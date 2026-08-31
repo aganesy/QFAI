@@ -18,12 +18,15 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 // Source-level split of the `*.todo(` token: this validator scans the repo's
 // own test files, so a literal occurrence here would make the suite report
 // itself. Mirrors what `testTodoStubs.test.ts` already does.
 const TODO = ".todo";
+// Same split for the `*.skip(` token, which the JS/TS dialect now matches too.
+const SKIP = ".skip";
 const JS_STUB = `it${TODO}('later');
 `;
 
@@ -146,5 +149,320 @@ describe("the opt-out still turns the whole validator off", () => {
       };
       expect(await validateTestTodoStubs(root, off)).toEqual([]);
     });
+  });
+});
+
+describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule", () => {
+  // Six of the seven dialects matched their stack's *skip* construct while the
+  // JS/TS entry matched `.todo` alone, so `it.skip` / `test.skip` /
+  // `describe.skip` — the form a developer actually writes to park a suite
+  // mid-change, and the form `qfai atdd scaffold` emits — cleared the only
+  // gate qfai has against work left as a silent placeholder.
+  const JS_SKIPS = [
+    'import { describe, it, test } from "vitest";',
+    "",
+    `it${SKIP}("skip form", () => {});`,
+    `test${SKIP}("test skip form", () => {});`,
+    `describe${SKIP}("suite skip form", () => {`,
+    '  it("would run", () => {});',
+    "});",
+    "",
+  ].join("\n");
+
+  it("reports every skip spelling, one finding per occurrence", async () => {
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const stubs = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(stubs).toHaveLength(3);
+      expect(stubs.map((i) => i.loc?.line)).toEqual([3, 4, 5]);
+    });
+  });
+
+  it("keeps refs on the exact construct so waivers and grouping stay stable", async () => {
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const refs = issues.filter((i) => i.code === "QFAI-TEST-003").map((i) => i.refs?.[0]);
+      expect(refs).toEqual([`it${SKIP}`, `test${SKIP}`, `describe${SKIP}`]);
+    });
+  });
+
+  it(`files ${SKIP} under its own warning rule while ${TODO} stays an error`, async () => {
+    // A `.todo` is a bare declaration and can only mean work not done. A
+    // `.skip` keeps its body and is what `qfai atdd scaffold` emits, so an
+    // `error` would fail the scaffold's own output on sight.
+    //
+    // The separate *code* matters as much as the severity: `waivers.ts`
+    // grades a waiver against the highest severity its rule produced in the
+    // run (`buildRuleSeverityIndex`) and rejects any waiver aimed at an
+    // `error` rule. Sharing `QFAI-TEST-001` would let this file's single
+    // `.todo` promote the whole rule to `error` and take the per-path waiver
+    // — the remediation the `.skip` finding advertises — away with it.
+    await withTests({ "tests/a.test.ts": `${JS_STUB}${JS_SKIPS}` }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const graded = new Map(
+        issues.map((i) => [i.refs?.[0] ?? "", { code: i.code, severity: i.severity }] as const),
+      );
+      expect(graded.get(`it${TODO}`)).toEqual({ code: "QFAI-TEST-001", severity: "error" });
+      expect(graded.get(`it${SKIP}`)).toEqual({ code: "QFAI-TEST-003", severity: "warning" });
+      expect(graded.get(`describe${SKIP}`)).toEqual({
+        code: "QFAI-TEST-003",
+        severity: "warning",
+      });
+      // The gate `qfai-implement`'s FINAL CHECKLIST reads stays todo-only.
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
+    });
+  });
+
+  it("takes its severity from the promotion pin, not a literal", async () => {
+    // The warning above is right today and, written as a literal, stays right
+    // forever: nothing would ever promote it, and the operator is never told a
+    // debt is coming. P7 wants that soft landing pinned to a release instead.
+    // The release name in the message is the half only the pin can put there —
+    // `warning` alone reads identically either way.
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = (await validateTestTodoStubs(root, CONFIG)).filter(
+        (i) => i.code === "QFAI-TEST-003",
+      );
+      expect(issues, "the fixture stopped producing skip findings").not.toEqual([]);
+      for (const found of issues) {
+        expect(found.severity).toBe("warning");
+        expect(found.message).toContain(RULE_PROMOTIONS.testSkippedSuite.promoteAt);
+      }
+      // The `.todo` rule is not inside the window and keeps its hard error.
+      const todo = await withTests({ "tests/b.test.ts": JS_STUB }, (r) =>
+        validateTestTodoStubs(r, CONFIG),
+      );
+      expect(todo.find((i) => i.code === "QFAI-TEST-001")?.severity).toBe("error");
+    });
+  });
+
+  it("names the skip form in the message, not the todo form", async () => {
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const first = issues.find((i) => i.code === "QFAI-TEST-003");
+      expect(first?.message).toContain(`it${SKIP}`);
+      expect(first?.message).not.toContain(TODO);
+      expect(first?.message).toContain("vitest/jest");
+    });
+  });
+
+  it("tells the operator to drop the modifier, not to delete the test", async () => {
+    // `.skip` keeps its body, so the `.todo` remediation ("delete the stub")
+    // followed literally throws away a working test.
+    await withTests({ "tests/a.test.ts": `${JS_STUB}${JS_SKIPS}` }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipAction = issues.find((i) => i.code === "QFAI-TEST-003")?.suggested_action ?? "";
+      expect(skipAction).toContain("Remove the skip modifier");
+      expect(skipAction).not.toContain("delete the stub");
+      expect(skipAction).toContain("QFAI-TEST-003");
+      const todoAction = issues.find((i) => i.code === "QFAI-TEST-001")?.suggested_action ?? "";
+      expect(todoAction).toContain("delete the stub");
+    });
+  });
+
+  it(`also matches the chained ${SKIP}.each spellings`, async () => {
+    // The chained `.each` form puts a `.` where the bare form puts its `(`,
+    // so a pattern anchored straight onto the open paren let an
+    // unconditionally skipped parameterized suite through unreported.
+    const chained = [
+      `test${SKIP}.each([[1], [2]])("case %i", (n) => {});`,
+      `describe${SKIP}.each([[1]])("suite %i", () => {});`,
+      `it${SKIP}.each\`
+      a
+      \`("tagged", () => {});`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": chained }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([
+        `test${SKIP}`,
+        `describe${SKIP}`,
+        `it${SKIP}`,
+      ]);
+      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+    });
+  });
+
+  it(`also matches a ${SKIP} sitting behind a leading modifier`, async () => {
+    // `test.concurrent` + `.skip` is a valid Jest spelling — the token is
+    // split in the fixture below for the same reason the constants at the top
+    // of this file are. The modifier pushes `skip` off the root identifier, so
+    // a pattern demanding the token directly after `test` reported nothing for
+    // an unconditionally skipped concurrent test.
+    const modified = [
+      `test.concurrent${SKIP}("concurrent skip", async () => {});`,
+      `test.concurrent${SKIP}.each([[1]])("concurrent skip each %i", async (n) => {});`,
+      `it.failing${SKIP}("failing skip", () => {});`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": modified }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.loc?.line)).toEqual([1, 2, 3]);
+      // The label stays root + token, as it already did for the trailing
+      // `.each` chain, so `refs` does not fragment once per modifier.
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`test${SKIP}`, `test${SKIP}`, `it${SKIP}`]);
+      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+    });
+  });
+
+  it(`also matches a chain broken over a newline`, async () => {
+    // A member chain carries a line break at any of its dots, and that is what
+    // a printer emits once the chain outgrows the print width. The scan used
+    // to split the file into lines first, so `test.concurrent` + newline +
+    // `.skip(...)` — one valid call — was contained by no line it looked at
+    // and went unreported even under `--fail-on warning`.
+    const broken = [
+      "test.concurrent",
+      `  ${SKIP}("concurrent skip over two lines", async () => {});`,
+      `test${SKIP}`,
+      '  .each([[1]])("skip each over two lines %i", (n) => {});',
+      "it",
+      `  ${SKIP}("plain skip over two lines", () => {});`,
+      "describe",
+      `  ${TODO}("todo over two lines");`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": broken }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`test${SKIP}`, `test${SKIP}`, `it${SKIP}`]);
+      // The line the construct *starts* on — the root identifier's — and every
+      // finding after a multi-line match still lands on its own line.
+      expect(skipped.map((i) => i.loc?.line)).toEqual([1, 3, 5]);
+      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      const todo = issues.filter((i) => i.code === "QFAI-TEST-001");
+      expect(todo.map((i) => i.loc?.line)).toEqual([7]);
+    });
+  });
+
+  it("keeps a Ruby stub on its own line when blank lines precede it", async () => {
+    // Over-correction pin for the whole-file scan: the RSpec pattern anchors on
+    // `^` and then eats the indent, so a `\s*` indent would swallow the blank
+    // lines above the construct and file the finding against the first of them.
+    const spec = ["it 'x' do", "", "", "  skip 'later'", "end", ""].join("\n");
+    await withTests({ "tests/a_spec.rb": spec }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001").map((i) => i.loc?.line)).toEqual([4]);
+    });
+  });
+
+  it("keeps the JS member chain allowed to break over a newline", async () => {
+    // The other half of the pair below: confining the cross-line reach to the
+    // JS dialect must not take it away from the JS dialect. A chain a printer
+    // split at its `.` is still one call, and still a parked test.
+    await withTests(
+      { "tests/a.test.ts": `test\n  ${SKIP}("still one call", () => {});\n` },
+      async (root) => {
+        const issues = await validateTestTodoStubs(root, CONFIG);
+        const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+        expect(skipped.map((i) => i.loc?.line)).toEqual([1]);
+      },
+    );
+  });
+
+  it("does not let a non-JS pattern reach across a newline", async () => {
+    // Scanning the whole file let every dialect's `\s*` consume a line break,
+    // not just the JS member chain's. `pytest.skip` bound to a name, with an
+    // unrelated call expression on the next line, is no call at all — but
+    // `pytest.skip` + newline + `(` matched, and filed an **error** against a
+    // file with nothing skipped in it, failing an ordinary `--fail-on error`.
+    await withTests(
+      {
+        "tests/test_a.py": "skip_fn = pytest.skip\n(result)\n",
+        "tests/a_test.go": "fn := t.Skip\n(result)\n",
+        "tests/AT.cs": 'string Skip\n= "later";\n',
+      },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("still reports each non-JS stub written on one line", async () => {
+    // Over-correction pin for the newline gate: the construct these dialects
+    // actually use is a single statement, and every one of them must survive.
+    await withTests(
+      {
+        "tests/test_a.py": "def test_a():\n    pytest.skip('later')\n",
+        "tests/a_test.go": 'func TestA(t *testing.T) {\n\tt.Skip("later")\n}\n',
+        "tests/AT.cs": '[Fact(Skip = "later")]\npublic void A() {}\n',
+      },
+      async (root) => {
+        const issues = await validateTestTodoStubs(root, CONFIG);
+        expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(3);
+      },
+    );
+  });
+
+  it("ignores the construct inside a comment or a literal, not the real call", async () => {
+    // A regex over a raw file cannot tell a parked test from a fixture that
+    // *holds* one as data. This validator scans a repository's own test files,
+    // where a generator or parser suite carries the construct in a string and
+    // prose spells it out in a comment — so `--fail-on warning` failed with
+    // nothing skipped anywhere. Both directions are pinned in one fixture: the
+    // five inert spellings stay silent and the real call on line 8 does not.
+    const mixed = [
+      `const source = "it${SKIP}(name, fn)";`,
+      "const emitted = `test" + SKIP + "(name, fn)`;",
+      `const matcher = /it${SKIP}(pending)/;`,
+      `// describe${SKIP}("example", () => {});`,
+      "/*",
+      ` * it${TODO}("documented later");`,
+      " */",
+      `it${SKIP}("really parked", () => {});`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": mixed }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toEqual([]);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.loc?.line)).toEqual([8]);
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`it${SKIP}`]);
+    });
+  });
+
+  it("still matches a chain a comment sits inside", async () => {
+    // Over-correction pin for the mask: it blanks one character per character,
+    // so a comment between the root identifier and the `.skip` link collapses
+    // to whitespace the chain pattern already tolerates instead of splitting
+    // the call in two.
+    const commented = `it /* parked for now */ ${SKIP}("x", () => {});\n`;
+    await withTests({ "tests/a.test.ts": commented }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.loc?.line)).toEqual([1]);
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`it${SKIP}`]);
+    });
+  });
+
+  it("leaves a plain it()/describe() call alone", async () => {
+    await withTests(
+      {
+        "tests/a.test.ts": 'describe("s", () => {\n  it("works", () => {});\n});\n',
+        "tests/b.test.ts": "const rest = unit.skip(2);\n",
+        // A modifier chain carrying no skip/todo token at all: the widened
+        // leading-modifier match must not turn every chained call into a stub.
+        "tests/d.test.ts": 'test.concurrent.each([[1]])("runs", async (n) => {});\n',
+        // The same chain broken over a newline. Tolerating the line break must
+        // not cost the negative case: still no skip/todo token in it.
+        "tests/e.test.ts": 'test.concurrent\n  .each([[1]])("runs", async (n) => {});\n',
+        // Prose naming the construct at a line end, with the next line opening
+        // on a comment marker rather than the call's paren. Only whitespace may
+        // stand between the token and the `(` that makes it a call.
+        "tests/f.test.ts": `// spellings: it${SKIP}\n// (and it${TODO})\n`,
+        // Prose naming the construct inside a markdown code span. A repo's own
+        // test files are full of these, and `qfai validate` scans them, so a
+        // pattern that accepts a backtick straight after the bare form turns
+        // every mention into a reported stub.
+        "tests/c.test.ts": `// Excludes \`it${SKIP}\` / \`it${TODO}\` — they never run.\n`,
+      },
+      async (root) => {
+        const codes = await stubCodes(root);
+        expect(codes).not.toContain("QFAI-TEST-001");
+        expect(codes).not.toContain("QFAI-TEST-003");
+      },
+    );
   });
 });
