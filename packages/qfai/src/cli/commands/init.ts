@@ -934,9 +934,9 @@ export async function ensureRootGitignoreEntries(
   // that appended its own `.qfai/evidence/*.md` after the block wins under
   // git's last-match rule, and a block-scoped check called the negation
   // effective while `git check-ignore -v` named the project's line. The repair
-  // path was already right — `removeManagedBlock` strips the block and the
-  // rebuilt one is appended last, so it lands below the project's rule — but
-  // the early return fired first and it never ran.
+  // is `removeManagedBlock` plus a rebuilt block placed below the project's
+  // rule (see {@link placeManagedBlock}) — but the early return fired first and
+  // it never ran.
   //
   // Required entries are matched only against the managed block: a project that
   // deliberately removed, say, `.qfai/evidence/*` to track its own audit trail
@@ -953,21 +953,125 @@ export async function ensureRootGitignoreEntries(
   }
 
   // Strip existing managed QFAI block (known block lines only; stop at unknown lines; loop for duplicates)
-  const stripped = existing.includes(QFAI_GITIGNORE_MARKER)
+  const { stripped, blockAt } = existing.includes(QFAI_GITIGNORE_MARKER)
     ? removeManagedBlock(existing)
-    : existing;
+    : { stripped: existing, blockAt: -1 };
+
+  const placement = placeManagedBlock(stripped, rebuildManagedBlock(managedBlock), blockAt);
 
   if (dryRun) {
-    report(`  would update: .gitignore (append QFAI entries)`);
+    report(
+      placement.inPlace
+        ? `  would update: .gitignore (rebuild QFAI entries in place)`
+        : `  would update: .gitignore (append QFAI entries)`,
+    );
     return { copied: [gitignorePath], skipped: [] };
   }
 
-  const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
-  const block = rebuildManagedBlock(managedBlock);
-  const content = stripped.length > 0 ? stripped + separator + block : block;
-  await writeFile(gitignorePath, content, "utf-8");
-  report("  updated: .gitignore (appended QFAI entries)");
+  await writeFile(gitignorePath, placement.content, "utf-8");
+  report(
+    placement.inPlace
+      ? "  updated: .gitignore (rebuilt QFAI entries in place)"
+      : "  updated: .gitignore (appended QFAI entries)",
+  );
+  // Only the fallback can demote a project negation, and only against a project
+  // ignore line that re-ignores a governance record. Naming the loser is the
+  // least that move owes an operator: the file the negation re-included
+  // silently stops reaching `git add` and `git status`.
+  const demoted = placement.inPlace ? [] : demotedProjectNegations(existing, placement.content);
+  for (const negation of demoted) {
+    report(
+      `  WARNING: .gitignore — \`${negation}\` no longer wins; the QFAI managed block now sits below it.`,
+    );
+  }
   return { copied: [gitignorePath], skipped: [] };
+}
+
+/**
+ * The whole file as trailing-trimmed lines, the form
+ * {@link negationsOutrankLaterIgnores} reads.
+ */
+function gitignoreLines(content: string): string[] {
+  return content.split("\n").map((line) => line.trimEnd());
+}
+
+/**
+ * Where the rebuilt block goes: back where it was, or — only when that would
+ * leave a QFAI governance negation inert — at end of file.
+ *
+ * Appending unconditionally lifted every project line that sat *below* the
+ * block *above* it, and git applies the LAST matching pattern. A project
+ * negation such as `!.qfai/report/dashboard.md` that was winning before the run
+ * lost after it, silently: `.gitignore` does not untrack, so nothing failed and
+ * the loss surfaced later, as new files under the negated pattern stopped
+ * reaching `git add` and `git status`. Deleting an ignore line from the block
+ * and writing a negation below the block are two encodings of the same decision
+ * — *track this file* — and {@link rebuildManagedBlock} already protects the
+ * first.
+ *
+ * Rebuilding in place costs the block nothing: it is internally ordered
+ * (ignores first, negations last), which is what makes QFAI's negations outrank
+ * QFAI's ignores. End-of-file matters only against lines QFAI does not own, so
+ * the move is kept for exactly that case — a project ignore line below the
+ * block re-ignoring a governance record, where the two rules genuinely conflict.
+ */
+function placeManagedBlock(
+  stripped: string,
+  block: string,
+  blockAt: number,
+): { content: string; inPlace: boolean } {
+  if (blockAt >= 0 && stripped.length > 0) {
+    const candidate = insertManagedBlock(stripped, block, blockAt);
+    if (
+      negationsOutrankLaterIgnores(gitignoreLines(candidate), QFAI_GITIGNORE_GOVERNANCE_NEGATIONS)
+    ) {
+      return { content: candidate, inPlace: true };
+    }
+  }
+  const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
+  return { content: stripped.length > 0 ? stripped + separator + block : block, inPlace: false };
+}
+
+/** Splice `block` back in at line `at`, blank-line separated from both sides. */
+function insertManagedBlock(stripped: string, block: string, at: number): string {
+  const lines = stripped.replace(/\n+$/, "").split("\n");
+  const head = lines.slice(0, at);
+  const tail = lines.slice(at);
+
+  const parts = [...head];
+  if (parts.length > 0 && parts[parts.length - 1] !== "") {
+    parts.push("");
+  }
+  parts.push(...block.replace(/\n+$/, "").split("\n"));
+  if (tail.length > 0) {
+    if (tail[0] !== "") {
+      parts.push("");
+    }
+    parts.push(...tail);
+  }
+  return `${parts.join("\n")}\n`;
+}
+
+/**
+ * Project-owned negations that won before the rewrite and are inert after it.
+ *
+ * Lines the managed block owns are excluded: those move *with* the block, so
+ * their standing is {@link negationsOutrankLaterIgnores}' business, not this
+ * one's. What is left is the project's own re-inclusions, judged by the same
+ * last-match rule against the whole file.
+ */
+function demotedProjectNegations(before: string, after: string): string[] {
+  const beforeLines = gitignoreLines(before);
+  const afterLines = gitignoreLines(after);
+  const managed = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
+  const candidates = new Set(
+    beforeLines.filter((line) => line.startsWith("!") && !managed.has(line)),
+  );
+  return [...candidates].filter(
+    (negation) =>
+      negationsOutrankLaterIgnores(beforeLines, [negation]) &&
+      !negationsOutrankLaterIgnores(afterLines, [negation]),
+  );
 }
 
 /**
@@ -1139,9 +1243,17 @@ function extractManagedBlock(content: string): string {
   return merged.join("\n");
 }
 
-/** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */
-function removeManagedBlock(content: string): string {
+/**
+ * Remove all QFAI managed blocks (known block lines only; stops at unknown
+ * lines), and report where the first one sat.
+ *
+ * `blockAt` is a line index into the stripped file — the seam the rebuilt block
+ * goes back into, so the project's own lines keep the side of the block they
+ * were written on. Duplicated blocks collapse onto the first one's position.
+ */
+function removeManagedBlock(content: string): { stripped: string; blockAt: number } {
   const lines = content.split("\n");
+  let blockAt = -1;
 
   // Known lines: current block + legacy lines from previous versions
   const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
@@ -1150,6 +1262,9 @@ function removeManagedBlock(content: string): string {
   while (true) {
     const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
     if (startIdx === -1) break;
+    if (blockAt === -1) {
+      blockAt = startIdx;
+    }
 
     let endIdx = startIdx + 1; // marker is always consumed
 
@@ -1175,7 +1290,12 @@ function removeManagedBlock(content: string): string {
     if (last === undefined || last.trim() !== "") break;
     lines.pop();
   }
-  return lines.length > 0 ? lines.join("\n") + "\n" : "";
+  return {
+    stripped: lines.length > 0 ? lines.join("\n") + "\n" : "",
+    // A block that sat at the end, or one whose tail was blank lines the trim
+    // above removed, lands back at the end.
+    blockAt: blockAt === -1 ? -1 : Math.min(blockAt, lines.length),
+  };
 }
 
 function report(
