@@ -368,25 +368,46 @@ const LOCK_HEARTBEAT_MS = 2_000;
 /**
  * How long a waiter sleeps between attempts.
  *
- * Raised from 25ms with `LOCK_ATTEMPTS` lowered back to 200, keeping the 15s total patience while
- * doing a THIRD of the work to spend it. Measured: at 600 attempts of 25ms, twenty concurrent
- * writers turned the contended path into tens of thousands of failed renames and marker `lstat`s,
- * and the suite's own concurrency row went from about a second to sixteen minutes. Patience is a
- * duration, not an iteration count, and it is cheaper bought in longer sleeps.
+ * Raised from 25ms, keeping the 15s total patience while doing a THIRD of the work to spend it.
+ * Measured: at a 25ms poll, twenty concurrent writers turned the contended path into tens of
+ * thousands of failed renames and marker `lstat`s, and the suite's own concurrency row went from
+ * about a second to sixteen minutes. Patience is cheaper bought in longer sleeps.
  */
 const LOCK_POLL_MS = 75;
 /**
- * How many times a waiter polls before giving up. `LOCK_ATTEMPTS * LOCK_POLL_MS` must exceed
- * `LOCK_STALE_MS`, or the reclaim path is unreachable from inside a single run.
+ * How long a waiter keeps trying before it gives up. It must exceed `LOCK_STALE_MS`, or the
+ * reclaim path is unreachable from inside a single run.
  *
- * It did not: 200 polls of 25ms is five seconds against a ten-second ceiling, so a lock left by
- * a run that was killed less than five seconds earlier could never be judged abandoned before
- * the waiter gave up. `qfai init` then threw `another process is writing the record` and its
- * rollback DELETED the workflows it had just copied — over a holder that no longer existed.
- * The constant's own promise, that a crashed run cannot wedge the command permanently, was
- * true only across runs and not within one.
+ * It did not: patience used to be an ITERATION COUNT, 200 polls, and at the 25ms poll of the day
+ * that was five seconds against a ten-second ceiling — so a lock left by a run killed less than
+ * five seconds earlier could never be judged abandoned before the waiter gave up. `qfai init`
+ * then threw `another process is writing the record` and its rollback DELETED the workflows it
+ * had just copied, over a holder that no longer existed. The constant's own promise, that a
+ * crashed run cannot wedge the command permanently, was true only across runs and not within one.
+ *
+ * A DURATION rather than that iteration count, and the difference is the invariant above. As
+ * `attempts * poll` the ceiling comparison held only at the nominal sleep, so it was restated
+ * every time either half moved and was wrong twice; and the repair for a poll that had grown too
+ * expensive was to cut the count, which silently cut the patience with it. As one number the
+ * comparison with `LOCK_STALE_MS` is direct, and `LOCK_POLL_MS` becomes what it reads as — how
+ * often to look, not how long to wait.
  */
-const LOCK_ATTEMPTS = 200;
+const LOCK_PATIENCE_MS = 15_000;
+/**
+ * How long a holder re-reads a lock it has just published before concluding somebody replaced it.
+ *
+ * A reclaimer decides a lock is abandoned and then MOVES it, and those are separate syscalls: it
+ * can judge the previous holder's marker stale and have its `rename` land on the lock this holder
+ * published in between. `clearAbandonedLock` finds a fresh marker on the object it moved and puts
+ * it back, so the lock returns — under the same name, and as the same inode, because a `rename`
+ * carries the object. What the holder must not do is read the name once, during that window, and
+ * conclude it was dispossessed.
+ *
+ * Well under `LOCK_STALE_MS`: this is the width of another process's move-and-restore, not a
+ * second helping of patience. Only an object whose `dev`/`ino` match what was staged is ever
+ * accepted, so re-reading admits nothing a single read would not.
+ */
+const LOCK_CONFIRM_MS = 1_000;
 
 /**
  * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
@@ -573,26 +594,6 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
    * somebody else put there is the same class of act this is guarding against, and the next run
    * stops on it with a message naming the path.
    */
-  /**
-   * Give the lock up, removing an object this holder can still identify as its own.
-   *
-   * Review finding [122]: this was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
-   * resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
-   * can move the acquired directory aside and leave a symlink to somewhere else in its place —
-   * and the marker's name is readable out of the acquired directory, so an external file can be
-   * waiting under exactly that name. The unlink then followed the link and deleted it.
-   * `refuseLinkedLockPath` cannot help: it runs once, before acquisition.
-   *
-   * So release does what `clearAbandonedLock` does. `rename` the lock name onto a private one:
-   * whatever the name refers to now, the object moves and the NAME is free for the next holder,
-   * which is the release. Then ask, of the private object, whether it is the one this holder
-   * published — and only then remove it. A `rename` that moved somebody else's lock puts it
-   * back.
-   *
-   * A symlink under the lock name is moved and then left alone, not unlinked. Removing a link
-   * somebody else put there is the same class of act this is guarding against, and the next run
-   * stops on it with a message naming the path.
-   */
   const release = async (): Promise<void> => {
     clearInterval(heartbeat);
     if (held === undefined) return; // never published, so nothing under that name is ours
@@ -648,71 +649,164 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
   // Read here, under a name nothing else knows, so it is the identity of an object this
   // process made rather than of whatever a path resolves to later. Review finding [134].
   const staged = await lstat(staging).catch(() => undefined);
-  try {
-    const handle = await open(path.join(staging, marker), "wx");
-    await handle.close();
 
-    for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
-      try {
-        await rename(staging, lockDir);
-        // Stamped HERE, at the moment the lock becomes visible.
-        //
-        // The marker is created once, in `staging`, before the wait below — and renaming a
-        // directory does not touch the mtime of a file inside it, so without this the lock
-        // enters the world carrying the age of the WAIT rather than of the HOLD. A writer that
-        // waited past `LOCK_STALE_MS` published a lock that was already reclaimable, and the
-        // heartbeat could not have helped: until this rename there is no `lockDir/<marker>` for
-        // it to touch, so every tick during the wait was a swallowed ENOENT. The next writer
-        // polls every `LOCK_POLL_MS` and the first renewal is up to `LOCK_HEARTBEAT_MS` away,
-        // so it wins that race by two orders of magnitude and evicts a holder that is inside
-        // the section.
-        const published = new Date();
-        await utimes(path.join(lockDir, marker), published, published).catch(() => undefined);
-        // The object this holder published, by identity — read from the STAGING directory
-        // before the rename, not from the lock name after it.
-        //
-        // Review finding [128] introduced this identity: release used to free the canonical
-        // NAME before it could tell whose lock was under it, so a stalled holder that resumed
-        // after being reclaimed moved its successor's lock aside. Review finding [134] then
-        // found the identity itself taken the wrong way: reading `lstat(lockDir)` AFTER the
-        // rename asks what is at that name now, which is not necessarily what we just put
-        // there. A `rename` is atomic, so the object that arrived is the object we staged —
-        // and `staged` was read while nothing else could reach it, under a private name.
-        //
-        // If the two disagree, something replaced the lock between the rename and this read.
-        // That is not a lock this holder can claim, so acquisition fails rather than
-        // continuing with somebody else's identity recorded as its own.
-        const arrived = await lstat(lockDir).catch(() => undefined);
-        if (
-          staged === undefined ||
-          arrived === undefined ||
-          arrived.dev !== staged.dev ||
-          arrived.ino !== staged.ino
-        ) {
-          clearInterval(heartbeat);
-          throw new Error(
-            "qfai: the provenance lock was replaced between publishing it and reading it back. " +
-              "Nothing was written. Re-run once no other `qfai` process is working in this tree.",
-          );
-        }
-        held = { dev: staged.dev, ino: staged.ino };
-        return release;
-      } catch {
-        // Held, or the destination is not publishable. Age decides which.
-      }
-      await clearAbandonedLock(lockDir);
-      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  // Every failure below leaves the heartbeat renewing a marker this process does not hold, and
+  // one of those paths used to escape uncleared: a `staging` that could not be opened threw
+  // straight past the `clearInterval` at the foot of the function, leaving an `unref`ed timer
+  // stamping a path forever. Cleared in ONE place, so a new failure cannot reintroduce that.
+  try {
+    if (staged === undefined) {
+      // Refused BEFORE the wait, and that ordering is the point. Without an identity there is
+      // nothing to recognise a published lock by, so this holder could take the lock and then
+      // be unable to claim or release it — an orphan nobody removes until it ages out. Failing
+      // here costs a run that has published nothing.
+      throw new Error(
+        `qfai: could not read back the provenance lock staged at ${staging}. Nothing was ` +
+          "written. Re-run once no other `qfai` process is working in this tree.",
+      );
     }
-  } finally {
-    // A successful `rename` consumed `staging`, so this only ever removes an unpublished one.
-    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+
+    let published = false;
+    try {
+      const handle = await open(path.join(staging, marker), "wx");
+      await handle.close();
+      published = await publishLock(staging, lockDir);
+    } finally {
+      // A successful `rename` consumed `staging`, so this only ever removes an unpublished one.
+      await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+    }
+
+    if (!published) {
+      throw new Error(
+        `could not take the install-provenance lock at ${lockDir} within ${String(LOCK_PATIENCE_MS)}ms; another process is writing the record`,
+      );
+    }
+
+    // Everything from here runs ONCE, and that is the repair rather than a tidying.
+    //
+    // The stamp and the identity read used to sit inside the wait loop, so a failure in either
+    // was caught by the arm that means "the destination was not publishable" and the loop tried
+    // again. But the `rename` had already SUCCEEDED, which consumes `staging` — so every
+    // remaining attempt renamed a source that no longer existed, and a writer spent the rest of
+    // its patience on a guaranteed `ENOENT` before reporting `another process is writing the
+    // record`, which by then was false and named the wrong problem. Worse, the lock it had
+    // published stayed published with its heartbeat already stopped, so every other writer in
+    // the tree stalled a full `LOCK_STALE_MS` on a holder that had given up.
+    //
+    // Measured under load, with no fault injected: one `lock was replaced` throw, one reclaimer
+    // restoring the lock it had moved, then 178 `ENOENT` renames and a lost entry. The loop may
+    // only retry a rename that did NOT happen.
+    if (!(await confirmPublishedLock(lockDir, marker, staged))) {
+      // Given back before the failure is raised, and `release` is what gives it back rather than
+      // a second removal written here: it removes the standing lock only when that lock is this
+      // holder's object, refuses a name that has become a link, and unlinks one marker by name.
+      // Every one of those guards was bought by a review finding, and an acquisition that is
+      // about to fail has no better claim to improvise than a release does.
+      //
+      // Without it a lock published and then not claimed is held by nobody and renewed by
+      // nothing, so every other writer in the tree waits out the whole `LOCK_STALE_MS` ceiling
+      // before it can reclaim — which is the second half of what this defect cost.
+      held = { dev: staged.dev, ino: staged.ino };
+      await release();
+      throw new Error(
+        "qfai: the provenance lock was replaced between publishing it and reading it back. " +
+          "Nothing was written. Re-run once no other `qfai` process is working in this tree.",
+      );
+    }
+    held = { dev: staged.dev, ino: staged.ino };
+    return release;
+  } catch (error) {
+    clearInterval(heartbeat);
+    throw error;
   }
-  // Only reached when the lock was never taken, so the heartbeat is renewing a marker this
-  // process does not own — and would keep a lock somebody else holds looking alive forever.
-  clearInterval(heartbeat);
-  throw new Error(
-    `could not take the install-provenance lock at ${lockDir} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
-  );
+}
+
+/**
+ * Renames the staged directory onto the lock name until it lands, or until patience runs out.
+ *
+ * The `rename` IS the arbitration: it fails onto a non-empty directory, so exactly one writer
+ * publishes and the rest are told the destination is occupied. Age decides what to do about that
+ * — `clearAbandonedLock` removes a holder that is gone and leaves one that is working.
+ *
+ * It answers whether the lock was published rather than throwing, because the two outcomes are
+ * not the same kind of event and the caller treats them differently: an unpublished attempt is a
+ * contended tree, while a published one hands the caller an object it must now claim or clean up.
+ * Retrying is only ever correct for the first, and the loop holds no state that survives the
+ * second — the successful `rename` consumes `staging`, so there is nothing left to rename again.
+ */
+async function publishLock(staging: string, lockDir: string): Promise<boolean> {
+  const deadline = Date.now() + LOCK_PATIENCE_MS;
+  for (;;) {
+    const published = await rename(staging, lockDir).then(
+      () => true,
+      () => false,
+    );
+    if (published || Date.now() >= deadline) {
+      return published;
+    }
+    await clearAbandonedLock(lockDir);
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  }
+}
+
+/**
+ * Stamps a freshly published lock and confirms it is still the object this holder staged.
+ *
+ * ## The stamp
+ *
+ * Applied HERE, at the moment the lock becomes visible. The marker is created once, in the
+ * staging directory, before the wait — and renaming a directory does not touch the mtime of a
+ * file inside it, so without this the lock enters the world carrying the age of the WAIT rather
+ * than of the HOLD. A writer that waited past `LOCK_STALE_MS` published a lock that was already
+ * reclaimable, and the heartbeat could not have helped: until the rename there is no
+ * `lockDir/<marker>` for it to touch, so every tick during the wait was a swallowed `ENOENT`.
+ * The next writer polls every `LOCK_POLL_MS` and the first renewal is up to `LOCK_HEARTBEAT_MS`
+ * away, so it wins that race by two orders of magnitude and evicts a holder that is inside the
+ * section.
+ *
+ * ## The identity
+ *
+ * Compared against the STAGING directory's identity, read before the rename rather than from the
+ * lock name after it. Review finding [128] introduced this identity: release used to free the
+ * canonical NAME before it could tell whose lock was under it, so a stalled holder that resumed
+ * after being reclaimed moved its successor's lock aside. Review finding [134] then found the
+ * identity itself taken the wrong way — `lstat(lockDir)` after the rename asks what is at that
+ * name NOW, which is not necessarily what was just put there. A `rename` is atomic, so the
+ * object that arrived is the object that was staged, and `staged` was read under a private name
+ * nothing else could reach.
+ *
+ * ## Why it is read more than once
+ *
+ * Because a disagreement is not proof of dispossession. A reclaimer judges a lock stale and then
+ * MOVES it, and those are separate syscalls: it can read the PREVIOUS holder's marker as
+ * abandoned and have its `rename` land on the lock this holder published a moment later.
+ * `clearAbandonedLock` then finds a fresh marker on the object it moved and restores it — same
+ * name, same inode, because a `rename` carries the object. A single read taken inside that
+ * window sees `ENOENT` and reports a replacement that never happened.
+ *
+ * So the name is re-read until it answers with the staged object, bounded by `LOCK_CONFIRM_MS`.
+ * Nothing is loosened: only an object whose `dev` and `ino` equal the staged one is accepted, so
+ * a lock genuinely taken over by somebody else still ends the acquisition — a few polls later
+ * instead of on the first read.
+ */
+async function confirmPublishedLock(
+  lockDir: string,
+  marker: string,
+  staged: { dev: number; ino: number },
+): Promise<boolean> {
+  const deadline = Date.now() + LOCK_CONFIRM_MS;
+  for (;;) {
+    const published = new Date();
+    await utimes(path.join(lockDir, marker), published, published).catch(() => undefined);
+    const arrived = await lstat(lockDir).catch(() => undefined);
+    if (arrived !== undefined && arrived.dev === staged.dev && arrived.ino === staged.ino) {
+      return true;
+    }
+    if (Date.now() >= deadline) {
+      return false;
+    }
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  }
 }
 
 /**
