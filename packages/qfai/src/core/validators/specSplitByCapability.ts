@@ -9,7 +9,9 @@ import {
   maskNonSpecRegions,
   splitMarkdownRow,
 } from "../specPackParsers.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
@@ -354,6 +356,20 @@ function specDirPaths(
   return specIds.flatMap((specId) => known.get(specId) ?? [path.join(specsRoot, specId)]);
 }
 
+/**
+ * The sentence a finding still inside its promotion window carries.
+ *
+ * A window that says nothing is a window the operator cannot see: the finding
+ * is a `warning` today and an `error` from a release they are not told about,
+ * so the debt only becomes visible when it has already latched. Empty once the
+ * promotion has happened, because there is no longer a window to describe.
+ */
+function promotionWindowNote(severity: "warning" | "error", promoteAt: string): string {
+  return severity === "warning"
+    ? ` (${promoteAt} リリースまでは warning、それ以降は error として報告されます)`
+    : "";
+}
+
 export async function validateSpecSplitByCapability(
   root: string,
   config: QfaiConfig,
@@ -397,6 +413,29 @@ export async function validateSpecSplitByCapability(
   // that lists its CAPs in prose still reports 101 / 102 as before.
   const catalogue = parseCapCatalogue(capabilityText);
 
+  // The four catalogue-structure rules below are new, and each one necessarily
+  // lands on a `03_Capabilities.md` written before it existed: the declared
+  // spec column did not exist, a repeated CAP row was de-duplicated by the
+  // document-wide scan, a row naming two CAPs was skipped, and a companion
+  // column of a canonical name was never resolved by name. Shipping any of
+  // them straight at `error` would latch a gate on an upgrade, so each runs a
+  // promotion window (`RULE_PROMOTIONS`, design principle P7): a `warning`
+  // until its pinned release, an `error` from that release onwards.
+  //
+  // `resolveToolVersion` resolves rather than rejects — its own read failures
+  // return `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates one of these into a build
+  // failure.
+  const toolVersion = await resolveToolVersion();
+  const duplicateHeaderPromotion = RULE_PROMOTIONS.specSplitDuplicateColumnHeader.promoteAt;
+  const duplicateHeaderSeverity = newRuleSeverity(toolVersion, duplicateHeaderPromotion);
+  const ambiguousRowPromotion = RULE_PROMOTIONS.specSplitAmbiguousCapRow.promoteAt;
+  const ambiguousRowSeverity = newRuleSeverity(toolVersion, ambiguousRowPromotion);
+  const duplicateCapPromotion = RULE_PROMOTIONS.specSplitDuplicateCapId.promoteAt;
+  const duplicateCapSeverity = newRuleSeverity(toolVersion, duplicateCapPromotion);
+  const declaredSpecPromotion = RULE_PROMOTIONS.specSplitDeclaredSpecMismatch.promoteAt;
+  const declaredSpecSeverity = newRuleSeverity(toolVersion, declaredSpecPromotion);
+
   // A repeated canonical header used to resolve to whichever column came
   // first, so the columns after it were never read and the catalogue passed
   // whatever they held.
@@ -404,8 +443,8 @@ export async function validateSpecSplitByCapability(
     issues.push(
       issue(
         "QFAI-SPLIT-109",
-        `_policies/03_Capabilities.md のカタログ表に同名の列が複数あります: ${header}`,
-        "error",
+        `_policies/03_Capabilities.md のカタログ表に同名の列が複数あります: ${header}${promotionWindowNote(duplicateHeaderSeverity, duplicateHeaderPromotion)}`,
+        duplicateHeaderSeverity,
         capabilitiesPath,
         "specSplitByCapability.duplicateHeader",
         [header],
@@ -424,8 +463,8 @@ export async function validateSpecSplitByCapability(
     issues.push(
       issue(
         "QFAI-SPLIT-108",
-        `_policies/03_Capabilities.md の1行が複数の CAP ID を含んでいます: ${ambiguousRow.join(", ")}`,
-        "error",
+        `_policies/03_Capabilities.md の1行が複数の CAP ID を含んでいます: ${ambiguousRow.join(", ")}${promotionWindowNote(ambiguousRowSeverity, ambiguousRowPromotion)}`,
+        ambiguousRowSeverity,
         capabilitiesPath,
         "specSplitByCapability.ambiguousCapRow",
         ambiguousRow,
@@ -480,8 +519,8 @@ export async function validateSpecSplitByCapability(
     issues.push(
       issue(
         "QFAI-SPLIT-107",
-        `_policies/03_Capabilities.md の CAP ID が重複しています: ${duplicateCapIds.join(", ")}`,
-        "error",
+        `_policies/03_Capabilities.md の CAP ID が重複しています: ${duplicateCapIds.join(", ")}${promotionWindowNote(duplicateCapSeverity, duplicateCapPromotion)}`,
+        duplicateCapSeverity,
         capabilitiesPath,
         "specSplitByCapability.duplicateCapIds",
         duplicateCapIds,
@@ -545,8 +584,8 @@ export async function validateSpecSplitByCapability(
     issues.push(
       issue(
         "QFAI-SPLIT-106",
-        `03_Capabilities.md の Spec 列が行位置と一致しません: ${mismatch.capId} (宣言=${mismatch.declaredSpecId}, 行位置=${mismatch.derivedSpecId})`,
-        "error",
+        `03_Capabilities.md の Spec 列が行位置と一致しません: ${mismatch.capId} (宣言=${mismatch.declaredSpecId}, 行位置=${mismatch.derivedSpecId})${promotionWindowNote(declaredSpecSeverity, declaredSpecPromotion)}`,
+        declaredSpecSeverity,
         capabilitiesPath,
         "specSplitByCapability.declaredSpec",
         [mismatch.capId, mismatch.declaredSpecId, mismatch.derivedSpecId],

@@ -128,6 +128,32 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPLIT-106` — a capability catalogue row whose declared spec cell
+   * disagrees with the spec the row's position derives. The column is new, so
+   * every catalogue fills it in for the first time and meets each
+   * transcription slip of that first pass in one run.
+   */
+  specSplitDeclaredSpecMismatch: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPLIT-107` — the same capability ID on two catalogue rows. The
+   * document-wide scan that read the catalogue before de-duplicated its IDs,
+   * so a repeated row has been passing validation for as long as the
+   * catalogue has existed.
+   */
+  specSplitDuplicateCapId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPLIT-108` — a catalogue row whose capability cell names several
+   * IDs. Such a row was silently skipped, so a repository that grouped two
+   * capabilities onto one line carries it already.
+   */
+  specSplitAmbiguousCapRow: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPLIT-109` — a catalogue table that spells one canonical column name
+   * twice. Nothing resolved the header by name before, so a table carrying a
+   * companion column of the same name has been well-formed until now.
+   */
+  specSplitDuplicateColumnHeader: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

@@ -5,6 +5,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 import { validateOrphanProhibition } from "../../src/core/validators/orphanProhibition.js";
 import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";
@@ -461,6 +463,106 @@ describe("v1.4.36 layered validators", () => {
       );
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ships every new catalogue-structure code behind its promotion window", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // All four codes this change introduces necessarily fire on a catalogue
+      // written before they existed, so P7 gives each one a window: a warning
+      // until the pinned release, an error from it. Emitting a literal
+      // `"error"` beside the call — which is what they did — makes the upgrade
+      // itself the thing that latches the gate.
+      //
+      // The severity is read from the registry rather than asserted as
+      // `"warning"`, so this stays honest past the promotion; what is pinned
+      // unconditionally is that the pin decides it and that the message names
+      // the release while the window is open.
+      await seedPolicies(root, ["CAP-0001", "CAP-0001"], { "CAP-0001": "spec-9999" });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0001");
+
+      const version = await resolveToolVersion();
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const expected: Record<string, string> = {
+        "QFAI-SPLIT-106": RULE_PROMOTIONS.specSplitDeclaredSpecMismatch.promoteAt,
+        "QFAI-SPLIT-107": RULE_PROMOTIONS.specSplitDuplicateCapId.promoteAt,
+      };
+
+      expect(Object.keys(expected).every((code) => issues.some((i) => i.code === code))).toBe(true);
+      for (const [code, promoteAt] of Object.entries(expected)) {
+        const severity = newRuleSeverity(version, promoteAt);
+        for (const found of issues.filter((i) => i.code === code)) {
+          expect(found.severity, `${code} must take its severity from its pin`).toBe(severity);
+          if (severity === "warning") {
+            expect(found.message, `${code} must name the release ending its window`).toContain(
+              promoteAt,
+            );
+          }
+        }
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ships the ambiguous-row and duplicate-header codes behind their windows", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The other two of the four. They need a catalogue shaped differently
+      // from the one above — a duplicate column header suppresses the Spec
+      // column entirely — so they are pinned separately rather than by
+      // loosening the fixture until one tree produces all four.
+      await seedPolicies(root, ["CAP-0001"], undefined, undefined, {
+        trailer: ["| CAP-0002 / CAP-0003 | capability | metric | note |"],
+        trailerJoinsTable: true,
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const version = await resolveToolVersion();
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const promoteAt = RULE_PROMOTIONS.specSplitAmbiguousCapRow.promoteAt;
+      const severity = newRuleSeverity(version, promoteAt);
+      const ambiguous = issues.filter((i) => i.code === "QFAI-SPLIT-108");
+
+      expect(ambiguous.length).toBe(1);
+      expect(ambiguous[0]?.severity).toBe(severity);
+      if (severity === "warning") expect(ambiguous[0]?.message).toContain(promoteAt);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+
+    const second = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(second, ["CAP-0001"], undefined, undefined, { catalogHeading: true });
+      await writeFile(
+        path.join(second, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| CAP ID   | Statement  | Spec      | Spec      |",
+          "| -------- | ---------- | --------- | --------- |",
+          "| CAP-0001 | capability | spec-0001 | spec-9999 |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(second, "0001", "CAP-0001");
+
+      const version = await resolveToolVersion();
+      const issues = await validateSpecSplitByCapability(second, defaultConfig);
+      const promoteAt = RULE_PROMOTIONS.specSplitDuplicateColumnHeader.promoteAt;
+      const severity = newRuleSeverity(version, promoteAt);
+      const duplicates = issues.filter((i) => i.code === "QFAI-SPLIT-109");
+
+      expect(duplicates.length).toBe(1);
+      expect(duplicates[0]?.severity).toBe(severity);
+      if (severity === "warning") expect(duplicates[0]?.message).toContain(promoteAt);
+    } finally {
+      await rm(second, { recursive: true, force: true });
     }
   });
 
