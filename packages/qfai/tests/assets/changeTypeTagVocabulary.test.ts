@@ -40,9 +40,8 @@ const tagsInListLine = (body: string, linePrefix: string): string[] => {
 const tagsInClassificationTable = (body: string): string[] =>
   body
     .split(/\r?\n/)
-    .map((line) => /^\|\s*\*\*(@[a-z]+)\*\*/.exec(line))
-    .filter((match): match is RegExpExecArray => match !== null)
-    .map((match) => match[1]);
+    .map((line) => /^\|\s*\*\*(@[a-z]+)\*\*/.exec(line)?.[1])
+    .filter((tag): tag is string => tag !== undefined);
 
 const markdownFilesUnder = async (dir: string): Promise<string[]> => {
   const entries = await readdir(dir, { withFileTypes: true });
