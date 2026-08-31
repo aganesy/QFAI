@@ -13,6 +13,21 @@ import { parseArgs } from "./lib/args.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
+/**
+ * Exit code for a command name nothing recognizes.
+ *
+ * Deliberately not `options.invalidExitCode`. That field carries the
+ * CLI-arg-error code the exit-code table in `.qfai/contracts/cli/qfai-init.md`
+ * reserves — 2, for an unknown flag or a malformed value — and the parser never
+ * sets `invalid` for an unrecognized command, so borrowing it here would file a
+ * mistyped command under a row the contract wrote for something else. 1 keeps
+ * the two distinguishable while still refusing to report success, which is the
+ * defect this branch closed: the case used to print `Unknown command` and exit
+ * 0. A `--flag`-shaped first token never reaches here — the parser catches it,
+ * leaves `command` null, and the invalid-args branch above exits 2.
+ */
+const UNKNOWN_COMMAND_EXIT_CODE = 1;
+
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
@@ -63,6 +78,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
           ...(options.profile ? { profile: options.profile } : {}),
+          ...(options.reportSpecIds.length > 0 ? { specIds: options.reportSpecIds } : {}),
         });
       }
       return;
@@ -274,6 +290,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     default:
       error(`Unknown command: ${command}`);
       info(usage());
+      process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
       return;
   }
 }
@@ -303,9 +320,15 @@ Options:
   --root <path>   対象ディレクトリ
   --dir <path>    init の出力先
   --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents を上書き（assistant/manifest/** を含むそれ以外は既存があればスキップ）
+                  上書きだけでなく削除も行う: 過去の qfai が .claude/commands/ と .github/prompts/ に置いた
+                  wrapper と、出荷されなくなった skill 用に qfai が置いた wrapper（symlink 化以前の
+                  実ディレクトリを含む）を削除します。所有権は名前ではなくファイルの中身で判定するため
+                  自作の command / prompt / skill は残りますが、symlink には中身がないので、引退済みの
+                  QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
+                  .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
-                              (legacy .qfai/assistant/{instructions,steering,manifest}/ → constitution/manifest/catalog/process/)
+                              (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
@@ -317,7 +340,7 @@ Options:
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
-  --out <path>                  report/doctor/prototyping preflight: 出力先
+  --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: 基準URL
@@ -342,8 +365,9 @@ Options:
   --clean                       doctor: TTL 超過 review pack を _archive/ へ退避 (--dry-run 併用可)
   --autoremediate               doctor: install + clean + config-fill をまとめて実行
   --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
-  --spec <id>                   validate: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
+  --spec <id>                   validate/report: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
+                                 report: 既定の入出力も validate.spec-<ids>.json / report.spec-<ids>.md へ切り替える
   -h, --help      ヘルプ表示
 `;
 }
