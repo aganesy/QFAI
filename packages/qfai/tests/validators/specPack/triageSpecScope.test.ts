@@ -4,6 +4,14 @@ import { validateTriageSection } from "../../../src/core/validators/specPack.js"
 
 const DELTA_PATH = "_policies/10_delta.md";
 
+/**
+ * A version inside every promotion window, so `QFAI-TRIAGE-008` reports at its
+ * pre-promotion severity. Written as a literal rather than read from the
+ * package so this file keeps testing `QFAI-TRIAGE-007` — whose severity is not
+ * version-dependent — after the promotion release lands.
+ */
+const TOOL_VERSION = "0.0.0";
+
 const HEADER = [
   "| Source   | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
   "| -------- | ------- | ------------- | --------- | ------ | ----------- | --------- |",
@@ -25,13 +33,14 @@ const delta = (...rows: string[]): string =>
   ].join("\n");
 
 const codes = (text: string): string[] =>
-  validateTriageSection(text, DELTA_PATH).map((entry) => entry.code);
+  validateTriageSection(text, DELTA_PATH, TOOL_VERSION).map((entry) => entry.code);
 
 describe("QFAI-TRIAGE-007: what counts as the operation's object", () => {
   it("rejects DELETE whose Subject names an item", () => {
     const issues = validateTriageSection(
       delta("| REQ-0001 | delete BR-0006-0004 | spec-0006 | DELETE | - | user@host | obsolete |"),
       DELTA_PATH,
+      TOOL_VERSION,
     );
     const finding = issues.find((entry) => entry.code === "QFAI-TRIAGE-007");
     expect(finding?.severity).toBe("error");
@@ -63,6 +72,7 @@ describe("QFAI-TRIAGE-007: what counts as the operation's object", () => {
         const issues = validateTriageSection(
           delta(`| REQ-0001 | ${verb} ${id} | spec-0006 | ${operation} | - | u@h | - |`),
           DELTA_PATH,
+          TOOL_VERSION,
         );
         expect(issues.map((entry) => entry.code)).toContain("QFAI-TRIAGE-007");
       });
@@ -74,6 +84,7 @@ describe("QFAI-TRIAGE-007: what counts as the operation's object", () => {
     const issues = validateTriageSection(
       delta("| REQ-0001 | split BR-0006-0004 and BR-0006-0004 | spec-0006 | SPLIT | - | u@h | - |"),
       DELTA_PATH,
+      TOOL_VERSION,
     );
     const finding = issues.find((entry) => entry.code === "QFAI-TRIAGE-007");
     expect(finding?.refs).toEqual(["BR-0006-0004"]);
@@ -173,6 +184,7 @@ describe("QFAI-TRIAGE-007: which Operations are spec-scoped", () => {
     const issues = validateTriageSection(
       delta("| REQ-0001 | split BR-0006-0004 | spec-0006 | SPLIT | - | user@host | too coarse |"),
       DELTA_PATH,
+      TOOL_VERSION,
     );
     const finding = issues.find((entry) => entry.code === "QFAI-TRIAGE-007");
     expect(finding?.severity).toBe("error");
@@ -207,6 +219,7 @@ describe("QFAI-TRIAGE-007: which Operations are spec-scoped", () => {
     const issues = validateTriageSection(
       delta("| REQ-0001 | merge AC-0002-0001 and AC-0002-0002 | spec-0002 | MERGE | - | u@h | - |"),
       DELTA_PATH,
+      TOOL_VERSION,
     );
     expect(issues.find((entry) => entry.code === "QFAI-TRIAGE-007")?.refs).toEqual([
       "AC-0002-0001",
@@ -219,7 +232,7 @@ describe("QFAI-TRIAGE-007: which Operations are spec-scoped", () => {
       "| REQ-0001 | split BR-0006-0004 | spec-0006 | SPLIT | - | u@h | - |",
       "| REQ-0002 | split BR-0007-0004 | spec-0007 | SPLIT | - | u@h | - |",
     );
-    const findings = validateTriageSection(text, DELTA_PATH).filter(
+    const findings = validateTriageSection(text, DELTA_PATH, TOOL_VERSION).filter(
       (entry) => entry.code === "QFAI-TRIAGE-007",
     );
     expect(findings).toHaveLength(2);
