@@ -144,6 +144,23 @@ describe("fixed-language directive matcher", () => {
     ["a Japanese directive, emphatic", "必ず英語で回答すること。"],
     ["a Japanese exclusivity clause", "ユーザー向けの応答は日本語に統一する。"],
     ["a directive soft-wrapped over two lines", "Every plan is\nwritten in English."],
+    // A fallback wearing the user-conditional carve-out's clothes. It opens
+    // with `If`, it names the user, and it forces English on every operator
+    // who does not work in it — so being conditional on the user cannot be
+    // what earns the exemption. What earns it is the condition naming the
+    // language the directive then echoes; these name none.
+    [
+      "an English fallback to a fixed language",
+      "If the user does not specify a language, always respond in English.",
+    ],
+    [
+      "an English fallback, `when` and a bare verb",
+      "When the user has not chosen a language, use English.",
+    ],
+    [
+      "a Japanese fallback to a fixed language",
+      "ユーザーが言語を指定しない場合は必ず英語で回答すること。",
+    ],
   ];
 
   for (const [label, sample] of CAUGHT) {
@@ -175,6 +192,10 @@ describe("fixed-language directive matcher", () => {
       "| `countWords` splits on `\\s+` | prose critiques pass trivially for Japanese/Chinese copy. |",
     ],
     ["a glossary term ending in 語", "- 用語・単語・述語は言語ごとに定義する。"],
+    // The Japanese restatement, kept beside the fallback it must not be
+    // confused with: the condition names 日本語, so the directive echoing it is
+    // the user's language and not a fixed one.
+    ["the rule restated per language (ja)", "- ユーザーが日本語で書く場合は日本語で回答する。"],
   ];
 
   for (const [label, sample] of PERMITTED) {

@@ -21,8 +21,11 @@
  * is not one of the two permitted reference shapes:
  *
  * 1. **User-conditional** — the unit is an `If` / `When` clause about the
- *    *user*, so the language it names is the user's, not a fixed one
- *    (`If the user writes in Japanese, output Japanese.`).
+ *    *user* whose condition names every language the unit does, so the language
+ *    it commands is the one the condition derived from the user
+ *    (`If the user writes in Japanese, output Japanese.`). A condition that
+ *    names no language is a fallback to a fixed one, not a restatement, and is
+ *    reported (`If the user does not specify a language, respond in English.`).
  * 2. **Explicitly non-directive** — the unit disclaims pinning in so many
  *    words (`このファイルは出力言語を固定しない…`, `pins no language`).
  *
@@ -223,18 +226,66 @@ const DIRECTIVE_SHAPES: readonly DirectiveShape[] = [
 ];
 
 /**
- * The only two reference shapes a shipped file may use to name a language in
- * an output-binding context. See the module docstring.
+ * Carve-out 2: an explicit disclaimer that the file pins nothing.
+ *
+ * Carve-out 1 is not a regex — see {@link isUserLanguageConditional}.
  */
-const PERMITTED_REFERENCE_SHAPES: readonly RegExp[] = [
-  // 1. Conditional on the *user's* language — this is the Absolute Rule
-  //    restated per language, not a fixed language.
-  /^(?:if|when|whenever)\b.*\buser'?’?s?\b/i,
-  /(?:ユーザー?|利用者)[^。]*(?:場合|なら|に合わせ|に従)/,
-  // 2. An explicit disclaimer that the file pins nothing.
+const PERMITTED_DISCLAIMER_SHAPES: readonly RegExp[] = [
   /固定しない|固定されない|固定はしない/,
   /\b(?:pins no|does not pin|do not pin|never pins)\b/i,
 ];
+
+/**
+ * The condition clause a user-conditional unit opens with, or `null`.
+ *
+ * English: `if` / `when` / `whenever` at the head, the user named inside the
+ * clause, and the clause running to the comma that closes it. Japanese: the
+ * user named, and the clause running to its ender.
+ *
+ * The clause is extracted rather than merely detected because carve-out 1
+ * turns on WHERE the language is named, not on the unit being conditional.
+ */
+function userConditionClause(unit: string): string | null {
+  const english = /^(?:if|when|whenever)\b[^,]*?\buser'?’?s?\b[^,]*/i.exec(unit);
+  if (english !== null) return english[0];
+  const japanese = /(?:ユーザー?|利用者)[^。]*?(?:場合|なら|に合わせ|に従)/.exec(unit);
+  return japanese?.[0] ?? null;
+}
+
+/** Every language from the two rosters that `text` names. */
+function namedLanguages(text: string): Set<string> {
+  const found = new Set<string>();
+  for (const name of LANGUAGE_NAMES_EN) {
+    if (new RegExp(`\\b${name}\\b`, "i").test(text)) found.add(name);
+  }
+  for (const name of LANGUAGE_NAMES_JA) {
+    if (text.includes(name)) found.add(name);
+  }
+  return found;
+}
+
+/**
+ * Carve-out 1: the unit restates the Absolute Rule for one language.
+ *
+ * Being conditional on the user is NOT enough, which is what the first version
+ * of this carve-out asserted: `If the user does not specify a language, always
+ * respond in English.` opens with `If`, names the user, and is a fallback to a
+ * fixed language for every operator who does not work in it — the exact defect
+ * this matcher exists to find, wearing the exemption's clothes.
+ *
+ * What separates a restatement from a fallback is where the language comes
+ * from: in `If the user writes in Japanese, output Japanese.` the condition
+ * names the language and the directive echoes it, so the language IS the
+ * user's. So every language the unit names must be one its condition already
+ * named. A condition that names none — `does not specify a language`, `has not
+ * chosen one` — exempts nothing, and the shapes below judge the unit.
+ */
+function isUserLanguageConditional(unit: string): boolean {
+  const clause = userConditionClause(unit);
+  if (clause === null) return false;
+  const fromUser = namedLanguages(clause);
+  return [...namedLanguages(unit)].every((name) => fromUser.has(name));
+}
 
 /** A soft-wrap-joined sentence, with the 1-based line it starts on. */
 export interface LogicalUnit {
@@ -295,7 +346,7 @@ export function toLogicalUnits(text: string): LogicalUnit[] {
 
 /** True when the unit is one of the two permitted ways to name a language. */
 const isPermittedReference = (unit: string): boolean =>
-  PERMITTED_REFERENCE_SHAPES.some((shape) => shape.test(unit));
+  isUserLanguageConditional(unit) || PERMITTED_DISCLAIMER_SHAPES.some((shape) => shape.test(unit));
 
 /**
  * Every unit of `text` that pins output to a named language.
