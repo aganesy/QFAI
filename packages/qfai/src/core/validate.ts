@@ -89,9 +89,8 @@ import {
   validateSurfaceTypeDrift,
   validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
-  detectSkillManifestDrift,
   validateAutopilotPolicy,
-  detectHandoffSchemaDrift,
+  runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
 } from "./validators/index.js";
@@ -455,14 +454,13 @@ async function runSddValidators(
     // SKILL.md that lacks the `## Default Autopilot Policy` section.
     // SKILL.md governance lives in the sdd profile.
     ...(await validateAutopilotPolicy(root, { config })),
-    // CLI-HANDOFF Pair IV — fire `R-HANDOFF-SCHEMA-DRIFT` on
-    // asymmetric schema ↔ writer edits. Handoff is a skill-governance
-    // surface so it lives in sdd.
-    ...(await detectHandoffSchemaDrift(root)),
-    // Pair III — fire `R-SKILL-MANIFEST-DRIFT` on asymmetric
-    // probe-impl ↔ manifest-schema edits. Skill-manifest governance
-    // lives in the sdd profile (skill-governance domain).
-    ...(await detectSkillManifestDrift(root)),
+    // Self-governance group: Pair IV (`R-HANDOFF-SCHEMA-DRIFT`, schema ↔
+    // writer) and Pair III (`R-SKILL-MANIFEST-DRIFT`, probe-impl ↔
+    // manifest-schema). Both are skill-governance surfaces so they live
+    // in sdd, but both read qfai's own package sources — outside this
+    // repo the group is a declared no-op and the profile-coverage notice
+    // names its finding codes as unevaluated.
+    ...(await runPackageSelfGovernanceValidators(root)),
     // Doc governance — surface pre-implementation tokens in
     // `references/*.md` + SKILL.md as warning during the deprecation
     // window and error at sunset.

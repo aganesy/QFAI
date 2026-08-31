@@ -14,6 +14,10 @@ import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
 } from "../../core/validators/layerCoverage.js";
+import {
+  PACKAGE_SELF_GOVERNANCE_FAMILIES,
+  unevaluatedPackageSelfGovernanceFamilies,
+} from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -166,7 +170,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
-  const partialProfileNotice = buildPartialProfileNotice(normalized.profile);
+  const partialProfileNotice = buildPartialProfileNotice(
+    normalized.profile,
+    await unevaluatedPackageSelfGovernanceFamilies(root),
+  );
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
     normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
@@ -427,6 +434,10 @@ const GATE_GROUP_FAMILIES = {
     "E_*",
     "R-*",
   ],
+  // Split out of `sdd`: the group runs inside that profile, but its two
+  // detectors read qfai's own package sources, so in a consuming repo they
+  // are structurally unevaluated while the rest of `R-*` still fires.
+  "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: ["QFAI-PROT-*", "QFAI-CRIT-*", "QFAI-FID-*", "QFAI-UIE-*", "QFAI-DCON-*"],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
@@ -449,9 +460,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   verify: ALL_GATE_GROUPS,
   // Both stages mandate the review pack in their RCP footer and both now run
   // `validateReviewArtifacts`, so `QFAI-REVIEW-*` must not be listed as a
-  // family the run did not evaluate.
+  // family the run did not evaluate. `runSddValidators` additionally calls
+  // `runPackageSelfGovernanceValidators`, so sdd evaluates that group too.
   discussion: ["discussion", "review-artifacts"],
-  sdd: ["sdd", "review-artifacts"],
+  sdd: ["sdd", "package-self-governance", "review-artifacts"],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
@@ -464,8 +476,20 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
   return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
 }
 
-/** Deduped, order-preserving families for the groups a profile does not run. */
-function unevaluatedFamilies(profile: string): string[] {
+/**
+ * Deduped, order-preserving families for the groups a profile does not run.
+ *
+ * `unevaluatedSelfGovernance` carries the self-governance codes whose own
+ * inputs are absent, so those detectors cannot fire whatever the project does
+ * and their codes join the list even though the profile wires them in. It is
+ * per code, not per group: the two detectors read different files, and a tree
+ * carrying one detector's inputs but not the other's would otherwise drop both
+ * from the notice while one of them had structurally not run.
+ */
+function unevaluatedFamilies(
+  profile: string,
+  unevaluatedSelfGovernance: readonly string[],
+): string[] {
   if (!isKnownProfile(profile)) {
     return [];
   }
@@ -477,6 +501,15 @@ function unevaluatedFamilies(profile: string): string[] {
   for (const group of Object.keys(GATE_GROUP_FAMILIES) as GateGroup[]) {
     if (evaluated.has(group)) continue;
     for (const family of GATE_GROUP_FAMILIES[group]) push(family);
+  }
+  if (families.length === 0) {
+    // A profile that runs every group is not partial, and this notice is the
+    // partial-profile notice. Reporting a precondition-gated group there would
+    // put "full is a partial profile" into the artifact.
+    return families;
+  }
+  if (evaluated.has("package-self-governance")) {
+    for (const family of unevaluatedSelfGovernance) push(family);
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
@@ -498,13 +531,16 @@ function unevaluatedFamilies(profile: string): string[] {
  * the normal per-profile wording would then imply the requested profile's own
  * gates had been observed, so that case gets its own message.
  */
-function buildPartialProfileNotice(profile: string | undefined): Issue | null {
+function buildPartialProfileNotice(
+  profile: string | undefined,
+  unevaluatedSelfGovernance: readonly string[],
+): Issue | null {
   if (!profile) {
     return null;
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile);
+  const unevaluated = unevaluatedFamilies(profile, unevaluatedSelfGovernance);
   if (unevaluated.length === 0) {
     return null;
   }
