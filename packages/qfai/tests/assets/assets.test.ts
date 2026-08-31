@@ -1533,7 +1533,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       const reportTemplate = await readFile(reportTemplatePath, "utf-8");
       expect(reportTemplate).toContain("status:");
       expect(reportTemplate).toContain("/qfai-sdd");
+      expect(reportTemplate).toContain("run id:");
     }
+
+    // The evidence section the completion reviewer grades must resolve to one
+    // preflight. `.qfai/report/preflight_summary.md` is rewritten by every
+    // rerun, so citing it makes every spec's evidence print the same constant.
+    const evidenceTemplate = await readFile(
+      path.join(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        "qfai-sdd",
+        "templates",
+        "evidence",
+        "sdd-spec.md",
+      ),
+      "utf-8",
+    );
+    const preflightSection = sectionOf(evidenceTemplate, "## Preflight summary path");
+    expect(preflightSection).toContain(
+      "`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` (run id: <run-id>)",
+    );
+    expect(preflightSection).not.toMatch(/^- `\.qfai\/report\/preflight_summary\.md`$/m);
+
+    const sddSkill = await readFile(
+      path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md"),
+      "utf-8",
+    );
+    expect(sddSkill).toContain("`.qfai/report/preflight/run-<timestamp>/preflight_summary.md`");
 
     const businessFlowTemplatePath = path.join(
       templateQfaiDir,
@@ -1920,6 +1948,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 });
+
+/** Body of `heading` up to the next `## ` heading, so a sibling section cannot satisfy the assertion. */
+function sectionOf(content: string, heading: string): string {
+  const start = content.indexOf(`${heading}\n`);
+  expect(start, `${heading} is missing`).toBeGreaterThanOrEqual(0);
+  const rest = content.slice(start + heading.length);
+  const end = rest.indexOf("\n## ");
+  return end === -1 ? rest : rest.slice(0, end);
+}
 
 /** Every `options.<key>` the given slice of CLI source touches. */
 function collectOptionKeys(source: string): Set<string> {
