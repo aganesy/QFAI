@@ -50,6 +50,7 @@
     "tests/helpers/shippedLaneCommands.ts",
     "tests/helpers/shippedWorkflowFixtures.ts",
     "tests/helpers/tempTree.ts",
+    "tests/helpers/wiringGraph.ts",
     "tests/helpers/workflowsIntegrityFixtures.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
     "tests/integration/cliStartupCost.test.ts",
@@ -96,6 +97,7 @@
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
-    "tests/unit/shippedLaneCommands.test.ts"
+    "tests/unit/shippedLaneCommands.test.ts",
+    "tests/unit/wiringGraph.test.ts"
   ]
 }
