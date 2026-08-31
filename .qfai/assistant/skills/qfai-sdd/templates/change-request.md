@@ -105,21 +105,54 @@ union of the open CRs' blocked sets.
 ## Approved actions (owner skill rerun plan)
 
 1. `<owner skill>` rerun scope: `<what>`
-2. Downstream ledger sweep: reset these `tdd/test-list.md` rows, recording this
-   CR's ID in their `DR-ID` column. **Enumerate them here, before approval** —
-   list the `TDD-ID`s (or a verifiable selection rule such as "every row whose
-   `TC-Refs` names TC-0007"), because what the operator approves is this list.
-   A reset of any row not covered by it is not operator-approved, and
-   `Resolution` must match this list.
-   - `<TDD-NNNN>`, `<TDD-NNNN>`, …
+2. Downstream ledger sweep: reset **or retire** these `tdd/test-list.md` rows.
+   **Enumerate them here, before approval** — list them as `<spec-id>/TDD-NNNN`
+   (or a verifiable selection rule such as "every row whose `TC-Refs` names
+   TC-0007"), because what the operator approves is this list. A reset or a
+   retirement of any row not covered by it is not operator-approved, and
+   `Resolution` must match this list. Qualify every ID with its spec: `TDD-ID`
+   is unique only within its spec, so a CR touching two specs cannot otherwise
+   tell their two `TDD-0001`s apart — and once a retired row is deleted, this
+   list is the only place its number survives.
+   - Reset to `todo`, recording this CR's ID in their `DR-ID` column:
+     `<spec-id>/TDD-NNNN`, `<spec-id>/TDD-NNNN`, …
      This is the only sanctioned backward status transition — see
      `.qfai/assistant/skills/qfai-implement/SKILL.md`, "Approved Change Request
      reset".
+   - Retire (delete the row; its TC is gone upstream or is no longer a coverage
+     target):
+     `<spec-id>/TDD-NNNN` — `<that row's Evidence cell, verbatim>`, …
+     Copy the `Evidence` cell in **and paste the body of the `### TDD-NNNN`
+     section it anchors to below this list**: the cell is only a pointer into
+     `.qfai/evidence/implement-<spec-id>.md` (`atdd-<spec-id>.md` for an
+     `Integration` / `API` / `E2E` row), which the managed `.gitignore` block
+     excludes, so without the body this CR records a reference a clean checkout
+     cannot resolve. A row retired before it ever ran anchors nothing — `todo`,
+     `blocked`, `red` and `exception` owe no `Evidence` — so write
+     `no evidence — retired at Status = <status>, never executed` in place of
+     the cell value and paste no body. A retired `TDD-ID` is never reused.
+     Name the test's disposition here too — `<delete tests/x.test.ts "selector">`
+     or `<re-point at spec-id/TDD-NNNN>` — because deleting the row leaves the
+     test itself untouched and unowned.
+     A retirement carried out by `/qfai-sdd` under an approved `UPDATE:REMOVE`
+     Triage row belongs in that row's `09_delta.md` instead (an `UPDATE:MODIFY`
+     row's, when the TC survives a `Level` change out of coverage **and that row
+     records an approver for the deletion**); do not open a CR to re-approve it.
+     An `UPDATE:MODIFY` row carrying no such approval authorises no deletion,
+     and that retirement comes back here.
+     On the cross-spec path the approving Triage row sits in
+     `_policies/10_delta.md`, which may not carry spec-local `US` / `AC` / `BR` /
+     `EX` / `TC` IDs outside the `## Triage` table's own cells: put the evidence
+     body in the retiring spec's `09_delta.md` and cite it from that row's
+     `Rationale` cell.
 
 ## Resolution
 
 <!--
 Filled in when Status leaves `open`. Record what was actually done: the owner
 skill that was rerun and the upstream artifacts it updated, and the ledger rows
-reset (by TDD-ID). Set `Applied at` in the header once this section is true.
+touched as `<spec-id>/TDD-NNNN` — resets and retirements listed separately,
+each retirement carrying the `Evidence` value its deleted row held, the
+transcribed `### TDD-NNNN` evidence body, and what became of that row's test.
+Set `Applied at` in the header once this section is true.
 -->
