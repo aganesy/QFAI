@@ -122,9 +122,26 @@ describe("doctor --clean prunes stale validate run logs", () => {
     const stale = await seedRunLog(root, "run-20260401120000001", 30);
     await seedRunLog(root, "run-20260811120000002", 0);
 
+    // A malformed config is an error-severity doctor finding, and doctor
+    // grades findings by `validation.failOn` (shipped default `error`)
+    // whether or not `--fail-on` was passed — so the run exits 1 on the
+    // diagnostic, not on the refusal.
     const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
 
-    expect(exit).toBe(0);
+    expect(exit).toBe(1);
+    expect(await exists(stale)).toBe(true);
+
+    // With the diagnostic graded away, nothing is left to fail: the
+    // refusal itself is not an error, and it is still a refusal.
+    const optedOut = await runDoctor({
+      root,
+      rootExplicit: true,
+      format: "text",
+      clean: true,
+      failOn: "never",
+    });
+
+    expect(optedOut).toBe(0);
     expect(await exists(stale)).toBe(true);
   });
 

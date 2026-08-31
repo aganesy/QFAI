@@ -10,13 +10,16 @@
   - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration)
   - `packages/qfai/src/core/doctor/` — the side-effecting remediations
     reached only through `--clean` / `--autoremediate`
-    (`autoremediate.ts`, `cleanReviewPacks.ts`,
+    (`autoremediate.ts`, `cleanReviewPacks.ts`, `cleanRunLogs.ts`,
     `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
-    `staleTtl.ts`) plus two read-only checks that write nothing:
+    `staleTtl.ts`) plus three read-only checks that write nothing:
     `workflowsIntegrity.ts`, which backs the `workflows.integrity`
-    check documented below, and `assetLineBudget.ts`, which owns the
+    check documented below, `assetLineBudget.ts`, which owns the
     per-file assistant asset line ceiling at runtime so a project
-    holding only the published package can still check it
+    holding only the published package can still check it, and
+    `outDirCollisions.ts`, which backs the `output.outDirCollision`
+    check and is also the ownership precondition `cleanRunLogs.ts`
+    consults before it deletes anything
   - `packages/qfai/src/core/prototyping/playwrightLauncher.ts`
     (Playwright launcher candidate probe via `resolvePlaywrightLauncher`
     and the `getProbeOrder` candidate list)
@@ -76,6 +79,14 @@ names a destination file, see its bullet):
   warning). After sunset, only `"playwright"` is accepted (REQ-0108).
 - `qfai.config.yaml#review.staleTtlDays` — the calendar-day TTL the
   `--clean` archive decision uses. Defaults to 14 when unset.
+- `qfai.config.yaml#report.staleTtlDays` — the calendar-day TTL the
+  `--clean` run-log prune decision uses. Defaults to 14 when unset;
+  `0` opts the project out of pruning entirely.
+- `qfai.config.yaml#report.keepLatestRuns` — how many newest
+  `<outDir>/run-*` directories survive the prune regardless of age, so
+  the `run_log:` pointer in `validate.log` can never be pruned away.
+  Clamped up to 1 when set to `0`; use `report.staleTtlDays: 0` to keep
+  everything.
 
 ## Side effects (written)
 
@@ -83,8 +94,8 @@ Doctor does not touch the repository unless `--clean` or
 `--autoremediate` is passed; the one write available without either
 is the report destination the operator names with `--out`.
 `--autoremediate` supersedes `--clean`: when both are present, only
-the autoremediate path runs (it archives review packs itself as one
-of its phases).
+the autoremediate path runs (it archives review packs and prunes run
+logs itself as phases of its own).
 
 ### `--out <path>`
 
@@ -104,16 +115,30 @@ counts it.
 
 ### `--clean`
 
-Archives TTL-expired review packs — moves, never deletes.
+Archives TTL-expired review packs — moves, never deletes — and prunes
+TTL-expired validate run logs, which it does delete.
 
-| Path                        | Write              | Condition                                   |
-| --------------------------- | ------------------ | ------------------------------------------- |
-| `.qfai/review/review-<ts>/` | renamed (moved)    | pack mtime older than `review.staleTtlDays` |
-| `.qfai/review/_archive/`    | created if missing | at least one pack is archive-eligible       |
+| Path                        | Write              | Condition                                                                                                              |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `.qfai/review/review-<ts>/` | renamed (moved)    | pack mtime older than `review.staleTtlDays`                                                                            |
+| `.qfai/review/_archive/`    | created if missing | at least one pack is archive-eligible                                                                                  |
+| `<outDir>/run-<ts>/`        | removed            | older than `report.staleTtlDays`, outside the newest `report.keepLatestRuns`, and not the run `validate.log` points at |
 
 `.qfai/review/_archive/` is itself skipped while enumerating packs, so
 a re-run is a no-op. Under `--dry-run` the plan is reported (`would
-move -> _archive/<pack>`) and no rename is issued.
+move -> _archive/<pack>`, `would remove -> <run id>`) and neither the
+rename nor the removal is issued.
+
+The run-log half deletes rather than moves, so it runs only after a
+precondition check clears it: the config must have loaded without
+issues, and no other project root in the monorepo may resolve
+`paths.outDir` to the same directory. When either fails, the archive
+half still runs and the prune is skipped with a reported reason —
+the `output.outDirCollision` and config diagnostics that would
+otherwise explain it are produced by the pass that runs AFTER the
+clean phase. A removal that fails is reported per run id and makes the
+command exit non-zero whatever `--fail-on` says: some directories are
+irreversibly gone while others the operator asked to remove are not.
 
 ### `--autoremediate`
 
@@ -124,6 +149,7 @@ Runs install + clean + config-fill as one orchestrated pass.
 | `<root>/.gitignore`                     | managed block rewritten            | the managed block is missing or stale (see below); never in a detected CI environment                            |
 | `qfai.config.yaml`                      | appended                           | a default-keyed field (`review:`) is absent from the PARSED document; user-authored values are never overwritten |
 | `.qfai/review/review-<ts>/`             | renamed (moved)                    | same TTL rule as `--clean`                                                                                       |
+| `<outDir>/run-<ts>/`                    | removed                            | same TTL / keep-latest / pointer rule and the same precondition check as `--clean`                               |
 | `.qfai/review/.legacy-packs`            | written (first run only)           | packs predating `revision_form` exist and no record has been taken yet                                           |
 | `.qfai/review/review-<ts>/summary.json` | `revision_form: "legacy"` added    | the pack is named by `.legacy-packs` and declares no form of its own                                             |
 | `node_modules/`                         | `npm install <name>`               | `--profile <skill>` names a manifest with unmet `runtimeDependencies`                                            |
