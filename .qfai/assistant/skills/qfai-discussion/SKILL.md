@@ -51,7 +51,7 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 ## UI-bearing Canonical Sidecar Family
 
-Every UI-bearing pack must produce, as primary truth: `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. Only a pack on a **visual-prototyping surface** (`web`, `mobile`, `desktop` or `mixed`, as `primary_surface` or in `secondary_surfaces`) MUST additionally emit a draft brand SSOT at the **consuming-project root**; a cli-only pack MUST NOT author it:
+Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. Only a pack on a **visual-prototyping surface** (`web`, `mobile`, `desktop` or `mixed`, as `primary_surface` or in `secondary_surfaces`) MUST additionally emit a draft brand SSOT at the **consuming-project root**; a cli-only pack MUST NOT author it:
 
 - `<consuming-project-root>/DESIGN.md` — **visual-prototyping surfaces only.** Brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
 
