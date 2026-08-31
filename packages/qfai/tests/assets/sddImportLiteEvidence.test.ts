@@ -5,12 +5,14 @@
  * no trigger: no phase, stage or Mandatory Output said who writes it, to which
  * path, under which name. Critical Constraint 1 puts the whole template
  * directory in scope, so enumerating it surfaced an artifact an author could
- * only name after the template itself — and `.qfai/evidence/import-lite.md` is
- * exactly the name `QFAI-IMPLITE-001`'s detector rejects.
+ * only name after the template itself — leaving `.qfai/evidence/import-lite.md`
+ * as the one name a reader could infer, which holds a single run and is
+ * overwritten by the next import.
  *
  * These cases pin both halves: the shipped documents describe the producer, and
- * every `import-lite-*` path they print really satisfies the detector in
- * `src/core/validators/importLite.ts`.
+ * every `import-lite-*` path they print really satisfies the detector, whose
+ * name and content rules live in `src/core/preflight/importLiteEvidence.ts`
+ * behind `validateImportLiteEvidencePresence`.
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -55,8 +57,40 @@ function documentedEvidencePaths(source: string): string[] {
     .filter((candidate) => !candidate.includes("*"));
 }
 
-/** Resolve the doc's `<ts>` placeholder to a concrete run stamp. */
-const materialize = (documented: string): string => documented.replace(/<ts>/gi, "20260822T090000");
+/**
+ * Resolve the doc's `<ts>` placeholder to a concrete run stamp.
+ *
+ * The stamp is the canonical 17-digit one (`YYYYMMDDhhmmssSSS`) that
+ * `CANONICAL_TIMESTAMP_RE` accepts, the same form discussion packs use. A
+ * second-precision `YYYYMMDDTHHmmss` form is not a canonical stamp and the name
+ * check rejects it, so materializing to one would have tested a path the
+ * documents must never send an operator down.
+ */
+const materialize = (documented: string): string =>
+  documented.replace(/<ts>/gi, "20260822090000000");
+
+/**
+ * A filled-in copy of the shipped template: identifying metadata plus one real
+ * source. A filename match alone is not evidence — the detector reads the body
+ * and skips a record that names nothing traceable — so every "input source
+ * exists" case has to seed a record, not just a name.
+ */
+const FILLED_EVIDENCE = [
+  "# Evidence: import-lite (legacy-import)",
+  "",
+  "## Metadata",
+  "",
+  "- generated_at: 2026-08-22T09:00:00Z",
+  "- author: AI",
+  "- entrypoint: import-lite",
+  "- produced_by: /qfai-sdd Stage 0",
+  "",
+  "## Sources",
+  "",
+  "- URLs: https://example.com/legacy-requirements",
+  "- Local paths:",
+  "",
+].join("\n");
 
 /** A spec set with no discussion pack — the state QFAI-IMPLITE-001 covers. */
 async function seedSpecSet(): Promise<string> {
@@ -80,18 +114,24 @@ afterEach(async () => {
 });
 
 /** Write the evidence at the exact relative path given, then run the detector. */
-async function importLiteCodesAt(relativePath: string | null): Promise<string[]> {
+async function importLiteCodesAt(
+  relativePath: string | null,
+  body: string = FILLED_EVIDENCE,
+): Promise<string[]> {
   if (relativePath !== null) {
     const target = path.join(root, relativePath);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, "# Evidence: import-lite\n", "utf-8");
+    await writeFile(target, body, "utf-8");
   }
   const issues = await validateImportLiteEvidencePresence(root, defaultConfig);
   return issues.map((issue) => issue.code);
 }
 
-const importLiteCodes = (evidenceFileName: string | null): Promise<string[]> =>
-  importLiteCodesAt(evidenceFileName === null ? null : `.qfai/evidence/${evidenceFileName}`);
+const importLiteCodes = (
+  evidenceFileName: string | null,
+  body: string = FILLED_EVIDENCE,
+): Promise<string[]> =>
+  importLiteCodesAt(evidenceFileName === null ? null : `.qfai/evidence/${evidenceFileName}`, body);
 
 describe("qfai-sdd documents who produces import-lite evidence", () => {
   for (const tree of QFAI_TREES) {
@@ -118,19 +158,28 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
     });
 
     it(`${tree}: the template carries the same collision rule as the skill`, async () => {
-      // Second precision is not uniqueness: a re-run or a parallel run inside
-      // the same second must not overwrite an earlier run's audit trail, and a
-      // reader holding only the template has to be told so too.
+      // A stamp is not uniqueness: a re-run or a parallel run must not
+      // overwrite an earlier run's audit trail, and a reader holding only the
+      // template has to be told so too. The recovery is a fresh stamp, not a
+      // `-<n>` counter — `classifyEvidenceName` rejects any suffix that is not
+      // exactly the canonical stamp, so a counter would produce a file the
+      // detector cannot see.
       const template = flat(await read(tree, TEMPLATE_REL));
-      expect(template).toContain("`-<n>` counter");
-      expect(template).toContain("until the name is free");
+      expect(template).toContain("re-stamp and retry");
+      expect(template, "the template still offers the rejected `-<n>` counter").not.toContain(
+        "`-<n>` counter",
+      );
     });
 
-    it(`${tree}: the template's Metadata names a real entrypoint`, async () => {
+    it(`${tree}: the template's Metadata keeps the entrypoint the detector reads`, async () => {
+      // `entrypoint: import-lite` is not decoration: `hasRequiredMetadata`
+      // keys on that exact value to recognise the file as import-lite evidence
+      // at all. Naming the producing skill there instead would make every file
+      // the shipped procedure produces fail the shipped check, so the producer
+      // is recorded in its own field and in the prose above.
       const template = flat(await read(tree, TEMPLATE_REL));
-      expect(template).toContain("entrypoint: qfai-sdd");
-      // `import-lite` is the mode, not a skill anyone can invoke.
-      expect(template).not.toContain("entrypoint: import-lite");
+      expect(template).toContain("entrypoint: import-lite");
+      expect(template).toContain("produced_by: /qfai-sdd Stage 0");
     });
 
     it(`${tree}: name reservation is atomic, not list-then-write`, async () => {
@@ -144,17 +193,29 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       }
     });
 
-    it(`${tree}: the Metadata output_path is the resolved path, not a fixed default`, async () => {
-      // Under a `paths.discussionDir` override the file does not live at the
-      // default path, so a hard-coded value would make the audit trail lie
-      // about where the trail itself is.
+    it(`${tree}: the Metadata output_path records where the file went`, async () => {
+      // The run stamp makes the filename vary per run, so a hard-coded value
+      // would make the audit trail lie about where the trail itself is.
       const template = flat(await read(tree, TEMPLATE_REL));
       const start = template.indexOf("## Metadata");
       expect(start, "the Metadata heading moved").toBeGreaterThanOrEqual(0);
       // `## Sources` is quoted in the prose above Metadata, so search forward.
       const metadata = template.slice(start, template.indexOf("## Sources", start));
       expect(metadata).toContain("output_path: <");
-      expect(metadata).toContain("paths.discussionDir");
+      expect(metadata).toContain("import-lite-<ts>.md");
+    });
+
+    it(`${tree}: the evidence directory is canonical, not derived from the config`, async () => {
+      // `resolveImportLiteEvidenceRoot` is pinned to `.qfai/evidence` on
+      // purpose. A document that sent a relocated project to the `evidence/`
+      // sibling of its `paths.discussionDir` would put the file where nothing
+      // looks, leaving QFAI-IMPLITE-001 unclearable by following the docs.
+      for (const rel of [TEMPLATE_REL, SKILL_REL, TRIAGE_REL]) {
+        const doc = flat(await read(tree, rel));
+        expect(doc, `${rel} sends the evidence to a discussionDir-relative directory`).not.toMatch(
+          /`evidence\/` sibling/i,
+        );
+      }
     });
 
     it(`${tree}: an evidence file is not left behind when no input source exists`, async () => {
@@ -168,12 +229,15 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       expect(triage).toMatch(/delete the evidence file/i);
     });
 
-    it(`${tree}: the skill says the packaged preflight API does not take this route`, async () => {
-      // The exported API blocks on a missing pack and always stamps
-      // `source: discussion-pack`, so this branch is agent-driven only and the
-      // summary has somewhere truthful to record an import-lite input.
+    it(`${tree}: the skill says the packaged preflight API takes this route`, async () => {
+      // `runSddPreflight` resolves the entrypoint itself and stamps
+      // `source: import-lite`, so the summary has somewhere truthful to record
+      // an import-lite input and nobody should hand-write a second copy.
       const skill = flat(await read(tree, SKILL_REL));
       expect(skill).toContain("runSddPreflight");
+      expect(skill, "the skill still tells the agent to hand-write the summary").not.toMatch(
+        /write the preflight summary by hand/i,
+      );
       const summary = flat(await read(tree, SUMMARY_REL));
       expect(summary).toContain("import-lite");
       expect(summary).not.toContain("source: discussion-pack");
@@ -224,16 +288,31 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
     });
   }
 
-  it("still fires for the trap name the template's own basename would produce", async () => {
-    // The reason the docs must print the `-<ts>` form: copying the template
-    // as-named yields a file the detector does not see.
-    expect(await importLiteCodes("import-lite.md")).toContain("QFAI-IMPLITE-001");
+  it("accepts a filled copy kept under the template's own basename", async () => {
+    // The template filename is deliberately accepted, so an operator who
+    // copied it as-named is not left with a warning nothing they wrote can
+    // clear. The docs still print the `-<ts>` form, because that fixed name
+    // holds one file and a second import would overwrite the first run.
+    expect(await importLiteCodes("import-lite.md")).not.toContain("QFAI-IMPLITE-001");
+  });
+
+  it("still fires for the template dropped in with its placeholders untouched", async () => {
+    // The real trap the docs steer around: a name that matches while the body
+    // records nothing traceable would silence the finding on a project with no
+    // input source at all.
+    const shipped = await readFile(
+      path.join(repoRoot, QFAI_TREES[1] ?? ".qfai", TEMPLATE_REL),
+      "utf-8",
+    );
+    expect(await importLiteCodes("import-lite-20260822090000000.md", shipped)).toContain(
+      "QFAI-IMPLITE-001",
+    );
   });
 
   it("still fires for a correctly named file written outside the evidence directory", async () => {
     // The reason the documented directory is kept and honoured above: the name
     // alone is not enough, so a doc that printed the wrong directory must fail.
-    expect(await importLiteCodesAt(".qfai/report/import-lite-20260822T090000.md")).toContain(
+    expect(await importLiteCodesAt(".qfai/report/import-lite-20260822090000000.md")).toContain(
       "QFAI-IMPLITE-001",
     );
   });
@@ -242,22 +321,24 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
     expect(await importLiteCodes(null)).toContain("QFAI-IMPLITE-001");
   });
 
-  // The run stamp is the whole point of the name. A `.*` tail accepted an
-  // empty one and an unreplaced placeholder, either of which silences the
-  // finding while recording no run.
+  // A hyphenated name has to carry the canonical stamp and nothing else. Each
+  // of these would otherwise stand in for a record of a run that never
+  // happened — the `-<n>` collision suffix included, which is why the shipped
+  // procedure recovers from a name clash by re-stamping instead.
   for (const name of [
     "import-lite-.md",
     "import-lite-<ts>.md",
     "import-lite-notatimestamp.md",
     "import-lite-20260822.md",
+    "import-lite-20260822090000000-2.md",
   ]) {
-    it(`still fires for the stampless name ${name}`, async () => {
+    it(`still fires for the non-canonical name ${name}`, async () => {
       expect(await importLiteCodes(name)).toContain("QFAI-IMPLITE-001");
     });
   }
 
-  it("accepts the collision-suffixed form the procedure produces", async () => {
-    expect(await importLiteCodes("import-lite-20260822T090000-2.md")).not.toContain(
+  it("accepts the canonical 17-digit stamp the procedure produces", async () => {
+    expect(await importLiteCodes("import-lite-20260822090000000.md")).not.toContain(
       "QFAI-IMPLITE-001",
     );
   });
@@ -265,17 +346,17 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
 
 describe("the detector is reachable from the public validate profiles", () => {
   it("reports QFAI-IMPLITE-001 through validateProject --profile sdd", async () => {
-    // The detector had no caller in production at all, so a spec change with
-    // neither a pack nor import-lite evidence passed the gate the shipped
-    // skill points at.
+    // The detector once had no caller in production at all, so a spec change
+    // with neither a pack nor import-lite evidence passed the gate the shipped
+    // skill points at. This pins the dispatch that closed that hole.
     const result = await validateProject(root, undefined, { profile: "sdd" });
     expect(result.issues.map((entry) => entry.code)).toContain("QFAI-IMPLITE-001");
   });
 
   it("goes quiet through the profile once the evidence exists", async () => {
     await writeFile(
-      path.join(root, ".qfai/evidence/import-lite-20260822T090000.md"),
-      "# Evidence: import-lite\n",
+      path.join(root, ".qfai/evidence/import-lite-20260822090000000.md"),
+      FILLED_EVIDENCE,
       "utf-8",
     );
     const result = await validateProject(root, undefined, { profile: "sdd" });
@@ -289,8 +370,8 @@ describe("the detector is reachable from the public validate profiles", () => {
     expect(before.issues.map((entry) => entry.code)).toContain("QFAI-DPACK-001");
 
     await writeFile(
-      path.join(root, ".qfai/evidence/import-lite-20260822T090000.md"),
-      "# Evidence: import-lite\n",
+      path.join(root, ".qfai/evidence/import-lite-20260822090000000.md"),
+      FILLED_EVIDENCE,
       "utf-8",
     );
 

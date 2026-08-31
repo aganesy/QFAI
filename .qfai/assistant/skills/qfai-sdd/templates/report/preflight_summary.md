@@ -4,8 +4,7 @@
 
 - status: <ready | blocked>
 - source: <discussion-pack | import-lite>
-- selected discussion-pack: <path | (not found)>
-- import-lite evidence: <path | (n/a)>
+- selected <discussion-pack | import-lite evidence>: <path | (not found)>
 
 ## Blockers
 

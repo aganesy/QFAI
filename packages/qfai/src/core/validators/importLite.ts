@@ -1,37 +1,17 @@
-import { readdir } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFiles } from "../fs.js";
+import { findPacks } from "../packLocator.js";
+import { toRelativePath } from "../paths.js";
+import {
+  IMPORT_LITE_EVIDENCE_DIR_REL,
+  findImportLiteEvidence,
+} from "../preflight/importLiteEvidence.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-
-/**
- * `import-lite-<YYYYMMDDTHHmmss>[-<n>].md`, and nothing looser.
- *
- * The run stamp is the whole point of the name: the shipped procedure derives
- * it from the wall clock and appends `-<n>` only to break a same-second
- * collision. A `.*` tail also accepted `import-lite-.md` and the literal
- * `import-lite-<ts>.md` — an unreplaced placeholder — either of which silences
- * `QFAI-IMPLITE-001` while recording no run at all.
- */
-const IMPORT_LITE_EVIDENCE_RE = /^import-lite-\d{8}T\d{6}(?:-\d+)?\.md$/i;
-
-/**
- * True when the project carries an import-lite evidence file — the input
- * source a spec set built with no discussion pack is allowed to have.
- *
- * Shared with `validateDiscussionPackReadiness`, which must not report a
- * missing pack on that route: the shipped `qfai init` CI runs
- * `--profile full --fail-on error`, so a `QFAI-DPACK-001` there fails the
- * build of every imported spec set the documented route produces.
- */
-export async function hasImportLiteEvidence(root: string, config: QfaiConfig): Promise<boolean> {
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  return existsImportLiteEvidence(path.join(path.dirname(discussionRoot), "evidence"));
-}
 
 export async function validateImportLiteEvidencePresence(
   root: string,
@@ -44,17 +24,11 @@ export async function validateImportLiteEvidencePresence(
   }
 
   const discussionRoot = resolvePath(root, config, "discussionDir");
-  const discussionFiles = await collectFiles(discussionRoot, {
-    extensions: [".md"],
-  });
-  const hasDiscussionIndex = discussionFiles.some(
-    (filePath) => path.basename(filePath).toLowerCase() === "06_req.md",
-  );
-  if (hasDiscussionIndex) {
+  if (await hasDiscussionPackReq(discussionRoot)) {
     return [];
   }
 
-  if (await hasImportLiteEvidence(root, config)) {
+  if ((await findImportLiteEvidence(root)) !== null) {
     return [];
   }
 
@@ -69,20 +43,51 @@ export async function validateImportLiteEvidencePresence(
       "change",
       [
         "次のいずれかを実施してください:",
-        "- `.qfai/discussion/discussion-*/06_REQ.md` を用意する",
-        "- `.qfai/evidence/import-lite-<YYYYMMDDTHHmmss>.md` を生成する",
+        // The discussion root is configurable (`paths.discussionDir`), and the
+        // check above inspects the configured one. Naming the default here sent
+        // a relocated project to a path the validator never looks at, so
+        // following the remedy left the warning standing. Evidence, by
+        // contrast, is canonical by design — see IMPORT_LITE_EVIDENCE_DIR_REL.
+        `- \`${toRelativePath(root, discussionRoot)}/discussion-*/06_REQ.md\` を用意する`,
+        // `<ts>` alone sent an operator to `import-lite-draft.md`, which the
+        // name check rejects: the hyphenated form has to carry the canonical
+        // 17-digit stamp (`import-lite.md` without one is still accepted).
+        `- \`${IMPORT_LITE_EVIDENCE_DIR_REL}/import-lite-<17桁timestamp>.md\` を生成する（\`generated_at\` は ISO8601 の実在日時。\`entrypoint: import-lite\` を埋め、\`Sources\` か user excerpt に実在の入力源を最低 1 件記録する。テンプレートのプレースホルダのままのファイルは入力源として扱われません）`,
       ].join("\n"),
     ),
   ];
 }
 
-async function existsImportLiteEvidence(evidenceRoot: string): Promise<boolean> {
+/**
+ * The input source must be a `06_REQ.md` sitting directly inside a discussion
+ * pack directory. Matching on the basename anywhere under `discussionDir`
+ * accepted a parked copy (`archive/06_REQ.md`) or a loose file at the
+ * discussion root, both of which cleared the warning without the project
+ * having the input source the catalogue asks for.
+ *
+ * Every directory `findPacks` recognises counts, canonical or not. This rule
+ * asks whether the specs can be traced back to something, and a REQ index
+ * inside a legacy (`discussion-NNNN`) or misnamed pack is such a thing — it is
+ * an input source that has to be REPAIRED, which is what `QFAI-DPACK-005` /
+ * `QFAI-DPACK-006` are for. Firing this warning as well would report "no input
+ * source" about a project that has one, and its remedies (author a REQ,
+ * write evidence) are not the rename those rules actually want.
+ */
+async function hasDiscussionPackReq(discussionRoot: string): Promise<boolean> {
+  const packs = await findPacks(discussionRoot, "discussion");
+  for (const pack of packs) {
+    if (await isFile(path.join(pack.path, "06_REQ.md"))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function isFile(filePath: string): Promise<boolean> {
   try {
-    const entries = await readdir(evidenceRoot, { withFileTypes: true });
-    return entries.some(
-      (entry) => entry.isFile() && IMPORT_LITE_EVIDENCE_RE.test(entry.name.trim()),
-    );
+    return (await stat(filePath)).isFile();
   } catch {
+    // ENOENT / EACCES: an unreadable candidate is not an input source.
     return false;
   }
 }

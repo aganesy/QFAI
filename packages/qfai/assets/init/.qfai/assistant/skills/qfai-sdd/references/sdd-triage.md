@@ -97,10 +97,10 @@ and that none were added or dropped — in the `Rationale` column of the
 1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
    **Import-lite exception** — when Stage 0 took the missing-pack route
    (specs present, no discussion pack at all), input 1 is instead the
-   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md` — that
-   path at the default config; on a project that moved
-   `paths.discussionDir`, read the `evidence/` sibling of the _resolved_
-   directory instead, or the evidence Stage 0 just wrote is not found. Its
+   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md`. That
+   path is canonical and does not follow `paths.discussionDir`: a project
+   that moved its discussion packs still reads and writes the evidence
+   under `.qfai/evidence/`, which is where the check looks. Its
    `## Sources` and `## User provided excerpt` are the canonical REQ/NFR
    intake for this run, and its `## Assumptions / Missing information`
    items become Open Questions on whichever spec each row lands on.
@@ -180,6 +180,13 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 
+The heading must be exactly `## Triage` (H2). Every such section in the
+file is validated, so a re-run may append another `## Triage` section
+instead of extending the first table. A decorated heading
+(`## Triage — 2026-07-26`) or a demoted one (`### Triage`) is read by no
+Triage validator; put the date or the note in the section body, not in
+the heading.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no
@@ -202,6 +209,9 @@ ops), `Rationale` (recommended for every row).
   in `_policies/03_Capabilities.md`. This is the structural gate that
   enforces the append-first principle: CREATE is only permitted when a
   new capability is being added to the catalog.
+- `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
+  `Triage` but is not a canonical `## Triage` section — its rows are read by
+  none of the checks above. Rename the heading to `## Triage`.
 
 ## Status field interaction
 

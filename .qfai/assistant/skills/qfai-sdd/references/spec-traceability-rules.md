@@ -129,7 +129,7 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
 - **Import-lite pair.** A spec set imported with no discussion pack at all (the Stage 0
   missing-pack exception in `SKILL.md`) has no pack half to write, so items it produces carry
   the evidence pair instead: `import-lite-<ts>#<REQ-ID>`, e.g.
-  `import-lite-20260415101112#REQ-0007`. The left half is the basename of the
+  `import-lite-20260415101112123#REQ-0007` (the same 17-digit stamp form as a pack). The left half is the basename of the
   `.qfai/evidence/import-lite-<ts>.md` file Stage 0 wrote, minus the `.md`; the right half is
   the requirement ID as the imported material names it, or — when that material carries no IDs
   — the source anchor the evidence's `## Sources` cites, verbatim. Both halves stay required
@@ -236,7 +236,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - The `Evidence` **cell** is checked too, not only the header: on a row at
   `green` / `refactor` / `review-fix` / `done`, an empty-or-dash cell is
   `TDDLIST_EVIDENCE_EMPTY` and a verdict with no command is
-  `TDDLIST_EVIDENCE_STATUS_ONLY`, both at `error`.
+  `TDDLIST_EVIDENCE_STATUS_ONLY`. Both are reported at `warning`:
+  `TDDLIST_EVIDENCE_STATUS_ONLY` permanently (waivable as `TDDLIST-004`), and
+  `TDDLIST_EVIDENCE_EMPTY` until the promotion release its finding names.
 
 ## Traceability Ledger (`16_Traceability-ledger.md`)
 
