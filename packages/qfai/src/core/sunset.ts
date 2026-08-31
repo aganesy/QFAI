@@ -26,7 +26,7 @@ export const SUNSETS = {
   playwrightCli: "1.10.0",
   /** UI contracts authored before the `primary_tasks` slot (`QFAI-AUD-001`). */
   legacyPrimaryTasksSlot: "1.10.0",
-  /** Pre-recut `.qfai/assistant/{steering,instructions}/` (the CHG-003 layer recut). */
+  /** Pre-recut `.qfai/assistant/{steering,instructions}/` (the four-layer recut). */
   legacyAssistantSteering: "1.10.0",
   /** Specs with a UI contract companion but no `surface_type` (`D-SURFACE-TYPE-MISSING`). */
   surfaceTypeMissing: "1.10.0",
@@ -35,6 +35,99 @@ export const SUNSETS = {
    * `runId` (`D-DEPRECATED-SCHEMA`).
    */
   legacyPrototypingJsonShape: "1.10.0",
+} as const;
+
+/**
+ * The mirror image of {@link SUNSETS}: new finding codes and the release at
+ * which each stops being a `warning` and becomes an `error`.
+ *
+ * A sunset gives an *old* shape a window before it fails. A promotion gives an
+ * *existing repository* the same window against a *new* rule. Both are the same
+ * comparison; only the direction of the migration differs.
+ *
+ * Why the window: a correct new rule still lands on data written before the
+ * rule existed. `TDDLIST_EVIDENCE_EMPTY` shipped straight at `error` and took a
+ * consuming repository from 3 errors to 27 in a single `qfai init` — 20 of them
+ * on rows already at `done`, a state with no transition left that could
+ * re-observe anything. The rule was right; shipping it without a window was
+ * what latched that gate.
+ *
+ * Each entry records both halves of its window: `introducedIn`, the release the
+ * code first shipped in, and `promoteAt`, the release it becomes an `error`
+ * at. The first is not recoverable from the second once the tool has moved
+ * past the pin, and the contract below is about the *distance* between them —
+ * so `tests/core/sunsetLedger.test.ts` needs it written down to check that a
+ * window is a window at all.
+ *
+ * The policy a new code follows:
+ *
+ * 1. ship it here at `warning`, pinned to a promotion release at least one
+ *    minor ahead of the release that introduces the code;
+ * 2. emit the finding through {@link newRuleSeverity} so the severity follows
+ *    the pin instead of a literal beside the `issue(...)` call;
+ * 3. say in the finding itself that it is inside a window and which release
+ *    ends it, so `--fail-on error` keeps working while the operator sees the
+ *    debt they are about to owe;
+ * 4. where the code can fire on rows that are already terminal, document how a
+ *    terminal row is meant to satisfy it — otherwise the only remedy is an
+ *    out-of-lifecycle edit.
+ */
+export const RULE_PROMOTIONS = {
+  /**
+   * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
+   * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
+   * full minor beyond it.
+   */
+  tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-AGENT-014` — the agent catalog's embedded copy of an agent body is
+   * absent, or disagrees with the markdown file it is derived from. Every
+   * repository that customised an agent before the comparison existed carries
+   * the divergence already.
+   */
+  agentDeveloperInstructionsDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
+   * Contract sets written before the declaration was required state none, so
+   * the rule lands on every one of them at once.
+   */
+  contractDependencyUndeclared: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-032` — a contract index table with no `Depends On` column.
+   * The column is in the shipped template, so a table predating it is missing
+   * a column its author never had.
+   */
+  contractIndexDependsOnColumnMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-033` — an index row whose `Depends On` cell is blank, or
+   * disagrees with the apply order the contract file declares. Nothing read
+   * the column before, so the mirror it asks for was never maintained.
+   */
+  contractIndexDependsOnMirror: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-034` — a contract that appears in no contract index. The
+   * rule fires once per unlisted contract, so a repository that indexed only
+   * part of its set meets the whole backlog in one run.
+   */
+  contractIndexCoverageMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-035` — an index row whose `File` cell points at a file that
+   * does not declare the row's id. A wrong pointer is silent until something
+   * reads it, so the finding arrives on rows nobody knew were wrong.
+   */
+  contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-RESEARCH-012` — a discussion pack with no Research Summary section.
+   * A pack is written once and rarely revisited, so the rule necessarily lands
+   * on packs that were complete under the schema of their day.
+   */
+  researchSummarySectionMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TRIAGE-008` — a Triage heading that is not the canonical `## Triage`,
+   * so no triage validator reads the rows under it. Existing delta files carry
+   * whatever heading they were written with.
+   */
+  triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {
@@ -118,4 +211,26 @@ export function deprecationSeverity(
   sunsetVersion: string,
 ): "warning" | "error" {
   return isAtOrPastSunset(currentVersion, sunsetVersion) ? "error" : "warning";
+}
+
+/**
+ * The severity a *new* finding code carries at `currentVersion`: `warning`
+ * until its {@link RULE_PROMOTIONS} release, `error` from it onwards.
+ *
+ * Same comparison as {@link deprecationSeverity} — `isAtOrPastSunset` compares
+ * two versions and knows nothing about which of them deprecates what — but the
+ * two are not interchangeable at a call site: one reads a sunset, the other a
+ * promotion, and a reader must be able to tell which migration a finding is in
+ * without opening the registry.
+ *
+ * Conservative default is inherited: an unparseable current version (e.g. the
+ * `"unknown"` `resolveToolVersion` falls back to) is treated as inside the
+ * window, so a version that cannot be read never escalates a warning into a
+ * build failure.
+ */
+export function newRuleSeverity(
+  currentVersion: string,
+  promotionVersion: string,
+): "warning" | "error" {
+  return isAtOrPastSunset(currentVersion, promotionVersion) ? "error" : "warning";
 }
