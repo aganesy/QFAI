@@ -84,6 +84,18 @@ jobs:
             *.*) reject "'$claimed' must carry exactly three numeric components" ;;
           esac
 
+          # The same leading-zero refusal prepare-release applies to the dispatcher's input.
+          # It is repeated rather than assumed: this step reads what the TREE declares, and a
+          # manifest can be edited by hand without going through that workflow at all.
+          major="${claimed%%.*}"
+          minor="${after_major%%.*}"
+          for part in "$major" "$minor" "$after_minor"; do
+            case "$part" in
+              0) ;;
+              0*) reject "'$claimed' has a leading zero in '$part': node-semver rejects it, so this is not a version npm can publish" ;;
+            esac
+          done
+
           # The CHANGELOG has to name it too. A manifest bumped on its own is a version nobody has
           # described yet — an ordinary state part-way through preparing a release, and not a
           # reason to fail. It is a reason to do nothing.

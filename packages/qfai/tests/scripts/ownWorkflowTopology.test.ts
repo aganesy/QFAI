@@ -2680,6 +2680,38 @@ describe("release automation performs decisions rather than making them", () => 
     ).toContain("CHANGELOG.md");
   });
 
+  it("refuses a version component with a leading zero, at both ends", () => {
+    // `01.11.0`, `1.011.0` and `1.11.00` satisfy every structural check these workflows made
+    // — digits and dots, three non-empty components — and `sort -V` orders them happily. They
+    // are not SemVer: `node-semver` rejects them, so npm refuses the publish. Without this the
+    // refusal arrived last, after the release pull request had merged and the tag was pushed,
+    // leaving an invalid version in `main` and a tag naming it.
+    //
+    // Both ends, because they read different things: prepare-release reads what a human typed
+    // into the dispatch form, tag-release reads what the tree declares — and a manifest can be
+    // edited by hand without either workflow being involved.
+    for (const name of ["prepare-release.yml", "tag-release.yml"]) {
+      const document = workflow(name);
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const commands = Object.values(jobs)
+        .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+        .join("\n")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line !== "" && !line.startsWith("#"))
+        .join("\n");
+      // The case ARM, which is the refusal itself. The paragraph beside it names every one of
+      // `01.11.0`, `node-semver` and `leading zero`, so matching any of those would match the
+      // explanation and survive the check being deleted.
+      expect(
+        commands,
+        `${name} must refuse a component with a leading zero: npm would refuse the publish, ` +
+          `and by then the release pull request has merged and the tag exists`,
+      ).toMatch(/0\*\)/);
+    }
+  });
+
   it("treats an existing tag as a re-run only when it names this commit", () => {
     // Idempotent means "already did exactly this", not "the name is taken". The first version
     // asked only whether the ref resolved, so a `vX.Y.Z` created against a different commit

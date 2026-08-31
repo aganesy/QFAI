@@ -78,6 +78,19 @@ jobs:
             *.*) reject "must carry exactly three numeric components" ;;
           esac
 
+          # No leading zeros. `01.11.0`, `1.011.0` and `1.11.00` pass every check above and
+          # `sort -V` too, and they are not SemVer: `node-semver` rejects them, so npm would
+          # refuse the publish — after the release pull request had already merged and the tag
+          # had already been pushed, leaving an invalid version in `main`.
+          major="${RELEASE_VERSION%%.*}"
+          minor="${after_major%%.*}"
+          for part in "$major" "$minor" "$after_minor"; do
+            case "$part" in
+              0) ;;
+              0*) reject "has a leading zero in '$part': node-semver rejects it, and npm would refuse the publish after the release pull request had already merged" ;;
+            esac
+          done
+
           current="$(node -p "require('./packages/qfai/package.json').version")"
           if [ "$current" = "$RELEASE_VERSION" ]; then
             reject "is already the version in packages/qfai/package.json"
