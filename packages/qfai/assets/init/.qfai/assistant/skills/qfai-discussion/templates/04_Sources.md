@@ -12,6 +12,40 @@
 - `secondary`: Derived information (summaries, analyses).
 - `external`: Third-party references (specs, RFCs, vendor docs).
 
+## Research Summary
+
+Research-First Protocol output. Schema: `constitution/research-first-protocol.md`.
+Replace every `[...]` placeholder with real research: validation rejects
+bracketed `title` / `url` / `reason` values and requires `published` to be a
+real `YYYY-MM-DD` date, so an unfilled block below reports errors rather than
+passing.
+
+```yaml
+research_summary:
+  sources:
+    - id: SRC-0001
+      title: [Source title]
+      url: [https://example.com/reference]
+      published: [YYYY-MM-DD]
+  best_practices:
+    - id: BP-0001
+      category: [Category]
+      title: [Best practice title]
+      description: [What to do and why]
+      source_id: SRC-0001
+  anti_patterns:
+    - id: AP-0001
+      category: [Category]
+      title: [Anti-pattern title]
+      description: [What to avoid and why]
+      source_id: SRC-0001
+  reflection:
+    - source_id: SRC-0001
+      finding: [What the source implies for this project]
+      action: apply
+      reason: [Why this action was chosen]
+```
+
 ## Trend Scan
 
 ### user expectation / market norm
@@ -62,7 +96,7 @@
 - reference: [Source name or URL]
 - observation: [What color trend or signal was observed]
 - decision_connection: [How the color signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this color signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the color signal should be evaluated in design review]
 - local_implication: [What color choices should change locally]
 
 ### typography
@@ -73,7 +107,7 @@
 - reference: [Source name or URL]
 - observation: [What typographic trend or signal was observed]
 - decision_connection: [How the typography signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this typography signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the typography signal should be evaluated in design review]
 - local_implication: [What typeface or scale choices should change locally]
 
 ### Visual
@@ -84,7 +118,7 @@
 - reference: [Source name or URL]
 - observation: [What visual motif trend or signal was observed]
 - decision_connection: [How the visual motif translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this visual motif; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the visual motif should be evaluated in design review]
 - local_implication: [What visual motif choices should change locally]
 
 ### spacing
@@ -95,7 +129,7 @@
 - reference: [Source name or URL]
 - observation: [What spacing convention or density trend was observed]
 - decision_connection: [How the spacing signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this spacing signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the spacing signal should be evaluated in design review]
 - local_implication: [What spacing or density choices should change locally]
 
 ### shape
@@ -106,7 +140,7 @@
 - reference: [Source name or URL]
 - observation: [What shape language trend was observed (border-radius, geometric vs organic, etc.)]
 - decision_connection: [How the shape language translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this shape signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the shape signal should be evaluated in design review]
 - local_implication: [What shape-language choices should change locally]
 
 ### imagery
@@ -117,7 +151,7 @@
 - reference: [Source name or URL]
 - observation: [What imagery or illustration style trend was observed]
 - decision_connection: [How the imagery signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this imagery signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the imagery signal should be evaluated in design review]
 - local_implication: [What imagery or illustration choices should change locally]
 
 ### design_guideline_research

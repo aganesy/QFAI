@@ -12,10 +12,10 @@ const TESTS_ROOT = path.resolve(__dirname, "..");
 
 describe("fixture coverage", () => {
   it("pass/fail/non-UI per validator", async () => {
-    // Check that taste.test.ts has pass, fail, and non-UI scenarios
+    // Check that threeLayer.test.ts has pass, fail, and non-UI scenarios
     const result = await checkFixtureCoverage(
-      path.join(TESTS_ROOT, "uix", "taste.test.ts"),
-      "taste",
+      path.join(TESTS_ROOT, "uix", "threeLayer.test.ts"),
+      "threeLayer",
     );
 
     expect(result.hasPass).toBe(true);
@@ -25,15 +25,19 @@ describe("fixture coverage", () => {
   });
 
   it("fixture files per validator", async () => {
+    // The canonical UIX validators — the set `runCanonicalUixValidators` runs.
+    // The retired pre-`DESIGN.md` sidecar validators (taste / strategy) were
+    // deleted with their tests, so naming them here only asserted that fixtures
+    // exist for validators that no longer do. `trendScan` stays: its SSOT is
+    // `04_Sources.md#Trend Scan`, not a retired sidecar.
     const validators = [
-      { name: "taste", file: path.join(TESTS_ROOT, "uix", "taste.test.ts") },
-      { name: "trend", file: path.join(TESTS_ROOT, "uix", "trend.test.ts") },
+      { name: "classification", file: path.join(TESTS_ROOT, "uix", "classification.test.ts") },
       { name: "threeLayer", file: path.join(TESTS_ROOT, "uix", "threeLayer.test.ts") },
+      { name: "trendScan", file: path.join(TESTS_ROOT, "uix", "trendScan.test.ts") },
       {
         name: "comparisonValidator",
         file: path.join(TESTS_ROOT, "uix", "comparisonValidator.test.ts"),
       },
-      { name: "strategy", file: path.join(TESTS_ROOT, "uix", "strategy.test.ts") },
       { name: "screenContract", file: path.join(TESTS_ROOT, "uix", "screenContract.test.ts") },
     ];
 
