@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
+import { collectIssueCodeUsage } from "../helpers/issueCodes.js";
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
 /**
@@ -528,8 +529,21 @@ describe("sunset ledger", () => {
     // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.
     const promotions = await readRulePromotionEntries();
     const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
+    // Scoped to codes that can reach `error`, which is what P7 is about: the
+    // window softens a NEW ERROR into a warning until the promote release. A
+    // code that already ships at `warning` or `info` has nothing to soften, so
+    // demanding an entry for it buys a registration that governs nothing — the
+    // "relaxation dressed up as a policy" this repository refuses elsewhere.
+    // Severity comes from `tests/helpers/issueCodes.ts`, the same collector
+    // `issueCodeUniqueness` uses, rather than a second extractor beside it.
+    //
+    // Fail-closed on disagreement: a code this file extracts that the usage map
+    // does not know stays in the list. Silence from the second reader must not
+    // be what exempts a code from the first.
+    const usage = await collectIssueCodeUsage(SRC);
     const unregistered = [...codes]
       .filter((code) => !baseline.has(code) && !promotions.includes(code))
+      .filter((code) => usage.get(code)?.errorCapable !== false)
       .sort();
 
     expect(
