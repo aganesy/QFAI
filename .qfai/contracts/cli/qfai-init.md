@@ -38,7 +38,7 @@ Required outputs (created if absent; merged or refreshed if present per the exis
 
 Reinit behavior (existing `.qfai/` present):
 
-- `README.md` and `_templates/entry.md` are refreshed to the latest seeded version with a notice listing diffs.
+- The `.qfai/steering/` seed is create-only: an existing `README.md` / `_templates/entry.md` is never rewritten, not even under `--force` (that surface holds project content). When either file differs from the body the running release would seed, init prints a notice naming the file, the first differing line and both line counts, and tells the operator how to obtain a fresh copy (`qfai init --dir <scratch-dir>`, then diff). The comparison is line-ending-insensitive, so a CRLF checkout of an unedited seed is not reported as drift. When the existing path cannot be compared at all (not a regular file, or unreadable, or past the comparison size ceiling), init prints a notice saying so instead of failing the run. An unchanged file produces no notice, so a silent `skipped` entry means "already current".
 - User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
@@ -59,7 +59,7 @@ Behavior:
 
 - For each file in the relocation table, move the existing user-edited content to the new path.
 - If a destination already exists with user edits, preserve the user-edited content and surface `W-USER-EDIT-PRESERVED` (REQ-0013).
-- After the move, run `qfai init` default flow to refresh seeded README / template.
+- After the move, run the `qfai init` default flow, which seeds a missing README / template and reports drift on an existing one (create-only, as above).
 - Old paths are not deleted within the deprecation window (NFR-0002); they remain readable but emit `D-DEPRECATED-PATH` warnings during validate.
 
 Required preconditions:

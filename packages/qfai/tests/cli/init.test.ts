@@ -1928,6 +1928,102 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init reports a stale steering seed
+  it("TC-0003-0022 (TDD-0022): re-init reports .qfai/steering/ seed drift instead of skipping silently", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022c-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // An untouched tree is already current: the seed files appear in the
+      // skipped list and must not draw a drift notice.
+      const cleanRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(cleanRun).not.toContain("differs from the seed this qfai release generates");
+
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      await writeFile(readmePath, "# my custom worklog notes\n", "utf-8");
+      await writeFile(templatePath, "---\nid: stale\n---\n", "utf-8");
+
+      const staleRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(staleRun).toContain(
+        ".qfai/steering/README.md differs from the seed this qfai release generates",
+      );
+      expect(staleRun).toContain(
+        ".qfai/steering/_templates/entry.md differs from the seed this qfai release generates",
+      );
+      expect(staleRun).toMatch(
+        /first differing line \d+; on disk \d+ lines, latest seed \d+ lines/,
+      );
+      expect(staleRun).toContain("create-only");
+      // The notice never implies a rewrite happened.
+      expect(await readFile(readmePath, "utf-8")).toBe("# my custom worklog notes\n");
+      expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): CRLF is not drift
+  it("TC-0003-0022 (TDD-0022): re-init does not report drift for a CRLF copy of an unedited seed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022d-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      // What core.autocrlf=true (or a Windows editor) leaves behind: the same
+      // body, every LF rewritten as CRLF.
+      for (const target of [readmePath, templatePath]) {
+        const body = await readFile(target, "utf-8");
+        await writeFile(target, body.replace(/\n/g, "\r\n"), "utf-8");
+      }
+
+      const crlfRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(crlfRun).not.toContain("differs from the seed this qfai release generates");
+      expect(crlfRun).not.toContain("could not be compared");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): an uncomparable seed path is reported
+  it("TC-0003-0022 (TDD-0022): re-init reports a steering seed path it cannot compare", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022e-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      // A directory where the seed file belongs: occupied, so create-only skips
+      // it, but there is no body to compare — that must not read as "current".
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      // `removeTempTree` rather than a bare `rm`: this file routes every removal
+      // through the helper, and its `force` / retry contract is what is wanted
+      // here too — the seed is a regular file, so the recursive flag is inert.
+      await removeTempTree(readmePath);
+      await mkdir(readmePath, { recursive: true });
+
+      const blockedRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(blockedRun).toContain(
+        ".qfai/steering/README.md could not be compared against the seed this qfai release generates",
+      );
+      expect(blockedRun).toContain("whether it is current is unknown");
+      // The unaffected sibling stays silent, and the run still succeeds.
+      expect(blockedRun).not.toContain(".qfai/steering/_templates/entry.md could not be compared");
+      const dirStat = await lstat(readmePath);
+      expect(dirStat.isDirectory()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));

@@ -26,7 +26,7 @@ import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
-import { isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
@@ -433,6 +433,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(note);
   }
 
+  for (const note of projectSteeringResult.staleNotes) {
+    info(note);
+  }
+
   // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
   // the report summary so the warning stays at the bottom of the
   // terminal output and is not buried by the skipped-paths list (PR
@@ -493,7 +497,10 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
 
 function buildProjectSteeringReadmeBody(): string {
   // Kind enum is sourced from the SSOT in assistantPaths.ts so a contract
-  // change automatically updates the README without manual sync.
+  // change automatically updates the README without manual sync. The
+  // derivation binds the body written at seed time only: an existing README is
+  // never rewritten, so a later enum change surfaces as the drift notice
+  // seedProjectSteering emits, not as an in-place refresh.
   const kindLines = WORKLOG_ENTRY_KINDS.map((k) => `- \`${k}\``);
   return [
     "# .qfai/steering/ — AI work-log surface",
@@ -535,8 +542,10 @@ function buildProjectSteeringReadmeBody(): string {
 }
 
 function buildProjectSteeringEntryTemplate(): string {
-  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT)
-  // so the template cannot drift from the validator.
+  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT) so the
+  // template cannot drift from the validator at seed time. An already-seeded
+  // template is create-only; later heading changes are reported by the drift
+  // notice in seedProjectSteering rather than written over the user's copy.
   const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
     heading,
     "",
@@ -570,23 +579,161 @@ function buildProjectSteeringEntryTemplate(): string {
   ].join("\n");
 }
 
+/**
+ * Locates the first line at which an on-disk seed file stopped matching the
+ * body this release generates, plus both line counts. A full unified diff is
+ * deliberately not produced: the notice is printed next to a skipped-paths
+ * list that routinely runs to several hundred entries, and the operator's
+ * question is only "is my copy current?".
+ */
+function summarizeSeedDrift(onDisk: string, generated: string): string {
+  const current = normalizeNewlines(onDisk).split("\n");
+  const latest = normalizeNewlines(generated).split("\n");
+  const span = Math.max(current.length, latest.length);
+  let firstDiffLine = span;
+  for (let i = 0; i < span; i += 1) {
+    if (current[i] !== latest[i]) {
+      firstDiffLine = i + 1;
+      break;
+    }
+  }
+  return `first differing line ${firstDiffLine}; on disk ${current.length} lines, latest seed ${latest.length} lines`;
+}
+
+/**
+ * A seed file large enough to be a hand-grown work-log README and still
+ * bounded. Past it the comparison is declined rather than paid for: the answer
+ * the notice carries is one line long, and no size of file changes it.
+ */
+const SEED_DRIFT_MAX_BYTES = 256 * 1024;
+
+/**
+ * CRLF-insensitive comparison text.
+ *
+ * `core.autocrlf=true`, or any editor that saves the seed with CRLF, leaves a
+ * byte-for-byte unedited file unequal to the LF body this release generates —
+ * and the drift notice then fired on every reinit, naming line 1, for a file
+ * nobody had touched. `diffProjectSkillsAgainstInitAssets` in
+ * `core/skillsIntegrity.ts` normalises for the same reason.
+ */
+function normalizeNewlines(text: string): string {
+  return text.replace(/\r\n/g, "\n");
+}
+
+/**
+ * Either the body to compare, or why no comparison was possible.
+ *
+ * "Could not read it" and "it matches" are different answers, and collapsing
+ * them made a silent `skipped` mean either "already current" or "never
+ * checked" — the exact ambiguity the drift notice exists to remove.
+ */
+type SeedComparison =
+  | { readonly kind: "body"; readonly body: string }
+  | { readonly kind: "uncomparable"; readonly reason: string };
+
+/**
+ * Reads an existing seed file for the drift comparison: one `open`, `fstat` on
+ * that handle, a bounded read from it.
+ *
+ * The path is whatever the project already had there, because the seed is
+ * create-only — so it is not necessarily a regular file. A FIFO stalls a plain
+ * `readFile` until some writer appears, which hung `qfai init` outright, and a
+ * multi-gigabyte file at that name loaded whole into memory. `O_NONBLOCK`
+ * answers the first (`ENXIO` for a FIFO with no writer) and the `fstat`-then-
+ * bounded-read answers the second. Nothing here fails the run: an unreadable
+ * path is reported as uncomparable and init carries on.
+ */
+async function readSeedBodyForDrift(fullPath: string): Promise<SeedComparison> {
+  const tooLarge: SeedComparison = {
+    kind: "uncomparable",
+    reason: `larger than the ${SEED_DRIFT_MAX_BYTES}-byte comparison ceiling`,
+  };
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(fullPath, OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    if (!pinned.isFile()) {
+      return { kind: "uncomparable", reason: "not a regular file" };
+    }
+    if (pinned.size > SEED_DRIFT_MAX_BYTES) {
+      return tooLarge;
+    }
+    // Read to the end, and one byte past the ceiling: `read` may return fewer
+    // bytes than asked for, and a writer holding this inode can append after
+    // the `fstat`, so stopping at the size just measured would compare a
+    // prefix and report drift the file does not have.
+    const buffer = Buffer.alloc(SEED_DRIFT_MAX_BYTES + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    if (filled > SEED_DRIFT_MAX_BYTES) {
+      return tooLarge;
+    }
+    return { kind: "body", body: buffer.subarray(0, filled).toString("utf-8") };
+  } catch (err: unknown) {
+    const code = hasErrnoCode(err) ? err.code : undefined;
+    if (code === "ENXIO" || code === "EISDIR" || code === "ENOTDIR" || code === "ELOOP") {
+      return { kind: "uncomparable", reason: `not a regular file (${code})` };
+    }
+    if (code !== undefined) {
+      return { kind: "uncomparable", reason: `could not be read (${code})` };
+    }
+    return { kind: "uncomparable", reason: `could not be read (${describeError(err)})` };
+  } finally {
+    try {
+      await handle?.close();
+    } catch {
+      // Closing a handle whose entry vanished under us is not a drift signal
+      // and must not fail the run either; the comparison already has its answer.
+    }
+  }
+}
+
 async function seedProjectSteering(
   destRoot: string,
   dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; staleNotes: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
+  const staleNotes: string[] = [];
 
-  const targets: Array<{ rel: string[]; body: string }> = [
-    { rel: ["README.md"], body: buildProjectSteeringReadmeBody() },
-    { rel: [".gitkeep"], body: "" },
-    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate() },
+  // `derived` marks the bodies built from the SSOT constants. Those are the
+  // ones that go stale when a release extends WORKLOG_ENTRY_KINDS or
+  // HANDOFF_REQUIRED_SECTIONS; `.gitkeep` carries no content to compare.
+  const targets: Array<{ rel: string[]; body: string; derived: boolean }> = [
+    { rel: ["README.md"], body: buildProjectSteeringReadmeBody(), derived: true },
+    { rel: [".gitkeep"], body: "", derived: false },
+    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate(), derived: true },
   ];
 
   for (const target of targets) {
     const fullPath = joinProjectSteering(destRoot, ...target.rel);
     if (await pathExists(fullPath)) {
       skipped.push(fullPath);
+      // The steering seed is create-only and stays that way — see the note on
+      // STANDARD_ASSET_PATHS: this surface holds project content, so not even
+      // --force rewrites it. What the skipped-paths list cannot express is the
+      // difference between "skipped because it is already current" and
+      // "skipped because it no longer matches this release's seed", so the
+      // second case is reported explicitly instead of refreshing silently.
+      if (target.derived) {
+        const rel = path.relative(destRoot, fullPath).replace(/\\/g, "/");
+        const existing = await readSeedBodyForDrift(fullPath);
+        if (existing.kind === "uncomparable") {
+          // Silence has to keep meaning "already current", so a path that could
+          // not be compared says so rather than passing as an ordinary skip.
+          staleNotes.push(
+            `  NOTE: ${rel} could not be compared against the seed this qfai release generates (${existing.reason}); whether it is current is unknown.`,
+          );
+        } else if (normalizeNewlines(existing.body) !== normalizeNewlines(target.body)) {
+          staleNotes.push(
+            `  NOTE: ${rel} differs from the seed this qfai release generates (${summarizeSeedDrift(existing.body, target.body)}).`,
+          );
+        }
+      }
       continue;
     }
     copied.push(fullPath);
@@ -596,7 +743,14 @@ async function seedProjectSteering(
     }
   }
 
-  return { copied, skipped };
+  if (staleNotes.length > 0) {
+    staleNotes.push(
+      "  The .qfai/steering/ seed is create-only, so the file(s) above were left unchanged.",
+      "  To compare against the current bodies: qfai init --dir <scratch-dir>, then diff <scratch-dir>/.qfai/steering/ against your own.",
+    );
+  }
+
+  return { copied, skipped, staleNotes };
 }
 
 // ---------------------------------------------------------------------------
