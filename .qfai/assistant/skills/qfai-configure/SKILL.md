@@ -476,4 +476,5 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - qfai-configure is the user-facing entrypoint for editing `qfai.config.yaml` and the `.qfai/assistant/manifest/` declarative manifests; edits to those files MUST go through this skill so the agent-catalog / agent-routing / review-profiles SSOTs stay consistent.
+- Exception: `agent-catalog.yml#agents[].developer_instructions` is a derived copy of `.qfai/assistant/agents/<id>.md`. Edit the markdown file — the source — then bring the block back into agreement by copying that file from its `## Mission` heading onward, verbatim; never author new content in the block. `QFAI-AGENT-014` warns when the two diverge and when the block is missing.
 - Run after every major workflow change to refresh the consuming project to the current QFAI baseline. Do NOT edit `qfai.config.yaml` directly when the skill is available.
