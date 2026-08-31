@@ -1547,7 +1547,7 @@ async function runUpgradeScopeFull(
     for (const gate of stillMissing) {
       error(`  - ${gate}`);
     }
-    // Recovery message: tailor to the loaded signal's `profile` so the
+    // Recovery message: adapt to the loaded signal's `profile` so the
     // operator is steered toward a profile that can actually empty the
     // skip-set. The saas-package profile is INADMISSIBLE because
     // `runSaasPackageProfile` unconditionally emits one skip-finding
