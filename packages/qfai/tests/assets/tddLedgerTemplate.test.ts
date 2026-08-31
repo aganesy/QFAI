@@ -6,7 +6,11 @@ import { describe, expect, it } from "vitest";
 
 import { resolveAtddHomeKind } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { isCoverageTargetLevel, NON_COVERAGE_LAYERS } from "../../src/core/tddHelpers.js";
+import {
+  classifyCoverageLevel,
+  isCoverageTargetLevel,
+  NON_COVERAGE_LAYERS,
+} from "../../src/core/tddHelpers.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -70,7 +74,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(
-        "plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,\nor a `Level` the layer vocabulary cannot read — blank, or an unrecognised\nspelling) TC**",
+        "plus **one `Layer = Integration` row per integration-level TC** — every `Level`\nwhose ATDD annotation routes to `tests/integration/**`",
       );
 
       const preconditions = await read(
@@ -81,7 +85,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain(
-        "**and one `Layer = Integration` row per\n   integration-level (`L3`, `integration`, or a `Level` the layer vocabulary\n   cannot read — blank, or a spelling like `smoke`) TC**",
+        "**and one `Layer = Integration` row per\n   integration-level TC** (every `Level` whose ATDD annotation routes to",
       );
 
       const checklists = await read(
@@ -89,7 +93,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain(
-        "- Add one `Layer = Integration` row per integration-level (`L3`, `integration`, or **a `Level` the layer vocabulary cannot read** — blank, or an unrecognised spelling like `smoke`) TC as well",
+        "- Add one `Layer = Integration` row per integration-level TC as well, `Status = todo`. Integration-level means **every `Level` whose ATDD annotation routes to `tests/integration/**`**",
       );
 
       // The consumer of those rows names the same producer, so an agent
@@ -136,14 +140,14 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(preconditions).toContain("**Read each TC's `Level` once and route it to exactly one");
       expect(preconditions).toContain(
-        "`Level` is `L3`, the word `integration`, **is blank, or is a spelling neither\n  vocabulary recognises**",
+        "**every `Level`\n  whose ATDD annotation routes to `tests/integration/**`**",
       );
       expect(preconditions).toContain(
         "**A blank _or unrecognised_ `Level` belongs to the second group**",
       );
 
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain("The two groups are exclusive.");
+      expect(template).toContain("The two groups are exclusive, and membership is decided by");
 
       const testCases = await read(
         tree,
@@ -181,10 +185,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
 
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain("A TC whose `Level` is blank **or unrecognised**");
+      expect(template).toContain("A TC whose\n`Level` is blank **or unrecognised**");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("a Level the layer vocabulary cannot read (blank or unrecognised)");
+      expect(skill).toContain("every Level whose ATDD annotation routes to tests/integration/**");
 
       const checklists = await read(
         tree,
@@ -298,15 +302,102 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain("Reconcile **per boundary, not only per TC**");
-      expect(checklists).toContain("match the existing rows to it by `Selector`");
-      expect(checklists).toContain("retire the row of a boundary the TC no longer declares");
+      expect(checklists).toContain("append a row at `todo` for a boundary the TC has gained");
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("**Within a TC it is keyed on the boundary.**");
-      expect(template).toContain("has its\nrow retired");
+      expect(template).toContain("a boundary the TC\nhas gained is appended at `todo`");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain("**per boundary within a matrix-shaped TC**");
+    });
+
+    it(`${tree}: the boundary reconciliation is not keyed on the mutable Selector`, async () => {
+      // `drift-protocol.md` authorises the executing stage to fill a
+      // placeholder selector and repair an unresolvable one, so a row seeded
+      // with a descriptive selector carries the test's real title once its
+      // cycle runs. Matching the spec's boundaries against that cell reports
+      // every implemented boundary as deleted, and retiring on it discards a
+      // `done` row's `TDD-ID`, `Status` and `Evidence` for behaviour that never
+      // changed.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).not.toContain("match the existing rows to it by `Selector`");
+      expect(checklists).toContain(
+        "**`Selector` is not the key, and a row past `todo` is never retired by a string comparison.**",
+      );
+      // Retirement survives, but only where the row cannot have been rewritten.
+      expect(checklists).toContain("only a row still at `Status = todo` whose seeded selector");
+      // And the ambiguous case goes to the change record rather than to a diff.
+      expect(checklists).toContain("**stop and raise a `CR-*`**");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).not.toContain("match the\nexisting rows to it by `Selector`");
+      expect(template).toContain("**`Selector` is not that key.**");
+      expect(template).toContain(
+        "`TDD-ID` is the\nonly identity on these rows that nothing downstream rewrites",
+      );
+    });
+
+    it(`${tree}: system and acceptance are routed to the Integration group`, async () => {
+      // Both are IN the TDD level vocabulary, so neither is "unrecognised",
+      // and neither is a coverage target — a rule worded on spelling put them
+      // in no group at all. `resolveAtddHomeKind` routes both to
+      // `tests/integration/**`, so `/qfai-atdd` writes their tests while
+      // nothing seeded the handoff row Phase Red step 3b reads.
+      expect(isCoverageTargetLevel("system")).toBe(false);
+      expect(isCoverageTargetLevel("acceptance")).toBe(false);
+      expect(resolveAtddHomeKind("system")).toBe("integration");
+      expect(resolveAtddHomeKind("acceptance")).toBe("integration");
+      // The gap only exists because they are not unrecognised: an
+      // unrecognised-spelling rule would have caught them otherwise.
+      expect(classifyCoverageLevel("system")).toBe("non-coverage");
+      expect(classifyCoverageLevel("acceptance")).toBe("non-coverage");
+
+      for (const [file, needle] of [
+        [
+          "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+          "**and `system` / `acceptance`**",
+        ],
+        [
+          "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+          "**and `system` / `acceptance`**",
+        ],
+        ["assistant/skills/qfai-sdd/SKILL.md", "and `system` / `acceptance`"],
+        [
+          "assistant/skills/qfai-implement/references/execution-ledger.md",
+          "and `system` /\n`acceptance`",
+        ],
+        ["assistant/skills/qfai-atdd/references/red-provenance.md", "and\n`system` / `acceptance`"],
+        [
+          "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md",
+          "and `system` / `acceptance`",
+        ],
+      ] as const) {
+        expect(await read(tree, file), `${file} does not route system / acceptance`).toContain(
+          needle,
+        );
+      }
+    });
+
+    it(`${tree}: a cross-spec entry on an Integration row goes to the ATDD file`, async () => {
+      // The same split gate item 10 resolves the row's anchor against. Named
+      // as `E2E` / `API` only, one row's record lands in two files: the open
+      // obligation is written where the gate does not read it, so it stops
+      // being a completion prohibition.
+      const ownership = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/cross-spec-ownership.md",
+      );
+      expect(ownership).not.toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row)",
+      );
+      expect(ownership).toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+      );
+      expect(ownership).toContain("**all three**");
     });
 
     it(`${tree}: the checkpoint writer sends an Integration row to the ATDD file`, async () => {

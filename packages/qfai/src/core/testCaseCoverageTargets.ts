@@ -19,7 +19,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { collectHeadingTcIdsFrom, collectHeadingTcLevelsFrom } from "./atddTraceability.js";
+import {
+  collectHeadingTcIdsFrom,
+  collectHeadingTcLevelsFrom,
+  collectTcLevels,
+  resolveAtddHomeKind,
+} from "./atddTraceability.js";
 import {
   hasTestCaseTableSection,
   resolveTestCaseTable,
@@ -34,6 +39,23 @@ export const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
 export type TestCaseIds = {
   knownTcIds: Set<string>;
   unitComponentTcIds: Set<string>;
+  /**
+   * The TCs whose ATDD annotation routes to `tests/integration/**`, which is
+   * exactly the set Phase 2b owes a `Layer = Integration` ledger row.
+   *
+   * Derived from {@link collectTcLevels} and {@link resolveAtddHomeKind} rather
+   * than from a word list of its own. `QFAI-ATDD-112` routes by that pair, so
+   * a second spelling test here would be a second answer to "is this TC
+   * integration-level" — and the two would disagree exactly where it costs
+   * most. `system` and `acceptance` are the case that proves it: both are
+   * *recognised* by the TDD level vocabulary, so a "neither vocabulary knows
+   * it" test puts them in no group at all, while ATDD routes them here.
+   *
+   * A TC that declares no `Level` is in this set for the same reason ATDD
+   * routes an unreadable cell to integration: the obligation is kept rather
+   * than discharged.
+   */
+  integrationTcIds: Set<string>;
   /**
    * Coverage-target TC -> the lower-cased `Level` it declared, or `""` when the
    * spec declared none. The id set alone discards the level, so coverage could
@@ -65,13 +87,29 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   // second `unrecognizedLevels` that could diverge from this one.
   const knownTcIds = new Set<string>();
   const unitComponentTcIds = new Set<string>();
+  const integrationTcIds = new Set<string>();
   const unrecognizedLevels = new Set<string>();
   const coverageTargetLevels = new Map<string, string>();
   const collected: TestCaseIds = {
     knownTcIds,
     unitComponentTcIds,
+    integrationTcIds,
     unrecognizedLevels,
     coverageTargetLevels,
+  };
+  /**
+   * Fills {@link integrationTcIds} from the ids collected so far.
+   *
+   * Called at each return that can carry TCs rather than once at the end,
+   * because the `!resolution.table` branch returns a populated `knownTcIds`
+   * (a heading-form spec) and leaving the set empty there would report every
+   * integration obligation such a spec has as absent.
+   */
+  const settleIntegrationTcIds = (raw: string): void => {
+    const levels = collectTcLevels(raw);
+    for (const tcId of knownTcIds) {
+      if (resolveAtddHomeKind(levels.get(tcId)) === "integration") integrationTcIds.add(tcId);
+    }
   };
   const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return { ...collected, fileMissing: true };
@@ -136,6 +174,7 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
     // `TDDLIST_TC_TABLE_UNRESOLVED` nor `TDDLIST_TC_NOT_COVERED` was raised
     // and ATDD asked for the default integration annotation instead.
     const brokenSection = hasTestCaseTableSection(content);
+    settleIntegrationTcIds(content);
     return knownTcIds.size > 0 && !brokenSection
       ? collected
       : { ...collected, unresolved: resolution.reason };
@@ -227,5 +266,6 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       }
     }
   }
+  settleIntegrationTcIds(content);
   return collected;
 }

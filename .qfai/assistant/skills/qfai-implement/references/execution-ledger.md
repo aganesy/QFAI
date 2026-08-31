@@ -303,9 +303,12 @@ therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 
 **Who seeds them.** `/qfai-sdd` Phase 2b, **at least** one `Layer = Integration`
-row per integration-level `TC-*` — `L3`, the word `integration`, or a `Level`
-the layer vocabulary cannot read (blank, or a spelling like `smoke`), the same
-routing `QFAI-ATDD-112` uses — alongside
+row per integration-level `TC-*` — every `Level` whose annotation routes to
+`tests/integration/**` under `QFAI-ATDD-112`: `L3`, the word `integration`, a
+blank cell, a spelling that names no layer (`smoke`), and `system` /
+`acceptance`. Routing, not spelling: the last two are in the layer vocabulary
+and are still not coverage targets, so a "the vocabulary cannot read it" test
+leaves them owned by no group. Alongside
 the coverage-target rows (`references/ledger-preconditions.md#producer`). A
 matrix-shaped TC is seeded one row per independently observable boundary there,
 because `/qfai-atdd` cannot split a row it may not write

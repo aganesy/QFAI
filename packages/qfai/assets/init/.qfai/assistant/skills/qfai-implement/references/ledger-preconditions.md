@@ -15,16 +15,27 @@ are exclusive, and a TC in both is a TC whose test two skills write.
   recognises** — `L1` / `L2` and their word forms `unit` / `component`, the
   spellings **What counts as a coverage target** below reads as unit or
   component work. These are the rows this skill drives end to end;
-- **one `Layer = Integration` row per integration-level TC** — a TC whose
-  `Level` is `L3`, the word `integration`, **is blank, or is a spelling neither
-  vocabulary recognises** (`smoke`, a typo). These are ATDD-owned
+- **one `Layer = Integration` row per integration-level TC** — **every `Level`
+  whose ATDD annotation routes to `tests/integration/**`**: `L3`, the word
+  `integration`, a blank cell, a spelling that names no layer (`smoke`, a typo),
+  **and `system` / `acceptance`**. These are ATDD-owned
   rows (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
   `/qfai-atdd` and their `Evidence` anchors into
   `.qfai/evidence/atdd-<spec-id>.md`, but the row itself lives here and this
   skill advances it under every rule that file states.
 
-**A blank _or unrecognised_ `Level` belongs to the second group**, because
-`QFAI-ATDD-112` puts it there: the ATDD collector routes every `Level` it cannot
+**Route by where the annotation goes, not by whether you recognise the word.**
+The second group is defined by `QFAI-ATDD-112`'s routing, and asking instead
+"is this spelling unknown?" leaves a gap: `system` and `acceptance` are *in* the
+layer vocabulary — so they are not unrecognised — and are not unit or component
+either, so a spelling test puts them in **no group at all**, while ATDD routes
+both to `tests/integration/**` and its P4 writes their tests. The result is a TC
+whose test one stage owns and whose handoff row nothing seeds, so Phase Red step
+3b never has a handoff to read. Reading the routing covers them with no extra
+rule, and covers the next such `Level` too.
+
+**A blank _or unrecognised_ `Level` belongs to the second group** for the same
+reason: the ATDD collector routes every `Level` it cannot
 read — no cell at all, and any spelling that names no layer — to
 `tests/integration/**` and that stage's P4 writes the test
 (`qfai-atdd/SKILL.md`, coverage obligations). Seeding it as a first-group row

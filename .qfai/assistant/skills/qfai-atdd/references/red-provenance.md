@@ -315,9 +315,10 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 ## A spec with no ATDD-owned rows
 
 `/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*` and a
-`Layer = Integration` row per integration-level `TC-*` — `L3`, `integration`, or
-a `Level` the layer vocabulary cannot read (blank, or a spelling like `smoke`),
-the routing `QFAI-ATDD-112` already uses; `US-*` and
+`Layer = Integration` row per integration-level `TC-*` — every `Level` whose
+annotation routes to `tests/integration/**` under `QFAI-ATDD-112`: `L3`,
+`integration`, a blank cell, a spelling that names no layer (`smoke`), and
+`system` / `acceptance`; `US-*` and
 `CON-API-*` are not row-producing obligations there. A first run therefore finds
 **zero** `Layer = E2E` / `Layer = API` rows, legitimately, and this stage cannot
 create them — it is not the ledger's writer under any circumstance.

@@ -220,8 +220,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
 7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
    — one row per coverage-target TC **and one `Layer = Integration` row per
-   integration-level (`L3`, `integration`, or a `Level` the layer vocabulary
-   cannot read — blank, or a spelling like `smoke`) TC**,
+   integration-level TC** (every `Level` whose ATDD annotation routes to
+   `tests/integration/**`: `L3`, `integration`, blank, a spelling that names no
+   layer like `smoke`, and `system` / `acceptance`),
    `Status = todo`. The two groups are exclusive, and "one row" is a floor: a
    matrix-shaped TC is split one row per independently observable boundary,
    all sharing that `TC-Refs`
@@ -381,6 +382,6 @@ project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, plus at least one Layer = Integration row per integration-level TC — L3, integration, or a Level the layer vocabulary cannot read (blank or unrecognised) — Status = todo; a matrix-shaped TC splits one row per boundary) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, plus at least one Layer = Integration row per integration-level TC — every Level whose ATDD annotation routes to tests/integration/**: L3, integration, blank, a spelling that names no layer, and system / acceptance — Status = todo; a matrix-shaped TC splits one row per boundary) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence, and a row past todo is never retired by comparing its Selector against the spec.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets on a visual-prototyping surface (skipped for cli-only); .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

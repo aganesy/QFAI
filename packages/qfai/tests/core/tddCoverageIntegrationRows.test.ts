@@ -42,6 +42,20 @@ const UNIT_TC_TABLE = [
   "",
 ].join("\n");
 
+/** A `Level` the TDD vocabulary recognises but the ATDD map does not name. */
+function tcTableAtLevel(level: string): string {
+  return [
+    "# 06 Test Cases",
+    "",
+    "## Test Case Table",
+    "",
+    "| TC-ID        | Level | AC-Refs      | EX-Ref       | Title   |",
+    "| ------------ | ----- | ------------ | ------------ | ------- |",
+    `| TC-0001-0001 | ${level} | AC-0001-0001 | EX-0001-0001 | title-1 |`,
+    "",
+  ].join("\n");
+}
+
 function ledger(rows: Array<{ id: string; tcRefs: string; layer: string; status: string }>) {
   return [
     "# TDD Test List",
@@ -162,5 +176,95 @@ describe("qfai report counts the ATDD-owned Integration rows", () => {
       },
     );
     expect(withoutRow).not.toContain("Integration rows (ATDD-owned)");
+  });
+});
+
+describe("qfai report names the integration obligation, not only the rows that were seeded", () => {
+  it("reports an L3 TC that no Integration row covers", async () => {
+    // Phase 2b never ran, or ran before this TC existed. Row counts describe
+    // what was seeded, so on their own they said `0 / 0` — and an `L3` TC is
+    // not a coverage target, so the arithmetic above said `0` too. The spec
+    // read as finished with no integration test in the tree at all, and no
+    // validator reports the missing row either.
+    const spec = await coverageFor({
+      testCases: L3_ONLY_TC_TABLE,
+      tdd: ledger([]),
+    });
+
+    expect(spec.unitComponentTotal).toBe(0);
+    expect(spec.openCount).toBe(0);
+    expect(spec.integrationRowTotal).toBe(0);
+    expect(spec.integrationTcExpected).toBe(1);
+    expect(spec.integrationTcsWithoutRow).toEqual(["TC-0001-0001"]);
+  });
+
+  it("reports a missing row for a spec with no ledger file at all", async () => {
+    const spec = await coverageFor({ testCases: L3_ONLY_TC_TABLE });
+
+    expect(spec.integrationTcExpected).toBe(1);
+    expect(spec.integrationTcsWithoutRow).toEqual(["TC-0001-0001"]);
+  });
+
+  it("counts a TC that a seeded Integration row already names as covered", async () => {
+    // Over-correction pin: the obligation is discharged by any `Integration`
+    // row carrying the TC, whatever its status and however many boundaries the
+    // TC was split across — the split is a floor, so a row count above one is
+    // the normal shape rather than a duplicate.
+    const spec = await coverageFor({
+      testCases: L3_ONLY_TC_TABLE,
+      tdd: ledger([
+        { id: "TDD-0001", tcRefs: "TC-0001-0001", layer: "Integration", status: "todo" },
+        { id: "TDD-0002", tcRefs: "TC-0001-0001", layer: "Integration", status: "done" },
+      ]),
+    });
+
+    expect(spec.integrationTcExpected).toBe(1);
+    expect(spec.integrationTcsWithoutRow).toEqual([]);
+  });
+
+  for (const level of ["system", "acceptance"]) {
+    it(`routes a Level = ${level} TC to the integration obligation, not to neither group`, async () => {
+      // These two are the gap the "blank or unrecognised" rule left open. Both
+      // are IN the TDD level vocabulary, so they are not unrecognised and not
+      // coverage targets — while `resolveAtddHomeKind` routes both to
+      // `tests/integration/**` and `/qfai-atdd` writes their tests. Read by
+      // spelling they belonged to no group at all; read by routing they belong
+      // here, which is what the producer rule now says.
+      const spec = await coverageFor({ testCases: tcTableAtLevel(level), tdd: ledger([]) });
+
+      expect(spec.unitComponentTotal).toBe(0);
+      expect(spec.integrationTcExpected).toBe(1);
+      expect(spec.integrationTcsWithoutRow).toEqual(["TC-0001-0001"]);
+    });
+  }
+
+  it("keeps an L4 TC out of the integration obligation", async () => {
+    // Over-correction pin at the other edge: `L4` routes to `tests/api/**`, so
+    // it is not an `Integration` row this phase seeds, and reporting it as one
+    // would demand a row the producer rule does not create.
+    const spec = await coverageFor({ testCases: tcTableAtLevel("L4"), tdd: ledger([]) });
+
+    expect(spec.integrationTcExpected).toBe(0);
+    expect(spec.integrationTcsWithoutRow).toEqual([]);
+  });
+
+  it("keeps a unit TC out of the integration obligation", async () => {
+    const spec = await coverageFor({ testCases: UNIT_TC_TABLE, tdd: ledger([]) });
+
+    expect(spec.unitComponentTotal).toBe(1);
+    expect(spec.integrationTcExpected).toBe(0);
+    expect(spec.integrationTcsWithoutRow).toEqual([]);
+  });
+
+  it("prints the missing-row line for a spec whose ledger seeds nothing", async () => {
+    const rendered = await withSpec(
+      async (root) => formatReportMarkdown(await createReportData(root)),
+      { testCases: L3_ONLY_TC_TABLE, tdd: ledger([]) },
+    );
+
+    expect(rendered).toContain("- Integration rows (ATDD-owned): 0 (unfinished: 0)");
+    expect(rendered).toContain(
+      "- integration-level TCs with no Integration row (seed in /qfai-sdd Phase 2b): TC-0001-0001",
+    );
   });
 });

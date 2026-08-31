@@ -7,14 +7,20 @@ Red/Green/Refactor cycle one row at a time.
 ## Producer
 
 Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**,
-plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,
-or a `Level` the layer vocabulary cannot read — blank, or an unrecognised
-spelling) TC**. `/qfai-sdd` seeds both at Phase 2b.
+plus **one `Layer = Integration` row per integration-level TC** — every `Level`
+whose ATDD annotation routes to `tests/integration/**`: `L3`, `integration`, a
+blank cell, a spelling that names no layer, and `system` / `acceptance`.
+`/qfai-sdd` seeds both at Phase 2b.
 An empty table below is valid — it means the spec declares neither yet, not that
 the ledger is missing.
 
-The two groups are exclusive. A TC whose `Level` is blank **or unrecognised**
-belongs to the second: `QFAI-ATDD-112` routes every `Level` it cannot read to
+The two groups are exclusive, and membership is decided by **where the
+annotation goes, not by whether the word is familiar**. `system` and
+`acceptance` are the case that proves it: both are in the layer vocabulary, so
+neither is unrecognised, and neither is unit or component — a spelling test puts
+them in no group at all while `/qfai-atdd` still writes their tests. A TC whose
+`Level` is blank **or unrecognised** belongs to the second for the same reason:
+`QFAI-ATDD-112` routes every `Level` it cannot read to
 `tests/integration/**`, so seeding it as a coverage-target row would have
 `/qfai-implement` and `/qfai-atdd` each write a test for it — and
 `TDDLIST_UNKNOWN_LEVEL` is a waivable `warning`, so nothing stops such a TC
@@ -58,13 +64,24 @@ not being a coverage target**. That reading would sweep away every existing
 `Layer = Integration` row, evidence and all.
 
 **Within a TC it is keyed on the boundary.** A matrix-shaped TC holds one row
-per independently observable boundary, so re-derive that set and match the
-existing rows to it by `Selector`: a boundary the TC no longer declares has its
-row retired, a boundary it has gained is appended at `todo`, and the rest are
-reset. Reconciling per TC alone leaves a TC that drops from three boundaries to
-two holding all three rows — the TC is still declared and still `L3`, so no
-retirement rule fires, and the changed-TC reset hands the third row back as
-selectable work for behaviour the spec no longer states.
+per independently observable boundary, so re-derive that set: a boundary the TC
+has gained is appended at `todo`, and the rest are reset. Reconciling per TC
+alone leaves a TC that drops from three boundaries to two holding all three rows
+— the TC is still declared and still `L3`, so no retirement rule fires, and the
+changed-TC reset hands the third row back as selectable work for behaviour the
+spec no longer states.
+
+**`Selector` is not that key.** The executing stage is authorised to fill a
+placeholder selector and to repair an unresolvable one, so a row seeded with a
+descriptive selector holds the test's real title once its cycle has run. A
+string comparison against the spec therefore reports every implemented boundary
+as deleted, and retiring on it discards a `done` row's `TDD-ID`, `Status` and
+`Evidence` for behaviour that never changed. Retire on this rule only a row
+still at `Status = todo` whose seeded selector names a boundary the TC no longer
+declares; when the re-derived set is smaller than the TC's rows that have
+already progressed, stop and raise a `CR-*` instead. Which implemented
+obligation the spec dropped belongs to the change record, and `TDD-ID` is the
+only identity on these rows that nothing downstream rewrites.
 
 ## Ledger
 

@@ -40,7 +40,7 @@ Editing it does not require permission — it requires a record and a re-review.
 
 ## The evidence entry
 
-Per affected spec, in the evidence file the row's `Layer` owns (`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row):
+Per affected spec, in the evidence file the row's `Layer` owns (`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row — **all three**, the same split gate item 10 resolves an anchor against, `execution-ledger.md#atdd-owned-rows`). Naming only two of them splits one row's record across two files: the entry lands where the gate does not read, so an open obligation stops being a completion prohibition and the row's seal is recomputed over a file that never held it.
 
 | Field                | Meaning                                                       |
 | -------------------- | ------------------------------------------------------------- |

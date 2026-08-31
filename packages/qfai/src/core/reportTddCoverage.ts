@@ -42,7 +42,8 @@ export async function collectTddCoverage(
     // spec (`## TC-0001` + `- Level: L1`) disappeared from the report while the
     // gate demanded a ledger row for every TC in it, and a TC declared in a
     // second table was gated but never counted.
-    const { unitComponentTcIds, fileMissing, unresolved } = await collectTestCaseIds(entry.dir);
+    const { unitComponentTcIds, integrationTcIds, fileMissing, unresolved } =
+      await collectTestCaseIds(entry.dir);
     // A spec with no `06_Test-Cases.md` is omitted rather than printed as a
     // zero row: the report would otherwise claim a document that does not
     // exist declares nothing, which is not the same statement.
@@ -92,6 +93,8 @@ export async function collectTddCoverage(
         // Integration row" is a fact, not an absence of information.
         integrationRowTotal: 0,
         integrationRowOpenCount: 0,
+        integrationTcExpected: integrationTcIds.size,
+        integrationTcsWithoutRow: Array.from(integrationTcIds).sort(),
         missingTcRefs: Array.from(unitComponentTcIds).sort(),
         exceptionRows: [],
       });
@@ -161,6 +164,8 @@ export async function collectTddCoverage(
         // No readable ledger table means no rows at all, Integration included.
         integrationRowTotal: 0,
         integrationRowOpenCount: 0,
+        integrationTcExpected: integrationTcIds.size,
+        integrationTcsWithoutRow: Array.from(integrationTcIds).sort(),
         missingTcRefs: Array.from(unitComponentTcIds).sort(),
         exceptionRows: [],
       });
@@ -195,6 +200,12 @@ export async function collectTddCoverage(
     // the outstanding work either.
     let integrationRowTotal = 0;
     let integrationRowOpenCount = 0;
+    // The TCs an `Integration` row actually names, so the expected set can be
+    // subtracted from it. A count of rows alone cannot answer "which
+    // obligation has no row": Phase 2b seeds one row per boundary, so the row
+    // total and the TC total are different numbers by design, and a spec that
+    // was seeded for two of its three integration TCs still reports rows.
+    const integrationRowTcIds = new Set<string>();
     const bump = (counts: Map<string, number>, tc: string): void => {
       counts.set(tc, (counts.get(tc) ?? 0) + 1);
     };
@@ -231,6 +242,17 @@ export async function collectTddCoverage(
         // is not in — so the row would be walked and still reported nowhere.
         if (isAtddIntegrationRow(scan, row)) {
           integrationRowTotal += 1;
+          // Read here rather than from the coverage block below: that block is
+          // gated on `isCoverageBearingRow`, and an `Integration` row is not
+          // coverage-bearing, so the refs of the very rows this set is about
+          // never reach it.
+          for (const ref of splitTcRefs(row[scan.tcRefsIndex] ?? "")) {
+            const upper = ref.toUpperCase();
+            if (!isWellFormedTcRef(upper)) continue;
+            integrationRowTcIds.add(upper);
+            const parent = resolveParentTcId(upper);
+            if (parent) integrationRowTcIds.add(parent);
+          }
           // Unfinished is "not terminal": `todo` and every in-review status
           // alike. A `green` or `refactor` row has not cleared its blocking
           // reviewers, and the completion conditions refuse a ledger holding
@@ -347,6 +369,18 @@ export async function collectTddCoverage(
       blockedCount: Array.from(unitComponentTcIds).filter((id) => blockedTcIds.has(id)).length,
       integrationRowTotal,
       integrationRowOpenCount,
+      // The obligation, beside the rows that discharge it. Row counts alone
+      // describe only what was seeded, so a spec whose Phase 2b never ran —
+      // or an older one carrying a header-only ledger — reported nothing at
+      // all: its TCs are not coverage targets, so the counts above are `0`,
+      // and with no rows the line was suppressed too. No validator reports
+      // the miss either (`ledger-preconditions.md`), which left `qfai report`
+      // and `qfai validate` jointly silent about a spec with no integration
+      // test at all.
+      integrationTcExpected: integrationTcIds.size,
+      integrationTcsWithoutRow: Array.from(integrationTcIds)
+        .filter((id) => !integrationRowTcIds.has(id))
+        .sort(),
       missingTcRefs,
       exceptionRows,
     });

@@ -238,6 +238,20 @@ export type ReportTddCoverageSpec = {
   integrationRowTotal?: number;
   /** Integration rows that are neither `done` nor parked at `exception`. */
   integrationRowOpenCount?: number;
+  /**
+   * The TCs `06_Test-Cases.md` routes to `tests/integration/**`, i.e. the
+   * obligation the rows above are meant to discharge.
+   *
+   * The row counts describe what was seeded; this describes what is owed. They
+   * are different questions, and only the second can see a Phase 2b that never
+   * ran: with no rows the pair above is `0 / 0`, and an integration-level TC
+   * is not a coverage target either, so a spec with no integration test at all
+   * read as finished. No validator reports a missing row either
+   * (`ledger-preconditions.md`), which left both commands silent together.
+   */
+  integrationTcExpected?: number;
+  /** Those of them that no `Layer = Integration` row names in `TC-Refs`. */
+  integrationTcsWithoutRow?: string[];
   missingTcRefs?: string[];
   exceptionRows: Array<{ tddId: string; drId: string }>;
 };
@@ -1286,9 +1300,22 @@ export function formatReportMarkdown(
       // are silent about these rows by construction — an `L3` TC is not a
       // coverage target — so a spec whose obligations are all integration-level
       // read as finished while its rows sat at `todo`.
-      if (spec.integrationRowTotal !== undefined && spec.integrationRowTotal > 0) {
+      // Printed when the spec either holds such a row or owes one. Gating on
+      // the row count alone hid the worse of the two states: a spec whose
+      // Phase 2b never ran has no rows, so the line vanished exactly where it
+      // had the most to say.
+      const integrationTcsWithoutRow = spec.integrationTcsWithoutRow ?? [];
+      if (
+        (spec.integrationRowTotal !== undefined && spec.integrationRowTotal > 0) ||
+        integrationTcsWithoutRow.length > 0
+      ) {
         lines.push(
           `- Integration rows (ATDD-owned): ${spec.integrationRowTotal} (unfinished: ${spec.integrationRowOpenCount})`,
+        );
+      }
+      if (integrationTcsWithoutRow.length > 0) {
+        lines.push(
+          `- integration-level TCs with no Integration row (seed in /qfai-sdd Phase 2b): ${integrationTcsWithoutRow.join(", ")}`,
         );
       }
       const missingTcRefs = spec.missingTcRefs ?? [];
