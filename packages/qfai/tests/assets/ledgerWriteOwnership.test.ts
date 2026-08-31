@@ -37,7 +37,9 @@ const read = async (tree: string, rel: string): Promise<string> =>
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("writes both columns the gate reads, not just Status", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("update `test-list.md` **Status and Evidence** after each phase");
+    expect(skill).toContain(
+      "update `test-list.md` **Status, DR-ID and Evidence** after each phase",
+    );
     // The payload goes to the evidence file; the cell takes the outcome and
     // the anchor. Asserting the old "verbatim into the cell" wording pinned an
     // instruction that corrupts the ledger gate item 10 reads (#464).
@@ -63,9 +65,13 @@ describe.each(QFAI_TREES)("%s", (tree) => {
 
   it("says what a worker returns instead of writing", async () => {
     // Without this the ban is a prohibition with no replacement, and the
-    // evidence simply stops existing.
+    // evidence simply stops existing. All three carve-out cells: the
+    // orchestrator's reconcile is the only write an `exception` row's
+    // mandatory `DR-*` can come from.
     const policy = await read(tree, POLICY);
-    expect(policy).toContain("final `Status`, and the `Evidence` payload");
+    expect(policy).toContain(
+      "final `Status`, the `DR-ID` that status requires, and the `Evidence` payload",
+    );
   });
 
   it("reconciles the merged ledger before integration verify, and fails on a stale row", async () => {

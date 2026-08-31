@@ -204,9 +204,9 @@ describe.each(TREES)("%s", (tree) => {
     // sentence bolded. What matters here is that the instruction names both
     // columns and fires per phase, so the assertion tracks the shipped spelling.
     expect(skill).toContain(
-      "update `test-list.md` **Status and Evidence** after each phase completes",
+      "update `test-list.md` **Status, DR-ID and Evidence** after each phase completes",
     );
-    expect(skill).toContain("final Status, DR-ID and Evidence values");
+    expect(skill).toContain("`Status`, `DR-ID` and `Evidence` match the per-phase writes");
   });
 });
 
@@ -247,12 +247,20 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     const heading = "### Completion";
     expect(skill, "the Completion heading moved").toContain(heading);
     const completion = skill.slice(skill.indexOf(heading));
+    // The step reconciles the three unconditional cells rather than writing
+    // them for the first time (`ledgerWriteTiming.test.ts` owns that framing),
+    // so the anchor is the reconcile spelling — but it still has to name the
+    // three as the unconditional set, which is what the conditional pair is
+    // being distinguished *from*.
     expect(completion).toContain(
-      "final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers unconditionally",
+      "`Status`, `DR-ID` and `Evidence` match the per-phase writes the Orchestrator Protocol mandates — the three cells the Drift Protocol carve-out covers unconditionally",
     );
     expect(completion).toContain(
       "`Test file` and `Selector` are covered too, but only while their stated condition still holds",
     );
+    // One-way: a condition that has ceased to hold is not re-openable at
+    // Completion, which is the half a deferral would rely on.
+    expect(completion).toContain("the conditions are one-way");
   });
 
   it("enumerates the owned cells where the schema is defined, not just the heading", async () => {
