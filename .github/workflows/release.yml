@@ -37,15 +37,16 @@ on:
         type: string
 
 env:
-  NODE_LTS: "20.19"
   # Trusted publishing needs npm >= 11.5.1. Pinning Node to that requirement is
   # documented minimum (22.14.0) is not enough: `npm@latest` carries its own
   # engine range — npm 12 wants `^22.22.2 || ^24.15.0 || >=26.0.0` — so the
   # install fails with EBADENGINE before the version check ever runs. Track the
   # current LTS major instead, and let setup-node resolve its newest patch.
   #
-  # Only the publish job runs on it. The gate stays on `NODE_LTS`, which is the
-  # version `engines.node` promises; moving it would stop testing what ships.
+  # Only the publish job runs on it, and it is the ONE workflow-level Node literal this repository
+  # allows (BR-0017-0027). It survives because it encodes npm's engine range for trusted publishing,
+  # which no file in the repository expresses. Every other job, the release gate included, takes its
+  # Node from `./.github/actions/setup`.
   NODE_PUBLISH: "24"
 
 concurrency:
@@ -65,8 +66,9 @@ jobs:
       tag: ${{ steps.pin.outputs.tag }}
       sha: ${{ steps.pin.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           # Not the input: the repository default, so nothing the dispatcher
           # controls decides what code is checked out before it is validated.
           # The tag is resolved through `refs/tags/` below and everything
@@ -82,11 +84,36 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
+          # Exactly `vX.Y.Z`, anchored at both ends.
+          #
+          # The pattern here was `v[0-9]*.[0-9]*.[0-9]*`, and a shell `*` matches ANY run of
+          # characters — so `v1.10.1-beta.1` passed, and so did `v1x.2y.3junk`. Both were
+          # measured. That matters more than it looks: the publish step passes no `--tag`, so npm
+          # points `latest` at whatever it publishes, and a hand-dispatched prerelease would have
+          # gone out to every `npm install qfai`.
+          #
+          # Checked by structure rather than by regex, so it holds under any POSIX shell: nothing
+          # but digits and dots after the `v`, no empty component, and exactly three of them.
+          # That is the same set as `^v[0-9]+\.[0-9]+\.[0-9]+$`.
+          reject() { echo "::error::'$RELEASE_TAG' is not a vX.Y.Z release tag: $1"; exit 1; }
           case "$RELEASE_TAG" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::'$RELEASE_TAG' is not a vX.Y.Z release tag"; exit 1 ;;
+            v*) ;;
+            *) reject "it must begin with v" ;;
           esac
           version="${RELEASE_TAG#v}"
+          case "$version" in
+            *[!0-9.]*)
+              reject "only digits and dots may follow the v, so a prerelease or build suffix is not a release"
+              ;;
+            *..* | .* | *.) reject "it has an empty version component" ;;
+          esac
+          after_major="${version#*.}"
+          [ "$after_major" != "$version" ] || reject "it must carry exactly three numeric components"
+          after_minor="${after_major#*.}"
+          [ "$after_minor" != "$after_major" ] || reject "it must carry exactly three numeric components"
+          case "$after_minor" in
+            *.*) reject "it must carry exactly three numeric components" ;;
+          esac
 
           # Fully qualified, so a branch that happens to share the tag's name
           # cannot stand in for it. `^{commit}` dereferences an annotated tag.
@@ -133,21 +160,66 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
+          # Full history, because the gate is not a self-contained check.
+          # `pnpm ci:gate` runs `scripts/check-prompt-scanner-pair.mjs`, which
+          # takes a three-dot diff between `origin/main` and `HEAD`. At the
+          # default depth of 1 the tag and the branch share no reachable merge
+          # base, the script exits 2, and the re-publish path this workflow
+          # opens with — re-running a failed publish for an older tag — could
+          # never get past this job.
           fetch-depth: 0
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      # ── The composite action, taken from THIS workflow's revision ────────────────────
+      # The checkout above put the TAG's tree in the workspace, and `uses: ./…` resolves
+      # against the workspace. Review finding [07]: re-publishing a tag created before the
+      # composite action existed — the `workflow_dispatch` path this workflow opens with —
+      # left `./.github/actions/setup/action.yml` absent, and the job failed on step
+      # resolution without ever reaching `pnpm ci:gate`. The re-publish route was documented
+      # and unreachable for exactly the tags it was written for.
+      #
+      # So the action is fetched separately, at `github.sha` — the revision of the workflow
+      # being executed, which by construction contains the action this file references. A
+      # sparse checkout of `.github/actions` into a side path, and `clean: false` so it does
+      # not wipe the tag tree already in the workspace.
+      #
+      # Not `uses: aganesy/QFAI/.github/actions/setup@main`: that is a moving reference, and
+      # this repository pins every `uses:` to an immutable ref. Not a re-inlined preamble
+      # either — `BR-0017-0027` makes the composite action the single definition, and a copy
+      # here is the drift its extraction removed.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          # CONE MODE OFF, which is the difference between fetching one directory and fetching one
+          # directory plus every file at the repository root. In cone mode the root files come too,
+          # so `.ci-actions/CHANGELOG.md` lands in the workspace and `ci:gate`'s
+          # `markdownlint-cli2 "**/*.md"` lints it — its ignore entry is the bare `CHANGELOG.md`,
+          # which does not match a nested copy. Measured: 376 errors, on every release rather than
+          # only on the re-publish path this sidecar exists for.
+          sparse-checkout-cone-mode: false
+      # The one definition of how this repository installs a toolchain (BR-0017-0027). It enables
+      # corepack, resolves Node from `package.json#engines`, re-shims pnpm against the toolcache Node
+      # in that order, and installs frozen. Inlining any of it is what let the gate and `ci.yml` drift.
+      #
+      # Resolving the RANGE, deliberately — the newest release satisfying `engines.node`.
+      #
+      # Review finding [13] is about the floor going unexercised, and pinning this job to it was the
+      # first attempt. That trades one gap for its mirror image: the gate would then run ONLY on
+      # 20.19.0 and the inverse break — works on the floor, fails on the newest Node an adopter
+      # actually installs — would be exercised nowhere at tag time. The finding asks for a floor
+      # lane "separately from validating the newest Node", not instead of it.
+      #
+      # The floor is covered for this exact commit without pinning here: the `verify` job above
+      # refuses a tag that is not an ancestor of `origin/main`, so the tagged tree has already
+      # passed `ci.yml`, whose `node-floor` lane runs the package suite on the floor. Seven lanes on
+      # the newest, one on the floor, and this gate re-runs the aggregate on the newest.
+      - uses: ./.ci-actions/.github/actions/setup
       - name: Run the release gate
         # The same aggregate `main` is held to: SSOT sync, format, lint, types,
         # package tests and pack verification.
@@ -164,17 +236,62 @@ jobs:
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
         shell: bash
 
+  # ── 2b. The same tree, on the floor `engines.node` promises ──────
+  # Review finding [56]. The gate above resolves the RANGE — the newest Node satisfying
+  # `engines.node` — and the comment there argued the floor was already covered: `verify` refuses a
+  # tag that is not an ancestor of `origin/main`, so the tagged tree has passed `ci.yml`, whose
+  # `node-floor` lane runs the package suite on the floor.
+  #
+  # That holds only for tags cut after `node-floor` existed. This workflow opens with a
+  # `workflow_dispatch` re-publish path whose whole purpose is older tags: such a tag is an ancestor
+  # of `main` and has never seen that lane. So the floor is exercised here, on the tagged tree,
+  # derived from THAT tree's `engines.node` — the version the package about to be published promises
+  # to run on.
+  #
+  # Beside the gate rather than instead of it: the two failures are mirror images, and the finding
+  # that created `node-floor` asked for a floor lane separately from validating the newest Node.
+  gate-floor:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ needs.verify.outputs.sha }}
+      # The composite action from THIS workflow's revision, for the reason the gate documents: a tag
+      # cut before the action existed has no `./.github/actions/setup` in its tree.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+      - uses: ./.ci-actions/.github/actions/setup
+        with:
+          pin-engines-floor: "true"
+          # The PACKAGE's manifest, which is where the promise to adopters lives. In this tree it
+          # agrees with the root's; on a re-published tag it need not.
+          engines-manifest: "./packages/qfai/package.json"
+      - name: Build qfai on the floor
+        run: pnpm -C packages/qfai build
+      - name: Run the package test suite on the floor
+        run: pnpm -C packages/qfai test
+
   # ── 3. GitHub Release, on the tag push ───────────────────────────
   github-release:
     if: github.event_name == 'push'
-    needs: [verify, gate]
+    needs: [verify, gate, gate-floor]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
       - name: Extract this version's CHANGELOG section
         env:
@@ -210,7 +327,7 @@ jobs:
   #   - the `release` environment carries a required reviewer, which is what
   #     keeps tagging and publishing separate decisions.
   publish:
-    needs: [verify, gate]
+    needs: [verify, gate, gate-floor]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: release
@@ -218,13 +335,79 @@ jobs:
       contents: read
       id-token: write # npm provenance
     steps:
-      - uses: actions/checkout@v4
+      # FIRST, before a single line of tag-controlled code is fetched or run.
+      #
+      # `environment: release` makes a tag push PROPOSE a publish rather than perform one — but
+      # only when the environment carries required reviewers. Without them GitHub starts this job
+      # immediately, and this check used to sit eight steps down: after `actions/checkout` at the
+      # tag, and after `pnpm install`, which runs the lifecycle scripts of whatever that tag
+      # declares. This job holds `id-token: write`, so that code could mint an OIDC token and
+      # publish on its own before the guard below ever ran and failed.
+      #
+      # An unprotected environment is precisely the case this guard exists to refuse, so it is
+      # answered before anything the tag controls is on disk. It needs nothing from the
+      # repository: `gh api` and `GITHUB_REPOSITORY` are enough.
+      - name: Require an approved environment
+        # The `environment:` key above is what makes a tag push *propose* a
+        # publish rather than perform one — but only when the environment
+        # carries required reviewers. GitHub silently allows an unprotected
+        # environment, which would turn every tag push into an unattended
+        # irreversible upload. Refuse rather than assume.
+        env:
+          # `Get an environment` wants repository `Administration: read`, and the workflow
+          # `permissions:` block has no key that grants it — so `github.token` may not be able to
+          # answer this at all. An optional secret carries a credential that can; without one the
+          # job token is still tried, because on many repositories it does work and requiring a
+          # secret nobody needs would be its own obstacle.
+          GH_TOKEN: ${{ secrets.ENVIRONMENT_READ_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          # A call this token cannot make is NOT the same answer as `no protection rules`.
+          #
+          # This read was `2>/dev/null || echo ""`, which collapsed both into an empty string —
+          # so a permission failure on a properly protected environment reported that the
+          # environment was unprotected, and every release stopped with a message pointing at the
+          # wrong thing. Both outcomes still refuse, because a check that cannot read its input
+          # must never report a pass; what changes is that they are now told apart, and the
+          # operator is sent to the right fix.
+          set +e
+          response="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
+            --jq '[.protection_rules[]?.type] | join(",")' 2>&1)"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "::error::cannot read the 'release' environment (gh exited ${status}): ${response}. This is not a statement about whether the environment is protected — it is that this job could not find out, and publishing without knowing is the thing this guard refuses. \`Get an environment\` requires repository Administration: read, which the workflow permissions block cannot grant; supply a credential that has it as the ENVIRONMENT_READ_TOKEN secret."
+            exit 1
+          fi
+          case "$response" in
+            *required_reviewers*) echo "release environment requires reviewers: $response" ;;
+            *)
+              echo "::error::the 'release' environment has no required reviewers (rules: ${response:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
+              exit 1
+              ;;
+          esac
+        shell: bash
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
+      # The rebuild allow-list from THIS workflow's revision, for the same reason the gate jobs
+      # fetch the composite action that way. Review finding [131]: a tag cut before the list
+      # existed does not carry it, so reading it out of the tag's tree made the refusal below
+      # fire on every re-publish of an older tag — a documented route, stopped by a guard meant
+      # to protect it.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_PUBLISH }}
           cache: pnpm
@@ -236,7 +419,32 @@ jobs:
       - name: Re-shim pnpm against toolcache Node
         run: corepack prepare pnpm@9.12.3 --activate
         shell: bash
-      - run: pnpm install --frozen-lockfile
+      # `--ignore-scripts` for the reason the toolchain action carries it: a dependency's
+      # manifest is not in this tree, it arrives inside a tarball, and its `postinstall` would
+      # run here — in the job holding `id-token: write`. The guard above means a human approved
+      # this release; it does not mean they reviewed every transitive lifecycle script the tag
+      # resolves to. What may build is named in the allow-list beside the composite action.
+      - run: pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
+      - name: Build the dependencies permitted to run install scripts
+        run: |
+          set -euo pipefail
+          list=".ci-actions/.github/actions/setup/dependency-builds.txt"
+          # Where each permitted package comes from, before any of it runs. A name on the list
+          # is a permission for that package, not for whatever the lockfile points the name at.
+          node ".ci-actions/.github/actions/setup/verify-rebuild-sources.mjs" pnpm-lock.yaml "${list}"
+          if [ ! -f "${list}" ]; then
+            echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
+            exit 1
+          fi
+          names=0
+          while IFS= read -r name || [ -n "${name}" ]; do
+            case "${name}" in "" | "#"*) continue ;; esac
+            names=$((names + 1))
+            echo "rebuilding ${name}"
+            pnpm rebuild "${name}"
+          done <"${list}"
+          echo "rebuilt ${names} permitted dependency package(s)"
+        shell: bash
       - name: Drop the placeholder auth line so npm reaches the OIDC exchange
         # setup-node writes `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
         # and exports NODE_AUTH_TOKEN as the literal `XXXXX-XXXXX-XXXXX-XXXXX`
@@ -260,7 +468,28 @@ jobs:
         # says nothing about the version.
         run: |
           set -euo pipefail
-          npm install -g npm@latest
+          # The registry, named on the command line. Review finding [87]'s rule found this one:
+          # `npm` resolves its registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`, so an
+          # unqualified `npm@latest` is a name an attacker-controlled registry can answer — in the
+          # job that holds the publishing identity, and with the installed npm doing the publish.
+          # `--ignore-scripts` stops the package running at install time rather than when invoked.
+          #
+          # And the VERSION, for the same reason the corepack fallback carries one.
+          #
+          # This was `npm@latest`, on the argument that the floor check below decides whether
+          # what arrived is new enough and a pin would be a second version to maintain. That
+          # argument is wrong in the direction that matters here: `@latest` means the same tag
+          # installs a different npm on different days, into the one job that holds
+          # `id-token: write` and performs an irreversible upload. A future release with a
+          # different engine requirement, a regression, or a tampered publish all arrive without
+          # a diff — and the floor check cannot see any of that, because it only asks whether the
+          # version is at least 11.5.1.
+          #
+          # The floor stays. It is the ASSERTION that this pin is still adequate, which is a
+          # different job from choosing what to install: bump the pin and the floor tells you
+          # whether the new one still clears the bar. Two numbers, because they answer two
+          # questions.
+          npm install -g --ignore-scripts --registry https://registry.npmjs.org/ npm@12.0.2
           have="$(npm --version)"
           need="11.5.1"
           lowest="$(printf '%s\n%s\n' "$have" "$need" | sort -V | head -1)"
@@ -269,26 +498,6 @@ jobs:
             exit 1
           fi
           echo "npm $have"
-        shell: bash
-      - name: Require an approved environment
-        # The `environment:` key above is what makes a tag push *propose* a
-        # publish rather than perform one — but only when the environment
-        # carries required reviewers. GitHub silently allows an unprotected
-        # environment, which would turn every tag push into an unattended
-        # irreversible upload. Refuse rather than assume.
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          rules="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
-            --jq '[.protection_rules[]?.type] | join(",")' 2>/dev/null || echo "")"
-          case "$rules" in
-            *required_reviewers*) echo "release environment requires reviewers: $rules" ;;
-            *)
-              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
-              exit 1
-              ;;
-          esac
         shell: bash
       - name: Skip if this version is already on npm
         # Re-running a release — a rotated token, a retried upload — must not
