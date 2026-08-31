@@ -284,7 +284,7 @@ So:
 - Each worker returns, per item it processed: `TDD-ID`, final `Status`, and the
   `Evidence` payload in the per-item evidence contract's form.
 - The orchestrator writes those rows into the trunk ledger during
-  `#post-parallel-integration-verify`, before the verify runs.
+  `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 

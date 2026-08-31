@@ -11,10 +11,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { validateOptionComparison } from "../../../src/core/validators/uix/comparisonValidator.js";
-import { validateTasteInterview } from "../../../src/core/validators/uix/taste.js";
-import { validateTrendScan } from "../../../src/core/validators/uix/trend.js";
 import { validateThreeLayerModel } from "../../../src/core/validators/uix/threeLayer.js";
-import { validateStrategyStrong } from "../../../src/core/validators/uix/strategy.js";
+import { validateTrendScan } from "../../../src/core/validators/uix/trendScan.js";
 import { validateScreenContractSchema } from "../../../src/core/validators/uix/screenContract.js";
 
 const tempDirs: string[] = [];
@@ -42,10 +40,8 @@ describe("non-UI safety", () => {
     await createNonUiPack(root);
 
     const validators = [
-      validateTasteInterview,
-      validateTrendScan,
       validateThreeLayerModel,
-      validateStrategyStrong,
+      validateTrendScan,
       validateScreenContractSchema,
       validateOptionComparison,
     ];
