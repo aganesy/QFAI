@@ -4,6 +4,7 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { collectScenarioFiles } from "./discovery.js";
 import { collectSpecEntries } from "./specLayout.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "./sunset.js";
 import { issue } from "./validators/utils.js";
 import {
   isFindingInSpecScope,
@@ -282,6 +283,71 @@ function toRepoRelative(root: string, absolute: string): string {
   return path.relative(root, absolute).split(path.sep).join("/");
 }
 
+/**
+ * Whether this profile's arm in `runProfileOwnValidators` forwards
+ * `platformOption` onwards. Only those arms reach `detectPlatform`, the single
+ * site that raises `QFAI-PLATFORM-001`; the rest discard the value.
+ *
+ * Exhaustive on purpose — the return type makes a new profile declare which
+ * side of the fork it is on before this compiles.
+ */
+function consumesPlatformOption(profile: ValidationProfile): boolean {
+  switch (profile) {
+    case "prototyping":
+    case "verify":
+    case "full":
+    case "saas-package":
+      return true;
+    case "discussion":
+    case "sdd":
+    case "atdd":
+    case "tdd":
+      return false;
+  }
+}
+
+/**
+ * Reports a `--platform` the requested profile never reads.
+ *
+ * The flag parses on every `validate` run but reaches `detectPlatform` from
+ * four of the eight profiles, so on the other four the value was accepted and
+ * dropped in silence: a stale or misspelled platform in a CI matrix fanned out
+ * over identical legs with no finding naming the cause.
+ *
+ * Behind a promotion window (`RULE_PROMOTIONS.platformOptionUnusedByProfile`),
+ * because the invocations it fires on were legal when they were written: a
+ * matrix that passes one `--platform` uniformly across profiles meets the
+ * finding on four legs at once on upgrade. `warning` until the pinned release,
+ * `error` from it — never a hard-coded severity, which is a window that never
+ * opens. `resolveToolVersion` resolves rather than rejects (its own read
+ * failures return `"unknown"`, read as inside the window), so an unreadable
+ * version cannot be what escalates this into a build failure.
+ */
+async function buildUnusedPlatformIssues(
+  profile: ValidationProfile,
+  platformOption: string | undefined,
+): Promise<Issue[]> {
+  if (!platformOption || consumesPlatformOption(profile)) {
+    return [];
+  }
+  const promoteAt = RULE_PROMOTIONS.platformOptionUnusedByProfile.promoteAt;
+  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+  const windowNote =
+    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+  return [
+    issue(
+      "QFAI-PLATFORM-003",
+      `--platform (${platformOption}) は profile "${profile}" では参照されません。${windowNote}`,
+      severity,
+      undefined,
+      "platformDetection.unusedPlatformOption",
+      [platformOption],
+      "canonical",
+      "platform 依存の検証が必要な場合は --profile prototyping / verify / full / saas-package を指定してください。不要であれば --platform を外してください。",
+    ),
+  ];
+}
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -294,6 +360,9 @@ async function runProfileValidators(
   // so every gate the profile is about was defined by files nothing read. That
   // is not an SDD fact or an ATDD fact; it invalidates the run.
   const surface = await inspectIntegrationSurface(root);
+  // A CLI-boundary observation, independent of the tree below: it survives the
+  // short-circuit so the operator still learns the flag went nowhere.
+  const unusedPlatform = await buildUnusedPlatformIssues(profile, platformOption);
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -315,9 +384,9 @@ async function runProfileValidators(
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return surface.issues;
+    return [...unusedPlatform, ...surface.issues];
   }
-  return [...surface.issues, ...(await runProfileOwnValidators())];
+  return [...unusedPlatform, ...surface.issues, ...(await runProfileOwnValidators())];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
