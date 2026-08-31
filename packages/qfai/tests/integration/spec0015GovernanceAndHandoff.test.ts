@@ -196,13 +196,30 @@ describe("spec-0015 handoff schema CHG-006", () => {
 });
 
 describe("spec-0015 finding-code catalog CHG-006", () => {
-  it("QFAI:SPEC-0015:TC-0015-0026 — normal: 8 catalog codes registered (severity error; one documented warning)", () => {
+  it("QFAI:SPEC-0015:TC-0015-0026 — normal: 8 catalog codes registered; the catalog declares membership only, no severity", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
     expect(codes.length).toBe(8);
-    const entry = JUSTIFICATION_CATALOG.find((e) => e.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE");
-    expect(entry?.severity).toBe("warning");
-    const errorEntries = JUSTIFICATION_CATALOG.filter((e) => e.severity === "error");
-    expect(errorEntries.length).toBe(7);
+    expect(codes).toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
+    for (const entry of JUSTIFICATION_CATALOG) {
+      expect(Object.keys(entry).sort()).toEqual(["code", "description"]);
+    }
+  });
+
+  it("QFAI:SPEC-0015:TC-0015-0026 — normal: ingestion rejects an empty justification at error even for a code its own detector emits at warning", async () => {
+    const dir = path.join(root, ".qfai", "review");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "out-of-zone.json"),
+      JSON.stringify({
+        findings: [{ code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE", justification: "" }],
+      }),
+      "utf-8",
+    );
+    const { config } = await loadConfig(root);
+    const issues = await validateReviewerJustification(root, config);
+    const flagged = issues.filter((i) => i.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE");
+    expect(flagged.length).toBe(1);
+    expect(flagged[0]?.severity).toBe("error");
   });
 
   it("QFAI:SPEC-0015:TC-0015-0027 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {
@@ -237,6 +254,62 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(issuesFilled.find((i) => i.code === entry.code)).toBeUndefined();
     }
+  });
+
+  /**
+   * The spec-0015 surfaces that state what the REQ-0168 catalog *stores*.
+   *
+   * `10_Plan.md` is in this list because it is the last one that was left behind. The other five
+   * moved to the membership-only contract in one pass; the plan kept saying "register ... at
+   * severity error", and `qfai-atdd/SKILL.md` calls `10_Plan.md` "the primary How SSOT for
+   * execution phases" — so a later ATDD run reading it would have re-added the `severity` field
+   * that `JUSTIFICATION_CATALOG` no longer has. Enumerating the surfaces here is the point: a
+   * seventh one that starts describing the stored shape has to be added, and then it is checked.
+   *
+   * `_policies/10_delta.md` is deliberately absent. It is the append-only triage record for this
+   * change (`UPDATE:APPEND` only, `Approved By` filled in), so its text is history rather than a
+   * live contract and must not be rewritten to match.
+   */
+  const CATALOG_SHAPE_SURFACES = [
+    "01_Spec.md",
+    "02_User-stories.md",
+    "03_Acceptance-Criteria.md",
+    "04_Business-Rules.md",
+    "06_Test-Cases.md",
+    "10_Plan.md",
+  ] as const;
+
+  const repoRoot = path.resolve(__dirname, "../../../..");
+
+  const readSurface = async (name: string): Promise<string> =>
+    readFile(path.join(repoRoot, ".qfai", "specs", "spec-0015", name), "utf-8");
+
+  it.each(CATALOG_SHAPE_SURFACES)(
+    "QFAI:SPEC-0015:TC-0015-0026 — normal: %s states the catalog's membership-only shape",
+    async (surface) => {
+      const text = await readSurface(surface);
+      // The stored shape: membership, and explicitly no severity column on the entry.
+      expect(text).toMatch(/membership only/i);
+      expect(text).toMatch(/per-code severity/i);
+      // Over-correction pin — dropping the severity column must not drop the justification
+      // obligation or the error-severity refusal of an empty one.
+      expect(text).toMatch(/non-empty `justification:`/);
+      expect(text).toMatch(/severity error/i);
+    },
+  );
+
+  it("QFAI:SPEC-0015:TC-0015-0026 — error: the plan does not tell an implementer to register the catalog at a severity", async () => {
+    const text = await readSurface("10_Plan.md");
+    const item = text.split(/\r?\n/).find((line) => line.includes("BR-0015-0013"));
+    expect(item).toBeDefined();
+    // The superseded instruction, verbatim. It put the severity on the registration itself,
+    // which is the column `JUSTIFICATION_CATALOG` entries do not carry (asserted above).
+    expect(item).not.toContain("at severity error with mandatory non-empty");
+    expect(item).toMatch(/membership only/i);
+    expect(item).toMatch(/no per-code severity column/i);
+    // What the plan must still require of the implementer.
+    expect(item).toMatch(/non-empty `justification:`/);
+    expect(item).toMatch(/rejects an empty \/ whitespace-only value at severity error/i);
   });
 });
 
