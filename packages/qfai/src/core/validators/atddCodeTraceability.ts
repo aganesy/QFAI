@@ -312,9 +312,11 @@ type AtddTraceabilitySummary = {
 export async function validateAtddCodeTraceability(
   root: string,
   config: QfaiConfig,
-  options: { specScope?: SpecScope } = {},
+  // `evaluated` lets a caller that already scanned the test tree hand the
+  // result in rather than paying for a second walk of every test file.
+  options: { specScope?: SpecScope; evaluated?: AtddCodeTraceabilityResult } = {},
 ): Promise<Issue[]> {
-  const evaluated = await evaluateAtddCodeTraceability(root, config);
+  const evaluated = options.evaluated ?? (await evaluateAtddCodeTraceability(root, config));
   // A `--spec` run must not put a sibling spec's ids in this run's message.
   // `isFindingInSpecScope` decides whether a finding survives, but it cannot
   // edit one — so a scoped run kept the finding (correctly, the requested spec

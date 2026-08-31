@@ -197,9 +197,15 @@ describe("the npm README states the routing the package ships", () => {
   it("names the gate that owns Unit and Component instead", async () => {
     // Dropping an obligation without naming its replacement reads as "unit
     // tests are ungated", which is not what happened.
+    //
+    // The ledger is named as the per-spec `test-list.md`, not as a bare
+    // `tdd/test-list.md`: the README alignment gate copies this sentence into
+    // the repository root README, where the markdown path-reference guardrail
+    // (`assets.test.ts` > "checks relative path references in markdown")
+    // resolves `tdd/test-list.md` against the repo root and finds nothing.
     const readme = await readReadme();
     expect(readme).toContain("carry **no** ATDD annotation obligation");
-    expect(readme).toContain("`tdd/test-list.md` ledger");
+    expect(readme).toContain("per-spec `test-list.md` ledger");
   });
 
   it("says the directories follow the configured testsDir", async () => {

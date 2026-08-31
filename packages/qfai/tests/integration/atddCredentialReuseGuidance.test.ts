@@ -200,6 +200,13 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // (`tests/core/atddUsPlannedDeferral.test.ts`). Moving the baseline is the
     // correct response to a code someone meant to add; the row still reddens
     // for one nobody declared.
+    //
+    // `QFAI-ATDD-131`/`-132`/`-133` are present for the mirror-image reason:
+    // the Coverage Depth Matrix gate (`src/core/validators/atddCoverageDepth.ts`)
+    // is a validator, so its codes are declarations the tree now holds and the
+    // baseline has to say so. What this row still guards is unchanged — the
+    // set is enumerated, so the prose deliverable growing a code of its own
+    // reddens it. Their promotion windows are held in `sunsetLedger.test.ts`.
     expect(await atddFindingCodes()).toEqual([
       "QFAI-ATDD-101",
       "QFAI-ATDD-102",
@@ -217,6 +224,9 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",
+      "QFAI-ATDD-131",
+      "QFAI-ATDD-132",
+      "QFAI-ATDD-133",
       "QFAI-ATDD-901",
     ]);
   });
