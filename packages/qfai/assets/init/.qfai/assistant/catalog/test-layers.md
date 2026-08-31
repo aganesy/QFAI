@@ -2,9 +2,7 @@
 
 This document is the SSOT for ATDD test-layer semantics and completion gates.
 
-For which CI lane runs which layer, see the sibling map
-[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the policy
-loader reads this file and not that one, so nothing there can change the vocabulary declared below.
+For which CI lane runs which layer, see the sibling map [`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the policy loader reads this file and not that one, so nothing there can change the vocabulary declared below.
 
 ## Layer vocabulary crosswalk (normative)
 
@@ -344,15 +342,8 @@ and `**Unit and Component owe no ATDD annotation.**` above.
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
 
-- **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's
-  kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does,
-  and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier
-  declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so
-  `QFAI-ATDD-118` (`info`) names it — a legitimate placeholder that must not read as coverage. A
-  repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never
-  `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-118` in `validate.spec-<id>.json`,
-  because `summary.json` is repo-wide under every scope. A skipped test still counts as declared,
-  and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short.
+- **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does, and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so `QFAI-ATDD-118` (`info`) names it — a legitimate placeholder that must not read as
+  coverage. A repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-118` in `validate.spec-<id>.json`, because `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `<testsDir>/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
