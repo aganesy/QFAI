@@ -19,6 +19,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -39,6 +40,7 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  joinAssistantAssetLayer,
   joinAssistantLayer,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
@@ -47,6 +49,18 @@ import {
   legacyAssistantSteeringSunsetLabel,
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
+import {
+  mergeRoutingPhases,
+  readCatalogAgentIds,
+  readProfileNames,
+  type RoutingMergeResult,
+  type RoutingMergeWarningKind,
+} from "../../core/manifest/routingPhaseMerge.js";
+import {
+  directoryPinIntact,
+  pinDirectory,
+  resolvesInsideRoot,
+} from "../../core/manifest/manifestWriteGuard.js";
 import { resolveToolVersion } from "../../core/version.js";
 import {
   RETIRED_WORKFLOW_NAMES,
@@ -88,6 +102,13 @@ const execAsync = promisify(execCb);
  * `assistant/agents/*.md` in an installed project. That is the lesser failure:
  * drift is visible and repairable, a silently overwritten taxonomy is neither.
  *
+ * One half of that drift is not tolerable, though: a phase the shipped skills
+ * route to. A skill updated by `--force` runs against a routing table that
+ * predates the phase it now names, and nothing said so. `--force` therefore
+ * also runs `mergeRequiredRoutingPhases`, an **add-only** merge of missing
+ * skills and phases into `manifest/agent-routing.yml` — see
+ * `core/manifest/routingPhaseMerge.ts` for why it adds and never edits.
+ *
  * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
  * the same reason: they hold project content.
  */
@@ -120,7 +141,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
     );
   }
 
@@ -298,6 +319,14 @@ export async function runInit(options: InitOptions): Promise<void> {
     conflictPolicy: "skip",
   });
 
+  // The routing manifest is user configuration, so it is never overwritten —
+  // but the skills just regenerated above may name phases an older project's
+  // table does not have. Add-only merge; runs after the create-only copy so a
+  // fresh project already has the file (and the merge then finds nothing).
+  const routingMergeNotes = options.force
+    ? await mergeRequiredRoutingPhases(assistantAssets, destRoot, options.dryRun)
+    : [];
+
   // git config core.symlinks true（symlink 生成の前提条件）
   await configureGitSymlinks(destRoot, options.dryRun);
 
@@ -431,7 +460,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
   );
 
-  for (const note of upgradeResult.preservedNotes) {
+  for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
     info(note);
   }
 
@@ -753,6 +782,350 @@ async function seedProjectSteering(
   }
 
   return { copied, skipped, staleNotes };
+}
+
+// ---------------------------------------------------------------------------
+// agent-routing.yml add-only phase merge (--force)
+// ---------------------------------------------------------------------------
+
+const ROUTING_MANIFEST_FILE = "agent-routing.yml";
+const AGENT_CATALOG_FILE = "agent-catalog.yml";
+const REVIEW_PROFILES_FILE = "review-profiles.yml";
+
+/**
+ * Ceiling on a manifest this step reads into memory.
+ *
+ * The largest shipped manifest is ~70 KB, so 4 MiB is far above any table a
+ * human maintains while still bounding what a file swapped in at that path can
+ * make `init` allocate.
+ */
+const MANIFEST_MAX_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Diagnostic code per merge-warning kind.
+ *
+ * One code for every warning read the same to a consumer classifying by code:
+ * a YAML syntax error and a deliberately removed agent both arrived as
+ * `W-ROUTING-AGENT-DIVERGED`, so a project with no divergence at all was
+ * steered into the taxonomy repair for a file that simply does not parse.
+ */
+const ROUTING_WARNING_CODES: Record<RoutingMergeWarningKind, string> = {
+  "manifest-shape": "W-ROUTING-MANIFEST-UNREADABLE",
+  "agent-diverged": "W-ROUTING-AGENT-DIVERGED",
+  "catalog-mismatch": "W-ROUTING-AGENT-UNKNOWN",
+  "profile-mismatch": "W-ROUTING-PROFILE-UNKNOWN",
+};
+
+/**
+ * Merge the routing phases the shipped skills require into the project's own
+ * `manifest/agent-routing.yml`, adding only. Returns the operator notes to
+ * print; an unreadable manifest is reported, never repaired, and never fails
+ * `init` — the rest of the run is still useful.
+ */
+async function mergeRequiredRoutingPhases(
+  assistantAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const templatePath = joinAssistantAssetLayer(assistantAssets, "manifest", ROUTING_MANIFEST_FILE);
+  const projectPath = joinAssistantLayer(destRoot, "manifest", ROUTING_MANIFEST_FILE);
+  const rel = toPosixRelative(destRoot, projectPath);
+
+  const unsafe = await describeUnsafeManifestPath(destRoot, projectPath, rel);
+  if (unsafe !== null) return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${unsafe}`];
+  // The directory that just cleared the check, pinned by identity so the
+  // replacement can tell it is still the one that was cleared.
+  const parent = await pinDirectory(path.dirname(projectPath));
+
+  const project = await readMergeableManifest(projectPath);
+  // The project predates the manifest layer. Not this step's to repair:
+  // validate reports the missing manifest (QFAI-AGENT-002).
+  if (project.kind === "missing") return [];
+  if (project.kind === "unusable") {
+    return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} ${project.reason}.`];
+  }
+  const template = await readMergeableManifest(templatePath);
+  if (template.kind !== "ok") {
+    // A packaging fault, not a project one — and silence here is what made it
+    // invisible: the merge stopped with no note at all.
+    return [
+      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: the packaged ${ROUTING_MANIFEST_FILE} could not be read; skipped the phase merge.`,
+    ];
+  }
+
+  const result = mergeRoutingPhases(template.content, project.content, {
+    knownAgents: await readProjectManifestNames(destRoot, AGENT_CATALOG_FILE, readCatalogAgentIds),
+    knownProfiles: await readProjectManifestNames(destRoot, REVIEW_PROFILES_FILE, readProfileNames),
+  });
+  if (result.content !== null && !dryRun) {
+    const replaced = await replaceFileAtomically(projectPath, result.content, project.pinned, () =>
+      directoryPinIntact(destRoot, parent),
+    );
+    if (replaced !== null) {
+      return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} ${replaced}`];
+    }
+  }
+  return formatRoutingMergeNotes(result, rel, dryRun);
+}
+
+function formatRoutingMergeNotes(
+  result: RoutingMergeResult,
+  rel: string,
+  dryRun: boolean,
+): string[] {
+  const notes: string[] = [];
+  const additions = [
+    ...result.addedSkills,
+    ...result.addedPhases.map((entry) => `${entry.skill}/${entry.phase}`),
+  ];
+  for (const added of additions) {
+    notes.push(
+      `  I-ROUTING-PHASE-MERGED: ${rel} ${dryRun ? "would gain" : "gained"} ${added} (add-only; existing phases untouched).`,
+    );
+  }
+  for (const warning of result.warnings) {
+    notes.push(`  ${ROUTING_WARNING_CODES[warning.kind]}: ${warning.message}`);
+  }
+  return notes;
+}
+
+/**
+ * Names a project manifest declares — catalog agent ids, review profile
+ * names — or `null` when the file cannot be read as one. `--force` regenerates
+ * `assistant/agents/**` but never `manifest/**`, so a project that removed an
+ * agent or a profile through `qfai-configure` still has no entry for it, and a
+ * spliced-in node referring to one would leave the project routing to something
+ * nothing declares — `qfai validate` failing (QFAI-AGENT-008) for an agent, an
+ * unresolvable reviewer set for a profile.
+ */
+async function readProjectManifestNames(
+  destRoot: string,
+  file: string,
+  parse: (source: string) => ReadonlySet<string> | null,
+): Promise<ReadonlySet<string> | null> {
+  const manifestPath = joinAssistantLayer(destRoot, "manifest", file);
+  const read = await readMergeableManifest(manifestPath);
+  return read.kind === "ok" ? parse(read.content) : null;
+}
+
+type ManifestRead =
+  | { kind: "ok"; content: string; pinned: PinnedFileRead }
+  | { kind: "missing" }
+  | { kind: "unusable"; reason: string };
+
+/**
+ * Read a manifest, but only from a regular file of bounded size.
+ *
+ * `readFile` takes whatever is at the path. On a FIFO it blocks until a writer
+ * appears — `qfai init --force` then neither merges nor exits, with no
+ * diagnostic — and on a file swapped for an enormous one it pulls the whole
+ * thing into memory. The `fstat`-on-the-open-handle pin is the same one the
+ * flattened-link repair in this file applies, and it answers for the inode
+ * actually opened rather than for the pathname.
+ *
+ * `mode` travels with the content because the atomic replace writes a **new**
+ * inode: without it a manifest somebody kept at `0600` would come back `0644`.
+ *
+ * Every failure short of "not there" is `unusable`, never a throw. The contract
+ * for a manifest this step cannot read is a `W-ROUTING-MANIFEST-UNREADABLE`
+ * note and a skipped merge; letting an `EACCES` on one file propagate out of
+ * here would instead abort the whole of `qfai init --force`, throwing away the
+ * skills and agents it had already regenerated over a step that is optional by
+ * construction.
+ */
+async function readMergeableManifest(target: string): Promise<ManifestRead> {
+  let pinned: PinnedFileRead | null;
+  try {
+    pinned = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
+  } catch (err: unknown) {
+    if (isEnoent(err)) return { kind: "missing" };
+    return {
+      kind: "unusable",
+      reason: `could not be read (${describeError(err)}); skipped the phase merge`,
+    };
+  }
+  if (pinned === null) {
+    return {
+      kind: "unusable",
+      reason: `is not a regular file of at most ${String(MANIFEST_MAX_BYTES)} bytes; skipped the phase merge`,
+    };
+  }
+  const content = decodeUtf8OrNull(pinned.content);
+  // A lossy decode is not a read. `Buffer.toString("utf-8")` never throws: it
+  // substitutes U+FFFD for every byte sequence it cannot make sense of, so a
+  // manifest carrying some other encoding in a comment or a scalar still parses
+  // as YAML, and the merge would then atomically rename the *substituted* text
+  // over the user's file — losing those bytes with no way back.
+  if (content === null) {
+    return { kind: "unusable", reason: "is not valid UTF-8; skipped the phase merge" };
+  }
+  return { kind: "ok", content, pinned };
+}
+
+/**
+ * The text of `bytes`, or `null` when they are not UTF-8.
+ *
+ * `ignoreBOM` keeps a leading U+FEFF in the string instead of stripping it:
+ * the decoded text is written back, and a silently dropped BOM is the same
+ * unasked-for edit the fatal decode is here to prevent.
+ */
+function decodeUtf8OrNull(bytes: Buffer): string | null {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Why the project's manifest must not be written, or `null` when it may be.
+ *
+ * `writeFile` follows a symlink and rewrites whatever it points at, so a
+ * project whose manifest is a link into another tree would have had that other
+ * file edited by `qfai init`. `copyTemplateTree` `lstat`s its destinations for
+ * exactly this; a direct write has to as well — and an `lstat` (like
+ * `O_NOFOLLOW`) answers for the **last** path component only. A project whose
+ * `assistant/manifest` directory is itself a link out of the tree passes both
+ * checks with a perfectly ordinary file at the end of it, and every write still
+ * lands outside the project. So the ancestors are resolved too, and the result
+ * has to be inside the destination root.
+ */
+async function describeUnsafeManifestPath(
+  destRoot: string,
+  target: string,
+  rel: string,
+): Promise<string | null> {
+  if ((await safeLstat(target))?.isSymbolicLink()) {
+    return `${rel} is a symlink; skipped the phase merge rather than write through it to a file outside the project.`;
+  }
+  if (!(await resolvesInsideRoot(destRoot, path.dirname(target)))) {
+    return `${rel} resolves outside the project through a linked parent directory; skipped the phase merge rather than write there.`;
+  }
+  return null;
+}
+
+/**
+ * Replace `target` with `content` without following a symlink at that path and
+ * without ever leaving the original truncated.
+ *
+ * Opening the file itself `O_TRUNC` emptied a valid user manifest the instant
+ * the merge began, so an `ENOSPC`, an `EIO` or a signal mid-write left the
+ * project with an empty or half-written `agent-routing.yml` and no copy of what
+ * it replaced — unrecoverable damage from an add-only update to a file the user
+ * owns. The content goes to a temp file in the same directory and is renamed
+ * over the target instead: `rename` is atomic against the pathname, so any
+ * failure before it leaves the original exactly as it was, and it replaces the
+ * directory entry rather than writing through whatever that entry points at.
+ *
+ * `stillSafe` is what makes the *pathname* trustworthy. The write-safety check
+ * ran against the parent directory some syscalls ago, and both the temp create
+ * and the `rename` resolve that directory's name again: in a working tree
+ * another process can touch, `manifest/` swapped for a link out of the project
+ * in between would send the replacement there. Node has no `renameat`, so the
+ * directory cannot be held as a descriptor — instead its identity is re-checked
+ * immediately before each of the two operations that trust the name.
+ *
+ * The **file** is re-checked for the same reason, and the directory pin does
+ * not cover it: an editor or a `qfai-configure` run that saves over
+ * `agent-routing.yml` after it was read leaves the directory exactly as it was,
+ * and the rename would then replace that new content with a merge built from
+ * the old. Its inode and its bytes are both compared, because the ordinary save
+ * that truncates and rewrites keeps the inode.
+ *
+ * The original's **ownership** travels with its mode. The replacement is a new
+ * inode created by whoever is running `init`, so under `sudo qfai init --force`
+ * — or in any shared tree where the manifest belongs to somebody else — a
+ * silent `rename` would hand the user's own file to root and leave them unable
+ * to edit it through `qfai-configure`. Where the ownership cannot be restored,
+ * the replacement is declined rather than made.
+ *
+ * Returns `null` on success, or the reason it declined.
+ */
+async function replaceFileAtomically(
+  target: string,
+  content: string,
+  pinned: PinnedFileRead,
+  stillSafe: () => Promise<boolean>,
+): Promise<string | null> {
+  const directoryMoved =
+    "is in a directory that is no longer the one that passed the write-safety check; skipped the phase merge rather than replace a file that may now be outside the project.";
+  if (!(await stillSafe())) return directoryMoved;
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+  try {
+    // `O_EXCL`: the temp name is ours or nothing is written. It is created
+    // `0600` and widened once complete, so the content is never briefly
+    // readable under a mode the original did not carry.
+    const handle = await open(
+      temp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    try {
+      await handle.writeFile(content, "utf-8");
+      if (!(await restoreOwnership(handle, pinned))) {
+        await rm(temp, { force: true });
+        return "belongs to another user and this process cannot restore that ownership; skipped the phase merge rather than take the file over.";
+      }
+      await handle.chmod(pinned.mode);
+    } finally {
+      await handle.close();
+    }
+    if (!(await stillSafe())) {
+      await rm(temp, { force: true });
+      return directoryMoved;
+    }
+    if (!(await isUnchangedManifest(target, pinned))) {
+      await rm(temp, { force: true });
+      return "changed while the merge was being prepared; skipped the phase merge rather than overwrite the newer content with a merge of the older.";
+    }
+    await rename(temp, target);
+    return null;
+  } catch (err: unknown) {
+    // The temp file is this function's alone — leaving it behind would litter
+    // the manifest directory with a partial YAML on every failed merge.
+    await rm(temp, { force: true });
+    throw err;
+  }
+}
+
+/**
+ * Give the replacement the original's `uid` / `gid`, or say it could not.
+ *
+ * Already-correct ownership is the common case and needs no syscall — a user
+ * replacing their own file in their own group. `EPERM` is the case that
+ * matters: the process may not hand the file to that owner, so proceeding would
+ * change it. Windows has no meaningful `fchown`.
+ */
+async function restoreOwnership(handle: FileHandle, pinned: PinnedFileRead): Promise<boolean> {
+  if (process.platform === "win32") return true;
+  const current = await handle.stat();
+  if (current.uid === pinned.uid && current.gid === pinned.gid) return true;
+  try {
+    await handle.chown(pinned.uid, pinned.gid);
+    return true;
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException | null)?.code === "EPERM") return false;
+    throw err;
+  }
+}
+
+/** Whether `target` still holds exactly the inode and bytes that were read. */
+async function isUnchangedManifest(target: string, pinned: PinnedFileRead): Promise<boolean> {
+  let now: PinnedFileRead | null;
+  try {
+    now = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
+  } catch {
+    return false;
+  }
+  if (now === null) return false;
+  const sameInode =
+    pinned.ino === 0 || now.ino === 0 || (now.dev === pinned.dev && now.ino === pinned.ino);
+  return sameInode && now.content.equals(pinned.content);
+}
+
+/** A `destRoot`-relative path with forward slashes, for operator notes. */
+function toPosixRelative(destRoot: string, target: string): string {
+  return path.relative(destRoot, target).split("\\").join("/");
 }
 
 // ---------------------------------------------------------------------------
@@ -2256,6 +2629,23 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 }
 
 /**
+ * One bounded read of a regular file: its bytes, and everything a replacement
+ * has to put back.
+ *
+ * `mode`, `uid` and `gid` because an atomic replace writes a **new** inode;
+ * `dev` and `ino` so the replacement can tell it is still about to replace the
+ * file it read.
+ */
+type PinnedFileRead = {
+  content: Buffer;
+  mode: number;
+  uid: number;
+  gid: number;
+  dev: number;
+  ino: number;
+};
+
+/**
  * The same read, returning the bytes.
  *
  * The restore copy writes back what it read, and decoding as UTF-8 first
@@ -2265,7 +2655,7 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 async function readPinnedRegularFileBytes(
   filePath: string,
   maxBytes: number,
-): Promise<{ content: Buffer; mode: number } | null> {
+): Promise<PinnedFileRead | null> {
   let handle: FileHandle | undefined;
   try {
     handle = await open(filePath, OPEN_READ_FLAGS);
@@ -2279,11 +2669,18 @@ async function readPinnedRegularFileBytes(
       filled += bytesRead;
     }
     if (filled > maxBytes) return null;
-    // The mode comes from this `fstat`, not from a separate `stat` on the
+    // The metadata comes from this `fstat`, not from a separate `stat` on the
     // pathname. Two operations could land on two inodes: content read from a
     // replacement that somebody made `0600` for a reason, restored under the
     // `0644` the old entry carried, and readable by everyone.
-    return { content: Buffer.from(buffer.subarray(0, filled)), mode: pinned.mode & 0o7777 };
+    return {
+      content: Buffer.from(buffer.subarray(0, filled)),
+      mode: pinned.mode & 0o7777,
+      uid: pinned.uid,
+      gid: pinned.gid,
+      dev: pinned.dev,
+      ino: pinned.ino,
+    };
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "ENXIO" || code === "EISDIR") return null;

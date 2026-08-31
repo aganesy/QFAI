@@ -1,10 +1,15 @@
 import {
   access,
+  chmod,
+  chown,
   lstat,
   mkdtemp,
   mkdir,
   readFile,
   readlink,
+  rename,
+  rm,
+  stat,
   writeFile,
   symlink,
 } from "node:fs/promises";
@@ -15,6 +20,7 @@ import { promisify } from "node:util";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import { isMap, isSeq, parseDocument } from "yaml";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
@@ -76,6 +82,34 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
   const target = await readlink(linkPath);
   const normalized = target.replace(/\\/g, "/");
   expect(normalized).toContain(expectedFragment);
+}
+
+/** The `qfai-atdd` phases sequence of an `agent-routing.yml` document. */
+function atddPhases(doc: ReturnType<typeof parseDocument>) {
+  const routing = doc.get("routing");
+  if (!isSeq(routing)) throw new Error("agent-routing.yml has no routing sequence");
+  const atdd = routing.items.find((item) => isMap(item) && item.get("skill") === "qfai-atdd");
+  if (!isMap(atdd)) throw new Error("agent-routing.yml has no qfai-atdd entry");
+  const phases = atdd.get("phases");
+  if (!isSeq(phases)) throw new Error("qfai-atdd has no phases");
+  return phases;
+}
+
+/** Roll a routing table back to a package that had no ATDD `red` gate. */
+function withoutAtddRedPhase(source: string): string {
+  const doc = parseDocument(source);
+  const phases = atddPhases(doc);
+  phases.items = phases.items.filter((item) => !(isMap(item) && item.get("id") === "red"));
+  return doc.toString({ lineWidth: 0 });
+}
+
+function atddPhaseIds(source: string): string[] {
+  const ids: string[] = [];
+  for (const item of atddPhases(parseDocument(source)).items) {
+    const id = isMap(item) ? item.get("id") : null;
+    if (typeof id === "string") ids.push(id);
+  }
+  return ids;
 }
 
 // This suite exercises end-to-end init flows with extensive filesystem I/O
@@ -1176,6 +1210,335 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
       expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // A project that installed an older package keeps its own agent-routing.yml
+  // (manifest/ is user configuration and --force never overwrites it), so a
+  // phase added to the shipped routing used to reach new projects only: the
+  // regenerated skills routed to a phase the project's table did not have.
+  it("--force merges a missing routing phase in without rewriting the project's taxonomy", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // Roll this project back to a table without the ATDD `red` phase, and
+      // give it a taxonomy of its own: an extra agent in `coverage`, and one
+      // shipped-required agent deliberately dropped from it.
+      const doc = parseDocument(withoutAtddRedPhase(await readFile(routingPath, "utf-8")));
+      const coverage = atddPhases(doc).items.find(
+        (item) => isMap(item) && item.get("id") === "coverage",
+      );
+      if (!isMap(coverage)) throw new Error("qfai-atdd has no coverage phase");
+      coverage.set("mandatory_agents", ["house-engineer"]);
+      await writeFile(routingPath, doc.toString({ lineWidth: 0 }), "utf-8");
+      // The merge replaces the file through a temp file and a rename, which
+      // makes a new inode: the mode has to be carried over, or a manifest kept
+      // at 0600 comes back readable by everyone.
+      if (process.platform !== "win32") await chmod(routingPath, 0o600);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      const merged = await readFile(routingPath, "utf-8");
+      const atddSection = merged.slice(merged.indexOf("- skill: qfai-atdd"));
+      // The phase is back, ahead of `implementation` as shipped.
+      expect(atddSection.indexOf("- id: red")).toBeGreaterThan(-1);
+      expect(atddSection.indexOf("- id: red")).toBeLessThan(
+        atddSection.indexOf("- id: implementation"),
+      );
+      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
+      // The project's own edit is untouched, and its dropped required agent is
+      // reported rather than restored.
+      expect(merged).toContain("house-engineer");
+      expect(captured).toContain("W-ROUTING-AGENT-DIVERGED");
+      expect(captured).toContain("test-design-analyst");
+      if (process.platform !== "win32") {
+        expect((await stat(routingPath)).mode & 0o777).toBe(0o600);
+      }
+      // No half-written temp file is left behind in the manifest layer.
+      const manifestEntries = await fg("*", {
+        cwd: path.dirname(routingPath),
+        dot: true,
+        onlyFiles: true,
+      });
+      expect(manifestEntries.filter((entry) => entry.endsWith(".tmp"))).toEqual([]);
+
+      // Idempotent: a second --force has nothing left to add.
+      const second = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+      expect(second).not.toContain("I-ROUTING-PHASE-MERGED");
+      expect(await readFile(routingPath, "utf-8")).toBe(merged);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // `writeFile` resolves a symlink and writes through it, so a project whose
+  // `agent-routing.yml` is a link into another tree would have had that other
+  // file rewritten by `qfai init`. `copyTemplateTree` already `lstat`s its
+  // destinations for this; the merge's direct write has to as well.
+  it("--force refuses to merge through a symlinked agent-routing.yml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-link-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // A valid, writable routing table that lives outside the project and is
+      // missing the ATDD `red` phase — exactly what the merge wants to add.
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      const escapee = path.join(outside, "agent-routing.yml");
+      await writeFile(escapee, stale, "utf-8");
+      await rm(routingPath, { force: true });
+      try {
+        await symlink(escapee, routingPath, "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Nothing was written through the link.
+      expect(await readFile(escapee, "utf-8")).toBe(stale);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // `Buffer.toString("utf-8")` does not fail on bytes that are not UTF-8: it
+  // substitutes U+FFFD for each of them. The YAML still parses, so without a
+  // strict decode the merge would rename the substituted text over the user's
+  // manifest and those bytes would be gone for good.
+  it("--force skips a routing manifest that is not valid UTF-8", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-utf8-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // Missing the ATDD `red` phase — so there is something to add — with a
+      // comment carrying a byte sequence no UTF-8 decoder can accept.
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      const bytes = Buffer.concat([
+        Buffer.from("# owner: ", "utf-8"),
+        Buffer.from([0xff, 0xfe]),
+        Buffer.from(`\n${stale}`, "utf-8"),
+      ]);
+      await writeFile(routingPath, bytes);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Byte for byte what the project had: nothing was substituted and
+      // written back.
+      expect(await readFile(routingPath)).toEqual(bytes);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // A manifest `init` cannot open is the same class of problem as one it cannot
+  // parse: the contract is a note and a skipped merge. Letting the read error
+  // out of the merge aborted the whole `--force` run over an optional step.
+  it("--force reports an unreadable routing manifest instead of failing init", async () => {
+    // Needs an unreadable file, which POSIX modes give and root ignores.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-eacces-"));
+    const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      await writeFile(routingPath, stale, "utf-8");
+      await chmod(routingPath, 0o000);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // The rest of the run still happened rather than being thrown away.
+      await access(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"));
+      await chmod(routingPath, 0o600);
+      expect(await readFile(routingPath, "utf-8")).toBe(stale);
+    } finally {
+      await chmod(routingPath, 0o600).catch(() => undefined);
+      await removeTempTree(root);
+    }
+  });
+
+  // The replacement is a new inode created by whoever runs `init`, so under
+  // `sudo qfai init --force` — or in any shared tree where the manifest belongs
+  // to somebody else — a silent rename hands the user's own file to root and
+  // leaves them unable to edit it through `qfai-configure`.
+  it("--force keeps the routing manifest's owner across the merge", async () => {
+    // Needs a process that may hand a file to another owner.
+    if (process.platform === "win32" || process.getuid?.() !== 0) return;
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-owner-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+      await writeFile(
+        routingPath,
+        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
+        "utf-8",
+      );
+      await chown(routingPath, 1000, 1000);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
+      const after = await lstat(routingPath);
+      expect(after.uid).toBe(1000);
+      expect(after.gid).toBe(1000);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // `--force` regenerates `assistant/agents/**` but never the project's
+  // `agent-catalog.yml`, so a phase spliced in ahead of an agent the project
+  // removed would leave `qfai validate` failing (QFAI-AGENT-008) on a table
+  // that validated a moment earlier.
+  it("--force skips a routing phase the project's agent catalog cannot satisfy", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-catalog-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const routingPath = path.join(manifestDir, "agent-routing.yml");
+      const catalogPath = path.join(manifestDir, "agent-catalog.yml");
+
+      await writeFile(
+        routingPath,
+        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
+        "utf-8",
+      );
+      // The supported removal path: the agent is gone from the catalog.
+      const catalog = parseDocument(await readFile(catalogPath, "utf-8"));
+      const agents = catalog.get("agents");
+      if (!isSeq(agents)) throw new Error("agent-catalog.yml has no agents sequence");
+      agents.items = agents.items.filter(
+        (item) => !(isMap(item) && item.get("id") === "qa-gatekeeper"),
+      );
+      await writeFile(catalogPath, catalog.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-AGENT-UNKNOWN");
+      expect(captured).toContain("qa-gatekeeper");
+      expect(atddPhaseIds(await readFile(routingPath, "utf-8"))).not.toContain("red");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // The merge runs after the create-only copy, but `--dry-run` copies nothing,
+  // so the manifest layer is legitimately absent there. An absent path is not
+  // an unsafe one: it is simply nothing to merge into, and warning about it
+  // would put a write-safety diagnostic on every `--force --dry-run`.
+  it("--force --dry-run reports no routing warning when there is no manifest yet", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dry-"));
+    try {
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: true, yes: true });
+      });
+
+      expect(captured).not.toContain("W-ROUTING");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // An `lstat` on the manifest — like `O_NOFOLLOW` — answers for the last path
+  // component only. A project whose whole `manifest/` directory is a link out
+  // of the tree has a perfectly ordinary file at the end of it, so both checks
+  // passed while every byte written still landed outside the project.
+  it("--force refuses to merge through a symlinked manifest directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dirlink-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const escapee = path.join(outside, "manifest");
+
+      // Move the real manifest layer out of the project and link to it.
+      await rename(manifestDir, escapee);
+      try {
+        await symlink(escapee, manifestDir, "dir");
+      } catch {
+        await rename(escapee, manifestDir);
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+      const escapedRouting = path.join(escapee, "agent-routing.yml");
+      const stale = withoutAtddRedPhase(await readFile(escapedRouting, "utf-8"));
+      await writeFile(escapedRouting, stale, "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Nothing was written to the file outside the project.
+      expect(await readFile(escapedRouting, "utf-8")).toBe(stale);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // `review-profiles.yml` is excluded from `--force` exactly as the catalog is,
+  // so a skill entry shipped alongside a new profile would be appended whole
+  // into a project that has neither — leaving `review_profile:` naming a
+  // profile nothing declares when the reviewers for that skill are selected.
+  it("--force skips a routing entry whose review profile the project lacks", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-profile-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const routingPath = path.join(manifestDir, "agent-routing.yml");
+      const profilesPath = path.join(manifestDir, "review-profiles.yml");
+
+      // A project on an older package: no `qfai-prototyping` routing entry, and
+      // no `ui-bearing` profile for it to name either.
+      const routing = parseDocument(await readFile(routingPath, "utf-8"));
+      const entries = routing.get("routing");
+      if (!isSeq(entries)) throw new Error("agent-routing.yml has no routing sequence");
+      entries.items = entries.items.filter(
+        (item) => !(isMap(item) && item.get("skill") === "qfai-prototyping"),
+      );
+      await writeFile(routingPath, routing.toString({ lineWidth: 0 }), "utf-8");
+      const profiles = parseDocument(await readFile(profilesPath, "utf-8"));
+      const declared = profiles.get("profiles");
+      if (!isMap(declared)) throw new Error("review-profiles.yml has no profiles map");
+      declared.delete("ui-bearing");
+      await writeFile(profilesPath, profiles.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-PROFILE-UNKNOWN");
+      expect(captured).toContain("ui-bearing");
+      expect(await readFile(routingPath, "utf-8")).not.toContain("- skill: qfai-prototyping");
     } finally {
       await removeTempTree(root);
     }
