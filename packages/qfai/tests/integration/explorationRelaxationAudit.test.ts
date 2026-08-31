@@ -58,7 +58,7 @@ describe("exploration relaxation is recorded in the validate result", () => {
     const dcon030 = result.issues.find((i) => i.code === "QFAI-DCON-030");
     expect(dcon030?.severity).toBe("error");
     expect(dcon030?.relaxedFrom).toBeUndefined();
-    expect(result.issues.some((i) => i.code === "QFAI-PROT-RELAX-001")).toBe(false);
+    expect(result.issues.some((i) => i.code === "QFAI-PROT-337")).toBe(false);
   });
 
   it("exploration downgrades the gate, stamps relaxedFrom and emits the notice", async () => {
@@ -68,7 +68,7 @@ describe("exploration relaxation is recorded in the validate result", () => {
     expect(dcon030?.severity).toBe("warning");
     expect(dcon030?.relaxedFrom).toBe("error");
 
-    const notices = result.issues.filter((i) => i.code === "QFAI-PROT-RELAX-001");
+    const notices = result.issues.filter((i) => i.code === "QFAI-PROT-337");
     expect(notices.length).toBe(1);
     const notice = notices[0];
     expect(notice?.severity).toBe("info");

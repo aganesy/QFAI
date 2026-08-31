@@ -314,7 +314,7 @@ export function relaxIssuesForMode(
 }
 
 /** Code of the one-per-run notice that reports an applied relaxation. */
-export const EXPLORATION_RELAXATION_NOTICE_CODE = "QFAI-PROT-RELAX-001" as const;
+export const EXPLORATION_RELAXATION_NOTICE_CODE = "QFAI-PROT-337" as const;
 
 /** Rule slug carried by the relaxation notice. */
 export const EXPLORATION_RELAXATION_NOTICE_RULE = "prototypingMode.explorationRelaxation" as const;

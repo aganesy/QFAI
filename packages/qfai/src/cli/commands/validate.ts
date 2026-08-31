@@ -1015,7 +1015,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BREAK-008":
     "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
   "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
-  "QFAI-PROT-RELAX-001":
+  "QFAI-PROT-337":
     "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so each carries a promotion window
