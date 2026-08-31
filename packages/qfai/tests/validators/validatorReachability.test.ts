@@ -335,6 +335,25 @@ function callableReturnType(
 }
 
 /**
+ * True when a top-level statement carries the `export` keyword.
+ *
+ * `ts.Statement` does not declare `modifiers` — only the node kinds that can
+ * hold them do — so the property is reached through `canHaveModifiers` /
+ * `getModifiers` rather than off the union. Reading it directly type-checks
+ * nowhere and would leave every caller below narrowing an `any`.
+ */
+function isExportedStatement(statement: ts.Statement): boolean {
+  if (!ts.canHaveModifiers(statement)) {
+    return false;
+  }
+  return (
+    ts
+      .getModifiers(statement)
+      ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) === true
+  );
+}
+
+/**
  * Exported entry points that can emit findings, identified by their declared
  * return type rather than by a name prefix: `run*`, `detect*` and `check*`
  * validators exist too, and a prefix rule would exempt exactly the modules this
@@ -343,9 +362,7 @@ function callableReturnType(
 function findingsEntries(sourceFile: ts.SourceFile, findingsTypes: ReadonlySet<string>): string[] {
   const names: string[] = [];
   for (const statement of sourceFile.statements) {
-    const isExported = statement.modifiers?.some(
-      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-    );
+    const isExported = isExportedStatement(statement);
     if (isExported !== true) {
       continue;
     }
@@ -471,10 +488,7 @@ function hasRuntimeExport(sourceFile: ts.SourceFile): boolean {
     if (ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement)) {
       return false;
     }
-    return (
-      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ===
-      true
-    );
+    return isExportedStatement(statement);
   });
 }
 

@@ -87,6 +87,7 @@
     "tests/scripts/testTypeCheckEnumeration.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/boundedRead.test.ts",
+    "tests/validators/validatorReachability.test.ts",
     "tests/unit/buildCommand.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
