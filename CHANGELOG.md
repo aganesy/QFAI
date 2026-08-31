@@ -6,6 +6,39 @@
 
 ### Added
 
+- **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
+  `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
+  `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を
+  作成する。その PR が main に入ると `Tag release commit` が `vX.Y.Z` を push し、`release.yml` が
+  起動する。publish は従来どおり `release` environment の必須レビュアー承認で止まる。
+- **tag はリリース PR が運んだコミットにしか付かない。** 起動条件は
+  `packages/qfai/package.json` の変更だが、それは必要条件であって十分条件ではない
+  — `feature/vX.Y.Z` のような pinned branch は manifest と CHANGELOG 見出しを両方揃えるため、
+  それだけでは区別できない。tag ジョブはそのコミットを運んだ PR を API に問い、head branch が
+  `release/vX.Y.Z` であることを要求する。`.agents/rules/version-discipline.md` は tag の発行に
+  独立した明示指示を求めており、pin が与えるのは「版」であって「tag を切ってよい」ではない。
+- **版に関する検査はリテラルで行う。** CHANGELOG 見出しの照合は文字列一致で、正規表現ではない
+  (`1.10.2` を正規表現として使うと `1010.2` に一致してしまう)。同名 tag が既にある場合は
+  commit まで dereference し、このコミットを指すときだけ no-op として、異なるコミットを指す
+  ときは両方の sha を示して失敗する。`01.11.0` / `1.011.0` のような先頭ゼロ入りの版は両
+  ワークフローが拒否する — node-semver が拒否するため、通してしまうと publish 時まで失敗が
+  遅れ、そのときには PR も tag も既に存在している。
+- **リリース文面は自動生成しない。** 内容は各変更の作者が `## [Unreleased]` に書き足したものがそのまま
+  使われ、GitHub Release の本文も同じセクションから抽出される。裏返しとして `## [Unreleased]` が
+  何も説明していなければ `Prepare release` は失敗する — 空の場合だけでなく、`### Added` のような
+  カテゴリ見出ししか無い場合も含む。誰も書いていないリリースノートは「何も起きなかった」と読める。
+  なお `## [X.Y.Z] - <日付>` の日付は **Prepare release を実行した日** で、tag が切られるのは PR が
+  マージされたときなので、翌日以降にマージするならリリース PR の中で直す (PR 本文がその旨を告げる)。
+- **版番号も自動化は選ばない。** `.agents/rules/version-discipline.md` が版番号の決定権をユーザに置いて
+  いるため、入力は必須で既定値を持たない。作成されるブランチ名が pin を運ぶので
+  `check-branch-version-pin.sh` が manifest との一致を検証できる。書き込みは
+  `RELEASE_AUTOMATION_TOKEN` 経由で行うため、ワークフローの `permissions:` は `contents: read` のままで、
+  `BR-0017-0016` の閉じた逸脱集合は広がらない。
+- **準備が途中で失敗しても再開できる。** branch の push と PR の作成は別々の失敗で、後者だけが
+  remote に branch を残す。force-push は規則で禁止されているため、素直に再実行すると
+  non-fast-forward で拒否されて手が無くなる。既存 branch と既存 PR を検出して採用するので、
+  原因を直して再実行すればそのまま続けられる (同名でも別の版を宣言している branch は衝突
+  として名指しで拒否する)。
 - **`qfai --version` / `qfai -V` print the tool version.** Both spellings were
   unrecognised and fell through to `Unknown command`, and `usage()` advertised
   no version affordance at all; the only way to read the version was
@@ -14,6 +47,39 @@
   flag on any command, prints to stdout and exits 0 — including outside a
   project, where there is no `qfai.config.yaml` to read. `usage()` and both
   READMEs now list it next to `-h, --help`.
+
+### Fixed
+
+- **昇格 window を持たない 9 個の finding code を、ガードの母集団を狭めるのではなく登録して塞いだ。**
+  56 本の PR をまとめて取り込んだ後、`RULE_PROMOTIONS` に登録の無い code が 9 個残っていた。
+  最初の修正はガードの母集団を `errorCapable` な code に絞るものだったが、これは誤りだった —
+  P7 は「新しい code は `warning` で出荷し、1 minor 以上先の release に昇格を pin する」と
+  定めており、`errorCapable: false` は新しい code の**正しい初期状態**である。あの filter は
+  ガードが守るべき母集団そのもの (登録の無い新しい warning は永久に素通りし、昇格もされない)
+  を除外していた。filter を撤回し、`QFAI-AGENT-014` / `QFAI-CONTRACT-015` / `-032` / `-033` /
+  `-034` / `-035` / `QFAI-RESEARCH-012` / `QFAI-TRIAGE-008` の 8 個を `RULE_PROMOTIONS` に
+  登録した。severity は literal ではなく `newRuleSeverity` が pin から決め、finding 本文は
+  window の終わる release を名乗る (P7 step 2 / 3)。`resolveToolVersion()` は validator 実行
+  ごとに 1 回だけ解決する。error に到達しうる code として、8 個には `expected:` / `fix:` の
+  catalog 行も揃えた。`QFAI-REVIEW-010` だけは `info` のまま据え置いた: P7 の梯子は
+  warning → error であり、`newRuleSeverity` は `info` を返さない。info の code をそこへ通すと
+  登録した日に severity が上がり、pin の release で build が落ちる — window の目的と逆になる。
+  除外は「src/ のどの emission site でも `info` である」ことをテストが毎回検証する、
+  名前つきの 1 行として置いた。
+- **exploration の hard-error 一覧から落ちていた UIX gate を戻した (24 個)。**
+  到達可能性 walk が module-level の配列定数を展開しないため、`CANONICAL_UIX_VALIDATORS` を
+  `map` で回す canonical UI/UX validator 群が「到達不能」と読まれ、その gate 20 個が
+  `EXPLORATION_HARD_ERROR_CODES` から削除されていた。削除ではなく walk 側の盲点だった —
+  discussion pack がある限りこれらは実際に走る。walk が配列 initializer も関数本体と同じ
+  規則で辿るようにしたところ、equality テストが 24 個を要求した (以前の 20 個に加えて、
+  一度も一覧に載ったことのない `validateTrendScan` の 4 個)。
+- **GitHub Release の本文が長すぎるときに、リリースを失敗させずに切り詰めるようにした。**
+  `release.yml` の抽出ステップは本文が空の場合しか検査しておらず、CHANGELOG のセクションが
+  GitHub Release 本文の上限 125,000 文字を超えると `gh release create` が 422 を返して
+  Release が作られなかった (v1.10.1 のセクションは 160,679 文字)。npm publish は別ジョブの
+  ため成功しており、run を読むまで表面化しなかった。切り詰めはエントリ境界・文書順で行い、
+  どこまで残したかと全文へのリンクを本文末尾に付ける。どのエントリが重要かはこの機構が
+  決めない。
 
 ## [1.10.1] - 2026-08-31
 
