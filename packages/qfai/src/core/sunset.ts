@@ -163,6 +163,14 @@ export const RULE_PROMOTIONS = {
    * arrives in the first run after the upgrade.
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-AUTOPILOT-001` — a `qfai-*` SKILL.md whose
+   * hard-required bucket names something outside the pinned set, or omits a
+   * pinned entry. Installed skills are only refreshed by an explicit
+   * `qfai init --force`, so every project that installed before the set was
+   * pinned still lists the retired entry and would meet this at once.
+   */
+  autopilotHardRequiredDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

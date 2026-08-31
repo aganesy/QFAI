@@ -117,3 +117,17 @@ Pack: `.qfai/discussion/discussion-20260804173914356/` (CHG-007). Cascade only �
 - Open questions: OQ-0015-0001 opened (registration timing + the full SSOT set that must move together). No prior open question resolved here.
 - Round-2 review corrections folded in: the acceptance criterion was first appended as a duplicate of the CHG-006 `AC-0015-0016` and is renumbered to `AC-0015-0022` (the CHG-006 chain at `AC-0015-0016` is untouched); the two ledger rows were first appended to the file's second Markdown table, which `parseFirstMarkdownTable` never reads, and are moved into the first table.
 - Approved By: user@2026-08-05 (CHG-007 pack approval)
+
+## 2026-08-22 — hard-required autopilot bucket の `companyName` 削除
+
+Upstream: `_policies/10_delta.md` § 2026-08-22 (policy-only UPDATE:MODIFY — DR-0269 statement / 06_Glossary.md)。本 spec は同一列挙の cascade 先。
+
+| Operation     | Sub-op | Target                                                                             | Source (REQ) | Rationale                                                                | DR-Ref  | Status |
+| ------------- | ------ | ---------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------ | ------- | ------ |
+| UPDATE:MODIFY | MODIFY | AC-0015-0015 / BR-0015-0010 / 01_Spec.md (Cross-skill governance behavior CHG-006) | REQ-0160     | hard-required から consumer 不在の `companyName` を削除し DR-0269 と同期 | DR-0269 | PASS   |
+
+- Change: hard-required の列挙を `companyName` / brand intent / `primarySpecId` から brand intent / `primarySpecId` に縮小。`R-AUTOPILOT-POLICY-MISSING` の trigger 条件 (section 欠落 / bucket 部分欠落) は不変。
+- Rationale: `companyName` は配布ツリーに consumer が無く、hard-required の「着手前に必ず訊く」コストだけを払っていた。auto-decide と違い hard-required は縮小も widening も許さない固定集合なので、集合そのものを改訂した。
+- Regression: `packages/qfai/tests/assets/assets.test.ts` — 配布 SKILL.md 7 件の hard-required bucket が pinned 2 項目を「両方含み、それ以外を含まない」ことを双方向に検査。
+- ID 安定性: US / AC / BR / EX / TC いずれも renumber なし。新規 append なし。
+- Approved By: yusuke_senaga (issue #753)

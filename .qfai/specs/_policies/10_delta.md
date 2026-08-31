@@ -880,3 +880,19 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 - `spec-0017` is repository-internal by construction: `.github/workflows/**`, root `scripts/**` and `packages/qfai/scripts/**` are **not** in `package.json#files`, so nothing it owns is distributed.
 - The shipped rows (REQ-0014..0021, spec-0003) do touch the distributed surface. Two guards bind them: a conventional pin-version comment trailer is forbidden in shipped files by the comment-blind internal-version regex in `check-no-internal-version-leakage.sh`, and `verify-pack.mjs` permits only `workflows` under the shipped `.github/`, so composite-action templates cannot ship.
 - REQ-0023's mapping document is a sibling of `.qfai/assistant/catalog/test-layers.md`, which is SSOT-synced. It MUST be authored under `packages/qfai/assets/init/.qfai/assistant/catalog/` — editing the root `.qfai/` copy directly would be reverted by `pnpm sync:ssot` and fail `git diff --exit-code .qfai/` in `ci:gate`.
+
+## 2026-08-22 — UPDATE:MODIFY — drop `companyName` from the hard-required autopilot bucket
+
+- Operation: UPDATE:MODIFY (policy-only; no CAP / REQ / spec ID added or renumbered)
+- Subject:
+  - `_policies/08_Decisions.md` DR-0269 Statement — hard-required bucket enumeration
+  - `_policies/06_Glossary.md` "autopilot policy" row — same enumeration
+- Change: hard-required は `companyName` / brand intent / `primarySpecId` の 3 項目から、brand intent / `primarySpecId` の 2 項目に縮小。
+- Rationale: hard-required は「default 不可能ゆえ着手前に必ず訊く」bucket であり、1 項目 = 1 回の確定 prompt。`companyName` は配布ツリー上に consumer が存在しない (template slot / artifact section / `references/*.md` のいずれからも読まれない) ため、同 section が宣言する 0-1 prompt 予算を無条件に消費するだけだった。
+- Cascade:
+  - `spec-0015/01_Spec.md` / `03_Acceptance-Criteria.md` / `04_Business-Rules.md` — 同一列挙の同期。該当 AC / BR の spec ローカル ID は `spec-0015/09_delta.md` が記録する (`_policies` は spec ローカル ID を参照しない)
+  - `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md` 7 件の `## Default Autopilot Policy` から該当 bullet を削除し、root `.qfai/` mirror へ同期
+  - `packages/qfai/src/core/validators/autopilotPolicy.ts` の JSDoc 列挙を同期
+- Approval: 非 approval-gated。UPDATE:MODIFY は `_policies/11_Slice-Policy.md` §Triage の AskUserQuestion 対象外 (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE のみ) のため、AskUserQuestion テンプレートは起動していない。
+- ID 安定性: DR-0269 は renumber せず statement のみ改訂。spec-0015 側の AC / BR も ID 据え置き (詳細は `spec-0015/09_delta.md`)。
+- 配布物影響: 配布サーフェス (`assets/init/.qfai/assistant/skills/qfai-*/SKILL.md`) の本文のみ。内部 ID / version marker の増減なし。

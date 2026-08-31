@@ -143,7 +143,6 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `companyName`
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
