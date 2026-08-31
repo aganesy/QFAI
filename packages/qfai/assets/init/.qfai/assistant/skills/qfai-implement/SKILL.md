@@ -39,7 +39,7 @@ QFAI Skill Body (SSOT)
 
 ## Spec Auto-Discovery Protocol
 
-When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see Volume Policy > Multi-spec queue); this protocol does NOT enable multi-spec parallel execution.
+When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see `references/volume-policy.md#multi-spec-queue`); this protocol does NOT enable multi-spec parallel execution.
 
 ### User Selection Flow
 
@@ -72,7 +72,7 @@ Skill-specific examples:
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
   already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting, confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
   per-spec verification first when it is missing or stale (`references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`).
-  Only then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
+  Only then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (`references/volume-policy.md#advancing-the-queue`).
 
 ## Goal
 
@@ -80,11 +80,11 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Visual Review Guard
 
-- Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item.
-- Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior. Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` → root `DESIGN.md` → `.qfai/contracts/design/DESIGN.md.lock.yaml` → `.qfai/contracts/design/design-system.yaml` (post-loop token mirror) → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` → `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` → `.qfai/prototypes/final/index.html`.
+- Review rendered output, screenshot evidence, or HTML output before closing any UI-affecting item — on a cli-only target the reviewable rendering is the captured command output (stdout/stderr transcript, exit code) instead.
+- Read spec + contract inputs first whenever implementation touches UI or critique-driven behavior. Read order: `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` → root `DESIGN.md` → `.qfai/contracts/design/DESIGN.md.lock.yaml` → `.qfai/contracts/design/design-system.yaml` (post-loop token mirror) → `.qfai/contracts/design/prototype-handoff.yaml` → `.qfai/contracts/ui/*.yaml` → `.qfai/evidence/prototyping/iter-NN/<screen>.{png,html}` → `.qfai/prototypes/final/index.html`. **cli-only target** — decided per implemented spec, never per session: read the classification from the `01_Context.md` of the discussion pack **this spec's own provenance names** (`Source: discussion-<ts>#...` in its `02_User-stories.md` / `03_Acceptance-Criteria.md`), and the target is cli-only when that block says `primary_surface: cli` with no visual `secondary_surfaces`. Consult `.qfai/state.json#discussion.currentId` only when the spec carries no pack provenance at all, and treat the target as visual when neither resolves — `/qfai-implement` takes any one spec from an argument or the queue, so a `discussion.currentId` pointer left on someone else's CLI pack must not strip a web spec of its `DESIGN.md` / lock / prototype inputs (nor the inverse demand them of an older CLI spec). On a cli-only target none of the four design-contract entries nor either prototype-evidence entry exists — `/qfai-discussion` authors no root `DESIGN.md`, `/qfai-sdd` Phase 0 skips the freeze and `/qfai-prototyping` rejects `cli` — so the read order is `01_Spec.md` → `03_Acceptance-Criteria.md` → `05_Examples.md` → `.qfai/contracts/ui/*.yaml` and nothing is missing.
 - Do not read discussion-pack UI/UX sidecars or fallback mocks.
 - Prototype HTML is analysis input, not production source. Reimplement with project-native patterns while preserving the visual identity captured in `prototype-handoff.yaml` `implementationNotes` (free-form prose).
-- UI-affecting items require product-surface-reviewer prototype parity review before `done`. If code intent and rendered output diverge, treat the rendered/HTML result as the blocking review input and reconcile before DONE.
+- UI-affecting items require a `product-surface-reviewer` review before `done`. On a visual-prototyping target that review is **prototype parity**. On a cli-only target there is no prototype to compare against (`/qfai-prototyping` rejects `cli`), so parity is replaced — not waived — by a surface review of the captured command output (stdout/stderr transcript + exit code) against `.qfai/contracts/ui/*.yaml` and `03_Acceptance-Criteria.md`; never block a cli item on prototype artifacts that cannot exist. If code intent and the reviewed output diverge, treat the rendered/HTML/transcript result as the blocking review input and reconcile before DONE.
 
 ## Non-goals
 
@@ -95,7 +95,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Execution Ledger: test-list.md
 
-The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
+The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`;
 the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> `done` plus the re-entry edges the reference enumerates, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
 The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
@@ -104,7 +104,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first
 
-1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `#format-ssot-mandatory` and `#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
+1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory` and `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` — **every queued spec's, not only the first**, since step 3 runs once for the whole invocation — and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement, including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 3. **Then run routing phase `plan`** — the only phase carrying `iteration: per-invocation`, and the one this stage exists ahead of: the planner must read the ledger those resets have already been applied to. Route `delivery-planner` over **every** queued ledger — a queue transition resumes at Phase Red and re-enters this phase only when its frame check finds the in-scope `CR-*` set or the plan's revision moved (`references/volume-policy.md#advancing-the-queue`) — for the risk tiers, the T1 coherent groups, the parallel dispatch decision and the order the rows will be worked in (Volume Policy), which Phase Red step 1 then walks; it is **blocking** here, so a non-PASS stops the invocation before any row moves, and it does **not** pick the row — that is Phase Red step 1, which runs per row inside the frame this phase fixes. Route `test-design-analyst` over the same ledgers, plus each spec's full `TC-*` / `US-*` / `CON-API-*` obligation set read independently of the rows, for coverage and layer-ownership findings; it is mandatory and **not** blocking, because the repair for a missing obligation is upstream and this skill invents no row that no TC backs (Preconditions). A **missing row** is raised only for a coverage-target `TC-*`: `US-*` and `CON-API-*` seed no rows, so zero `E2E` / `API` rows is normal and is never reported as a dropped obligation. What each receives and returns, why the analyst neither produces nor REVISEs over the Coverage Depth Matrix here, how a named-`TDD-ID` or mutation-only invocation is confirmed rather than re-planned, and where the findings are recorded: `references/plan-phase.md`.
 
@@ -127,8 +127,8 @@ The eight required columns, the allowed transitions and the exception rules are 
    > whichever assert happens to execute first — every assertion after it is unobserved on every RED
    > run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
    > row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
-   > observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
-   > Green.
+   > observation**. Split the row per `references/execution-ledger.md#selector-granularity-must` (rules
+   > and examples: `references/selector-granularity.md`) before continuing; do not proceed to Green.
 
 ### Phase: Green (Make It Pass)
 
@@ -153,7 +153,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review
    (`implementation-reviewer`). A T1 row submits with its coherent group and stays in
-   `refactor` until the group closes (Volume Policy > Group formation).
+   `refactor` until the group closes (`references/volume-policy.md#group-formation-states-and-transitions`).
 5. After all routed blocking reviewers return PASS, run checkpoint verification
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
@@ -171,8 +171,8 @@ The eight required columns, the allowed transitions and the exception rules are 
    is a user-approved accepted-risk waiver. Completion cannot be declared while
    any `exception` row lacks such a waiver.
 4. If a multi-spec queue was confirmed, announce the next queued spec and restart at
-   Phase: Red with its ledger; exit only after the last entry (Volume Policy >
-   Advancing the queue).
+   Phase: Red with its ledger; exit only after the last entry
+   (`references/volume-policy.md#advancing-the-queue`).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -210,8 +210,7 @@ Scale the ceremony to the ledger: derive a **risk tier** per row, **batch** T1 g
 reviews per coherent BR/AC group, process multiple specs as a **sequential queue**, state the
 implied **cost** before starting. The tier scales how **often** a gate runs, never **whether** it
 runs: `agent-routing.yml` keeps `qa-gatekeeper`, `completion-reviewer` and
-`implementation-reviewer` all mandatory (only the first two are in `blocking_agents`, but item 8 of
-the 11-point gate makes an `implementation-reviewer` REVISE block `done` anyway), and criticality
+`implementation-reviewer` all mandatory and all blocking, and criticality
 (authz, crypto, money, data integrity) forces T2 regardless of layer. Why this exists, the tier
 table, the group-formation transitions and the queue-advance steps: `references/volume-policy.md`.
 
@@ -224,7 +223,7 @@ All agent-to-agent transitions follow these contracts:
 3. `qa-gatekeeper` confirms or rejects each observation. A RED rejection stops the row before Green; it does not wait for the `review` phase.
 4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
-6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
+6. Only after every required reviewer passes may the item transition to `done`. Every reviewer in `blocking_agents` blocks `done` — for `qfai-implement` that is `implementation-reviewer`, `qa-gatekeeper` and `completion-reviewer` — and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
 7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every required reviewer still runs, once per group. T2/T3 rows submit alone.
 
 #### Precedence between `delivery-planner` and `qa-gatekeeper`
@@ -316,7 +315,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
-9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
+9. UI-affecting items have `product-surface-reviewer` PASS — **prototype parity** on a visual-prototyping target, and on a cli-only target (see `#visual-review-guard`) a surface review of the captured command output in its place, because no prototype exists to compare against
 10. `test-list.md` Status is current and its Evidence cell's anchor resolves to a fresh per-item entry in the evidence file its `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row, whose RED provenance was produced by the stage that authored its test — `/qfai-atdd` owns all three, because `QFAI-ATDD-112` puts every `L3` and undeclared-`Level` TC in `tests/integration/**` and its P4 writes those tests (`references/execution-ledger.md#atdd-owned-rows`). **Compatibility:** an `E2E` / `API` row that reached `done` or `review-fix` before this split has its evidence and anchor in `implement-<spec-id>.md`, which was the contract at the time. **Identify it by a marker, not by its status**: the row carries `Pre-split-evidence: implement` in its `Evidence` cell. **Write it once, from the history**: for **every** `E2E` / `API` row past `todo` — `red` and `green` and `refactor` as much as `done` and `review-fix` — check whether its `Evidence` anchor pointed at `implement-<spec-id>.md` in the commit that last advanced it. A row interrupted mid-cycle by the upgrade has legitimately stored evidence there too, and skipping it left that row unable to finish: unmarked, it is judged by the current rule whatever its status, so the evidence it lawfully wrote was rejected at item 10. Find that commit from the row's **patch history**, not with `git log -S`: the id is on both sides of a status-only change, and `-S` matches a filepair only when one side contains the string, so it walks back to the commit that _added_ the row instead. `git log -p -- <test-list.md>` and take the newest commit whose hunk changes that `TDD-ID`'s line (`git log -L` on the row also works where the line is stable). If its anchor named the implement file, append the marker. A row advanced after the split has an ATDD anchor there and gets none. Run it as part of taking this version; until it has run, those rows are judged by the current rule, which is the safe direction: they are reported, not silently accepted. Status and anchor alone cannot tell a legacy row from a new `E2E` / `API` row written to the wrong file — which would let a row that never produced its ATDD handoff be accepted as complete. **A row with no marker is judged by the current rule whatever its status**, which for an `E2E` / `API` row means the ATDD file: status and anchor alone cannot tell a legacy row from one written to the wrong file after the split, and accepting the implement anchor without the marker let a row that never produced an ATDD handoff pass the gate as complete. **A row that carries the marker** is the legacy case, and its implement anchor is accepted — it has no ATDD entry to produce, and a `done` row has no legal transition that would let it re-observe a RED, so requiring the new location would make an already-complete row permanently ungateable. Until the marker pass has run, unmarked legacy rows are reported rather than accepted; that is the safe direction, and running it is what clears them. A row advanced after the split writes to the file its `Layer` owns. The cell is a pointer, not the payload (`references/execution-ledger.md#evidence-cell-contract`). `Review pack seal` is recomputed here from the `review-<timestamp>/` directory it names, and a mismatch means the pack was edited after the round closed. Each reviewer verdict's `Audited evidence hash` is **recomputed** here over the entry's phase-authored fields: the revision excludes `.qfai/evidence/**`, so this is the only thing that tells a verdict passed on the evidence as read from one passed on evidence edited afterwards. The item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision (`references/evidence-revision.md`) — **except item 3**, which cannot be taken against the final tree on any row: a RED precedes the code that makes it pass, and a `falsifiability` row's mutation run is taken against a tree reverted before the GREEN. It names its own field (`RED revision`, or `Falsifiability revision` in its place); items 5, 7 and 8 share `Revision`. That is the property that RED is worth having, not a defect in it; demanding one revision across all four made an `observed-red` E2E/API row unable to reach `done` however correct its evidence was. Such a row's RED names the revision it was observed at, items 5, 7 and 8 agree among themselves, and the reviewer checks that the handed-over RED names this row's selector and the predicate it owns rather than that it matches the final tree
 11. The item's evidence file (item 10) is appended with both reviewer verdicts after items 7-8 returned PASS — this skill runs those reviewers for every row it advances, including the ones whose RED came from `/qfai-atdd`
 12. Checkpoint verification passed (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision — a mismatch means the checkpoint record was edited after the run, and nothing else in the entry would have moved. The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
@@ -419,7 +418,7 @@ review is requested.
 
 - `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash` (`references/evidence-revision.md`)
 - `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`
-- `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
+- `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE). On a cli-only target the field records the captured-command-output surface review item 9 substitutes for parity; the field name does not change, so nothing downstream has to learn a second key
 - `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
 
@@ -431,7 +430,7 @@ the completion gate (see `Completion prohibition conditions`).
 ### Evidence hard rules
 
 - Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected; both command and result are required, and "should pass" or "looks good" alone is not acceptable — `TDDLIST_EVIDENCE_STATUS_ONLY` (warning, waivable as `TDDLIST-004`: ledgers predating the check carry prose verdicts)
-- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (error)
+- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (warning inside its promotion window, error from the release the finding names; a row already at a terminal status backfills the cell in place — `references/execution-ledger.md`)
 - Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle. **Stale is mechanical**: evidence whose named `Revision` differs from the revision the item finally landed at (`references/evidence-revision.md`). **Reviewer obligation, not a machine gate** — why, and the full rules: `references/execution-ledger.md`.
 - **Selective reporting of repeated runs of the same gate is invalid.** When a gate was run more than once, report every run in order — a clean rerun after a red one is an `environment/tooling` finding, not a pass (`.qfai/assistant/constitution/shared-skill-operating-baseline.md#nondeterministic-gates`)
 
@@ -495,4 +494,4 @@ project_memory:
 
 - One TDD item at a time from test-list.md by default; item-level parallelism inside one spec only when the Parallelization Policy technical gate and user consent both pass; status lifecycle is forward-only along todo → red → green → refactor → done, plus re-entry edges (refactor → red on a qa-gatekeeper REVISE, blocked → todo, exception → todo, refactor → review-fix → refactor, approved upstream reset) enumerated only in `references/execution-ledger.md#allowed-transitions` — never conclude an edge is illegal from this line alone; exception requires DR-ID.
 - Fresh RED + GREEN command/result evidence is mandatory per item, except on the _RED not observable_ path where `Satisfied-by` + falsifiability command/result replace the RED pair (exclusive alternative, never both); status-only evidence (e.g. "Status: PASS") is rejected.
-- UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.
+- UI-affecting items require product-surface-reviewer PASS before the item can transition to done — prototype-parity on a visual-prototyping target, and on a cli-only target a surface review of the captured command output in its place, since `/qfai-prototyping` rejects `cli` and produces no prototype to compare against.
