@@ -96,6 +96,105 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     expect(summary.configFieldsWritten).toContain("review");
   });
 
+  it("previews the legacy-pack record against the post-archive set, as the live run sees it", async () => {
+    // A TTL-expired pack with no `revision_form` is archived by phase (2) before
+    // phase (4) enumerates the top level, so a live run records nothing. The
+    // dry-run moves no directory, so without the same exclusion it counted the
+    // pack and promised `.legacy-packs` + `summary.json` writes the live run
+    // would never make. Both paths must answer 0.
+    const seed = async (label: string): Promise<string> => {
+      const root = await newTempDir(label);
+      const staleTs = "20260401120000333";
+      const packDir = path.join(root, ".qfai", "review", `review-${staleTs}`);
+      await mkdir(packDir, { recursive: true });
+      // No `revision_form` — this is exactly what the migration records.
+      await writeFile(
+        path.join(packDir, "summary.json"),
+        JSON.stringify({ verdict: "pass" }, null, 2),
+        "utf-8",
+      );
+      const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      await utimes(packDir, mtime, mtime);
+      return root;
+    };
+
+    const dryRoot = await seed("legacy-dry");
+    const dry = await runAutoremediate({ root: dryRoot, dryRun: true, yes: true, isCi: false });
+
+    const liveRoot = await seed("legacy-live");
+    const live = await runAutoremediate({ root: liveRoot, dryRun: false, yes: true, isCi: false });
+
+    expect(live.archived).toHaveLength(1);
+    expect(dry.archived).toEqual(live.archived);
+    expect(live.legacyPacksRecorded).toEqual([]);
+    expect(dry.legacyPacksRecorded).toEqual([]);
+    expect(dry.lines).toContain("autoremediate: would record legacy review packs=0 (dry-run)");
+    // The preview promised no manifest, and the live run wrote none.
+    expect(await fileExists(path.join(liveRoot, ".qfai", "review", ".legacy-packs"))).toBe(false);
+    expect(await fileExists(path.join(dryRoot, ".qfai", "review", ".legacy-packs"))).toBe(false);
+  });
+
+  it("previews the config-fill against the parsed document, as the live run sees it", async () => {
+    // The dry-run branch skipped `tryFillConfigDefaults` entirely and printed a
+    // fixed `would fill default-keyed config fields` line, so the preview
+    // promised an append for a config that already declares `review:` (live
+    // run: writes nothing) and for one that is not a parseable mapping (live
+    // run: `skipped config-fill`). An operator reading the plan saw a change
+    // that was neither needed nor possible.
+    const seed = async (label: string, source: string): Promise<string> => {
+      const root = await newTempDir(label);
+      await writeFile(path.join(root, "qfai.config.yaml"), source, "utf-8");
+      return root;
+    };
+    const preview = async (root: string): Promise<string> => {
+      const summary = await runAutoremediate({
+        root,
+        dryRun: true,
+        yes: true,
+        isCi: false,
+        skipInstall: true,
+      });
+      expect(summary.configFieldsWritten).toEqual([]);
+      return summary.lines.join("\n");
+    };
+
+    // (a) Key already present: nothing to fill, so nothing may be promised.
+    const presentSource = "review:\n  staleTtlDays: 30\n";
+    const presentRoot = await seed("preview-present", presentSource);
+    const presentLines = await preview(presentRoot);
+    expect(presentLines).not.toContain("would fill default-keyed config fields");
+    expect(presentLines).toContain("config-fill not needed, default-keyed fields present");
+    // ...and the live run on the same input indeed writes nothing.
+    const presentLive = await runAutoremediate({
+      root: await seed("live-present", presentSource),
+      dryRun: false,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+    });
+    expect(presentLive.configFieldsWritten).toEqual([]);
+    expect(presentLive.lines.join("\n")).not.toContain("wrote default-keyed fields");
+
+    // (b) Unparseable document: the preview must decline exactly as live does.
+    const brokenRoot = await seed(
+      "preview-unparseable",
+      "paths:\n  specsDir: .qfai/specs\n : : :\n",
+    );
+    const brokenLines = await preview(brokenRoot);
+    expect(brokenLines).not.toContain("would fill default-keyed config fields");
+    expect(brokenLines).toContain("skipped config-fill");
+    expect(await readFile(path.join(brokenRoot, "qfai.config.yaml"), "utf-8")).toContain(" : : :");
+
+    // (c) Over-correction pin: a genuinely missing field must STILL be
+    // previewed, and now by name rather than as a blanket claim.
+    const gapRoot = await seed("preview-gap", "paths:\n  specsDir: .qfai/specs\n");
+    const gapLines = await preview(gapRoot);
+    expect(gapLines).toContain("autoremediate: would fill default-keyed config fields: review");
+    expect(await readFile(path.join(gapRoot, "qfai.config.yaml"), "utf-8")).not.toContain(
+      "staleTtlDays",
+    );
+  });
+
   it("does NOT overwrite a user-authored review.staleTtlDays value", async () => {
     const root = await newTempDir("no-overwrite");
     const configPath = path.join(root, "qfai.config.yaml");
@@ -112,6 +211,53 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     const updated = await readFile(configPath, "utf-8");
     expect(updated).toContain("staleTtlDays: 30");
     expect(summary.configFieldsWritten).not.toContain("review");
+  });
+
+  it("recognises a quoted top-level `review` key and leaves the user value alone", async () => {
+    // `"review":` is valid YAML for the same key. Deciding presence with a raw
+    // `^review:` text match called it absent and appended a SECOND `review:`
+    // block — a duplicate key that either invalidates the file or, on a
+    // last-wins reader, replaces the operator's 30 with the default 14. The
+    // guarantee "user-authored values are never overwritten" only holds if
+    // presence is read off the parsed document.
+    const root = await newTempDir("quoted-key");
+    const configPath = path.join(root, "qfai.config.yaml");
+    const original = '"review":\n  staleTtlDays: 30\n';
+    await writeFile(configPath, original, "utf-8");
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: false,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+    });
+
+    expect(summary.configFieldsWritten).not.toContain("review");
+    const updated = await readFile(configPath, "utf-8");
+    expect(updated).toBe(original);
+    expect(updated).not.toContain("staleTtlDays: 14");
+  });
+
+  it("declines to append to a qfai.config.yaml that is not a parseable mapping", async () => {
+    // Appending `review:` to a document that does not parse cannot be made
+    // safe; report the skip instead of compounding the damage.
+    const root = await newTempDir("unparseable");
+    const configPath = path.join(root, "qfai.config.yaml");
+    const original = "paths:\n  specsDir: .qfai/specs\n : : :\n";
+    await writeFile(configPath, original, "utf-8");
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: false,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+    });
+
+    expect(summary.configFieldsWritten).toEqual([]);
+    expect(await readFile(configPath, "utf-8")).toBe(original);
+    expect(summary.lines.join("\n")).toContain("skipped config-fill");
   });
 
   // Regression: "runtimeDependencies — all installed" is an affirmative
