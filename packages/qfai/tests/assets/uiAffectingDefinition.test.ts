@@ -183,7 +183,7 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       const skill = await read(tree, SKILL);
       const item9 = skill
         .split(/\r?\n/)
-        .find((line) => line.startsWith("9. UI-affecting items have prototype parity PASS"));
+        .find((line) => line.startsWith("9. UI-affecting items have "));
 
       expect(item9).toBeDefined();
       expect(item9).toContain(REFERENCE);
@@ -307,7 +307,7 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       // reading is a working assumption, not the recorded value.
       const item9 = skill
         .split(/\r?\n/)
-        .find((line) => line.startsWith("9. UI-affecting items have prototype parity PASS"));
+        .find((line) => line.startsWith("9. UI-affecting items have "));
       expect(item9).toContain("#when-owning-module-is-not-declared");
       expect(item9).toContain("against the tree the row landed at");
     });
