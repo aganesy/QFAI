@@ -150,6 +150,8 @@ releases completion.
 - [ ] All tests pass.
 - [ ] `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` passes with zero
       `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
+      The JS/TS `.skip` family is a separate warning rule, `QFAI-TEST-003`, and is **not**
+      counted here — a `.skip` parked in some unrelated scaffold cannot block completion.
       `--spec` scopes the **spec-owned** rules; `QFAI-TEST-001` is **not** one of them and
       still fails this gate wherever the stub lives. It names a test file, which no spec
       owns, so a sibling spec's `it.todo` exits 1 here. That is a real limit, not a
