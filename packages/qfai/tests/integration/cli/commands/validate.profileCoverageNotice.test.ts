@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runValidate } from "../../../../src/cli/commands/validate.js";
+import { QFAI_GITIGNORE_BLOCK } from "../../../../src/core/gitignore.js";
 import type { ValidationProfile } from "../../../../src/core/types.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
@@ -20,6 +21,30 @@ const PARTIAL_PROFILES = [
   "tdd",
   "saas-package",
 ] as const;
+
+/**
+ * Every profile, as a record so the compiler enumerates them.
+ *
+ * A list written out by hand is the same convention the differential below
+ * exists to remove: a profile added to `ValidationProfile` would simply not be
+ * measured. A `Record<ValidationProfile, true>` does not type-check until the
+ * new profile is a key here, so the omission is a build error rather than a
+ * quietly narrower suite.
+ */
+const EVERY_PROFILE: Record<ValidationProfile, true> = {
+  discussion: true,
+  sdd: true,
+  prototyping: true,
+  atdd: true,
+  tdd: true,
+  verify: true,
+  full: true,
+  "saas-package": true,
+};
+
+const ALL_PROFILES: readonly ValidationProfile[] = Object.keys(EVERY_PROFILE).filter(
+  (key): key is ValidationProfile => key in EVERY_PROFILE,
+);
 
 /** The half of `validate.json` this suite reads. */
 type Report = { issues: Finding[]; profileValidatorsRan?: boolean };
@@ -69,6 +94,35 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-coverage-"));
   try {
     await seedSpec(root);
+    await task(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The same project plus one review pack whose `summary.json` is not JSON.
+ *
+ * `validateReviewArtifacts` is the sole emitter of `QFAI-REVIEW-*`, so a tree
+ * that gives it something to complain about turns "does this profile run that
+ * validator?" into an observation. The plain `withProject` tree has no review
+ * pack at all, which is why the contradiction suite above never reached this
+ * family: with nothing to report, listing it as unevaluated contradicts
+ * nothing.
+ */
+async function withBrokenReviewPack(task: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-coverage-review-"));
+  try {
+    await seedSpec(root);
+    // The managed block keeps the advisory `QFAI-REVIEW-008` (no recommended
+    // ignore) out of the measurement, so what the differential reads is the
+    // malformed pack rather than the fixture's own housekeeping.
+    await writeFile(path.join(root, ".gitignore"), QFAI_GITIGNORE_BLOCK, "utf-8");
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+    await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# R01\n", "utf-8");
+    await writeFile(path.join(packDir, "summary.json"), "{ not json", "utf-8");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -156,6 +210,51 @@ async function noticeFor(root: string, profile: ValidationProfile): Promise<Find
   await runValidate({ root, strict: false, profile });
   return (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
 }
+
+describe("the review-artifacts group is measured against what each profile emits", () => {
+  // `GATE_GROUP_FAMILIES["review-artifacts"]` is claimed by `discussion` and by
+  // `sdd`, and that claim rests on two call sites in `core/validate.ts` that
+  // agree with it only by convention: `runDiscussionValidators` calls
+  // `validateReviewArtifacts` unconditionally, and `runSddValidators` calls it
+  // under an `includeReviewArtifacts` parameter that defaults to `true` and
+  // that the `sdd` dispatch happens not to pass — while `runFullValidators`
+  // passes `false` so the family is reported once. Flip that default, or hand
+  // the `sdd` case a sixth positional argument, and the notice keeps promising
+  // a gate the run no longer evaluates.
+  //
+  // So measure it instead of restating it. `validateReviewArtifacts` is the
+  // sole emitter of `QFAI-REVIEW-*` (`core/validators/reviewArtifacts.ts`), so
+  // on a tree with a malformed pack "the profile ran it" is observable, and the
+  // notice has to agree with that observation in BOTH directions: a profile
+  // that reports the family must not list it as unevaluated, and a profile that
+  // reports nothing must name it. Either call site changing, or the group table
+  // changing, fails this.
+  for (const profile of ALL_PROFILES) {
+    it(`--profile ${profile}: the notice agrees with whether the run reports QFAI-REVIEW-*`, async () => {
+      await withoutCiEnv(async () => {
+        await withBrokenReviewPack(async (root) => {
+          await runValidate({ root, strict: false, profile });
+          const all = await findings(root);
+          const reported = all
+            .map((entry) => entry.code)
+            .filter((code) => code.startsWith("QFAI-REVIEW-"));
+          const notice = all.find((entry) => entry.code === "QFAI-PROFILE-001");
+          expect(notice, "every profile writes a coverage notice").toBeDefined();
+          const namedAsUnevaluated = (notice?.message ?? "").includes("QFAI-REVIEW-*");
+
+          expect(
+            namedAsUnevaluated,
+            reported.length > 0
+              ? `this run reported ${reported.join(", ")}, so the notice must not call ` +
+                  "QFAI-REVIEW-* unevaluated"
+              : "this run reported no QFAI-REVIEW-* finding on a malformed pack, so the notice " +
+                  "must name the family as unevaluated",
+          ).toBe(reported.length === 0);
+        });
+      });
+    });
+  }
+});
 
 describe("QFAI-PROFILE-001 never names a family the same run emitted", () => {
   for (const profile of PARTIAL_PROFILES) {
