@@ -3,7 +3,9 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
 
 /**
@@ -559,9 +561,28 @@ export async function validateAssistantAnchorReferences(
   const index = await buildTreeIndex(files);
   const roots: ResolutionRoots = { root, assistantDir, skillsDir };
 
+  // The rule is right, but nothing resolved these citations before it, so a
+  // vendored tree refreshed in part meets its whole backlog of drifted anchors
+  // in one run — and every one of them is an edit to a document the consumer
+  // did not write. Shipping it straight at `error` would turn an upgrade into
+  // a latched gate. It is a `warning` until the pinned release, an `error`
+  // from that release onwards.
+  //
+  // `resolveToolVersion` resolves rather than rejects — its own read failures
+  // return `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates this into a build failure.
+  const promotion = RULE_PROMOTIONS.assistantAnchorDangling.promoteAt;
+  const severity = newRuleSeverity(await resolveToolVersion(), promotion);
+  const windowNote =
+    severity === "warning"
+      ? ` ${promotion} リリースまでは warning、以降は error として報告されます。`
+      : "";
+
   const issues: Issue[] = [];
   for (const [citingFile, document] of index.documents) {
-    issues.push(...danglingIssues(index, roots, citingFile, document.references));
+    issues.push(
+      ...danglingIssues(index, roots, citingFile, document.references, severity, windowNote),
+    );
   }
   return issues;
 }
@@ -571,6 +592,8 @@ function danglingIssues(
   roots: ResolutionRoots,
   citingFile: string,
   references: readonly AnchorReference[],
+  severity: "warning" | "error",
+  windowNote: string,
 ): Issue[] {
   const relativeCiting = toRelative(roots.root, citingFile);
   const issues: Issue[] = [];
@@ -578,11 +601,22 @@ function danglingIssues(
     const target = resolveTarget(index, roots, citingFile, reference.targetPath);
     if (target.kind === "outside") continue;
     if (target.kind === "missing") {
-      issues.push(missingTargetIssue(roots.root, relativeCiting, target.path, reference));
+      issues.push(
+        missingTargetIssue(
+          roots.root,
+          relativeCiting,
+          target.path,
+          reference,
+          severity,
+          windowNote,
+        ),
+      );
       continue;
     }
     if (index.documents.get(target.path)?.slugs.has(reference.anchor) === true) continue;
-    issues.push(danglingIssue(roots.root, relativeCiting, target.path, reference));
+    issues.push(
+      danglingIssue(roots.root, relativeCiting, target.path, reference, severity, windowNote),
+    );
   }
   return issues;
 }
@@ -593,13 +627,15 @@ function missingTargetIssue(
   relativeCiting: string,
   target: string,
   reference: AnchorReference,
+  severity: "warning" | "error",
+  windowNote: string,
 ): Issue {
   const citation = `${reference.targetPath}#${reference.anchor}`;
   const relativeTarget = toRelative(root, target);
   return issue(
     "QFAI-LINK-002",
-    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} が assistant tree に存在しません。エージェントはこの引用をたどれず、指示は黙って何も適用しません。`,
-    "error",
+    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} が assistant tree に存在しません。エージェントはこの引用をたどれず、指示は黙って何も適用しません。${windowNote}`,
+    severity,
     relativeCiting,
     "assistantAnchorReferences.missingTarget",
     [citation],
@@ -614,13 +650,15 @@ function danglingIssue(
   relativeCiting: string,
   target: string,
   reference: AnchorReference,
+  severity: "warning" | "error",
+  windowNote: string,
 ): Issue {
   const citation = `${reference.targetPath}#${reference.anchor}`;
   const relativeTarget = toRelative(root, target);
   return issue(
     "QFAI-LINK-002",
-    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} に slug が \`${reference.anchor}\` と一致する見出しがありません。エージェントはこの引用をたどった先で該当節を見つけられず、指示は黙って何も適用しません。`,
-    "error",
+    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} に slug が \`${reference.anchor}\` と一致する見出しがありません。エージェントはこの引用をたどった先で該当節を見つけられず、指示は黙って何も適用しません。${windowNote}`,
+    severity,
     relativeCiting,
     "assistantAnchorReferences.dangling",
     [citation],

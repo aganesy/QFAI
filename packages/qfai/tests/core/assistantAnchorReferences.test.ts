@@ -19,7 +19,9 @@ import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateProject } from "../../src/core/validate.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import {
   collectAnchorReferences,
   collectHeadingSlugs,
@@ -47,6 +49,22 @@ async function withAssistantTree(
 async function run(root: string) {
   const { config } = await loadConfig(root);
   return validateAssistantAnchorReferences(root, config);
+}
+
+/**
+ * The severity `QFAI-LINK-002` carries at the version under test.
+ *
+ * Written as the pin rather than as a literal on purpose: the code is new, so
+ * P7 runs it behind a promotion window, and a test that hard-codes one side of
+ * that window goes red on the release that opens it — for a change the pin
+ * already authorised. Reading the registry keeps the assertion about the rule
+ * rather than about today's date.
+ */
+async function pinnedSeverity(): Promise<"warning" | "error"> {
+  return newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.assistantAnchorDangling.promoteAt,
+  );
 }
 
 describe("slugifyHeading", () => {
@@ -172,9 +190,53 @@ describe("validateAssistantAnchorReferences", () => {
       async (root) => {
         const issues = await run(root);
         expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
-        expect(issues[0]?.severity).toBe("error");
+        expect(issues[0]?.severity).toBe(await pinnedSeverity());
         expect(issues[0]?.loc?.line).toBe(3);
         expect(issues[0]?.message).toContain("layer-derivation-procedure-normative");
+      },
+    );
+  });
+
+  it("takes both findings' severity from the promotion window, not a literal", async () => {
+    // P7: a finding code introduced after the policy ships behind a window —
+    // `warning` until the pinned release, `error` from it onwards. Nothing
+    // resolved these citations before this rule, so an upgraded tree meets its
+    // whole backlog of drifted anchors at once; at `error` that is a latched
+    // gate on documents the consumer never wrote.
+    //
+    // Both shapes are checked. `missingTarget` and `dangling` are separate
+    // emitters of the same code, and wiring one to the pin while the other
+    // keeps a literal leaves the window half-open — which is what the sunset
+    // ledger reads as registered.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/catalog/test-layers.md": ["# Test layers", ""].join("\n"),
+        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+          "# qfai-sdd",
+          "",
+          "Derive the Layer per `catalog/test-layers.md#layer-derivation-procedure-normative`.",
+          "",
+          "Then read `catalog/gone.md#anything`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await run(root);
+        const expected = await pinnedSeverity();
+        expect(issues.map((entry) => entry.rule).sort()).toEqual([
+          "assistantAnchorReferences.dangling",
+          "assistantAnchorReferences.missingTarget",
+        ]);
+        expect(issues.map((entry) => entry.severity)).toEqual([expected, expected]);
+
+        // The window is only honest if the reader is told it is open. A
+        // warning that reads like a permanent one hides the release it turns
+        // into a build failure.
+        const promoteAt = RULE_PROMOTIONS.assistantAnchorDangling.promoteAt;
+        for (const entry of issues) {
+          if (expected === "warning") expect(entry.message).toContain(promoteAt);
+          else expect(entry.message).not.toContain(promoteAt);
+        }
       },
     );
   });

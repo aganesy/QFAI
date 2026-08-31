@@ -128,6 +128,14 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-LINK-002` — a `file.md#anchor` citation in the assistant tree whose
+   * target document or heading is not there. Nothing resolved these citations
+   * before, so a tree refreshed in part carries the whole backlog of drifted
+   * anchors the moment the rule arrives — and repairing them is an edit to the
+   * vendored documents, not to the consumer's own work.
+   */
+  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {
