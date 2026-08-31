@@ -151,3 +151,47 @@ export const HANDOFF_REQUIRED_SECTIONS = [
   "## Open questions",
   "## References to consult first",
 ] as const;
+
+/**
+ * The README at the root of the assistant tree, and the one marker
+ * `qfai init` owns outright.
+ *
+ * `qfai validate` reads it to tell "init ran here and the integration surface
+ * was deleted" from "init never ran here". The two look identical from the
+ * integration directories alone once every wrapper is gone, and only one of
+ * them is a defect. The four READMEs init writes under `.agents/`, `.codex/`,
+ * `.claude/agents/` and `.github/agents/` cannot answer that on their own:
+ * those sit in conventional directories and are written only when the path is
+ * free. This one is inside `.qfai/`, which init creates, and it outlives every
+ * integration directory.
+ *
+ * Imported by:
+ *   - init.ts (writes the marker)
+ *   - validators/integrationSurface.ts (reads it)
+ * so the path and the signature cannot drift between the two.
+ */
+export const ASSISTANT_README_SEGMENTS = [".qfai", "assistant", "README.md"] as const;
+
+export function joinAssistantReadme(destRoot: string): string {
+  return path.join(destRoot, ...ASSISTANT_README_SEGMENTS);
+}
+
+/**
+ * The title `qfai init` writes, and the section every marker README has.
+ *
+ * One mention of the canonical tree is not a signature — a project documenting
+ * where it keeps its own QFAI tree writes that sentence, and one of those made
+ * a checkout that never ran init read as initialised, with all six surfaces
+ * then reported missing. All three parts together are init's.
+ */
+const INIT_MARKER_TITLE = /^# QFAI /;
+const INIT_MARKER_SECTION = "## Canonical entrypoint";
+
+/** Whether a README body is one `qfai init` wrote. */
+export function hasInitMarkerSignature(body: string): boolean {
+  return (
+    INIT_MARKER_TITLE.test(body) &&
+    body.includes(INIT_MARKER_SECTION) &&
+    body.includes(`${ASSISTANT_DIR}/`)
+  );
+}
