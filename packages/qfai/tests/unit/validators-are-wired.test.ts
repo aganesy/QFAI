@@ -60,6 +60,35 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
  */
 const PENDING_WIRING: ReadonlySet<string> = new Set<string>();
 
+/** `export { a, b } from "./mod.js";` — `export type { … }` is not matched. */
+const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
+
+/**
+ * Barrel entries known to have outlived their call site. `validators/index.ts`
+ * announces itself as the production path, so a name listed there with no
+ * caller reads as a live rule; the guard below reports that, and these are the
+ * pre-existing cases it must not fail on.
+ *
+ * This list MUST shrink, never grow — with one exception already spent: the
+ * guard moved from "referenced anywhere under `src/**`" to "called from a
+ * module reachable from `validate.ts`", and three names the looser rule had
+ * been passing surfaced at once. They are pre-existing gaps, each out of scope
+ * here:
+ * - `validateImportLiteEvidencePresence` (QFAI-IMPLITE-001);
+ * - `validateDelegationMapIssues` — reached only through the barrel;
+ * - `validateTasteInterview`, `validateTrendScan`, `validateStrategyStrong` —
+ *   UI-bearing checks absent from `runCanonicalUixValidators`, whose only
+ *   caller is the test-only helper `uix/nonUiOverfire.ts`. Wiring them changes
+ *   what `qfai validate` reports, so it belongs to a UIX change, not here.
+ */
+const KNOWN_UNWIRED_BARREL_EXPORTS: ReadonlySet<string> = new Set<string>([
+  "validateImportLiteEvidencePresence",
+  "validateDelegationMapIssues",
+  "validateTasteInterview",
+  "validateTrendScan",
+  "validateStrategyStrong",
+]);
+
 async function listTsFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir);
   const out: string[] = [];
@@ -147,6 +176,240 @@ async function buildReachableText(): Promise<string> {
   }
   return fragments.join("\n");
 }
+
+/**
+ * Every name re-exported from `validators/index.ts`, mapped to the absolute
+ * path of the module that defines it.
+ */
+async function collectBarrelExports(): Promise<Map<string, string>> {
+  const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+  const out = new Map<string, string>();
+  BARREL_EXPORT_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = BARREL_EXPORT_RE.exec(indexBody)) !== null) {
+    const names = match[1];
+    const rel = match[2];
+    if (names === undefined || rel === undefined) continue;
+    const owner = path.resolve(path.dirname(VALIDATORS_INDEX), rel.replace(/\.js$/, ".ts"));
+    for (const raw of names.split(",")) {
+      const name = raw
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0]
+        ?.trim();
+      if (name !== undefined && name.length > 0) {
+        out.set(name, owner);
+      }
+    }
+  }
+  return out;
+}
+
+/** The `validate*` subset of the barrel — the names this guard audits. */
+async function collectBarrelValidators(): Promise<Map<string, string>> {
+  const all = await collectBarrelExports();
+  return new Map(Array.from(all).filter(([name]) => name.startsWith("validate")));
+}
+
+/**
+ * Reduce a module to the text that can actually execute: block and line
+ * comments, string / template literals, and `import … from "…"` /
+ * `export { … } from "…"` declarations all go away.
+ *
+ * Without this, prose about a rule counts as wiring. `validateTddList` is
+ * named in four comments under `src/core/`, so a substring scan keeps calling
+ * it "wired" even after `validate.ts` drops both its import and its call —
+ * exactly the regression this guard exists to catch. A bare re-export is not
+ * a call site either: it only moves the name one module further along.
+ */
+function codeOnly(source: string): string {
+  return (
+    source
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      // A `//` preceded by `:`, a quote or a backslash belongs to a URL, a
+      // string or an escaped regex atom, not to a comment.
+      .replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1")
+      .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
+      .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
+      .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ")
+      .replace(/`(?:\\.|[^`\\])*`/g, '""')
+      .replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, '""')
+  );
+}
+
+/**
+ * True when `source` uses `name` as an identifier in executable position —
+ * either a call `name(…)` or a function value handed to something that calls
+ * it (`[name]`, `{ gate: name }`, `run(name)`). Identifier boundaries keep
+ * `validateDelegationMap` from being satisfied by `validateDelegationMapIssues`.
+ *
+ * A trailing `:` marks a property key rather than a value, so registries that
+ * are *keyed* by validator name (`SAAS_PACKAGE_SKIPPED_GATE_FAMILIES`) do not
+ * masquerade as call sites — they are data about the gate, not the gate.
+ */
+function referencesName(source: string, name: string): boolean {
+  return new RegExp(`(?<![\\w$])${name}(?![\\w$])(?!\\s*:)`).test(codeOnly(source));
+}
+
+/** Comments out; everything else — imports included — kept verbatim. */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1");
+}
+
+/** `import … from "./x.js"` / `export … from "./x.js"` targets. */
+const MODULE_EDGE_RE = /from\s*["'](\.\.?\/[\w./-]+)["']/g;
+
+/** Resolve a relative specifier to the `src/**` file it names, if any. */
+async function resolveModule(fromFile: string, rel: string): Promise<string | undefined> {
+  const base = path.resolve(path.dirname(fromFile), rel.replace(/\.js$/, ""));
+  for (const candidate of [`${base}.ts`, path.join(base, "index.ts")]) {
+    if (!candidate.startsWith(SRC_ROOT)) continue;
+    try {
+      if ((await stat(candidate)).isFile()) return candidate;
+    } catch {
+      // not this shape — try the next candidate
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The modules whose code can actually run when `validate.ts` runs: the
+ * transitive closure of relative import edges from `validate.ts`, plus — for
+ * every barrel name a reached module actually calls — the module defining it.
+ *
+ * Membership in `src/**` is not enough. `uix/nonUiOverfire.ts` lives in `src/`
+ * but nothing imports it; only `tests/validators/uix/nonUiOverfire.test.ts`
+ * does. Counting its references as wiring let `validateTasteInterview`,
+ * `validateTrendScan` and `validateStrategyStrong` read as live rules while
+ * being absent from every production call path.
+ *
+ * The barrel itself is never expanded: it re-exports every validator, wired or
+ * not, so following its edges would make "listed in the barrel" mean
+ * "reachable" by construction — the very thing under audit.
+ */
+async function collectReachableModules(barrel: Map<string, string>): Promise<Set<string>> {
+  const reached = new Set<string>([VALIDATE_TS]);
+  const queue: string[] = [VALIDATE_TS];
+
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (file === undefined) continue;
+    let body: string;
+    try {
+      body = await readFile(file, "utf-8");
+    } catch {
+      continue; // unreadable module — nothing to traverse
+    }
+
+    const edges: string[] = [];
+    const code = stripComments(body);
+    MODULE_EDGE_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = MODULE_EDGE_RE.exec(code)) !== null) {
+      const rel = match[1];
+      if (rel !== undefined) edges.push(rel);
+    }
+
+    for (const rel of edges) {
+      const resolved = await resolveModule(file, rel);
+      if (resolved === undefined || resolved === VALIDATORS_INDEX) continue;
+      if (reached.has(resolved)) continue;
+      reached.add(resolved);
+      queue.push(resolved);
+    }
+
+    // A barrel name used here pulls in the module that defines it, which the
+    // skipped barrel edge would otherwise have supplied.
+    for (const [name, owner] of barrel) {
+      if (reached.has(owner)) continue;
+      if (referencesName(body, name)) {
+        reached.add(owner);
+        queue.push(owner);
+      }
+    }
+  }
+  return reached;
+}
+
+/** Names called from at least one module reachable from `validate.ts`. */
+async function namesWithReachableCallSite(
+  names: Map<string, string>,
+  reachable: Set<string>,
+): Promise<Set<string>> {
+  const referenced = new Set<string>();
+  for (const file of reachable) {
+    if (file === VALIDATORS_INDEX) continue;
+    let body: string;
+    try {
+      body = await readFile(file, "utf-8");
+    } catch {
+      continue; // unreadable module — nothing to count
+    }
+    for (const [name, owner] of names) {
+      // The defining module always mentions its own export; the barrel is what
+      // is being audited. A reference from anywhere else is a real call site.
+      if (file !== owner && referencesName(body, name)) referenced.add(name);
+    }
+  }
+  return referenced;
+}
+
+describe("meta-test: validators/index.ts lists only wired validators", () => {
+  it("every validate* re-exported from the barrel has a call site outside the barrel", async () => {
+    const barrel = await collectBarrelValidators();
+    expect(barrel.size, "expected the barrel to re-export validators").toBeGreaterThan(10);
+
+    const reachable = await collectReachableModules(await collectBarrelExports());
+    const referenced = await namesWithReachableCallSite(barrel, reachable);
+    const unwired = Array.from(barrel.keys())
+      .filter((name) => !referenced.has(name) && !KNOWN_UNWIRED_BARREL_EXPORTS.has(name))
+      .sort();
+
+    expect(
+      unwired,
+      "validators/index.ts declares itself the production path, so a name listed there with no call " +
+        "site reads as a live rule. Delete the barrel line when a validator is retired, or wire it in.",
+    ).toEqual([]);
+  });
+
+  it("counts only executable references, not prose, re-exports or longer names", () => {
+    // Rejected: the name is mentioned, never used.
+    expect(referencesName("// validateFoo reads the ledger table", "validateFoo")).toBe(false);
+    expect(referencesName("/**\n * See `validateFoo`.\n */", "validateFoo")).toBe(false);
+    expect(referencesName('import { validateFoo } from "./foo.js";', "validateFoo")).toBe(false);
+    expect(referencesName('export { validateFoo } from "./foo.js";', "validateFoo")).toBe(false);
+    expect(referencesName('const skipped = ["validateFoo"];', "validateFoo")).toBe(false);
+    expect(referencesName("issues.push(...validateFooIssues(root));", "validateFoo")).toBe(false);
+    expect(referencesName('const families = { validateFoo: ["FOO_*"] };', "validateFoo")).toBe(
+      false,
+    );
+
+    // Accepted: a call, or a value something else will call.
+    expect(referencesName("issues.push(...(await validateFoo(root)));", "validateFoo")).toBe(true);
+    expect(referencesName("const gates = [validateFoo];", "validateFoo")).toBe(true);
+    expect(referencesName("const gates = { tdd: validateFoo };", "validateFoo")).toBe(true);
+  });
+
+  it("counts call sites only from modules the validate.ts graph reaches", async () => {
+    const reachable = await collectReachableModules(await collectBarrelExports());
+
+    // A module validate.ts pulls in through the barrel, two hops down.
+    expect(reachable.has(path.resolve(SRC_ROOT, "core/validators/uix/canonical.ts"))).toBe(true);
+    // A src/ helper whose only caller is a test. Its references must not count
+    // as wiring, or a validator dropped from the production graph goes unseen.
+    expect(reachable.has(path.resolve(SRC_ROOT, "core/validators/uix/nonUiOverfire.ts"))).toBe(
+      false,
+    );
+    expect(reachable.has(VALIDATORS_INDEX)).toBe(false);
+  });
+
+  it("the retired /qfai-require validators are gone from the barrel", async () => {
+    const barrel = await collectBarrelValidators();
+    expect(barrel.has("validateRequireIndexShape")).toBe(false);
+    expect(barrel.has("validateRequirementsContext")).toBe(false);
+  });
+});
 
 describe("meta-test: prototyping validators are wired into the pipeline", () => {
   it("every public Issue[]-returning validator under validators/prototyping/ is reachable from validate.ts", async () => {

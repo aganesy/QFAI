@@ -61,7 +61,6 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
       ["input.unknownCode", 2],
     ]),
   ],
-  ["validators/requirementsContext.ts", new Map([["code", 1]])],
   // Two, not one. The second site is the workflow-set ingestion branch: it emits the
   // finding's own code at `info` while that code's catalog registration is deferred,
   // and the code it emits is the same `code` local the rejection site below uses. The
@@ -69,6 +68,32 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   // reads as their owner — rather than restated here.
   ["validators/reviewerJustification.ts", new Map([["code", 2]])],
 ]);
+
+/**
+ * Rule codes that were published, then retired together with the validator
+ * that emitted them. Their modules are now `@deprecated` stubs returning `[]`
+ * (`requirePack.ts` set the precedent), so the ownership scan finds no owner
+ * for them and nothing else stops a future rule from taking a number back.
+ *
+ * Announced publicly before retirement, so re-using a number would make two
+ * different checks share one public code across versions — the same failure
+ * the collision guard below exists to prevent, only spread over time.
+ */
+const RETIRED_CODES: readonly string[] = [
+  // validators/requireIndex.ts — the `02_requirement-index.md` input is gone.
+  "QFAI-REQINDEX-001",
+  "QFAI-REQINDEX-002",
+  // validators/requirementsContext.ts — glossary / actors / business-flows /
+  // require.md inputs are gone.
+  "QFAI-REQCTX-000",
+  "QFAI-REQCTX-001",
+  "QFAI-REQCTX-002",
+  "QFAI-REQCTX-003",
+  "QFAI-REQCTX-004",
+  "QFAI-REQCTX-010",
+  "QFAI-REQCTX-020",
+  "QFAI-REQCTX-021",
+];
 
 /**
  * The rule codes each dynamic site can actually reach — every rule-code-shaped
@@ -154,19 +179,6 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
       "QFAI-ORPHAN-107",
       "QFAI-ORPHAN-108",
       "QFAI-ORPHAN-109",
-    ],
-  ],
-  [
-    "validators/requirementsContext.ts",
-    [
-      "QFAI-REQCTX-000",
-      "QFAI-REQCTX-001",
-      "QFAI-REQCTX-002",
-      "QFAI-REQCTX-003",
-      "QFAI-REQCTX-004",
-      "QFAI-REQCTX-010",
-      "QFAI-REQCTX-020",
-      "QFAI-REQCTX-021",
     ],
   ],
   [
@@ -498,6 +510,26 @@ describe("validate rule codes are owned by exactly one module", () => {
         `${code} is a waived pre-existing collision; its owner set is frozen until the split lands`,
       ).toEqual(sorted(allowed));
     }
+  });
+
+  it("no live module re-uses a retired rule code", async () => {
+    const { owners, dynamicCodes } = await scanIssueSources();
+
+    const reachable = new Set<string>();
+    for (const codes of dynamicCodes.values()) {
+      for (const code of codes) {
+        reachable.add(code);
+      }
+    }
+
+    const reused = RETIRED_CODES.filter(
+      (code) => (owners.get(code)?.size ?? 0) > 0 || reachable.has(code),
+    ).sort();
+
+    expect(
+      reused,
+      "these codes were published and then retired with their validator; taking a number back makes one public code mean two different checks across versions — pick an unused number instead",
+    ).toEqual([]);
   });
 
   it("the screen-id casing check and specsCovered linkage no longer share a code", async () => {
