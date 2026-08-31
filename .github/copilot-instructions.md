@@ -32,4 +32,4 @@ Key rules to follow:
 - `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.
 - `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.
 - `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
-- `.agents/rules/version-discipline.md` — branch name pins `packages/qfai/package.json#version`; never select version numbers independently.
+- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.

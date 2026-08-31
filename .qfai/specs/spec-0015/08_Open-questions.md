@@ -10,7 +10,7 @@
 
 ## Carry-forward deferred (not resolved here)
 
-- OQ-0119 — Reviewer subagent prompt / tool-augmentation timing for the new finding-code catalog (REQ-0168). Remains carry-forward deferred per upstream; this slice pins severity + justification posture (BR-0015-0013) only and MUST NOT resolve the prompt-augmentation timing.
+- OQ-0119 — Reviewer subagent prompt / tool-augmentation timing for the new finding-code catalog (REQ-0168). Remains carry-forward deferred per upstream; this slice pins catalog membership + justification posture (BR-0015-0013) only and MUST NOT resolve the prompt-augmentation timing.
 
 ## Deferred lockstep change (CHG-007, 2026-08-05)
 
