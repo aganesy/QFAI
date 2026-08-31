@@ -209,16 +209,24 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-006");
   });
 
-  it("skips the Research Summary gate when uiux.requireResearchSummary is false", async () => {
+  it("keeps the Research Summary content rules on when uiux.requireResearchSummary is false", async () => {
+    // The setting says the section is not required. It does not say a section
+    // the project chose to write may record the protocol wrongly, so only the
+    // absence rule is suppressed and the content rules stay on. The absence
+    // rule itself is covered by the two pack-directory tests below; this
+    // fixture is a loose file with no pack, so QFAI-RESEARCH-012 has nothing
+    // to report here either way and is not worth asserting on.
     const root = await newTempDir();
     await seedResearchSummaryWithoutSources(root);
 
-    const issues = await validateResearchSummary(root, {
-      ...defaultConfig,
-      uiux: { ...defaultConfig.uiux, requireResearchSummary: false },
-    });
+    const codes = (
+      await validateResearchSummary(root, {
+        ...defaultConfig,
+        uiux: { ...defaultConfig.uiux, requireResearchSummary: false },
+      })
+    ).map((item) => item.code);
 
-    expect(issues).toHaveLength(0);
+    expect(codes).toContain("QFAI-RESEARCH-001");
   });
 
   it("keeps the Research Summary gate when uiux.requireResearchSummary is true or unset", async () => {
