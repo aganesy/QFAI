@@ -41,7 +41,23 @@ type Review = {
 ```
 
 `designMdViolations` is filled by the static gate. Leave the field as
-`[]` unless the runtime injects pre-computed violations.
+`[]` unless the runtime injects pre-computed violations. You cannot
+waive a finding by writing `[]` yourself: on a convergence stop the
+accepted iteration's HTML is re-scanned and the re-scan result wins —
+over the captured HTML that is **present and readable**, since a
+missing `iter-NN/` directory or a file the re-scan cannot stat or read
+yields no findings and lets the stop through —
+and `npx qfai prototyping certify` re-scans the accepted iteration's
+captured HTML before it seals, so no certificate is **issued** over a
+violation the capture evidence shows (certify reads
+`.qfai/evidence/prototyping/iter-NN/` only — it never opens the
+authoring `prototypes/` tree). One carve-out: `npx qfai prototyping certify --upgrade-scope full` is not
+an issuing path — it re-gates an already-sealed scope-limited
+certificate without re-scanning HTML, so a promotion to full is only
+as trustworthy as the seal it inherits. If the final HTML moved after
+that seal, run `npx qfai prototyping certify --check` first: it
+recomputes the evidence digests and reports the mismatch. The gate is
+non-waivable — see `generator-prompt.md`.
 
 ## 4 axes
 
