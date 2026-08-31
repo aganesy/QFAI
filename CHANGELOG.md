@@ -4,6 +4,52 @@
 
 ## [Unreleased]
 
+### Added
+
+- **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
+  `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
+  `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を
+  作成する。その PR が main に入ると `Tag release commit` が `vX.Y.Z` を push し、`release.yml` が
+  起動する。publish は従来どおり `release` environment の必須レビュアー承認で止まる。
+- **tag はリリース PR が運んだコミットにしか付かない。** 起動条件は
+  `packages/qfai/package.json` の変更だが、それは必要条件であって十分条件ではない
+  — `feature/vX.Y.Z` のような pinned branch は manifest と CHANGELOG 見出しを両方揃えるため、
+  それだけでは区別できない。tag ジョブはそのコミットを運んだ PR を API に問い、head branch が
+  `release/vX.Y.Z` であることを要求する。`.agents/rules/version-discipline.md` は tag の発行に
+  独立した明示指示を求めており、pin が与えるのは「版」であって「tag を切ってよい」ではない。
+- **版に関する検査はリテラルで行う。** CHANGELOG 見出しの照合は文字列一致で、正規表現ではない
+  (`1.10.2` を正規表現として使うと `1010.2` に一致してしまう)。同名 tag が既にある場合は
+  commit まで dereference し、このコミットを指すときだけ no-op として、異なるコミットを指す
+  ときは両方の sha を示して失敗する。`01.11.0` / `1.011.0` のような先頭ゼロ入りの版は両
+  ワークフローが拒否する — node-semver が拒否するため、通してしまうと publish 時まで失敗が
+  遅れ、そのときには PR も tag も既に存在している。
+- **リリース文面は自動生成しない。** 内容は各変更の作者が `## [Unreleased]` に書き足したものがそのまま
+  使われ、GitHub Release の本文も同じセクションから抽出される。裏返しとして `## [Unreleased]` が
+  何も説明していなければ `Prepare release` は失敗する — 空の場合だけでなく、`### Added` のような
+  カテゴリ見出ししか無い場合も含む。誰も書いていないリリースノートは「何も起きなかった」と読める。
+  なお `## [X.Y.Z] - <日付>` の日付は **Prepare release を実行した日** で、tag が切られるのは PR が
+  マージされたときなので、翌日以降にマージするならリリース PR の中で直す (PR 本文がその旨を告げる)。
+- **版番号も自動化は選ばない。** `.agents/rules/version-discipline.md` が版番号の決定権をユーザに置いて
+  いるため、入力は必須で既定値を持たない。作成されるブランチ名が pin を運ぶので
+  `check-branch-version-pin.sh` が manifest との一致を検証できる。書き込みは
+  `RELEASE_AUTOMATION_TOKEN` 経由で行うため、ワークフローの `permissions:` は `contents: read` のままで、
+  `BR-0017-0016` の閉じた逸脱集合は広がらない。
+- **準備が途中で失敗しても再開できる。** branch の push と PR の作成は別々の失敗で、後者だけが
+  remote に branch を残す。force-push は規則で禁止されているため、素直に再実行すると
+  non-fast-forward で拒否されて手が無くなる。既存 branch と既存 PR を検出して採用するので、
+  原因を直して再実行すればそのまま続けられる (同名でも別の版を宣言している branch は衝突
+  として名指しで拒否する)。
+
+### Fixed
+
+- **GitHub Release の本文が長すぎるときに、リリースを失敗させずに切り詰めるようにした。**
+  `release.yml` の抽出ステップは本文が空の場合しか検査しておらず、CHANGELOG のセクションが
+  GitHub Release 本文の上限 125,000 文字を超えると `gh release create` が 422 を返して
+  Release が作られなかった (v1.10.1 のセクションは 160,679 文字)。npm publish は別ジョブの
+  ため成功しており、run を読むまで表面化しなかった。切り詰めはエントリ境界・文書順で行い、
+  どこまで残したかと全文へのリンクを本文末尾に付ける。どのエントリが重要かはこの機構が
+  決めない。
+
 ## [1.10.1] - 2026-08-31
 
 ### Added
