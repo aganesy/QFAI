@@ -39,7 +39,13 @@ import {
   type ScCoverage,
   type TestFileScan,
 } from "./traceability.js";
-import type { Issue, ValidationCounts, ValidationResult, ValidationWaiverEntry } from "./types.js";
+import type {
+  Issue,
+  ValidationCounts,
+  ValidationProfile,
+  ValidationResult,
+  ValidationWaiverEntry,
+} from "./types.js";
 import { validateProject } from "./validate.js";
 import { resolveToolVersion } from "./version.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
@@ -350,6 +356,12 @@ export type ReportData = {
   generatedAt: string;
   root: string;
   configPath: string;
+  /**
+   * どの profile の validate 出力から生成したレポートか。
+   * 成果物だけを見て profile の取り違えを検出できるようにするための記録で、
+   * 入力に profile が無い場合は省略される。
+   */
+  profile?: ValidationProfile;
   summary: ReportSummary;
   ids: ReportIds;
   traceability: ReportTraceability;
@@ -551,6 +563,7 @@ export async function createReportData(
     generatedAt: new Date().toISOString(),
     root: displayRoot,
     configPath: displayConfigPath,
+    ...(normalizedValidation.profile ? { profile: normalizedValidation.profile } : {}),
     summary: {
       specs: specFiles.length,
       scenarios: scenarioCount,
@@ -667,6 +680,9 @@ export function formatReportMarkdown(
   lines.push(`- ルート: ${formatPathLink(data.root, baseUrl)}`);
   lines.push(`- 設定: ${formatPathLink(data.configPath, baseUrl)}`);
   lines.push(`- 版: ${data.version}`);
+  if (data.profile) {
+    lines.push(`- profile: ${data.profile}`);
+  }
   lines.push("");
 
   const severityOrder: Record<string, number> = {
