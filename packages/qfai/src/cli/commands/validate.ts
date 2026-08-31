@@ -1038,6 +1038,21 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  // The assistant-tree provenance family. Every governed file under
+  // `constitution/` and `catalog/` is either byte-identical to the installed
+  // release or an explicitly recorded local overlay; the four classifications
+  // below are the ways that can fail, and the fifth is the comparison itself
+  // being impossible.
+  "QFAI-ASSETS-003":
+    "Every governed assistant file qfai wrote is still the content the installed release ships (`qfai init --force` refreshes an unedited stale copy).",
+  "QFAI-ASSETS-004":
+    "No governed assistant file is a local fork: a project-specific rule lives in a `*.local.md` overlay of the same layer, not in the qfai-owned file.",
+  "QFAI-ASSETS-005":
+    "Every file under the governed assistant layers is either shipped by the installed release or a `*.local.md` overlay.",
+  "QFAI-ASSETS-006":
+    "Every normative file the installed release ships exists in the project as a regular file.",
+  "QFAI-ASSETS-007":
+    "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
 };
 
 /**

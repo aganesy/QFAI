@@ -28,9 +28,35 @@ import {
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../src/core/assistantAssetProvenance.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+/**
+ * The five provenance codes ship behind
+ * `RULE_PROMOTIONS.assistantAssetProvenance`, so the severity is whatever the
+ * pin says at the version under test — `warning` inside the window, `error`
+ * from the promotion release onwards. Derived from the pin rather than written
+ * as a literal so this file does not have to be edited on the release that
+ * closes the window, and so a severity that stops following the pin is caught
+ * here and not only by `sunsetLedger.test.ts`.
+ */
+const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promoteAt;
+
+/** The family the pin governs — not the two existence probes above it. */
+const PROVENANCE_CODES = new Set([
+  "QFAI-ASSETS-003",
+  "QFAI-ASSETS-004",
+  "QFAI-ASSETS-005",
+  "QFAI-ASSETS-006",
+  "QFAI-ASSETS-007",
+]);
+
+async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
+  return newRuleSeverity(await resolveToolVersion(), assetProvenancePromotion);
+}
 
 const shippedAssistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const tempRoots: string[] = [];
@@ -81,7 +107,7 @@ describe("assistant asset provenance", () => {
     const issues = await validateAssistantAssets(root, defaultConfig);
     const forked = issues.filter((found) => found.code === "QFAI-ASSETS-004");
     expect(forked).toHaveLength(1);
-    expect(forked[0]?.severity).toBe("warning");
+    expect(forked[0]?.severity).toBe(await expectedProvenanceSeverity());
     expect(forked[0]?.file).toContain("test-layers.md");
   });
 
@@ -120,6 +146,60 @@ describe("assistant asset provenance", () => {
     expect(unshipped[0]?.file).toContain("project-layers.md");
   });
 
+  it("takes every provenance code's severity from the promotion pin, not a literal", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const catalogDir = path.join(assistantDir, "catalog");
+    // One project carrying all four classifications at once: a fork, a stale
+    // copy, an unshipped addition and a deletion.
+    const forked = path.join(catalogDir, "test-layers.md");
+    await writeFile(forked, `${await readFile(forked, "utf-8")}\n- project-only rule\n`, "utf-8");
+    await writeFile(path.join(catalogDir, "project-layers.md"), "# not an overlay\n", "utf-8");
+    const stale = path.join(assistantDir, "constitution", "quality.md");
+    const olderRelease = "# Quality\n\nWhat an older release shipped.\n";
+    await writeFile(stale, olderRelease, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await writeAssistantAssetsLock(assistantDir, {
+      files: {
+        ...(lock?.files ?? {}),
+        "constitution/quality.md": hashAssistantAssetText(olderRelease),
+      },
+    });
+    // Not `drift-protocol.md` / `test-layers.md`: their absence belongs to the
+    // existence probes (QFAI-ASSETS-001/002), which are not part of this
+    // family's window.
+    await rm(path.join(assistantDir, "constitution", "communication.md"));
+
+    const issues = (await validateAssistantAssets(root, defaultConfig)).filter((found) =>
+      PROVENANCE_CODES.has(found.code),
+    );
+
+    // Nothing compared the governed layers before this check existed, so its
+    // first run meets every edit a project ever made to them at once. P7
+    // (docs/design-principles.md) requires that to arrive behind a window
+    // rather than as a hard error on upgrade — a literal severity beside each
+    // `issue(...)` call is what latched a consuming repository's gate.
+    const expected = await expectedProvenanceSeverity();
+    expect(codesOf(issues)).toEqual(
+      expect.arrayContaining([
+        "QFAI-ASSETS-003",
+        "QFAI-ASSETS-004",
+        "QFAI-ASSETS-005",
+        "QFAI-ASSETS-006",
+      ]),
+    );
+    expect(issues.map((found) => found.severity)).toEqual(issues.map(() => expected));
+
+    // And inside the window every finding says so, naming the release that
+    // ends it — an operator running `--fail-on error` has to be able to see
+    // the debt they are about to owe.
+    if (expected === "warning") {
+      for (const found of issues) {
+        expect(found.message).toContain(assetProvenancePromotion);
+      }
+    }
+  });
+
   it("reports a deleted governed file instead of passing it in silence", async () => {
     const root = await makeProject();
     const target = path.join(root, ".qfai", "assistant", "constitution", "quality.md");
@@ -128,7 +208,7 @@ describe("assistant asset provenance", () => {
     const issues = await validateAssistantAssets(root, defaultConfig);
     const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(missing).toHaveLength(1);
-    expect(missing[0]?.severity).toBe("warning");
+    expect(missing[0]?.severity).toBe(await expectedProvenanceSeverity());
     expect(missing[0]?.file).toContain("quality.md");
   });
 
@@ -628,7 +708,7 @@ describe("assistant asset provenance", () => {
     const issues = await validateAssistantAssets(root, defaultConfig);
     const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
     expect(unverifiable).toHaveLength(1);
-    expect(unverifiable[0]?.severity).toBe("warning");
+    expect(unverifiable[0]?.severity).toBe(await expectedProvenanceSeverity());
     // Silence was the bug: an inability to compare is not a clean tree.
     expect(issues.length).toBeGreaterThan(0);
   });

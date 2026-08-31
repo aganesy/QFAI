@@ -27,6 +27,20 @@ vi.mock("../../src/shared/assets.js", async (importOriginal) => {
 
 const { defaultConfig } = await import("../../src/core/config.js");
 const { validateAssistantAssets } = await import("../../src/core/validators/assistantAssets.js");
+const { newRuleSeverity, RULE_PROMOTIONS } = await import("../../src/core/sunset.js");
+const { resolveToolVersion } = await import("../../src/core/version.js");
+
+/**
+ * `QFAI-ASSETS-007` ships behind `RULE_PROMOTIONS.assistantAssetProvenance`
+ * with the rest of the family, so the severity follows the pin rather than a
+ * literal written here.
+ */
+async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
+  return newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.assistantAssetProvenance.promoteAt,
+  );
+}
 const { getInitAssetsDir: realInitAssetsDir } = await vi.importActual<typeof AssetsModule>(
   "../../src/shared/assets.js",
 );
@@ -70,7 +84,7 @@ describe("assistant asset provenance against an unreadable install", () => {
     const issues = await validateAssistantAssets(root, defaultConfig);
     const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
     expect(unverifiable).toHaveLength(1);
-    expect(unverifiable[0]?.severity).toBe("warning");
+    expect(unverifiable[0]?.severity).toBe(await expectedProvenanceSeverity());
     expect(unverifiable[0]?.rule).toBe("assistantAssets.unverifiableProvenance");
     // The three provenance verdicts are unreachable without a shipped set, so
     // none of them may be claimed either way.

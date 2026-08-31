@@ -128,6 +128,16 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * The assistant-tree provenance family — `QFAI-ASSETS-003` (a vendored copy
+   * still as qfai wrote it but behind the installed release), `QFAI-ASSETS-004`
+   * (a local fork), `QFAI-ASSETS-005` (a non-overlay addition),
+   * `QFAI-ASSETS-006` (a shipped normative file that is absent) and
+   * `QFAI-ASSETS-007` (the comparison could not be made at all). Nothing
+   * compared the governed layers before, so every project that ever edited one
+   * meets the whole family in the run that first records provenance.
+   */
+  assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

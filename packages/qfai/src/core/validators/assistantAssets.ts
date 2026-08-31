@@ -15,7 +15,9 @@ import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
@@ -139,6 +141,25 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * reported at `warning`, never `error`.
  */
 async function validateAssistantAssetProvenance(assistantDir: string): Promise<Issue[]> {
+  // The whole family runs a promotion window (`RULE_PROMOTIONS`,
+  // docs/design-principles P7): nothing compared the governed layers before, so
+  // the first run that records provenance meets every edit a project ever made
+  // to them at once. Shipping that straight at `error` would turn an upgrade
+  // into a latched gate, which is the regression P7 was written after.
+  //
+  // `resolveToolVersion` resolves rather than rejects — a read failure returns
+  // `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates these into a build failure.
+  const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promoteAt;
+  const assetProvenanceSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    assetProvenancePromotion,
+  );
+  const windowNote =
+    assetProvenanceSeverity === "warning"
+      ? ` ${assetProvenancePromotion} リリースまでは warning、それ以降は error として報告されます。`
+      : "";
+
   let shipped: Record<string, string>;
   try {
     // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree
@@ -155,7 +176,15 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
     // no findings let every such tree pass `validate` with its provenance
     // unchecked — `init` already fails closed on the same condition, so only
     // this side accepted it. The inability is itself the finding.
-    return [unverifiableProvenanceIssue(assistantDir, "shipped", error)];
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "shipped",
+        error,
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
   }
 
   const lock = await readAssistantAssetsLock(assistantDir);
@@ -166,7 +195,15 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
   } catch (error: unknown) {
     // Same reasoning on the project's own side. A layer root that is not a real
     // directory reaches here rather than being walked.
-    return [unverifiableProvenanceIssue(assistantDir, "vendored", error)];
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "vendored",
+        error,
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
   }
 
   // The union of both key sets, not just what is on disk. Walking only the
@@ -205,7 +242,13 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
       // fallback is *also* absent, though — see `coveredByExistenceProbe`.
       continue;
     }
-    const finding = provenanceIssue(status, relative, filePath);
+    const finding = provenanceIssue(
+      status,
+      relative,
+      filePath,
+      assetProvenanceSeverity,
+      windowNote,
+    );
     if (finding !== null) {
       issues.push(finding);
     }
@@ -250,6 +293,8 @@ function unverifiableProvenanceIssue(
   assistantDir: string,
   side: "shipped" | "vendored",
   error: unknown,
+  assetProvenanceSeverity: ProvenanceSeverity,
+  windowNote: string,
 ): Issue {
   const detail = error instanceof Error ? error.message : String(error);
   const subject =
@@ -260,8 +305,8 @@ function unverifiableProvenanceIssue(
     "QFAI-ASSETS-007",
     `${subject}を読み取れなかったため、${GOVERNED_ASSISTANT_LAYERS.map((layer) => `${layer}/`).join(
       " / ",
-    )} の provenance を検証できませんでした（${detail}）。`,
-    "warning",
+    )} の provenance を検証できませんでした（${detail}）。${windowNote}`,
+    assetProvenanceSeverity,
     assistantDir,
     "assistantAssets.unverifiableProvenance",
     undefined,
@@ -270,10 +315,20 @@ function unverifiableProvenanceIssue(
   );
 }
 
+/**
+ * The severity the whole provenance family carries, resolved once from
+ * `RULE_PROMOTIONS.assistantAssetProvenance`. Threaded in rather than
+ * recomputed per finding so the five codes cannot drift apart, and so the pin —
+ * not a literal beside each `issue(...)` call — is what decides them.
+ */
+type ProvenanceSeverity = "warning" | "error";
+
 function provenanceIssue(
   status: ReturnType<typeof classifyAssistantAsset>,
   relative: string,
   filePath: string,
+  assetProvenanceSeverity: ProvenanceSeverity,
+  windowNote: string,
 ): Issue | null {
   switch (status) {
     case "shipped":
@@ -281,8 +336,8 @@ function provenanceIssue(
     case "stale":
       return issue(
         "QFAI-ASSETS-003",
-        `${ASSISTANT_DIR}/${relative} は導入時に qfai が書いた内容のままですが、インストール済みリリースの内容と異なります（stale copy）。`,
-        "warning",
+        `${ASSISTANT_DIR}/${relative} は導入時に qfai が書いた内容のままですが、インストール済みリリースの内容と異なります（stale copy）。${windowNote}`,
+        assetProvenanceSeverity,
         filePath,
         "assistantAssets.staleVendoredAsset",
         undefined,
@@ -292,8 +347,8 @@ function provenanceIssue(
     case "forked":
       return issue(
         "QFAI-ASSETS-004",
-        `${ASSISTANT_DIR}/${relative} はインストール済みリリースの内容とも ${ASSISTANT_ASSETS_LOCK_BASENAME} の記録とも一致しません（local fork）。`,
-        "warning",
+        `${ASSISTANT_DIR}/${relative} はインストール済みリリースの内容とも ${ASSISTANT_ASSETS_LOCK_BASENAME} の記録とも一致しません（local fork）。${windowNote}`,
+        assetProvenanceSeverity,
         filePath,
         "assistantAssets.forkedVendoredAsset",
         undefined,
@@ -303,8 +358,8 @@ function provenanceIssue(
     case "unshipped":
       return issue(
         "QFAI-ASSETS-005",
-        `${ASSISTANT_DIR}/${relative} はインストール済みリリースに存在しないファイルです（overlay 以外の追加）。`,
-        "warning",
+        `${ASSISTANT_DIR}/${relative} はインストール済みリリースに存在しないファイルです（overlay 以外の追加）。${windowNote}`,
+        assetProvenanceSeverity,
         filePath,
         "assistantAssets.unshippedVendoredAsset",
         undefined,
@@ -314,8 +369,8 @@ function provenanceIssue(
     case "missing":
       return issue(
         "QFAI-ASSETS-006",
-        `${ASSISTANT_DIR}/${relative} はインストール済みリリースが出荷する規範ファイルですが、通常ファイルとして存在しません（欠落）。`,
-        "warning",
+        `${ASSISTANT_DIR}/${relative} はインストール済みリリースが出荷する規範ファイルですが、通常ファイルとして存在しません（欠落）。${windowNote}`,
+        assetProvenanceSeverity,
         filePath,
         "assistantAssets.missingVendoredAsset",
         undefined,
