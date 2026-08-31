@@ -7,8 +7,10 @@
  *   3. write missing default-keyed config fields (does NOT overwrite
  *      user-authored values).
  *
- * Disabled in CI by default (`process.env.CI === "true"` → emit
- * `"autoremediate disabled in CI"` and return without remediating).
+ * Disabled in CI by default: the caller detects CI via the framework's
+ * `isCiEnvironment` predicate (any truthy `CI` value, or
+ * `GITHUB_ACTIONS=true`) and passes `isCi`, on which this orchestrator
+ * emits `"autoremediate disabled in CI"` and returns without remediating.
  * Honors `--dry-run` by surfacing the plan without side effects.
  * Honors `--yes` by skipping interactive confirmation; this CLI is
  * non-interactive today, so `--yes` mostly serves as a documented
