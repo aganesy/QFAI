@@ -183,7 +183,7 @@ describe("qfai-implement checkpoint verification contract", () => {
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("**Step 1 is not settled by its exit code.**");
+      expect(reference).toContain("**Step 1 is not settled by its exit code, in either form.**");
       expect(reference).toContain("the recorded output names that entry as having run");
       expect(reference).toMatch(/an exit 0\s+whose output names no test is a FAIL/);
     }
@@ -206,10 +206,11 @@ describe("qfai-implement checkpoint verification contract", () => {
       );
       expect(skill).toContain("**step 1 is not settled by its exit code**");
       // Completion prohibition: a nameless exit 0 blocks completion as a non-zero
-      // exit does — scoped to the narrowed form, because the file-scoped default
-      // cannot select nothing and its default reporter names no test either.
+      // exit does. NOT scoped to the narrowed form any more — the file-scoped
+      // default cannot select nothing out of the *file*, but when several rows
+      // share that file it can still run none of THIS row's tests.
       expect(skill).toContain(
-        "or a narrowed step 1 command exited 0 with neither a test named in its recorded output",
+        "or a step 1 command exited 0 without its recorded output naming the `Selector` entries that run had to observe",
       );
       // The bare exit-code definitions must not survive anywhere unqualified.
       expect(skill).not.toContain("(PASS only when every command exits 0)");
@@ -231,7 +232,9 @@ describe("qfai-implement checkpoint verification contract", () => {
         "utf-8",
       );
       expect(reference).toContain("**The option that makes the run visible.**");
-      expect(reference).toContain("pytest <Test file> --verbosity=1 -k '<entry>'");
+      // pytest's example selects by node ID: `-k` is an expression, not a literal
+      // (see "selects a pytest entry by node ID" below).
+      expect(reference).toContain("pytest '<Test file>::<node id>' --verbosity=1");
       expect(reference).toContain("go test ./<dir of Test file> -v -run '^<entry>$'");
       expect(reference).toContain("--reporter=verbose");
       expect(reference).toContain("--verbose");
@@ -330,9 +333,10 @@ describe("qfai-implement checkpoint verification contract", () => {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
 
       // Completion prohibition: a nameless exit 0 is blocking only when the
-      // count is missing too.
+      // count is missing too — and the count stands in for a name on a NARROWED
+      // run only, since file-scoped the siblings sharing the file supply it.
       expect(skill).toContain(
-        "with neither a test named in its recorded output nor — on a runner with no option that prints names — a positive selected/run count recorded in its place",
+        "on a runner with no option that prints names, a positive selected/run count recorded in its place accepted for a **narrowed** run only",
       );
       // Evidence definition (`Checkpoint verification result`).
       expect(skill).toContain(
@@ -348,6 +352,122 @@ describe("qfai-implement checkpoint verification contract", () => {
       );
       expect(skill).not.toContain(
         "entry it ran; an exit 0 naming no test selected nothing and is a FAIL",
+      );
+    }
+  });
+
+  // "It over-runs ... it can only execute more than the row, never less" is true
+  // of the FILE, not of the row. Several rows share a test file routinely; when
+  // this row's tests are deleted or renamed the file-scoped run executes the
+  // siblings' and exits 0, the full suite passes for the same reason, and step 4
+  // lets it through because TDDLIST_SELECTOR_UNRESOLVED is a warning and the gate
+  // is --fail-on error. Every command in the set reported success on a row whose
+  // test did not exist.
+  it("checks the row's own Selector even on the file-scoped default", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain(
+        "**It can still run none of the row's own tests, so exit 0 is not the whole of it here either.**",
+      );
+      // The failure path is named, so the rule cannot be read as belt-and-braces.
+      expect(reference).toContain("`TDDLIST_SELECTOR_UNRESOLVED` is a");
+      expect(reference).toContain("`--fail-on error` lets it through by design");
+      // The obligation itself, and its escape hatch for nameless runners.
+      expect(reference).toContain("names **every**\n   `Selector` entry among the tests it ran");
+      expect(reference).toContain("narrow per entry instead");
+      // Pass criteria must agree — the old text settled the file-scoped form on
+      // its exit code alone, which is exactly the hole above.
+      expect(reference).toContain("**Step 1 is not settled by its exit code, in either form.**");
+      expect(reference).not.toContain(
+        "File-scoped it\ncannot select nothing, so there exit 0 is the whole of it",
+      );
+    }
+  });
+
+  // A Selector may hold any character a test name may hold. This repo's own suite
+  // has names carrying an apostrophe, and `-k 'this row's ...'` is a shell syntax
+  // error, so the checkpoint cannot be run at all.
+  it("passes a Selector entry as an argument rather than pasting it into a shell line", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain(
+        "**The entry is an argument, not a fragment of a command line.**",
+      );
+      expect(reference).toContain("Pass it as one argv element");
+      // The concrete escape, for when a shell line is unavoidable.
+      expect(reference).toContain("rewrite each embedded `'` as `'\\''`");
+      // The two layers must not be conflated: regex-escaping is not shell-escaping.
+      expect(reference).toContain(
+        "the shell and\n   the regex are two layers, and getting one right does not settle the other",
+      );
+    }
+  });
+
+  // `-k` is a substring EXPRESSION pytest evaluates, so a name is not a legal
+  // value for it: a parameter ID containing a comma exits 4 with "Wrong
+  // expression passed to '-k'", which no amount of shell escaping repairs.
+  it("selects a pytest entry by node ID rather than interpolating it into -k", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**pytest selects by node ID, not by `-k`.**");
+      expect(reference).toContain("pytest --collect-only -q '<Test file>'");
+      expect(reference).toContain("pytest '<Test file>::<node id>' --verbosity=1");
+      expect(reference).toContain("Wrong expression passed to '-k'");
+      // Over-correction pin: `-k` keeps its one legitimate use, and the regex
+      // runners are untouched.
+      expect(reference).toContain("Use `-k` only for a glob entry pytest can express");
+      expect(reference).toContain(
+        "Runners whose name option is a regex (`-t`, `-run`) keep taking the escaped-for-regex entry",
+      );
+      // The superseded example must not survive.
+      expect(reference).not.toContain("pytest <Test file> --verbosity=1 -k '<entry>'");
+    }
+  });
+
+  // The array form was legal only from this change onward; before it the contract
+  // said "comma-separated list", so persisted ledgers hold cells that mean two
+  // names and now read as one. Handed to a name option the joined string selects
+  // zero tests and still exits 0, and the row can never advance again.
+  it("gives a cell written under the old comma rule a way forward", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "selector-granularity.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("### Reading a cell written under the old comma rule");
+      // The disambiguation is evidence-driven and ordered, so it can never invent
+      // entries out of one comma-bearing name.
+      expect(reference).toContain("**This branch wins**");
+      expect(reference).toContain("If **every**\n   part names a test in that file");
+      expect(reference).toContain("it is one entry — and the entry names no test");
+      // Over-correction pin: this is a migration, not a second syntax. The
+      // writing rule and the bare-cell rule both stand.
+      expect(reference).toContain("Nothing here\nchanges **Writing**");
+      expect(reference).toContain("**Never split a bare cell on commas.**");
+    }
+  });
+
+  // The authoring surface has to name the enforcement, or a row author learns the
+  // array form from one file and the per-entry requirement from neither.
+  it("tells the ledger's author that every array element must resolve", async () => {
+    for (const dir of SDD_SKILL_DIRS) {
+      const rules = await readFile(
+        path.join(dir, "references", "spec-traceability-rules.md"),
+        "utf-8",
+      );
+      expect(rules).toContain("requires **every** element to name a test in the row's `Test file`");
+      expect(rules).toContain("a surviving element cannot vouch for a deleted sibling");
+      expect(rules).toContain(
+        "selector-granularity.md#reading-a-cell-written-under-the-old-comma-rule",
       );
     }
   });

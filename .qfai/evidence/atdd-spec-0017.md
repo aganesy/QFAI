@@ -2198,7 +2198,13 @@ ten further callsites, spread across eight `tests/assets` files none of which th
 the count at the merged tree is 923 + 10 = 933. The line below is re-derived from the merged tree
 rather than carried from either side, and both suite totals above remain known-invalid.
 
-e2e callsites at this tree: 933
+It has since moved a fifth time, and this time from inside: answering the round's five open review
+threads added five `it` callsites to `tests/assets/implementCheckpointVerification.test.ts` — the
+file-scoped selector check, the argv/shell-escaping rule, pytest's node-ID selection, the legacy
+comma-cell migration, and the authoring-side per-element requirement. So 933 + 5 = 938, re-derived
+from the tree rather than read off a failure message.
+
+e2e callsites at this tree: 938
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

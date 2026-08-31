@@ -518,6 +518,46 @@ async function readTestFileContent(root: string, testFile: string): Promise<stri
 }
 
 /**
+ * A `Selector` cell split into entries, per `selector-granularity.md` § Entry form.
+ *
+ * That section is the SSOT for the split and this is its executable half, so the two must agree:
+ * a cell whose first non-space character is `[` and which parses as a JSON array of strings holds
+ * **one entry per element**, and every other cell is exactly **one** entry, whatever punctuation
+ * it carries.
+ *
+ * A cell is never split on commas. A comma is legal inside a single vitest/jest name — this repo
+ * has `falls back to the built-in set, and labels it, when the file is absent` — so a comma split
+ * would invent entries that match nothing.
+ *
+ * The array form has to be parsed here rather than left to the containment check below. An array
+ * reaching that check unsplit matched on its **last** element alone, via the last-identifier
+ * fallback: `["missing_test","existing_test"]` resolved on `existing_test` and reported nothing
+ * about the missing first one, which is the whole failure `TDDLIST_SELECTOR_UNRESOLVED` exists to
+ * report.
+ */
+function selectorEntries(selector: string): string[] {
+  const trimmed = selector.trim();
+  if (!trimmed.startsWith("[")) {
+    return [trimmed];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    // Not a JSON array after all — one entry, exactly as § Entry form says.
+    return [trimmed];
+  }
+  if (
+    Array.isArray(parsed) &&
+    parsed.length > 0 &&
+    parsed.every((element): element is string => typeof element === "string")
+  ) {
+    return parsed;
+  }
+  return [trimmed];
+}
+
+/**
  * Whether a ledger `Selector` names something present in the test file.
  *
  * Selectors are written in whatever the project's runner accepts —
@@ -531,9 +571,16 @@ async function readTestFileContent(root: string, testFile: string): Promise<stri
  * Deliberately lenient. Both consumers treat a match as evidence *for* the
  * test's presence, so a false negative costs a warning that a false positive
  * would silently swallow.
+ *
+ * **Every entry must resolve**, not just one. A row carrying several entries is claiming all of
+ * them; one surviving element cannot vouch for a deleted sibling.
  */
 function selectorResolves(selector: string, content: string): boolean {
-  const withoutPath = normalizeSelector(selector);
+  return selectorEntries(selector).every((entry) => entryResolves(entry, content));
+}
+
+function entryResolves(entry: string, content: string): boolean {
+  const withoutPath = normalizeSelector(entry);
   if (withoutPath === null) {
     return false;
   }
@@ -581,7 +628,11 @@ function normalizeSelector(selector: string): string | null {
  * `validates the header` must still appear in full, so the `header` fallback stays dead.
  */
 function selectorResolvesVerbatim(selector: string, content: string): boolean {
-  const withoutPath = normalizeSelector(selector);
+  return selectorEntries(selector).every((entry) => entryResolvesVerbatim(entry, content));
+}
+
+function entryResolvesVerbatim(entry: string, content: string): boolean {
+  const withoutPath = normalizeSelector(entry);
   if (withoutPath === null) {
     return false;
   }

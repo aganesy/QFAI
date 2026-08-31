@@ -52,3 +52,24 @@ per entry (Phase Red, `qa-gatekeeper`, `checkpoint-verification.md` step 1) spli
   runner-specific translation rules, never by this split.
 - The ledger is a GFM table, so a `|` inside any name is escaped `\|` exactly as in every other
   cell. That is the table's rule, not this one.
+
+### Reading a cell written under the old comma rule
+
+Before the array form, this contract called a multi-entry cell a _comma-separated list_, so ledgers
+already persisted in projects hold rows like `renders the header, renders the footer` that meant two
+names. Read literally by the rule above those are now **one** entry, and a name option handed the
+joined string selects zero tests and still exits 0 — the row can never be advanced again. So a bare
+cell containing a comma gets one bounded compatibility reading before it is treated as a single name:
+
+1. Resolve the whole cell as one name against the row's `Test file`. If it names a test there, it is
+   one entry. **This branch wins**, because a name that legitimately contains a comma is the case
+   the array form was introduced to protect, and it is the more common one.
+2. Only if the whole cell resolves to nothing, split it on commas and resolve each part. If **every**
+   part names a test in that file, the cell was written under the old rule and holds those entries.
+3. If neither reading resolves, it is one entry — and the entry names no test, which is the row's
+   real problem and is reported as `TDDLIST_SELECTOR_UNRESOLVED` rather than papered over by a split.
+
+The disambiguation is evidence, not guesswork: a split is adopted only when the file actually
+contains every part, so it can never invent entries out of one comma-bearing name. Nothing here
+changes **Writing** — a row you touch is rewritten in the array form, which is why this reading is a
+migration and not a second permanent syntax.
