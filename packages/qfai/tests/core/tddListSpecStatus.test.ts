@@ -2,10 +2,12 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 
 const HEADERS =
   "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status    | DR-ID        | Evidence |";
@@ -34,8 +36,9 @@ async function writeSpecPack(specsRoot: string, dirName: string, body: string): 
 }
 
 /**
- * A spec whose ledger owes both a warning (`TDDLIST_EXCEPTION_PARKED`) and an
- * error (`TDDLIST_EVIDENCE_EMPTY`), with the `Status:` bullet under test.
+ * A spec whose ledger owes a fixed-severity warning (`TDDLIST_EXCEPTION_PARKED`)
+ * and a promotion-window finding (`TDDLIST_EVIDENCE_EMPTY`, see
+ * {@link undemotedEvidenceEmpty}), with the `Status:` bullet under test.
  *
  * `spec-0002` exists alongside it as an active spec unless `successor` says
  * otherwise — `false` leaves it out, a string replaces its lifecycle bullets —
@@ -81,11 +84,30 @@ async function withSpecStatus(
 const severityOf = (issues: Issues, code: string): string | undefined =>
   issues.find((entry) => entry.code === code)?.severity;
 
+/**
+ * The severity `TDDLIST_EVIDENCE_EMPTY` carries when nothing has demoted it.
+ *
+ * The rule runs a promotion window (`RULE_PROMOTIONS.tddListEvidenceEmpty`), so
+ * that severity is `warning` until the tool reaches `promoteAt` and `error`
+ * after it. These cases are about the lifecycle demotion, not about the window:
+ * asserting a literal would make them fail on one side of the promotion or the
+ * other while the behaviour they cover — active keeps the rule's own severity,
+ * retired drops to `info` — never changed.
+ */
+let undemotedEvidenceEmpty: "warning" | "error";
+
+beforeAll(async () => {
+  undemotedEvidenceEmpty = newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt,
+  );
+});
+
 describe("ledger findings follow the spec's lifecycle Status", () => {
   it("keeps full severity while the spec is active", async () => {
     await withSpecStatus(["- Status: active"], (issues) => {
       expect(severityOf(issues, "TDDLIST_EXCEPTION_PARKED")).toBe("warning");
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -110,7 +132,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
 
   it("treats a spec with no Status bullet as active", async () => {
     await withSpecStatus([], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -118,7 +140,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     // `QFAI-STATUS-002` reports the bad value; the ledger must not retire
     // itself on a spelling nobody validated.
     await withSpecStatus(["- Status: retired"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -136,7 +158,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
         "- Deprecated-at: 2026-01-01",
       ],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
     );
   });
@@ -149,7 +171,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     await withSpecStatus(
       ["- Notes:", "    - Status: deprecated", "    - Deprecated-at: 2026-01-01"],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
     );
   });
@@ -159,7 +181,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     // `QFAI-STATUS-*` rule looks at it — prose alone must not take the ledger
     // out of the gate.
     await withSpecStatus(["-Status: deprecated", "-Deprecated-at: 2026-01-01"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -174,7 +196,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
         "- Status: active",
       ],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
     );
   });
@@ -184,10 +206,10 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     // with no `Superseded-by` would demote the whole ledger with nothing
     // anywhere reporting the omission.
     await withSpecStatus(["- Status: superseded"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
     await withSpecStatus(["- Status: deprecated", "- Deprecated-at: last spring"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -198,7 +220,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     await withSpecStatus(
       ["- Status: superseded", "- Superseded-by: spec-0002"],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
       { successor: false },
     );
@@ -207,7 +229,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
   it("does not retire a spec that supersedes itself", async () => {
     // The source cannot inherit its own obligations, so nothing moved.
     await withSpecStatus(["- Status: superseded", "- Superseded-by: spec-0001"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -217,7 +239,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     await withSpecStatus(
       ["- Status: superseded", "- Superseded-by: spec-0002"],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
       { successor: "- Status: deprecated\n- Deprecated-at: 2026-01-01" },
     );
@@ -238,7 +260,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
         "- Deprecated-at: 2026-01-01",
       ],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
     );
   });
@@ -251,14 +273,14 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     await withSpecStatus(
       ["- Status: superseded", "- Superseded-by: spec-0002"],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
       { successor: "" },
     );
     await withSpecStatus(
       ["- Status: superseded", "- Superseded-by: spec-0002"],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
       { successor: "- Status: retired" },
     );
@@ -271,7 +293,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     await withSpecStatus(
       ["- Status:", "deprecated", "- Deprecated-at:", "2026-01-01"],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
     );
   });
@@ -280,10 +302,10 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     // `2026-02-30` passes the shape regex and rolls over to March 2. A
     // retirement date nobody can audit is not a retirement.
     await withSpecStatus(["- Status: deprecated", "- Deprecated-at: 2026-02-30"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
     await withSpecStatus(["- Status: removed", "- Deprecated-at: 9999-99-99"], (issues) => {
-      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
     });
   });
 
@@ -306,7 +328,7 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
         "- Status: active",
       ],
       (issues) => {
-        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe(undemotedEvidenceEmpty);
       },
     );
   });
