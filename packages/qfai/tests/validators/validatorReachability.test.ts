@@ -35,7 +35,6 @@ const ENTRY_POINTS = ["validate.ts", "../index.ts", "../cli/index.ts", "../cli/m
  */
 const KNOWN_UNREACHABLE = new Map<string, string>([
   ["validators/auditProfile.ts", "unfiled — same class as #402"],
-  ["validators/mermaidFence.ts", "unfiled — same class as #402"],
   ["validators/requirePack.ts", "unfiled — same class as #402"],
   ["validators/requirementsContext.ts", "unfiled — same class as #402"],
   // Its last importer went with the retired validators; the module itself is
