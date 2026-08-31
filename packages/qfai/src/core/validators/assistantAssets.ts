@@ -9,7 +9,9 @@ import { collectFiles } from "../fs.js";
 import { hasErrnoCode } from "../fs/errno.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
 
@@ -270,13 +272,16 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * `/qfai-configure` gets a work list rather than a single "something is
  * unfilled" flag.
  *
- * Severity is `warning`, not `error`. The escalation the rule would deserve —
- * error once the project has specs, since Stage 0 has been mandatory for at
- * least one skill run by then — cannot ship yet: these four files are copied
- * verbatim by `qfai init` and a project that has never run `/qfai-configure`
- * would fail its own `validate --profile full` gate on upgrade. Keeping the
- * finding visible is what closes the reported hole; raising the severity is a
- * separate, breaking decision.
+ * Severity comes from a promotion window, not from a literal beside the call.
+ * The escalation the rule deserves — error, since Stage 0 has been mandatory
+ * for at least one skill run by the time a project has specs — cannot land the
+ * day the detector does: these four files are copied verbatim by `qfai init`,
+ * so a project that has never run `/qfai-configure` would fail its own
+ * `validate --profile full` gate on upgrade with four findings on files it
+ * never touched. That is the migration P7 exists for, so the rule ships at
+ * `warning` behind {@link RULE_PROMOTIONS.steeringCatalogPlaceholders} and
+ * becomes an `error` at the pinned release. Writing `"warning"` here instead
+ * would have been the same window with no way for it to ever open.
  *
  * A missing file is skipped: this rule is about unfilled content, and the
  * pre-recut `steering/` layout is already reported by `D-DEPRECATED-PATH`.
@@ -285,6 +290,15 @@ async function collectSteeringPlaceholderIssues(
   root: string,
   assistantDir: string,
 ): Promise<Issue[]> {
+  // `resolveToolVersion` resolves rather than rejects — a read failure returns
+  // `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates this into a build failure.
+  const promoteAt = RULE_PROMOTIONS.steeringCatalogPlaceholders.promoteAt;
+  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+  const windowNote =
+    severity === "warning"
+      ? ` ${promoteAt} リリースまでは warning、それ以降は error として報告されます。`
+      : "";
   const issues: Issue[] = [];
   for (const fileName of STEERING_CATALOG_FILES) {
     const filePath = path.join(assistantDir, "catalog", fileName);
@@ -301,8 +315,8 @@ async function collectSteeringPlaceholderIssues(
     issues.push(
       issue(
         "QFAI-ASSETS-003",
-        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。`,
-        "warning",
+        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。${windowNote}`,
+        severity,
         filePath,
         "assistantAssets.steeringPlaceholder",
         sections.map((entry) => entry.section),

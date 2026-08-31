@@ -1032,6 +1032,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Markdown table row carries the same cell count as its header, so a positionally-read ledger cannot silently shift a column.",
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
+  "QFAI-ASSETS-003":
+    "Every Stage 0 steering catalog file (.qfai/assistant/catalog/{manifest,product,structure,tech}.md) holds project values rather than the `<...>` slots and bare TODO/TBD placeholders `qfai init` ships, since qfai-implement Stage 0 reads its gate commands from tech.md#standard-commands-copy-paste and cannot run one that is still a placeholder.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA":

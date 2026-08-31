@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
 
 // tests/validators/<this file> -> tests -> packages/qfai
@@ -65,7 +67,15 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
 
     expect(findings).toHaveLength(1);
     const [finding] = findings;
-    expect(finding?.severity).toBe("warning");
+    // Not a literal: the severity is decided by the promotion pin, so spelling
+    // `"warning"` here would go red the release the window closes and would
+    // say nothing about whether the pin is what decides it.
+    expect(finding?.severity).toBe(
+      newRuleSeverity(
+        await resolveToolVersion(),
+        RULE_PROMOTIONS.steeringCatalogPlaceholders.promoteAt,
+      ),
+    );
     expect(finding?.rule).toBe("assistantAssets.steeringPlaceholder");
     expect(finding?.file).toContain(path.join("catalog", "tech.md"));
     expect(finding?.refs).toContain("Standard commands (copy-paste)");
@@ -627,6 +637,27 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     const findings = await steeringFindings(root);
 
     expect(findings[0]?.message).toContain(".qfai/assistant/catalog/tech.md");
+  });
+
+  it("takes its severity from the promotion window and names the release that ends it", async () => {
+    // P7: a new finding code ships at `warning` behind a pinned promotion
+    // release, and says so in the finding itself, so `--fail-on error` keeps
+    // working while the operator sees the debt. This rule landed with a
+    // literal `"warning"` and no pin at all — which reads as "registered" to
+    // nothing, and gave the escalation its docstring promises no route to
+    // ever happen. `tests/core/sunsetLedger.test.ts` catches the missing
+    // registry entry; this catches the operator-visible half.
+    const root = await newRoot();
+    await seedShipped(root, "tech.md");
+
+    const { promoteAt } = RULE_PROMOTIONS.steeringCatalogPlaceholders;
+    const findings = await steeringFindings(root);
+    const [finding] = findings;
+
+    expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), promoteAt));
+    if (finding?.severity === "warning") {
+      expect(finding.message).toContain(promoteAt);
+    }
   });
 
   it("does not report a steering file that is absent", async () => {
