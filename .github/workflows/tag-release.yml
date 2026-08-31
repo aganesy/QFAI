@@ -53,11 +53,21 @@ jobs:
       - name: Read the version the tree declares, and require the CHANGELOG to agree
         id: version
         env:
-          # Reading a ref needs only the job token; the push below uses the PAT.
-          GH_TOKEN: ${{ github.token }}
+          # The PAT, not the job token. Asking which pull request carried a commit needs
+          # `pull-requests: read`, and granting that here would add a FOURTH member to
+          # `BR-0017-0016`'s closed departure set — a set whose whole point is that someone
+          # reads every addition. Reading through the secret keeps this workflow at
+          # `{ contents: read }` and moves nothing into the permission surface.
+          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}
         run: |
           set -euo pipefail
           reject() { echo "::error::tag-release: $1"; exit 1; }
+
+          # Checked here rather than only before the push: this step now READS with the same
+          # secret, and an unset one would otherwise surface as an opaque `gh` auth failure.
+          if [ -z "${GH_TOKEN}" ]; then
+            reject "the RELEASE_AUTOMATION_TOKEN secret is not set. This job asks which pull request carried the commit and pushes the tag, and neither is done with the job token: a tag pushed with GITHUB_TOKEN raises no workflow event, so release.yml would never start. Add a token with contents:write and pull-requests:read."
+          fi
 
           claimed="$(node -p "require('./packages/qfai/package.json').version")"
 
@@ -79,6 +89,28 @@ jobs:
           # reason to fail. It is a reason to do nothing.
           if ! grep -qE "^## \[${claimed}\]" CHANGELOG.md; then
             echo "tag-release: packages/qfai/package.json says ${claimed} and CHANGELOG.md has no '## [${claimed}]' heading yet; nothing to tag"
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "version=${claimed}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # An APPROVED RELEASE PULL REQUEST, not merely a manifest that moved. Without this a
+          # pinned feature branch that syncs `packages/qfai/package.json` and adds its own
+          # CHANGELOG heading would be tagged the moment it merged — and
+          # `.agents/rules/version-discipline.md` requires an explicit instruction for a tag,
+          # which is carried by the release pull request and by nothing else. A pin authorises a
+          # VERSION; it does not authorise cutting the tag.
+          #
+          # Asked of the API rather than read off the commit subject, so it holds under merge,
+          # squash and rebase alike — the mistake this workflow already made once. A direct push
+          # to `main` is associated with no pull request and therefore tags nothing.
+          if ! pulls="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" 2>&1)"; then
+            reject "could not ask which pull request carried ${GITHUB_SHA}, so whether this is a release merge is unknown: ${pulls}"
+          fi
+          # Every associated pull request, not just the first: a commit can belong to more than
+          # one, and picking `.[0]` would decline a real release merge for an incidental sibling.
+          if ! printf '%s' "$pulls" | jq -r '.[].headRefName' | grep -qxF "release/v${claimed}"; then
+            echo "tag-release: ${GITHUB_SHA} did not arrive from release/v${claimed}; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"
             exit 0

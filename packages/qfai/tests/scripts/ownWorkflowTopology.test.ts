@@ -2673,6 +2673,53 @@ describe("release automation performs decisions rather than making them", () => 
     ).toContain("CHANGELOG.md");
   });
 
+  it("tags only what an approved release pull request carried", () => {
+    // The trigger is `packages/qfai/package.json` changing, which is necessary and NOT
+    // sufficient. A pinned feature branch — `feature/vX.Y.Z`, which this repository's version
+    // discipline actively encourages — syncs that manifest and writes its own CHANGELOG
+    // heading, so on merge it satisfied both of the checks above and got itself tagged. A pin
+    // authorises a VERSION; `.agents/rules/version-discipline.md` is explicit that cutting the
+    // tag needs a separate instruction, and the release pull request is where that lives.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const body = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n");
+    // Comment lines stripped before matching. Five rows in this work matched a sentence about
+    // a check instead of the check, and every one was found by planting — the paragraph above
+    // this construct names both `release/v` and the pull request it asks about.
+    const commands = body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    expect(
+      commands,
+      "provenance must be ASKED OF THE API: which pull request carried this commit. Read off " +
+        "the commit subject it would be wrong under squash and rebase, which is the mistake " +
+        "this workflow already made once",
+    ).toMatch(/commits\/\$\{GITHUB_SHA}\/pulls/);
+    expect(
+      commands,
+      "and the answer must be required to be THIS version's release branch: a manifest that " +
+        "moved is necessary and not sufficient",
+      // The GREP, on the same line — not a mention. Measured: replacing the comparison with
+      // `grep -q .` (accept any pull request at all) left this row GREEN, because the message
+      // inside the branch names `release/v${claimed}` too. Sixth time in this work that a row
+      // matched a sentence about a check instead of the check; every one found by planting.
+    ).toMatch(/grep[^\n]*release\/v\$\{claimed}/);
+
+    // …and the permission surface must not have widened to pay for it. Asking the API needs
+    // `pull-requests: read`, and granting it here would make `BR-0017-0016`'s closed departure
+    // set four. Reading through the secret is what keeps that set at three.
+    expect(
+      tagWorkflow["permissions"],
+      "the provenance check must not have bought itself a permission",
+    ).toEqual({ contents: "read" });
+  });
+
   it("refuses to cut a release nobody described", () => {
     // The answer to "where does the release text come from": nowhere in here. These workflows
     // rename a section; the prose is whatever the merged pull requests wrote. So an empty
