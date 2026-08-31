@@ -175,7 +175,7 @@ export type AtddCodeTraceabilityResult = {
    * consequence is that a bullet list of IDs discharges `QFAI-ATDD-111` /
    * `-112` / `-113` / `-115` exactly as an executable acceptance test does, and
    * `missing: []` cannot tell the two apart. Reported at `info`
-   * (`QFAI-ATDD-118`) and persisted into the summary artifact for the same
+   * (`QFAI-ATDD-119`) and persisted into the summary artifact for the same
    * reason `unitComponentTcIds` is: a coverage scan must never leave "covered
    * by a test" and "covered by an ID written down" indistinguishable.
    *

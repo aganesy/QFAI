@@ -773,7 +773,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
-  "QFAI-ATDD-118":
+  "QFAI-ATDD-119":
     "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",

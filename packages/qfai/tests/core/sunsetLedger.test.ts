@@ -80,6 +80,11 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.
   "QFAI-REVIEW-010",
+  // An obligation referenced only from carriers that declare no test. The
+  // finding reports which partition the obligation landed in so a downstream
+  // gate can read it; a repository is free to leave a placeholder there
+  // deliberately, so there is no release at which this should fail a build.
+  "QFAI-ATDD-119",
 ];
 
 // tests/core/<this file> -> packages/qfai

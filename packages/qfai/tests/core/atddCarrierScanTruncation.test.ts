@@ -5,7 +5,7 @@
  * `truncated: true`. `coveredByCarrierOnly` is a negative claim — "every
  * carrier for this obligation declares no test" — so a markdown ledger read
  * before the cut and the acceptance test read after it would have produced
- * `QFAI-ATDD-118` for an obligation that is genuinely tested, and a downstream
+ * `QFAI-ATDD-119` for an obligation that is genuinely tested, and a downstream
  * gate reading the two arrays would have inherited the same error.
  *
  * The partition is therefore suppressed while `scan.truncated` is set, and the
@@ -93,7 +93,7 @@ describe("carrier-only coverage is not asserted from a truncated scan", () => {
       try {
         scan.truncate = true;
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-118");
+        expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-119");
 
         const markdown = await readFile(
           path.join(root, ".qfai", "report", "atdd-traceability", "summary.md"),

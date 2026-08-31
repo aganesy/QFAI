@@ -270,7 +270,7 @@ type AtddTraceabilitySummary = {
     conDb: string[];
   };
   /**
-   * Owed obligations no carrier declares a runnable test for (`QFAI-ATDD-118`).
+   * Owed obligations no carrier declares a runnable test for (`QFAI-ATDD-119`).
    *
    * The field downstream readers gate on. `missing` alone says an ID was found
    * somewhere under the scanned roots; it does not say a test references it,
@@ -626,7 +626,7 @@ export async function validateAtddCodeTraceability(
 }
 
 /**
- * `QFAI-ATDD-118` — obligations discharged by an annotation and nothing else.
+ * `QFAI-ATDD-119` — obligations discharged by an annotation and nothing else.
  *
  * Coverage is decided by a text match over the scanned roots, and the scan
  * deliberately reads `.md` / `.feature` so an annotation ledger or a Gherkin
@@ -658,7 +658,7 @@ function buildCarrierOnlyIssues(
   const rest = refs.length > 10 ? ` (他 ${String(refs.length - 10)} 件)` : "";
   return [
     issue(
-      "QFAI-ATDD-118",
+      "QFAI-ATDD-119",
       `テスト宣言を持たない注釈 carrier だけでカバーされている obligation があります（${String(refs.length)} 件）: ${shown}${rest}`,
       "info",
       attribution.file,
@@ -897,7 +897,7 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("## Covered By Annotation Carrier Only");
   lines.push("");
   lines.push(
-    "Referenced only from carriers that declare no test — prose (`.md`) or a code file holding nothing but the annotation (QFAI-ATDD-118).",
+    "Referenced only from carriers that declare no test — prose (`.md`) or a code file holding nothing but the annotation (QFAI-ATDD-119).",
   );
   lines.push("");
   if (summary.scan.truncated) {

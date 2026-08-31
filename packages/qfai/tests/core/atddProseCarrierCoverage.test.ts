@@ -10,7 +10,7 @@
  * was the only thing the summary artifact said about it.
  *
  * The distinction is now reported, not enforced: markdown stays a legitimate
- * carrier, `QFAI-ATDD-118` (`info`) names the obligations that have nothing
+ * carrier, `QFAI-ATDD-119` (`info`) names the obligations that have nothing
  * else, and `coveredByCarrierOnly` puts the same partition in
  * `summary.json` so `qfai report` and the completion reviewer can gate on it.
  *
@@ -104,7 +104,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        const carrierOnly = issues.find((entry) => entry.code === "QFAI-ATDD-118");
+        const carrierOnly = issues.find((entry) => entry.code === "QFAI-ATDD-119");
 
         expect(carrierOnly?.severity).toBe("info");
         expect(carrierOnly?.refs).toEqual(["SPEC-0001:US-0001"]);
@@ -124,7 +124,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const found = codes(await validateAtddCodeTraceability(root, defaultConfig));
-        expect(found).not.toContain("QFAI-ATDD-118");
+        expect(found).not.toContain("QFAI-ATDD-119");
         expect(found).not.toContain("QFAI-ATDD-111");
       },
     );
@@ -143,7 +143,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        const carrierOnly = issues.find((entry) => entry.code === "QFAI-ATDD-118");
+        const carrierOnly = issues.find((entry) => entry.code === "QFAI-ATDD-119");
 
         expect(carrierOnly?.refs).toEqual(["SPEC-0001:US-0001"]);
         expect(codes(issues)).not.toContain("QFAI-ATDD-111");
@@ -165,7 +165,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -184,7 +184,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -210,7 +210,7 @@ describe("an annotation carrier is not an executable test", () => {
           },
         };
         expect(codes(await validateAtddCodeTraceability(root, config))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -227,7 +227,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -251,7 +251,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -272,7 +272,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -298,7 +298,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -321,7 +321,7 @@ describe("an annotation carrier is not an executable test", () => {
         },
         async (root) => {
           expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-            "QFAI-ATDD-118",
+            "QFAI-ATDD-119",
           );
         },
       );
@@ -348,7 +348,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -375,7 +375,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -405,7 +405,7 @@ describe("an annotation carrier is not an executable test", () => {
             },
           };
           const issues = await validateAtddCodeTraceability(root, config);
-          expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
             "SPEC-0001:US-0001",
           ]);
         },
@@ -438,7 +438,7 @@ describe("an annotation carrier is not an executable test", () => {
             },
           };
           expect(codes(await validateAtddCodeTraceability(root, config))).not.toContain(
-            "QFAI-ATDD-118",
+            "QFAI-ATDD-119",
           );
         },
       );
@@ -465,7 +465,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -489,7 +489,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -527,7 +527,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -576,7 +576,7 @@ describe("an annotation carrier is not an executable test", () => {
           },
         };
         const issues = await validateAtddCodeTraceability(root, config);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0002",
         ]);
       },
@@ -614,7 +614,7 @@ describe("an annotation carrier is not an executable test", () => {
             },
           };
           expect(codes(await validateAtddCodeTraceability(root, config))).not.toContain(
-            "QFAI-ATDD-118",
+            "QFAI-ATDD-119",
           );
         },
       );
@@ -661,7 +661,7 @@ describe("an annotation carrier is not an executable test", () => {
           },
         };
         const issues = await validateAtddCodeTraceability(root, config);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -706,7 +706,7 @@ describe("an annotation carrier is not an executable test", () => {
           },
         };
         const issues = await validateAtddCodeTraceability(root, config);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0001",
         ]);
       },
@@ -742,7 +742,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
-          "QFAI-ATDD-118",
+          "QFAI-ATDD-119",
         );
       },
     );
@@ -778,7 +778,7 @@ describe("an annotation carrier is not an executable test", () => {
       },
       async (root) => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
-        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-119")?.refs).toEqual([
           "SPEC-0001:US-0002",
         ]);
       },
@@ -867,7 +867,7 @@ describe("an annotation carrier is not an executable test", () => {
         const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
           specScope: new Set(["0002"]),
         });
-        expect(codes(scoped)).not.toContain("QFAI-ATDD-118");
+        expect(codes(scoped)).not.toContain("QFAI-ATDD-119");
       },
     );
   });
