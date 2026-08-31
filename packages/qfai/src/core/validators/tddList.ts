@@ -11,6 +11,7 @@ import {
   UNKNOWN_LEVEL_CODE,
   UNKNOWN_LEVEL_RULE_ID,
 } from "../ruleIds.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { LedgerTable } from "../tddHelpers.js";
 import {
   collectIncompleteLedgerTables,
@@ -29,6 +30,7 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe } from "./utils.js";
 
 /**
@@ -54,7 +56,7 @@ const TRANSITIONS_REF =
  * **The ordinal counts ledger tables, not tables in the file**, and says so.
  * `collectLedgerTables` admits only schema-complete tables outside fenced and
  * commented regions, so the shipped `test-list.md` template — a `## Ledger`
- * table, a `## Schema` documentation table, a `## CHG-001` ledger table — makes
+ * table, a `## Schema` documentation table, a `## CHG-NNN` ledger table — makes
  * its third table the *second* ledger table. An unqualified `table 2` sent the
  * reader to the documentation table that has no rows to fix.
  */
@@ -329,6 +331,72 @@ const LAYER_TEST_DIRS: Record<string, string | null> = {
 };
 
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
+
+/**
+ * Layers whose RED/GREEN pairs are produced by `/qfai-atdd`, not by the
+ * implement loop — `Integration` among them because `QFAI-ATDD-112` covers
+ * every `L3` TC and every TC with no declared `Level`.
+ *
+ * The evidence file follows the stage that ran the commands, so these rows
+ * anchor into `atdd-<spec-id>.md` and every other row into
+ * `implement-<spec-id>.md` (`references/execution-ledger.md`, "ATDD-owned
+ * rows"). `qfai-implement`'s completion gate reads the same split, so an
+ * `E2E` row pointed at the implement file does not satisfy it.
+ */
+const ATDD_OWNED_LAYERS = new Set(["integration", "api", "e2e"]);
+
+/**
+ * The evidence file this row's `Evidence` cell has to point at.
+ *
+ * A single hard-coded `implement-…` path sent every `E2E` / `API` /
+ * `Integration` row at the wrong file, which is the one the completion gate
+ * does not accept for them.
+ */
+function evidenceFileFor(layer: string, specNumber: string): string {
+  const stage = ATDD_OWNED_LAYERS.has(layer.trim().toLowerCase()) ? "atdd" : "implement";
+  return `.qfai/evidence/${stage}-spec-${specNumber}.md`;
+}
+
+/**
+ * The anchor an evidence entry carries for this row: the row's own `TDD-ID`,
+ * lower-cased.
+ *
+ * A fixed example anchor named an entry that does not exist for any row but
+ * the one it was written from, so following it produced a pointer that
+ * resolves to nothing.
+ */
+function evidenceAnchorFor(tddId: string): string {
+  return TDD_ID_FORMAT.test(tddId)
+    ? `#${tddId.toLowerCase()}`
+    : "#<この行の TDD-ID を小文字にした anchor>";
+}
+
+/**
+ * The legal way a row at `status` can re-run a cycle it never actually ran.
+ *
+ * The advice used to be "move it back to `todo` / `red`" for every status this
+ * check fires on, and `references/execution-ledger.md` forbids that on three
+ * of the four: `green -> red` is the transition table's named example of a
+ * prohibited backward edge, `refactor -> red` is admissible only as QA
+ * rejection recovery behind a routed `qa-gatekeeper` REVISE, and
+ * **any status** -> `todo` is the upstream reset, which needs an approved
+ * `CR-*` recorded in `DR-ID`. An operator whose run genuinely does not exist
+ * was being told to commit a second lifecycle violation to clear the first.
+ */
+function unrunRowRecovery(status: string): string {
+  switch (status) {
+    case "green":
+      return "`green -> red` は禁止された後退遷移です。サイクルを実際に走らせていないなら、その行を anomaly として `exception` に移し（`DR-ID` に `DR-*` を記録）、解消後に `exception -> todo` で最初からやり直してください。承認済み上流変更がある場合に限り `any status -> todo`（upstream reset、`DR-ID` に承認済み `CR-*`）も使えます。";
+    case "refactor":
+      return "`refactor -> red` は routed `qa-gatekeeper` が REVISE を返した QA rejection recovery のときだけ合法です（その verdict を `Evidence` に記録）。それ以外は `exception`（`DR-*` を記録）に移し、解消後に `exception -> todo` で再入してください。承認済み上流変更がある場合に限り `any status -> todo`（upstream reset、`DR-ID` に承認済み `CR-*`）も使えます。";
+    case "review-fix":
+      return "`review-fix` の行は Status を変えないまま RED/GREEN サイクルを再実行できます（reviewer rework は後退遷移ではありません）。実行結果を evidence ファイルに記録してから `review-fix -> refactor` に戻してください。";
+    case "done":
+      return "`done` は終端で、`red` へも無承認の `todo` へも戻せません。再開できるのは承認済み `CR-*` を `DR-ID` に記録した upstream reset（`any status -> todo`）だけです。その承認がないなら、上記のとおりセルを in-place で backfill してください。";
+    default:
+      return "`todo` / `red` への巻き戻しは合法な遷移とは限りません。`references/execution-ledger.md` の Allowed transitions を確認してください。";
+  }
+}
 
 /**
  * True when `testFile` is placed under the repo-root `dir`.
@@ -1386,6 +1454,23 @@ async function validateSpecTddList(
   // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
   // `error: 0` an actively misleading signal for the two SKILL.md hard rules
   // encoded below, which until now only a human reading the prose could apply.
+  //
+  // `TDDLIST_EVIDENCE_EMPTY` runs a promotion window (`RULE_PROMOTIONS`): the
+  // rule is right, but it necessarily fires on cells written before it existed,
+  // including rows already at `done` — a state with no transition left that
+  // could re-observe anything. Shipping it straight at `error` turned an
+  // upgrade into a latched gate for a consuming repository. It is a `warning`
+  // until the pinned release and an `error` from that release onwards.
+  //
+  // `resolveToolVersion` resolves rather than rejects — its own read failures
+  // return `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates this into a build failure.
+  const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
+  const evidenceEmptySeverity = newRuleSeverity(await resolveToolVersion(), evidenceEmptyPromotion);
+  const evidenceEmptyWindowNote =
+    evidenceEmptySeverity === "warning"
+      ? ` Reported as a warning until the ${evidenceEmptyPromotion} release, then an error`
+      : "";
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -1394,16 +1479,21 @@ async function validateSpecTddList(
     const rowLabel = tddId.length > 0 ? `${tddId} (${ref.label})` : ref.label;
 
     if (EVIDENCE_PLACEHOLDER.test(evidence)) {
+      // The pointer example is built from *this* row: the evidence file its
+      // `Layer` owns and an anchor named after its own `TDD-ID`. A fixed
+      // `implement-…#tdd-0042` named an entry no other row has, and sent every
+      // ATDD-owned row at the file its completion gate does not accept.
+      const pointerExample = `${evidenceFileFor(cell(ref, "Layer"), specNumber)}${evidenceAnchorFor(tddId)}`;
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_EMPTY",
-          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules)`,
-          "error",
+          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result in its evidence file, with the cell pointing at that entry ("Empty evidence entries are rejected", qfai-implement Evidence hard rules).${evidenceEmptyWindowNote}`,
+          evidenceEmptySeverity,
           relPath,
           "tddList.evidencePresent",
           undefined,
           "change",
-          `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。まだ実行していない場合は Status を todo / red に戻してください。`,
+          `実行したコマンドとその結果は evidence ファイルに記録し、Evidence 列には結果の要約とその anchor への pointer だけを書いてください（例: RED fail / GREEN pass — evidence at \`${pointerExample}\`）。コマンドと出力をセルへ直接貼ると、改行や \`|\` が台帳の行を打ち切ったり列をずらしたりします（qfai-implement \`references/execution-ledger.md\`）。Status=done のような終端の行は、Status を変えずに Evidence セルだけを追記します（Evidence の追記は状態遷移ではありません）。実行記録が残っていない場合は evidence ファイルに backfill entry を作成し、その anchor をセルに記録してください。まだサイクルを実行していない場合の合法な回復手順は Status ごとに異なります: ${unrunRowRecovery(status)}`,
         ),
       );
       continue;
@@ -1444,7 +1534,7 @@ async function validateSpecTddList(
   // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
   //
   // Read from every ledger table, not just the first. A ledger that appends a
-  // per-change-request section (`## CHG-006 …` + its own table) is a shape the
+  // per-change-request section (`## CHG-NNN …` + its own table) is a shape the
   // implement skill produces, and scoring coverage against table 1 alone
   // reports every TC the later tables cover as uncovered. That was survivable
   // while this was the second gate behind `QFAI-ATDD-112`; with L1/L2 now
