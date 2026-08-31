@@ -40,6 +40,7 @@
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
     "lint:workflow-shape": "vitest run tests/integration/shippedWorkflowShapeGate.test.ts",
     "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts tests/core/prFixMonitor.test.ts tests/core/prMergePlan.test.ts",
+    "generate:rule-codes": "node scripts/generate-emitted-rule-codes.mjs",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage tests/unit/core/prototyping tests/core/prototyping",
