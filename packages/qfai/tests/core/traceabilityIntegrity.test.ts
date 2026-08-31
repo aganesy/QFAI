@@ -367,7 +367,7 @@ describe("ledger presence is checked without a branch diff", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   async function seedSpecDirs(...specIds: string[]): Promise<void> {
@@ -473,7 +473,7 @@ describe("an unavailable diff is reported, not swallowed", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("emits QFAI-TRACE-003 (info) when git cannot resolve the base ref", async () => {
@@ -519,7 +519,7 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("does not judge a legacy spec-pack ledger against the layered schema", async () => {
