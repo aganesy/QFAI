@@ -96,6 +96,8 @@
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
-    "tests/unit/shippedLaneCommands.test.ts"
+    "tests/unit/shippedLaneCommands.test.ts",
+    "tests/core/validators/skillDocumentReadability.test.ts",
+    "tests/core/validators/skillReferenceReachability.test.ts"
   ]
 }
