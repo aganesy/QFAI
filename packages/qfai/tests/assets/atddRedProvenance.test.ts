@@ -2227,6 +2227,21 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("When this stage has no row of its own, the record is stage-level");
     expect(shared).toContain("`## Shared-artifact re-verify` in the stage evidence file");
+    // And it names that file, not the Coverage Depth Matrix: the matrix is a
+    // separate committed artifact the stage evidence only links to, it holds no
+    // `## Final status`, and gate item 10 in `/qfai-implement` reads the stage
+    // evidence file — a block written into the matrix would never be consulted.
+    // The file is what this row owns; the placement adverb inside the same
+    // parenthetical is pinned by "gives the stage-level re-verify block one
+    // home" below, which tightened it from "beside" to "immediately before" —
+    // the block has to precede `## Final status` to stay inside the stage
+    // review's seal. Pinning the adverb here as well would make that
+    // tightening read as this row's regression.
+    expect(shared).toContain("in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`,");
+    expect(shared).toContain("`## Final status`)");
+    expect(shared).not.toContain(
+      "stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`",
+    );
     // And a consumer is told to read both places, or the block would be written
     // and never consulted.
     expect(shared).toContain("A consumer clearing a mismatch reads **both** places");
