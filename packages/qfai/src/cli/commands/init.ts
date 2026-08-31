@@ -15,6 +15,7 @@ import {
   rename,
   rm,
   rmdir,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -25,9 +26,19 @@ import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
-import { error, info } from "../lib/logger.js";
+import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { toRelativePath } from "../../core/paths.js";
+import {
+  CODEX_AGENT_WRAPPER_DIR,
+  CODEX_AGENT_WRAPPER_SUFFIX,
+  isGeneratedCodexAgentToml,
+  parseAgentCatalogDeclarations,
+  parseAgentCatalogKinds,
+  renderCodexAgentToml,
+  type CodexAgentKind,
+} from "../../core/codexAgentToml.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
@@ -40,8 +51,10 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  hasInitMarkerSignature,
   joinAssistantAssetLayer,
   joinAssistantLayer,
+  joinAssistantReadme,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
@@ -333,6 +346,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  // The copy above is create-only, so it cannot repair a marker-less README a
+  // previous version of init left behind.
+  const markerRewritten = await ensureAssistantMarker(assistantAssets, destRoot, options.dryRun);
+  const rewrittenPaths = new Set(markerRewritten);
 
   // The routing manifest is user configuration, so it is never overwritten —
   // but the skills just regenerated above may name phases an older project's
@@ -343,7 +360,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     : [];
 
   // git config core.symlinks true（symlink 生成の前提条件）
-  await configureGitSymlinks(destRoot, options.dryRun);
+  // 唯一のワーキングツリー外への変更なので、書き込み直後にその場で報告する
+  // （dry-run でもプレビュー行を出す）。report() まで保留すると、後続の
+  // syncIntegrationWrappers などが throw した場合（Windows で Developer Mode
+  // が無効なときの EPERM など）に、既に永続化された設定の開示だけが失われる。
+  for (const note of await configureGitSymlinks(destRoot, options.dryRun)) {
+    info(note);
+  }
 
   // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
@@ -451,6 +474,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...rootResult.copied,
       ...qfaiResult.copied,
       ...skillsResult.copied,
+      ...markerRewritten,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
@@ -458,6 +482,10 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
     ],
+    // The marker rewrite runs after a create-only copy that has already
+    // recorded the same README as skipped. Reporting it in both columns tells
+    // a reader running without `--force` that the file was left untouched at
+    // the same time as saying it was written, so the rewrite's paths win.
     [
       ...rootResult.skipped,
       ...qfaiResult.skipped,
@@ -468,7 +496,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
-    ],
+    ].filter((entry) => !rewrittenPaths.has(entry)),
     [...removed, ...upgradeResult.removed],
     options.dryRun,
     "init",
@@ -491,6 +519,332 @@ export async function runInit(options: InitOptions): Promise<void> {
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Assistant-tree marker (the one file init owns outright)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ceiling on the README this rewrite will read before deciding.
+ *
+ * The same bound `QFAI-LINK-001` reads the marker under: generous against what
+ * init writes — a few hundred bytes — and small enough that a document somebody
+ * else put at that path costs nothing to decline.
+ */
+const ASSISTANT_README_MAX_BYTES = 64 * 1024;
+
+/**
+ * Rewrites `.qfai/assistant/README.md` when it does not carry init's signature.
+ *
+ * `qfai validate` reads that README to tell "init ran here and the integration
+ * surface was deleted" from "init never ran here"; once every wrapper is gone
+ * the two are indistinguishable from the integration directories alone, and
+ * only one of them is a defect. Every other `.qfai/**` path is copied
+ * create-only, so a project initialised before this README carried the
+ * signature keeps its older one forever — the marker is then never written, and
+ * deleting all six surfaces reads as a project that never ran init: nothing
+ * checked, every profile passing, and the assistant loading nothing.
+ *
+ * Only a regular file that is missing the signature is rewritten. One that has
+ * it is left as it is, notes a project added below init's own text and all, and
+ * anything else at that path — a directory, a symlink, a document too large to
+ * be init's — is somebody else's to remove, not init's.
+ *
+ * The rewrite **keeps** what was there. Every `.qfai/**` path is create-only,
+ * so a project could reasonably annotate the README an older init wrote, and
+ * this repair runs on a plain `qfai init` — without `--force`. Discarding those
+ * notes to gain a marker is not a trade init gets to make on the project's
+ * behalf, so the previous text is filed below the template under
+ * {@link PRESERVED_BODY_HEADING} instead. A second run then sees the signature
+ * and leaves the file alone, so nothing accumulates.
+ *
+ * The replacement claims the pathname rather than writing through it: a sidecar
+ * in the same directory, then `rename`. `writeFile` on the checked path follows
+ * whatever the entry resolves to — a symlink another process put there between
+ * the check and the write, or a hard link the README already shared with a file
+ * outside the project — and would have written the template into it. `rename`
+ * replaces the directory entry, so the other name keeps its inode. What the
+ * entry carried comes with it: its mode, and its bytes exactly as they were.
+ *
+ * Two conditions make the repair decline rather than proceed, both of them
+ * cases where going ahead is worse than leaving the file alone: a merge that
+ * would overshoot the ceiling the rule reads the marker under, and a pathname
+ * that stopped being the inode this read while the merge was being written.
+ *
+ * Absence is not this function's case: the template copy that runs before it
+ * creates the file, and reporting the same path twice would double-count it.
+ * That copy has already recorded an existing README as *skipped*, so a path
+ * this returns is removed from the skipped column by {@link runInit}.
+ */
+async function ensureAssistantMarker(
+  assistantAssetsDir: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const dest = joinAssistantReadme(destRoot);
+  let current: Stats;
+  try {
+    current = await lstat(dest);
+  } catch (err: unknown) {
+    // Only absence is the template copy's case. Every other failure — an ACL,
+    // a transient `EIO` — used to reach the same silent `return []` through
+    // `safeLstat`, and the copy before this one had already filed the path as
+    // *skipped*, so `qfai init` reported a clean run over a project whose
+    // marker is still missing and whose integration surface still reads as
+    // never initialised. Saying so is the whole difference.
+    if (isEnoent(err)) {
+      return [];
+    }
+    warn(
+      [
+        `WARN: ${dest} の状態を取得できませんでした（${describeError(err)}）。`,
+        `      qfai init のマーカーは書き込まれていないため、QFAI-LINK-001 は引き続き「未初期化」と判定します。パーミッションを確認して qfai init を再実行してください。`,
+      ].join("\n"),
+    );
+    return [];
+  }
+  if (!current.isFile()) {
+    return [];
+  }
+  const previous = await readExistingReadme(dest);
+  if (previous === null || hasInitMarkerSignature(decodeForDetection(previous.content))) {
+    return [];
+  }
+  const template = await readTemplateReadme(path.join(assistantAssetsDir, "README.md"));
+  if (template === null) {
+    return [];
+  }
+  const merged = mergeAssistantReadme(template, previous.content);
+  // The marker is only a marker while the rule can read it, and the rule reads
+  // it under this same ceiling. Writing a merge that overshoots would report a
+  // repair while leaving the project exactly as unreadable as before — and the
+  // next `qfai init` would decline the oversized file too, so nothing would
+  // ever come back for it. Declining and saying so leaves the operator the one
+  // move that works.
+  if (merged.byteLength > ASSISTANT_README_MAX_BYTES) {
+    warn(
+      [
+        `WARN: ${dest} に qfai init のマーカーを書き込めません（既存の内容と結合すると ${String(ASSISTANT_README_MAX_BYTES)} bytes の上限を超えます）。`,
+        `      既存の内容は変更していません。プロジェクト固有の注記を別ファイルへ移して短くしてから qfai init を再実行してください。`,
+      ].join("\n"),
+    );
+    return [];
+  }
+  if (!dryRun) {
+    await mkdir(path.dirname(dest), { recursive: true });
+    if (!(await replaceViaSidecar(dest, merged, previous))) {
+      // Somebody else put a different file at the pathname while this ran.
+      // Theirs is the newer decision; overwriting it is not this repair's call.
+      warn(
+        `WARN: ${dest} は qfai init の実行中に別のプロセスが置き換えたため、マーカーの書き込みを見送りました。qfai init を再実行してください。`,
+      );
+      return [];
+    }
+  }
+  return [dest];
+}
+
+/** Heading the previous README's text is filed under. */
+const PRESERVED_BODY_HEADING = "## qfai init が置き換える前の README";
+
+const PRESERVED_BODY_NOTE = [
+  "以下は `qfai init` がこのファイルにマーカーを書き込む前からあった内容です。",
+  "プロジェクト固有の注記が含まれている可能性があるため保持しています。不要であれば削除してください。",
+].join("\n");
+
+/**
+ * The template with the previous README filed below it.
+ *
+ * **The previous body is carried as bytes.** It is somebody else's file: it
+ * may be Shift_JIS, or hold a sequence that is not UTF-8 at all, and a round
+ * trip through a string replaces every byte it cannot decode with U+FFFD —
+ * irreversibly, since this result is what goes back to the pathname. Only the
+ * text init contributes is encoded here; what was already there is spliced in
+ * untouched.
+ *
+ * An empty previous body has nothing to keep, and appending a heading over
+ * nothing only leaves the operator a section to delete.
+ */
+function mergeAssistantReadme(template: string, previous: Buffer): Buffer {
+  const head = Buffer.from(template.endsWith("\n") ? template : `${template}\n`, "utf-8");
+  if (isBlankBytes(previous)) {
+    return head;
+  }
+  const preamble = Buffer.from(
+    `\n---\n\n${PRESERVED_BODY_HEADING}\n\n${PRESERVED_BODY_NOTE}\n\n`,
+    "utf-8",
+  );
+  const parts = [head, preamble, previous];
+  if (previous[previous.length - 1] !== 0x0a) {
+    parts.push(Buffer.from("\n", "utf-8"));
+  }
+  return Buffer.concat(parts);
+}
+
+/**
+ * Whether these bytes are whitespace only.
+ *
+ * Asked of the bytes rather than of a decoded string: the encoding is unknown,
+ * and every encoding this could plausibly be agrees on space / tab / CR / LF.
+ * Any other byte counts as content worth keeping.
+ */
+function isBlankBytes(bytes: Buffer): boolean {
+  return bytes.every((byte) => byte === 0x20 || byte === 0x09 || byte === 0x0a || byte === 0x0d);
+}
+
+/**
+ * Put `content` at `filePath` without writing through the entry already there,
+ * and without discarding a file that arrived while this ran.
+ *
+ * The sidecar is created exclusively in the same directory — same filesystem,
+ * so `rename` is the atomic swap and not a copy — and removed again if the
+ * swap fails, so a failure leaves the original exactly as it was.
+ *
+ * The staging file is written **through the handle `wx` opened**, never re-opened
+ * by name. `wx` proves the sidecar was ours at creation and nothing more: a
+ * process that can write this directory may delete the predictable pathname and
+ * put a symlink or a hard link there, and a second `writeFile(sidecar, …)`
+ * would have followed it and written the template into whatever it resolved to.
+ * The handle is the file itself, so nothing the pathname does afterwards can
+ * redirect the write — and the same handle answers for the mode and for the
+ * inode the swap is about to move.
+ *
+ * Two things are carried over from the entry that was read: its **mode**, so a
+ * README a project keeps at `0600` does not come back world-readable under the
+ * umask the sidecar was created with; and its **content**, re-read and compared
+ * immediately before the swap. `rename` replaces unconditionally, so an editor
+ * or a concurrent `qfai init` that touched the file after the read would
+ * otherwise have had its work deleted and replaced by a merge of content that
+ * is no longer there. Comparing the bytes rather than only `dev`/`ino` is what
+ * catches the ordinary case: an editor that truncates and rewrites **keeps the
+ * inode**, so an identity check alone read it as untouched.
+ *
+ * Neither check closes its window — a replacement of either pathname between
+ * the last check and `rename` would take an exclusive claim the platform does
+ * not offer for a replacement — but each turns the common case of it from a
+ * silent overwrite into a declined repair. Returns `false` when it declines.
+ */
+async function replaceViaSidecar(
+  filePath: string,
+  content: Buffer,
+  pinned: PinnedFileRead,
+): Promise<boolean> {
+  const { path: sidecar, handle } = await openSidecar(filePath);
+  let staged: { dev: number; ino: number };
+  try {
+    await handle.writeFile(content);
+    await handle.chmod(pinned.mode);
+    const written = await handle.stat();
+    staged = { dev: written.dev, ino: written.ino };
+  } catch (err: unknown) {
+    await handle.close().catch(() => undefined);
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    throw err;
+  }
+  await handle.close();
+
+  try {
+    if (!(await isUnchanged(filePath, pinned))) {
+      await discardSidecar(sidecar, staged);
+      return false;
+    }
+    if (!(await sidecarStillOurs(sidecar, staged))) {
+      // The staging pathname is somebody else's file now. Renaming it over the
+      // README would install content this repair never wrote, and removing it
+      // would delete a file that is not ours to delete.
+      return false;
+    }
+    await rename(sidecar, filePath);
+    return true;
+  } catch (err: unknown) {
+    // Best-effort: the swap already failed, and a sidecar that cannot be
+    // removed is a leftover to report through the original error, not a second
+    // failure to raise in its place.
+    await discardSidecar(sidecar, staged);
+    throw err;
+  }
+}
+
+/**
+ * Whether the pathname still holds exactly what {@link readExistingReadme} read.
+ *
+ * Identity first, then the bytes: the inode answers "is this still the same
+ * file", the content answers "has that file been rewritten underneath us". Only
+ * both together mean nothing has happened since the read.
+ */
+async function isUnchanged(filePath: string, pinned: PinnedFileRead): Promise<boolean> {
+  const now = await readExistingReadme(filePath).catch(() => null);
+  if (now === null) {
+    return false;
+  }
+  return isSameEntry(now, pinned) && now.content.equals(pinned.content);
+}
+
+/** Whether the staging pathname still names the inode this run wrote. */
+async function sidecarStillOurs(
+  sidecar: string,
+  staged: { dev: number; ino: number },
+): Promise<boolean> {
+  const current = await safeLstat(sidecar);
+  if (current === undefined || !current.isFile()) {
+    return false;
+  }
+  return current.ino === 0 || staged.ino === 0
+    ? true
+    : current.dev === staged.dev && current.ino === staged.ino;
+}
+
+/** Remove the staging file, but only while it is still the one this run wrote. */
+async function discardSidecar(
+  sidecar: string,
+  staged: { dev: number; ino: number },
+): Promise<void> {
+  if (!(await sidecarStillOurs(sidecar, staged))) {
+    return;
+  }
+  await rm(sidecar, { force: true }).catch(() => undefined);
+}
+
+/**
+ * The bytes at `filePath`, or `null` when it is not a bounded regular file.
+ *
+ * Bytes, not text: what comes back is spliced into the replacement verbatim.
+ */
+async function readExistingReadme(filePath: string): Promise<PinnedFileRead | null> {
+  try {
+    return await readPinnedRegularFileBytes(filePath, ASSISTANT_README_MAX_BYTES);
+  } catch (err: unknown) {
+    // Removed between the `lstat` above and this read. Nothing to repair, and
+    // the caller's other branches all mean "leave it alone" too.
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * The signature test's view of a body whose encoding is unknown.
+ *
+ * Lossy on purpose, and safe to be: the decoded string is only ever asked
+ * whether init's ASCII heading and section are in it, and it is thrown away
+ * afterwards. Nothing this returns is written anywhere.
+ */
+function decodeForDetection(bytes: Buffer): string {
+  return bytes.toString("utf-8");
+}
+
+/** The shipped template's text, or `null` when it is not a bounded file. */
+async function readTemplateReadme(filePath: string): Promise<string | null> {
+  try {
+    return await readPinnedRegularFile(filePath, ASSISTANT_README_MAX_BYTES);
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
   }
 }
 
@@ -1861,16 +2215,14 @@ function report(
     info(`  skipped: ${skipped.length}`);
     info("  skipped paths:");
     for (const skippedPath of skipped) {
-      const relative = path.relative(baseDir, skippedPath);
-      info(`    - ${relative}`);
+      info(`    - ${toRelativePath(baseDir, skippedPath)}`);
     }
   }
   if (removed.length > 0) {
     info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
     info(dryRun ? "  would remove paths:" : "  removed paths:");
     for (const removedPath of removed) {
-      const relative = path.relative(baseDir, removedPath);
-      info(`    - ${relative}`);
+      info(`    - ${toRelativePath(baseDir, removedPath)}`);
     }
   }
 }
@@ -1942,31 +2294,181 @@ async function pathExists(target: string): Promise<boolean> {
 // Git config
 // ---------------------------------------------------------------------------
 
-async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<void> {
+/**
+ * Resolves the `.git/config` this init would configure, or null outside a
+ * repository. `git rev-parse` resolves upward from `cwd`, so `--dir subdir`
+ * inside an existing repository configures that repository rather than
+ * `subdir`; naming the resolved file in the report makes that visible.
+ *
+ * The common git dir is what matters, not the per-worktree one: inside a
+ * linked worktree the per-worktree git dir is `.git/worktrees/<name>`, which
+ * holds no `config` file at all, while the local-scope write lands in the
+ * common `.git/config`. Every fallback therefore stays on `--git-common-dir`
+ * until the option itself runs out: git old enough to lack it is also old
+ * enough to lack linked worktrees, so `--git-dir` is the common dir there.
+ * All three forms may answer relative to `destRoot`, so resolve the answer.
+ */
+async function resolveGitConfigPath(probeDir: string): Promise<string | null> {
+  const gitDir =
+    (await runGitRevParse("git rev-parse --path-format=absolute --git-common-dir", probeDir)) ??
+    (await runGitRevParse("git rev-parse --git-common-dir", probeDir)) ??
+    (await runGitRevParse("git rev-parse --git-dir", probeDir));
+  return gitDir === null ? null : path.join(path.resolve(probeDir, gitDir), "config");
+}
+
+/** Runs one `git rev-parse` form, answering null when it fails or is empty. */
+async function runGitRevParse(command: string, probeDir: string): Promise<string | null> {
   try {
-    await execAsync("git rev-parse --git-dir", { cwd: destRoot });
+    const { stdout } = await execAsync(command, { cwd: probeDir, env: gitChildEnv() });
+    const resolved = stdout.trim();
+    return resolved === "" ? null : resolved;
   } catch {
-    // Not a git repository — skip
-    return;
+    // Not a git repository, or a git too old for this rev-parse form.
+    return null;
+  }
+}
+
+/**
+ * The environment the git children run in, with `GIT_CONFIG` removed.
+ *
+ * `GIT_CONFIG` is a historical alias for `--file`: when it is set, `git
+ * config` counts it as a config-file selection, so every `--local` form here
+ * dies with `error: only one config file at a time` (exit 129). The read
+ * swallows that failure, but the write is the one change init makes outside
+ * the working tree and the setting is what lets git expand the rules symlinks
+ * on Windows — it must not be defeated by an ambient variable aimed at some
+ * unrelated file. Dropping the variable pins every child to the repository
+ * config that `--local` names.
+ */
+function gitChildEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.GIT_CONFIG;
+  return env;
+}
+
+/**
+ * The directory the git probes run in: `destRoot` when it exists, otherwise
+ * its nearest existing ancestor, or null when even that is unreachable.
+ *
+ * `--dir` may name a directory that does not exist yet. The real run creates
+ * it during the template copy, which runs before this step, so the probes see
+ * the enclosing repository and the write lands there. A `--dry-run` creates
+ * nothing, and spawning a child in a missing `cwd` fails with ENOENT, so the
+ * preview used to stay silent about a write the real run performs. Walking up
+ * finds the same repository, because creating a plain directory never starts
+ * a new one.
+ */
+async function nearestExistingDir(destRoot: string): Promise<string | null> {
+  let current = path.resolve(destRoot);
+  for (;;) {
+    try {
+      if ((await stat(current)).isDirectory()) {
+        return current;
+      }
+    } catch {
+      // Missing (ENOENT), shadowed by a file (ENOTDIR), or unreadable — none
+      // of which init can fix here. Keep walking; the loop ends at the root.
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    current = parent;
+  }
+}
+
+/**
+ * Reads `core.symlinks` at one scope, answering false when it is unset.
+ *
+ * Both scopes matter. `--local` is the scope the write targets: an unscoped
+ * read also sees global and system config, so a `true` inherited from there
+ * would suppress the local pin and leave the repository dependent on a
+ * setting that can be removed outside it. The unscoped read is the effective
+ * value, which `--local` alone cannot predict — in a linked worktree with
+ * `extensions.worktreeConfig=true`, `config.worktree` outranks the common
+ * `.git/config`, so a local `true` can still resolve to `false`.
+ *
+ * `--bool` canonicalises the stored spelling, so the values git itself
+ * accepts as true (`yes`, `on`, `1`, a valueless key) are recognised instead
+ * of being rewritten as if they were unset.
+ */
+async function gitSymlinksEnabled(
+  probeDir: string,
+  scope: "local" | "effective",
+): Promise<boolean> {
+  const command =
+    scope === "local"
+      ? "git config --local --bool --get core.symlinks"
+      : "git config --bool --get core.symlinks";
+  try {
+    const { stdout } = await execAsync(command, { cwd: probeDir, env: gitChildEnv() });
+    return stdout.trim() === "true";
+  } catch {
+    // Exit 1 = unset. Any other failure is treated the same: write and let the
+    // write's own error reporting speak.
+    return false;
+  }
+}
+
+/** Disclosed when the local pin is in place but something outranks it. */
+const WORKTREE_OVERRIDE_NOTE =
+  "  warning: core.symlinks の実効値は false のままです（worktree スコープの上書き）。" +
+  "解除するには linked worktree で `git config --worktree core.symlinks true` を実行してください。";
+
+/**
+ * Configures `core.symlinks`, the one change init makes outside the working
+ * tree, and returns the report lines that disclose it. Both modes speak: a
+ * dry-run that stayed silent about `.git/config` understated the real run, and
+ * a real run that stayed silent left the setting unattributable afterwards.
+ */
+async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<string[]> {
+  const probeDir = await nearestExistingDir(destRoot);
+  if (probeDir === null) {
+    return [];
+  }
+
+  const configPath = await resolveGitConfigPath(probeDir);
+  if (configPath === null) {
+    return [];
+  }
+
+  if (await gitSymlinksEnabled(probeDir, "local")) {
+    const lines = [`  git config: core.symlinks already true (${configPath}) — left untouched`];
+    if (!(await gitSymlinksEnabled(probeDir, "effective"))) {
+      lines.push(WORKTREE_OVERRIDE_NOTE);
+    }
+    return lines;
   }
 
   if (dryRun) {
-    return;
+    return [`  would set: git config --local core.symlinks true (${configPath})`];
   }
 
   try {
-    await execAsync("git config core.symlinks true", { cwd: destRoot });
+    await execAsync("git config --local core.symlinks true", {
+      cwd: probeDir,
+      env: gitChildEnv(),
+    });
   } catch (err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       [
-        "git config core.symlinks true の設定に失敗しました。",
+        "git config --local core.symlinks true の設定に失敗しました。",
         "手動で以下を実行してください:",
-        "  git config core.symlinks true",
+        "  git config --local core.symlinks true",
         `原因: ${detail}`,
       ].join("\n"),
     );
   }
+
+  const lines = [`  git config: core.symlinks=true (${configPath})`];
+  if (!(await gitSymlinksEnabled(probeDir, "effective"))) {
+    // The write landed in the common config but does not govern: only a
+    // higher-precedence scope can do that, and per-worktree config is the one
+    // git offers. Say so rather than reporting an enablement that is not one.
+    lines.push(WORKTREE_OVERRIDE_NOTE);
+  }
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
@@ -2014,7 +2516,7 @@ async function syncIntegrationWrappers(
 
   // Step 1: Prune deprecated wrappers (commands, prompts, old non-symlink dirs)
   const removed = options.force
-    ? await pruneStaleQfaiWrappers(destRoot, skills, options.dryRun)
+    ? await pruneStaleQfaiWrappers(destRoot, skills, agents, options.dryRun)
     : [];
 
   // Step 2: Write README files as regular files
@@ -2086,6 +2588,12 @@ async function syncIntegrationWrappers(
   copied.push(...agentResult.copied);
   skipped.push(...agentResult.skipped);
 
+  // Step 6: Generate Codex agent profiles (.codex/agents/<name>.toml)
+  const codexResult = await createCodexAgentTomls(assistantAssetsDir, destRoot, agents, options);
+  copied.push(...codexResult.copied);
+  skipped.push(...codexResult.skipped);
+  removed.push(...codexResult.removed);
+
   return { copied, skipped, removed };
 }
 
@@ -2146,6 +2654,530 @@ async function createAgentSymlinks(
 
   return { copied, skipped };
 }
+
+/**
+ * Writes `.codex/agents/<name>.toml`, one Codex profile per canonical agent.
+ *
+ * Unlike the other two agent wrappers this one cannot be a symlink — Codex
+ * wants the whole body escaped into a `developer_instructions` string — so it
+ * is a snapshot, and a snapshot needs a regeneration trigger. It gets the same
+ * one `assistant/agents/**` has: create-only on a plain run, rewritten under
+ * `--force`. Without it a correction to an agent definition reached Claude and
+ * Copilot the moment it landed (they follow the symlink) and never reached
+ * Codex at all.
+ */
+async function createCodexAgentTomls(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agents: string[],
+  options: WrapperSyncOptions,
+): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+
+  const roster = await collectCodexAgentRoster(destRoot, agents);
+  if (roster.length === 0) {
+    return { copied, skipped, removed };
+  }
+
+  const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+  const unsafeComponent = await findUnsafeWrapperComponent(destRoot, CODEX_AGENT_WRAPPER_DIR);
+  if (unsafeComponent !== undefined) {
+    info(`  skip: ${wrapperDir} (${unsafeComponent})`);
+    return { copied, skipped, removed };
+  }
+
+  const classification = await loadAgentClassification(assistantAssetsDir, destRoot);
+
+  for (const agentName of roster) {
+    const destination = path.join(wrapperDir, `${agentName}${CODEX_AGENT_WRAPPER_SUFFIX}`);
+    const destinationStats = await safeLstat(destination);
+    const existing = destinationStats !== undefined;
+    if (existing && !options.force) {
+      skipped.push(destination);
+      continue;
+    }
+    const occupant = describeUnwritableDestination(destinationStats);
+    if (occupant !== undefined) {
+      info(`  skip: ${destination} (${occupant})`);
+      skipped.push(destination);
+      continue;
+    }
+
+    const plan = await planCodexAgentProfile(
+      assistantAssetsDir,
+      destRoot,
+      agentName,
+      classification,
+      options,
+    );
+    if (plan.status === "unavailable") {
+      info(`  skip: ${destination} (${plan.reason})`);
+      // `--force` means "make the wrappers match the canonical agents". A
+      // profile we cannot regenerate is no evidence the old one is still
+      // right: a stale `worker` TOML keeps exactly the write access the
+      // classification guard below just refused to grant, and Codex keeps
+      // loading it. So drop it rather than leave it unexplained.
+      if (existing && options.force) {
+        removed.push(destination);
+        if (!options.dryRun) {
+          await rm(destination, { recursive: true, force: true });
+        }
+      }
+      continue;
+    }
+
+    if (!options.dryRun) {
+      await mkdir(path.dirname(destination), { recursive: true });
+      // `writeFile` follows a symlink and truncates whatever it points at, so a
+      // `.codex/agents/<name>.toml` committed as a link would turn the
+      // documented `--force` refresh into an overwrite of an arbitrary file,
+      // this repository or not. The wrapper is generator output: drop the link.
+      await removeSymlinkAt(destination);
+      if (!(await writeGeneratedProfile(destination, plan.toml))) {
+        // The `lstat` above already refused everything that is not a regular
+        // file; this is the same refusal for an entry that arrived after it.
+        info(`  skip: ${destination} (${NON_REGULAR_DESTINATION})`);
+        skipped.push(destination);
+        continue;
+      }
+    }
+    copied.push(destination);
+  }
+
+  if (options.force) {
+    removed.push(...(await pruneOrphanCodexProfiles(wrapperDir, new Set(roster), options.dryRun)));
+  }
+
+  return { copied, skipped, removed };
+}
+
+/**
+ * The first component of `relativeDir` under `destRoot` that must not be
+ * written through, or `undefined` when the whole chain is safe.
+ *
+ * `.codex/agents` is a path an untrusted repository controls, and a directory
+ * component of it can be a symlink out of the tree — a checked-in
+ * `.codex/agents -> /home/user/.config` is enough. `mkdir` follows it,
+ * `writeFile` follows it, and `removeSymlinkAt` cannot see it: that guard
+ * looks at the leaf `<name>.toml` only. A plain `qfai init` would then write
+ * every profile into that external directory and `--force` would let
+ * {@link pruneOrphanCodexProfiles} delete files there. So every component is
+ * `lstat`-ed before anything is written or removed, and one link anywhere in
+ * the chain skips the step whole rather than writing part of it somewhere
+ * unexpected.
+ *
+ * A component that does not exist yet ends the walk: `mkdir` creates real
+ * directories, and nothing below an absent parent can exist either.
+ */
+async function findUnsafeWrapperComponent(
+  destRoot: string,
+  relativeDir: string,
+): Promise<string | undefined> {
+  let current = destRoot;
+  for (const segment of relativeDir.split("/")) {
+    current = path.join(current, segment);
+    const stats = await safeLstat(current);
+    if (stats === undefined) {
+      return undefined;
+    }
+    if (stats.isSymbolicLink()) {
+      return `${current} が symlink のため生成先として使えません`;
+    }
+    if (!stats.isDirectory()) {
+      return `${current} がディレクトリではありません`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Deletes the generated profiles of agents that left the roster.
+ *
+ * The loop above only ever visits agents that still exist, so deleting an agent
+ * from both the catalog and `assistant/agents/` left its TOML untouched — and a
+ * Codex profile is a self-contained snapshot, not a symlink that goes dangling
+ * with its referent. Codex alone kept loading a retired agent, write access
+ * included. Scoped to `--force`, which is already the mode that rewrites this
+ * tree, and to files carrying the generator's own shape so a project's
+ * hand-written Codex profile survives.
+ */
+async function pruneOrphanCodexProfiles(
+  wrapperDir: string,
+  roster: Set<string>,
+  dryRun: boolean,
+): Promise<string[]> {
+  const removed: string[] = [];
+  let entries: Dirent[];
+  try {
+    entries = await readdir(wrapperDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return removed;
+    }
+    throw err;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory() || !entry.name.endsWith(CODEX_AGENT_WRAPPER_SUFFIX)) {
+      continue;
+    }
+    const agentName = entry.name.slice(0, -CODEX_AGENT_WRAPPER_SUFFIX.length);
+    if (roster.has(agentName)) {
+      continue;
+    }
+    const target = path.join(wrapperDir, entry.name);
+    const read = await readBoundedTextFile(target);
+    if (read.status !== "ok" || !isGeneratedCodexAgentToml(read.content, agentName)) {
+      continue;
+    }
+    removed.push(target);
+    if (!dryRun) {
+      await rm(target, { force: true });
+    }
+  }
+  return removed;
+}
+
+type CodexAgentProfilePlan =
+  | { status: "render"; toml: string }
+  | { status: "unavailable"; reason: string };
+
+/** Renders one profile, or says why the agent cannot get one. */
+async function planCodexAgentProfile(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agentName: string,
+  classification: AgentClassification,
+  options: WrapperSyncOptions,
+): Promise<CodexAgentProfilePlan> {
+  const kind = classification.kinds.get(agentName);
+  if (kind === undefined) {
+    // Guessing `worker` would drop `sandbox_mode` from a reviewer and hand a
+    // read-only agent write access; guessing `reviewer` would break a worker.
+    return { status: "unavailable", reason: classifyFailureReason(agentName, classification) };
+  }
+
+  const markdown = await readCanonicalAgentMarkdown(
+    assistantAssetsDir,
+    destRoot,
+    agentName,
+    options,
+  );
+  if (markdown.status === "rejected") {
+    return { status: "unavailable", reason: markdown.reason };
+  }
+  if (markdown.status === "absent") {
+    return { status: "unavailable", reason: "canonical markdown が見つかりません" };
+  }
+
+  const rendered = renderCodexAgentToml(markdown.content, kind, agentName);
+  if (!rendered.ok) {
+    return { status: "unavailable", reason: rendered.error };
+  }
+  return { status: "render", toml: rendered.toml };
+}
+
+function classifyFailureReason(agentName: string, classification: AgentClassification): string {
+  if (classification.unusable !== undefined) {
+    return classification.unusable;
+  }
+  return classification.rejected.has(agentName)
+    ? `agent-catalog.yml の ${agentName} の kind が不正です`
+    : `agent-catalog.yml に ${agentName} の kind がありません`;
+}
+
+/**
+ * Every agent that deserves a Codex profile: the shipped roster plus whatever
+ * the project added under `.qfai/assistant/agents/`.
+ *
+ * A project may declare its own agent — `agent-catalog.yml` plus a canonical
+ * markdown file is exactly what `validateAgentDefinition` accepts, and
+ * `--force` preserves the extra file rather than pruning it. Enumerating the
+ * shipped assets alone left that agent with Claude and Copilot wrappers and no
+ * Codex profile, which is the same one-integration-behind split this whole
+ * step exists to close.
+ */
+async function collectCodexAgentRoster(destRoot: string, shipped: string[]): Promise<string[]> {
+  const roster = new Set(shipped);
+  const projectAgentsDir = path.join(destRoot, ".qfai", "assistant", "agents");
+  let entries: Dirent[];
+  try {
+    entries = await readdir(projectAgentsDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return [...roster].sort();
+    }
+    throw err;
+  }
+  for (const entry of entries) {
+    // `isFile()` is false for the symlinked agent docs some layouts leave here,
+    // so accept anything that is not a directory and reads as an agent doc.
+    if (entry.isDirectory() || !entry.name.endsWith(".md") || entry.name === "README.md") {
+      continue;
+    }
+    roster.add(entry.name.slice(0, -".md".length));
+  }
+  return [...roster].sort();
+}
+
+type AgentClassification = {
+  kinds: Map<string, CodexAgentKind>;
+  /** IDs the project's own catalog names but does not classify. */
+  rejected: Set<string>;
+  /** Set — to the reason — when the project's catalog cannot be read at all. */
+  unusable: string | undefined;
+};
+
+/**
+ * The project's own copy wins over the shipped template, for both the catalog
+ * and the canonical markdown: `assistant/manifest/**` is copied create-only and
+ * `qfai-configure` edits it in place, so a project that retyped an agent must
+ * see that reflected in its Codex profile rather than the default.
+ *
+ * The template is not just a fallback for the empty destination `--dry-run`
+ * sees, though: it also *fills in* the IDs the project's catalog never heard
+ * of. A project initialised by an older release keeps its catalog verbatim, so
+ * returning the first non-empty map left every agent a later release added
+ * permanently un-classified — markdown and two wrappers written, Codex profile
+ * skipped as "kind がありません" forever.
+ *
+ * It fills in **only** those, though. An ID the project names without a usable
+ * `kind` is a broken local statement about that agent, and answering it with
+ * the shipped value re-grants exactly the access the classification guard
+ * exists to withhold: a project that had pinned an agent to `reviewer` and then
+ * mistyped the key would get the shipped `worker` profile, `sandbox_mode` and
+ * all, from a `--force` run. Those IDs — and every ID, when the project's
+ * catalog is not a catalog at all — stay unclassified, so the profile is
+ * refused and, under `--force`, removed.
+ */
+async function loadAgentClassification(
+  assistantAssetsDir: string,
+  destRoot: string,
+): Promise<AgentClassification> {
+  const projectCatalog = joinAssistantLayer(destRoot, "manifest", "agent-catalog.yml");
+  const project = await readBoundedTextFile(projectCatalog);
+  if (project.status === "rejected") {
+    return { kinds: new Map(), rejected: new Set(), unusable: project.reason };
+  }
+
+  const declarations =
+    project.status === "ok" ? parseAgentCatalogDeclarations(project.content) : undefined;
+  if (declarations?.unusable === true) {
+    return {
+      kinds: new Map(),
+      rejected: new Set(),
+      unusable: "agent-catalog.yml を agents リストとして読めません",
+    };
+  }
+
+  const kinds = new Map(declarations?.kinds ?? []);
+  const rejected = declarations?.unclassified ?? new Set<string>();
+  const shipped = await readBoundedTextFile(
+    path.join(assistantAssetsDir, "manifest", "agent-catalog.yml"),
+  );
+  if (shipped.status === "ok") {
+    for (const [id, kind] of parseAgentCatalogKinds(shipped.content)) {
+      if (!kinds.has(id) && !rejected.has(id)) {
+        kinds.set(id, kind);
+      }
+    }
+  }
+  return { kinds, rejected, unusable: undefined };
+}
+
+/**
+ * Drops `target` when it is a symlink, leaving its referent untouched — `rm`
+ * unlinks the entry, it does not follow it.
+ */
+async function removeSymlinkAt(target: string): Promise<void> {
+  const stats = await safeLstat(target);
+  if (stats?.isSymbolicLink() === true) {
+    await rm(target, { force: true });
+  }
+}
+
+const NON_REGULAR_DESTINATION =
+  "通常ファイル以外のエントリ（FIFO / ソケット / デバイス）が存在するため生成できません";
+
+/**
+ * Why this destination cannot take generator output, or `undefined`.
+ *
+ * Absent is fine — the write creates it. A regular file is fine — it is the
+ * profile being refreshed. A symlink is fine — {@link removeSymlinkAt} drops
+ * the link, and the write then creates a real file beside it rather than
+ * through it.
+ *
+ * Nothing else is. A directory failed the write `EISDIR` and aborted the run
+ * with every earlier agent's profile already rewritten; a **FIFO** is worse
+ * still, because `writeFile` on one blocks until a reader appears and `qfai
+ * init --force` simply stops, with no diagnostic and no exit. A socket or a
+ * device node fails mid-run the way the directory did. None of them is
+ * generator output, so each is refused rather than replaced — a refusal costs
+ * one profile, and going ahead costs the run.
+ */
+function describeUnwritableDestination(stats: Stats | undefined): string | undefined {
+  if (stats === undefined || stats.isFile() || stats.isSymbolicLink()) {
+    return undefined;
+  }
+  return stats.isDirectory() ? "ディレクトリが存在するため生成できません" : NON_REGULAR_DESTINATION;
+}
+
+/**
+ * Write the profile, refusing anything that is not a regular file.
+ *
+ * The `lstat` before the write answers for the entry that was there then; this
+ * answers for the one the write actually lands on. `O_NOFOLLOW` refuses a
+ * symlink that arrived in between (`ELOOP`), `O_NONBLOCK` turns opening a FIFO
+ * with no reader into `ENXIO` instead of a hang, and the `fstat` on the open
+ * handle refuses a FIFO that *does* have a reader, a socket, or a device before
+ * a byte is written. Returns `false` when it refuses.
+ */
+async function writeGeneratedProfile(destination: string, content: string): Promise<boolean> {
+  const flags =
+    constants.O_WRONLY |
+    constants.O_CREAT |
+    constants.O_TRUNC |
+    (typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0) |
+    (typeof constants.O_NONBLOCK === "number" ? constants.O_NONBLOCK : 0);
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(destination, flags, 0o644);
+    if (!(await handle.stat()).isFile()) {
+      return false;
+    }
+    await handle.writeFile(content, "utf-8");
+    return true;
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException | null)?.code;
+    // The three the guards above produce. Anything else is a real failure.
+    if (code === "ELOOP" || code === "ENXIO" || code === "EISDIR") {
+      return false;
+    }
+    throw err;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/**
+ * The canonical body to snapshot, from the project's copy or the shipped asset.
+ *
+ * The project's copy wins on a plain run — it is what the two symlink wrappers
+ * resolve to. Under `--force` the asset wins instead, because `--force` has
+ * already overwritten that copy with the asset (`STANDARD_ASSET_PATHS` includes
+ * `assistant/agents`) — except under `--dry-run`, where the copy is only
+ * announced. Reading the destination there made the preview describe a project
+ * state that the real run replaces one step earlier: a stale agent document
+ * missing its `## Mission` heading had `--force --dry-run` announce the removal
+ * of a profile the real `--force` regenerates.
+ */
+async function readCanonicalAgentMarkdown(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agentName: string,
+  options: WrapperSyncOptions,
+): Promise<BoundedRead> {
+  const projectCopy = path.join(destRoot, ".qfai", "assistant", "agents", `${agentName}.md`);
+  const shippedAsset = path.join(assistantAssetsDir, "agents", `${agentName}.md`);
+  const candidates = options.force ? [shippedAsset, projectCopy] : [projectCopy, shippedAsset];
+  for (const candidate of candidates) {
+    const read = await readBoundedTextFile(candidate);
+    if (read.status !== "absent") {
+      return read;
+    }
+  }
+  return { status: "absent" };
+}
+
+type BoundedRead =
+  | { status: "ok"; content: string }
+  | { status: "absent" }
+  | { status: "rejected"; reason: string };
+
+/**
+ * A canonical agent document is a few kilobytes of markdown; a catalog is
+ * smaller still. The ceiling is generous enough that no honest input meets it
+ * and small enough that a hostile one cannot exhaust memory.
+ */
+const MAX_CANONICAL_INPUT_BYTES = 4 * 1024 * 1024;
+
+/** Read granularity. One chunk, reused nowhere, so the peak stays the total. */
+const CANONICAL_READ_CHUNK_BYTES = 64 * 1024;
+
+/** `O_NONBLOCK` keeps `open` off a FIFO's blocking path; Windows has neither. */
+const NONBLOCKING_READ_FLAGS =
+  process.platform === "win32" ? constants.O_RDONLY : constants.O_RDONLY | constants.O_NONBLOCK;
+
+/**
+ * Reads a regular file of bounded size, or says why it would not.
+ *
+ * Both inputs this reads are named by an untrusted repository — the roster
+ * accepts whatever `.qfai/assistant/agents/` holds, symlinks included — so a
+ * plain `readFile` was a hang or an OOM away: pointed at a FIFO it waits for a
+ * writer that never comes, pointed at `/dev/zero` it reads until the heap is
+ * gone. The file type is checked against the *opened* handle, so swapping the
+ * path after the check does not get past it.
+ *
+ * The ceiling is applied to the bytes actually read, not to the size `fstat`
+ * reports. A reported size is a claim, and on Linux a procfs file
+ * (`/proc/self/pagemap`, say) is a regular file that claims 0 and then yields
+ * as much as it is asked for — so a symlink pointing there passed both checks
+ * and `readFile` consumed memory to the same effect as `/dev/zero`. Reading in
+ * chunks and stopping one byte past the ceiling makes the bound the one thing
+ * the file cannot lie about.
+ *
+ * `absent` for a missing file (a dangling symlink included); every other I/O
+ * failure propagates.
+ */
+async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
+  let handle: FileHandle;
+  try {
+    handle = await open(filePath, NONBLOCKING_READ_FLAGS);
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return { status: "absent" };
+    }
+    // A directory, a symlink cycle or a device with no reader is the same
+    // answer as a special file: not something to snapshot. Anything else
+    // (EACCES, EIO, ...) is the caller's problem, not a classification.
+    if (hasErrnoCode(err) && UNREADABLE_OPEN_CODES.has(err.code)) {
+      return {
+        status: "rejected",
+        reason: `${filePath} は通常ファイルとして開けません (${err.code})`,
+      };
+    }
+    throw err;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) {
+      return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
+    }
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for (;;) {
+      const chunk = Buffer.alloc(CANONICAL_READ_CHUNK_BYTES);
+      const { bytesRead } = await handle.read(chunk, 0, CANONICAL_READ_CHUNK_BYTES, total);
+      if (bytesRead === 0) {
+        break;
+      }
+      total += bytesRead;
+      if (total > MAX_CANONICAL_INPUT_BYTES) {
+        return {
+          status: "rejected",
+          reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+        };
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    return { status: "ok", content: Buffer.concat(chunks, total).toString("utf-8") };
+  } finally {
+    await handle.close();
+  }
+}
+
+const UNREADABLE_OPEN_CODES = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENXIO"]);
 
 async function ensureSymlink(
   linkPath: string,
@@ -2248,6 +3280,18 @@ async function ensureSymlink(
  * candidates, not guarantee anything by itself.
  */
 /**
+ * Names {@link claimSidecar} produces, so prune leaves them alone.
+ *
+ * The skill-wrapper prune no longer needs this — it now deletes only names in
+ * `RETIRED_SKILL_IDS`, and no sidecar name is a retired skill id. The
+ * agent-wrapper prune still does: it matches on the resolved target, and a
+ * sidecar holding a retired wrapper's flattened bytes resolves to exactly the
+ * retired agent the prune is looking for. Deleting it would take the only copy
+ * an earlier failed repair preserved.
+ */
+const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
+
+/**
  * How much of a sidecar the copy fallback will hold in memory.
  *
  * The same ceiling the flattened-link probe vets against, so an entry that
@@ -2256,12 +3300,26 @@ async function ensureSymlink(
 const SIDECAR_COPY_MAX_BYTES = 4096;
 
 async function claimSidecar(linkPath: string): Promise<string> {
+  const { path: claimed, handle } = await openSidecar(linkPath);
+  await handle.close();
+  return claimed;
+}
+
+/**
+ * The same claim, handing back the **open handle** rather than only the name.
+ *
+ * A caller that goes on to write the staging file must write through this
+ * handle. Closing it and re-opening by pathname gives up everything `wx` bought:
+ * a process that can write the directory may delete the predictable name and
+ * put a symlink or a hard link there between the two, and the re-opened write
+ * follows it out of the project.
+ */
+async function openSidecar(linkPath: string): Promise<{ path: string; handle: FileHandle }> {
   const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
   for (let attempt = 0; attempt < 1000; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
     try {
-      await writeFile(candidate, "", { flag: "wx" });
-      return candidate;
+      return { path: candidate, handle: await open(candidate, "wx") };
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
     }
@@ -2646,6 +3704,24 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 }
 
 /**
+ * Whether `stats` names the inode `pinned` was read from.
+ *
+ * `ino` is `0` on the filesystems that have no such number (and on a few
+ * Windows volumes). There is nothing to compare there, so the answer is "yes"
+ * — the check narrows a race where the platform lets it and never blocks a
+ * repair where it cannot.
+ */
+function isSameEntry(stats: FileIdentity, pinned: FileIdentity): boolean {
+  if (pinned.ino === 0 || stats.ino === 0) {
+    return true;
+  }
+  return stats.dev === pinned.dev && stats.ino === pinned.ino;
+}
+
+/** The two fields an inode is identified by. `Stats` and {@link PinnedFileRead} both carry them. */
+type FileIdentity = { dev: number; ino: number };
+
+/**
  * One bounded read of a regular file: its bytes, and everything a replacement
  * has to put back.
  *
@@ -2668,6 +3744,10 @@ type PinnedFileRead = {
  * The restore copy writes back what it read, and decoding as UTF-8 first
  * replaces every invalid sequence with U+FFFD — irreversibly, since the sidecar
  * is removed straight after.
+ *
+ * `dev` / `ino` come off the same handle as the content, so a caller that
+ * replaces the pathname afterwards can check that the entry it is about to
+ * replace is still the inode it read.
  */
 async function readPinnedRegularFileBytes(
   filePath: string,
@@ -3132,6 +4212,7 @@ async function classifyInitWrittenSkillWrapper(
 async function pruneStaleQfaiWrappers(
   destRoot: string,
   canonicalSkills: string[],
+  canonicalAgents: string[],
   dryRun: boolean,
 ): Promise<string[]> {
   const canonical = new Set(canonicalSkills);
@@ -3203,13 +4284,246 @@ async function pruneStaleQfaiWrappers(
     }
   }
 
-  // 4. Agent symlinks: NOT auto-pruned.
-  // Agent symlinks use different suffixes per integration dir (.md vs .agent.md),
-  // so stale agent symlinks (agents removed from canonical) are not auto-detected.
-  // ensureSymlink --force recreates existing entries but does not remove orphaned ones.
-  // Manual removal is required when a canonical agent is deleted.
+  // 4. Remove agent wrappers that name an agent this version no longer ships.
+  await pruneStaleAgentWrappers(destRoot, canonicalAgents, removed, dryRun);
 
   return removed;
+}
+
+/**
+ * Agent wrappers whose target names a canonical agent the shipped roster no
+ * longer contains.
+ *
+ * Matched by the **resolved target**, not by the entry name: agent wrappers
+ * carry a different suffix per integration directory (`.md` vs `.agent.md`),
+ * so a name test cannot tell a retired wrapper from a file somebody wrote, and
+ * that is why this step used to be skipped altogether. The target is the thing
+ * init actually writes, and it is the same predicate `QFAI-LINK-001` reports on
+ * — so detection and repair stay in agreement by construction.
+ *
+ * The canonical `.qfai/assistant/agents/*.md` behind a retired wrapper is
+ * deliberately **not** deleted. That tree is create-only and a project may add
+ * agents of its own to it; removing a file there would destroy content init
+ * never wrote. `QFAI-LINK-001` says so in its remedy.
+ */
+async function pruneStaleAgentWrappers(
+  destRoot: string,
+  canonicalAgents: string[],
+  removed: string[],
+  dryRun: boolean,
+): Promise<void> {
+  const shipped = new Set(canonicalAgents.map((name) => `${name}.md`));
+  const agentsDir = path.join(destRoot, ".qfai", "assistant", "agents");
+
+  for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
+    const fullDir = path.join(destRoot, dir);
+    if (!(await isSymlinkFreeDirectory(destRoot, dir))) {
+      continue;
+    }
+    const entries = await readdir(fullDir, { withFileTypes: true });
+    for (const entry of entries) {
+      // A `.qfai-repair-<n>` file holds the content a failed repair preserved,
+      // and is sometimes the only copy of it left. The skill-wrapper prune
+      // reaches the same conclusion through `RETIRED_SKILL_IDS` — no sidecar
+      // name is a retired skill id — but this prune matches on the resolved
+      // target, and a sidecar holding a retired wrapper's flattened bytes
+      // resolves to exactly the agent being pruned. It needs the name test.
+      if (SIDECAR_RE.test(entry.name)) {
+        continue;
+      }
+      const entryPath = path.join(fullDir, entry.name);
+      const target = await agentWrapperTarget(entryPath, entry);
+      if (target === null) {
+        continue;
+      }
+      const resolved = path.resolve(fullDir, target);
+      // Only an entry init itself could have written: a direct child of the
+      // canonical agents directory. Anything pointing elsewhere is somebody
+      // else's link, and anything pointing deeper is not a wrapper shape init
+      // produces.
+      if (path.dirname(resolved) !== agentsDir || shipped.has(path.basename(resolved))) {
+        continue;
+      }
+      // A **regular** file is a wrapper only when it holds the exact bytes init
+      // writes for that target — `path.relative` from this directory, nothing
+      // else. Resolving the content and comparing the destination accepted
+      // `../../.qfai/assistant/agents/./retired.md`, and an absolute path to
+      // the same file, as things init had written; neither is a byte sequence
+      // it produces, and `--force` deleted a one-line file somebody wrote by
+      // hand. `isFlattenedLink` already keeps those non-canonical spellings on
+      // the preserve side, and this is a delete, so it holds the same line. A
+      // symlink is left to the resolved-target test: its content is the link,
+      // not a document, and `ensureSymlink` normalises it the same way.
+      if (!entry.isSymbolicLink() && !isGeneratedWrapperTarget(target, fullDir, resolved)) {
+        continue;
+      }
+      if (dryRun) {
+        removed.push(entryPath);
+        continue;
+      }
+      if (await removeJudgedAgentWrapper(entryPath, target)) {
+        removed.push(entryPath);
+      }
+    }
+  }
+}
+
+/**
+ * True when `dir` is a real directory under `root` reached without crossing a
+ * symlink.
+ *
+ * `readdir` follows a link. A `.claude/agents` — or any ancestor of it —
+ * pointing at a tree outside the project therefore lists somebody else's
+ * entries, while the target of an entry found there is resolved against the
+ * **lexical** in-project path: a link or a one-line file living in that
+ * external directory reads as a retired wrapper, and the delete that follows
+ * destroys data the project never owned. `retiredWrappers` refuses to
+ * enumerate a damaged directory for exactly this reason, and prune — which
+ * deletes rather than reports — has to refuse too.
+ *
+ * An `lstat` that cannot answer counts as "do not enumerate": for a step whose
+ * action is a delete, refusing is the safe direction to be wrong in. Only the
+ * components **below** `root` are examined, because a project legitimately
+ * sits behind a symlinked parent (`/tmp` on macOS is one).
+ */
+async function isSymlinkFreeDirectory(root: string, dir: string): Promise<boolean> {
+  let current = root;
+  for (const segment of dir.split("/")) {
+    current = path.join(current, segment);
+    const stats = await safeLstat(current);
+    if (stats === undefined || !stats.isDirectory()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Delete a wrapper this prune has judged, claiming its pathname first.
+ *
+ * Reading the target and deleting by pathname are two operations, and between
+ * them another process — an editor, a second agent, a concurrent
+ * `qfai init --force` — can leave a different file, or a whole directory, at
+ * the same path. A delete on the strength of the earlier read then destroyed
+ * content nothing had examined. `rename` is atomic against the pathname, so
+ * afterwards this process holds the very entry it is about to remove: it
+ * re-derives the target from what actually moved, and anything that is no
+ * longer the wrapper it judged goes straight back. Same claim-then-verify
+ * shape as {@link recreateFlattenedLink}, and the sidecar it claims carries
+ * the one name prune leaves alone.
+ *
+ * Returns whether the wrapper was removed.
+ */
+async function removeJudgedAgentWrapper(entryPath: string, target: string): Promise<boolean> {
+  const sidecar = await claimSidecar(entryPath);
+  try {
+    await rename(entryPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing moved, so the claim is a stray empty file — and it is one prune
+    // deliberately leaves alone, while a later attempt sidesteps it with a
+    // numbered name. Absence is a race with something else removing the
+    // wrapper: there is nothing left to prune.
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    if (isEnoent(renameErr)) {
+      return false;
+    }
+    throw renameErr;
+  }
+  // What actually moved, not what `readdir` reported a moment ago. A probe that
+  // cannot answer is not a licence to delete: the entry goes back, `validate`
+  // reports it again, and the operator still has the file.
+  const moved = await safeLstat(sidecar);
+  const movedTarget =
+    moved === undefined ? null : await agentWrapperTarget(sidecar, moved).catch(() => null);
+  if (movedTarget !== target) {
+    try {
+      await restoreSidecar(sidecar, entryPath);
+    } catch (restoreErr: unknown) {
+      throw new Error(
+        [
+          `退役 wrapper の削除を中止しましたが、退避したファイルを元に戻せませんでした: ${entryPath}`,
+          `原因: ${describeError(restoreErr)}`,
+          `元のファイルは次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: restoreErr },
+      );
+    }
+    info(`  note: ${entryPath} は検査後に内容が変わったため削除していません`);
+    return false;
+  }
+  // A symlink or a small regular file — that is all the check above accepts —
+  // so `recursive` would only widen this to a directory it never judged.
+  await rm(sidecar, { force: true });
+  return true;
+}
+
+/**
+ * Whether `target` is the byte sequence init writes for a wrapper in
+ * `wrapperDir` pointing at `resolved`.
+ *
+ * `createAgentSymlinks` builds every agent target with `path.relative`, so that
+ * is the only spelling a flattened wrapper can legitimately hold. Comparing
+ * resolved destinations instead accepted every other spelling of the same file
+ * — a redundant `./`, a doubled separator, an absolute path — and none of those
+ * are bytes init produced. Separator-insensitive on Windows only, for the same
+ * reason {@link toComparableTarget} is.
+ */
+function isGeneratedWrapperTarget(target: string, wrapperDir: string, resolved: string): boolean {
+  return toComparableTarget(target) === toComparableTarget(path.relative(wrapperDir, resolved));
+}
+
+/**
+ * The path an agent wrapper points at, in either form a checkout can leave it
+ * in, or `null` when the entry is not a wrapper.
+ *
+ * A flattened wrapper — the regular file a `core.symlinks false` checkout
+ * writes, holding the target bytes — has to answer too, or a retired wrapper
+ * survives the prune on exactly the platform where flattening is the default.
+ * A file holding anything else (an agent document a project wrote by hand) is
+ * not a wrapper and is preserved: the content has to be a single-line relative
+ * path landing on a canonical agent for this to remove it.
+ *
+ * Takes whatever already carries the entry's kind — the `Dirent` from the
+ * listing, or the `Stats` of the inode that was claimed for deletion — so the
+ * second read judges the thing that moved rather than a pathname.
+ */
+async function agentWrapperTarget(
+  entryPath: string,
+  entry: Pick<Dirent, "isSymbolicLink" | "isFile">,
+): Promise<string | null> {
+  if (entry.isSymbolicLink()) {
+    try {
+      return await readlink(entryPath);
+    } catch (err: unknown) {
+      // Absence is a race with something else removing the entry — there is
+      // nothing left to prune. Any other fault means the target could not be
+      // read, and answering "not a wrapper" would silently keep it.
+      if (isEnoent(err)) {
+        return null;
+      }
+      throw err;
+    }
+  }
+  if (!entry.isFile()) {
+    return null;
+  }
+  const content = await readPinnedRegularFile(entryPath, 4096).catch((err: unknown) => {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  });
+  // **No whitespace anywhere**, the same test `wrapperTarget` applies in the
+  // validator. Git writes the target for mode `120000` verbatim, with no
+  // trailing newline and none of the padding an editor or a shell `echo`
+  // leaves behind — so a project's own one-line note ending in a space or a
+  // tab is not a flattened wrapper. Refusing only `\r` and `\n` accepted
+  // `../../.qfai/assistant/agents/custom.md ` as one, and `--force` deleted a
+  // file init had never written.
+  if (content === null || content.length === 0 || /\s/.test(content)) {
+    return null;
+  }
+  return content;
 }
 
 /**
@@ -3874,7 +5188,7 @@ function buildCodexReadme(): string {
     "- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.",
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
     "- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.",
-    "- `.agents/rules/version-discipline.md` — branch name pins `packages/qfai/package.json#version`; never select version numbers independently.",
+    "- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.",
     "",
   ].join("\n");
 }
@@ -3966,7 +5280,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.",
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
     "- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.",
-    "- `.agents/rules/version-discipline.md` — branch name pins `packages/qfai/package.json#version`; never select version numbers independently.",
+    "- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.",
     "",
   ].join("\n");
 }
