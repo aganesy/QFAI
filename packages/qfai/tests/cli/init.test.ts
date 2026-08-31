@@ -93,6 +93,14 @@ async function expectSymlink(linkPath: string): Promise<void> {
   expect(stat.isSymbolicLink()).toBe(true);
 }
 
+function reportedPaths(output: string): string[] {
+  const bulletPrefix = "    - ";
+  return output
+    .split("\n")
+    .filter((line) => line.startsWith(bulletPrefix))
+    .map((line) => line.slice(bulletPrefix.length).trim());
+}
+
 async function expectSymlinkTarget(linkPath: string, expectedFragment: string): Promise<void> {
   const target = await readlink(linkPath);
   const normalized = target.replace(/\\/g, "/");
@@ -2907,6 +2915,43 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       expect(secondRun).toContain("skipped paths:");
       expect(secondRun).toContain("DESIGN.md");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // `validate`, `doctor` and `report` all normalize their paths through
+  // `toRelativePath`, so init's report must print the same separator or a path
+  // copied out of it will not match the same file elsewhere.
+  it("prints reported paths with posix separators", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-sep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacyPath = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-discussion",
+        "10_workflow.md",
+      );
+      await writeFile(legacyPath, "legacy workflow\n", "utf-8");
+
+      const skippedRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+      const removedRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: true, yes: true });
+      });
+
+      const skippedBullets = reportedPaths(skippedRun);
+      const removedBullets = reportedPaths(removedRun);
+
+      expect(skippedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
+      expect(removedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
+      expect(skippedBullets).toContain(".qfai/assistant/skills/qfai-atdd/SKILL.md");
+      expect(removedBullets).toContain(".qfai/assistant/skills/qfai-discussion/10_workflow.md");
     } finally {
       await removeTempTree(root);
     }

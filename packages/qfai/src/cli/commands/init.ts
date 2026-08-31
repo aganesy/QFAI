@@ -29,6 +29,7 @@ import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { toRelativePath } from "../../core/paths.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
@@ -2214,16 +2215,14 @@ function report(
     info(`  skipped: ${skipped.length}`);
     info("  skipped paths:");
     for (const skippedPath of skipped) {
-      const relative = path.relative(baseDir, skippedPath);
-      info(`    - ${relative}`);
+      info(`    - ${toRelativePath(baseDir, skippedPath)}`);
     }
   }
   if (removed.length > 0) {
     info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
     info(dryRun ? "  would remove paths:" : "  removed paths:");
     for (const removedPath of removed) {
-      const relative = path.relative(baseDir, removedPath);
-      info(`    - ${relative}`);
+      info(`    - ${toRelativePath(baseDir, removedPath)}`);
     }
   }
 }
