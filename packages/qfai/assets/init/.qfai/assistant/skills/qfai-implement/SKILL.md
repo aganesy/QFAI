@@ -43,7 +43,7 @@ When no explicit argument is given, detect the candidate specs. Execution is con
 
 ### User Selection Flow
 
-- Single spec: announce the detected spec; ask for confirmation when scope is ambiguous.
+- Single spec: announce the detected spec and require the user to confirm it before the first TDD item — `primarySpecId` is hard-required (see `## Default Autopilot Policy`), so a lone candidate narrows the choice but never settles it.
 - Multiple specs: display the candidates and require the user to choose one spec, or to confirm an ordered queue processed one spec at a time.
 - Zero specs: stop and ask the user to provide the target spec explicitly.
 
@@ -487,7 +487,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 - hard-required:
   - `companyName`
   - brand intent
-  - `primarySpecId` (when absent from inputs)
+  - `primarySpecId` (when absent from inputs — auto-discovery narrows the candidates, the user still supplies the value; see `## Spec Auto-Discovery Protocol`)
 
 A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
 

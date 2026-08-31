@@ -47,6 +47,7 @@ reason. No prose asset has an exemption.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
+- The three buckets of a skill's `## Default Autopilot Policy` say who settles a decision: `auto-decide` = the skill settles it without asking; `ask-user` = the skill asks before acting; `hard-required` = no default is possible, so the run may not start until the user has supplied the value — a repository-side derivation may narrow the candidates but never settles the value on the agent's own authority.
 
 ## Canonical qfai Launcher (Mandatory)
 
