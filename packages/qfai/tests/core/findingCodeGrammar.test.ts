@@ -42,8 +42,6 @@ const KNOWN_LOCAL_FACTORIES: readonly string[] = [
   "contractIssue",
   "makeIssue",
   "skillIssue",
-  "strategyIssue",
-  "tasteIssue",
   "threeLayerIssue",
   "trendIssue",
 ];
@@ -51,7 +49,9 @@ const KNOWN_LOCAL_FACTORIES: readonly string[] = [
 /**
  * Codes that predate the grammar. Frozen: the guards below fail both when a
  * new non-conforming code appears and when a registered one stops existing, so
- * this list can only shrink.
+ * this list can only shrink. It has: the `UIX-VAL-STRATEGY-*`, `UIX-VAL-TASTE-*`
+ * and `QFAI-DOC-*` entries left with the validators that raised them, which is
+ * the shrink the guard is here to make visible.
  */
 const LEGACY_FINDING_CODES: readonly string[] = [
   "D-DEPRECATED-PATH",
@@ -80,10 +80,6 @@ const LEGACY_FINDING_CODES: readonly string[] = [
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-002",
   "QFAI-CFG-LINK-003",
-  "QFAI-DOC-CONVERGENCE-INCOMPLETE",
-  "QFAI-DOC-CONVERGENCE-MISSING",
-  "QFAI-DOC-VOCABULARY-CONTRADICTION",
-  "QFAI-DOC-VOCABULARY-PROHIBITED",
   "QFAI-UIUX-PERF",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
@@ -169,26 +165,7 @@ const LEGACY_FINDING_CODES: readonly string[] = [
   "UIX-VAL-SKILL-SECTION-MISSING",
   "UIX-VAL-SKILL-STATIC-FIRST",
   "UIX-VAL-SKILL-UI-BEARING-FALSE",
-  "UIX-VAL-STRATEGY-CANDIDATE-OPTIONS",
-  "UIX-VAL-STRATEGY-CHOSEN-OPTION",
-  "UIX-VAL-STRATEGY-DUPLICATE-CANDIDATE-OPTION",
-  "UIX-VAL-STRATEGY-DUPLICATE-FILENAME",
-  "UIX-VAL-STRATEGY-INCOMPLETE",
-  "UIX-VAL-STRATEGY-INVALID-CANDIDATE-OPTION",
-  "UIX-VAL-STRATEGY-INVALID-CHOSEN-OPTION",
-  "UIX-VAL-STRATEGY-INVALID-DECISION",
-  "UIX-VAL-STRATEGY-INVALID-SURFACE",
-  "UIX-VAL-STRATEGY-LEGACY-FILENAME",
-  "UIX-VAL-STRATEGY-NONE-CANDIDATES-REQUIRED",
-  "UIX-VAL-STRATEGY-NONE-CHOSEN-REQUIRED",
-  "UIX-VAL-STRATEGY-NONE-DECISION-REQUIRED",
-  "UIX-VAL-STRATEGY-NONUI-WARN",
-  "UIX-VAL-STRATEGY-SELECTION-BOOLEAN",
-  "UIX-VAL-STRATEGY-SELECTION-REQUIRES-CHOSEN",
-  "UIX-VAL-STRATEGY-SELECTION-REQUIRES-DECISION",
   "UIX-VAL-T05",
-  "UIX-VAL-TASTE-INCOMPLETE",
-  "UIX-VAL-TASTE-MISSING",
   "UIX-VAL-TREND-CATEGORY-MISSING",
   "UIX-VAL-TREND-ENTRY-MISSING",
   "UIX-VAL-TREND-FIELD-MISSING",
