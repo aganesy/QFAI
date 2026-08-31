@@ -23,6 +23,7 @@
   - Evidence file production (`.qfai/evidence/atdd-<spec-id>.md`)
   - Stage gates (P0-P8) enforcement
   - Reviewer Gate with independent non-edit reviewer
+  - Credential-reuse guidance for acceptance-test harnesses (worker-scoped session reuse; backend-agnostic prose, no validator and no new vocabulary)
 - Out:
   - Unit / Component test implementation (belongs to `/qfai-implement`)
   - Product feature changes beyond ATDD execution needs
@@ -57,12 +58,21 @@
 - REQ-0008: Evidence production -- mandatory evidence file with coverage matrix, work orders, execution logs
 - REQ-0157: `qfai atdd scaffold --spec spec-NNNN` -- spec test*cases を読み `tests/atdd/spec-NNNN/<TC-ID>.test.*`skeleton を emit する。各 skeleton は test-framework primitives を import し`// TODO: implement assertion for <TC-ID>` + 関連 US-* / CON-API-\_ への comment 参照を含む。`qfai validate`は TODO 残存中`D-SCAFFOLD-PLACEHOLDER`(severity warning) を emit し、3 validate cycle 後に error へエスカレート (既定;`qfai.config.yaml#atdd.scaffoldEscalateCycles` で設定可能 / DR-0272)。idempotent: 再実行で non-TODO content を上書きしない。
 
+- REQ-0024: Worker-scoped credential-reuse rule as ATDD guidance -- record, as backend-agnostic ATDD-layer guidance, seven rules for an acceptance-test harness that reuses one authenticated session per parallel worker instead of authenticating per test. The transferable asset is the rule set, not a fixture.
+  - The seven rules: (1) never sign in per test; (2) never share one account across parallel workers; (3) key the cached session by the pair of worker index and actor; (4) tear the cache down at worker exit; (5) re-authenticate and rewrite the cache when a restored session is rejected; (6) a test that mutates its own account creates a dedicated one; (7) test-level parallelism costs more workers, not more sign-ins.
+  - Companion rule, recorded in the same place: when an environment identifier is injected by the caller, the harness MUST NOT provision or tear down that environment.
+  - Also owns the credential-class script-naming rule -- a credential-free lane and a credentialed lane MUST be reachable by different script names -- as adopter guidance only; QFAI keeps its own script names.
+  - Prose guidance only: no validator, no new finding code, no new test layer and no new annotation token, so the layer vocabulary does not grow.
+  - Backend-agnostic: it names no browser backend, and any worked example is presented as one illustration among possible backends with nothing named, installed or pinned.
+  - QFAI's own suite has zero credentials, so nothing here is dogfooded; the guidance states that rather than hiding it.
+
 ## Entry points
 
-- US range in this spec: US-0008-0001..US-0008-0007
+- US range in this spec: US-0008-0001..US-0008-0008
 - Primary actors: QA Engineer, AI Agent (Orchestrator), CI/CD pipeline
 - Notes: ATDD skill produces acceptance tests only; unit/component tests belong to `/qfai-implement`
 - v1.9.2 Second-Wave (copy-down for execution): `qfai atdd scaffold --spec spec-NNNN` は spec の test*cases から `tests/atdd/spec-NNNN/<TC-ID>.test.*`skeleton (TODO marker + US-*/CON-API-\_ comment 参照) を idempotent に生成する。TODO 残存は`D-SCAFFOLD-PLACEHOLDER` (warning) で、3 validate cycle 後に error へエスカレート (`atdd.scaffoldEscalateCycles` 既定 3 / DR-0272)。
+- CHG-007 (copy-down for execution): the credential-reuse guidance is a `/qfai-atdd` reference artifact, cross-linked from the skill entry point. It states the seven worker-scoped session-reuse rules, the companion injected-environment rule, and the credential-class script-naming rule as adopter guidance. It names no browser backend, installs nothing, pins nothing, and adds no validator, finding code, test layer or annotation token. Its scope is E2E / API / Integration only -- no unit or component obligation (RJ-0008-0001). It ships, so it carries no internal identifier and no version marker beyond the canonical package version.
 
 ## Escalation Hook (Read \_policies only when needed)
 
