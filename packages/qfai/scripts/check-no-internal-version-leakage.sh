@@ -60,10 +60,13 @@ INTERNAL_SPEC_RE='[sS][pP][eE][cC]-0*[1-9][0-9]+'
 INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 
 # QFAI internal trace IDs that should not leak (CAP-0010+, DEC, DR,
-# OQ-NNNN-NNNN, QFAI-PROT2-NNN). OQ-NNNN-NNNN was added in PR #208 11th
-# late-review wave (codex r3265386185, LOW) to keep `08_Open-questions.md`
-# internal references out of distributed surfaces.
-INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b'
+# OQ-NNNN-NNNN, QFAI-PROT2-NNN, CHG-NNN). OQ-NNNN-NNNN was added in PR #208
+# 11th late-review wave (codex r3265386185, LOW) to keep
+# `08_Open-questions.md` internal references out of distributed surfaces.
+# CHG-NNN is the cross-spec change ID from `_policies/10_delta.md`; it
+# resolves to nothing outside this repository, so a consuming project that
+# receives one has no way to look it up.
+INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b'
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas no longer carry this field.
