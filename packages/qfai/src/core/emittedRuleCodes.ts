@@ -43,6 +43,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-AGENT-014",
   "QFAI-ASSETS-001",
   "QFAI-ASSETS-002",
+  "QFAI-ASSETS-003",
   "QFAI-ATDD-101",
   "QFAI-ATDD-102",
   "QFAI-ATDD-103",
