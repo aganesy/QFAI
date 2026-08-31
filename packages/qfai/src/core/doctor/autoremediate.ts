@@ -8,14 +8,20 @@
  *   3. write missing default-keyed config fields (does NOT overwrite
  *      user-authored values).
  *
- * Disabled in CI by default: the caller detects CI via the framework's
- * `isCiEnvironment` predicate (any truthy `CI` value, or
- * `GITHUB_ACTIONS=true`) and passes `isCi`, on which this orchestrator
+ * Disabled in CI by default: the caller detects a standard CI environment
+ * via the framework's `isCiEnvironment` predicate (any truthy `CI` value,
+ * or `GITHUB_ACTIONS=true`) and passes `isCi`, on which this orchestrator
  * emits `"autoremediate disabled in CI"` and returns without remediating.
- * Honors `--dry-run` by surfacing the plan without side effects.
- * Honors `--yes` by skipping interactive confirmation; this CLI is
- * non-interactive today, so `--yes` mostly serves as a documented
- * forward-compatible flag.
+ * Honors `--dry-run` by surfacing the plan in the future tense, without
+ * side effects. The plan is the one a live run would execute: the
+ * config-fill preview parses the config and names only the fields that
+ * are actually missing, and reports the same decline a live run would.
+ *
+ * `--yes` is meant to skip the interactive confirmation the CLI contract
+ * requires before any install / tracked-file write. That prompt is NOT
+ * implemented yet — this CLI is non-interactive today — so the pass runs
+ * unattended either way. That is a known deviation from the contract (see
+ * `.qfai/contracts/cli/qfai-doctor.md`), not a relaxation of it.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
@@ -24,6 +30,8 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import { parse as parseYaml } from "yaml";
 
 import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
@@ -66,9 +74,47 @@ export type AutoremediateSummary = {
 };
 
 const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
-  yamlKey: string;
+  /** Top-level mapping key, as the parsed document spells it (no colon). */
+  key: string;
   defaultLine: string;
-}> = [{ yamlKey: "review:", defaultLine: "review:\n  staleTtlDays: 14\n" }];
+}> = [{ key: "review", defaultLine: "review:\n  staleTtlDays: 14\n" }];
+
+/**
+ * The document's top-level mapping keys, or `null` when the file is not a
+ * mapping this pass may safely append to.
+ *
+ * Presence used to be decided by a raw-text `^review:` regex, which reads a
+ * *spelling* rather than the document. `"review":` and `'review' :` are valid
+ * YAML for the same key, so a config that set `staleTtlDays: 30` under a quoted
+ * key was misread as unset: the pass appended a second `review:` block, which
+ * either makes the file invalid (duplicate key) or — on a last-wins reader —
+ * silently replaces the operator's 30 with 14. Parsing answers for every
+ * spelling of the key at once.
+ *
+ * `null` is also the answer for a document that does not parse or is not a
+ * mapping (a list, a scalar): appending text to it cannot be made safe, so the
+ * caller declines rather than guessing.
+ */
+function topLevelKeys(source: string): Set<string> | null {
+  if (source.trim().length === 0) {
+    return new Set<string>();
+  }
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(source);
+  } catch {
+    return null;
+  }
+  // An empty document (`---`, or a comment-only file) parses to null and is
+  // still a file this pass may append a first key to.
+  if (parsed === null || parsed === undefined) {
+    return new Set<string>();
+  }
+  if (typeof parsed !== "object" || Array.isArray(parsed)) {
+    return null;
+  }
+  return new Set(Object.keys(parsed));
+}
 
 async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   const { spawn } = await import("node:child_process");
@@ -89,47 +135,101 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   });
 }
 
-async function tryFillConfigDefaults(
-  root: string,
-): Promise<{ written: string[]; lines: string[] }> {
-  const written: string[] = [];
-  const lines: string[] = [];
+type ConfigFillPlan = {
+  readonly configPath: string;
+  /** Default-keyed fields absent from the PARSED document, in declaration order. */
+  readonly missing: readonly string[];
+  /** Exact content a live run would write; `null` when there is nothing to write. */
+  readonly nextSource: string | null;
+  /** Set when the pass declines outright (unreadable, or not a YAML mapping). */
+  readonly skipLine: string | null;
+};
+
+/**
+ * Decide — without writing — what a config-fill would do.
+ *
+ * The dry-run branch used to skip this work entirely and print a fixed
+ * `would fill default-keyed config fields` line, so a preview promised an
+ * append for a config that already carried the key (live run: writes nothing)
+ * and for one that does not parse as a mapping (live run: `skipped
+ * config-fill`). Both paths now read the same plan, so the preview cannot
+ * claim a change the live run will not make.
+ */
+async function planConfigFill(root: string): Promise<ConfigFillPlan> {
   const configPath = path.join(root, "qfai.config.yaml");
   let existing = "";
   if (await exists(configPath)) {
     try {
       existing = await readFile(configPath, "utf-8");
     } catch {
-      lines.push(`autoremediate: skipped config-fill (failed to read ${configPath})`);
-      return { written, lines };
+      return {
+        configPath,
+        missing: [],
+        nextSource: null,
+        skipLine: `autoremediate: skipped config-fill (failed to read ${configPath})`,
+      };
     }
   }
+  const presentKeys = topLevelKeys(existing);
+  if (presentKeys === null) {
+    return {
+      configPath,
+      missing: [],
+      nextSource: null,
+      skipLine: `autoremediate: skipped config-fill (${configPath} is not a parseable YAML mapping)`,
+    };
+  }
+  const missing: string[] = [];
   let appended = existing;
   for (const field of DEFAULT_KEYED_CONFIG_FIELDS) {
-    // Anchor key existence at column 0 of any line (multiline-mode
-    // regex) so we do NOT false-match nested keys (`  review:`),
-    // YAML comments (`# review:`), or substring occurrences in
-    // values (`description: "code_review: ..."`). The yamlKey
-    // SSOT carries the trailing colon, so escape the literal `:`
-    // when building the regex.
-    const literal = field.yamlKey.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
-    const keyRe = new RegExp(`^${literal}`, "mu");
-    if (!keyRe.test(appended)) {
+    if (!presentKeys.has(field.key)) {
       appended = `${appended.replace(/\s*$/u, "")}\n${field.defaultLine}`;
-      written.push(field.yamlKey.replace(/:$/u, ""));
+      missing.push(field.key);
     }
   }
-  if (written.length > 0) {
-    try {
-      await writeFile(configPath, appended, "utf-8");
-      lines.push(`autoremediate: wrote default-keyed fields: ${written.join(", ")}`);
-    } catch (error) {
-      lines.push(
+  return {
+    configPath,
+    missing,
+    nextSource: missing.length > 0 ? appended : null,
+    skipLine: null,
+  };
+}
+
+/** Report a plan in the future tense. Issues no filesystem write. */
+function describeConfigFillPlan(plan: ConfigFillPlan): string {
+  if (plan.skipLine !== null) {
+    return plan.skipLine;
+  }
+  if (plan.missing.length === 0) {
+    return "autoremediate: config-fill not needed, default-keyed fields present (dry-run)";
+  }
+  return `autoremediate: would fill default-keyed config fields: ${plan.missing.join(", ")} (dry-run)`;
+}
+
+async function applyConfigFill(
+  plan: ConfigFillPlan,
+): Promise<{ written: string[]; lines: string[] }> {
+  if (plan.skipLine !== null) {
+    return { written: [], lines: [plan.skipLine] };
+  }
+  if (plan.nextSource === null) {
+    return { written: [], lines: [] };
+  }
+  const written = [...plan.missing];
+  try {
+    await writeFile(plan.configPath, plan.nextSource, "utf-8");
+    return {
+      written,
+      lines: [`autoremediate: wrote default-keyed fields: ${written.join(", ")}`],
+    };
+  } catch (error) {
+    return {
+      written,
+      lines: [
         `autoremediate: failed to write config defaults: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+      ],
+    };
   }
-  return { written, lines };
 }
 
 /**
@@ -215,9 +315,26 @@ export async function runAutoremediate(
     ...(options.dryRun ? { dryRun: true } : {}),
   });
   const archivedNames = cleanResult.archived.map((entry) => entry.packName);
-  lines.push(
-    `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
-  );
+  // `cleanStaleReviewPacks` populates `archived` under dry-run too — it lists
+  // the packs a live run WOULD move. Reporting that count with the past-tense
+  // `archived=N` wording made a preview read as a completed archive, so an
+  // operator checking the plan saw packs already gone. Mirror the `--clean`
+  // dry-run vocabulary instead (`would archive` / `would move ->`).
+  if (options.dryRun) {
+    lines.push(
+      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+    );
+    for (const packName of archivedNames) {
+      lines.push(`  would move -> _archive/${packName}`);
+    }
+  } else {
+    lines.push(
+      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+    );
+    for (const packName of archivedNames) {
+      lines.push(`  -> _archive/${packName}`);
+    }
+  }
 
   // (2b) Prune stale validate run logs (--clean behavior, second target).
   // Kept in lockstep with the `--clean` branch in `cli/commands/doctor.ts`
@@ -258,13 +375,20 @@ export async function runAutoremediate(
 
   // (3) Write missing default-keyed config fields (user-authored values
   // are NOT touched because we only append the key when absent).
+  // Both branches read the SAME plan. The dry-run branch used to short-circuit
+  // to a fixed `would fill default-keyed config fields` line without looking at
+  // the file, so it promised an append for a config that already declared the
+  // key — a live run writes nothing there — and for one that is not a parseable
+  // mapping, where a live run declines with `skipped config-fill`. Planning is
+  // read-only, so the preview costs nothing and cannot drift from the write.
+  const configPlan = await planConfigFill(options.root);
   let configFieldsWritten: string[] = [];
-  if (!options.dryRun) {
-    const filled = await tryFillConfigDefaults(options.root);
+  if (options.dryRun) {
+    lines.push(describeConfigFillPlan(configPlan));
+  } else {
+    const filled = await applyConfigFill(configPlan);
     configFieldsWritten = filled.written;
     lines.push(...filled.lines);
-  } else {
-    lines.push("autoremediate: would fill default-keyed config fields (dry-run)");
   }
 
   // (4) Record the review packs that predate `revision_form`, once.
@@ -279,8 +403,16 @@ export async function runAutoremediate(
   // a commit and every legacy claim is uncorroborated again in CI and in the
   // next clone. It is done there rather than here because this module is core
   // and that helper is CLI — importing it the other way is a cycle.
+  // The archive pass above already ran, so a live run no longer sees the packs
+  // it moved into `_archive/` and records none of them. A dry-run moves
+  // nothing, so without the same exclusion it enumerated those packs and
+  // reported `would record legacy review packs=N` for a live run whose answer
+  // is 0 — a preview that promised manifest and summary writes the run would
+  // never make. Handing the archived names over keeps both paths on the same
+  // post-archive set.
   const migration = await migrateLegacyReviewPacks(options.root, {
     ...(options.dryRun ? { dryRun: true } : {}),
+    excludePacks: archivedNames,
   });
   lines.push(
     options.dryRun

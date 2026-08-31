@@ -6,8 +6,11 @@ import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
+import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
+import type { Issue } from "../../core/types.js";
 import { isCiEnvironment } from "../../core/phasePolicy.js";
+import { resolveFailOn } from "../lib/failOn.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -15,7 +18,11 @@ export type DoctorCommandOptions = {
   rootExplicit: boolean;
   format: "text" | "json";
   outPath?: string;
-  failOn?: "warning" | "error";
+  /**
+   * 明示された `--fail-on` の値。未指定なら `validation.failOn`
+   * (同梱既定値 `error`) が使われる。`never` は明示的なオプトアウト。
+   */
+  failOn?: FailOn;
   profile?: DoctorProfile;
   /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
   skillProfile?: string;
@@ -112,13 +119,19 @@ function formatDoctorJson(data: unknown): string {
  * still printed in that case — the removals that DID happen are
  * irreversible and the operator has to see them — and the flag makes
  * `runDoctor` exit non-zero regardless of `--fail-on`.
+ *
+ * `config` and `configIssues` come from `runDoctor`'s single
+ * `loadConfig` rather than a second load here: `precheckRunLogPrune`
+ * blocks the irreversible half on unresolved config issues, so it has
+ * to see the very issue list the caller's `failOn` resolution read.
  */
 async function runCleanPhase(
   resolvedRoot: string,
+  config: QfaiConfig,
+  configIssues: readonly Issue[],
   dryRun: boolean,
 ): Promise<{ lines: string[]; failed: boolean }> {
   const lines: string[] = [];
-  const { config, issues } = await loadConfig(resolvedRoot);
   const reviewTtlDays = config.review?.staleTtlDays;
   const packs = await cleanStaleReviewPacks(resolvedRoot, {
     ...(typeof reviewTtlDays === "number" ? { ttlDays: reviewTtlDays } : {}),
@@ -138,7 +151,7 @@ async function runCleanPhase(
   // The run-log half of `--clean` deletes rather than moves, so it is
   // gated on the two preconditions the diagnostic pass would otherwise
   // only report AFTER the deletion (invalid config, shared outDir).
-  const precheck = await precheckRunLogPrune(resolvedRoot, config, issues);
+  const precheck = await precheckRunLogPrune(resolvedRoot, config, configIssues);
   if (precheck.blocked) {
     lines.push(`doctor --clean: run log prune skipped — ${precheck.reason}`);
     return { lines, failed: false };
@@ -184,6 +197,13 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const resolvedRoot = options.rootExplicit
     ? options.root
     : (await findConfigRoot(options.root)).root;
+  // doctor の失敗条件は validate と同じ設定キー (`validation.failOn`) で
+  // 決まる。フラグ由来の値しか見なかった頃は、`== errors blocking the
+  // active profile ==` に `[error]` を並べたうえで exit 0 を返しており、
+  // 契約 (errors バケットが空でなければ exit 1) にも validate にも
+  // 反しない読み方が存在しなかった。`--clean` 分岐の TTL 参照も
+  // この 1 回のロードを共有する。
+  const { config, issues: configIssues } = await loadConfig(resolvedRoot);
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
@@ -192,11 +212,14 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // still there. Independent of `--fail-on`, which grades diagnostics.
   let cleanFailed = false;
   if (options.autoremediate) {
-    // Route through the framework's single CI predicate rather than an
-    // inline `process.env["CI"] === "true"`. The inline form missed the
-    // `GITHUB_ACTIONS` arm and read `CI=1` as "local", so the mutating
-    // path below (root `.gitignore` rewrite, config-fill, review-pack
-    // archival) ran on CI checkouts that AC-0006-0018 puts off limits.
+    // The owning business rule suppresses autoremediation on "standard CI
+    // env vars", not on the single `CI` variable. An inline
+    // `process.env["CI"] === "true"` missed the `GITHUB_ACTIONS` arm and read
+    // `CI=1` as "local", so a lane that exports only `GITHUB_ACTIONS=true`
+    // kept remediating: `npm install`, root `.gitignore` rewrite, review-pack
+    // archival and config-fill all ran on CI checkouts that AC-0006-0018 puts
+    // off limits. `isCiEnvironment` is the repo's SSOT for that detection
+    // (`core/phasePolicy.ts`); reuse it so the two CI gates cannot drift apart.
     const isCi = isCiEnvironment();
     // Thread the resolved skill profile into the autoremediate orchestrator
     // so the install phase actually reaches the runtimeDependencies probe.
@@ -254,7 +277,12 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       return 0;
     }
   } else if (options.clean) {
-    const cleanPhase = await runCleanPhase(resolvedRoot, Boolean(options.dryRun));
+    const cleanPhase = await runCleanPhase(
+      resolvedRoot,
+      config,
+      configIssues,
+      Boolean(options.dryRun),
+    );
     sideEffectLines.push(...cleanPhase.lines);
     cleanFailed = cleanPhase.failed;
   }
@@ -277,7 +305,14 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // remains on stdout (legacy human-readable behavior).
   const sideEffectPrefix =
     !isJson && sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
-  const exitCode = cleanFailed || shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
+  const failOn = resolveFailOn(
+    options.failOn ? { failOn: options.failOn } : {},
+    config.validation.failOn,
+  );
+  // `cleanFailed` overrides `failOn` on purpose: it reports an
+  // irreversible, partially-applied deletion, which is not a diagnostic
+  // severity for `--fail-on` (or `validation.failOn`) to grade away.
+  const exitCode = cleanFailed || shouldFailDoctor(data.summary, failOn) ? 1 : 0;
 
   if (isJson && sideEffectLines.length > 0) {
     process.stderr.write(`${sideEffectLines.join("\n")}\n`);
@@ -304,11 +339,8 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   return exitCode;
 }
 
-function shouldFailDoctor(
-  summary: { warning: number; error: number },
-  failOn?: "warning" | "error",
-): boolean {
-  if (!failOn) {
+function shouldFailDoctor(summary: { warning: number; error: number }, failOn: FailOn): boolean {
+  if (failOn === "never") {
     return false;
   }
   if (failOn === "error") {

@@ -17,7 +17,7 @@
 // pre-fix bug lived in the CLI → autoremediate wire-up, not in the
 // autoremediate impl itself.
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -43,7 +43,7 @@ async function newTempDir(label: string): Promise<string> {
 // ["playwright"]`) would fail even though the CLI dispatch is correct.
 // Forcing both signals to be unset during the test scope keeps the test
 // about CLI wiring (not about the CI early-return behavior, which has
-// its own tests).
+// its own cases in `doctorAutoremediate.ciOff.test.ts`).
 const CI_ENV_KEYS = ["CI", "GITHUB_ACTIONS"] as const;
 const savedCiEnv = new Map<(typeof CI_ENV_KEYS)[number], string | undefined>();
 
@@ -278,4 +278,46 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(exitB).toBe(0);
     expect(stdoutB).not.toMatch(/doctor --autoremediate: install phase skipped/);
   });
+
+  // The CI suppression is a safety guarantee of the doctor contract, and it
+  // has to hold for the standard CI env vars, not for `CI` alone. A lane that
+  // exports only `GITHUB_ACTIONS=true` used to remediate: the managed
+  // `.gitignore` block was rewritten, then install / archive / config-fill all
+  // ran. Both env vars must reach the same short-circuit.
+  it.each(["CI", "GITHUB_ACTIONS"])(
+    "suppresses autoremediation when %s=true is the only CI signal",
+    async (envKey) => {
+      const root = await newTempDir(`ci-${envKey.toLowerCase()}`);
+      // A stale pack a live run would have archived, so the assertion is
+      // about a real suppressed side effect, not just the log line.
+      const oldTs = "20260401120000555";
+      const oldDir = path.join(root, ".qfai", "review", `review-${oldTs}`);
+      await mkdir(oldDir, { recursive: true });
+      const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      await utimes(oldDir, mtime, mtime);
+
+      process.env[envKey] = "true";
+
+      const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
+      const realRunAutoremediate = autoremediateModule.runAutoremediate;
+      vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async (opts) => {
+        seenOptions.push(opts);
+        return realRunAutoremediate(opts);
+      });
+
+      const exit = await runDoctor({
+        root,
+        rootExplicit: true,
+        format: "text",
+        autoremediate: true,
+      });
+
+      expect(exit).toBe(0);
+      expect(seenOptions[0]?.isCi).toBe(true);
+      // No `.gitignore` written (that rewrite runs BEFORE the orchestrator).
+      await expect(access(path.join(root, ".gitignore"))).rejects.toThrow();
+      // Pack untouched.
+      await expect(access(oldDir)).resolves.toBeUndefined();
+    },
+  );
 });
