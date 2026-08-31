@@ -45,11 +45,17 @@ export type LegacyPackMigration = {
  */
 export async function migrateLegacyReviewPacks(
   root: string,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; excludePacks?: readonly string[] } = {},
 ): Promise<LegacyPackMigration> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const manifestPath = path.join(root, LEGACY_MANIFEST_REL);
   const existing = await readManifest(manifestPath);
+  // Packs a caller has already moved out of the top level — or, under a
+  // dry-run, would move. The archive pass in `runAutoremediate` runs first, so
+  // a live run simply no longer sees them here; excluding them by name is what
+  // makes the dry-run preview enumerate the same set instead of counting packs
+  // the live run will have archived before this step ever looks.
+  const excluded = new Set<string>(options.excludePacks ?? []);
 
   // **The first run is the snapshot, and only the first.** Re-classifying on
   // every invocation meant a pack written *after* the migration that forgot its
@@ -62,6 +68,7 @@ export async function migrateLegacyReviewPacks(
   const added: string[] = [];
   if (!alreadyMigrated) {
     for (const packName of await listPackNames(reviewRoot)) {
+      if (excluded.has(packName)) continue;
       if (await declaresRevisionForm(path.join(reviewRoot, packName, "summary.json"))) continue;
       added.push(packName);
     }
