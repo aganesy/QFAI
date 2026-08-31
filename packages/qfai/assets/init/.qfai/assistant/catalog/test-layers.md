@@ -3,9 +3,8 @@
 This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 For which CI lane runs which layer, see the sibling map
-[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the
-policy loader reads this file and not that one, so nothing there can change the
-vocabulary declared below.
+[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the policy
+loader reads this file and not that one, so nothing there can change the vocabulary declared below.
 
 ## Layer vocabulary crosswalk (normative)
 
@@ -184,12 +183,11 @@ all-integration suite.
 
 ### Annotation routing
 
-The derived `Level` records which oracle owns the obligation, and the
-[ATDD annotation hard gate](#atdd-annotation-hard-gate) routes each obligation
-ID to exactly one directory. `US-*` is answered from `<testsDir>/e2e/**`
-(`QFAI-ATDD-111`) and `CON-API-*` from `<testsDir>/api/**` (`QFAI-ATDD-113`); those
-two are fixed by the ID type. A `TC-*` is answered from the directory **its own
-declared `Level`** names (`QFAI-ATDD-112`):
+The derived `Level` records which oracle owns the obligation, and the [ATDD annotation hard
+gate](#atdd-annotation-hard-gate) routes each obligation ID to exactly one directory. `US-*` is
+answered from `<testsDir>/e2e/**` (`QFAI-ATDD-111`) and `CON-API-*` from `<testsDir>/api/**`
+(`QFAI-ATDD-113`); those two are fixed by the ID type. A `TC-*` is answered from the directory **its
+own declared `Level`** names (`QFAI-ATDD-112`):
 
 | `Level`                       | Answered from                       |
 | ----------------------------- | ----------------------------------- |
@@ -213,11 +211,10 @@ answer to a cell qfai cannot read, never a supported spelling: fix the cell
 (see [Obligation spanning more than one layer](#obligation-spanning-more-than-one-layer)).
 `TDDLIST_UNKNOWN_LEVEL` (`warning`) names such a cell on the ledger side.
 
-Exactly one directory, never two: an annotation outside the one its `Level` names is
-both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`), and
-the rejection is symmetric — an annotation left in `<testsDir>/integration/**` after its
-TC moved to `L4`/`L5` is rejected the same way an early one in `<testsDir>/api/**` is.
-Two consequences bind every `TC-*` row:
+Exactly one directory, never two: an annotation outside the one its `Level` names is both uncovered
+and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`), and the rejection is symmetric —
+an annotation left in `<testsDir>/integration/**` after its TC moved to `L4`/`L5` is rejected the
+same way an early one in `<testsDir>/api/**` is. Two consequences bind every `TC-*` row:
 
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
@@ -295,32 +292,27 @@ and `**Unit and Component owe no ATDD annotation.**` above.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
 
 - Integration obligations (enforced today):
-  - Every `TC-*` in specs must be referenced at least once from the directory
-    its declared `Level` routes to: L3/Integration -> `<testsDir>/integration/**`,
-    L4/API -> `<testsDir>/api/**`, L5/E2E -> `<testsDir>/e2e/**`. A TC with no declared
-    `Level` defaults to `<testsDir>/integration/**`. **L1/Unit and L2/Component owe
-    no reference at all** — see "Unit and Component owe no ATDD annotation"
-    below. This is what `QFAI-ATDD-112` checks.
+  - Every `TC-*` in specs must be referenced at least once from the directory its declared `Level`
+    routes to: L3/Integration -> `<testsDir>/integration/**`, L4/API -> `<testsDir>/api/**`, L5/E2E
+    -> `<testsDir>/e2e/**`. A TC with no declared `Level` defaults to `<testsDir>/integration/**`.
+    **L1/Unit and L2/Component owe no reference at all** — see "Unit and Component owe no ATDD
+    annotation" below. This is what `QFAI-ATDD-112` checks.
   - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
-  - A `TC-*` annotation outside the directory its declared `Level` names is
-    rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is
-    `Level`-relative,
-    not a blanket ban: a `TC-*` in `<testsDir>/api/**` is rejected **unless** that TC
-    declares `L4`/`API`, and in `<testsDir>/e2e/**` unless it declares `L5`/`E2E` —
-    an annotation matching its own `Level` is what discharges the obligation
-    there. A `TC-*` should not be at L4 or L5 in the first place (see
-    "Annotation routing"): re-file that obligation as `CON-API-*` or `US-*`.
-    But while the row exists at that `Level`, its annotation belongs in the one
-    directory the `Level` names, and putting it anywhere else leaves the TC
-    uncovered as well as forbidden.
-  - Every declared `CON-DB-*` must be referenced at least once from
-    `<testsDir>/integration/**` (`QFAI-ATDD-115`). Use `QFAI:CON-DB-XXXX`
-    annotations. L3 owns this because a DB contract is only exercised against
-    real infrastructure, which is L3's declared scope; a `CON-DB` reference
-    from `<testsDir>/e2e/**` is not counted, or an end-to-end assertion that never
-    touches the schema could close the obligation. A contract outside the
-    current slice defers with a `-- x-qfai-status: planned` comment line,
-    reported at `info` by `QFAI-ATDD-116` so the deferral stays visible.
+  - A `TC-*` annotation outside the directory its declared `Level` names is rejected
+    (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is `Level`-relative, not a
+    blanket ban: a `TC-*` in `<testsDir>/api/**` is rejected **unless** that TC declares `L4`/`API`,
+    and in `<testsDir>/e2e/**` unless it declares `L5`/`E2E` — an annotation matching its own
+    `Level` is what discharges the obligation there. A `TC-*` should not be at L4 or L5 in the first
+    place (see "Annotation routing"): re-file that obligation as `CON-API-*` or `US-*`. But while
+    the row exists at that `Level`, its annotation belongs in the one directory the `Level` names,
+    and putting it anywhere else leaves the TC uncovered as well as forbidden.
+  - Every declared `CON-DB-*` must be referenced at least once from `<testsDir>/integration/**`
+    (`QFAI-ATDD-115`). Use `QFAI:CON-DB-XXXX` annotations. L3 owns this because a DB contract is
+    only exercised against real infrastructure, which is L3's declared scope; a `CON-DB` reference
+    from `<testsDir>/e2e/**` is not counted, or an end-to-end assertion that never touches the
+    schema could close the obligation. A contract outside the current slice defers with a
+    `-- x-qfai-status: planned` comment line, reported at `info` by `QFAI-ATDD-116` so the
+    deferral stays visible.
 
 - **Unit and Component owe no ATDD annotation.** A `TC-*` whose declared
   `Level` is L1 or L2 is outside `QFAI-ATDD-112` entirely: it is not required
@@ -474,10 +466,9 @@ Treat these as review signals in the same class as volume floors — worth a fin
 - a very low `test_` functions per file ratio in a module that carries many obligations
 - a single selector whose recorded runtime grows monotonically across RED rounds
 
-## Test stub detection (QFAI-TEST-001 / QFAI-TEST-002)
+## Test stub detection (QFAI-TEST-001 / -002 / -003)
 
-`QFAI-TEST-001` (error) reports the silent-placeholder construct of each
-supported stack:
+`QFAI-TEST-001` (error) reports the silent-placeholder construct of each supported stack:
 
 | Extensions           | Construct                                                           |
 | -------------------- | ------------------------------------------------------------------- |
@@ -488,6 +479,14 @@ supported stack:
 | `.rs`                | `#[ignore]`                                                         |
 | `.rb`                | a line starting `skip` / `pending`                                  |
 | `.cs`                | `[Ignore` / `Skip = "`                                              |
+
+`QFAI-TEST-003` (warning) is the JS/TS `.skip` family — `it.skip(` / `test.skip(` /
+`describe.skip(`, chained `.each` spellings included. It is its own rule, not a graded-down
+`QFAI-TEST-001`: a waiver is judged against the highest severity its rule produced in the run,
+so sharing one code would let a single `.todo` promote the pair to `error` and take the
+per-path waiver in `.qfai/waivers.yml` away from every `.skip`. The fix differs too — a `.skip`
+keeps its body (it is what `npx qfai atdd scaffold` emits for a skeleton awaiting
+implementation), so drop the modifier rather than delete the test.
 
 `QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
 Without it a clean run on an unsupported stack is indistinguishable from a
