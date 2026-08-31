@@ -19,7 +19,6 @@ export {
   validateDelegationMapIssues,
   validatePrototypingDelegationMap,
 } from "./prototyping/delegationMap.js";
-export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
 export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
