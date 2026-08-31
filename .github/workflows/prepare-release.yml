@@ -215,7 +215,14 @@ jobs:
           # The body is written to a file rather than passed inline: its lines begin at column
           # zero, and inside a YAML block scalar that ends the block. A quoted heredoc keeps
           # every line indented and stops the shell expanding what is meant to stay literal.
-          body_file="$(mktemp)"
+          #
+          # Under the repository's own `tmp/`, not `mktemp`'s. Bare `mktemp` implies `--tmpdir`
+          # and lands in `/tmp` when `TMPDIR` is unset, which is outside the only scratch area
+          # `.agents/rules/temporary-files.md` sanctions — and it left the file behind. Removed
+          # on exit rather than after the call, so a failing `gh pr create` does not leak it.
+          mkdir -p tmp
+          body_file="tmp/release-pr-body.md"
+          trap 'rm -f "${body_file}"' EXIT
           {
             echo "Prepared by the \`Prepare release\` workflow from a version a human supplied."
             echo ""

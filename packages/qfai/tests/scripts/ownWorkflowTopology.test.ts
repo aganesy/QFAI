@@ -2680,6 +2680,38 @@ describe("release automation performs decisions rather than making them", () => 
     ).toContain("CHANGELOG.md");
   });
 
+  it("keeps scratch inside the one directory this repository sanctions", () => {
+    // `.agents/rules/temporary-files.md` makes `tmp/` at the repository root the sole scratch
+    // area. Bare `mktemp` implies `--tmpdir` and lands in `/tmp` when `TMPDIR` is unset, which
+    // is outside it — and the file it made was never removed. Stated over the WHOLE own tree
+    // rather than the one step that had it: the rule is not about that step.
+    for (const name of OWN_WORKFLOW_FILES) {
+      const document = workflow(name);
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const commands = Object.values(jobs)
+        .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+        .join("\n")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line !== "" && !line.startsWith("#"))
+        .join("\n");
+      // Comment lines stripped first, because the paragraph explaining why `mktemp` was
+      // dropped necessarily names it — and a row that matched that would go red on the fix
+      // and green on the defect.
+      // Non-vacuity: a `not.toMatch` over an empty string passes, and an extractor that
+      // stopped finding step bodies would report every workflow clean.
+      expect(commands.length, `${name} must have step bodies for this to be about`).toBeGreaterThan(
+        0,
+      );
+      expect(
+        commands,
+        `${name} must not reach for mktemp: bare mktemp writes outside the repository's tmp/, ` +
+          `which is the only scratch area .agents/rules/temporary-files.md sanctions`,
+      ).not.toMatch(/\bmktemp\b/);
+    }
+  });
+
   it("refuses a version component with a leading zero, at both ends", () => {
     // `01.11.0`, `1.011.0` and `1.11.00` satisfy every structural check these workflows made
     // — digits and dots, three non-empty components — and `sort -V` orders them happily. They
