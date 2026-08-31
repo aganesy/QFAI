@@ -178,7 +178,7 @@ So:
   places is what went stale, and a worker returning the short copy returns a
   block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
-  `#post-parallel-integration-verify`, before the verify runs.
+  `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 
