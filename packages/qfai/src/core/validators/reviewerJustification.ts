@@ -16,19 +16,19 @@ import { exists, issue } from "./utils.js";
 //
 // The set is composed from three sources:
 //   1. The historical R-WORKLOG-DRIFT family (REQ-0006 contract).
-//   2. CHG-005 extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
-//   3. The 8-code spec governance catalog (CHG-006 / AC-0015-0018) sourced
+//   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
+//   3. The 8-code spec governance catalog (AC-0015-0018) sourced
 //      from `justificationCatalog.ts`.
 const ADVISORY_FAILING_CODES = new Set<string>([
   "R-WORKLOG-DRIFT",
   "R-REJECTED-READOPT",
   "R-HANDOFF-INCOMPLETE",
-  // CHG-005: Reviewer-Gate findings that MUST carry a non-empty
+  // Second-wave Reviewer-Gate findings that MUST carry a non-empty
   // justification. Empty / whitespace-only justifications are treated
   // as advisory-failing to enforce BR-0004-0028 across spec families.
   "R-CERTIFY-VERIFY-CIRCULAR",
   "R-PROMPT-SCANNER-DRIFT",
-  // CHG-006: the 8-code spec governance catalog (AC-0015-0018) is
+  // The 8-code spec governance catalog (AC-0015-0018) is
   // merged in via the catalog SSOT so this set stays in lockstep with
   // the catalog by construction.
   ...CATALOG_ADVISORY_FAILING_CODES,
