@@ -17,7 +17,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import {
@@ -312,6 +312,94 @@ describe("a project rule after the managed block does not win", () => {
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       expect(await readGitignore(root)).toBe(first);
+    });
+  });
+});
+
+describe("a project rule after the managed block keeps its place", () => {
+  /** A stale block — one governance negation short — plus a project negation below it. */
+  const staleBlockWithNegationBelow = async (root: string): Promise<void> => {
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const stale = (await readGitignore(root))
+      .split(NL)
+      .filter((line) => line !== "!.qfai/review/.legacy-packs")
+      .join(NL)
+      .trimEnd();
+    await writeFile(
+      path.join(root, ".gitignore"),
+      `${stale}${NL}${NL}# project-owned: keep our published dashboard tracked${NL}!.qfai/report/dashboard.md${NL}`,
+      "utf-8",
+    );
+  };
+
+  it("rebuilds the block in place instead of hoisting a project negation above it", async () => {
+    // The block was stripped from wherever it sat and re-appended at EOF, so
+    // anything the project wrote below it ended up above it. Git applies the
+    // last matching pattern, so `!.qfai/report/dashboard.md` stopped beating
+    // `.qfai/report/*` and the file quietly dropped out of `git add`.
+    await withProject(async (root) => {
+      await staleBlockWithNegationBelow(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
+      const projectNegation = lines.lastIndexOf("!.qfai/report/dashboard.md");
+      const reportIgnore = lines.lastIndexOf(".qfai/report/*");
+      expect(projectNegation).toBeGreaterThan(-1);
+      expect(projectNegation).toBeGreaterThan(reportIgnore);
+      // The rewrite still did its job: the missing governance negation is back,
+      // in one block, and QFAI's own negations still outrank QFAI's ignores.
+      expect(lines).toContain("!.qfai/review/.legacy-packs");
+      expect(lines.filter((l) => l === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
+      for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+        expect(lines.lastIndexOf(negation)).toBeGreaterThan(reportIgnore);
+      }
+    });
+  });
+
+  it("settles after one rewrite", async () => {
+    await withProject(async (root) => {
+      await staleBlockWithNegationBelow(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const once = await readGitignore(root);
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readGitignore(root)).toBe(once);
+    });
+  });
+
+  it("names the project negation it demotes when the block must move", async () => {
+    // The fallback stays for a project ignore line that re-ignores a governance
+    // record — a genuine conflict. What it may not do is stay silent about the
+    // project negation the move makes inert.
+    await withProject(async (root) => {
+      await staleBlockWithNegationBelow(root);
+      const conflicted = await readGitignore(root);
+      await writeFile(
+        path.join(root, ".gitignore"),
+        `${conflicted.trimEnd()}${NL}.qfai/evidence/*.md${NL}`,
+        "utf-8",
+      );
+
+      const lines: string[] = [];
+      const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        lines.push(String(chunk));
+        return true;
+      });
+      try {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      } finally {
+        spy.mockRestore();
+      }
+
+      const after = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
+      // The block moved below the project's ignore line, as the conflict requires…
+      expect(after.lastIndexOf("!.qfai/evidence/coverage-depth-*.md")).toBeGreaterThan(
+        after.lastIndexOf(".qfai/evidence/*.md"),
+      );
+      // …and the negation that lost is reported, not swallowed.
+      expect(lines.join("")).toContain("!.qfai/report/dashboard.md");
     });
   });
 });
