@@ -37,11 +37,15 @@ interface SkillFrontmatter {
 }
 
 const parseAllowedTools = (source: string, file: string): readonly string[] => {
-  const match = /^allowed-tools:\s*\[([^\]]*)\]\s*$/m.exec(source);
-  if (match === null) {
+  // The capture group is read through a narrowing check rather than
+  // `match !== null` alone: under `noUncheckedIndexedAccess` the group is
+  // `string | undefined`, so a null match and a regex whose shape changed
+  // out from under this reader both land on the same explicit throw.
+  const inner = /^allowed-tools:\s*\[([^\]]*)\]\s*$/m.exec(source)?.[1];
+  if (inner === undefined) {
     throw new Error(`${file}: no inline 'allowed-tools: [...]' frontmatter entry`);
   }
-  return match[1]
+  return inner
     .split(",")
     .map((tool) => tool.trim())
     .filter((tool) => tool.length > 0);
