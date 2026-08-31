@@ -7,6 +7,7 @@ import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
 import type { FailOn } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
+import { isCiEnvironment } from "../../core/phasePolicy.js";
 import { resolveFailOn } from "../lib/failOn.js";
 import { info } from "../lib/logger.js";
 
@@ -117,7 +118,12 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
   if (options.autoremediate) {
-    const isCi = process.env["CI"] === "true";
+    // Route through the framework's single CI predicate rather than an
+    // inline `process.env["CI"] === "true"`. The inline form missed the
+    // `GITHUB_ACTIONS` arm and read `CI=1` as "local", so the mutating
+    // path below (root `.gitignore` rewrite, config-fill, review-pack
+    // archival) ran on CI checkouts that AC-0006-0018 puts off limits.
+    const isCi = isCiEnvironment();
     // Thread the resolved skill profile into the autoremediate orchestrator
     // so the install phase actually reaches the runtimeDependencies probe.
     // Without `skill`, runAutoremediate's (1) install branch is skipped
@@ -231,9 +237,16 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   }
 
   if (options.outPath) {
+    // Relative `--out` is anchored to the operating root, not the process
+    // cwd, so `qfai doctor --root <proj> --out <rel>` and
+    // `qfai report --root <proj> --out <rel>` land in the same tree.
+    // The cwd-based resolution used to scatter a CI job's evidence: the
+    // report went into the project while the doctor artifact went to the
+    // runner's working directory, silently, because the "wrote <abs>" line
+    // still looks like success. `prototyping preflight` shares this slot.
     const outAbs = path.isAbsolute(options.outPath)
       ? options.outPath
-      : path.resolve(process.cwd(), options.outPath);
+      : path.resolve(resolvedRoot, options.outPath);
     await mkdir(path.dirname(outAbs), { recursive: true });
     await writeFile(outAbs, `${sideEffectPrefix}${output}\n`, "utf-8");
     info(`doctor: wrote ${outAbs}`);

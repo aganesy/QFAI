@@ -2,11 +2,30 @@
 
 ## 前提
 
+前提は経路ごとに異なります。**自動化された経路は、手動経路が「更新済み」を要求している
+ものを更新するための経路です。** 先に版を上げてから Prepare release を実行すると、入力
+した版が現在の版と一致するため必ず拒否されます。
+
+### 共通
+
 - main に対象コミットが揃っている
+- 各変更が `CHANGELOG.md` の `## [Unreleased]` に説明を書いている（空、または
+  `### Added` のような見出しだけの状態では Prepare release は失敗します）
+- Supported: Node.js >= 20.0.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
+
+### 自動化された経路を使う場合
+
+- `packages/qfai/package.json#version` と `CHANGELOG.md` の版見出しは **まだ更新して
+  いない**こと。更新するのがこの経路の仕事です
+- リポジトリに `RELEASE_AUTOMATION_TOKEN` secret が設定されている（下記「必要な secret」）
+- npm publish 権限は不要です。publish は `release` environment の必須レビュアーが承認
+  したうえで CI が trusted publishing (OIDC) で実行します
+
+### 手動の経路を使う場合
+
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
 - npm publish 権限があり、`npm whoami` が成功する
 - 次メジャーへ進む前提として、パッチで整合を取り、段階的に進める
-- Supported: Node.js >= 20.0.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
 
 ## 権限と責務
 
@@ -21,7 +40,52 @@
 - レビュー完了基準: DoD を満たし、追加指摘がすべて解消されていること
 - PR のマージ/タグ付けは権限保有者が実施する
 
-## 手順
+## 自動化された経路（推奨）
+
+版番号を1回入力すれば、PR 作成と tag 付けは自動で進みます。publish は `release`
+environment の必須レビュアー承認で従来どおり止まります。
+
+1. Actions で **Prepare release** を実行し、`version` に `X.Y.Z`（先頭 `v` なし）を入力する
+2. 作成された `release/vX.Y.Z` の PR をレビューして merge する
+3. **Tag release commit** が `vX.Y.Z` を自動で push し、`release.yml` が起動する
+4. `release` environment の承認を与えると npm publish が走る
+
+### この自動化が「しない」こと
+
+**リリース文面を書きません。** `CHANGELOG.md` の `## [Unreleased]` は各変更が入るたびに
+その変更の作者が書き足すもので、リリース時に起きるのは「どこで区切るか」だけです。
+Prepare release がするのは次の3点だけで、散文は一切生成しません。
+
+- `packages/qfai/package.json#version` の同期
+- `## [Unreleased]` を `## [X.Y.Z] - <日付>` に rename
+  （日付は **Prepare release を実行した日** です。tag が切られるのは PR がマージされた
+  ときなので、翌日以降にマージする場合はその PR の中で日付を直してください。マージ後に
+  直すには `main` への別コミットが必要になります）
+- 空の `## [Unreleased]` を再挿入
+
+GitHub Release の本文も `release.yml` が同じセクションを抽出して使います。つまり公開される
+説明は、マージ済み PR が書いた内容そのものです。
+
+裏返しとして、**`## [Unreleased]` が空なら Prepare release は失敗します**。誰も書いていない
+リリースノートは「何も起きなかった」と読めてしまい、無いより悪いためです。
+
+**版番号も選びません。** `.agents/rules/version-discipline.md` は版番号の決定権をユーザに
+置いており、フォームへの入力がその明示指示にあたります。入力は必須で、既定値はありません。
+
+### 必要な secret
+
+`RELEASE_AUTOMATION_TOKEN`（`contents: write` と `pull-requests: write`）。理由は2つあります。
+
+- **`GITHUB_TOKEN` で push した tag は他の workflow を起動しません。** 職務トークンで tag を
+  打つと `release.yml` が発火せず、リリースが無言で止まります。
+- ワークフロー側の `permissions:` を `contents: read` のまま保てるため、`BR-0017-0016` の
+  「最小スコープからの逸脱はちょうど3件」という閉じた集合を広げずに済みます。
+
+secret が未設定なら、両ワークフローとも理由を述べて失敗します（黙って何もしないことはありません）。
+
+## 手順（手動）
+
+自動化を使わない場合、または権限が無い環境では以下の手順で実施します。
 
 ※ 以下のコマンドは、特記がない限りリポジトリ直下で実行してください。
 
