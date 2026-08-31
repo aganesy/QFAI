@@ -1426,8 +1426,31 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
 // does not move; a literal list makes any creation, removal or rename a failing test that
 // names which one, instead of a diff someone has to interpret.
 
-/** The own-CI workflow files. Two, and layer separation may not make it three. */
-const OWN_WORKFLOW_FILES = ["ci.yml", "release.yml"] as const;
+/**
+ * The own-CI workflow files.
+ *
+ * `BR-0017-0035` is what this list serves, and its subject is TEST-LAYER SEPARATION: layer
+ * separation must be jobs and matrix legs inside the existing file, and a new workflow file PER
+ * LAYER must be rejected. It is not a freeze on the repository ever gaining a workflow — the row
+ * below says so in as many words, that it asserts the count layer separation must not change
+ * rather than a count frozen when the spec was written.
+ *
+ * The two release-automation files are outside that subject, and outside the concern behind it.
+ * What `AC-0017-0018` protects against is a new workflow creating a CHECK NAME nobody has
+ * configured — a repository-settings surface no agent can reach. Neither of these runs on
+ * `pull_request`: `prepare-release.yml` is `workflow_dispatch` only, and `tag-release.yml` fires
+ * on a push to `main`. They report no check on any pull request, so the configured set is
+ * unchanged.
+ *
+ * The list stays a literal for the reason it always was: a creation, removal or rename should be
+ * a failing test naming which file, not a diff somebody has to interpret. It named these two.
+ */
+const OWN_WORKFLOW_FILES = [
+  "ci.yml",
+  "prepare-release.yml",
+  "release.yml",
+  "tag-release.yml",
+] as const;
 
 /**
  * Every check name the own-CI workflow reports, as literals.
@@ -2560,6 +2583,559 @@ describe("a permitted rebuild is verified against where the package comes from",
         release.indexOf("verify-rebuild-sources.mjs"),
         "and must check before it rebuilds",
       ).toBeLessThan(release.indexOf("pnpm rebuild"));
+    }
+  });
+});
+
+describe("release automation performs decisions rather than making them", () => {
+  // `prepare-release.yml` and `tag-release.yml` mechanise a release that a human has already
+  // decided twice over: once by typing the version into the dispatch form, once by merging the
+  // pull request that carries it. `.agents/rules/version-discipline.md` puts both of those with
+  // the user, and the rule's own recorded failure is an agent choosing a version number — so
+  // what these rows pin is that neither workflow can.
+
+  const workflow = (name: string): Record<string, unknown> =>
+    parseYaml(readFileSync(path.join(REPO_ROOT, ".github", "workflows", name), "utf-8")) as Record<
+      string,
+      unknown
+    >;
+
+  it("takes the version from a human and never computes one", () => {
+    const prepare = workflow("prepare-release.yml");
+    const on = prepare["on"];
+    expect(isRecord(on), "prepare-release must declare its triggers").toBe(true);
+    const triggers = isRecord(on) ? on : {};
+    expect(
+      Object.keys(triggers).sort(),
+      "dispatch ONLY: a schedule or a push trigger would mean a release nobody asked for, and " +
+        "the version would have to come from somewhere other than a person",
+    ).toEqual(["workflow_dispatch"]);
+
+    const dispatch = triggers["workflow_dispatch"];
+    const inputs = isRecord(dispatch) && isRecord(dispatch["inputs"]) ? dispatch["inputs"] : {};
+    expect(Object.keys(inputs), "the version is the input, and the only one").toEqual(["version"]);
+    expect(
+      isRecord(inputs["version"]) ? inputs["version"]["required"] : undefined,
+      "and it is required: a default would be this workflow choosing",
+    ).toBe(true);
+  });
+
+  it("tags from the manifest, and only when the CHANGELOG names that version", () => {
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const tagJob = jobs["tag"];
+    expect(isRecord(tagJob), "tag-release must have a tag job").toBe(true);
+    const job = isRecord(tagJob) ? tagJob : {};
+    // The TRIGGER, not a commit message. This repository merges pull requests with merge
+    // commits, so `head_commit.message` reads "Merge pull request #N from …" and a condition on
+    // the release commit's own subject could never have fired. A version is a fact about the
+    // tree; a commit subject is a fact about how somebody merged.
+    const push = isRecord(tagWorkflow["on"]) ? tagWorkflow["on"]["push"] : undefined;
+    const paths = isRecord(push) ? push["paths"] : undefined;
+    expect(
+      paths,
+      "the trigger must be the manifest changing: that is the only way a version can change, " +
+        "and it is independent of how the pull request was merged",
+    ).toEqual(["packages/qfai/package.json"]);
+    expect(
+      String(job["if"] ?? ""),
+      "and there must be no condition on a commit subject, which merge commits hide",
+    ).not.toContain("head_commit");
+
+    const body =
+      (job["steps"] as Array<Record<string, unknown>> | undefined)
+        ?.map((step) => String(step["run"] ?? ""))
+        .join("\n") ?? "";
+    // The READ and the comparison, not a mention of the path. Measured: the first version
+    // asserted the body contained `packages/qfai/package.json`, and the error message beside the
+    // check names that path too — so replacing the read with `manifest="$claimed"` left the row
+    // green. Fourth time in this work that a row matched a sentence about a thing instead of the
+    // thing; every one of them was found by planting.
+    const commands = body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    expect(
+      commands,
+      "the version must be read out of the manifest, which is the tree's own statement of it",
+    ).toMatch(/claimed=.*packages\/qfai\/package\.json/);
+    expect(
+      commands,
+      "and the CHANGELOG must be SEARCHED for that version before anything is tagged: the " +
+        "Release body is extracted from that section, so a tag without it publishes a release " +
+        "nobody described. The awk, not a mention — the message inside that branch names the " +
+        "file too, and a row that matched it stayed green when the check was removed",
+    ).toMatch(/awk[^\n]*CHANGELOG\.md/);
+    expect(
+      commands,
+      "and the heading must be matched LITERALLY. Under a regex the dots in `1.10.2` match any " +
+        "character, so a heading mistyped as `## [1010.2]` satisfied this check — and " +
+        "release.yml's literal match then rejected the same heading, leaving a wrong tag behind " +
+        "and a publish that could not succeed",
+    ).not.toMatch(/grep[^\n]*\^## /);
+    expect(
+      body,
+      "and the CHANGELOG heading, because the GitHub Release body is extracted from that section",
+    ).toContain("CHANGELOG.md");
+  });
+
+  it("says what the recorded release date means, while it can still be changed", () => {
+    // The date written into `## [X.Y.Z] - <date>` is the day Prepare release RAN. The tag is
+    // cut when the release pull request merges — review and CI in between, so typically a
+    // later day — and the published CHANGELOG then dates the release before it happened,
+    // permanently.
+    //
+    // Nothing in this machinery can fix that at tag time: correcting it then would mean a
+    // second commit to `main` outside any pull request. What it can do is say so at the one
+    // moment the file is still editable — in the release pull request — and record the drift
+    // on the run that cut the tag. Both halves are pinned, because either alone leaves the
+    // wrong date unremarked somewhere.
+    const prepareText = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "prepare-release.yml"),
+      "utf-8",
+    );
+    expect(
+      prepareText,
+      "the release pull request must say the date is the preparation date: whoever merges it " +
+        "is the last person who can change it without a second commit to main",
+    ).toContain("PREPARED, not the date it ships");
+
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const commands = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    // The COMPARISON, inside its brackets — the notice beside it names both dates, and a row
+    // matching that would survive the check being deleted.
+    expect(
+      commands,
+      "and the tag run must compare the recorded date with the day the tag is actually cut",
+    ).toMatch(/\[[^\n]*recorded_date[^\n]*today[^\n]*\]/);
+  });
+
+  it("can be re-run after the pull request failed to open, without forcing anything", () => {
+    // The push and the pull request are two failures, and only the first leaves nothing
+    // behind. A run that pushed `release/vX.Y.Z` and then lost `gh pr create` to a transient
+    // API error left the branch on the remote; the obvious retry builds a sibling commit from
+    // `main`, and the non-forced push refuses it as a non-fast-forward. Force is ruled out by
+    // `.agents/rules/version-discipline.md` — so the recommended flow could not be restarted
+    // by any means the rules allow, and nothing said the way out was deleting the branch.
+    const prepare = workflow("prepare-release.yml");
+    const jobs = isRecord(prepare["jobs"]) ? prepare["jobs"] : {};
+    const commands = Object.values(jobs)
+      .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+
+    expect(
+      commands,
+      "an already-pushed branch must be detected before the push, not discovered by its failure",
+    ).toMatch(/ls-remote[^\n]*RELEASE_BRANCH/);
+    expect(
+      commands,
+      "and an already-open pull request must be detected before `gh pr create`, whose failure " +
+        "would be indistinguishable from the one this branch exists to survive",
+    ).toMatch(/gh pr list[^\n]*RELEASE_BRANCH/);
+    expect(
+      commands,
+      "and adoption must be conditional on the branch declaring THIS version: same name, other " +
+        "version is a collision, not a re-run",
+    ).toMatch(/\[[^\n]*existing_version[^\n]*RELEASE_VERSION[^\n]*\]/);
+
+    // …and none of it may be bought with force. The rule forbids it, and a forced push here
+    // would overwrite a release branch somebody may already be reviewing.
+    expect(
+      commands,
+      "nothing here may force-push: `.agents/rules/version-discipline.md` forbids it outright",
+    ).not.toMatch(/push[^\n]*(--force|-f \b)/);
+  });
+
+  it("keeps scratch inside the one directory this repository sanctions", () => {
+    // `.agents/rules/temporary-files.md` makes `tmp/` at the repository root the sole scratch
+    // area. Bare `mktemp` implies `--tmpdir` and lands in `/tmp` when `TMPDIR` is unset, which
+    // is outside it — and the file it made was never removed. Stated over the WHOLE own tree
+    // rather than the one step that had it: the rule is not about that step.
+    for (const name of OWN_WORKFLOW_FILES) {
+      const document = workflow(name);
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const commands = Object.values(jobs)
+        .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+        .join("\n")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line !== "" && !line.startsWith("#"))
+        .join("\n");
+      // Comment lines stripped first, because the paragraph explaining why `mktemp` was
+      // dropped necessarily names it — and a row that matched that would go red on the fix
+      // and green on the defect.
+      // Non-vacuity: a `not.toMatch` over an empty string passes, and an extractor that
+      // stopped finding step bodies would report every workflow clean.
+      expect(commands.length, `${name} must have step bodies for this to be about`).toBeGreaterThan(
+        0,
+      );
+      expect(
+        commands,
+        `${name} must not reach for mktemp: bare mktemp writes outside the repository's tmp/, ` +
+          `which is the only scratch area .agents/rules/temporary-files.md sanctions`,
+      ).not.toMatch(/\bmktemp\b/);
+    }
+  });
+
+  it("refuses a version component with a leading zero, at both ends", () => {
+    // `01.11.0`, `1.011.0` and `1.11.00` satisfy every structural check these workflows made
+    // — digits and dots, three non-empty components — and `sort -V` orders them happily. They
+    // are not SemVer: `node-semver` rejects them, so npm refuses the publish. Without this the
+    // refusal arrived last, after the release pull request had merged and the tag was pushed,
+    // leaving an invalid version in `main` and a tag naming it.
+    //
+    // Both ends, because they read different things: prepare-release reads what a human typed
+    // into the dispatch form, tag-release reads what the tree declares — and a manifest can be
+    // edited by hand without either workflow being involved.
+    for (const name of ["prepare-release.yml", "tag-release.yml"]) {
+      const document = workflow(name);
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const commands = Object.values(jobs)
+        .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+        .join("\n")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line !== "" && !line.startsWith("#"))
+        .join("\n");
+      // The case ARM, which is the refusal itself. The paragraph beside it names every one of
+      // `01.11.0`, `node-semver` and `leading zero`, so matching any of those would match the
+      // explanation and survive the check being deleted.
+      expect(
+        commands,
+        `${name} must refuse a component with a leading zero: npm would refuse the publish, ` +
+          `and by then the release pull request has merged and the tag exists`,
+      ).toMatch(/0\*\)/);
+    }
+  });
+
+  it("treats an existing tag as a re-run only when it names this commit", () => {
+    // Idempotent means "already did exactly this", not "the name is taken". The first version
+    // asked only whether the ref resolved, so a `vX.Y.Z` created against a different commit
+    // between Prepare release and the merge ended the job successfully with this commit
+    // untagged — release.yml never starting, and nothing anywhere saying so.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const commands = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    expect(
+      commands,
+      "the tag the API returns must be DEREFERENCED to a commit and compared with this one: " +
+        "asking only whether the ref resolves cannot tell a re-run from a collision",
+      // The TEST, inside its brackets — not a mention. Measured: replacing the comparison with
+      // `if true` left this row GREEN, because the reject message beside it names both
+      // `object_sha` and `GITHUB_SHA`. Seventh time in this work that a row matched a sentence
+      // about a check instead of the check; every one of them found by planting.
+    ).toMatch(/\[[^\n]*object_sha[^\n]*=[^\n]*GITHUB_SHA[^\n]*\]/);
+    expect(
+      commands,
+      "and an annotated tag needs the extra hop — its ref points at the tag object, not at the " +
+        "commit, and this workflow creates annotated tags, so that hop is the normal case",
+    ).toMatch(/git\/tags\//);
+  });
+
+  it("demands the release token where it is used, not before", () => {
+    // This workflow starts on EVERY push to `main` that touches the manifest, and most of
+    // those are not releases. Everything up to the CHANGELOG check answers from the tree and
+    // needs no credential — so demanding the secret at the top of the step puts a red cross on
+    // ordinary merges for a release nobody was attempting. It has to come after the questions
+    // that can say "this is not a release", and before the first one that needs a token.
+    //
+    // An ORDERING, checked by position rather than by presence: all three constructs exist
+    // whichever order they are written in, so a row asserting each separately cannot see this.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const commands = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+
+    const changelogCheck = commands.search(/awk[^\n]*CHANGELOG\.md/);
+    const tokenCheck = commands.search(/-z[^\n]*GH_TOKEN/);
+    const firstApiCall = commands.search(/gh api/);
+    expect(changelogCheck, "the CHANGELOG check must be there to order against").toBeGreaterThan(
+      -1,
+    );
+    expect(tokenCheck, "the token check must be there at all").toBeGreaterThan(-1);
+    expect(firstApiCall, "and so must the API call it guards").toBeGreaterThan(-1);
+    expect(
+      tokenCheck,
+      "the token must not be demanded before the checks that answer from the tree: a manifest " +
+        "bumped without its CHANGELOG heading is an ordinary state, and must stay quiet",
+    ).toBeGreaterThan(changelogCheck);
+    expect(
+      tokenCheck,
+      "and it must be demanded before the first call that needs it, so an absent secret reads " +
+        "as an absent secret rather than as an opaque gh auth failure",
+    ).toBeLessThan(firstApiCall);
+  });
+
+  it("tags only what an approved release pull request carried", () => {
+    // The trigger is `packages/qfai/package.json` changing, which is necessary and NOT
+    // sufficient. A pinned feature branch — `feature/vX.Y.Z`, which this repository's version
+    // discipline actively encourages — syncs that manifest and writes its own CHANGELOG
+    // heading, so on merge it satisfied both of the checks above and got itself tagged. A pin
+    // authorises a VERSION; `.agents/rules/version-discipline.md` is explicit that cutting the
+    // tag needs a separate instruction, and the release pull request is where that lives.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const body = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n");
+    // Comment lines stripped before matching. Five rows in this work matched a sentence about
+    // a check instead of the check, and every one was found by planting — the paragraph above
+    // this construct names both `release/v` and the pull request it asks about.
+    const commands = body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    expect(
+      commands,
+      "provenance must be ASKED OF THE API: which pull request carried this commit. Read off " +
+        "the commit subject it would be wrong under squash and rebase, which is the mistake " +
+        "this workflow already made once",
+    ).toMatch(/commits\/\$\{GITHUB_SHA}\/pulls/);
+    expect(
+      commands,
+      "and the answer must be required to be THIS version's release branch: a manifest that " +
+        "moved is necessary and not sufficient",
+      // The GREP, on the same line — not a mention. Measured: replacing the comparison with
+      // `grep -q .` (accept any pull request at all) left this row GREEN, because the message
+      // inside the branch names `release/v${claimed}` too. Sixth time in this work that a row
+      // matched a sentence about a check instead of the check; every one found by planting.
+    ).toMatch(/grep[^\n]*release\/v\$\{claimed}/);
+
+    // …and the permission surface must not have widened to pay for it. Asking the API needs
+    // `pull-requests: read`, and granting it here would make `BR-0017-0016`'s closed departure
+    // set four. Reading through the secret is what keeps that set at three.
+    expect(
+      tagWorkflow["permissions"],
+      "the provenance check must not have bought itself a permission",
+    ).toEqual({ contents: "read" });
+  });
+
+  it("refuses to cut a release nobody described", () => {
+    // The answer to "where does the release text come from": nowhere in here. These workflows
+    // rename a section; the prose is whatever the merged pull requests wrote. So an empty
+    // `## [Unreleased]` has to stop the release rather than produce an empty heading — a release
+    // note nobody wrote reads as "nothing happened".
+    const prepare = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "prepare-release.yml"),
+      "utf-8",
+    );
+    expect(
+      prepare,
+      "a section that describes nothing must be refused — and `trim()` alone cannot tell, " +
+        "because `### Added` with nothing under it is non-empty and describes nothing",
+    ).toMatch(/substantive\.length === 0/);
+    expect(
+      prepare,
+      "and what makes a line substantive is that it is neither blank nor a heading",
+    ).toMatch(/!line\.startsWith\(/);
+    // The WRITE, and exactly what it inserts — not the absence of `### Added` anywhere in the
+    // file. The first version asserted the latter and broke the moment the refusal message
+    // beside the check named `### Added` as an example of a section that describes nothing: a
+    // negative match over the whole document cannot tell a warning ABOUT category headings
+    // from a workflow that writes one.
+    const changelogWrites = prepare.match(/writeFileSync\(changelogPath/g) ?? [];
+    expect(
+      changelogWrites,
+      "there must be exactly one CHANGELOG write: a second is somewhere else to compose prose",
+    ).toHaveLength(1);
+    expect(
+      prepare,
+      "and it must insert a release heading and nothing else — the release text is whatever the " +
+        "merged pull requests wrote, and this workflow only moves the boundary",
+      // Both backticks. Measured: without the closing one this is a prefix test, and appending
+      // `\n\n### Added\n\n- Released.` inside the same template left the row GREEN — a workflow
+      // composing release prose, passing the row that exists to forbid exactly that.
+    ).toContain("`\\n\\n## [${version}] - ${date}`");
+  });
+
+  // ── the Release body, capped rather than fatal ─────────────────────────────────────────
+  //
+  // v1.10.1 is why these two rows exist. Its CHANGELOG section runs to 160,679 characters
+  // against the 125,000-character limit on a GitHub Release body; `gh release create`
+  // answered 422 and no Release was created, while the npm publish beside it succeeded —
+  // the two jobs are siblings, so nothing surfaced until somebody read the run. A release
+  // that is too well described is not a reason to stop shipping it.
+  //
+  // EXECUTED, not grepped. The cap is arithmetic over a body, and a row that matched
+  // `slice(` would pass on a cap that kept nothing, on one that kept everything, and on one
+  // that reordered the entries. Same reason `extractVerdictProgram` exists at the top of
+  // this file, and the same quoted-heredoc guarantee: `<<'CAP'` means the bytes the runner
+  // executes and the bytes run here are the same bytes.
+
+  const NOTES_LIMIT = 125_000;
+
+  const extractNotesCapProgram = (): string => {
+    const jobs = workflow("release.yml")["jobs"];
+    const job = isRecord(jobs) ? jobs["github-release"] : undefined;
+    const steps = isRecord(job) ? job["steps"] : undefined;
+    // Narrowed, not asserted, and refused rather than defaulted to `[]`. An `as` here would
+    // let a renamed job hand this an empty program — every row would then run `node ""`,
+    // exit 0, and report GREEN on a release.yml that no longer caps anything.
+    if (!Array.isArray(steps)) {
+      throw new Error(
+        `release.yml has no github-release steps to read; found ${JSON.stringify(steps)}`,
+      );
+    }
+    const run = steps.map((step) => (isRecord(step) ? String(step["run"] ?? "") : "")).join("\n");
+    const lines = run.split("\n");
+    const openers = lines.flatMap((line, index) => (line.includes("<<'CAP'") ? [index] : []));
+    const terminators = lines.flatMap((line, index) => (line.trimEnd() === "CAP" ? [index] : []));
+    const [opener] = openers;
+    const [terminator] = terminators;
+    // Refused rather than defaulted, for the reason the header gives: a silent zero-match
+    // extractor hands every row an empty program, and `node ""` exits 0 on all of them.
+    if (opener === undefined || terminator === undefined || terminator <= opener) {
+      throw new Error(
+        `expected one well-ordered CAP heredoc, found openers ${JSON.stringify(openers)} and terminators ${JSON.stringify(terminators)}`,
+      );
+    }
+    if (openers.length !== 1 || terminators.length !== 1) {
+      throw new Error(
+        `expected exactly one CAP heredoc, found ${openers.length} openers and ${terminators.length} terminators`,
+      );
+    }
+    const body = lines.slice(opener + 1, terminator).join("\n");
+    if (body.trim().length === 0) {
+      throw new Error("the extracted cap program is empty");
+    }
+    return body;
+  };
+
+  /** Runs the shipped cap over a supplied section and returns what it left on disk. */
+  const capNotes = (section: string, version: string): { notes: string; output: string } => {
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-notes-cap-"));
+    try {
+      mkdirSync(path.join(dir, "tmp"));
+      writeFileSync(path.join(dir, "tmp", "release-notes.md"), section, "utf-8");
+      // `.cjs`, because the shipped block is fed to `node -` on stdin — which is CommonJS —
+      // and its `require` would throw under the `.mjs` an ESM extension would imply.
+      const scriptPath = path.join(dir, "cap.cjs");
+      writeFileSync(scriptPath, `${extractNotesCapProgram()}\n`, "utf-8");
+      const output = execFileSync(process.execPath, [scriptPath], {
+        cwd: dir,
+        encoding: "utf-8",
+        env: { ...process.env, RELEASE_VERSION: version, GITHUB_REPOSITORY: "aganesy/QFAI" },
+      });
+      return {
+        notes: readFileSync(path.join(dir, "tmp", "release-notes.md"), "utf-8"),
+        output,
+      };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("caps a section past the body limit instead of failing the release", () => {
+    // Shaped like the real thing: top-level entries, because that is the boundary the cap
+    // cuts on and a body of undifferentiated text would exercise only the fallback.
+    const section = Array.from(
+      { length: 600 },
+      (_unused, index) => `- **Entry ${index}.** ${"detail ".repeat(40)}`,
+    ).join("\n");
+    expect(section.length, "the fixture has to actually exceed the limit").toBeGreaterThan(
+      NOTES_LIMIT,
+    );
+
+    const { notes, output } = capNotes(section, "9.9.9");
+    expect(notes.length, "the body it leaves must fit").toBeLessThanOrEqual(NOTES_LIMIT);
+    // …and must still be a release note. A cap that satisfies the line above by writing one
+    // character passes every limit and describes nothing.
+    expect(notes.length, "and must still carry most of the section").toBeGreaterThan(
+      NOTES_LIMIT * 0.7,
+    );
+
+    // Document order, unedited. This is the property that matters: the cap must not choose
+    // which entries matter — that judgement belongs to whoever wrote the CHANGELOG, and it is
+    // the same thing every other row in this describe refuses to let the machinery do.
+    // `split` always yields at least one element, but the index signature is
+    // `string | undefined` under this tree's settings and the two rows below pass it where a
+    // `string` is required. REFUSED rather than defaulted to an empty string:
+    // `section.startsWith("")` is true for every section, so a `?? ""` here would write a
+    // vacuous pass into the one row that checks the cap reordered nothing.
+    const [kept] = notes.split("\n\n---\n\n");
+    if (kept === undefined) {
+      throw new Error("the capped notes carry no body before the footer");
+    }
+    expect(
+      section.startsWith(kept),
+      "what it keeps must be a PREFIX of the section: no reordering, no selection, no summary",
+    ).toBe(true);
+    // Cut at an entry boundary, so the notes never stop mid-sentence.
+    // Cut ON a boundary, stated as the boundary rather than as the fixture's last characters:
+    // what follows the kept prefix must be the start of the next entry, so the notes can never
+    // stop mid-entry.
+    expect(
+      section.slice(kept.length).startsWith(`
+- **`),
+      "the cut must land on an entry boundary, never inside one",
+    ).toBe(true);
+
+    expect(notes, "and must say where the rest is").toContain(
+      "https://github.com/aganesy/QFAI/blob/v9.9.9/CHANGELOG.md",
+    );
+    expect(output, "and must say on the run that it did so").toMatch(/capped/);
+  });
+
+  it("leaves a section that already fits exactly as it is", () => {
+    // The other direction. Without it the row above is satisfied by a cap that truncates
+    // unconditionally, which would put a "not the whole section" footer on every release.
+    const section = `### Added\n\n- **A small release.** One entry.`;
+    const { notes, output } = capNotes(section, "9.9.9");
+    expect(notes, "an ordinary section must pass through untouched").toBe(section);
+    expect(output, "and must not claim it was capped").not.toMatch(/capped/);
+  });
+
+  it("keeps both workflows at the minimal permission scope", () => {
+    // The writes go through a token in a secret, not through the job token, which is what keeps
+    // `BR-0017-0016`'s closed departure set at three. The row above that enforces the set would
+    // catch a regression here too; this one says why it holds, so a later reader does not
+    // "simplify" it by granting `contents: write` and widening the set.
+    for (const name of ["prepare-release.yml", "tag-release.yml"]) {
+      const document = workflow(name);
+      expect(document["permissions"], `${name} must grant exactly the minimal scope`).toEqual({
+        contents: "read",
+      });
+
+      const text = readFileSync(path.join(REPO_ROOT, ".github", "workflows", name), "utf-8");
+      expect(
+        text,
+        `${name} must take its write capability from a secret, not from the job token`,
+      ).toContain("RELEASE_AUTOMATION_TOKEN");
     }
   });
 });

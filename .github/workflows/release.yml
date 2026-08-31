@@ -309,6 +309,48 @@ jobs:
             echo "::error::no CHANGELOG body for ${RELEASE_VERSION}"
             exit 1
           fi
+
+          # …and it has to FIT. A GitHub Release body is capped at 125,000 characters, and this
+          # step only ever checked the empty end of the range — so v1.10.1, whose section runs to
+          # 160,676 characters across 415 entries, made `gh release create` fail with a 422 and no
+          # Release was created. The npm publish was unaffected (the two jobs are siblings), which
+          # is exactly why this went unnoticed until somebody read the run.
+          #
+          # Capped rather than failed. A release that is too well described is not a reason to
+          # stop shipping it, and the section is the authority either way — so the body is cut at
+          # an ENTRY boundary, in document order, and says how much was left and where the rest
+          # is. Nothing here decides which entries matter; that judgement is not this machinery's
+          # to make.
+          node - <<'CAP'
+          const { readFileSync, writeFileSync } = require("node:fs");
+          const LIMIT = 125000;
+          const version = process.env.RELEASE_VERSION;
+          const path = "tmp/release-notes.md";
+          const body = readFileSync(path, "utf8").replace(/\n+$/, "");
+          if (body.length <= LIMIT - 600) {
+            console.log(`release notes: ${body.length} characters, within the limit`);
+            process.exit(0);
+          }
+          const footer =
+            "\n\n---\n\n**These notes are not the whole section.**\n\n" +
+            `The \`[${version}]\` section of \`CHANGELOG.md\` runs to ${body.length} characters, ` +
+            `past the ${LIMIT}-character limit on a release body. What is above is that same ` +
+            "section in document order, stopped at an entry boundary.\n\n" +
+            `Full section: https://github.com/${process.env.GITHUB_REPOSITORY}/blob/v${version}/CHANGELOG.md\n`;
+          const budget = LIMIT - footer.length - 200;
+          // An entry boundary, so the notes never end mid-sentence. A heading boundary was tried
+          // first and kept a quarter of the section: the headings are few and the bodies between
+          // them are enormous.
+          let cut = body.lastIndexOf("\n- **", budget);
+          if (cut < 0) cut = body.lastIndexOf("\n- ", budget);
+          if (cut < 0) cut = body.lastIndexOf("\n### ", budget);
+          if (cut < 0) cut = budget;
+          writeFileSync(path, body.slice(0, cut).replace(/\n+$/, "") + footer, "utf8");
+          console.log(
+            `release notes: capped at ${cut} of ${body.length} characters ` +
+              `(${Math.round((100 * cut) / body.length)}% of the section), with a link to the rest`,
+          );
+          CAP
         shell: bash
       - name: Create the release
         env:
