@@ -17,37 +17,33 @@ Upstream artifacts include, at minimum:
 - **test or production artifacts another spec's completed implement run
   certifies** — a file named on a `done` row of another `tdd/test-list.md`: a
   production module in that row's `Owning module` column, a test in its
-  `Test file` column. `Owning module` is the only column that holds a
-  production path, so a production file declared there is upstream even though
-  no `Test file` cell names it. Changing one is not forbidden (the codebase is not
+  `Test file` column. `Owning module` is the only column that holds a production
+  path, so a production file declared there is upstream even though no
+  `Test file` cell names it. Changing one is not forbidden (the codebase is not
   partitioned and duplication removal is mandated), but it must be recorded and
-  re-reviewed per
-  `skills/qfai-implement/references/cross-spec-ownership.md`. It becomes drift
-  in the full sense — STOP, Change Request, owner rerun — when the other spec's
-  obligation no longer holds rather than merely moving.
+  re-reviewed per `skills/qfai-implement/references/cross-spec-ownership.md`. It
+  becomes drift in the full sense — STOP, Change Request, owner rerun — when the
+  other spec's obligation no longer holds rather than merely moving.
 
 One file inside `.qfai/specs/**` is carved out of that last line:
-`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
-cells unconditionally, plus its `Test file` and `Selector` cells under the two
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence` cells
+unconditionally, plus its `Test file` and `Selector` cells under the two
 machine-checkable conditions in `#allowed-exceptions-minimal-whitelist`. Its
 **rows** — which obligations exist and what each covers — remain upstream.
 
-**Every artifact in this list requires an owner rerun by definition — except
-the code and test artifacts of the last bullet, which carry their own route in
-that bullet.** They are the one entry whose prohibition is conditional, because
-the codebase is not partitioned: while the other spec's obligation still holds,
-the record and re-review of `cross-spec-ownership.md` are the whole route, and
-the owner rerun is owed exactly when the edit becomes drift in the full sense
-(that bullet's last sentence). Reading the blanket rule over them instead
-demanded an owner rerun for every shared-file edit, which the cross-spec
-procedure does not perform and the mandated duplication removal cannot pay for.
-For every other entry there is
-no downstream test for "is an owner rerun required here?" — being on this list
-is the answer, and the rerun is a _consequence_ of the artifact being upstream
-SSOT, never a precondition for the prohibition. A downstream phase that finds
-itself weighing whether the owner needs to be involved has already left its
-lane: it cannot see who owns the artifact, and working that out in the observed
-case required reading the agent roster and reasoning backwards from it.
+**Every artifact in this list requires an owner rerun by definition — except the code and test
+artifacts of the last bullet, which carry their own route in that bullet.** They are the one
+entry whose prohibition is conditional, because the codebase is not partitioned: while the other
+spec's obligation still holds, the record and re-review of `cross-spec-ownership.md` are the
+whole route, and the owner rerun is owed exactly when the edit becomes drift in the full sense
+(that bullet's last sentence). Reading the blanket rule over them instead demanded an owner rerun
+for every shared-file edit, which the cross-spec procedure does not perform and the mandated
+duplication removal cannot pay for. For every other entry there is no downstream test for "is an
+owner rerun required here?" — being on this list is the answer, and the rerun is a _consequence_
+of the artifact being upstream SSOT, never a precondition for the prohibition. A downstream phase
+that finds itself weighing whether the owner needs to be involved has already left its lane: it
+cannot see who owns the artifact, and working that out in the observed case required reading the
+agent roster and reasoning backwards from it.
 
 ## Allowed exceptions (minimal whitelist)
 
@@ -344,17 +340,36 @@ is a defect.
 - Every reviewer finding declares a `Traces to:` value. See
   `shared-skill-delegation-baseline.md#finding-provenance-must` for the response schema. Legal
   values:
-  - an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`) or a named constitution/catalog rule;
+  - an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`) or a named constitution/catalog rule
+    **that governs the product's behaviour**;
   - `defect:correctness`, `defect:security`, or `defect:code-quality` — the deliverable-defect
     classes above, each of which MUST carry the concrete evidence in the changed artifacts that
     demonstrates it;
+  - `record:<CODE>` — a defect in the run's own record rather than in the product;
   - `none` — reviewer-originated scope.
-- The first two are **blocking** and gate `done`.
+- The first two are **blocking** and gate `done`. `record:*` and `none` are not.
+- `Traces to: record:<CODE>` is a record defect: the ledger, a round block, an evidence anchor or
+  the provenance prose is wrong while the product is not. It MUST be recorded as `advisory`, MUST
+  NOT be `blocking`, and settles in the spec's record-defect queue (`#the-record-defect-queue`)
+  rather than by re-running the row. `record:unchecked` is a bug report against `validateTddList`,
+  not against the item — a record rule worth a round is worth a validator code.
+- **A record that misrepresents the run is not a record defect.** Evidence copied from a previous
+  round or a sibling row, an evidence anchor resolving to a run other than the one it names, and a
+  false `Authored/edited under review` attestation do not merely mis-state the work — they claim
+  work that was not done, or independence the reviewer did not have. `agents/qa-gatekeeper.md`
+  rejects the first two outright and
+  `shared-skill-delegation-baseline.md#reviewer-response-template` forbids a `PASS` on the third,
+  so classifying them `record:*` would let an advisory-only review return `PASS` and release
+  `done` over the very evidence the gate exists to reject. They stay **blocking** as
+  `defect:code-quality` and MUST NOT be filed as `record:*`. `record:*` covers a record that is
+  honestly produced and merely wrong — a tier missing from an Evidence cell, a `Satisfied-by`
+  naming the wrong sibling row, an unlabelled round block.
 - `Traces to: none` is reviewer-originated scope. It is **drift**, and it is **not satisfiable
   downstream**: encoding it as production code plus a hard test assertion is the same violation as
   patching upstream SSOT, inverted. It MUST be recorded as `advisory`, MUST NOT be `blocking`, and
   is routed to the Change Request / Open Question path — never to the implementer.
-- Routing an advisory finding:
+- Routing a `none` advisory (a `record:*` advisory takes `#the-record-defect-queue` instead — the
+  Change Request path adjudicates product obligations and cannot repair a record):
   1. The reviewer records it in its response under `Advisory / Change Request proposals`, with
      enough context for the owner phase to adjudicate. The reviewer does **not** write it into
      `08_Open-questions.md`: that file is upstream SSOT (see `#core-rule`) and is owned by
@@ -374,6 +389,86 @@ is a defect.
   depend on the obligation under dispute, resume only after approval and the owner rerun.
   Completing against an obligation that is known to be under revision would ship a knowingly
   inconsistent SSOT.
+
+### The record-defect queue
+
+Making `record:*` advisory removes the round it used to force. It does not remove the defect, so
+the class is only honest if the defect lands somewhere with an owner and is consumed. That place is
+one queue per spec, and it is defined by a destination, an owner, an entry shape and a drain.
+
+- **Where.** A `## Record defects` section in the evidence file the reviewing stage's **own
+  completion contract** names. For a `/qfai-implement` review that is
+  `.qfai/evidence/implement-<spec-id>.md` when that file exists, otherwise
+  `.qfai/evidence/atdd-<spec-id>.md` — the same file rule the spec-level checkpoint boundary uses,
+  so a spec never has this queue in two places. **Do not derive the path from a
+  `<stage>-<spec-id>.md` pattern.** Each stage names its own evidence file and not every one of
+  them is spec-scoped — `/qfai-configure` writes `.qfai/evidence/configure-<run-id>.md`, one per
+  run, and has no `configure-<spec-id>.md` at all — so the pattern named files no stage creates.
+  Never `08_Open-questions.md`: that file is upstream SSOT owned by `/qfai-sdd` (see
+  `#core-rule`), and a record defect is not a product obligation.
+- **The class needs a drain, so a stage whose completion contract has none does not use it.** Every
+  stage sharing `shared-skill-delegation-baseline.md` reads the provenance rules, but an entry is
+  only worth filing where something consumes it, and the queue above is defined as much by the
+  drain as by the destination. The test is textual and local: **that stage's own completion
+  conditions must require this queue drained before it declares completion.** `/qfai-implement`
+  states it (`skills/qfai-implement/SKILL.md#spec-completion-conditions`), and no other stage's
+  completion conditions mention the queue at all — so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`,
+  `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT classify a finding
+  `record:*`; it keeps the class it would have had, blocking under the rule it names. A stage gains
+  the class by adding the drain to its completion conditions, never by being named here. A class
+  whose entries are written where nothing drains them is the round-dropped-and-defect-dropped
+  outcome this queue exists to prevent, and it is worse in the stages that never gained the queue
+  than the round ever was.
+- **Who.** The reviewer records the finding in its response as an advisory, as for any advisory.
+  The **orchestrator** that dispatched the review appends it to the queue when the round closes —
+  the same role that owns the ledger. A finding that stays in the reviewer response and never
+  reaches the queue is an unrouted advisory, which the review gate already forbids.
+- **Entry.** One line per defect: the `<CODE>`, the row or artifact it is against, what the record
+  says against what the run actually did, and the round it came from. That is what makes it
+  repairable later by someone who did not watch the round.
+- **Drain, at the spec boundary.** Before spec-level completion is declared, every open entry is
+  **repaired in place**: the record is corrected to what the run did, with no row re-run and no
+  status change. Repair is the only close. When the rule the entry names is one no validator
+  checks, the entry **also** produces a validator bug report per the `record:unchecked` ratchet
+  above — that report tracks the missing check and does not stand in for the repair. Closing an
+  entry on the report alone leaves the wrong record exactly as wrong as it was, with the round
+  that found it already spent: a missing tier stays missing, and the item stays complete. The two
+  are different obligations against different backlogs. Completion is not declared while an entry
+  is open. This gates the **spec** boundary only: a `record:*` finding still never holds an
+  individual row out of `done`, which is the whole point of the class.
+- **When the record cannot be repaired honestly.** Repair means writing what the run actually did,
+  which needs the round's artifacts to still say what that was. Where they do not — nothing
+  reconciles the entry with any run — the finding was never a record defect: what is missing is
+  not a correct record of the work but any evidence the work happened, which is the integrity case
+  above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path.
+  There is no third exit: an entry closes on a corrected record or on a blocking finding.
+- **Re-attest a repair in a pack of its own; never re-run it, and never edit a sealed one.** A
+  defect inside a `Satisfied-by`, a round block or any other phase-authored field sits inside the
+  exact bytes a reviewer's `Audited evidence hash` covers, and the completion gate recomputes that
+  hash — so repairing in place makes a correct PASS read as stale, and skipping the recomputation
+  would accept evidence nobody read. Repair the record, then have a reviewer **of the role that
+  issued the verdict** re-read the repaired entry and emit a **record re-attestation**: the
+  `TDD-ID`, the same `Reviewed revision`, the same `Result`, a recomputed `Audited evidence hash`,
+  and the queue entry's `<CODE>`.
+- **The re-attestation is a new review pack, and the pack it supersedes is left untouched.** A
+  verdict lives in a `review-<timestamp>/` pack fixed by a `Review pack seal` the completion gate
+  recomputes, so replacing that verdict's `Audited evidence hash` line where it is stored breaks
+  the seal by construction, and replacing only the evidence file's copy leaves the sealed reviewer
+  response carrying a hash nothing agrees with. Write the re-attestation as its own
+  `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash
+  it recorded — it was correct over the bytes it read — and its pack keeps recomputing. The
+  evidence entry records `Record re-attestation` beside the verdict it supersedes, with its own
+  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate
+  recomputes the superseding hash and both seals, which is what makes the re-attestation an
+  artifact a validator can see rather than an untraceable edit. No code runs, no row changes
+  status, and it spends no round — it opens none, so it is not a `Round N:` pack. The revision a
+  verdict names excludes `.qfai/evidence/**`, so by construction nothing outside the record moved.
+  **A repair that would move the revision is not a record repair**: it is a change to the
+  deliverable and takes the ordinary path. A repaired entry whose verdict carries no
+  re-attestation is still an open entry.
+
+An unconsumed queue would make the class worse than what it replaced: the round is gone and the
+defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 
