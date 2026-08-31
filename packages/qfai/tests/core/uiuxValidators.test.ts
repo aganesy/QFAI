@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
 import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
-import { parseHtmlMock } from "../../src/core/uiux/htmlMockParser.js";
+import { parseHtmlMock } from "../../src/core/uiux/htmlMockDom.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import { validateBpApDb } from "../../src/core/validators/bpApDb.js";
 import { validateDesignToken } from "../../src/core/validators/designToken.js";
@@ -50,7 +50,7 @@ describe("uiux validators", () => {
     expect(parsed.resolved.get("semantic.text.body")).toBe("#ffffff / #ffffff");
   });
 
-  it("detects local refs, unsafe URLs, and event handlers in HTML mock", () => {
+  it("detects local refs, unsafe URLs, and event handlers in HTML mock", async () => {
     const html = [
       '<button style="width: 20px; height: 20px" onclick="doX()">Tap</button>',
       '<div style="width: 20px; height: 20px">Box</div>',
@@ -61,7 +61,7 @@ describe("uiux validators", () => {
       '<div data-href="https://example.com/should-not-be-detected"></div>',
     ].join("\n");
 
-    const result = parseHtmlMock(html);
+    const result = await parseHtmlMock(html);
 
     expect(result.localRefs).toContain("./local.css");
     expect(result.unsafeUrls).toContain("javascript:alert(1)");
@@ -100,10 +100,10 @@ describe("uiux validators", () => {
     expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });
 
-  it("parses var() fallback values containing nested parentheses", () => {
+  it("parses var() fallback values containing nested parentheses", async () => {
     const html =
       '<div style="color: var(--fg, rgba(0, 0, 0, 0.5)); width: calc(100% - 10px)"></div>';
-    const result = parseHtmlMock(html);
+    const result = await parseHtmlMock(html);
     expect(result.varUsages[0]?.fallback).toBe("rgba(0, 0, 0, 0.5)");
   });
 
