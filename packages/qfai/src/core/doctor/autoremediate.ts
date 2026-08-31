@@ -8,8 +8,9 @@
  *      user-authored values).
  *
  * Disabled in CI by default: the caller detects a standard CI environment
- * (`isCiEnvironment`) and passes `isCi`, which makes this emit
- * `"autoremediate disabled in CI"` and return without remediating.
+ * via the framework's `isCiEnvironment` predicate (any truthy `CI` value,
+ * or `GITHUB_ACTIONS=true`) and passes `isCi`, on which this orchestrator
+ * emits `"autoremediate disabled in CI"` and returns without remediating.
  * Honors `--dry-run` by surfacing the plan in the future tense, without
  * side effects. The plan is the one a live run would execute: the
  * config-fill preview parses the config and names only the fields that
@@ -17,9 +18,9 @@
  *
  * `--yes` is meant to skip the interactive confirmation the CLI contract
  * requires before any install / tracked-file write. That prompt is NOT
- * implemented yet, so today the pass runs unattended either way — a known
- * deviation from the contract (see `.qfai/contracts/cli/qfai-doctor.md`),
- * not a relaxation of it.
+ * implemented yet — this CLI is non-interactive today — so the pass runs
+ * unattended either way. That is a known deviation from the contract (see
+ * `.qfai/contracts/cli/qfai-doctor.md`), not a relaxation of it.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
@@ -35,7 +36,7 @@ import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
-import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
+import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
 
@@ -221,6 +222,22 @@ async function applyConfigFill(
   }
 }
 
+/**
+ * Phrase for a manifest that was never probed. "not found" is reserved
+ * for a genuinely missing file inside an existing skills root; a
+ * missing skills root is an uninitialized project, and a read fault is
+ * neither of those.
+ */
+function describeUnprobedManifest(probe: SkillManifestProbeResult): string {
+  if (probe.manifest === "unparseable") {
+    return "unparseable";
+  }
+  if (probe.manifest === "unreadable") {
+    return "present but unreadable";
+  }
+  return probe.skillsRootExists ? "not found" : "not found (skills root missing; run qfai init)";
+}
+
 export async function runAutoremediate(
   options: AutoremediateOptions,
 ): Promise<AutoremediateSummary> {
@@ -245,9 +262,18 @@ export async function runAutoremediate(
   // (1) Probe runtimeDependencies and (optionally) install missing ones.
   const installed: string[] = [];
   if (options.skill) {
-    const findings = await probeSkillManifestRuntimeDeps(options.root, options.skill);
-    const missing = findings.filter((finding) => finding.status === "missing");
-    if (missing.length === 0) {
+    const probe = await probeSkillManifest(options.root, options.skill);
+    const missing = probe.findings.filter((finding) => finding.status === "missing");
+    if (probe.manifest !== "found") {
+      // Claiming "all installed" for a skill whose manifest was never
+      // read reads as a positive result; say what actually happened so
+      // a typo'd `--profile`, an uninitialized project, and a real
+      // filesystem fault stay distinguishable in the remediation log.
+      const reason = describeUnprobedManifest(probe);
+      lines.push(
+        `autoremediate: runtimeDependencies — manifest ${reason} at ${path.relative(options.root, probe.manifestPath)}; nothing installed`,
+      );
+    } else if (missing.length === 0) {
       lines.push("autoremediate: runtimeDependencies — all installed");
     } else {
       for (const finding of missing) {

@@ -217,10 +217,11 @@ install phase is structurally skipped and doctor says so explicitly.
   (AC-0006-0018): doctor emits `autoremediate disabled in CI`, skips
   the `.gitignore` rewrite and every remediation, and returns 0
   without building the diagnostic. `--clean` is not CI-suppressed.
-  Detection is the repo-wide `isCiEnvironment` predicate — exactly
-  `CI=true` OR `GITHUB_ACTIONS=true`. Other truthy spellings
-  (`CI=1`) are outside the guarantee; a lane that uses one must pass
-  `--dry-run` or omit the flag.
+  Detection is the repo-wide `isCiEnvironment` predicate — any `CI`
+  value that is not `""`, `false` or `0` (trimmed, case-insensitively)
+  OR `GITHUB_ACTIONS=true`. The truthy-by-presence spellings (`CI=1`,
+  `CI=yes`) are therefore INSIDE the guarantee, not outside it;
+  `CI=false` and `CI=0` read as local and do remediate.
 
 ## Playwright probe order (`--profile prototyping`)
 
@@ -431,7 +432,7 @@ returns 0; the summary is the signal, not the exit code.
 - `qfai doctor` does NOT delete anything. `--clean` renames stale
   review packs into `_archive/`; no path is removed on any flag.
 - `qfai doctor` does NOT remediate in a detected CI environment
-  (`CI=true` or `GITHUB_ACTIONS=true`): that disables
+  (any truthy `CI` value, or `GITHUB_ACTIONS=true`): that disables
   `--autoremediate` (AC-0006-0018).
 - `qfai doctor` does NOT trigger `playwright install` on any path,
   and does NOT run any install command on the probe path. Install

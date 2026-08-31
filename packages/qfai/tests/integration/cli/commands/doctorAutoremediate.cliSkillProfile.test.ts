@@ -35,35 +35,39 @@ async function newTempDir(label: string): Promise<string> {
 }
 
 // Capture and restore the CI env vars around each test. The doctor CLI
-// detects a standard CI environment with `isCiEnvironment` and forwards
-// the result to `runAutoremediate`, which short-circuits with
-// `disabledInCi` when true. On GitHub Actions BOTH `CI` and
-// `GITHUB_ACTIONS` are `"true"`, so the install branch this test
-// exercises would never fire — installCalls would be empty, and the
-// assertion (`installCalls === ["playwright"]`) would fail even though
-// the CLI dispatch is correct. Clearing both during the test scope keeps
-// these tests about CLI wiring (the CI early-return has its own case at
-// the bottom of this file).
+// computes `isCi = isCiEnvironment()` and forwards it to
+// `runAutoremediate`, which short-circuits with `disabledInCi` when
+// true. On GitHub Actions both `CI` and `GITHUB_ACTIONS` are `"true"`,
+// so the install branch this test exercises would never fire —
+// installCalls would be empty, and the assertion (`installCalls ===
+// ["playwright"]`) would fail even though the CLI dispatch is correct.
+// Forcing both signals to be unset during the test scope keeps the test
+// about CLI wiring (not about the CI early-return behavior, which has
+// its own cases in `doctorAutoremediate.ciOff.test.ts`).
 const CI_ENV_KEYS = ["CI", "GITHUB_ACTIONS"] as const;
-const savedCiEnv = new Map<string, string | undefined>();
+const savedCiEnv = new Map<(typeof CI_ENV_KEYS)[number], string | undefined>();
+
+function setCiEnv(key: (typeof CI_ENV_KEYS)[number], value: string | undefined): void {
+  if (value === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- literal union key
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+}
 
 beforeEach(() => {
-  savedCiEnv.clear();
   for (const key of CI_ENV_KEYS) {
     savedCiEnv.set(key, process.env[key]);
-    Reflect.deleteProperty(process.env, key);
+    setCiEnv(key, undefined);
   }
 });
 
 afterEach(async () => {
   for (const key of CI_ENV_KEYS) {
-    const saved = savedCiEnv.get(key);
-    if (saved === undefined) {
-      Reflect.deleteProperty(process.env, key);
-    } else {
-      process.env[key] = saved;
-    }
+    setCiEnv(key, savedCiEnv.get(key));
   }
+  savedCiEnv.clear();
   vi.restoreAllMocks();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();

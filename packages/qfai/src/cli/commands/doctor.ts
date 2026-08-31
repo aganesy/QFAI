@@ -106,13 +106,13 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const sideEffectLines: string[] = [];
   if (options.autoremediate) {
     // The owning business rule suppresses autoremediation on "standard CI
-    // env vars", not on the single `CI` variable. A bare
-    // `process.env.CI === "true"` left a lane
-    // that exports only `GITHUB_ACTIONS=true` remediating: `.gitignore`
-    // rewrite, `npm install`, archive and config-fill all ran in a context
-    // the contract promises is suppressed. `isCiEnvironment` is the repo's
-    // SSOT for that detection (`core/phasePolicy.ts`); reuse it so the two
-    // CI gates cannot drift apart.
+    // env vars", not on the single `CI` variable. An inline
+    // `process.env["CI"] === "true"` missed the `GITHUB_ACTIONS` arm and read
+    // `CI=1` as "local", so a lane that exports only `GITHUB_ACTIONS=true`
+    // kept remediating: `npm install`, root `.gitignore` rewrite, review-pack
+    // archival and config-fill all ran on CI checkouts that AC-0006-0018 puts
+    // off limits. `isCiEnvironment` is the repo's SSOT for that detection
+    // (`core/phasePolicy.ts`); reuse it so the two CI gates cannot drift apart.
     const isCi = isCiEnvironment();
     // Thread the resolved skill profile into the autoremediate orchestrator
     // so the install phase actually reaches the runtimeDependencies probe.
@@ -224,9 +224,16 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   }
 
   if (options.outPath) {
+    // Relative `--out` is anchored to the operating root, not the process
+    // cwd, so `qfai doctor --root <proj> --out <rel>` and
+    // `qfai report --root <proj> --out <rel>` land in the same tree.
+    // The cwd-based resolution used to scatter a CI job's evidence: the
+    // report went into the project while the doctor artifact went to the
+    // runner's working directory, silently, because the "wrote <abs>" line
+    // still looks like success. `prototyping preflight` shares this slot.
     const outAbs = path.isAbsolute(options.outPath)
       ? options.outPath
-      : path.resolve(process.cwd(), options.outPath);
+      : path.resolve(resolvedRoot, options.outPath);
     await mkdir(path.dirname(outAbs), { recursive: true });
     await writeFile(outAbs, `${sideEffectPrefix}${output}\n`, "utf-8");
     info(`doctor: wrote ${outAbs}`);
