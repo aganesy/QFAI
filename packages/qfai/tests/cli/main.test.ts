@@ -43,16 +43,22 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
-  it("sets exitCode=1 for an unknown top-level command", async () => {
+  it("sets exitCode=1 when the top-level command is unknown", async () => {
     const cwd = process.cwd();
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await run(["vlaidate"], cwd);
-      expect(process.exitCode).toBe(1);
-    } finally {
-      process.exitCode = previousExitCode;
+    // Two spellings of the same defect, one from each side of this merge: a
+    // word that is no command at all, and a near-miss typo of one that is.
+    // Both reach the same `Unknown command` path, and keeping both keeps the
+    // typo case from being read as a suggestion feature that does not exist.
+    for (const unknown of ["bogus", "vlaidate"]) {
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run([unknown], cwd);
+        expect(process.exitCode).toBe(1);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
     }
   });
 
