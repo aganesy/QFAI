@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -10,6 +11,7 @@ import {
   loadConfig,
   resolvePath,
   type ConfigPathKey,
+  type QfaiConfig,
 } from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import {
@@ -34,7 +36,7 @@ import {
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
+import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
@@ -43,6 +45,11 @@ import {
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
+import {
+  checkAssistantAssetLineBudget,
+  type ExemptAssistantAsset,
+  type OversizedAssistantAsset,
+} from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
@@ -222,8 +229,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     });
 
     if (key === "skillsDir") {
-      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
-      if (diff.status === "skipped_missing_skills") {
+      // Isolated, not awaited bare: `collectFiles` inside the diff rejects on
+      // an unreadable skills tree, and this call sits before every check that
+      // follows — including `assets.lineBudget`, whose whole job is to report
+      // exactly that kind of damage. One EACCES here used to take the entire
+      // `qfai doctor` run down and emit no diagnostics at all.
+      const diff = await inspectSkillsIntegrity(root, config);
+      if (diff === null) {
+        addCheck(checks, {
+          id: "skills.integrity",
+          severity: "warning",
+          title: "Skills integrity (.qfai/assistant/skills)",
+          message:
+            "skills を検査できませんでした（ディレクトリまたはファイルの読み取りに失敗）。権限とパスを確認してください。",
+          details: { skillsDir: toRelativePath(root, resolved) },
+        });
+      } else if (diff.status === "skipped_missing_skills") {
         addCheck(checks, {
           id: "skills.integrity",
           severity: "info",
@@ -272,6 +293,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
+  addCheck(checks, await buildAssetLineBudgetCheck(root));
 
   // Installed shipped-workflow drift. `modified` is emitted as the `info`
   // advisory below, the content-identical `ok` state as the `ok` check after it,
@@ -849,6 +871,212 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   };
 }
 
+/**
+ * Reports assistant assets that exceed the shipped line ceiling.
+ *
+ * The ceiling used to be asserted only by the framework's own asset test, which
+ * is not published, so a project created by init had no way to check the rule
+ * its operating baseline states. Severity is `warning`: an oversized asset is
+ * authoring drift, not something that stops the active profile.
+ */
+async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
+  const report = await checkAssistantAssetLineBudget(root);
+  const title = "Assistant asset line budget";
+  const details = {
+    assistantDir: toRelativePath(root, report.assistantDir),
+    maxLines: report.maxLines,
+    scanned: report.scanned,
+    oversized: report.oversized,
+    // The baseline promises the exemption is visible to the reader, not just to
+    // the implementation: each exempt path is listed with the reason it was not
+    // measured, and the same pair is rendered into the message for text readers.
+    exempt: report.exempt,
+    unreadable: report.unreadable,
+    unscannable: report.unscannable,
+  };
+  const exemptNote = formatExemptAssets(report.exempt);
+
+  if (report.status === "skipped_missing_assistant") {
+    return {
+      id: "assets.lineBudget",
+      severity: "info",
+      title,
+      message:
+        "assistant assets が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+      details,
+    };
+  }
+
+  if (report.status === "ok") {
+    return {
+      id: "assets.lineBudget",
+      severity: "ok",
+      title,
+      message: `${report.scanned} 件の assistant asset がいずれも ${report.maxLines} 行以内です${exemptNote}`,
+      details,
+    };
+  }
+
+  const unmeasuredPaths = [...report.unreadable, ...report.unscannable];
+  const unmeasured = unmeasuredPaths.length;
+
+  if (report.status === "incomplete") {
+    const incompleteActions = [
+      "読み取れなかったパスの権限・存在を確認してから doctor を再実行する",
+    ];
+    return {
+      id: "assets.lineBudget",
+      severity: "warning",
+      title,
+      message:
+        `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした: ` +
+        `${formatMessagePaths(unmeasuredPaths)}${exemptNote}${formatNextActionHint(incompleteActions)}`,
+      details: {
+        ...details,
+        nextActions: incompleteActions,
+      },
+    };
+  }
+
+  const unmeasuredNote =
+    unmeasured > 0
+      ? `（ほかに ${unmeasured} 件は読み取れず未検査: ${formatMessagePaths(unmeasuredPaths)}）`
+      : "";
+  const nextActions = assetLineBudgetNextActions(report.oversized);
+  return {
+    id: "assets.lineBudget",
+    severity: "warning",
+    title,
+    message:
+      `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています: ` +
+      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
+      formatNextActionHint(nextActions),
+    details: {
+      ...details,
+      nextActions,
+    },
+  };
+}
+
+/**
+ * Whether one code point is a C0, DEL or C1 control character.
+ *
+ * Read as code points rather than matched with the equivalent character-class
+ * regular expression: that pattern needs an `eslint-disable no-control-regex`,
+ * and the universal quality rule forbids adding a suppression without the
+ * user’s explicit permission. `reviewerJustification.ts` refuses control
+ * characters the same way, for the same reason.
+ */
+function isControlCodePoint(code: number): boolean {
+  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+}
+
+/**
+ * Makes one path safe to splice into a single-line finding message.
+ *
+ * A filename may legally contain a newline or an ANSI escape on POSIX, and
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
+ * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
+ * lines — into the very output whose one-finding-per-line shape downstream
+ * severity greps rely on. `details` keeps the raw path; only what is rendered
+ * is escaped.
+ */
+function escapeForMessage(value: string): string {
+  let escaped = "";
+  for (const character of value) {
+    const code = character.codePointAt(0);
+    escaped +=
+      code !== undefined && isControlCodePoint(code)
+        ? `\\x${code.toString(16).padStart(2, "0")}`
+        : character;
+  }
+  return escaped;
+}
+
+function formatMessagePaths(paths: ReadonlyArray<string>): string {
+  return paths.map(escapeForMessage).join(", ");
+}
+
+/**
+ * Renders the offending files into `check.message` itself.
+ *
+ * The default `qfai doctor` run is the text formatter, and that formatter
+ * prints only `check.message` — `details` reaches nobody who did not pass
+ * `--format json`. The shipped baseline promises the ordinary command reports
+ * every file over the ceiling, so the paths and their measured line counts
+ * belong in the message. Same shape as `skill.runtimeDependencies`: the whole
+ * list, comma-joined on one line, so the severity-grep readers downstream still
+ * see exactly one line per finding.
+ */
+function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>): string {
+  return oversized.map((entry) => `${escapeForMessage(entry.path)} (${entry.lines} 行)`).join(", ");
+}
+
+/**
+ * States what was skipped and why, in the default output as well as in JSON.
+ *
+ * An asset that is never measured is invisible otherwise: the counts speak only
+ * for what was measured, so without this a reader has no way to tell a compliant
+ * tree from one whose longest file is exempt. The baseline promises the reason
+ * travels with the path, so both are rendered.
+ */
+function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string {
+  if (exempt.length === 0) {
+    return "";
+  }
+  const entries = exempt
+    .map((entry) => `${escapeForMessage(entry.path)}（${escapeForMessage(entry.reason)}）`)
+    .join(", ");
+  return `（検査対象外 ${exempt.length} 件: ${entries}）`;
+}
+
+/** Appends the repair guidance so text readers get it, not only JSON readers. */
+function formatNextActionHint(actions: ReadonlyArray<string>): string {
+  return actions.length > 0 ? ` — 対処: ${actions.join(" / ")}` : "";
+}
+
+/**
+ * Repair guidance for the layers the oversized files actually sit in.
+ *
+ * `assets.lineBudget` measures every assistant asset, not just skills, so a
+ * blanket "move a section under the skill's references/" would tell a reader to
+ * relocate a constitution document or a manifest YAML into an unrelated skill
+ * and break the loader contract that reads it from its own layer.
+ */
+function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>): string[] {
+  const actions: string[] = [];
+  const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
+  const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
+  if (hasSkillAsset) {
+    actions.push("超過した skill の1トピックを、その skill 配下の references/ に移す");
+  }
+  if (hasOtherAsset) {
+    actions.push(
+      "skill 以外の資産（constitution/ catalog/ manifest/ など）は同じレイヤー内でトピック単位に分割し、参照元のパスを更新する",
+    );
+  }
+  return actions;
+}
+
+/**
+ * The skills diff, or `null` when the tree could not be inspected.
+ *
+ * `diffProjectSkillsAgainstInitAssets` walks the configured skills directory,
+ * so an unreadable subdirectory rejects it. That call runs before every later
+ * check, so letting the rejection escape means `qfai doctor` reports nothing —
+ * not even the findings that exist to describe an unreadable tree.
+ */
+async function inspectSkillsIntegrity(
+  root: string,
+  config: QfaiConfig,
+): Promise<SkillsIntegrityDiff | null> {
+  try {
+    return await diffProjectSkillsAgainstInitAssets(root, config);
+  } catch {
+    return null;
+  }
+}
+
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
   if (!(await exists(agentsDir))) {
@@ -861,7 +1089,20 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
     };
   }
 
-  const entries = await readdir(agentsDir, { withFileTypes: true });
+  let entries: Dirent[];
+  try {
+    entries = await readdir(agentsDir, { withFileTypes: true });
+  } catch {
+    // `exists()` passed, so this is a permission or race failure rather than
+    // an absent tree. Reporting it beats rejecting the whole doctor run.
+    return {
+      id: "agents.frontmatter",
+      severity: "warning",
+      title: "Agent frontmatter",
+      message: "agent ディレクトリを列挙できませんでした（権限またはロックを確認してください）",
+      details: { path: toRelativePath(root, agentsDir) },
+    };
+  }
   const markdownFiles = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
     .map((entry) => entry.name)
@@ -878,15 +1119,35 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   }
 
   const invalidFiles: Array<{ file: string; error: string }> = [];
+  const unreadableFiles: string[] = [];
   for (const fileName of markdownFiles) {
     const filePath = path.join(agentsDir, fileName);
-    const parsed = parseAgentFrontmatter(await readFile(filePath, "utf-8"));
+    let content: string;
+    try {
+      content = await readFile(filePath, "utf-8");
+    } catch {
+      // Deleted between the listing and the read, or unreadable. It is not
+      // "valid frontmatter" and it must not reject the run either.
+      unreadableFiles.push(`.qfai/assistant/agents/${fileName}`);
+      continue;
+    }
+    const parsed = parseAgentFrontmatter(content);
     if (!parsed.ok) {
       invalidFiles.push({
         file: `.qfai/assistant/agents/${fileName}`,
         error: parsed.error,
       });
     }
+  }
+
+  if (unreadableFiles.length > 0 && invalidFiles.length === 0) {
+    return {
+      id: "agents.frontmatter",
+      severity: "warning",
+      title: "Agent frontmatter",
+      message: `agent 定義を読み取れず検査できませんでした (count=${unreadableFiles.length}): ${formatMessagePaths(unreadableFiles)}`,
+      details: { count: markdownFiles.length, unreadableFiles },
+    };
   }
 
   if (invalidFiles.length > 0) {
