@@ -2201,7 +2201,19 @@ changes a callsite under the two globs, so it owes this line exactly as a direct
 two suite totals above are known-invalid for this tree — not re-run here, because a merge that resolves
 documentation conflicts cannot certify a suite run it did not take.
 
-e2e callsites at this tree: 942
+**And a fourth time, from the same branch's next commit.** Three review threads on that branch's PR
+were answered with three new `it` callsites in `tests/assets/atddRedProvenance.test.ts` — the
+skipped-version upgrade route, the sibling requirement on an `Integration` row the ATDD stage never
+handed over, and the marker-first destination for a `review-fix` round — taking that file from 229 to
+232 and the count from 942 to 945. Every endpoint of the paragraph above was **re-measured** with the
+guard's own `CALLSITE` rule rather than carried forward, because a chain whose earlier terms are
+assumed is the defect this section is a record of: 915 at the merge base (`e420a44f`), 925 at `main`
+(`2643bc3a`), 932 at the branch tip before the merge (`b9e91e12`), 942 at the merge (`02f43e655`) —
+all four unchanged — and `942 + 3 = 945` here. Nothing about `spec-0017` changed in this commit
+either; the two suite totals above stay known-invalid for this tree, and are not re-run here for the
+same reason the merge did not re-run them.
+
+e2e callsites at this tree: 945
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
