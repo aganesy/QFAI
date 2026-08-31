@@ -30,6 +30,17 @@ QFAI npm パッケージとして配布されるファイル群を「配布サ�
 - `spec-0001..0009` はサンプル / Category B として配布物に登場してよい
   (`qfai init` で生成される spec の例示)。
 - `package.json` の `"version"` フィールドは正規版番なので除外。
+- `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md` の
+  **ファイル名** に含まれる版番は意図的な刻印なので、ファイル名 scan の
+  version クラスから除外する。memo は ADR 的な引用先であり公開後に名前を
+  変えられず、`src/core/paths/assistantPaths.ts` の
+  `migrationMemoRelativePath()` が `--upgrade-assistant-tree` のたびに
+  1 件生成する。除外は version クラスかつファイル名のみ — memo 本文と、
+  spec ID / trace ID は従来どおり検出する。
+  除外は「この形の basename だけを無害化する」書き換えとして実装する
+  (パスを丸ごと skip しない)。したがって同ディレクトリの
+  `notes-v2.0-draft.md`、下位ディレクトリ `drafts-v2.0/`、`.qfai/` 配下
+  でない別ツリーの同名パスは引き続き検出される。
 
 ## Canonical Version Source
 
@@ -53,8 +64,12 @@ minor / major 上げで表現する。
    `package.json#files` を読んで配布物パスを動的決定し、上の正規表現で grep。
    CI lint job + build job (post-build) で実行。layer 1 を補完する
    最終バックストップ — comment 行検出粒度に依存しない。
+   scan は 2 次元: ファイル **内容** と **ファイル名** の両方に同じ正規表現を
+   当てる。名前側の hit は `FAIL: ... leaked in a FILE NAME` として
+   内容側と区別して報告する。
 3. **smoke test** — `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts`。
-   `qfai init` を temp dir に走らせ、出力ツリーを同じ正規表現で grep。
+   `qfai init` を temp dir に走らせ、出力ツリーを同じ正規表現で grep
+   (layer 2 と同じく内容 + ファイル名の 2 次元)。
    `copyTemplateTree` のロジック / asset 取り込みフィルタの抜けを catch。
    拡張子 allowlist に加えて `.gitkeep` 等の拡張子なしテキストファイルも
    basename allowlist で走査する (`path.extname(".gitkeep") === ""` のため
