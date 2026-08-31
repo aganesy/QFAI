@@ -2706,10 +2706,18 @@ describe("release automation performs decisions rather than making them", () => 
   const NOTES_LIMIT = 125_000;
 
   const extractNotesCapProgram = (): string => {
-    const steps = (workflow("release.yml")["jobs"] as Record<string, unknown>)["github-release"];
-    const run = (isRecord(steps) ? ((steps["steps"] as Array<Record<string, unknown>>) ?? []) : [])
-      .map((step) => String(step["run"] ?? ""))
-      .join("\n");
+    const jobs = workflow("release.yml")["jobs"];
+    const job = isRecord(jobs) ? jobs["github-release"] : undefined;
+    const steps = isRecord(job) ? job["steps"] : undefined;
+    // Narrowed, not asserted, and refused rather than defaulted to `[]`. An `as` here would
+    // let a renamed job hand this an empty program — every row would then run `node ""`,
+    // exit 0, and report GREEN on a release.yml that no longer caps anything.
+    if (!Array.isArray(steps)) {
+      throw new Error(
+        `release.yml has no github-release steps to read; found ${JSON.stringify(steps)}`,
+      );
+    }
+    const run = steps.map((step) => (isRecord(step) ? String(step["run"] ?? "") : "")).join("\n");
     const lines = run.split("\n");
     const openers = lines.flatMap((line, index) => (line.includes("<<'CAP'") ? [index] : []));
     const terminators = lines.flatMap((line, index) => (line.trimEnd() === "CAP" ? [index] : []));
