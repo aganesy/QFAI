@@ -45,6 +45,21 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("A row with no recorded tier is treated as **T2**");
     });
 
+    it(`${tree}: states its rationale once and points at the file that holds the ceremony`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      // A merge left two wordings of the same opening paragraph stacked. The
+      // surviving one must be the copy corrected for the move into a reference
+      // file: it names `SKILL.md`, where the per-item ceremony actually lives.
+      const rationale = section.match(/The per-item ceremony/g) ?? [];
+      expect(rationale, "the rationale paragraph is duplicated").toHaveLength(1);
+      expect(section).toContain(
+        "The per-item ceremony in `SKILL.md` is written for a ledger of tens of rows",
+      );
+      // What is below in this file is the risk-tier table, not the ceremony.
+      expect(section).not.toContain("The per-item ceremony below");
+      expect(section).toContain("dropping a gate is not on the table");
+    });
+
     it(`${tree}: permits batched review with a bounded unit`, async () => {
       const section = await read(tree, REFERENCE);
       expect(section).toContain("## Batched review");
@@ -77,15 +92,15 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).not.toContain("no live gatekeeper turn");
       expect(section).toContain("### Routing is unchanged");
       expect(section).toContain("scales **how often** a gate runs, never **whether** it runs");
-      // `blocking_agents` lists only qa-gatekeeper + completion-reviewer, so
-      // claiming all three are "blocking" contradicted the central manifest.
-      expect(section).not.toContain("mandatory and blocking for `qfai-implement`");
+      // `blocking_agents` now carries all three reviewers, so the prose must
+      // not keep describing `implementation-reviewer` as absent from it.
+      expect(section).not.toContain("Note the asymmetry");
+      expect(section).not.toContain("`implementation-reviewer` is mandatory but not in that list");
       expect(section).toContain(
-        "`implementation-reviewer` is mandatory but not in that list, and a `REVISE` from it still blocks `done`",
+        "`blocking_agents` lists all three, so a `REVISE` from any of them blocks `done`",
       );
-      expect(skill).toContain(
-        "only the first two are in `blocking_agents`, but item 8 of the 12-point gate makes an `implementation-reviewer` REVISE block `done` anyway",
-      );
+      expect(skill).not.toContain("only the first two are in `blocking_agents`");
+      expect(skill).toContain("`implementation-reviewer` all mandatory and all blocking");
       expect(section).toContain(
         "`qa-gatekeeper` confirms RED/GREEN once per coherent group instead of once per row",
       );
@@ -183,6 +198,28 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
         expect(section).toContain(critical);
       }
       expect(section).toContain("When it is arguable whether a row is critical, it is critical");
+    });
+
+    it(`${tree}: cites the volume-policy subsections by file, not as bare sections`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const section = await read(tree, REFERENCE);
+      // `Volume Policy > X` reads as a pointer inside SKILL.md, but its own
+      // `## Volume Policy (MUST)` section carries none of those subsections —
+      // they live in `references/volume-policy.md`. Cite the file, the way
+      // every other reference in SKILL.md does.
+      expect(skill).not.toMatch(/Volume Policy\s*>/);
+      const citations: ReadonlyArray<readonly [string, string]> = [
+        ["references/volume-policy.md#multi-spec-queue", "## Multi-spec queue"],
+        ["references/volume-policy.md#advancing-the-queue", "### Advancing the queue"],
+        [
+          "references/volume-policy.md#group-formation-states-and-transitions",
+          "### Group formation (states and transitions)",
+        ],
+      ];
+      for (const [citation, heading] of citations) {
+        expect(skill, `SKILL.md does not cite ${citation}`).toContain(citation);
+        expect(section, `volume-policy.md has no ${heading}`).toContain(heading);
+      }
     });
 
     it(`${tree}: the multi-spec queue defines how it advances and when it exits`, async () => {
