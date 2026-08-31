@@ -1499,7 +1499,12 @@ agents:
       Check. **The retained round alone does not qualify the row** — it proves the
       row was once GREEN, not that it resumed: require
       `Round N: Resumed-from-blocked` on the round the resumption wrote into, and
-      REVISE the self-reference without it. A row reset to `todo` by an approved
+      REVISE the self-reference without it. **Read the departure status it records
+      and require `green` or `refactor`** — the field carries both halves, and only
+      those two name a round a GREEN pair closed. A row blocked at `red`, at
+      `review-fix` before its rework took a GREEN, or at `todo` has no GREEN of its
+      own to point at, so a row that resumed from one of those and cites itself is
+      hiding why its fresh RED passed. A row reset to `todo` by an approved
       Change Request carries the same retained GREEN while that approval **withdrew**
       the work it records, so accepting the retained round on its own readmits the
       "no production change and no sibling" path this exception is narrowed against.

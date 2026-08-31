@@ -428,8 +428,16 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
     // reached `red` with no RED behind it — which `red-provenance.md` forbids
     // — and that stage lost the `todo` row it was going to hand over to.
     const skill = flat(await read(tree, SKILL));
-    expect(skill).toContain("**A row whose `Resumed-from-blocked` names `todo` is not that row**");
-    expect(skill).toContain("**A row whose `Resumed-from-blocked` names `todo` does come here**");
+    // Narrowed since: the departure status alone was made to stand for "the
+    // handover was never consumed", which a reset row falsifies. The carve-out
+    // still sends a row blocked at `todo` to 3b — it now also asks whether the
+    // row carries a round.
+    expect(skill).toContain(
+      "**A row whose `Resumed-from-blocked` names `todo` and carries no earlier round is not that row**",
+    );
+    expect(skill).toContain(
+      "**A row whose `Resumed-from-blocked` names `todo` over no earlier round does come here**",
+    );
     // The unconditional wording is gone from both sites.
     expect(skill).not.toContain("**Unless that row was resumed from `blocked`**");
     expect(skill).not.toContain("**Neither does a row resumed from `blocked`**");
@@ -554,5 +562,110 @@ describe.each(TREES)("%s (the blocked mechanism holds at its edges)", (tree) => 
     expect(text).toContain("either overwriting that record or mixing two cycles under one number");
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("**round 1 only on a row carrying no rounds**");
+  });
+});
+
+describe.each(TREES)("%s (the resumption reads what was written, not the status alone)", (tree) => {
+  const rounds = async (): Promise<string> =>
+    flat(await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"));
+
+  it("gives a finished but un-reviewed rework round a case of its own", async () => {
+    // The review is requested at `refactor`, so a block taken between the
+    // rework's GREEN and that return leaves the highest round holding both
+    // pairs and no verdict. Read as "the rework had not opened a round", the
+    // resumption went looking for a verdict that does not exist yet.
+    const text = await rounds();
+    expect(text).toContain(
+      "**A highest round that holds both pairs but carries no reviewer verdict of its own is the rework's round, finished and not yet re-submitted**",
+    );
+    expect(text).toContain("The resumed cycle **opens no round**");
+    // And the case that does read the verdict now says which round carries one.
+    expect(text).toContain(
+      "A highest round already closed by its GREEN pair **and carrying its own verdict** means the rework had not opened a round",
+    );
+  });
+
+  it("continues a round a previous resumption opened and left empty", async () => {
+    // `blocked` -> `todo` writes `Resumed-from-blocked` before the fresh RED it
+    // owes, so a row blocked again while still at `todo` leaves a round with
+    // that field and nothing else. Opening the next number stranded it.
+    const text = await rounds();
+    expect(text).toContain("**Unless the highest round holds nothing but `Resumed-from-blocked`**");
+    expect(text).toContain("That round is unfinished, not closed");
+    expect(text).toContain("the next resumption **continues it**");
+  });
+
+  it("moves a falsifiability trio into the retained group in its own shape", async () => {
+    // The group described RED-pair fields only, so an interrupted trio lost the
+    // predicate it broke and lost that it was a falsifiability observation.
+    const text = await rounds();
+    expect(text).toContain(
+      "**A round whose RED observation was the falsifiability trio moves the trio, not a RED pair**",
+    );
+    expect(text).toContain("`Round N: Interrupted RED Satisfied-by`");
+    expect(text).toContain("`Round N: Interrupted Falsifiability command`");
+    expect(text).toContain("`Round N: Interrupted Falsifiability result`");
+    expect(text).toContain("`Round N: Interrupted RED failure mode`");
+    // The field list declares itself complete, so it has to admit both shapes.
+    expect(text).toContain("in whichever of the two forms that round's own observation took");
+  });
+
+  it("keeps an already-recorded verdict recomputable after its run is moved", async () => {
+    // The move happens after the gatekeeper hashed and passed that run, so
+    // recomputing against the round's live RED fields reads the fresh run and
+    // reports a correct PASS as stale — a row with no legal way to complete.
+    const text = await rounds();
+    expect(text).toContain(
+      "**A verdict already recorded against the moved run is recomputed from this group, not from the round's live RED fields**",
+    );
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain(
+      "**A round that has moved its observation into the `Interrupted RED` group is hashed from that group**",
+    );
+    expect(baseline).toContain("The fresh observation is a separate subject");
+  });
+
+  it("puts `Resumed-from-blocked` inside the RED observation hash subject", async () => {
+    // The reviewer was made to read the field, so a subject that does not cover
+    // it lets the field be added, removed or rewritten to another departure
+    // after the PASS with the recomputation unmoved.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain(
+      "the RED pair or the falsifiability trio with `RED failure mode`, and `Resumed-from-blocked` where the round carries one",
+    );
+    expect(baseline).toContain(
+      "`Resumed-from-blocked` is in the subject because the reviewer reads it",
+    );
+  });
+
+  it("makes the gatekeeper check the departure status, not just the field", async () => {
+    // `red-not-observable.md` limits the self-reference to a departure a GREEN
+    // pair closed; the reviewer condition required only that the field be
+    // present, so a row blocked at `red` or `todo` could cite itself.
+    const gatekeeper = flat(await read(tree, "assistant/agents/qa-gatekeeper.md"));
+    expect(gatekeeper).toContain(
+      "**Read the departure status it records and require `green` or `refactor`**",
+    );
+    expect(gatekeeper).toContain("has no GREEN of its own to point at");
+  });
+
+  it("does not read a reset ATDD row's spent handover as an unconsumed one", async () => {
+    // An approved upstream reset returns a completed E2E/API/Integration row to
+    // `todo` with its rounds retained; blocked again there, its
+    // `Resumed-from-blocked` names `todo` over provenance consumed a cycle ago.
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain(
+      "**A row whose `Resumed-from-blocked` names `todo` and carries no earlier round is not that row**",
+    );
+    expect(skill).toContain("**The departure status alone does not say the handover is unspent**");
+    expect(skill).toContain(
+      "**A row whose `Resumed-from-blocked` names `todo` over no earlier round does come here**",
+    );
+    expect(skill).toContain("**A row that carries an earlier round does not**");
+    expect(skill).toContain("an entry whose RED observation is newer than the retained rounds");
   });
 });

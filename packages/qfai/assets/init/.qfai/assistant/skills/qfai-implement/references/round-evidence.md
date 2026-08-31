@@ -37,11 +37,26 @@ reviewer `REVISE` that requires new production behaviour adds a round.
   `RED test hash` and its manifest included**: those two pin the test content
   and the fixtures the run executed, and the fresh RED overwrites them like
   every other RED field, so moving the revision, command and result alone
-  preserves a run with no way left to say what it ran. Repeat the group,
+  preserves a run with no way left to say what it ran. **A round whose RED
+  observation was the falsifiability trio moves the trio, not a RED pair**:
+  `Round N: Interrupted RED Satisfied-by` /
+  `Round N: Interrupted Falsifiability command` /
+  `Round N: Interrupted Falsifiability result`, plus
+  `Round N: Interrupted RED failure mode` wherever the round recorded one. The
+  group mirrors whichever form the round actually held; writing the interrupted
+  run into RED-pair fields alone loses which predicate was broken and loses that
+  the observation was a falsifiability one at all, and neither is recoverable
+  from the fresh run that overwrote the live fields.
+  Repeat the group,
   oldest first, when a row was blocked at `red` more than once. **It is absent
   when the block interrupted no run at all** — a row blocked at `red` before
   its RED was observed has nothing to move here, and an empty group would
-  report an execution that never happened (`#what-opens-a-round`)
+  report an execution that never happened (`#what-opens-a-round`).
+  **A verdict already recorded against the moved run is recomputed from this
+  group, not from the round's live RED fields** — the group is that
+  observation's audit subject once it has been moved, so the earlier `PASS`
+  stays reproducible instead of going stale against a run it never read
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`)
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
@@ -113,8 +128,19 @@ round to write into, which is a row that cannot legally reach `done`.
   rework got, because it does not change across the rework
   (`#where-the-rounds-happen`), so the **round** decides which of the cases
   above applies. A rework round that had taken its RED and not its GREEN is the
-  `red` case: continue it, `Interrupted RED` group included. A highest round
-  already closed by its GREEN pair means the rework had not opened a round, and
+  `red` case: continue it, `Interrupted RED` group included. **A highest round
+  that holds both pairs but carries no reviewer verdict of its own is the
+  rework's round, finished and not yet re-submitted** — the review is requested
+  at `refactor` (`qfai-implement/SKILL.md`), so a block taken between the GREEN
+  and that return leaves exactly this shape. The resumed cycle **opens no
+  round**: this one is complete, and `Round N: Resumed-from-blocked` goes on it.
+  Take the row back to `refactor` and re-submit, as the ordinary `review-fix` ->
+  `refactor` return does. Reading this state as "the rework had not opened a
+  round" sent the resumption to a verdict that does not exist yet, and either
+  stranded the row or opened a duplicate round over finished work.
+  A highest round
+  already closed by its GREEN pair **and carrying its own verdict** means the
+  rework had not opened a round, and
   **which of the two rework paths it was on is what says whether the resumption
   opens one** — read that off `Round N: reviewer verdict` on that round, which
   records the finding _and the path it took_ for exactly this reason:
@@ -141,7 +167,15 @@ round to write into, which is a row that cannot legally reach `done`.
 
 - **Blocked at `todo`** — no round was open, so the resumed cycle is the row's
   **next** round: round 1 on a row that carries none, and the number after the
-  highest on a row that already carries rounds. A row at `todo` is not always
+  highest on a row that already carries rounds. **Unless the highest round holds
+  nothing but `Resumed-from-blocked`** — a resumption writes that field before
+  the fresh RED it owes, so a row blocked again while still at `todo` leaves a
+  round opened and empty. That round is unfinished, not closed: the next
+  resumption **continues it**, appending its blocker to the field and writing
+  its RED/GREEN pair into it. Opening the number after it instead would strand a
+  round that can never take the RED/GREEN pair "one block per RED/GREEN cycle"
+  requires, once per repeat.
+  A row at `todo` is not always
   one that never ran — an approved upstream reset and `exception` -> `todo`
   both return a row to `todo` with its earlier rounds retained
   (`execution-ledger.md#allowed-transitions`), and it can be blocked again
@@ -159,7 +193,7 @@ is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
 its place), the GREEN pair, the reviewer verdict, `Resumed-from-blocked` on
 a round a resumption wrote into (or the highest existing round when it opened
 none), and the `Interrupted RED` group on a round a resumption re-observed the
-RED into. Row-level fields are not round
+RED into — in whichever of the two forms that round's own observation took. Row-level fields are not round
 fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
 `Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
 `RED test hash` and `Falsifiability revision` were on that list until a
