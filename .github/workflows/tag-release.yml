@@ -87,7 +87,12 @@ jobs:
           # The CHANGELOG has to name it too. A manifest bumped on its own is a version nobody has
           # described yet — an ordinary state part-way through preparing a release, and not a
           # reason to fail. It is a reason to do nothing.
-          if ! grep -qE "^## \[${claimed}\]" CHANGELOG.md; then
+          #
+          # Matched LITERALLY, by the same `index($0, h) == 1` release.yml uses. Under a regex
+          # the dots in `1.10.2` match any character, so a heading mistyped as `## [1010.2]`
+          # satisfied this check — and release.yml's literal match then rejected the same
+          # heading, leaving a wrong tag behind and a publish that could not succeed.
+          if ! awk -v h="## [${claimed}]" 'index($0, h) == 1 { found = 1; exit } END { exit !found }' CHANGELOG.md; then
             echo "tag-release: packages/qfai/package.json says ${claimed} and CHANGELOG.md has no '## [${claimed}]' heading yet; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"

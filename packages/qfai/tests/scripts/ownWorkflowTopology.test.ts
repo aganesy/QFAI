@@ -2664,9 +2664,16 @@ describe("release automation performs decisions rather than making them", () => 
       commands,
       "and the CHANGELOG must be SEARCHED for that version before anything is tagged: the " +
         "Release body is extracted from that section, so a tag without it publishes a release " +
-        "nobody described. The grep, not a mention — the message inside that branch names the " +
+        "nobody described. The awk, not a mention — the message inside that branch names the " +
         "file too, and a row that matched it stayed green when the check was removed",
-    ).toMatch(/grep[^\n]*CHANGELOG\.md/);
+    ).toMatch(/awk[^\n]*CHANGELOG\.md/);
+    expect(
+      commands,
+      "and the heading must be matched LITERALLY. Under a regex the dots in `1.10.2` match any " +
+        "character, so a heading mistyped as `## [1010.2]` satisfied this check — and " +
+        "release.yml's literal match then rejected the same heading, leaving a wrong tag behind " +
+        "and a publish that could not succeed",
+    ).not.toMatch(/grep[^\n]*\^## /);
     expect(
       body,
       "and the CHANGELOG heading, because the GitHub Release body is extracted from that section",
