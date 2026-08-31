@@ -1039,6 +1039,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-SPECSECTION-001":
+    "Every spec pack carries each heading `validation.require.specSections` lists, in its own Markdown or — for a layered pack — in the shared `_policies` pack.",
+  "QFAI-SPECSECTION-002":
+    "Every `validation.require.specSections` entry normalises to a comparable heading name, so a configured strict gate is never a no-op.",
 };
 
 /**

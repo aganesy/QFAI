@@ -5,8 +5,23 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type ConfigLoadResult, type QfaiConfig } from "../../src/core/config.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateSpecSections } from "../../src/core/validators/specSections.js";
+import { resolveToolVersion } from "../../src/core/version.js";
+
+/**
+ * Both codes ship behind `RULE_PROMOTIONS.specSectionsRequiredHeadings`, so the
+ * severity is whatever the pin says at the version under test — `warning`
+ * inside the window, `error` from the promotion release onwards. Derived from
+ * the pin rather than written as a literal so this file does not have to be
+ * edited on the release that closes the window.
+ */
+const specSectionsPromotion = RULE_PROMOTIONS.specSectionsRequiredHeadings.promoteAt;
+
+async function expectedSpecSectionsSeverity(): Promise<"warning" | "error"> {
+  return newRuleSeverity(await resolveToolVersion(), specSectionsPromotion);
+}
 
 function configRequiring(sections: string[]): QfaiConfig {
   return {
@@ -66,10 +81,40 @@ describe("validateSpecSections", () => {
       expect(issues).toHaveLength(1);
       const finding = issues[0];
       expect(finding?.code).toBe("QFAI-SPECSECTION-001");
-      expect(finding?.severity).toBe("error");
+      expect(finding?.severity).toBe(await expectedSpecSectionsSeverity());
       expect(finding?.rule).toBe("validation.require.specSections");
       expect(finding?.refs).toEqual(["Risks"]);
       expect(finding?.file).toBe(path.join(specsRoot, "spec-0001"));
+    });
+  });
+
+  it("takes both codes' severity from the promotion pin, not a literal", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["##", "Risks"]));
+
+      // The gate is new, so it necessarily fires on packs written before it
+      // existed. P7 (docs/design-principles.md) requires that to arrive as a
+      // `warning` behind a window rather than as a hard error on upgrade —
+      // shipping `"error"` beside the `issue(...)` call is what latched a
+      // consuming repository's gate. `sunsetLedger.test.ts` checks the wiring;
+      // this checks the finding an operator actually sees.
+      const expected = await expectedSpecSectionsSeverity();
+      expect(issues.map((entry) => entry.code)).toEqual([
+        "QFAI-SPECSECTION-002",
+        "QFAI-SPECSECTION-001",
+      ]);
+      expect(issues.map((entry) => entry.severity)).toEqual([expected, expected]);
+
+      // And inside the window the finding says so, naming the release that
+      // ends it — an operator running `--fail-on error` has to be able to see
+      // the debt they are about to owe.
+      if (expected === "warning") {
+        for (const entry of issues) {
+          expect(entry.message).toContain(specSectionsPromotion);
+        }
+      }
     });
   });
 
@@ -168,7 +213,7 @@ describe("validateSpecSections", () => {
       // Nothing usable is left, so without this the gate would be configured
       // and yet silently evaluate nothing.
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-SPECSECTION-002"]);
-      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.severity).toBe(await expectedSpecSectionsSeverity());
       expect(issues[0]?.file).toBe("qfai.config.yaml");
       expect(issues[0]?.refs).toEqual(['"##"', '"   "']);
     });
