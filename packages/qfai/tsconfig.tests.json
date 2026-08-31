@@ -56,6 +56,7 @@
     "tests/integration/atddCredentialReuseGuidance.test.ts",
     "tests/integration/cli/commands/validate.tddProfileTableArity.test.ts",
     "tests/integration/cliStartupCost.test.ts",
+    "tests/integration/contractDeferralNotes.test.ts",
     "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
     "tests/integration/scripts/checkPublishDryRun.test.ts",
     "tests/integration/shippedWorkflowDetection.test.ts",
@@ -93,11 +94,15 @@
     "tests/scripts/boundedRead.test.ts",
     "tests/validators/validatorReachability.test.ts",
     "tests/unit/buildCommand.test.ts",
+    "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
+    "tests/core/bpApDb.test.ts",
     "tests/core/findingCodeBaseline.ts",
     "tests/cli/commands/sddPreflight.test.ts",
+    "tests/core/findingCodeGrammar.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
+    "tests/core/platformOptionProfileScope.test.ts",
     "tests/core/specSplitScopeAttribution.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.guttedPackage.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.retiredCount.test.ts",
@@ -105,6 +110,7 @@
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
-    "tests/validators/importLite.test.ts"
+    "tests/validators/importLite.test.ts",
+    "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts"
   ]
 }

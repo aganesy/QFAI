@@ -4,10 +4,22 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
 import { containsMermaidBlock } from "../validators/discussionPack.js";
 import { resolveImportLiteEntrypoint } from "./importLiteEvidence.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
+const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
+/**
+ * Preflight runs get their own parent directory instead of sharing
+ * `<outDir>/run-*` with the validate run log. Everything that reads `<outDir>`
+ * treats a `run-*` directory there as a validate run — `writeValidateRunLog`
+ * suppresses a stale `validate.log` by comparing against the newest one, and
+ * the shipped Validate Hard Gate asks the reader to check that `run_log:` names
+ * that same newest directory. A preflight directory in that namespace would
+ * answer both questions with a run that never validated anything.
+ */
+const PREFLIGHT_RUN_ROOT = "preflight";
 
 /**
  * `import-lite` is the entrypoint for a project that already carries specs but
@@ -28,6 +40,7 @@ export type RunSddPreflightOptions = {
    * pointed-at pack so an explicitly pinned (older) pack is the one gated.
    */
   packDir?: string;
+  startedAt?: Date;
 };
 
 export type SddPreflightResult = {
@@ -38,7 +51,20 @@ export type SddPreflightResult = {
   openQuestions: string[];
   blockers: string[];
   nextCommands: string[];
+  /** Run id of this preflight, in `run-<17-digit local timestamp>` form. */
+  runId: string;
+  /** Immutable, run-scoped summary — the path evidence files must cite. */
   preflightSummaryPath: string;
+  /** Overwritten-every-run copy at `<outDir>/preflight_summary.md`, for humans. */
+  latestPreflightSummaryPath: string;
+};
+
+type PreflightRun = {
+  runId: string;
+  summaryPath: string;
+  latestSummaryPath: string;
+  /** `<outDir>/preflight/` — where the `run-*` freshness check looks. */
+  runRoot: string;
 };
 
 export async function runSddPreflight(
@@ -48,9 +74,7 @@ export async function runSddPreflight(
 ): Promise<SddPreflightResult> {
   const discussionRoot = resolvePath(root, config, "discussionDir");
   const reportRoot = resolvePath(root, config, "outDir");
-  const summaryPath = path.join(reportRoot, "preflight_summary.md");
-
-  await mkdir(reportRoot, { recursive: true });
+  const run = await allocatePreflightRun(reportRoot, options.startedAt ?? new Date());
 
   const readiness = await inspectLatestDiscussionPack(
     discussionRoot,
@@ -76,7 +100,7 @@ export async function runSddPreflight(
         // report a confident `0` for a project whose requirements live in the
         // specs; the count is genuinely unknown on this path.
         importedReqCount: null,
-        summaryPath,
+        run,
         openQuestions: carryOverOpenQuestions,
         // `/qfai-discussion` is not the follow-up here — the input source is
         // already recorded, so the caller continues the SDD workflow.
@@ -84,15 +108,15 @@ export async function runSddPreflight(
       });
     }
 
-    await writeFile(
-      summaryPath,
-      `${buildBlockedPreflightSummary({
+    await publishPreflightSummary(
+      run,
+      buildBlockedPreflightSummary({
+        runId: run.runId,
         selectedDiscussionPack: readiness.latestPackDir,
         blockers,
         openQuestions: carryOverOpenQuestions,
         nextCommands,
-      })}\n`,
-      "utf-8",
+      }),
     );
 
     return {
@@ -103,7 +127,7 @@ export async function runSddPreflight(
       openQuestions: carryOverOpenQuestions,
       blockers,
       nextCommands,
-      preflightSummaryPath: summaryPath,
+      ...toSummaryPaths(run),
     };
   }
 
@@ -114,7 +138,7 @@ export async function runSddPreflight(
     source: "discussion-pack",
     selectedInputPath,
     importedReqCount: countReqIds(reqPath === null ? "" : await readSafe(reqPath)),
-    summaryPath,
+    run,
     openQuestions: carryOverOpenQuestions,
     nextCommands,
   });
@@ -130,19 +154,19 @@ async function completeReadyPreflight(input: {
   source: SddPreflightSource;
   selectedInputPath: string | null;
   importedReqCount: number | null;
-  summaryPath: string;
+  run: PreflightRun;
   openQuestions: string[];
   nextCommands: string[];
 }): Promise<SddPreflightResult> {
-  await writeFile(
-    input.summaryPath,
-    `${buildReadyPreflightSummary({
+  await publishPreflightSummary(
+    input.run,
+    buildReadyPreflightSummary({
+      runId: input.run.runId,
       source: input.source,
       selectedInputPath: input.selectedInputPath,
       importedReqCount: input.importedReqCount,
       openQuestions: input.openQuestions,
-    })}\n`,
-    "utf-8",
+    }),
   );
 
   return {
@@ -153,8 +177,75 @@ async function completeReadyPreflight(input: {
     openQuestions: input.openQuestions,
     blockers: [],
     nextCommands: input.nextCommands,
-    preflightSummaryPath: input.summaryPath,
+    ...toSummaryPaths(input.run),
   };
+}
+
+function toSummaryPaths(
+  run: PreflightRun,
+): Pick<SddPreflightResult, "runId" | "preflightSummaryPath" | "latestPreflightSummaryPath"> {
+  return {
+    runId: run.runId,
+    preflightSummaryPath: run.summaryPath,
+    latestPreflightSummaryPath: run.latestSummaryPath,
+  };
+}
+
+/** Reserve `<outDir>/preflight/run-<timestamp>/` for this preflight. */
+async function allocatePreflightRun(reportRoot: string, startedAt: Date): Promise<PreflightRun> {
+  const runRoot = path.join(reportRoot, PREFLIGHT_RUN_ROOT);
+  await mkdir(runRoot, { recursive: true });
+
+  const { runId, runDir } = await allocateRunDir(runRoot, startedAt);
+  return {
+    runId,
+    summaryPath: path.join(runDir, PREFLIGHT_SUMMARY_FILE),
+    latestSummaryPath: path.join(reportRoot, PREFLIGHT_SUMMARY_FILE),
+    runRoot,
+  };
+}
+
+/** The `- run id:` line `buildReadyPreflightSummary` / `buildBlocked…` write. */
+const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
+
+/**
+ * Write the run-scoped summary first, then refresh the latest pointer with the
+ * same body. The run-scoped copy is never rewritten, so an evidence file that
+ * cites it keeps resolving to the state that justified its decisions.
+ *
+ * The pointer refresh is conditional, for the same reason
+ * `writeLatestValidateLog` makes it conditional: run directories are named from
+ * the run's START time, so a slow preflight started first can finish last, and
+ * an unconditional write would leave `preflight_summary.md` describing the
+ * older run while a newer `preflight/run-*` sits beside it — exactly what the
+ * "latest run" pointer promises not to do.
+ *
+ * Two guards, as there: the `run-*` listing catches a newer run that is still
+ * in flight (its directory exists from the moment it was allocated), and the
+ * existing file's own `run id:` catches a newer run whose directory was pruned
+ * after it wrote. Neither is mutual exclusion — the residual window is the gap
+ * between this check and the write — but it is bounded by that gap rather than
+ * by the whole duration of the slower run. An unreadable or unparseable
+ * existing pointer counts as "no newer run", so a truncated file self-heals.
+ */
+async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
+  const contents = `${body}\n`;
+  await writeFile(run.summaryPath, contents, "utf-8");
+
+  if (await hasNewerRunDir(run.runRoot, run.runId)) {
+    return;
+  }
+  let existingRunId: string | null = null;
+  try {
+    existingRunId =
+      PREFLIGHT_RUN_ID_LINE_RE.exec(await readFile(run.latestSummaryPath, "utf-8"))?.[1] ?? null;
+  } catch {
+    existingRunId = null;
+  }
+  if (existingRunId !== null && existingRunId > run.runId) {
+    return;
+  }
+  await writeFile(run.latestSummaryPath, contents, "utf-8");
 }
 
 function resolvePreflightBlockers(readiness: {
@@ -248,6 +339,7 @@ async function resolveStoryWorkshopBlockers(packDir: string | null): Promise<str
  * erase the decision Stage 1 still has to promote.
  */
 function buildBlockedPreflightSummary(input: {
+  runId: string;
   selectedDiscussionPack: string | null;
   blockers: string[];
   openQuestions: string[];
@@ -259,6 +351,7 @@ function buildBlockedPreflightSummary(input: {
     "## Status",
     "",
     "- status: blocked",
+    `- run id: ${input.runId}`,
     `- latest discussion-pack: ${input.selectedDiscussionPack ?? "(not found)"}`,
     "",
     "## Blockers",
@@ -280,6 +373,7 @@ function renderCarryOver(openQuestions: string[]): string[] {
 }
 
 function buildReadyPreflightSummary(input: {
+  runId: string;
   source: SddPreflightSource;
   selectedInputPath: string | null;
   importedReqCount: number | null;
@@ -295,6 +389,7 @@ function buildReadyPreflightSummary(input: {
     "## Status",
     "",
     "- status: ready",
+    `- run id: ${input.runId}`,
     `- source: ${input.source}`,
     `- ${inputLabel}: ${input.selectedInputPath ?? "(unknown)"}`,
     "",

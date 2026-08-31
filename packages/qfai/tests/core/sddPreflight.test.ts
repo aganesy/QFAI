@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -479,6 +479,144 @@ describe("runSddPreflight", () => {
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("status: blocked");
       expect(summary).toContain("discussion-latest");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("writes the summary into a run-scoped directory and mirrors it to the latest pointer", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102010");
+
+      const result = await runSddPreflight(root, defaultConfig);
+      const reportRoot = path.join(root, ".qfai", "report");
+
+      expect(result.runId).toMatch(/^run-\d{17}$/);
+      expect(result.preflightSummaryPath).toBe(
+        path.join(reportRoot, "preflight", result.runId, "preflight_summary.md"),
+      );
+      expect(result.latestPreflightSummaryPath).toBe(path.join(reportRoot, "preflight_summary.md"));
+
+      const runScoped = await readFile(result.preflightSummaryPath, "utf-8");
+      const latest = await readFile(result.latestPreflightSummaryPath, "utf-8");
+      expect(runScoped).toContain(`run id: ${result.runId}`);
+      expect(latest).toBe(runScoped);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an earlier run's summary readable after a later preflight", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const first = await runSddPreflight(root, defaultConfig);
+      await seedDiscussionPack(root, "20260216010102011");
+      const second = await runSddPreflight(root, defaultConfig);
+
+      expect(second.runId).not.toBe(first.runId);
+
+      const firstSummary = await readFile(first.preflightSummaryPath, "utf-8");
+      const secondSummary = await readFile(second.preflightSummaryPath, "utf-8");
+      expect(firstSummary).toContain("status: blocked");
+      expect(secondSummary).toContain("status: ready");
+
+      const latest = await readFile(second.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toBe(secondSummary);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Run directories are named from the run's START time, so a slow preflight
+  // started first can finish last. An unconditional pointer write then left
+  // `preflight_summary.md` describing the older run while a newer
+  // `preflight/run-*` sat beside it.
+  it("does not let an older run overwrite a newer run's latest pointer", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102013");
+
+      // The newer run publishes first; the older one finishes after it.
+      const newer = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+      const older = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+
+      expect(older.runId < newer.runId).toBe(true);
+
+      // The older run still owns its own run-scoped evidence...
+      const olderSummary = await readFile(older.preflightSummaryPath, "utf-8");
+      expect(olderSummary).toContain(older.runId);
+
+      // ...but the pointer keeps naming the newest run.
+      const latest = await readFile(newer.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(newer.runId);
+      expect(latest).not.toContain(older.runId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the pointer's own run id when the newer run directory is gone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102014");
+
+      const newer = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+      // Prune the newer run's directory, leaving only the pointer it wrote —
+      // the second guard is the only thing left to notice it.
+      await rm(path.dirname(newer.preflightSummaryPath), { recursive: true, force: true });
+
+      const older = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+
+      const latest = await readFile(older.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(newer.runId);
+      expect(latest).not.toContain(older.runId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still refreshes the pointer when this run is the newest", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102015");
+
+      const older = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+      const newer = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+
+      const latest = await readFile(newer.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(newer.runId);
+      expect(latest).not.toContain(older.runId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps preflight runs out of the validate run-log namespace", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102012");
+
+      const result = await runSddPreflight(root, defaultConfig);
+      const reportRoot = path.join(root, ".qfai", "report");
+      const entries = await readdir(reportRoot, { withFileTypes: true });
+
+      // `<outDir>/run-*` belongs to `writeValidateRunLog`; a preflight directory
+      // there would become the "newest `run-*`" the Validate Hard Gate reads.
+      expect(entries.filter((entry) => entry.name.startsWith("run-"))).toEqual([]);
+      expect(result.preflightSummaryPath).toContain(`${path.sep}preflight${path.sep}`);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
