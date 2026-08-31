@@ -55,18 +55,28 @@ Required columns, in the order used above:
 Optional columns. They are not in the header above — add the column to the
 ledger before writing a value that needs it:
 
-| Column       | Description                                                    |
-| ------------ | -------------------------------------------------------------- |
-| US-Refs      | The E2E user-story obligations this row implements             |
-| CON-API-Refs | The API contract obligations this row implements               |
-| Blocked-By   | What a `blocked` row is waiting on. **Required** on those rows |
+| Column        | Description                                                                   |
+| ------------- | ----------------------------------------------------------------------------- |
+| US-Refs       | The E2E user-story obligations this row implements                            |
+| CON-API-Refs  | The API contract obligations this row implements                              |
+| Blocked-By    | What a `blocked` row is waiting on. **Required** on those rows                |
+| Owning module | The production module this row will write. **Required for parallel dispatch** |
 
 `Status = blocked` without a `Blocked-By` column raises
 `TDDLIST_BLOCKED_MISSING_REF` (`error`), so add the column in the same edit.
+
 `blocked` means "cannot be started". It is completion-prohibiting and is
 never selected by Phase Red — not a parking status like `exception`, which
 demands a `DR-ID` and satisfies spec completion. `review-fix` is the state a
 row holds while reworking a blocking reviewer's REVISE.
+
+`Owning module` is a declaration, not an observation: it names the module the
+row is about to write, before that module exists. Parallel dispatch asks
+whether two rows write the same source module, and `Test file` cannot answer
+— two rows can share a test file and still write different modules. A ledger
+seeded without the column is dispatched serially, so add it when the spec is
+meant to run in parallel. Full rules:
+`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

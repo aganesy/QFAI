@@ -53,9 +53,16 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       const schema = template.slice(template.indexOf("## Schema"));
       const statusRow = schema.split(/\r?\n/).find((line) => cells(line)[0] === "Status");
       expect(statusRow).toBeDefined();
-      for (const status of VALID_STATUSES) {
-        expect(statusRow ?? "").toContain(`\`${status}\``);
-      }
+
+      // SET EQUALITY, both directions. Asserting only that each `VALID_STATUSES`
+      // value appears leaves the other drift undetected: a value the validator
+      // drops or renames stays in the row, and a typo added to the row is never
+      // read back — either way the template advertises a Status the validator
+      // rejects, which is the same enum drift this change is fixing, mirrored.
+      const advertised = [...(statusRow ?? "").matchAll(/`([^`]+)`/g)]
+        .map((match) => match[1])
+        .sort();
+      expect(advertised).toEqual([...VALID_STATUSES].sort());
     });
 
     it(`${tree}: the Schema names the optional columns a blocked row needs`, async () => {
@@ -64,10 +71,16 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // error naming a column the template never mentioned.
       const template = await read(tree, TEMPLATE);
       const schema = template.slice(template.indexOf("## Schema"));
-      for (const column of ["US-Refs", "CON-API-Refs", "Blocked-By"]) {
+      // `Owning module` is optional in the same sense — absent from the seeded
+      // header, defined in `qfai-implement/references/execution-ledger.md`. A
+      // reader who takes this list for the whole set of optional columns seeds
+      // a ledger without it and silently loses parallel dispatch, so the list
+      // has to name it too.
+      for (const column of ["US-Refs", "CON-API-Refs", "Blocked-By", "Owning module"]) {
         expect(schema).toContain(column);
       }
       expect(schema).toContain("TDDLIST_BLOCKED_MISSING_REF");
+      expect(schema).toContain("parallel dispatch");
       // `blocked` prohibits completion; `exception` satisfies it. A reader must
       // not take the new value for a parking status.
       expect(schema).toContain("never selected by Phase Red");
