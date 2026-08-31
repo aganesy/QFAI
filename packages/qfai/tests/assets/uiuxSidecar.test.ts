@@ -122,4 +122,28 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("rejected_points");
     expect(content).toContain("local_translation");
   });
+
+  it("04_Sources.md の Trend Scan は廃止済み TRD-XX / 未採番 UIX-VAL-T01 を要求しない", async () => {
+    // Trend Scan は `uiux/20_trend_scan.md` から 04_Sources.md へ移設され、
+    // 同じ recut で `TRD-XX` 評価軸スキームは廃止された
+    // (references/ui-bearing-playbook.md の 'Trend Scan SSOT')。
+    // `UIX-VAL-T01` はどの validator も emit しないため、空欄にしても
+    // 指摘は返らない。テンプレートが存在しない挙動を約束しないこと。
+    const content = await readCoreTemplate("04_Sources.md");
+    expect(content).not.toMatch(/TRD-/);
+    expect(content).not.toMatch(/UIX-VAL-T01/);
+
+    // 全 evaluation_connection が「design review でどう評価するか」を問う
+    // 同一形式に揃っていること (color/typography など 6 分類も例外にしない)。
+    const evaluationLines = content
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("- evaluation_connection:"));
+    expect(evaluationLines).toHaveLength(10);
+    for (const line of evaluationLines) {
+      expect(line).toMatch(
+        /^- evaluation_connection: \[How the .+ should be evaluated in design review\]$/,
+      );
+    }
+  });
 });

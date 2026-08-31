@@ -1,6 +1,8 @@
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { findPacks } from "../../core/packLocator.js";
 import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../core/state.js";
 import { error, info } from "../lib/logger.js";
@@ -33,23 +35,72 @@ async function resolveDiscussionRoot(root: string): Promise<string> {
 }
 
 async function listCandidateDirs(discussionRoot: string): Promise<string[]> {
+  // `findPacks` answers `[]` for a root it could not read as well as for one
+  // that is genuinely empty, and the caller turns `[]` into "does not match an
+  // existing discussion-* dir" — a claim about packs it never saw. Probe the
+  // directory first so the two cases separate: an absent root really has no
+  // candidates and the note is accurate, while an EACCES or an I/O error
+  // throws and the caller drops the note instead of misreporting a real id.
+  try {
+    await readdir(discussionRoot);
+  } catch (error: unknown) {
+    if (!isEnoent(error)) {
+      throw error;
+    }
+    return [];
+  }
   const packs = await findPacks(discussionRoot, "discussion");
   return packs.map((pack) => pack.name).sort((left, right) => left.localeCompare(right));
+}
+
+/**
+ * Stderr note when `<id>` names no existing `discussion-*` dir. Best
+ * effort by design: the pointer has already been written by the time
+ * this runs, so an unreadable config / discussion root must cost the
+ * note only — never turn a successful write into a failure.
+ */
+async function noteUnmatchedId(
+  root: string,
+  id: string,
+  writeErr: (m: string) => void,
+): Promise<void> {
+  let discussionRoot: string;
+  let candidates: string[];
+  try {
+    discussionRoot = await resolveDiscussionRoot(root);
+    candidates = await listCandidateDirs(discussionRoot);
+  } catch {
+    return;
+  }
+  if (candidates.includes(id)) return;
+  writeErr(
+    `qfai discussion use: note: "${id}" does not match an existing discussion-* dir ` +
+      `under ${discussionRoot}`,
+  );
 }
 
 /**
  * `qfai discussion use <id>` — persist the active-session pointer.
  * Permissive: it records the operator's explicit choice even when the
  * named pack dir does not (yet) exist; the missing/duplicate condition
- * is surfaced at read time by `list --active`.
+ * is surfaced at read time by `list --active`. The write is always
+ * confirmed on stdout naming the file and the key it moved, and an
+ * unmatched `<id>` additionally draws a stderr note, so a typo leaves
+ * evidence where it is made instead of only at the next read.
  */
-async function runUse(options: DiscussionOptions, writeErr: (m: string) => void): Promise<number> {
+async function runUse(
+  options: DiscussionOptions,
+  write: (m: string) => void,
+  writeErr: (m: string) => void,
+): Promise<number> {
   const id = options.id?.trim();
   if (!id) {
     writeErr("qfai discussion use: <id> is required (e.g. qfai discussion use discussion-<ts>).");
     return 1;
   }
   await writeDiscussionCurrentId(options.root, id);
+  write(`qfai discussion use: set discussion.currentId=${id} in .qfai/state.json`);
+  await noteUnmatchedId(options.root, id, writeErr);
   return 0;
 }
 
@@ -148,7 +199,7 @@ export async function runDiscussion(options: DiscussionOptions): Promise<number>
   const writeErr = options.writeErr ?? error;
 
   if (options.action === "use") {
-    return runUse(options, writeErr);
+    return runUse(options, write, writeErr);
   }
 
   // action === "list"
