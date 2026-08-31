@@ -1118,7 +1118,7 @@ agents:
 
       - [ ] Review verdict is explicit
       - [ ] Findings cite concrete artifacts or evidence
-      - [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding has `Traces to: none`
+      - [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding traces to `none` or `record:*`
       - [ ] Required gates and residual risks are recorded
 
       ## When to use
@@ -1352,7 +1352,7 @@ agents:
 
       - [ ] Review verdict is explicit
       - [ ] Findings cite concrete artifacts or evidence
-      - [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding has `Traces to: none`
+      - [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding traces to `none` or `record:*`
       - [ ] Required gates and residual risks are recorded
 
       ## When to use
@@ -1392,7 +1392,7 @@ agents:
       - Audit frontend changes for correctness and user-facing risk.
       - Audit layout sanity, interaction usability, and accessibility guardrails.
       - Audit visual design, token alignment, and service-level UX coherence.
-      - Reconcile sidecar artifacts (selected anchor, strategy, screen contracts), design tokens, mermaid flows, and rendered output consistency.
+      - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
         HTML mock is optional fallback evidence only. Design tokens are supporting input.
       - For UI implementation, compare rendered output against `.qfai/contracts/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
       - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
