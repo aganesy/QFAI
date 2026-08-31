@@ -1,0 +1,11 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-21T20:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "e52536af2",
+  "reviewers": [],
+  "notes": "Round 13 was opened and produced no responses: all three routed reviewers died on ENOTFOUND before writing anything, so this pack holds a review_request.md and nothing else. `reviewers: []` is the accurate record of that, not an omission — it is the state CR-20260823-0002 (approved 2026-08-23, option 1) made expressible, and until then QFAI-REVIEW-004 and -005 called the true record an error. `overall_status` is FAIL because a round that returned no verdict returned no passing verdict; nothing may proceed on it. The revision is the commit that added review_request.md, which is the revision that file names as under review. Written 2026-08-23, after the fact, from the request and the run outcome — no verdict is reconstructed here because none was ever produced."
+}
