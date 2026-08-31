@@ -28,6 +28,7 @@ import {
   type SpecPackIdKind,
 } from "../specPackIds.js";
 import {
+  maskNonSpecRegions,
   parseAcceptanceCriteriaIds,
   parseAllMarkdownTables,
   parseExamplesFeature,
@@ -435,6 +436,114 @@ async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]>
   return issues;
 }
 
+/** canonical な Triage 見出し = 完全一致の H2 (`## Triage`)。 */
+const CANONICAL_TRIAGE_HEADING_RE = /^##[ \t]+triage[ \t]*$/i;
+
+/** H1 / H2 は canonical Triage セクションを終端する (H3 以下は本文扱い)。 */
+const TRIAGE_SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
+
+/**
+ * `Triage` で始まるが canonical ではない見出し。`### Triage`,
+ * `## Triage — 2026-07-26`, `## Triage Table` を捕捉し、`## Triaged`
+ * のような別語は捕捉しない。
+ */
+const TRIAGE_LIKE_HEADING_RE = /^#{1,6}[ \t]+triage(?![0-9a-z])/i;
+
+type TriageSection = {
+  /** 0-based の出現順。診断ラベル (`section 2`) に使う。 */
+  index: number;
+  body: string;
+};
+
+/**
+ * canonical な `## Triage` セクションを **すべて** 返す。
+ *
+ * 以前は最初の 1 つだけを読んでいたため、skill 再実行で 2 つ目以降の
+ * セクションに積まれた行が QFAI-TRIAGE-* の検査対象から丸ごと外れて
+ * いた。セクション内の複数テーブル対応 (PR #206 review LWri) は
+ * セクションをまたげないので、呼び出し側で全セクションを走査する。
+ *
+ * 走査前に `maskNonSpecRegions` で非仕様領域 (fenced code block / HTML
+ * コメント / indented code) を blank する。delta が自分の書式を例示する
+ * ために `## Triage` を code fence 内へ置いた場合、生テキストのままだと
+ * その例示が 2 つ目のセクションとして収集され、テーブルが無ければ
+ * QFAI-TRIAGE-002 が誤発火して正当な文書が `--fail-on error` で落ちる。
+ */
+function collectTriageSections(text: string): TriageSection[] {
+  const lines = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
+  const sections: TriageSection[] = [];
+  let cursor = 0;
+  while (cursor < lines.length) {
+    if (!CANONICAL_TRIAGE_HEADING_RE.test(lines[cursor] ?? "")) {
+      cursor += 1;
+      continue;
+    }
+    const start = cursor;
+    cursor += 1;
+    while (cursor < lines.length && !TRIAGE_SECTION_BOUNDARY_RE.test(lines[cursor] ?? "")) {
+      cursor += 1;
+    }
+    sections.push({ index: sections.length, body: lines.slice(start, cursor).join("\n") });
+  }
+  return sections;
+}
+
+/**
+ * canonical な `## Triage` セクションの **外側** にある Triage 見出しを返す。
+ *
+ * canonical セクション内部の `### Triage Table` などは本文ごと検査対象な
+ * ので除外する。ここに残るものだけが「Triage を名乗るのに何の検査も
+ * 受けていない」見出しであり、QFAI-TRIAGE-008 の対象になる。
+ *
+ * `collectTriageSections` と同じく非仕様領域を先に blank する。書式例と
+ * して fenced code block に置かれた `### Triage` は誰も読まない見出しでは
+ * なく単なる例示なので、warning を出す理由がない。
+ */
+function collectUncheckedTriageHeadings(text: string): string[] {
+  const lines = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
+  const headings: string[] = [];
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const line = lines[cursor] ?? "";
+    if (CANONICAL_TRIAGE_HEADING_RE.test(line)) {
+      cursor += 1;
+      while (cursor < lines.length && !TRIAGE_SECTION_BOUNDARY_RE.test(lines[cursor] ?? "")) {
+        cursor += 1;
+      }
+      continue;
+    }
+    if (TRIAGE_LIKE_HEADING_RE.test(line)) {
+      headings.push(line.trim());
+    }
+    cursor += 1;
+  }
+  return Array.from(new Set(headings));
+}
+
+/**
+ * QFAI-TRIAGE-008: canonical でない Triage 見出しは、どの Triage
+ * validator にも読まれないまま行を抱え込む。見出し文字列を変えただけで
+ * append-first / 承認 gate が静かに外れる状態を、warning で可視化する。
+ */
+function validateTriageHeadings(text: string, deltaPath: string): Issue[] {
+  const unchecked = collectUncheckedTriageHeadings(text);
+  if (unchecked.length === 0) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-TRIAGE-008",
+      `canonical でない Triage 見出しは QFAI-TRIAGE-* の検査対象外です: ${unchecked.join(", ")}`,
+      "warning",
+      deltaPath,
+      "triage.headingCanonical",
+      unchecked,
+      "canonical",
+      "見出しを `## Triage` (H2 / 完全一致) に揃えてください。再実行のたびに追記する場合も `## Triage` を複数置けば全セクションが検査されます。日付などの注記は見出しではなく本文に書いてください。",
+    ),
+  ];
+}
+
 /**
  * Enforce QFAI-TRIAGE-006: every CREATE row in the Triage table must cite a
  * `CAP-NNNN` reference in its Rationale column, and that CAP must already
@@ -447,95 +556,140 @@ export async function validateCreateRowCapabilityRefs(
   deltaPath: string,
   capabilitiesPath: string,
 ): Promise<Issue[]> {
-  const headings = extractH2Headings(text);
-  if (!headings.has(normalizeHeading("Triage"))) {
+  // Walk every canonical `## Triage` section, not just the first: a
+  // re-run that appends a second section must reach the same structural
+  // gate as the first one.
+  const sections = collectTriageSections(text);
+  if (sections.length === 0) {
     return [];
   }
 
-  const section = extractMarkdownSection(text, "Triage");
-  // Triage section MAY contain multiple tables (e.g. when authors split
-  // a large change into themed sub-tables). Earlier behaviour read only
-  // the first table, letting CREATE rows in subsequent tables bypass
-  // QFAI-TRIAGE-006 entirely (PR #206 review LWri). Walk every table so
-  // the structural CAP-NNNN gate is uniform.
-  const tables = parseAllMarkdownTables(section);
-  if (tables.length === 0) {
-    return [];
+  const knownCaps = await loadKnownCapabilityIds(capabilitiesPath);
+
+  const issues: Issue[] = [];
+  for (const section of sections) {
+    // Triage section MAY contain multiple tables (e.g. when authors split
+    // a large change into themed sub-tables). Earlier behaviour read only
+    // the first table, letting CREATE rows in subsequent tables bypass
+    // QFAI-TRIAGE-006 entirely (PR #206 review LWri). Walk every table so
+    // the structural CAP-NNNN gate is uniform.
+    const tables = parseAllMarkdownTables(section.body);
+    for (const [tableIndex, table] of tables.entries()) {
+      const scopeLabel = buildTriageScopeLabel(
+        sections.length,
+        section.index,
+        tables.length,
+        tableIndex,
+      );
+      issues.push(...validateCreateRows(table, deltaPath, scopeLabel, knownCaps));
+    }
   }
 
-  // Resolve the known CAP set. When the capabilities catalog is missing
-  // or unreadable, intentionally treat the known set as empty (PR #206
-  // review #39). The downstream loop will then surface QFAI-TRIAGE-006
-  // for every CREATE row that references a CAP, which is the desired
-  // structural behaviour: append-first regression should fail loud
-  // rather than silently skip when the SSOT cannot be loaded. A
-  // separate validator surfaces the missing capabilities file itself.
-  let knownCaps = new Set<string>();
+  return issues;
+}
+
+/**
+ * Resolve the known CAP set. When the capabilities catalog is missing
+ * or unreadable, intentionally treat the known set as empty (PR #206
+ * review #39). The caller will then surface QFAI-TRIAGE-006 for every
+ * CREATE row that references a CAP, which is the desired structural
+ * behaviour: append-first regression should fail loud rather than
+ * silently skip when the SSOT cannot be loaded. A separate validator
+ * surfaces the missing capabilities file itself.
+ */
+async function loadKnownCapabilityIds(capabilitiesPath: string): Promise<Set<string>> {
   try {
     const capText = await readFile(capabilitiesPath, "utf-8");
-    knownCaps = new Set(parseIdsFromText(capText, "CAP"));
+    return new Set(parseIdsFromText(capText, "CAP"));
   } catch {
-    // No CAP catalog — leave knownCaps empty so every cited CAP is
+    // No CAP catalog — return an empty set so every cited CAP is
     // reported as unregistered.
+    return new Set<string>();
+  }
+}
+
+/**
+ * Diagnostic scope for a Triage table: `section 2 table 1` when the file
+ * carries several `## Triage` sections and/or several tables, and an empty
+ * string in the single-section / single-table case so existing messages are
+ * unchanged.
+ */
+function buildTriageScopeLabel(
+  sectionCount: number,
+  sectionIndex: number,
+  tableCount: number,
+  tableIndex: number,
+): string {
+  const parts: string[] = [];
+  if (sectionCount > 1) {
+    parts.push(`section ${sectionIndex + 1}`);
+  }
+  if (tableCount > 1) {
+    parts.push(`table ${tableIndex + 1}`);
+  }
+  return parts.join(" ");
+}
+
+function validateCreateRows(
+  table: { headers: string[]; rows: string[][] },
+  deltaPath: string,
+  scopeLabel: string,
+  knownCaps: ReadonlySet<string>,
+): Issue[] {
+  const headerIndex = (label: string): number => {
+    const target = label.trim().toLowerCase();
+    return table.headers.findIndex((h) => h.trim().toLowerCase() === target);
+  };
+  const opIdx = headerIndex("operation");
+  const rationaleIdx = headerIndex("rationale");
+  const sourceIdx = headerIndex("source");
+  if (opIdx < 0) {
+    return [];
   }
 
   const issues: Issue[] = [];
-  for (const [tableIndex, table] of tables.entries()) {
-    const headerIndex = (label: string): number => {
-      const target = label.trim().toLowerCase();
-      return table.headers.findIndex((h) => h.trim().toLowerCase() === target);
-    };
-    const opIdx = headerIndex("operation");
-    const rationaleIdx = headerIndex("rationale");
-    const sourceIdx = headerIndex("source");
-    if (opIdx < 0) {
+  for (const [rowIndex, row] of table.rows.entries()) {
+    const opCell = (row[opIdx] ?? "").trim().toUpperCase();
+    if (opCell !== "CREATE") {
       continue;
     }
-    const tableLabel = tables.length > 1 ? `table ${tableIndex + 1}` : "";
 
-    for (const [rowIndex, row] of table.rows.entries()) {
-      const opCell = (row[opIdx] ?? "").trim().toUpperCase();
-      if (opCell !== "CREATE") {
-        continue;
-      }
+    const sourceCell = sourceIdx >= 0 ? (row[sourceIdx] ?? "").trim() : "";
+    const baseLabel = sourceCell || `row ${rowIndex + 1}`;
+    const rowLabel = scopeLabel ? `${scopeLabel} ${baseLabel}` : baseLabel;
+    const rationaleCell = rationaleIdx >= 0 ? (row[rationaleIdx] ?? "") : "";
+    const referencedCaps = parseIdsFromText(rationaleCell, "CAP");
 
-      const sourceCell = sourceIdx >= 0 ? (row[sourceIdx] ?? "").trim() : "";
-      const baseLabel = sourceCell || `row ${rowIndex + 1}`;
-      const rowLabel = tableLabel ? `${tableLabel} ${baseLabel}` : baseLabel;
-      const rationaleCell = rationaleIdx >= 0 ? (row[rationaleIdx] ?? "") : "";
-      const referencedCaps = parseIdsFromText(rationaleCell, "CAP");
+    if (referencedCaps.length === 0) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-006",
+          `CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません (${rowLabel})。`,
+          "error",
+          deltaPath,
+          "triage.createRequiresCap",
+          [rowLabel],
+          "canonical",
+          "新 CAP を `_policies/03_Capabilities.md` に追加し、Rationale 列にその CAP-NNNN を明記してください。",
+        ),
+      );
+      continue;
+    }
 
-      if (referencedCaps.length === 0) {
-        issues.push(
-          issue(
-            "QFAI-TRIAGE-006",
-            `CREATE 行の Rationale に新 CAP-NNNN の参照が見つかりません (${rowLabel})。`,
-            "error",
-            deltaPath,
-            "triage.createRequiresCap",
-            [rowLabel],
-            "canonical",
-            "新 CAP を `_policies/03_Capabilities.md` に追加し、Rationale 列にその CAP-NNNN を明記してください。",
-          ),
-        );
-        continue;
-      }
-
-      const missing = referencedCaps.filter((cap) => !knownCaps.has(cap));
-      if (missing.length > 0) {
-        issues.push(
-          issue(
-            "QFAI-TRIAGE-006",
-            `CREATE 行が参照する CAP が _policies/03_Capabilities.md に未登録です: ${missing.join(", ")} (${rowLabel})`,
-            "error",
-            deltaPath,
-            "triage.capExists",
-            missing,
-            "canonical",
-            "_policies/03_Capabilities.md に新 CAP を追加してから CREATE を確定してください。",
-          ),
-        );
-      }
+    const missing = referencedCaps.filter((cap) => !knownCaps.has(cap));
+    if (missing.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-006",
+          `CREATE 行が参照する CAP が _policies/03_Capabilities.md に未登録です: ${missing.join(", ")} (${rowLabel})`,
+          "error",
+          deltaPath,
+          "triage.capExists",
+          missing,
+          "canonical",
+          "_policies/03_Capabilities.md に新 CAP を追加してから CREATE を確定してください。",
+        ),
+      );
     }
   }
 
@@ -544,9 +698,19 @@ export async function validateCreateRowCapabilityRefs(
 
 export function validateTriageSection(text: string, deltaPath: string): Issue[] {
   const issues: Issue[] = [];
-  const headings = extractH2Headings(text);
+  // `collectTriageSections` と同じ masked テキストから読む。生テキストのまま
+  // だと、書式例として fenced code block / HTML コメントに `## Change Summary`
+  // と `## Triage` を並べただけの文書で hasChangeSummary だけが true になり、
+  // 実在しない欠落として QFAI-TRIAGE-001 が誤発火する (`--fail-on warning`
+  // では検証自体が落ちる)。
+  const headings = extractH2Headings(maskNonSpecRegions(text));
   const hasChangeSummary = headings.has(normalizeHeading("Change Summary"));
-  const hasTriage = headings.has(normalizeHeading("Triage"));
+  const sections = collectTriageSections(text);
+  const hasTriage = sections.length > 0;
+
+  // Fires regardless of the canonical sections' state: a Triage heading
+  // nobody validates must never be silent.
+  issues.push(...validateTriageHeadings(text, deltaPath));
 
   if (hasChangeSummary && !hasTriage) {
     // QFAI-TRIAGE-001 is intentionally a warning rather than an error
@@ -584,14 +748,28 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
     return issues;
   }
 
-  const section = extractMarkdownSection(text, "Triage");
-  // Validate every Triage table, not just the first (PR #206 review LWri).
-  const tables = parseAllMarkdownTables(section);
+  // Validate every canonical `## Triage` section, and every table inside
+  // each of them (PR #206 review LWri covered the tables only).
+  for (const section of sections) {
+    issues.push(...validateTriageSectionBody(section, sections.length, deltaPath));
+  }
+
+  return issues;
+}
+
+function validateTriageSectionBody(
+  section: TriageSection,
+  sectionCount: number,
+  deltaPath: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  const tables = parseAllMarkdownTables(section.body);
   if (tables.length === 0) {
+    const scopeLabel = buildTriageScopeLabel(sectionCount, section.index, 0, 0);
     issues.push(
       issue(
         "QFAI-TRIAGE-002",
-        "`## Triage` セクションにテーブルが見つかりません。",
+        `\`## Triage\` セクションにテーブルが見つかりません。${scopeLabel ? ` (${scopeLabel})` : ""}`.trim(),
         "error",
         deltaPath,
         "triage.table",
@@ -604,7 +782,13 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
   }
 
   for (const [tableIndex, table] of tables.entries()) {
-    const tableLabel = tables.length > 1 ? `table ${tableIndex + 1} ` : "";
+    const scopeLabel = buildTriageScopeLabel(
+      sectionCount,
+      section.index,
+      tables.length,
+      tableIndex,
+    );
+    const tableLabel = scopeLabel ? `${scopeLabel} ` : "";
     const headerMap = new Map<string, number>();
     table.headers.forEach((column, index) => {
       headerMap.set(column.trim().toLowerCase(), index);

@@ -124,6 +124,161 @@ describe("validateTriageSection", () => {
     expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
+  it("validates every canonical `## Triage` section, not just the first", () => {
+    // A re-run of the SDD skill appends a second `## Triage` section rather
+    // than extending the first table. Reading only the first section left
+    // every later row ungated (issue #619).
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-2", "later", "spec-0001", "BOGUSOP", "-", "-", "-"]]),
+      "",
+    ].join("\n");
+    const issues = validateTriageSection(text, DELTA_PATH);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
+    expect(issues[0]?.message).toContain("section 2");
+  });
+
+  it("emits QFAI-TRIAGE-008 for a Triage heading no validator reads", () => {
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Triage — 2026-07-26",
+      "",
+      ...triageTable([["REQ-2", "later", "spec-0001", "BOGUSOP", "-", "-", "-"]]),
+      "",
+    ].join("\n");
+    const issues = validateTriageSection(text, DELTA_PATH);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008"]);
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.refs).toEqual(["## Triage — 2026-07-26"]);
+  });
+
+  it("emits QFAI-TRIAGE-008 when the only Triage heading is a non-canonical one", () => {
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "### Triage (rows owned by this spec)",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+    ].join("\n");
+    const issues = validateTriageSection(text, DELTA_PATH);
+    // QFAI-TRIAGE-001 alone would only say "no Triage section"; the heading
+    // finding names the section that is carrying the ungated rows.
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-008", "QFAI-TRIAGE-001"]);
+  });
+
+  it("does not emit QFAI-TRIAGE-008 for headings inside a canonical Triage section", () => {
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Triage",
+      "",
+      "### Triage Table (cross-spec rows only)",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Triaged backlog",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
+  it("ignores a `## Triage` example inside a fenced code block", () => {
+    // 書式例を fence に置いた delta が、例示を 2 つ目のセクションとして
+    // 収集され QFAI-TRIAGE-002 で落ちてはならない。
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Notes",
+      "",
+      "追記するときの書式:",
+      "",
+      "```markdown",
+      "## Triage",
+      "",
+      "(ここに表を書く)",
+      "",
+      "### Triage Table",
+      "```",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
+  it("does not emit QFAI-TRIAGE-001 when both headings only appear as an example", () => {
+    // 完全な書式例 (Change Summary + Triage) を fence / HTML コメントに置いた
+    // だけの文書。本文にはどちらも無いので「Change Summary はあるのに Triage
+    // が無い」は成立しない — Triage 側だけ mask して片側を生テキストで読むと
+    // QFAI-TRIAGE-001 が誤発火する。
+    const text = [
+      "# 09 Delta",
+      "",
+      "この delta はまだ空。書式:",
+      "",
+      "```markdown",
+      "## Change Summary",
+      "",
+      "- 変更点を書く",
+      "",
+      "## Triage",
+      "",
+      "(ここに表を書く)",
+      "```",
+      "",
+      "<!--",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "-->",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
+  it("ignores a Triage heading inside an HTML comment", () => {
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "<!--",
+      "## Triage — 2026-07-26",
+      "",
+      "(過去の草案。復活させる場合はこの上の表に追記する)",
+      "-->",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
   it("returns no issues when Triage exists without Change Summary", () => {
     const text = [
       "# 09 Delta",
@@ -139,10 +294,14 @@ describe("validateTriageSection", () => {
   });
 });
 
-function buildDelta(rows: string[][]): string {
+function triageTable(rows: string[][]): string[] {
   const header =
     "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |";
   const sep = "| --- | --- | --- | --- | --- | --- | --- |";
+  return [header, sep, ...rows.map((row) => `| ${row.join(" | ")} |`)];
+}
+
+function buildDelta(rows: string[][]): string {
   return [
     "# 09 Delta",
     "",
@@ -150,9 +309,7 @@ function buildDelta(rows: string[][]): string {
     "",
     "## Triage",
     "",
-    header,
-    sep,
-    ...rows.map((row) => `| ${row.join(" | ")} |`),
+    ...triageTable(rows),
     "",
   ].join("\n");
 }
@@ -194,6 +351,47 @@ describe("validateCreateRowCapabilityRefs (QFAI-TRIAGE-006)", () => {
     const text = buildDelta([
       ["REQ-4", "extend", "spec-0001", "UPDATE", "APPEND", "-", "no CAP needed"],
     ]);
+    const issues = await validateCreateRowCapabilityRefs(text, DELTA_PATH, capPath);
+    expect(issues).toEqual([]);
+  });
+
+  it("reaches CREATE rows in a second `## Triage` section", async () => {
+    const capPath = await newTempCapabilitiesPath("# 03 Capabilities\n\n- CAP-0001 sample\n");
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-2", "new feature", "(none)", "CREATE", "-", "user@host", "no CAP"]]),
+      "",
+    ].join("\n");
+    const issues = await validateCreateRowCapabilityRefs(text, DELTA_PATH, capPath);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-006"]);
+    expect(issues[0]?.message).toContain("section 2");
+  });
+
+  it("ignores a CREATE row in a `## Triage` example inside a fenced code block", async () => {
+    const capPath = await newTempCapabilitiesPath("# 03 Capabilities\n\n- CAP-0001 sample\n");
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Notes",
+      "",
+      "```markdown",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-9", "例示", "(none)", "CREATE", "-", "user@host", "no CAP"]]),
+      "```",
+      "",
+    ].join("\n");
     const issues = await validateCreateRowCapabilityRefs(text, DELTA_PATH, capPath);
     expect(issues).toEqual([]);
   });
