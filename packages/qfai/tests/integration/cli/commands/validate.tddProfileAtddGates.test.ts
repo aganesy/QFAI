@@ -10,6 +10,17 @@ import {
   SAAS_PACKAGE_SKIPPED_GATE_FAMILIES,
   saasPackageSkippedGateFamilies,
 } from "../../../../src/core/saasPackage/skippedGates.js";
+import {
+  PACKAGE_SELF_GOVERNANCE_FAMILIES,
+  PACKAGE_SOURCE_ROOT_REL,
+  runPackageSelfGovernanceValidators,
+  unevaluatedPackageSelfGovernanceFamilies,
+} from "../../../../src/core/validators/packageSelfGovernance.js";
+import {
+  HANDOFF_SCHEMA_REL,
+  HANDOFF_WRITER_PAIRS,
+} from "../../../../src/core/validators/handoffSchemaPairs.js";
+import { SKILL_MANIFEST_PAIRS } from "../../../../src/core/validators/skillManifestPairs.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
@@ -220,3 +231,105 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     }
   });
 });
+
+describe("the self-governance drift detectors are reported by their precondition", () => {
+  it("names them as unevaluated under --profile sdd in a project without the package sources", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "sdd" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      // `R-*` stays claimed as evaluated (the other Reviewer-Gate detectors do
+      // read project-owned paths), so only these two codes may be named.
+      for (const family of PACKAGE_SELF_GOVERNANCE_FAMILIES) {
+        expect(notice?.message).toContain(family);
+      }
+    });
+  });
+
+  it("keeps them off the list once every detector's own inputs are present", async () => {
+    await withProject(async (root) => {
+      await seedSelfGovernanceInputs(root, { handoff: true, skillManifest: true });
+      await runValidate({ root, strict: false, profile: "sdd" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      for (const family of PACKAGE_SELF_GOVERNANCE_FAMILIES) {
+        expect(notice?.message).not.toContain(family);
+      }
+    });
+  });
+
+  // The package source root is the tree the detectors live under, not the
+  // precondition for either of them. Deciding the whole group on its presence
+  // dropped both codes from the notice on a tree that could only evaluate one —
+  // the same false assurance the group was added to remove.
+  it("names only the detector whose inputs are missing on a partial tree", async () => {
+    await withProject(async (root) => {
+      await mkdir(path.join(root, PACKAGE_SOURCE_ROOT_REL), { recursive: true });
+      await seedSelfGovernanceInputs(root, { handoff: false, skillManifest: true });
+
+      expect(await unevaluatedPackageSelfGovernanceFamilies(root)).toEqual([
+        "R-HANDOFF-SCHEMA-DRIFT",
+      ]);
+
+      await runValidate({ root, strict: false, profile: "sdd" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).toContain("R-HANDOFF-SCHEMA-DRIFT");
+      expect(notice?.message).not.toContain("R-SKILL-MANIFEST-DRIFT");
+    });
+  });
+
+  // Pair IV needs a writer as well: `detectHandoffSchemaDrift` skips each
+  // registered writer that is absent, so a schema with no writer beside it
+  // reaches no verdict either.
+  it("counts Pair IV as unevaluated when the schema stands without a writer", async () => {
+    await withProject(async (root) => {
+      const schemaAbs = path.join(root, HANDOFF_SCHEMA_REL);
+      await mkdir(path.dirname(schemaAbs), { recursive: true });
+      await writeFile(schemaAbs, "export const HANDOFF_MINIMUM_FIELDS = [];\n", "utf-8");
+
+      expect(await unevaluatedPackageSelfGovernanceFamilies(root)).toContain(
+        "R-HANDOFF-SCHEMA-DRIFT",
+      );
+    });
+  });
+
+  it("runs each detector only where that detector's own inputs exist", async () => {
+    await withProject(async (root) => {
+      // Asymmetric Pair III edit: probe side declares the canonical token,
+      // schema side does not. Without the pair's files there is no signal.
+      expect(await runPackageSelfGovernanceValidators(root)).toEqual([]);
+
+      await seedSelfGovernanceInputs(root, { handoff: false, skillManifest: true });
+      const codes = (await runPackageSelfGovernanceValidators(root)).map((entry) => entry.code);
+      expect(codes).toContain("R-SKILL-MANIFEST-DRIFT");
+    });
+  });
+});
+
+/**
+ * Writes the registered inputs of either detector. Pair III is seeded with an
+ * asymmetric edit so it produces a finding; Pair IV is seeded symmetrically so
+ * it is evaluated and clean.
+ */
+async function seedSelfGovernanceInputs(
+  root: string,
+  which: { handoff: boolean; skillManifest: boolean },
+): Promise<void> {
+  const write = async (rel: string, body: string): Promise<void> => {
+    const abs = path.join(root, rel);
+    await mkdir(path.dirname(abs), { recursive: true });
+    await writeFile(abs, body, "utf-8");
+  };
+
+  if (which.skillManifest) {
+    const pair = SKILL_MANIFEST_PAIRS[0];
+    if (!pair) throw new Error("expected at least one skill-manifest pair");
+    await write(pair.probeImplRel, `export const x = ${pair.probeToken};\n`);
+    await write(pair.schemaRel, "export const y = 1;\n");
+  }
+
+  if (which.handoff) {
+    await write(HANDOFF_SCHEMA_REL, "export const HANDOFF_MINIMUM_FIELDS = [];\n");
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      await write(pair.writerRel, `export type ${pair.writerToken} = never;\n`);
+    }
+  }
+}
