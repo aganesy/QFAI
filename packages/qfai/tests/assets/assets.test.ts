@@ -412,6 +412,83 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {
+    // `--auto-serve` gained an SPA route fallback: a document request that
+    // matches no file on disk is served `index.html`. generator-prompt.md is
+    // injected into the generator sub-agent every cycle, so a stale "no SPA
+    // fallback" claim there makes the generator declare hash routes and avoid
+    // the parameterized contract routes the fallback exists to make capturable.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const generatorRef = await readFile(
+        path.join(
+          tree,
+          "assistant",
+          "skills",
+          "qfai-prototyping",
+          "references",
+          "generator-prompt.md",
+        ),
+        "utf-8",
+      );
+
+      // The stale claims must be gone.
+      expect(generatorRef).not.toContain("it has no SPA fallback");
+      expect(generatorRef).not.toContain("they will 404 under `--auto-serve`");
+      expect(generatorRef).not.toContain("so a `/settings` route 404s while");
+
+      // The behaviour the server actually implements must be stated.
+      expect(generatorRef).toContain("`index.html` instead of 404");
+      expect(generatorRef).toContain("`text/html`");
+      expect(generatorRef).toContain("/pairs/:instrument");
+
+      // The two genuine non-fallback cases stay documented.
+      expect(generatorRef).toContain("Sub-resource requests");
+      expect(generatorRef).toContain("path-traversal 403 guard");
+
+      // The third one: the fallback needs an index.html to fall back TO.
+      // `resolveServablePath` returns null when the served directory has
+      // none, so a skeleton-only cycle-0 tree still 404s path routes and
+      // loses that screen's evidence. Saying the fallback is unconditional
+      // would send the generator into exactly that hole.
+      expect(generatorRef).toContain("The fallback needs an `index.html` to fall back _to_");
+      expect(generatorRef).toMatch(/skeleton-only cycle-0 tree[\s\S]{0,120}still \*\*404s\*\*/);
+    }
+
+    // generator-prompt.md is one half of an SSOT-sync pair; the scanner it is
+    // paired with documents which screens ever reach it, which is exactly what
+    // the routing shape decides. Assert the scanner half states the same
+    // fallback contract so the pair cannot drift back apart.
+    const scannerSource = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "prototyping",
+        "designMdViolations.ts",
+      ),
+      "utf-8",
+    );
+    expect(scannerSource).toContain("`index.html` to a document request");
+    expect(scannerSource).toContain("parameterized contract routes");
+    expect(scannerSource).toContain("path-traversal 403 guard");
+
+    // The operator-facing half of the same contract. certify's missing-HTML
+    // recovery text is what an operator reads after a capture gap, and it is
+    // inside the same CLI as the prompt above: if it keeps advising "the
+    // server 404s path routes, use hash routes", the operator rewrites the
+    // contract routes the generator was told to keep.
+    const certifySource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "prototypingCertify.ts"),
+      "utf-8",
+    );
+    expect(certifySource).not.toContain("use hash routes or point --target-url");
+    expect(certifySource).toContain("serves index.html to any document ");
+    expect(certifySource).toContain("Do not reshape contract routes into hash ");
+    expect(certifySource).toContain("has nothing to fall back to and still 404s");
+  });
+
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
     const skillPath = path.join(
       templateQfaiDir,
@@ -877,6 +954,137 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(readme).toContain("doctor.json");
     expect(sanitized).not.toContain("docs/schema");
     expect(sanitized).not.toContain("docs/examples");
+  });
+
+  it("documents every qfai init flag in both READMEs", async () => {
+    const readmes = await Promise.all(
+      [path.join(repoRoot, "README.md"), path.join(repoRoot, "packages", "qfai", "README.md")].map(
+        (readmePath) => readFile(readmePath, "utf-8"),
+      ),
+    );
+
+    // Backticked tokens only: prose mentions such as `npx qfai init --force`
+    // do not count as documenting the flag. `--dir <path>` is documented with
+    // its value placeholder inside the same span, so a trailing space closes
+    // the token just as a backtick does.
+    const documentsFlag = (readme: string, flag: string): boolean =>
+      readme.includes(`\`${flag}\``) || readme.includes(`\`${flag} `);
+
+    for (const readme of readmes) {
+      // `--upgrade-assistant-tree` is the remedy the deprecation finding
+      // prints at operators, and the migration copies instead of deleting.
+      expect(readme).toContain("D-DEPRECATED-PATH");
+      expect(readme).toContain("copied, never deleted");
+    }
+
+    // SSOT drift guard: the documented set is DERIVED from the actual flag
+    // registration, not hand-maintained. `main.ts` decides which parsed
+    // options `runInit` receives, and `args.ts` decides which `--flag`
+    // writes each of those options — so a new init flag added to the parser
+    // and wired into `runInit` fails this test until both READMEs list it,
+    // whether or not the CLI ever prints guidance mentioning it.
+    const mainSource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "main.ts"),
+      "utf-8",
+    );
+    const argsSource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "lib", "args.ts"),
+      "utf-8",
+    );
+
+    // 1. Which ParsedArgs options does the `init` command consume?
+    const initCase = /case "init":([\s\S]*?)\breturn;/.exec(mainSource);
+    expect(initCase, 'main.ts must keep a `case "init":` dispatch block').not.toBeNull();
+    const initOptionKeys = collectOptionKeys(initCase?.[1] ?? "");
+    expect(initOptionKeys.size).toBeGreaterThan(0);
+
+    // 1b. `qfai init --help` never reaches the switch: main.ts answers the
+    //     common help flags in the guard above the dispatch, so scanning only
+    //     `case "init":` would let both READMEs drop `--help` / `-h` while the
+    //     test name still promises "every qfai init flag". Derive that guard's
+    //     options too — they apply to every command, `init` included.
+    const preDispatch = mainSource.slice(0, mainSource.indexOf("switch (command) {"));
+    expect(preDispatch.length, "main.ts must keep a `switch (command) {` dispatch").toBeGreaterThan(
+      0,
+    );
+    const commonOptionKeys = collectOptionKeys(preDispatch);
+
+    // 2. Which flag writes each of those options in the parser? Short aliases
+    //    (`-h`) and fall-through label groups (`case "--help": case "-h":`)
+    //    both count, so the help flags resolve to a real registration.
+    const flagsByOption = mapCliFlagsToOptions(argsSource);
+
+    // 3. Every flag that can set an init option must be documented in both
+    //    READMEs. An init option with no flag at all means the derivation
+    //    broke and is failed rather than skipped.
+    const expectDocumented = (flag: string, why: string): void => {
+      for (const readme of readmes) {
+        expect(
+          documentsFlag(readme, flag),
+          `README must document the init flag ${flag} (${why})`,
+        ).toBe(true);
+      }
+    };
+    for (const key of initOptionKeys) {
+      const flags = flagsByOption.get(key);
+      expect(flags, `args.ts must register a --flag that sets options.${key}`).toBeDefined();
+      expect((flags?.size ?? 0) > 0).toBe(true);
+      for (const flag of flags ?? []) {
+        expectDocumented(flag, `sets options.${key}`);
+      }
+    }
+
+    // 3b. The pre-dispatch guard also reads parser-internal state that no flag
+    //     writes (`options.invalidExitCode`), so only the flag-backed keys are
+    //     required here — and at least one must survive, or the derivation rotted.
+    const commonFlags = new Set<string>();
+    for (const key of commonOptionKeys) {
+      for (const flag of flagsByOption.get(key) ?? []) {
+        commonFlags.add(flag);
+      }
+    }
+    expect(
+      commonFlags.size,
+      "main.ts's pre-dispatch guard must resolve to at least one registered flag",
+    ).toBeGreaterThan(0);
+    for (const flag of commonFlags) {
+      expectDocumented(flag, "handled before the init dispatch");
+    }
+
+    // Drift guard: any `qfai init --<flag>` the tool prints at operators must
+    // be documented in both READMEs.
+    const sources = await Promise.all(
+      [
+        path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "init.ts"),
+        path.join(
+          repoRoot,
+          "packages",
+          "qfai",
+          "src",
+          "core",
+          "validators",
+          "assistantTreeMigration.ts",
+        ),
+      ].map((sourcePath) => readFile(sourcePath, "utf-8")),
+    );
+    const printedFlags = new Set<string>();
+    for (const source of sources) {
+      for (const match of source.matchAll(/qfai init (--[a-z][a-z-]+)/g)) {
+        const flag = match[1];
+        if (flag !== undefined) {
+          printedFlags.add(flag);
+        }
+      }
+    }
+    expect(printedFlags.size).toBeGreaterThan(0);
+    for (const flag of printedFlags) {
+      for (const readme of readmes) {
+        expect(
+          documentsFlag(readme, flag),
+          `README must document the init flag ${flag} that the CLI prints`,
+        ).toBe(true);
+      }
+    }
   });
 
   it("keeps package README aligned with discussion completion contract", async () => {
@@ -1771,6 +1979,66 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 });
+
+/** Every `options.<key>` the given slice of CLI source touches. */
+function collectOptionKeys(source: string): Set<string> {
+  const keys = new Set<string>();
+  for (const match of source.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)/g)) {
+    const key = match[1];
+    if (key !== undefined) {
+      keys.add(key);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Map `options.<key>` -> the CLI flags that write it, read straight out of
+ * `args.ts`. Consecutive `case` labels share the body they fall through into
+ * (`case "--help": case "-h":`), and short aliases are kept, so a flag is only
+ * missing here when the parser really does not register it.
+ */
+function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
+  const flagsByOption = new Map<string, Set<string>>();
+  let pendingFlags: string[] = [];
+  let sawBody = false;
+
+  for (const line of argsSource.split("\n")) {
+    // A label line, with or without the block brace prettier keeps on it.
+    const label = /^\s*(?:case "([^"]*)"|default)\s*:\s*\{?\s*$/.exec(line);
+    if (label !== null) {
+      if (sawBody) {
+        pendingFlags = [];
+        sawBody = false;
+      }
+      const flag = label[1];
+      if (flag !== undefined && /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/.test(flag)) {
+        pendingFlags.push(flag);
+      }
+      continue;
+    }
+    if (line.trim().length === 0) {
+      continue;
+    }
+    sawBody = true;
+    if (pendingFlags.length === 0) {
+      continue;
+    }
+    for (const assignment of line.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=[^=]/g)) {
+      const key = assignment[1];
+      if (key === undefined) {
+        continue;
+      }
+      const bucket = flagsByOption.get(key) ?? new Set<string>();
+      for (const flag of pendingFlags) {
+        bucket.add(flag);
+      }
+      flagsByOption.set(key, bucket);
+    }
+  }
+
+  return flagsByOption;
+}
 
 function extractPathReferences(content: string): Set<string> {
   const refs = new Set<string>();

@@ -25,6 +25,228 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("ignores CAP mentions in prose outside the CAP Catalog table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, undefined, {
+        leader: ["- 運用健全性は CAP-0003 が所有する（参考記述）。", ""],
+        catalogHeading: true,
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores CAP mentions in the Notes cell of the CAP Catalog table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002", "CAP-0003"],
+        undefined,
+        { "CAP-0001": "CAP-0003 と併せて読むこと" },
+        { catalogHeading: true },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a table that sits outside the CAP Catalog section", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], undefined, undefined, {
+        catalogHeading: true,
+        trailer: [
+          "## Related capabilities (reference)",
+          "",
+          "| CAP ID   | Owner |",
+          "| -------- | ----- |",
+          "| CAP-9999 | ops   |",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores an illustrative CAP Catalog heading inside a fenced sample", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, undefined, {
+        catalogHeading: true,
+        leader: [
+          "旧フォーマットの例:",
+          "",
+          "```markdown",
+          "## CAP Catalog",
+          "",
+          "| CAP ID | Statement |",
+          "| ------ | --------- |",
+          "| CAP-0001 | example |",
+          "```",
+          "",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores an illustrative CAP Catalog heading inside an HTML comment", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, undefined, {
+        catalogHeading: true,
+        leader: [
+          "<!--",
+          "## CAP Catalog",
+          "",
+          "| CAP ID | Statement |",
+          "| ------ | --------- |",
+          "| CAP-0001 | example |",
+          "-->",
+          "",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a fenced CAP mention in the whole-file fallback", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "- CAP-0001: capability",
+          "",
+          "## Example",
+          "",
+          "```markdown",
+          "- CAP-0009: 追加するときはこの形式で書く",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Over-correction pin: masking must not blank or truncate the real catalog
+  // when the document illustrates its own format after it.
+  it("still reads the real catalog when a fenced sample follows it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], undefined, undefined, {
+        catalogHeading: true,
+        trailer: [
+          "## Example",
+          "",
+          "```markdown",
+          "| CAP ID | Statement |",
+          "| ------ | --------- |",
+          "| CAP-0009 | example |",
+          "```",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps column positions when an earlier cell holds an escaped pipe", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"]);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| Statement           | CAP ID   | Notes |",
+          "| ------------------- | -------- | ----- |",
+          "| grep foo \\| wc -l  | CAP-0001 | note  |",
+          "| plain statement     | CAP-0002 | note  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to whole-file CAP order when the catalog has no table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      const capabilitiesPath = path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md");
+      await writeFile(
+        capabilitiesPath,
+        ["# 03 Capabilities", "", "- CAP-0001: capability", ""].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails spec split when CAP count and spec count mismatch", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -717,7 +939,9 @@ async function seedPolicies(
   notes?: Record<string, string>,
   extras?: {
     capCells?: Record<string, string>;
+    /** Lines emitted between the document title and the catalogue table. */
     leader?: string[];
+    /** Lines emitted after the catalogue table. */
     trailer?: string[];
     /** Append the trailer straight onto the catalogue table, with no blank line. */
     trailerJoinsTable?: boolean;
