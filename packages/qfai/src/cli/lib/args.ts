@@ -433,7 +433,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           } else {
             markInvalid();
           }
-          i += 1;
           break;
         }
         if (!applyFormatOption(command, next, options)) {
@@ -829,7 +828,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--assume": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -841,7 +840,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--scope": {
