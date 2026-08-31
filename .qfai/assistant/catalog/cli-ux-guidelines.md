@@ -27,7 +27,7 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 - `[error] QFAI-DT-002 Circular reference detected: semantic.color.primary (.qfai/contracts/design/design-tokens.yaml) refs=semantic.color.primary`
 - `[error] QFAI-MOCK-002 External URL reference in HTML Mock: https://cdn.example.com/style.css (.qfai/specs/spec-0001/01_Spec.md)`
 
-`severity` が `error` の issue には、上記の行に続けてインデント付きの詳細行が出力される:
+その実行を失敗させうる severity の issue には、上記の行に続けてインデント付きの詳細行が出力される。既定 (`--fail-on error`) では `error` のみ、`--fail-on warning` (`--strict` を含む) では `warning` にも付く:
 
 ```text
   error_code: <CODE>
@@ -76,10 +76,10 @@ text 出力の 1 行は、上から順に **最初に一致した規則** で解
 2. `[info] ` / `[warning] ` / `[error] ` で始まる行 — 新しい issue のヘッダー行
 3. `counts: ` で始まる行 — 集計行。issue 出力の終端
 4. `run-log: ` で始まる行 — run log 行。text 出力の最終行
-5. 直前 issue の severity が `error` で、まだ詳細ブロックに入っていない場合、2 スペースインデントの `error_code:` 行が詳細ブロックの開始。詳細ブロック内では 2 スペースインデント + `<label>:` の行が新しい詳細フィールド、それ以外の行は直前フィールド値の継続行
+5. 直前 issue の severity がその実行の `--fail-on` しきい値に達している場合 (既定では `error`、`--fail-on warning` では `warning` も) で、まだ詳細ブロックに入っていない場合、2 スペースインデントの `error_code:` 行が詳細ブロックの開始。詳細ブロック内では 2 スペースインデント + `<label>:` の行が新しい詳細フィールド、それ以外の行は直前フィールド値の継続行
 6. 上記のいずれにも一致しない行 — 直前 issue のメッセージ継続行
 
-メッセージ継続の終了条件は 2 / 3 / 5 のいずれか。`error` 以外の severity では詳細ブロックが出力されないため 2 または 3 で終わる。
+メッセージ継続の終了条件は 2 / 3 / 5 のいずれか。しきい値に達しない severity では詳細ブロックが出力されないため 2 または 3 で終わる。
 
 > **Known limitation:** message や詳細フィールドの値が、上の構造行と同じ接頭辞（`[error] ` / `counts: ` / インデント付き `error_code:` など）で始まる物理行を含む場合、この文法では区別できない。厳密な機械解析が必要なら text 出力ではなく `output.validateJsonPath` が指す JSON レポートを読むこと。
 

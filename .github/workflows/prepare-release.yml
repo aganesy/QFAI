@@ -1,0 +1,278 @@
+name: Prepare release
+
+# Turns a version somebody chose into a reviewable pull request.
+#
+# What this does NOT do is write release prose. The `## [Unreleased]` section is filled in as the
+# work lands, by whoever made each change; the only thing that happens at release time is deciding
+# where to cut. So this renames `## [Unreleased]` to `## [X.Y.Z] - <date>`, reopens an empty one,
+# syncs `packages/qfai/package.json#version`, and opens a pull request. A release note nobody wrote
+# is not one a reader can use, so an empty `## [Unreleased]` is refused rather than shipped as an
+# empty section.
+#
+# The VERSION is an input, and that is the point rather than an inconvenience.
+# `.agents/rules/version-discipline.md` puts the choice of `X.Y.Z` with the user: an automation that
+# picked it would be the rule's own recorded failure, replayed. Typing it into this form IS the
+# explicit instruction the rule asks for, and the branch it creates carries the pin so
+# `check-branch-version-pin.sh` can check the two agree.
+#
+# Writes go through `RELEASE_AUTOMATION_TOKEN`, not through the job token, so this workflow's
+# `permissions:` stays at the minimal `{ contents: read }` and `BR-0017-0016`'s closed departure set
+# is untouched. The same token is what lets the tag this eventually produces start `release.yml`:
+# GitHub does not raise workflow events for pushes made with `GITHUB_TOKEN`.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, as X.Y.Z with no leading v (e.g. 1.10.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          # Shallow, deliberately. `BR-0017-0019` keeps full history job-scoped to the three jobs
+          # that need it, and this is not one: the only history question here is whether a tag
+          # already exists, which is a ref lookup rather than a walk. It is asked of the API.
+          ref: main
+
+      - name: Refuse a version this repository cannot release
+        id: check
+        env:
+          # Through the environment, never through `${{ }}` inside `run`. A dispatcher-supplied
+          # value spliced into the script can close a quote and run its own commands — and this job
+          # holds a token that can write to the repository.
+          RELEASE_VERSION: ${{ inputs.version }}
+          # Reading a ref needs only the job token; nothing here writes.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          reject() { echo "::error::prepare-release: '$RELEASE_VERSION' $1"; exit 1; }
+
+          # Exactly X.Y.Z, anchored at both ends, checked by structure so it holds under any POSIX
+          # shell: nothing but digits and dots, no empty component, exactly three of them. This is
+          # the same set `release.yml` accepts after the leading `v`, and the same reason: the
+          # publish step passes no `--tag`, so npm points `latest` at whatever it publishes and a
+          # prerelease reaching it is a user-facing event.
+          case "$RELEASE_VERSION" in
+            v*) reject "must not carry a leading v: give the bare X.Y.Z" ;;
+            *[!0-9.]*) reject "may contain only digits and dots: a prerelease or build suffix is not a release" ;;
+            *..* | .* | *.) reject "has an empty version component" ;;
+          esac
+          after_major="${RELEASE_VERSION#*.}"
+          [ "$after_major" != "$RELEASE_VERSION" ] || reject "must carry exactly three numeric components"
+          after_minor="${after_major#*.}"
+          [ "$after_minor" != "$after_major" ] || reject "must carry exactly three numeric components"
+          case "$after_minor" in
+            *.*) reject "must carry exactly three numeric components" ;;
+          esac
+
+          # No leading zeros. `01.11.0`, `1.011.0` and `1.11.00` pass every check above and
+          # `sort -V` too, and they are not SemVer: `node-semver` rejects them, so npm would
+          # refuse the publish — after the release pull request had already merged and the tag
+          # had already been pushed, leaving an invalid version in `main`.
+          major="${RELEASE_VERSION%%.*}"
+          minor="${after_major%%.*}"
+          for part in "$major" "$minor" "$after_minor"; do
+            case "$part" in
+              0) ;;
+              0*) reject "has a leading zero in '$part': node-semver rejects it, and npm would refuse the publish after the release pull request had already merged" ;;
+            esac
+          done
+
+          current="$(node -p "require('./packages/qfai/package.json').version")"
+          if [ "$current" = "$RELEASE_VERSION" ]; then
+            reject "is already the version in packages/qfai/package.json"
+          fi
+          # Strictly greater, by version sort. `sort -V` puts the smaller first, so the current
+          # version being the smaller of the two is what "this is a bump" means.
+          lowest="$(printf '%s\n%s\n' "$current" "$RELEASE_VERSION" | sort -V | head -1)"
+          if [ "$lowest" != "$current" ]; then
+            reject "is not greater than the current $current"
+          fi
+
+          # Asked of the API, because this checkout is shallow and carries no tags. A ref that
+          # exists answers 0; anything else — absent, or unreachable — answers non-zero, and only
+          # the first is a reason to stop.
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${RELEASE_VERSION}" > /dev/null 2>&1; then
+            reject "already has a tag: releasing it again would mean two different trees under one name"
+          fi
+
+          # The section this release ships. Empty means nobody described the change, and a release
+          # note nobody wrote is worse than a missing one: it reads as "nothing happened".
+          node - <<'PROBE'
+          const { readFileSync } = require("node:fs");
+          const text = readFileSync("CHANGELOG.md", "utf8");
+          const at = text.indexOf("## [Unreleased]");
+          if (at < 0) {
+            console.log("::error::prepare-release: CHANGELOG.md has no `## [Unreleased]` section to close.");
+            process.exit(1);
+          }
+          const after = text.slice(at + "## [Unreleased]".length);
+          const next = after.search(/^## /m);
+          const body = next < 0 ? after : after.slice(0, next);
+          // Empty is not only "no characters". A section holding `### Added` with nothing under
+          // it has a non-empty `trim()` and describes nothing at all — and this workflow would
+          // move that bare heading into the release section, producing exactly the release note
+          // nobody wrote that the check exists to refuse. So: at least one line that is neither
+          // blank nor a heading.
+          const substantive = body
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line !== "" && !line.startsWith("#"));
+          if (substantive.length === 0) {
+            console.log(
+              "::error::prepare-release: the `## [Unreleased]` section describes nothing — it is " +
+                "empty, or carries only category headings such as `### Added`. This workflow " +
+                "renames sections; it does not write release notes. Describe the changes in " +
+                "CHANGELOG.md first — that is what the release ships and what the GitHub Release " +
+                "body is extracted from.",
+            );
+            process.exit(1);
+          }
+          const bullets = (body.match(/^- /gm) ?? []).length;
+          console.log(`prepare-release: the Unreleased section carries ${bullets} entr(ies)`);
+          PROBE
+
+          echo "version=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "branch=release/v${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Make the release edits
+        env:
+          RELEASE_VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'EDIT'
+          const { readFileSync, writeFileSync } = require("node:fs");
+          const version = process.env.RELEASE_VERSION;
+          // The date the release is cut, in UTC, which is the only clock a runner shares with a
+          // reader of the file.
+          const date = new Date().toISOString().slice(0, 10);
+
+          const manifestPath = "packages/qfai/package.json";
+          const manifest = readFileSync(manifestPath, "utf8");
+          const bumped = manifest.replace(
+            /("version"\s*:\s*")[^"]+(")/,
+            (whole, head, tail) => `${head}${version}${tail}`,
+          );
+          if (bumped === manifest) {
+            console.log("::error::prepare-release: could not find a version field to update.");
+            process.exit(1);
+          }
+          writeFileSync(manifestPath, bumped, "utf8");
+
+          const changelogPath = "CHANGELOG.md";
+          const changelog = readFileSync(changelogPath, "utf8");
+          const heading = "## [Unreleased]";
+          const at = changelog.indexOf(heading);
+          // The heading stays where it is and the release heading is inserted BELOW it, so the
+          // section's content becomes the release's and a fresh empty Unreleased is left on top.
+          const next =
+            changelog.slice(0, at + heading.length) +
+            `\n\n## [${version}] - ${date}` +
+            changelog.slice(at + heading.length);
+          writeFileSync(changelogPath, next, "utf8");
+          console.log(`prepare-release: closed Unreleased as [${version}] - ${date}`);
+          EDIT
+        shell: bash
+
+      - name: Open the release pull request
+        env:
+          # The PAT, not the job token. Two reasons, and only the first is about this step: a pull
+          # request opened with `GITHUB_TOKEN` runs no checks, because GitHub raises no workflow
+          # events for it — the release PR would sit there with nothing verifying it.
+          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}
+          RELEASE_VERSION: ${{ steps.check.outputs.version }}
+          RELEASE_BRANCH: ${{ steps.check.outputs.branch }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::prepare-release: the RELEASE_AUTOMATION_TOKEN secret is not set. This workflow writes a branch and opens a pull request, and it deliberately does not use the job token for either: a pull request opened with GITHUB_TOKEN runs no checks. Add a token with contents:write and pull-requests:write."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${RELEASE_BRANCH}"
+          git add CHANGELOG.md packages/qfai/package.json
+          git commit -m "chore(release): qfai ${RELEASE_VERSION}"
+
+          # The remote is re-pointed at the token, because the checkout above deliberately kept no
+          # credentials in the work tree.
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # RESUMABLE, because the push and the pull request are two failures and only the
+          # first leaves nothing behind. A run that pushed the branch and then lost
+          # `gh pr create` to a transient API error left the branch on the remote — and the
+          # obvious retry builds a sibling commit from `main`, which this non-forced push
+          # refuses as a non-fast-forward. Force is ruled out by
+          # `.agents/rules/version-discipline.md`, so the recommended flow could not be
+          # restarted by any means the rules allow: the only way out was a human deleting the
+          # branch, which nothing told them.
+          #
+          # Adopted only when it really is this release's branch. A branch of the same name
+          # declaring some other version is a collision, not a resume, and is refused by name.
+          if git ls-remote --exit-code --heads "$remote" "refs/heads/${RELEASE_BRANCH}" > /dev/null 2>&1; then
+            git fetch --depth=1 "$remote" "refs/heads/${RELEASE_BRANCH}"
+            existing_version="$(git show FETCH_HEAD:packages/qfai/package.json | node -pe "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")"
+            if [ "$existing_version" != "${RELEASE_VERSION}" ]; then
+              echo "::error::prepare-release: ${RELEASE_BRANCH} already exists on the remote and declares ${existing_version}, not ${RELEASE_VERSION}. That is a collision rather than a re-run of this release. Delete the branch, or release the version it already carries."
+              exit 1
+            fi
+            echo "prepare-release: ${RELEASE_BRANCH} is already pushed and declares ${RELEASE_VERSION}; reusing it rather than pushing a sibling commit. Its CHANGELOG is whatever that earlier run captured — delete the branch and re-run if the Unreleased section has grown since."
+          else
+            git push "$remote" "HEAD:refs/heads/${RELEASE_BRANCH}"
+          fi
+
+          # The body is written to a file rather than passed inline: its lines begin at column
+          # zero, and inside a YAML block scalar that ends the block. A quoted heredoc keeps
+          # every line indented and stops the shell expanding what is meant to stay literal.
+          #
+          # Under the repository's own `tmp/`, not `mktemp`'s. Bare `mktemp` implies `--tmpdir`
+          # and lands in `/tmp` when `TMPDIR` is unset, which is outside the only scratch area
+          # `.agents/rules/temporary-files.md` sanctions — and it left the file behind. Removed
+          # on exit rather than after the call, so a failing `gh pr create` does not leak it.
+          mkdir -p tmp
+          body_file="tmp/release-pr-body.md"
+          trap 'rm -f "${body_file}"' EXIT
+          {
+            echo "Prepared by the \`Prepare release\` workflow from a version a human supplied."
+            echo ""
+            echo "This changes three things and writes no prose:"
+            echo ""
+            echo "- \`packages/qfai/package.json#version\` is now \`${RELEASE_VERSION}\`"
+            echo "- \`CHANGELOG.md\`'s \`## [Unreleased]\` is closed as \`## [${RELEASE_VERSION}]\`"
+            echo "- an empty \`## [Unreleased]\` is reopened above it"
+            echo ""
+            echo "The release notes are whatever the merged pull requests wrote into \`## [Unreleased]\`; the GitHub Release body is extracted from that same section."
+            echo ""
+            echo "**The date above is the date this was PREPARED, not the date it ships.** The tag is cut when this pull request merges, so if that is a later day, correct the date in \`CHANGELOG.md\` here — this is the last point at which it can be changed without a second commit to \`main\`."
+            echo ""
+            echo "Merging this pushes the \`v${RELEASE_VERSION}\` tag automatically, which starts \`release.yml\`. Publishing still waits on the \`release\` environment's required reviewer."
+          } > "${body_file}"
+
+          # The other half of the resume. A second run against an adopted branch must not try
+          # to open a pull request that is already open — `gh pr create` fails on that, and the
+          # failure would be indistinguishable from the one this whole branch exists to survive.
+          existing_pr="$(gh pr list --head "${RELEASE_BRANCH}" --base main --state open --json number --jq '.[0].number // ""')"
+          if [ -n "${existing_pr}" ]; then
+            echo "prepare-release: pull request #${existing_pr} is already open for ${RELEASE_BRANCH}; nothing to create"
+          else
+            gh pr create \
+              --base main \
+              --head "${RELEASE_BRANCH}" \
+              --title "chore(release): qfai ${RELEASE_VERSION}" \
+              --body-file "${body_file}"
+          fi
+        shell: bash

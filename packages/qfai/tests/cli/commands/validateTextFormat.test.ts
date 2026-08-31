@@ -21,7 +21,7 @@ import { describe, expect, it } from "vitest";
 import { captureStdout } from "../../helpers/stdout.js";
 import { emitText, runValidate } from "../../../src/cli/commands/validate.js";
 import { warnIfTruncated } from "../../../src/cli/lib/warnings.js";
-import { loadConfig } from "../../../src/core/config.js";
+import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
@@ -154,8 +154,15 @@ type LineKind =
  * structural lines are recognised before the "anything else continues the
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
+ *
+ * Rule 5 keys on the run's `--fail-on` threshold, not on `error` alone: the
+ * emitter prints a detail block for every severity that can fail the run, so a
+ * `--fail-on warning` run puts one under its warnings too and a classifier
+ * pinned to `error` would read that block as more message text.
  */
-function classifyByGuideline(lines: string[]): { kind: LineKind; line: string }[] {
+function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind; line: string }[] {
+  const carriesDetail = (value: string | undefined): boolean =>
+    value === "error" || (failOn === "warning" && value === "warning");
   let section: "none" | "message" | "detail" = "none";
   let severity: string | undefined;
   return lines.map((line) => {
@@ -178,7 +185,7 @@ function classifyByGuideline(lines: string[]): { kind: LineKind; line: string }[
       severity = undefined;
       return { kind: "run-log" as const, line };
     }
-    if (severity === "error" && section === "message" && line.startsWith("  error_code: ")) {
+    if (carriesDetail(severity) && section === "message" && line.startsWith("  error_code: ")) {
       section = "detail";
       return { kind: "detail" as const, line };
     }
@@ -208,6 +215,14 @@ const MULTILINE_FIX = [
   "標準資産の直編集は非推奨です。",
   "標準状態へ戻してから validate を再実行してください。",
 ] as const;
+
+/**
+ * The `--fail-on` threshold a plain `qfai validate` runs at
+ * (`validation.failOn: "error"` in `core/config.ts`). `emitText` takes it to
+ * decide which issues get the detail block, so the synthetic renders below have
+ * to use the same threshold the real run this guideline documents does.
+ */
+const DEFAULT_FAIL_ON: FailOn = "error";
 
 const SYNTHETIC_ISSUES: Issue[] = [
   {
@@ -258,7 +273,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   it("emits every issue in the grammar documented by cli-ux-guidelines.md", async () => {
     const grammar = extractGrammar(await readGuideline());
     const output = await captureStdout(() => {
-      emitText(resultOf(SYNTHETIC_ISSUES));
+      emitText(resultOf(SYNTHETIC_ISSUES), DEFAULT_FAIL_ON);
       return Promise.resolve();
     });
     const lines = output.split("\n");
@@ -317,7 +332,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     if (multiline === undefined) return;
 
     const output = await captureStdout(() => {
-      emitText(resultOf([multiline]));
+      emitText(resultOf([multiline]), DEFAULT_FAIL_ON);
       return Promise.resolve();
     });
     const lines = output.split("\n");
@@ -332,12 +347,42 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     expect(detail.at(-1)).toBe(`${" ".repeat(indent)}${MULTILINE_FIX[1]}`);
   });
 
+  /**
+   * The detail block follows the run's `--fail-on` threshold, not the literal
+   * severity `error`: under `--fail-on warning` a warning is what fails the
+   * run, so it gets the same block. The guideline says so in both places it
+   * describes the block, and this is what holds the two together.
+   */
+  it("gives warnings the detail block under --fail-on warning, as documented", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain("`--fail-on warning`");
+
+    const warning = SYNTHETIC_ISSUES.find((issue) => issue.code === "QFAI-TEST-002");
+    expect(warning).toBeDefined();
+    if (warning === undefined) return;
+
+    const atThreshold = await captureStdout(() => {
+      emitText(resultOf([warning]), "warning");
+      return Promise.resolve();
+    });
+    expect(classifyByGuideline(atThreshold.trimEnd().split("\n"), "warning")).toContainEqual({
+      kind: "detail",
+      line: `  error_code: ${warning.code}`,
+    });
+
+    const belowThreshold = await captureStdout(() => {
+      emitText(resultOf([warning]), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    expect(belowThreshold).not.toContain("  error_code: ");
+  });
+
   it("closes the text output with the documented counts line", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("counts: info=<n> warning=<n> error=<n>");
 
     const output = await captureStdout(() => {
-      emitText(resultOf(SYNTHETIC_ISSUES));
+      emitText(resultOf(SYNTHETIC_ISSUES), DEFAULT_FAIL_ON);
       return Promise.resolve();
     });
     // QFAI-TEST-004 prints but is not counted — same rule as `countIssues`.
@@ -393,7 +438,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
       expect(parseError.message).toContain("\n");
 
       const output = await captureStdout(() => {
-        emitText(resultOf([parseError]));
+        emitText(resultOf([parseError]), DEFAULT_FAIL_ON);
         return Promise.resolve();
       });
       // The whole (multi-line) header block is exactly what the grammar renders,
@@ -474,7 +519,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
         );
         await runValidate({ root, strict: false, format: "text" });
       });
-      const classified = classifyByGuideline(output.trimEnd().split("\n"));
+      const classified = classifyByGuideline(output.trimEnd().split("\n"), DEFAULT_FAIL_ON);
 
       expect(classified[0]?.kind).toBe("warn");
       expect(classified.at(-1)?.kind).toBe("run-log");
