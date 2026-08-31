@@ -185,6 +185,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = await runHandoffUpgrade({
           root: resolvedRoot,
           legacyFile: options.handoffLegacyFile,
+          // The canonical `.qfai/handoff.yaml` is a consumed SSOT:
+          // `--force` is required to overwrite an existing one, and
+          // `--dry-run` must preview instead of writing.
+          force: options.force,
+          dryRun: options.dryRun,
         });
       }
       return;
@@ -325,10 +330,11 @@ Options:
                   自作の command / prompt / skill は残りますが、symlink には中身がないので、引退済みの
                   QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
                   .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
+  --force         handoff upgrade: 既存の .qfai/handoff.yaml を上書き（上書き前に .backup-<ISO> へ退避）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
-  --dry-run       変更を行わず表示のみ
+  --dry-run       init / doctor / handoff upgrade: 変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
