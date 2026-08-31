@@ -63,11 +63,6 @@ jobs:
           set -euo pipefail
           reject() { echo "::error::tag-release: $1"; exit 1; }
 
-          # Checked here rather than only before the push: this step now READS with the same
-          # secret, and an unset one would otherwise surface as an opaque `gh` auth failure.
-          if [ -z "${GH_TOKEN}" ]; then
-            reject "the RELEASE_AUTOMATION_TOKEN secret is not set. This job asks which pull request carried the commit and pushes the tag, and neither is done with the job token: a tag pushed with GITHUB_TOKEN raises no workflow event, so release.yml would never start. Add a token with contents:write and pull-requests:read."
-          fi
 
           claimed="$(node -p "require('./packages/qfai/package.json').version")"
 
@@ -109,6 +104,16 @@ jobs:
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+
+          # The token is required HERE, not at the top of the step. Everything above answers
+          # from the tree and needs no credential — and this workflow fires on every push to
+          # `main` that touches the manifest, most of which are not releases at all. Demanding
+          # the secret before those checks would put a red cross on ordinary merges for a
+          # release that was never being attempted. Below this line the answer is "yes, this is
+          # a release", and then a missing token really is a failure.
+          if [ -z "${GH_TOKEN}" ]; then
+            reject "the RELEASE_AUTOMATION_TOKEN secret is not set. This job asks which pull request carried the commit and then pushes the tag, and neither is done with the job token: a tag pushed with GITHUB_TOKEN raises no workflow event, so release.yml would never start. Add a token with contents:write and pull-requests:read."
           fi
 
           # An APPROVED RELEASE PULL REQUEST, not merely a manifest that moved. Without this a

@@ -2857,6 +2857,47 @@ describe("release automation performs decisions rather than making them", () => 
     ).toMatch(/git\/tags\//);
   });
 
+  it("demands the release token where it is used, not before", () => {
+    // This workflow starts on EVERY push to `main` that touches the manifest, and most of
+    // those are not releases. Everything up to the CHANGELOG check answers from the tree and
+    // needs no credential — so demanding the secret at the top of the step puts a red cross on
+    // ordinary merges for a release nobody was attempting. It has to come after the questions
+    // that can say "this is not a release", and before the first one that needs a token.
+    //
+    // An ORDERING, checked by position rather than by presence: all three constructs exist
+    // whichever order they are written in, so a row asserting each separately cannot see this.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const commands = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+
+    const changelogCheck = commands.search(/awk[^\n]*CHANGELOG\.md/);
+    const tokenCheck = commands.search(/-z[^\n]*GH_TOKEN/);
+    const firstApiCall = commands.search(/gh api/);
+    expect(changelogCheck, "the CHANGELOG check must be there to order against").toBeGreaterThan(
+      -1,
+    );
+    expect(tokenCheck, "the token check must be there at all").toBeGreaterThan(-1);
+    expect(firstApiCall, "and so must the API call it guards").toBeGreaterThan(-1);
+    expect(
+      tokenCheck,
+      "the token must not be demanded before the checks that answer from the tree: a manifest " +
+        "bumped without its CHANGELOG heading is an ordinary state, and must stay quiet",
+    ).toBeGreaterThan(changelogCheck);
+    expect(
+      tokenCheck,
+      "and it must be demanded before the first call that needs it, so an absent secret reads " +
+        "as an absent secret rather than as an opaque gh auth failure",
+    ).toBeLessThan(firstApiCall);
+  });
+
   it("tags only what an approved release pull request carried", () => {
     // The trigger is `packages/qfai/package.json` changing, which is necessary and NOT
     // sufficient. A pinned feature branch — `feature/vX.Y.Z`, which this repository's version
