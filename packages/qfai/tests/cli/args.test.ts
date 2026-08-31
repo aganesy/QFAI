@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { ParsedArgs } from "../../src/cli/lib/args.js";
 import { parseArgs } from "../../src/cli/lib/args.js";
 
 describe("parseArgs", () => {
@@ -143,6 +144,24 @@ describe("parseArgs", () => {
     const parsed = parseArgs(["prototyping", "preflight", "--format", "github"], cwd);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
+  });
+
+  it("accepts --format text|json for guardrails", () => {
+    const cwd = process.cwd();
+    const json = parseArgs(["guardrails", "check", "--format", "json"], cwd);
+    expect(json.invalid).toBe(false);
+    expect(json.options.guardrailsFormat).toBe("json");
+
+    const text = parseArgs(["guardrails", "list", "--format", "text"], cwd);
+    expect(text.invalid).toBe(false);
+    expect(text.options.guardrailsFormat).toBe("text");
+  });
+
+  it("rejects unsupported --format values for guardrails", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["guardrails", "check", "--format", "github"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.invalidExitCode).toBe(2);
   });
 
   it("parses sdd profile for validate", () => {
@@ -396,6 +415,323 @@ describe("parseArgs", () => {
       // the dangling `full` does not interfere with the next iter.
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.auditScope).toBe("deviation");
+    });
+  });
+
+  // Contract rule 2 extended to the whole switch: a command-specific
+  // flag used on a command that does not own it must markInvalid()
+  // instead of being silently dropped, and value-taking flags must
+  // still consume their value token on the reject path.
+  describe("cross-command flag ownership", () => {
+    type Options = ParsedArgs["options"];
+
+    const valueTakingCases: {
+      flag: string;
+      value: string;
+      wrongCommand: string[];
+      probe: (options: Options) => void;
+      untouched: (options: Options) => void;
+    }[] = [
+      {
+        flag: "--in",
+        value: "validate.json",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.reportIn).toBeUndefined(),
+      },
+      {
+        flag: "--base-url",
+        value: "https://example.com/",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.reportBaseUrl).toBeUndefined(),
+      },
+      {
+        flag: "--path",
+        value: "18_delta.md",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.guardrailsPaths).toEqual([]),
+      },
+      {
+        flag: "--max",
+        value: "12",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.guardrailsMax).toBeUndefined(),
+      },
+      {
+        flag: "--keyword",
+        value: "layout",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.guardrailsKeyword).toBeUndefined(),
+      },
+      {
+        flag: "--platform",
+        value: "web",
+        wrongCommand: ["report"],
+        probe: (o) => expect(o.reportFormat).toBe("json"),
+        untouched: (o) => expect(o.platform).toBeUndefined(),
+      },
+      {
+        flag: "--target-url",
+        value: "https://example.com/",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.prototypingTargetUrl).toBeUndefined(),
+      },
+      {
+        flag: "--cycle",
+        value: "5",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.prototypingCycle).toBeUndefined(),
+      },
+      {
+        flag: "--license-patch",
+        value: "patch.json",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.prototypingLicensePatch).toBeUndefined(),
+      },
+      {
+        flag: "--primary-spec-id",
+        value: "spec-0001",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.prototypingPrimarySpecId).toBeUndefined(),
+      },
+      {
+        flag: "--skeleton-mode",
+        value: "stub",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.prototypingSkeletonMode).toBeUndefined(),
+      },
+      {
+        flag: "--mode",
+        value: "exploration",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.prototypingMode).toBeUndefined(),
+      },
+    ];
+
+    it.each(valueTakingCases)(
+      "$flag on a non-owning command marks invalid AND consumes the value token",
+      ({ flag, value, wrongCommand, probe, untouched }) => {
+        const cwd = process.cwd();
+        const formatValue = wrongCommand[0] === "report" ? "json" : "github";
+        const parsed = parseArgs([...wrongCommand, flag, value, "--format", formatValue], cwd);
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.help).toBe(true);
+        untouched(parsed.options);
+        // The dangling value must not have shifted into the positional
+        // stream: the trailing --format is still honored.
+        probe(parsed.options);
+      },
+    );
+
+    const booleanCases: { flag: string; untouched: (options: Options) => void }[] = [
+      { flag: "--run-validate", untouched: (o) => expect(o.reportRunValidate).toBe(false) },
+      { flag: "--check", untouched: (o) => expect(o.prototypingCheckOnly).toBeUndefined() },
+      {
+        flag: "--check-convergence",
+        untouched: (o) => expect(o.prototypingCheckConvergence).toBeUndefined(),
+      },
+      { flag: "--capture", untouched: (o) => expect(o.prototypingCapture).toBeUndefined() },
+      { flag: "--auto-serve", untouched: (o) => expect(o.prototypingAutoServe).toBeUndefined() },
+      {
+        flag: "--emit-skeletons",
+        untouched: (o) => expect(o.prototypingEmitSkeletons).toBeUndefined(),
+      },
+      { flag: "--active", untouched: (o) => expect(o.discussionActive).toBeUndefined() },
+      { flag: "--clean", untouched: (o) => expect(o.doctorClean).toBeUndefined() },
+      { flag: "--autoremediate", untouched: (o) => expect(o.doctorAutoremediate).toBeUndefined() },
+    ];
+
+    it.each(booleanCases)(
+      "$flag on a non-owning command marks invalid instead of being dropped",
+      ({ flag, untouched }) => {
+        const cwd = process.cwd();
+        const parsed = parseArgs(["validate", flag, "--format", "github"], cwd);
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.validateFormat).toBe("github");
+        untouched(parsed.options);
+      },
+    );
+
+    it("rejects prototyping flags used on the wrong prototyping subcommand", () => {
+      const cwd = process.cwd();
+      const capture = parseArgs(["prototyping", "certify", "--capture"], cwd);
+      expect(capture.invalid).toBe(true);
+      expect(capture.options.prototypingCapture).toBeUndefined();
+
+      const cycle = parseArgs(["prototyping", "preflight", "--cycle", "3"], cwd);
+      expect(cycle.invalid).toBe(true);
+      expect(cycle.options.prototypingCycle).toBeUndefined();
+
+      const check = parseArgs(["prototyping", "iterate", "--cycle", "0", "--check"], cwd);
+      expect(check.invalid).toBe(true);
+      expect(check.options.prototypingCheckOnly).toBeUndefined();
+    });
+
+    it("rejects guardrails flags used on a non-owning guardrails action", () => {
+      const cwd = process.cwd();
+
+      // runGuardrails reads `max` only on the extract path.
+      const listMax = parseArgs(["guardrails", "list", "--max", "0"], cwd);
+      expect(listMax.invalid).toBe(true);
+      expect(listMax.options.guardrailsMax).toBeUndefined();
+
+      // `check` returns before the keyword filter is applied.
+      const checkKeyword = parseArgs(["guardrails", "check", "--keyword", "foo"], cwd);
+      expect(checkKeyword.invalid).toBe(true);
+      expect(checkKeyword.options.guardrailsKeyword).toBeUndefined();
+
+      const extractMax = parseArgs(["guardrails", "extract", "--max", "0"], cwd);
+      expect(extractMax.invalid).toBe(false);
+      expect(extractMax.options.guardrailsMax).toBe(0);
+
+      const listKeyword = parseArgs(["guardrails", "list", "--keyword", "foo"], cwd);
+      expect(listKeyword.invalid).toBe(false);
+      expect(listKeyword.options.guardrailsKeyword).toBe("foo");
+    });
+
+    it("accepts --active only on `discussion list`", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["discussion", "use", "discussion-1", "--active"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.discussionActive).toBeUndefined();
+      expect(parsed.options.discussionId).toBe("discussion-1");
+    });
+
+    it("accepts doctor --target-url only with the built-in prototyping profile", () => {
+      const cwd = process.cwd();
+
+      const bare = parseArgs(["doctor", "--target-url", "https://x/"], cwd);
+      expect(bare.invalid).toBe(true);
+
+      // A skill profile does not run the targetUrl probe either.
+      const skillProfile = parseArgs(
+        ["doctor", "--profile", "qfai-sdd", "--target-url", "https://x/"],
+        cwd,
+      );
+      expect(skillProfile.invalid).toBe(true);
+
+      // The pairing is judged after the loop, so `--profile` may follow.
+      const trailingProfile = parseArgs(
+        ["doctor", "--target-url", "https://x/", "--profile", "prototyping"],
+        cwd,
+      );
+      expect(trailingProfile.invalid).toBe(false);
+      expect(trailingProfile.options.prototypingTargetUrl).toBe("https://x/");
+    });
+
+    it("rejects --strict / --fail-on on commands that never read them", () => {
+      const cwd = process.cwd();
+
+      const reportStrict = parseArgs(["report", "--strict"], cwd);
+      expect(reportStrict.invalid).toBe(true);
+      expect(reportStrict.options.strict).toBe(false);
+
+      const reportFailOn = parseArgs(["report", "--fail-on", "warning", "--format", "json"], cwd);
+      expect(reportFailOn.invalid).toBe(true);
+      expect(reportFailOn.options.failOn).toBeUndefined();
+      expect(reportFailOn.options.reportFormat).toBe("json");
+
+      const validateStrict = parseArgs(["validate", "--strict", "--fail-on", "warning"], cwd);
+      expect(validateStrict.invalid).toBe(false);
+      expect(validateStrict.options.strict).toBe(true);
+      expect(validateStrict.options.failOn).toBe("warning");
+
+      const preflight = parseArgs(["prototyping", "preflight", "--fail-on", "error"], cwd);
+      expect(preflight.invalid).toBe(false);
+      expect(preflight.options.failOn).toBe("error");
+
+      const doctorFailOn = parseArgs(["doctor", "--fail-on", "warning"], cwd);
+      expect(doctorFailOn.invalid).toBe(false);
+      expect(doctorFailOn.options.failOn).toBe("warning");
+
+      // `prototyping iterate` does not thread failOn into its runner.
+      const iterateFailOn = parseArgs(
+        ["prototyping", "iterate", "--cycle", "0", "--fail-on", "warning"],
+        cwd,
+      );
+      expect(iterateFailOn.invalid).toBe(true);
+      expect(iterateFailOn.options.failOn).toBeUndefined();
+    });
+
+    it("keeps every guarded flag valid on its owning command", () => {
+      const cwd = process.cwd();
+
+      const report = parseArgs(
+        ["report", "--in", "validate.json", "--run-validate", "--base-url", "https://x/"],
+        cwd,
+      );
+      expect(report.invalid).toBe(false);
+      expect(report.options.reportIn).toBe("validate.json");
+      expect(report.options.reportRunValidate).toBe(true);
+      expect(report.options.reportBaseUrl).toBe("https://x/");
+
+      const iterate = parseArgs(
+        [
+          "prototyping",
+          "iterate",
+          "--cycle",
+          "0",
+          "--target-url",
+          "https://x/",
+          "--capture",
+          "--auto-serve",
+          "--check-convergence",
+          "--emit-skeletons",
+          "--skeleton-mode",
+          "stub",
+          "--mode",
+          "exploration",
+          "--license-patch",
+          "patch.json",
+          "--primary-spec-id",
+          "spec-0001",
+        ],
+        cwd,
+      );
+      expect(iterate.invalid).toBe(false);
+      expect(iterate.options.prototypingCycle).toBe(0);
+      expect(iterate.options.prototypingCapture).toBe(true);
+      expect(iterate.options.prototypingAutoServe).toBe(true);
+      expect(iterate.options.prototypingCheckConvergence).toBe(true);
+      expect(iterate.options.prototypingEmitSkeletons).toBe(true);
+      expect(iterate.options.prototypingSkeletonMode).toBe("stub");
+      expect(iterate.options.prototypingMode).toBe("exploration");
+      expect(iterate.options.prototypingLicensePatch).toBe("patch.json");
+      expect(iterate.options.prototypingPrimarySpecId).toBe("spec-0001");
+      expect(iterate.options.prototypingTargetUrl).toBe("https://x/");
+
+      const certify = parseArgs(["prototyping", "certify", "--check"], cwd);
+      expect(certify.invalid).toBe(false);
+      expect(certify.options.prototypingCheckOnly).toBe(true);
+
+      // `doctor --profile prototyping` shares the targetUrl probe, so
+      // --target-url stays valid there alongside doctor's own flags.
+      const doctor = parseArgs(
+        ["doctor", "--profile", "prototyping", "--target-url", "https://x/", "--clean"],
+        cwd,
+      );
+      expect(doctor.invalid).toBe(false);
+      expect(doctor.options.prototypingTargetUrl).toBe("https://x/");
+      expect(doctor.options.doctorClean).toBe(true);
+
+      const discussion = parseArgs(["discussion", "list", "--active"], cwd);
+      expect(discussion.invalid).toBe(false);
+      expect(discussion.options.discussionActive).toBe(true);
+
+      const validate = parseArgs(["validate", "--platform", "web"], cwd);
+      expect(validate.invalid).toBe(false);
+      expect(validate.options.platform).toBe("web");
     });
   });
 
