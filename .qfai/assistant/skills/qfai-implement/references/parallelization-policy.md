@@ -172,12 +172,16 @@ worker's returned `done` at `refactor` until these steps pass
 2. Re-request `completion-reviewer` and `implementation-reviewer` for that item
    against the same tree, so items 7 and 8 name the address item 6 now carries.
    **A UI-affecting item re-requests `product-surface-reviewer` there too**, so
-   item 9's prototype parity PASS names it as well. That verdict is a reading of
-   rendered output, and the worker took it before any other slice was in the
+   item 9's PASS names it as well — prototype parity on a visual-prototyping
+   target, and on a cli-only target the captured-output surface review item 9
+   puts in parity's place, since `/qfai-prototyping` rejects `cli` and leaves no
+   prototype to compare against. That verdict is a reading of reviewed output,
+   and the worker took it before any other slice was in the
    tree: a merged sibling's stylesheet, layout container or shared component can
    change what this item renders without moving its own suite off GREEN, so the
-   two code reviews above do not stand in for it. `SKILL.md` admits a UI item to
-   `done` only on that PASS (`#item-completion-checklist-12-point-gate`, item 9),
+   two code reviews above do not stand in for it. Gate item 9 admits a UI item
+   to `done` only on that PASS
+   (`../SKILL.md#item-completion-checklist-12-point-gate`),
    and a pre-merge one is evidence about a tree the item does not ship on.
 3. An item whose `Refactor verify revision` already resolves to the integrated
    tree — nothing landed after its slice — is current as recorded and needs

@@ -236,9 +236,10 @@ worker takes them all inside its own worktree, and the merge adds every other
 slice's change, so the address they share is not the integrated tree's. The
 post-merge step re-runs each merged item's relevant suite, refreshes its
 `Refactor verify` fields and re-requests the reviews — items 7 and 8 on every
-item, and item 9's `product-surface-reviewer` parity review as well on a
-UI-affecting one, whose rendered output another slice can change while this
-item's own suite stays GREEN — before that item goes `done`
+item, and item 9's `product-surface-reviewer` review as well on a UI-affecting
+one (prototype parity, or on a cli-only target the captured-output surface
+review item 9 puts in its place), whose reviewed output another slice can change
+while this item's own suite stays GREEN — before that item goes `done`
 (`parallelization-policy.md#re-verify-each-merged-item-on-the-integrated-tree`).
 "Before `done`" is literal: the orchestrator writes a worker's returned `done`
 into the trunk as `refactor` and promotes it only after the re-take passes

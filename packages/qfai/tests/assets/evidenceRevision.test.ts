@@ -238,17 +238,26 @@ describe("evidence and verdicts carry a revision", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(parallel).toContain(
-        "**A UI-affecting item re-requests `product-surface-reviewer` there too**, so item 9's prototype parity PASS names it as well",
+        "**A UI-affecting item re-requests `product-surface-reviewer` there too**, so item 9's PASS names it as well",
       );
       expect(parallel).toContain(
         "that item's re-verify and **every re-review it owes** have returned PASS on the merged tree — `completion-reviewer` and `implementation-reviewer` on every item, and `product-surface-reviewer` as well on a UI-affecting one",
       );
       expect(reference).toContain(
-        "item 9's `product-surface-reviewer` parity review as well on a UI-affecting one",
+        "item 9's `product-surface-reviewer` review as well on a UI-affecting one",
       );
       expect(skill).toContain(
-        "**plus item 9's `product-surface-reviewer` parity review on a UI-affecting item**",
+        "**plus item 9's `product-surface-reviewer` review on a UI-affecting item**",
       );
+      // Item 9's review is prototype parity only where a prototype exists.
+      // `/qfai-prototyping` rejects `cli`, so naming the re-take "parity"
+      // without the carve-out sends a cli orchestrator looking for an artifact
+      // that cannot exist and leaves the row permanently un-`done`-able —
+      // which is the claim `discussionSkillTemplateIntegration.test.ts` checks
+      // over every parity line in `SKILL.md`. All three surfaces carry it.
+      for (const surface of [parallel, reference, skill]) {
+        expect(surface).toContain("cli-only target");
+      }
       // Over-correction pin: the parity review is added to the re-take, not
       // substituted for the two code reviews every merged item still owes.
       expect(parallel).toContain(
