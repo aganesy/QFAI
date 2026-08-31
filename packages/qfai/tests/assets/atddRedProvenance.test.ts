@@ -233,6 +233,47 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     expect(provenance).toContain("not on the status");
   });
 
+  it("reads the DR of the current exception, not any DR left in the cell", async () => {
+    // `execution-ledger.md` keeps the old anomaly's `DR-*` through
+    // `exception -> todo` and APPENDS a new one on re-entry, so the cell can
+    // hold both. Asking only whether *a* `DR-*` reports both forms unavailable
+    // exempts a row on a branch-3 record that is over — readmitting exactly the
+    // row that reached `red` and still owes its proof.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("appended, not substituted");
+
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell",
+    );
+    expect(gatekeeper).toContain("Read the **last appended** `DR-*`");
+
+    // The reference and the downstream gate name the same key.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("keyed on the **last appended** `DR-*`");
+    expect(flat(await read(tree, IMPLEMENT))).toContain("Read the last appended `DR-*`");
+  });
+
+  it("excludes a waived branch-3 row from the downstream completion conditions too", async () => {
+    // The gatekeeper's Oracle-proof exclusion alone does not make a waived
+    // branch-3 `exception` completable: `qfai-implement`'s completion
+    // prohibitions still demand RED, GREEN and both reviewer verdicts per item,
+    // and branch 3 never enters Phase Green, so the waiver released the status
+    // bullet and nothing else.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "A waived branch-3 `exception` is outside the RED, GREEN, reviewer-verdict and `Oracle proof` conditions above as well",
+    );
+    expect(implement).toContain("it never enters Phase Green and produces none of that evidence");
+    // Judged where the exclusion is defined, rather than re-litigated here.
+    expect(implement).toContain('under "Branch 3 gets its own verdict"');
+    // The waiver carve-out it extends is still the one on the status bullet.
+    expect(implement).toContain("user-approved accepted-risk");
+
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("The same exclusion holds at `/qfai-implement`'s completion");
+  });
+
   it("accepts a valid exception as the third evidence form", async () => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("or a `DR-*` recording why neither was available");

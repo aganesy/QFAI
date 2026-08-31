@@ -286,10 +286,14 @@ having. It **can** stand at a spec-level completion gate, carried there by a
 user-approved `TDDLIST-001` waiver ("Branch 3 does not close a spec on its
 own" below), and the gate does not acquire an `Oracle proof` claim on it there:
 `agents/qa-gatekeeper.md` excludes a branch-3 `exception` from the requirement
-at both gates and judges it on its `DR-*` instead — keyed on that `DR-*`
-recording both forms unavailable, not on the status, since `exception` is
-reachable from any active status and a row parked there after proving its
-oracle still owes one. Its audit subject at P1d is the
+at both gates and judges it on its `DR-*` instead — keyed on the **last
+appended** `DR-*` recording both forms unavailable, not on the status and not on
+any `DR-*` in the cell, since `exception` is reachable from any active status, a
+row parked there after proving its oracle still owes one, and `exception ->
+todo` keeps the old record while a re-entry appends the new one. The same
+exclusion holds at `/qfai-implement`'s completion prohibitions, which otherwise
+demand a GREEN and two reviewer verdicts branch 3 never produces. Its audit
+subject at P1d is the
 row identity and obligation reference plus the `DR-ID` and the DR artifact, as
 the `exception` row above states.
 Criteria: `../../qfai-implement/references/oracle-strength.md`.

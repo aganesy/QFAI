@@ -63,6 +63,18 @@ absence or invalidity is REVISE there as anywhere. A `DR-*` naming no
 unavailability at all is already REVISE under "Branch 3 gets its own verdict",
 so no row reaches a gate exempt on a record that does not say why.
 
+**And it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell.**
+`exception -> todo` **keeps** the anomaly's `DR-*`, and a row that enters
+`exception` again records a new one **appended, not substituted**
+(`../skills/qfai-implement/references/execution-ledger.md`). So a row once on
+branch 3, reset to `todo`, re-run to `red` and parked again by some unrelated
+checkpoint anomaly holds both records side by side, and a rule that asks only
+whether _a_ `DR-*` reports both forms unavailable exempts it on the older one —
+readmitting exactly the row that reached `red` and owes its proof, which is the
+hole the paragraph above closes. Read the **last appended** `DR-*`: the one the
+current `exception` was written with. An earlier branch-3 record describes an
+exception that is over and exempts nothing.
+
 **At a RED observation the proof is a plan, and a plan is enough.** Branch 1's
 RED is taken before any production behaviour exists, so there is nothing to
 mutate: the item names the predicate it will break and the command it will run.
