@@ -670,6 +670,22 @@ function tcNotCoveredWithoutLedger(
 type StoppedSpecIndex = ReadonlySet<string> | null;
 
 /**
+ * Everything the stop check needs, read once for the whole run.
+ *
+ * The index and the severity travel together because they are established at
+ * the same moment and for the same reason: the steering surface is walked once
+ * for the whole validation, and the promotion window is a property of the tool
+ * version rather than of any one spec.
+ */
+type BlockedWorklogGate = {
+  /** `null` when the surface could not be walked: no answer, so no finding. */
+  stoppedSpecIds: StoppedSpecIndex;
+  blockedNoWorklogSeverity: "warning" | "error";
+  /** Names the release that ends the window; empty once the promotion has happened. */
+  blockedNoWorklogWindowNote: string;
+};
+
+/**
  * The finding a spec owes when its ledger stopped and `.qfai/steering/` holds
  * no record of why.
  *
@@ -681,8 +697,9 @@ function blockedWithoutWorklog(
   blockedRowLabels: readonly string[],
   specNumber: string,
   relPath: string,
-  stoppedSpecIds: StoppedSpecIndex,
+  gate: BlockedWorklogGate,
 ): Issue[] {
+  const { stoppedSpecIds, blockedNoWorklogSeverity, blockedNoWorklogWindowNote } = gate;
   if (stoppedSpecIds === null) return [];
   const specId = `spec-${specNumber}`;
   if (blockedRowLabels.length === 0 || stoppedSpecIds.has(specId)) return [];
@@ -690,8 +707,8 @@ function blockedWithoutWorklog(
   return [
     issue(
       "TDDLIST_BLOCKED_NO_WORKLOG",
-      `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up`,
-      "error",
+      `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up${blockedNoWorklogWindowNote}`,
+      blockedNoWorklogSeverity,
       relPath,
       "tddList.blockedWorklog",
       undefined,
@@ -723,20 +740,41 @@ function blockedWithoutWorklog(
  *   read error into a sentinel entry rather than throwing — so without this the
  *   spec it accounted for would be reported as an omission on the strength of a
  *   file nobody managed to open.
+ *
+ * Both codes it decides are new, and both run a promotion window
+ * (`RULE_PROMOTIONS`, design principle P7): the obligation lands on stops
+ * recorded before anyone was asked to account for them, on rows that are
+ * terminal. `resolveToolVersion` resolves rather than rejects — its read
+ * failures return `"unknown"`, which the comparator reads as inside the window
+ * — so an unreadable version can never be what escalates either into a build
+ * failure.
  */
-async function readSteeringIndex(
-  root: string,
-): Promise<{ stoppedSpecIds: StoppedSpecIndex; issues: Issue[] }> {
+async function readSteeringIndex(root: string): Promise<BlockedWorklogGate & { issues: Issue[] }> {
+  const toolVersion = await resolveToolVersion();
+  const blockedNoWorklogPromotion = RULE_PROMOTIONS.tddListBlockedWithoutWorklog.promoteAt;
+  const blockedNoWorklogSeverity = newRuleSeverity(toolVersion, blockedNoWorklogPromotion);
+  const blockedNoWorklogWindowNote =
+    blockedNoWorklogSeverity === "warning"
+      ? `. Reported as a warning until the ${blockedNoWorklogPromotion} release, then an error`
+      : "";
+  const unreadablePromotion = RULE_PROMOTIONS.tddListWorklogUnreadable.promoteAt;
+  const worklogUnreadableSeverity = newRuleSeverity(toolVersion, unreadablePromotion);
+  const unreadableWindowNote =
+    worklogUnreadableSeverity === "warning"
+      ? ` Reported as a warning until the ${unreadablePromotion} release, then an error.`
+      : "";
+  const window = { blockedNoWorklogSeverity, blockedNoWorklogWindowNote };
+
   const unreadable = (location: string, detail: string, remedy: string): Issue =>
     issue(
       "TDDLIST_WORKLOG_UNREADABLE",
       `${detail}. Ledger validation continued, but no spec was checked for a work-log entry accounting for its blocked rows`,
-      "warning",
+      worklogUnreadableSeverity,
       location,
       "tddList.blockedWorklog.unreadable",
       undefined,
       "change",
-      `${remedy} 復旧するまで \`TDDLIST_BLOCKED_NO_WORKLOG\` の判定は行われません。`,
+      `${remedy} 復旧するまで \`TDDLIST_BLOCKED_NO_WORKLOG\` の判定は行われません。${unreadableWindowNote}`,
     );
 
   let entries: readonly WorklogEntry[];
@@ -745,6 +783,7 @@ async function readSteeringIndex(
   } catch (err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
     return {
+      ...window,
       stoppedSpecIds: null,
       issues: [
         unreadable(
@@ -759,6 +798,7 @@ async function readSteeringIndex(
   const broken = unreadableWorklogEntries(entries);
   if (broken.length > 0) {
     return {
+      ...window,
       stoppedSpecIds: null,
       issues: broken.map((entry) =>
         unreadable(
@@ -770,7 +810,7 @@ async function readSteeringIndex(
     };
   }
 
-  return { stoppedSpecIds: collectStoppedSpecIds(entries), issues: [] };
+  return { ...window, stoppedSpecIds: collectStoppedSpecIds(entries), issues: [] };
 }
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -780,9 +820,8 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
 
   // Read once for the whole run: the steering surface is project-wide, and one
   // walk per spec would re-read every entry for every ledger.
-  const steering = await readSteeringIndex(root);
-  issues.push(...steering.issues);
-  const stoppedSpecIds = steering.stoppedSpecIds;
+  const { issues: steeringIssues, ...gate } = await readSteeringIndex(root);
+  issues.push(...steeringIssues);
 
   for (const entry of entries) {
     const specIssues = await validateSpecTddList(
@@ -790,7 +829,7 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
       entry.dir,
       entry.specNumber,
       specsRoot,
-      stoppedSpecIds,
+      gate,
     );
     issues.push(...specIssues);
   }
@@ -803,7 +842,7 @@ async function validateSpecTddList(
   specDir: string,
   specNumber: string,
   specsRoot: string,
-  stoppedSpecIds: StoppedSpecIndex,
+  gate: BlockedWorklogGate,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -1277,7 +1316,7 @@ async function validateSpecTddList(
   // block `qfai init` writes (`core/gitignore.ts`) covers `report`, `evidence`,
   // `discussion`, `review` and `state.json`, and no steering path, so the
   // surface is tracked and the omission is visible to ordinary CI.
-  issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, stoppedSpecIds));
+  issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, gate));
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
   const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);

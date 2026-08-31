@@ -61,4 +61,22 @@ describe.each(TREES)("%s", (tree) => {
     expect(ledger).toContain("Also write the `.qfai/steering/<id>.md` work-log entry for the stop");
     expect(ledger).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
   });
+
+  it("does not claim the finding is an error before its promotion", async () => {
+    // Both files said the finding is an `error` and that the completion command
+    // fails until the entry exists. It is a new rule shipping behind a
+    // promotion window (`RULE_PROMOTIONS`, P7) — it is a warning until the
+    // pinned release — so as written they told the reader their build was
+    // already failing on stops recorded before the check existed, and sent them
+    // to backfill entries under a deadline nothing was enforcing.
+    const skill = flat(await read(tree, SKILL));
+    const ledger = flat(await read(tree, LEDGER));
+
+    expect(skill).not.toContain(
+      "reports `TDDLIST_BLOCKED_NO_WORKLOG` as an `error`, so this stage's completion command fails",
+    );
+    expect(ledger).not.toContain("`TDDLIST_BLOCKED_NO_WORKLOG` errors while no");
+    expect(skill).toContain("a warning inside its migration window");
+    expect(ledger).toContain("a warning inside its migration window");
+  });
 });

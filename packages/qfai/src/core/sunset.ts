@@ -128,6 +128,25 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_BLOCKED_NO_WORKLOG` — a ledger that stopped with no steering
+   * entry accounting for the stop. Nothing asked for that entry before, so
+   * every repository holding a parked row owes one the moment the rule ships,
+   * and the rows are terminal: the account has to be written for stops that
+   * happened before anybody was told to record them.
+   */
+  tddListBlockedWithoutWorklog: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_WORKLOG_UNREADABLE` — the steering surface could not be read, so
+   * the check above had no answer and abstained.
+   *
+   * It shares that window rather than staying a `warning` for good. Once the
+   * obligation is a hard gate, an environment that stops the tool checking it
+   * has to be one too — otherwise making the surface unreadable is a way to
+   * turn the error back into a warning, and the gate is bypassed by the one
+   * condition it cannot see through.
+   */
+  tddListWorklogUnreadable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

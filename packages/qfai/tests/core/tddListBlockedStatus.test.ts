@@ -21,6 +21,8 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 /**
@@ -231,14 +233,28 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
   // whether `.qfai/steering/` says why.
   const BLOCKED_ROW = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260729-0008 |`;
 
-  it("errors when a blocked row has no steering entry at all", async () => {
-    // `error`, not `warning`: the stage completes on
-    // `validate --profile tdd --fail-on error`, so a warning would state the
-    // obligation and gate nothing.
+  it("takes its severity from the promotion window, ending at `error`", async () => {
+    // The obligation is `error` — the stage completes on
+    // `validate --profile tdd --fail-on error`, so a permanent warning would
+    // state it and gate nothing. But it is a NEW rule landing on stops
+    // recorded before anyone was asked to account for them, on rows that are
+    // terminal, so P7 gives it a window first: shipping it straight at `error`
+    // took this repository's own dogfooding validate from 0 errors to 1 on
+    // rows parked months before the check existed.
+    //
+    // Read from the pin rather than asserted as `"warning"`, so the assertion
+    // stays true across the promotion instead of having to be edited at it.
+    // What is pinned unconditionally is that the registry decides the severity
+    // and that the window ends at `error`.
     const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`);
     const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_NO_WORKLOG");
-    expect(found?.severity).toBe("error");
+    const promoteAt = RULE_PROMOTIONS.tddListBlockedWithoutWorklog.promoteAt;
+    const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+
+    expect(found?.severity).toBe(severity);
+    expect(newRuleSeverity(promoteAt, promoteAt)).toBe("error");
     expect(found?.message).toContain("spec-0001");
+    if (severity === "warning") expect(found?.message).toContain(promoteAt);
   });
 
   it("points `links` at a global entry, the only scope that reads it", async () => {

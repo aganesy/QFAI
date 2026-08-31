@@ -205,9 +205,12 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
   Also write the `.qfai/steering/<id>.md` work-log entry for the stop —
   `Blocked-By` names WHAT the row waits on, the entry is what was tried and
-  what the next session picks up. `TDDLIST_BLOCKED_NO_WORKLOG` errors while no
+  what the next session picks up. `TDDLIST_BLOCKED_NO_WORKLOG` reports while no
   open (non-`archived`) `kind: blocker` / `kind: handoff` entry names this spec
   — through its own `scope:`, or through `links:` on a `scope: global` entry.
+  It is a warning inside its migration window and an error from the release the
+  finding names, so a stop recorded before the check existed is not an upgrade
+  that fails on the spot.
 - `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
   backward transition**: the row never started, so nothing is being undone.
 - `todo` -> `red` (write a failing test)
