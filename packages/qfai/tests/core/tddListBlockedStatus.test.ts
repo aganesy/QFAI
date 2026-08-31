@@ -103,9 +103,9 @@ describe("TDDLIST_BLOCKED_MISSING_REF — a blocked row must name its blocker", 
     ".qfai/contracts/db/CON-DB-0005.sql:2715",
     "spec-0006:TDD-0034",
   ]) {
-    it(`accepts "${blocker}"`, async () => {
+    it(`accepts "${blocker}" with its departure status`, async () => {
       const issues = await run(
-        `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | ${blocker} |\n`,
+        `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | ${blocker} — blocked at green |\n`,
       );
       expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_MISSING_REF");
     });
@@ -114,6 +114,69 @@ describe("TDDLIST_BLOCKED_MISSING_REF — a blocked row must name its blocker", 
   it("says nothing about a row that is not blocked", async () => {
     const issues = await run(
       `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | todo | - | - |  |\n`,
+    );
+    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_MISSING_REF");
+  });
+});
+
+describe("TDDLIST_BLOCKED_MISSING_REF — the departure-status half", () => {
+  // `blocked` is reachable from every active status, and a row parked there
+  // across a session boundary persists nothing but its `Status` and this cell.
+  // The resumption reads the departure status to decide whether it continues an
+  // interrupted round or opens the next one, and to compose
+  // `Round N: Resumed-from-blocked`. Accepting a bare blocker let a row be saved
+  // in a state no later session can resume from.
+  it("errors when the cell names a blocker but no departure status", async () => {
+    const issues = await run(
+      `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260729-0008 |\n`,
+    );
+    const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_MISSING_REF");
+    expect(found?.severity).toBe("error");
+  });
+
+  for (const status of ["done", "exception", "blocked", "reviewfix", "in-progress"]) {
+    it(`errors when the departure status is "${status}"`, async () => {
+      // Only the active statuses the inbound edge admits can be departed from:
+      // `blocked` is the destination, and `done` / `exception` are terminal, so
+      // neither has work in flight for a blocker to stop.
+      const issues = await run(
+        `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260729-0008 — blocked at ${status} |\n`,
+      );
+      expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_MISSING_REF");
+    });
+  }
+
+  for (const status of ["todo", "red", "green", "refactor", "review-fix"]) {
+    it(`accepts a departure status of "${status}"`, async () => {
+      const issues = await run(
+        `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260729-0008 — blocked at ${status} |\n`,
+      );
+      expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_MISSING_REF");
+    });
+  }
+
+  it("keeps a dash-bearing blocker whole", async () => {
+    // The blocker half is matched greedily so the separator is the last one that
+    // still leaves a legal tail; anchoring on the first would cut
+    // `spec-0006:TDD-0034` in half and reject a well-formed cell.
+    const issues = await run(
+      `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | spec-0006:TDD-0034 - blocked at review-fix |\n`,
+    );
+    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_MISSING_REF");
+  });
+
+  it("errors when the departure status stands alone with no blocker", async () => {
+    const issues = await run(
+      `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | — blocked at green |\n`,
+    );
+    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_MISSING_REF");
+  });
+
+  it("still says nothing about a non-blocked row carrying a bare value", async () => {
+    // The check is scoped to `blocked` rows; a stale `Blocked-By` left on a
+    // resumed row is not this finding.
+    const issues = await run(
+      `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | todo | - | - | CR-20260729-0008 |\n`,
     );
     expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_MISSING_REF");
   });

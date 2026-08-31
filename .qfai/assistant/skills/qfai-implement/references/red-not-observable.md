@@ -15,6 +15,20 @@ run.
   path rather than a row id (step 1). Specific to those rows: their surfaces
   come from work orders that never appear in the ledger, which is not true of
   a `Unit` / `Component` / `Integration` row.
+- **Or, on a row resumed from `blocked`, satisfied by this row's own earlier
+  round** — `blocked` is reachable from `green` and `refactor`
+  (`execution-ledger.md#allowed-transitions`) and `blocked` -> `todo` restarts
+  the cycle, so the fresh RED that resumption owes is re-run against production
+  code **this row already wrote**. **Not an anomaly** and does **not** go to
+  `exception`: without this case the edge the ledger deliberately widened would
+  have no legal way back to `done`. Same procedure, and `Satisfied-by` takes
+  this row's own row id and the round that satisfied it (step 1). **Only a row
+  whose resumed round carries `Resumed-from-blocked`** (`round-evidence.md`)
+  **naming a departure status whose round was closed by a GREEN pair** — that
+  is, `green` or `refactor` — qualifies. A row that reached `todo` by an
+  approved upstream reset has its retained GREEN withdrawn, not resumed; a row
+  blocked at `todo` or `red` never wrote the GREEN this form points at. Both
+  take the ordinary classification.
 - **Or satisfied by pre-existing production state that no row and no work
   order created** — a regression guard over a property the system already had
   before this spec existed. **Not an anomaly** either: nothing built the
@@ -34,11 +48,12 @@ The row still needs to be falsifiable, so substitute falsifiability evidence
 for the natural RED and let the row proceed to `green` and `done`:
 
 1. Record `Satisfied-by` — **the sibling `TDD-NNNN` whose implementation
-   already satisfies this obligation**, or, on the two branches after it, the
-   production path and symbol, or the artifact **plus the property it already
-   had** — never the artifact alone, because a file name says nothing about
-   what made the predicate true. A decision record id is accepted where the
-   property was established by a decision rather than by code.
+   already satisfies this obligation**, or, on the three branches after it, the
+   production path and symbol, this row's own row id and round, or the artifact
+   **plus the property it already had** — never the artifact alone, because a
+   file name says nothing about what made the predicate true. A decision record
+   id is accepted where the property was established by a decision rather than
+   by code.
 
    **The production path and symbol** (`src/api/routes/evaluations.py::register`)
    **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
@@ -54,6 +69,38 @@ for the natural RED and let the row proceed to `green` and `done`:
    is the "anything else" case above, and `qfai-implement/SKILL.md` Phase Red
    step 5 sends it to `exception`. Widening the field for every row would let
    an ordinary TDD row reach `done` with no production change and no sibling.
+
+   **On a row resumed from `blocked` it is this row's own row id plus the round
+   whose GREEN wrote the predicate** (`TDD-0007 round 1`) — the only case where
+   `Satisfied-by` names the row itself, and it is open on every `Layer`. What a
+   reviewer checks in place of the sibling is that **retained round block**:
+   `round-evidence.md` keeps the rounds recorded before the block, so the GREEN
+   that wrote the predicate is on record and the mutation has a named boundary.
+   A row carrying no such round was never resumed from `blocked`, and this form
+   is not open to it — which is why it does not reopen the "no production
+   change and no sibling" hole the paragraph above closes.
+
+   **The retained round is necessary and not sufficient**: it proves the row was
+   once GREEN, not that it arrived at `todo` by a resumption. An approved
+   upstream reset leaves the same retained round while **withdrawing** the work
+   it records, so the qualifying evidence is `Round N: Resumed-from-blocked` on
+   the round the resumption wrote into — the blocker and the departure status,
+   persisted there precisely because `Blocked-By` is cleared by
+   `blocked` -> `todo` (`round-evidence.md`). A reviewer reads that field, not
+   the retained GREEN alone; absent it, a reset row claiming this form is
+   REVISEd and takes the ordinary classification above.
+
+   **On an `E2E` / `API` / `Integration` row the resumption reaches this
+   procedure through steps 4 and 5, not through the handover.**
+   `qfai-implement/SKILL.md` Phase Red step 3b consumes the `/qfai-atdd`
+   provenance of a `todo` row and skips steps 4 and 5 — replaying it here would
+   re-assert a RED observed on the pre-block tree and never take the fresh one
+   the resumption owes, so 3b excludes a row whose `Resumed-from-blocked` names
+   a departure status **other than `todo`** and sends it down the ordinary path.
+   **A row blocked at `todo` is excluded from that exclusion**: `todo` is where
+   the row waits for the handover, so a block taken there consumed nothing and
+   3b verifies the entry as it does for any other `todo` row. Such a row wrote
+   no round, so this procedure's self-reference is closed to it regardless.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as

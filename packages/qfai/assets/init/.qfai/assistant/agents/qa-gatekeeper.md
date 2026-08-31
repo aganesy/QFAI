@@ -115,7 +115,25 @@ falsifiability evidence that passes. On a handed-over row, **the predicate
 out of bounds.
 
 **On any other row the sibling row is still required** — production code
-no ledger row owns is the anomaly case there, not a substitute. See
+no ledger row owns is the anomaly case there, not a substitute. **One
+exception, and it is not unowned code**: a row resumed from `blocked` may name
+**itself** plus the round whose GREEN wrote the predicate, because
+`blocked` -> `todo` restarts a cycle this row had already implemented. Check it
+against the **retained round block** rather than a sibling, and treat the
+predicate that round's GREEN wrote as the owned code for the Oracle Strength
+Check. **The retained round alone does not qualify the row** — it proves the
+row was once GREEN, not that it resumed: require
+`Round N: Resumed-from-blocked` on the round the resumption wrote into, and
+REVISE the self-reference without it. **Read the departure status it records
+and require `green` or `refactor`** — the field carries both halves, and only
+those two name a round a GREEN pair closed. A row blocked at `red`, at
+`review-fix` before its rework took a GREEN, or at `todo` has no GREEN of its
+own to point at, so a row that resumed from one of those and cites itself is
+hiding why its fresh RED passed. A row reset to `todo` by an approved
+Change Request carries the same retained GREEN while that approval **withdrew**
+the work it records, so accepting the retained round on its own readmits the
+"no production change and no sibling" path this exception is narrowed against.
+See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 
