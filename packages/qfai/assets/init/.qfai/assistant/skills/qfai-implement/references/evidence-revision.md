@@ -72,6 +72,14 @@ Revision: <git rev> | working-tree+<content hash>
      latest — a recomputation that stops at one pair is the same hole with a
      value stored beside it.
 
+     **A record re-attestation seals its own pack the same way**, under
+     `Record re-attestation pack` and `Record re-attestation pack seal` — it is
+     not a round, so it takes no `Round N:` prefix
+     (`../../../constitution/drift-protocol.md#the-record-defect-queue`). The
+     pack holding the verdict it supersedes is never edited to restamp a hash:
+     that would break the seal already recorded over it, which is the one thing
+     a seal exists to prevent.
+
      **What a seal does and does not catch — say it once, plainly.** It is
      recorded at one moment and recomputed at another, and it catches every
      change between them: a pack edited after the round closed, a checkpoint
