@@ -18,13 +18,41 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only and runs a single-thread evolution loop driven by
-  `qfai prototyping iterate --cycle <n>`, with deterministic stop conditions
-  (exit codes 0 continue / 64 convergence / 65 max-iterations / 2 input error).
+- Prototyping is UI-only and runs a primary-spec evolution loop driven by
+  `qfai prototyping iterate --cycle <n>`. Each run resolves exactly one
+  primary UI-bearing spec (`prototyping.primarySpecId` in `qfai.config.yaml`,
+  a `surface_type: ui-bearing` marker, or `--primary-spec-id`), freezes it at
+  cycle 0, and iterates `cycle 0..9` (max 10 cycles) with deterministic stop
+  conditions (exit codes 0 continue / 64 convergence / 65 max-iterations /
+  66 license-verify failure / 2 input or lock drift). The full set of
+  UI-bearing specs is frozen at cycle 0 as `frozenSurfaceUnion` and is read
+  only to detect surface drift on later cycles: secondary specs are **not**
+  evaluated by that run. Only one primary spec can therefore be evolved per
+  project: re-running cycle 0 for a second spec is refused without `--force`,
+  and with `--force` it re-seeds `prototyping.json` (`runId`, `specsCovered`,
+  `frozenSpecsCovered`) around the new single spec, so the earlier spec's
+  iterations do not survive as a valid loop. Iterating a second UI-bearing
+  spec has to wait for the per-spec iteration layout.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
-- Per-iter evidence is `screenshot.png` + `index.html` per declared screen plus a single `review.json` (4-axis ordinal, prose critique, anti-slop detection, pivot directive).
+- Per-iter evidence is a single `<screen>.review.json` per declared spec ×
+  screen pair (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
+  bounded to 200 words each, `layoutAntiPatternsDetected[]`,
+  `designMdViolations[]`, and `pivotDirective`). It is the only
+  reviewer-authored file, not the only per-cycle artifact: the CLI itself
+  always writes `iterate-plan.json` into the same `iter-NN/` directory, and
+  from cycle 1 onward — once the previous cycle is recorded in
+  `prototyping.json#iterations[]` — an advisory `iterate-context.json` holding
+  the prior scores and open blockers. The opt-in `--capture` and
+  `--cycle 0 --emit-skeletons` flags additionally write `<screen>.png` /
+  `<screen>.html` there. Archive the whole `iter-NN/` directory; no
+  `interaction.json` is written on any path.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
+
+<!-- readme-align:ignore-start -->
+
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
+
+<!-- readme-align:ignore-end -->
 
 ## Installation
 
@@ -95,19 +123,15 @@ npx qfai report
     primary spec, UI contracts, design contract readiness, active agent-wrapper
     integrations, shipped role-input readiness, Playwright CLI launcher
     resolution/probing, and target URL reachability.
-    Note: prototyping evidence (`.qfai/evidence/prototyping/prototyping.json`) is produced by the AI workflow / skills
+    Note: prototyping evidence (`.qfai/evidence/prototyping/prototyping.json`) is produced by the AI workflow
     (`/qfai-prototyping`), not by a general-purpose end-user CLI flow.
     Use `npx qfai prototyping preflight --target-url <url>` for a focused
-    prototyping preflight before the skill starts; it now surfaces blocking
-    `QFAI-DCON-*` design-contract issues alongside runtime assumptions, resolves
-    a runnable Playwright CLI launcher (project wrapper / local bin / PATH /
-    `npx --no-install`), and still treats the first real delegation failure as a
-    runtime hard-stop.
-    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the
-    single-thread evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations),
-    2 (input error). `qfai validate` consumes the resulting evidence files
-    (`.qfai/evidence/prototyping/prototyping.json`).
-    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/render.json#/screens/0`).
+    prototyping preflight before the skill starts; it surfaces blocking
+    `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the primary-spec
+    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
+    Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs
+    (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/prototyping/iter-03/home.png`).
     Absolute paths are invalid. The same strict ref grammar is enforced for top-level and leaf evidence-bearing fields, including
     `runtimeGate.evidenceRefs`, `runtimeGate.ui[].declaredRef`, `runtimeGate.ui[].renderEvidenceRefs[]`,
     `runtimeGate.ui[].browserQaEvidenceRefs[]`, `specs[].coverageRefs[].declaredRef`, `specs[].coverageRefs[].observedRefs[]`,
@@ -129,13 +153,28 @@ npx qfai report
 
 ## ATDD annotation hard gate
 
-`qfai validate` enforces spec-to-test traceability with directory-based rules.
+`qfai validate` enforces spec-to-test traceability. `US` and `CON-API` obligations are routed by ID type;
+a `TC` obligation is routed by the `Level` its spec declares for it.
 
 - `tests/e2e/**`: annotate all covered user stories with concrete IDs such as `QFAI:SPEC-0001:US-0001`.
-- `tests/integration/**`: annotate all covered test cases with concrete IDs such as `QFAI:SPEC-0001:TC-0001`.
 - `tests/api/**`: annotate all covered API contracts with concrete IDs such as `QFAI:CON-API-0001`.
-- `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
+- Annotate a covered test case with a concrete ID such as `QFAI:SPEC-0001:TC-0001`, in the directory its declared `Level` names:
+
+  | `Level`                       | Annotated in           |
+  | ----------------------------- | ---------------------- |
+  | `L1`/`Unit`, `L2`/`Component` | no ATDD annotation     |
+  | `L3`/`Integration`            | `tests/integration/**` |
+  | `L4`/`API`                    | `tests/api/**`         |
+  | `L5`/`E2E`                    | `tests/e2e/**`         |
+  | none declared, or unreadable  | `tests/integration/**` |
+
+- Unit and Component test cases carry **no** ATDD annotation obligation. They are gated by the
+  per-spec `test-list.md` ledger instead, so do not copy them into `tests/integration/**` to satisfy this gate.
+- A `TC` annotation outside the directory its declared `Level` names is rejected. The rule is `Level`-relative,
+  not a blanket ban: a `TC` in `tests/api/**` is accepted only for a test case that declares `L4`/`API`, and in
+  `tests/e2e/**` only for `L5`/`E2E`.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
+- These directories follow `paths.testsDir` from `qfai.config.yaml`; `tests/` above is the default.
 
 ## Operating model (skills-driven workflow)
 
@@ -170,10 +209,20 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted
   (`QFAI-TRIAGE-006`). Every `01_Spec.md` declares a lifecycle
   `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
-- **qfai-prototyping**: Single-thread design evolution loop. One prototype iterated through up to
-  15 cycles of generate -> capture -> review with a 4-axis ordinal rubric, anti-slop detection,
-  prose critique, and explicit pivot permission. Stops deterministically when all four axes hit
-  `exceptional` (exit 64) or the iteration budget is exhausted (exit 65).
+- **qfai-prototyping**: Primary-spec design evolution loop. Resolves exactly
+  one primary UI-bearing spec per invocation and freezes it at cycle 0 (the
+  full UI-bearing set is recorded as `frozenSurfaceUnion` for drift detection
+  only), then iterates each `spec × screen` pair through up to 10 cycles
+  (`cycle 0..9`) of generate → capture → review with a 4-axis ordinal
+  rubric, 6 `*Feel` short-prose impressions (200-word bounded), explicit
+  layout anti-pattern detection (`lap-001..lap-008`), DESIGN.md token
+  violation detection, and explicit pivot permission. Stops
+  deterministically when every `spec × screen` pair satisfies the AND
+  convergence condition (all four ordinal axes `exceptional` AND
+  `layoutAntiPatternsDetected` empty AND `designMdViolations` empty)
+  (exit 64), when the 10-cycle budget is exhausted (exit 65), or when a
+  stock-photo source violates the cycle-0 frozen license catalog
+  (exit 66). Lock drift / input errors exit 2.
 - **qfai-atdd**: Implement acceptance tests driven by specs/scenarios.
 - **qfai-implement**: Unified TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger, including ledger status updates and exception closure.
 - **qfai-verify**: Run full-scan local quality gates (`validate --fail-on error`, `report`, repo gates) and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -241,7 +290,10 @@ Operational notes.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/constitution/change-classification.md`.
 - Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
-- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/catalog/review-gate.rules.yml`.
+- Review gate policies (required/optional layers, default reviewers, optional
+  review modes) are documented in `.qfai/assistant/catalog/review-gate.rules.yml`.
+  This catalog is reference material for agents; it is not machine-enforced.
+- Review pack structure — `.qfai/review/review-<YYYYMMDDhhmmssSSS>/{review_request.md,R01_*.md,summary.json}` — is the one layout enforced by validation (`QFAI-REVIEW-*`).
 - Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ## Configuration
@@ -364,6 +416,11 @@ Recommended baseline.
 
 Waiver policy.
 
+- A waiver's `rule:` is the finding's `code`, copied verbatim from
+  `.qfai/report/validate.json` — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`,
+  `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form
+  (`ATDD-112`) is kept working only for waiver files written against older
+  releases.
 - Use waivers only for `warning` / `info` findings (false positives).
 - Waivers that target `error` findings are invalid and fail validation (`QFAI-WAIVER-002`).
 - Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.
@@ -454,8 +511,10 @@ Typical customizations.
 │   │       ├── spec_required_files.json
 │   │       ├── structure.md
 │   │       ├── tech.md
+│   │       ├── test-layers-ci-lanes.md
 │   │       ├── test-layers.md
-│   │       └── ui-definition-protocol.md
+│   │       ├── ui-definition-protocol.md
+│   │       └── worklog-entry.schema.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```
@@ -463,6 +522,21 @@ Typical customizations.
 `qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,
 contracts, evidence, reports, reviews, placeholder spec directories, or artifact
 README files. Those files are created later by QFAI skills when real work exists.
+
+### AI work-log surface (`.qfai/steering/`)
+
+`qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
+AI coding agents, with a `README.md` and an `entry.md` template under `_templates/`. Each entry is a
+markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
+the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
+`W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
+
+The frontmatter contract and the **per-kind write trigger** — which `kind` an
+agent writes when — are in the seeded
+`.qfai/assistant/catalog/worklog-entry.schema.md`.
+
+Note that `.qfai/steering/` (the work-log surface) is a different directory from
+the legacy `.qfai/assistant/steering/` (the pre-recut assistant path).
 
 Integration wrappers are also generated for immediate use:
 
@@ -493,7 +567,12 @@ that link. Your `.qfai/assistant/skills/` entry is untouched; re-create the link
 
 ## Contributing (for QFAI maintainers)
 
-This repository is a monorepo, and the distributable package is under `packages/qfai`; if you change documentation, keep the repository root README and the package README aligned (the CI enforces this).
+This repository is a monorepo, and the distributable package is under `packages/qfai`.
+The repository root `README.md` and `packages/qfai/README.md` are kept aligned by
+`scripts/check-readme-alignment.mjs`, which CI runs as part of `pnpm ci:lint`: every line
+outside a `readme-align:ignore-start` / `readme-align:ignore-end` HTML-comment block must be
+identical in both files. When you change documentation, apply the edit to both READMEs, or
+wrap the intentionally file-specific part in those markers.
 
 ## License
 
