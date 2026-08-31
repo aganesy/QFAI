@@ -329,7 +329,7 @@ async function runProfileValidators(
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
-        return runTddValidators(root, config, true, true, true, true, specScope);
+        return runTddValidators(root, config, true, true, true, true, true, specScope);
       case "verify":
       case "full":
         return runFullValidators(root, config, platformOption, specScope);
@@ -553,9 +553,18 @@ async function runTddValidators(
   includeUpstreamGuard = true,
   // `full` runs the sdd profile, which already calls `validateContracts`.
   includeContracts = true,
+  // `full` runs the sdd profile, which already calls
+  // `validateMarkdownTableArity`.
+  includeTableArity = true,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
+    // The arity check exists for this ledger: every `validateTddList` row check
+    // resolves its column with `headers.indexOf(name)` and `continue`s on the
+    // empty string a truncated row produces, so a row cut before `Status` is
+    // not merely unflagged — it is unread. Running it here first means the
+    // profile `qfai-implement` gates on can see the corruption at all.
+    ...(includeTableArity ? await validateMarkdownTableArity(root, config) : []),
     ...(await validateTddList(root, config)),
     ...(await validateTestTodoStubs(root, config)),
     // `qfai-implement` names `--profile tdd` as its only completion gate, and
@@ -601,7 +610,7 @@ async function runFullValidators(
     ...(await runSddValidators(root, config, true, false, specScope, false)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
-    ...(await runTddValidators(root, config, false, false, false, false)),
+    ...(await runTddValidators(root, config, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
 }
