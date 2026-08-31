@@ -128,6 +128,13 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-050` — a `- SSOT modules:` entry naming a path that does not
+   * resolve, or one that resolves only by leaving the project root. Nothing
+   * read those paths before, so a route that went stale releases ago has been
+   * sitting in the contract unchallenged and arrives in one run.
+   */
+  contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {
