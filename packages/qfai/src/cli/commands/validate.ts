@@ -17,7 +17,7 @@ import {
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
@@ -530,16 +530,6 @@ function recountIssues(
     warning: counts.warning + (added.severity === "warning" ? 1 : 0),
     error: counts.error + (added.severity === "error" ? 1 : 0),
   };
-}
-
-function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
-  if (options.failOn) {
-    return options.failOn;
-  }
-  if (options.strict) {
-    return "warning";
-  }
-  return fallback;
 }
 
 function emitText(result: ValidationResult, failOn: FailOn): void {

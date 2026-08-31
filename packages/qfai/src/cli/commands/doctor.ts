@@ -5,8 +5,10 @@ import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
+import type { FailOn } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import { isCiEnvironment } from "../../core/phasePolicy.js";
+import { resolveFailOn } from "../lib/failOn.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -14,7 +16,11 @@ export type DoctorCommandOptions = {
   rootExplicit: boolean;
   format: "text" | "json";
   outPath?: string;
-  failOn?: "warning" | "error";
+  /**
+   * 明示された `--fail-on` の値。未指定なら `validation.failOn`
+   * (同梱既定値 `error`) が使われる。`never` は明示的なオプトアウト。
+   */
+  failOn?: FailOn;
   profile?: DoctorProfile;
   /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
   skillProfile?: string;
@@ -101,6 +107,13 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const resolvedRoot = options.rootExplicit
     ? options.root
     : (await findConfigRoot(options.root)).root;
+  // doctor の失敗条件は validate と同じ設定キー (`validation.failOn`) で
+  // 決まる。フラグ由来の値しか見なかった頃は、`== errors blocking the
+  // active profile ==` に `[error]` を並べたうえで exit 0 を返しており、
+  // 契約 (errors バケットが空でなければ exit 1) にも validate にも
+  // 反しない読み方が存在しなかった。`--clean` 分岐の TTL 参照も
+  // この 1 回のロードを共有する。
+  const { config } = await loadConfig(resolvedRoot);
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
@@ -166,7 +179,6 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       return 0;
     }
   } else if (options.clean) {
-    const { config } = await loadConfig(resolvedRoot);
     const ttlDays = config.review?.staleTtlDays;
     const result = await cleanStaleReviewPacks(resolvedRoot, {
       ...(typeof ttlDays === "number" ? { ttlDays } : {}),
@@ -214,7 +226,11 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // remains on stdout (legacy human-readable behavior).
   const sideEffectPrefix =
     !isJson && sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
-  const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
+  const failOn = resolveFailOn(
+    options.failOn ? { failOn: options.failOn } : {},
+    config.validation.failOn,
+  );
+  const exitCode = shouldFailDoctor(data.summary, failOn) ? 1 : 0;
 
   if (isJson && sideEffectLines.length > 0) {
     process.stderr.write(`${sideEffectLines.join("\n")}\n`);
@@ -241,11 +257,8 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   return exitCode;
 }
 
-function shouldFailDoctor(
-  summary: { warning: number; error: number },
-  failOn?: "warning" | "error",
-): boolean {
-  if (!failOn) {
+function shouldFailDoctor(summary: { warning: number; error: number }, failOn: FailOn): boolean {
+  if (failOn === "never") {
     return false;
   }
   if (failOn === "error") {

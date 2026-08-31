@@ -78,7 +78,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-          ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+          // `never` はここで捨てない: 捨てると「未指定」と区別できず、
+          // config の `validation.failOn` を下向きに上書きできなくなる。
+          ...(options.failOn ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
           ...(options.doctorSkillProfile !== undefined
             ? { skillProfile: options.doctorSkillProfile }
@@ -223,7 +225,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             rootExplicit: true,
             format: options.doctorFormat,
             ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-            ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+            // `never` は doctor 側の明示的なオプトアウトとして渡す。
+            ...(options.failOn ? { failOn: options.failOn } : {}),
             profile: "prototyping",
             ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
           });
@@ -319,7 +322,7 @@ Options:
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件
-  --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
+  --fail-on <error|warning|never>  doctor / prototyping preflight: 失敗条件（既定は validation.failOn、同梱既定値は error）
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
   --in <path>                   report: validate.json の入力先（configより優先）
