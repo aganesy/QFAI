@@ -27,7 +27,11 @@
 export const MOCK_HREF_TEMPLATE_REL =
   "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md";
 
-export const MOCK_HREF_VALIDATOR_REL = "packages/qfai/src/core/uiux/htmlMockParser.ts";
+// Follows the classification, not the filename. The same-origin branch moved to `htmlMockDom.ts` when
+// jsdom was put behind a dynamic import; a manifest left pointing at the old file reads an unchanged
+// module and reports no drift however far the template moves. Whoever moves this code again moves
+// this constant in the same change.
+export const MOCK_HREF_VALIDATOR_REL = "packages/qfai/src/core/uiux/htmlMockDom.ts";
 
 export type MockHrefPair = {
   /** Stable human-readable clause name (used in justification text). */
