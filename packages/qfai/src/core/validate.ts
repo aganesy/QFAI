@@ -56,6 +56,7 @@ import {
   validateCompletionCertificateIssues,
   validateConfigReferenceIntegrity,
   validatePrototypingArtifactRefIntegrity,
+  validatePrototypingDelegationMap,
   validateSpecIdLinkage,
   validateResearchSummary,
   validateRepositoryHygiene,
@@ -501,6 +502,10 @@ async function runPrototypingValidators(
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
     ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    // `QFAI-PROT-311` — delegationMap entries must name a role from the
+    // SKILL.md Delegation Scope Table. No-ops when prototyping.json has no
+    // executionPlan, so bootstrap projects are unaffected.
+    ...(await validatePrototypingDelegationMap(root)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
   // CHG-006 prototyping-mode relaxation: under `mode: exploration` the

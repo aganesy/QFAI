@@ -882,10 +882,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-289": "completionCertificate is required when completion is claimed.",
   "QFAI-PROT-292":
     "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
-  "QFAI-PROT-310":
-    "executionPlan in prototyping.json must be present and well-formed in full-harness mode: the block itself must be an object, and each of targetIterations (number), evaluationAxesSource (non-empty string), delegationMap (object), plannedAt (non-empty string) must be present with the correct shape.",
   "QFAI-PROT-311":
-    "delegationMap entry assigns a category to a role outside the SKILL.md Delegation Scope Table.",
+    "executionPlan.delegationMap is present but is not an object, or one of its entries assigns a category to a role outside the SKILL.md Delegation Scope Table.",
   "QFAI-PROT-318":
     "runtimeGate/specCoverage evidenceRefs contain a non-concrete artifact reference.",
   "QFAI-PROT-326": "runtimeGate.ui[].declaredRef must use the canonical screen contract sourceRef.",

@@ -457,19 +457,23 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     ).toEqual([]);
   });
 
-  it("validateExecutionPlanIssues is wired (QFAI-PROT-310)", async () => {
-    const reachable = await buildReachableText();
-    expect(
-      reachable.includes("validateExecutionPlanIssues"),
-      "validateExecutionPlanIssues must reach runPrototypingValidators",
-    ).toBe(true);
-  });
-
   it("validateDelegationMapIssues is wired (QFAI-PROT-311)", async () => {
     const reachable = await buildReachableText();
     expect(
       reachable.includes("validateDelegationMapIssues"),
       "validateDelegationMapIssues must reach runPrototypingValidators",
+    ).toBe(true);
+  });
+
+  // A name appearing in the reachable text can be satisfied by a barrel
+  // re-export or a doc comment alone — which is how QFAI-PROT-311 stayed
+  // dead while this suite was green. Pin the actual call site in
+  // runPrototypingValidators so unwiring the reader fails here.
+  it("runPrototypingValidators calls the delegationMap reader (QFAI-PROT-311)", async () => {
+    const validateBody = await readFile(VALIDATE_TS, "utf-8");
+    expect(
+      /validatePrototypingDelegationMap\(/.test(validateBody),
+      "validate.ts must invoke validatePrototypingDelegationMap(), not merely re-export it",
     ).toBe(true);
   });
 
