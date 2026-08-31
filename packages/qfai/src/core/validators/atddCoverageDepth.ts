@@ -4,8 +4,10 @@ import path from "node:path";
 import type { AtddCodeTraceabilityResult } from "../atddTraceability.js";
 import type { GitignoreLayer } from "../gitignore.js";
 import { isPathIgnoredByLayers } from "../gitignore.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe } from "./utils.js";
 
 /**
@@ -416,12 +418,49 @@ function referencesMatrix(body: readonly string[], matrixRel: string): boolean {
   return pathCandidates(body).some((candidate) => resolveReference(candidate) === matrixRel);
 }
 
+/**
+ * The sentence a finding inside its promotion window adds to its own message.
+ *
+ * Empty once the window has closed: at that point the severity is the finding's
+ * settled one, and a note about a release that has already happened would read
+ * as a reprieve the operator no longer has.
+ */
+function windowNote(severity: "warning" | "error", promoteAt: string): string {
+  return severity === "warning"
+    ? ` ${promoteAt} リリースまでは warning、それ以降は error として報告されます。`
+    : "";
+}
+
 export async function validateAtddCoverageDepth(
   root: string,
   result: AtddCodeTraceabilityResult,
 ): Promise<Issue[]> {
-  const issues = await matrixFileIssues(root, await specsWithAtddTests(result));
-  issues.push(...(await stageEvidenceIssues(root, result)));
+  // All three codes are new, so none of them may carry a severity literal:
+  // each takes it from its own `RULE_PROMOTIONS` pin, read once per run.
+  // `resolveToolVersion` resolves rather than rejects — an unreadable version
+  // reads as inside the window, so it can never escalate one of these into a
+  // build failure.
+  const version = await resolveToolVersion();
+  const matrixMissingSeverity = newRuleSeverity(
+    version,
+    RULE_PROMOTIONS.atddCoverageDepthMatrixMissing.promoteAt,
+  );
+  const matrixIgnoredSeverity = newRuleSeverity(
+    version,
+    RULE_PROMOTIONS.atddCoverageDepthMatrixIgnored.promoteAt,
+  );
+  const inlineMatrixSeverity = newRuleSeverity(
+    version,
+    RULE_PROMOTIONS.atddCoverageDepthInlineMatrix.promoteAt,
+  );
+
+  const issues = await matrixFileIssues(
+    root,
+    await specsWithAtddTests(result),
+    matrixMissingSeverity,
+    matrixIgnoredSeverity,
+  );
+  issues.push(...(await stageEvidenceIssues(root, result, inlineMatrixSeverity)));
   return issues;
 }
 
@@ -429,6 +468,8 @@ export async function validateAtddCoverageDepth(
 async function matrixFileIssues(
   root: string,
   specs: ReadonlyArray<readonly [string, string]>,
+  matrixMissingSeverity: "warning" | "error",
+  matrixIgnoredSeverity: "warning" | "error",
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const ignoreScope = await readIgnoreScope(root);
@@ -439,7 +480,7 @@ async function matrixFileIssues(
   for (const [specId, specDir] of specs) {
     const matrixRel = coverageDepthRelPath(specId);
     if (!(await exists(path.join(root, matrixRel)))) {
-      issues.push(missingMatrixIssue(specId, specDir, matrixRel));
+      issues.push(missingMatrixIssue(specId, specDir, matrixRel, matrixMissingSeverity));
       continue;
     }
     if (!isPathIgnoredByLayers(ignoreScope.layers, ignoreScope.toIgnorePath(matrixRel))) {
@@ -447,24 +488,33 @@ async function matrixFileIssues(
     }
     tracked ??= trackedEvidencePaths(root);
     if (!tracked.has(matrixRel)) {
-      issues.push(ignoredMatrixIssue(specId, specDir, matrixRel));
+      issues.push(ignoredMatrixIssue(specId, specDir, matrixRel, matrixIgnoredSeverity));
     }
   }
   return issues;
 }
 
-/** `QFAI-ATDD-131`: the spec has ATDD-owned tests and no matrix file. */
-function missingMatrixIssue(specId: string, specDir: string, matrixRel: string): Issue {
+/**
+ * `QFAI-ATDD-131`: the spec has ATDD-owned tests and no matrix file.
+ *
+ * The severity comes from the pin rather than a literal: the obligation is per
+ * ATDD stage run, and a spec whose tests were annotated before the matrix
+ * became a Mandatory Output would otherwise fail a gate retroactively. The
+ * window is what gives such a repository a release to produce the matrices in;
+ * after it the absence is an error, and `--fail-on warning` blocks on it
+ * before then for projects that want it sooner.
+ */
+function missingMatrixIssue(
+  specId: string,
+  specDir: string,
+  matrixRel: string,
+  matrixMissingSeverity: "warning" | "error",
+): Issue {
   return issue(
     "QFAI-ATDD-131",
-    `${specId}: ATDD 対象テストがあるのに Coverage Depth Matrix (${matrixRel}) がありません。`,
-    // Warning, not error: the obligation is per ATDD stage run, and a spec
-    // whose tests were annotated before the matrix became a Mandatory Output
-    // would otherwise fail a gate retroactively. The point of the rule is that
-    // absence stops being indistinguishable from a full matrix — a finding
-    // does that; `--fail-on warning` turns it into a block for projects that
-    // want one.
-    "warning",
+    `${specId}: ATDD 対象テストがあるのに Coverage Depth Matrix (${matrixRel}) がありません。` +
+      windowNote(matrixMissingSeverity, RULE_PROMOTIONS.atddCoverageDepthMatrixMissing.promoteAt),
+    matrixMissingSeverity,
     specDir,
     "atddCoverageDepth.matrixMissing",
     [specId],
@@ -474,15 +524,27 @@ function missingMatrixIssue(specId: string, specDir: string, matrixRel: string):
   );
 }
 
-/** `QFAI-ATDD-132`: the matrix exists, is ignored, and git does not track it. */
-function ignoredMatrixIssue(specId: string, specDir: string, matrixRel: string): Issue {
+/**
+ * `QFAI-ATDD-132`: the matrix exists, is ignored, and git does not track it.
+ *
+ * The finding itself is unambiguous — the file exists, so the stage ran and
+ * produced the judgement, and the ignore rule is what deletes that judgement
+ * from history. The severity still comes from the pin: the ignore line it
+ * lands on was written before anything asked for the matrix, so shipping it
+ * straight at `error` would turn an existing `.gitignore` into a hard gate in
+ * one upgrade.
+ */
+function ignoredMatrixIssue(
+  specId: string,
+  specDir: string,
+  matrixRel: string,
+  matrixIgnoredSeverity: "warning" | "error",
+): Issue {
   return issue(
     "QFAI-ATDD-132",
-    `${specId}: Coverage Depth Matrix (${matrixRel}) が .gitignore で除外されています。`,
-    // Error: the file exists, so the stage ran and produced the judgement —
-    // and the ignore rule is what deletes that judgement from history. Nothing
-    // about it is retroactive or ambiguous.
-    "error",
+    `${specId}: Coverage Depth Matrix (${matrixRel}) が .gitignore で除外されています。` +
+      windowNote(matrixIgnoredSeverity, RULE_PROMOTIONS.atddCoverageDepthMatrixIgnored.promoteAt),
+    matrixIgnoredSeverity,
     matrixRel,
     "atddCoverageDepth.matrixIgnored",
     [specId],
@@ -555,10 +617,16 @@ function fileProblem(
   return null;
 }
 
-/** `QFAI-ATDD-133` over every spec whose ATDD stage evidence file exists. */
+/**
+ * `QFAI-ATDD-133` over every spec whose ATDD stage evidence file exists.
+ *
+ * The severity comes from the pin for the same reason as `-131`: the section
+ * shape is a template that post-dates the evidence files it lands on.
+ */
 async function stageEvidenceIssues(
   root: string,
   result: AtddCodeTraceabilityResult,
+  inlineMatrixSeverity: "warning" | "error",
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specDirs = Array.from(result.declaredSpecDirs.values()).sort((left, right) =>
@@ -579,10 +647,9 @@ async function stageEvidenceIssues(
     issues.push(
       issue(
         "QFAI-ATDD-133",
-        `${specId}: ${problem}。このセクションは ${matrixRel} へのリンクと集計だけにしてください。`,
-        // Warning for the same reason as `-131`: the section shape is a
-        // template that post-dates existing evidence files.
-        "warning",
+        `${specId}: ${problem}。このセクションは ${matrixRel} へのリンクと集計だけにしてください。` +
+          windowNote(inlineMatrixSeverity, RULE_PROMOTIONS.atddCoverageDepthInlineMatrix.promoteAt),
+        inlineMatrixSeverity,
         evidenceRel,
         "atddCoverageDepth.inlineMatrix",
         [specId],

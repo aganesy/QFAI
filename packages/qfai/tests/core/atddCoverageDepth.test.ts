@@ -24,8 +24,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateAtddCoverageDepth } from "../../src/core/validators/atddCoverageDepth.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 
 const tempDirs: string[] = [];
 
@@ -751,5 +753,68 @@ describe("profile wiring", () => {
     const result = await validateProject(root, undefined, { profile: "atdd" });
 
     expect(result.issues.map((entry) => entry.code)).toContain("QFAI-ATDD-131");
+  });
+});
+
+describe("P7: all three codes ship behind a promotion window", () => {
+  /** The one finding of `code` this seed produces, or `undefined`. */
+  async function findingFor(seed: Seed, code: string) {
+    const root = await seedProject(seed);
+    const evaluated = await evaluateAtddCodeTraceability(root, defaultConfig);
+    return (await validateAtddCoverageDepth(root, evaluated)).find((entry) => entry.code === code);
+  }
+
+  const WINDOWS = [
+    ["QFAI-ATDD-131", RULE_PROMOTIONS.atddCoverageDepthMatrixMissing, {}],
+    [
+      "QFAI-ATDD-132",
+      RULE_PROMOTIONS.atddCoverageDepthMatrixIgnored,
+      { matrix: MATRIX, gitignore: ".qfai/evidence/*\n" },
+    ],
+    [
+      "QFAI-ATDD-133",
+      RULE_PROMOTIONS.atddCoverageDepthInlineMatrix,
+      { matrix: MATRIX, stageEvidence: INLINE_SECTION },
+    ],
+  ] as const;
+
+  it.each(WINDOWS)(
+    "%s carries the severity its pin decides, not a literal",
+    async (code, window, seed) => {
+      // The regression this pins is `-132`, which shipped a literal `"error"`:
+      // a new code at `error` from day one is what latched a consuming
+      // repository's gate on upgrade, and P7 exists to stop exactly that. The
+      // running version is inside every one of these windows, so a severity
+      // that still reads `error` here is one decided beside the call.
+      const finding = await findingFor(seed, code);
+
+      expect(finding, `${code} did not fire for its own seed`).toBeDefined();
+      expect(finding?.severity).toBe(newRuleSeverity(await resolveToolVersion(), window.promoteAt));
+      expect(finding?.severity).toBe("warning");
+    },
+  );
+
+  it.each(WINDOWS)(
+    "%s says in its own message which release ends the window",
+    async (code, window, seed) => {
+      // `--fail-on error` keeps working through the window, so the operator only
+      // learns about the debt they are about to owe if the finding says so.
+      const finding = await findingFor(seed, code);
+
+      expect(finding?.message).toContain(window.promoteAt);
+    },
+  );
+
+  it.each(WINDOWS)("%s becomes an error at its promotion release", (_code, window) => {
+    // The over-correction pin: a window that never closes is the other way to
+    // satisfy the assertions above, and `isAtOrPastSunset` returns `warning`
+    // for anything it cannot parse — so measure the pin itself, at its own
+    // release and one minor past it.
+    const [major = "0", minor = "0"] = window.promoteAt.split(".");
+    const past = `${major}.${Number(minor) + 1}.0`;
+
+    expect(newRuleSeverity(window.promoteAt, window.promoteAt)).toBe("error");
+    expect(newRuleSeverity(past, window.promoteAt)).toBe("error");
+    expect(newRuleSeverity(window.introducedIn, window.promoteAt)).toBe("warning");
   });
 });
