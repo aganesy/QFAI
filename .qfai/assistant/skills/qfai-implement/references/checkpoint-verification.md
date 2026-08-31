@@ -90,8 +90,9 @@ the full suite.
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
-reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL. **FAIL handling is defined here
-and nowhere else**, in one branch per boundary:
+reports zero `QFAI-TEST-001` findings — the JS/TS `.skip` family is the separate warning rule
+`QFAI-TEST-003` and is not counted here. Any non-zero exit is a FAIL. **FAIL handling is defined
+here and nowhere else**, in one branch per boundary:
 
 - **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
   does **not** go to `exception`: that status parks the row as an anomaly whose completion then
