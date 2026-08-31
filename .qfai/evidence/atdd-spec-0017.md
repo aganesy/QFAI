@@ -2198,8 +2198,10 @@ write points — taking the count from 925 to 930. Again nothing about `spec-001
 the invariant stated below is what named the obligation: a commit that changes a callsite under the
 `e2e` project's two globs owes this line a re-measurement, and it owes it whether the commit is a
 feature or a merge. The two suite totals above stay known-invalid for the same reason as before.
+That branch then grew the same file to seven callsites and a later `main` added two more, so the
+re-measurement this line carries is 934, not the 930 that first merge produced.
 
-e2e callsites at this tree: 932
+e2e callsites at this tree: 934
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
