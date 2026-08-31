@@ -229,19 +229,19 @@ in/out split is not re-derived per run.
 
 - Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
 - `Traces to:` names what the finding enforces. Legal values:
-  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named
-    constitution/catalog rule;
-  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from
-    the changed artifacts themselves, cited together with the evidence that demonstrates it. See
-    `drift-protocol.md#defect-or-new-scope-decide-this-first`. A reviewer who can show the
-    deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named constitution/catalog rule **that governs the product's behaviour**;
+  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts themselves, cited with the evidence that demonstrates it
+    (see `drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - `record:<CODE>` — a defect in the run's own record rather than in the product: a ledger cell, a round block, an evidence anchor, the provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
-- A finding whose `Traces to:` is `none` MUST be recorded as `advisory`. It cannot be `blocking`,
-  and it cannot gate `DONE`.
-- An advisory finding is routed to the Change Request / Open Question path defined in
-  `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
-- Only `blocking` findings — those citing an upstream obligation or a defect class — force
-  `REVISE`.
+- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the record-defect queue the
+  reviewing stage's own completion contract names, and that contract is what drains it (`drift-protocol.md#the-record-defect-queue`). **The class needs a drain: only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record, re-attested in a new pack where a reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair —
+  a record rule worth a round is worth a validator code.
+- **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false
+  `Authored/edited under review` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
+  built on them, so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
+- A `none` advisory takes the Change Request / Open Question path (`drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
+- Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
 
 ### Reviewer budget exhausted
 
@@ -287,7 +287,7 @@ Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
-- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
+- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
 - <action>   # blocking findings only
 Advisory / Change Request proposals:
@@ -356,8 +356,8 @@ post-escalation verification review of a user-named fix.
 
 - Reviewer responses in-flight use `Result: PASS | REVISE` (this file).
 - `summary.json` archived into review packs historically uses
-  `status: "PASS|FAIL"` (validated by
-  `packages/qfai/src/core/validators/reviewArtifacts.ts`).
+  `status: "PASS|FAIL"` (validated by the review-artifact validator
+  shipped inside the QFAI package).
 - A `REVISE` verdict during iteration maps to `status: "FAIL"` when the
   final `summary.json` is written; they represent the same outcome.
   Review packs should not invent a third verdict.
