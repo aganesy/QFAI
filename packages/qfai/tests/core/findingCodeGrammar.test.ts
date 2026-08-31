@@ -39,6 +39,7 @@ const SHARED_ISSUE_FACTORY = "issue";
 const KNOWN_LOCAL_FACTORIES: readonly string[] = [
   "canonicalIssue",
   "classificationIssue",
+  "competitiveIssue",
   "contractIssue",
   "makeIssue",
   "skillIssue",

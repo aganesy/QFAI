@@ -407,7 +407,7 @@ export async function validateCompetitiveReferences(
     }
     issues.push(
       competitiveIssue(
-        "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+        "QFAI-RESEARCH-014",
         `Competitive reference '${reference.label}' is missing or placeholders '${reference.missingFields.join(", ")}'.`,
         "error",
         `Populate ${reference.missingFields.join(", ")} for '${reference.label}' in the Competitive Reference Registry of 04_Sources.md.`,
@@ -419,7 +419,7 @@ export async function validateCompetitiveReferences(
   if (minimum > 0 && complete < minimum) {
     issues.push(
       competitiveIssue(
-        "UIX-VAL-COMPETITIVE-REFS-MIN",
+        "QFAI-RESEARCH-013",
         `UI-bearing packs need at least ${minimum} complete competitive references in 04_Sources.md; found ${complete}.`,
         "error",
         `Add competitive references with ${MANDATORY_FIELDS.join(", ")} under '## Competitive Reference Registry', or lower uiux.competitive_refs_min.`,

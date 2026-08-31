@@ -121,7 +121,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const shortfall = issues.filter((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN");
+    const shortfall = issues.filter((issue) => issue.code === "QFAI-RESEARCH-013");
     expect(shortfall).toHaveLength(1);
     expect(shortfall[0]?.severity).toBe("error");
     expect(shortfall[0]?.message).toContain("2");
@@ -135,7 +135,7 @@ describe("validateCompetitiveReferences", () => {
     await writeFile(path.join(root, "04_Sources.md"), "# 04 Sources\n\n## Traceability\n", "utf-8");
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-RESEARCH-013")).toBe(true);
   });
 
   it("fails when 04_Sources.md is missing", async () => {
@@ -143,7 +143,7 @@ describe("validateCompetitiveReferences", () => {
     await createPack(root, true);
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-RESEARCH-013")).toBe(true);
   });
 
   it("flags a reference whose mandatory field is empty or a placeholder", async () => {
@@ -160,14 +160,12 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(1);
     expect(incomplete[0]?.severity).toBe("error");
     expect(incomplete[0]?.message).toContain("rejected_points");
     // The placeholder entry does not count toward the minimum either.
-    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-RESEARCH-013")).toBe(true);
   });
 
   it("counts references written as a markdown table", async () => {
@@ -203,7 +201,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 5 }));
-    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-RESEARCH-013")).toBe(true);
   });
 
   it("honours uiux.competitive_refs_min: 0 as an opt-out of the count gate", async () => {
@@ -304,11 +302,9 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(3);
-    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-RESEARCH-013")).toBe(true);
   });
 
   it("ends the registry at an indented following heading", async () => {
@@ -331,7 +327,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    expect(issues.map((issue) => issue.code)).toEqual(["UIX-VAL-COMPETITIVE-REFS-MIN"]);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-RESEARCH-013"]);
     expect(issues[0]?.message).toContain("found 0");
   });
 
@@ -353,12 +349,10 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(1);
     expect(incomplete[0]?.message).toContain("adopted_points");
-    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+    expect(issues.some((issue) => issue.code === "QFAI-RESEARCH-013")).toBe(true);
   });
 
   it("keeps completeness checks enabled when the minimum is zero", async () => {
@@ -371,7 +365,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
-    expect(issues.map((issue) => issue.code)).toEqual(["UIX-VAL-COMPETITIVE-REF-INCOMPLETE"]);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-RESEARCH-014"]);
     expect(issues[0]?.message).toContain("local_translation");
   });
 
@@ -390,9 +384,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(1);
     expect(incomplete[0]?.message).toContain("local_translation");
   });
@@ -440,9 +432,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(1);
     expect(incomplete[0]?.message).toContain("adopted_points");
   });
@@ -462,7 +452,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const shortfall = issues.filter((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN");
+    const shortfall = issues.filter((issue) => issue.code === "QFAI-RESEARCH-013");
     expect(shortfall).toHaveLength(1);
     expect(shortfall[0]?.message).toContain("found 0");
   });
@@ -489,7 +479,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    expect(issues.map((issue) => issue.code)).toEqual(["UIX-VAL-COMPETITIVE-REFS-MIN"]);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-RESEARCH-013"]);
     expect(issues[0]?.message).toContain("found 0");
   });
 
@@ -549,14 +539,12 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, defaultConfig);
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(1);
     expect(incomplete[0]?.message).toContain("adopted_points");
     expect(incomplete[0]?.message).toContain("rejected_points");
     expect(incomplete[0]?.message).toContain("local_translation");
-    expect(issues.map((issue) => issue.code)).toContain("UIX-VAL-COMPETITIVE-REFS-MIN");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-RESEARCH-013");
   });
 
   // The over-correction pin: a populated value may legitimately OPEN with a
@@ -613,9 +601,7 @@ describe("validateCompetitiveReferences", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(2);
     for (const issue of incomplete) {
       for (const field of ["adopted_points", "rejected_points", "local_translation"]) {
@@ -636,7 +622,7 @@ describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {
     );
 
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    expect(issues.map((issue) => issue.code)).toContain("UIX-VAL-COMPETITIVE-REFS-MIN");
+    expect(issues.map((issue) => issue.code)).toContain("QFAI-RESEARCH-013");
   });
 
   it("suppresses the registry gate when the knob is lowered to 0", async () => {
@@ -649,7 +635,7 @@ describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {
     );
 
     const issues = await runCanonicalUixValidators(root, withUiux({ competitive_refs_min: 0 }));
-    expect(issues.map((issue) => issue.code)).not.toContain("UIX-VAL-COMPETITIVE-REFS-MIN");
+    expect(issues.map((issue) => issue.code)).not.toContain("QFAI-RESEARCH-013");
   });
 
   // CommonMark accepts up to three leading spaces before a heading, and the H2
@@ -695,9 +681,7 @@ describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(TABLE_ROWS.length);
     for (const issue of incomplete) {
       expect(issue.message).toContain("adopted_points");
@@ -730,9 +714,7 @@ describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {
     );
 
     const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
-    const incomplete = issues.filter(
-      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
-    );
+    const incomplete = issues.filter((issue) => issue.code === "QFAI-RESEARCH-014");
     expect(incomplete).toHaveLength(TABLE_ROWS.length);
     for (const issue of incomplete) {
       expect(issue.message).not.toContain("What is adopted");
