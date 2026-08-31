@@ -4,7 +4,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { VISUAL_BROWSER_SURFACES } from "../../src/core/detection/surfaceType.js";
-import { FORBIDDEN_LEGACY_PATTERNS } from "../../src/core/validators/uix/threeLayer.js";
+import {
+  CANONICAL_REQUIRED_SIDECAR_FILES,
+  FORBIDDEN_LEGACY_PATTERNS,
+} from "../../src/core/validators/uix/threeLayer.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
@@ -103,6 +106,35 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
+  });
+
+  // SKILL.md is the only file the skill is guaranteed to load; references are
+  // opt-in. If its family list drops a member of
+  // `threeLayer.ts#CANONICAL_REQUIRED_SIDECAR_FILES`, an operator builds a
+  // `uiux/` that the completeness gate cannot flag and the Reviewer Gate then
+  // demands a file nobody was told to create.
+  it("SKILL.md の canonical sidecar family が validator の SSOT と一致している", async () => {
+    const content = await readFile(skillPath, "utf-8");
+
+    const familySection = content
+      .split(/^## /m)
+      .find((section) => section.startsWith("UI-bearing Canonical Sidecar Family"));
+    expect(familySection).toBeDefined();
+    for (const file of CANONICAL_REQUIRED_SIDECAR_FILES) {
+      expect(familySection, `family section omits ${file}`).toContain(`uiux/${file}`);
+    }
+
+    // The `project_memory` restatement survives context compaction, so it must
+    // carry the same family as the prose above it.
+    const projectMemory = content.split(/^project_memory:$/m)[1];
+    expect(projectMemory).toBeDefined();
+    const memoryLine = (projectMemory ?? "")
+      .split("\n")
+      .find((line) => line.includes("UI-bearing sidecar family"));
+    expect(memoryLine).toBeDefined();
+    for (const file of CANONICAL_REQUIRED_SIDECAR_FILES) {
+      expect(memoryLine, `project_memory omits ${file}`).toContain(file);
+    }
   });
 
   it("forbidden sidecar 名の一覧が validator の SSOT を網羅している", () => {
