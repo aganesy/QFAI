@@ -387,7 +387,7 @@ describe("an annotation carrier is not an executable test", () => {
     for (const [file, body] of [
       ["tests/e2e/StoryFixture.cs", "[TestFixture]\npublic class StoryFixture { }\n"],
       ["tests/e2e/test_story.py", "@pytest.mark.integration\ndef make_client():\n    return 1\n"],
-    ]) {
+    ] as const) {
       await withProject(
         {
           us: ["US-0001"],
@@ -420,7 +420,7 @@ describe("an annotation carrier is not an executable test", () => {
         "tests/e2e/story_test.go",
         'func ExampleStory() {\n\tfmt.Println("ok")\n\t// Output: ok\n}\n',
       ],
-    ]) {
+    ] as const) {
       await withProject(
         {
           us: ["US-0001"],

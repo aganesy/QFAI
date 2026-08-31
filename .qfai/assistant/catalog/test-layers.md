@@ -3,9 +3,8 @@
 This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 For which CI lane runs which layer, see the sibling map
-[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the
-policy loader reads this file and not that one, so nothing there can change the
-vocabulary declared below.
+[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the policy
+loader reads this file and not that one, so nothing there can change the vocabulary declared below.
 
 ## Layer vocabulary crosswalk (normative)
 
@@ -46,11 +45,10 @@ Rules:
   ID type. A `TC-*` is answered from the directory **its own declared `Level`**
   names, which for a correctly filed row is `<testsDir>/integration/**`; see
   [Annotation routing](#annotation-routing) for the full table and the
-  misplacement rules.
-  L4's goal is `CON-API-*` and L5's is `US-*` (see the layer definitions
-  below), so an oracle that lands at L4 or L5 means the obligation is misfiled:
-  record it as `CON-API-*` or `US-*` rather than leaving a `TC-*` row at a
-  layer whose goal is another ID type.
+  misplacement rules. L4's goal is `CON-API-*` and L5's is `US-*` (see the
+  layer definitions below), so an oracle that lands at L4 or L5 means the
+  obligation is misfiled: record it as `CON-API-*` or `US-*` rather than
+  leaving a `TC-*` row at a layer whose goal is another ID type.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
@@ -215,10 +213,9 @@ answer to a cell qfai cannot read, never a supported spelling: fix the cell
 
 Exactly one directory, never two: an annotation outside the one its `Level`
 names is both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` /
-`QFAI-ATDD-123`), and
-the rejection is symmetric — an annotation left in `tests/integration/**` after
-its TC moved to `L4`/`L5` is rejected the same way an early one in
-`tests/api/**` is. Two consequences bind every `TC-*` row:
+`QFAI-ATDD-123`), and the rejection is symmetric — an annotation left in
+`tests/integration/**` after its TC moved to `L4`/`L5` is rejected the same way
+an early one in `tests/api/**` is. Two consequences bind every `TC-*` row:
 
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
@@ -300,15 +297,14 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
   - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
   - A `TC-*` annotation outside the directory its declared `Level` names is
     rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is
-    `Level`-relative,
-    not a blanket ban: a `TC-*` in `tests/api/**` is rejected **unless** that TC
-    declares `L4`/`API`, and in `tests/e2e/**` unless it declares `L5`/`E2E` —
-    an annotation matching its own `Level` is what discharges the obligation
-    there. A `TC-*` should not be at L4 or L5 in the first place (see
-    "Annotation routing"): re-file that obligation as `CON-API-*` or `US-*`.
-    But while the row exists at that `Level`, its annotation belongs in the one
-    directory the `Level` names, and putting it anywhere else leaves the TC
-    uncovered as well as forbidden.
+    `Level`-relative, not a blanket ban: a `TC-*` in `tests/api/**` is rejected
+    **unless** that TC declares `L4`/`API`, and in `tests/e2e/**` unless it
+    declares `L5`/`E2E` — an annotation matching its own `Level` is what
+    discharges the obligation there. A `TC-*` should not be at L4 or L5 in the
+    first place (see "Annotation routing"): re-file that obligation as
+    `CON-API-*` or `US-*`. But while the row exists at that `Level`, its
+    annotation belongs in the one directory the `Level` names, and putting it
+    anywhere else leaves the TC uncovered as well as forbidden.
   - Every declared `CON-DB-*` must be referenced at least once from
     `tests/integration/**` (`QFAI-ATDD-115`). Use `QFAI:CON-DB-XXXX`
     annotations. L3 owns this because a DB contract is only exercised against
@@ -340,16 +336,15 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
 
-- **An annotation carrier is not a test.** The scan reads `.feature` and `.md`
-  too, and a file's kind is read from its body: a `.feature` with a `Scenario:`
-  declares a test, a `.md` never does, and a `.test.ts` holding only the
-  annotation is the same ledger renamed. An obligation no carrier declares a
-  test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind
-  it, so `QFAI-ATDD-118` (`info`) names it — a legitimate placeholder that must
-  not read as coverage. A repo-wide gate reads `missing.<kind>` **and**
-  `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec`
-  gate reads the narrowed `QFAI-ATDD-118` in `validate.spec-<id>.json`, because
-  `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short.
+- **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's
+  kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does,
+  and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier
+  declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so
+  `QFAI-ATDD-118` (`info`) names it — a legitimate placeholder that must not read as coverage. A
+  repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never
+  `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-118` in `validate.spec-<id>.json`,
+  because `summary.json` is repo-wide under every scope. A skipped test still counts as declared,
+  and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
