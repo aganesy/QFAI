@@ -191,6 +191,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0034 | 配布 workflow 所有権コントラクト  | REQ-0030   | P1       |
 | AC-0003-0035 | 配布 set structural contract gate | REQ-0031   | P1       |
 | AC-0003-0036 | declined name の copy 前除外      | REQ-0030   | P1       |
+| AC-0003-0037 | Codex agent profile 生成          | REQ-0009   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -331,3 +332,11 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given provenance 記録上 QFAI が install した後 adopter が削除した配布名が 1 件あり、そのファイルはディスク上に存在しない fixture
 - When `qfai init` を実行し、copy set の構築経路を観測する
 - Then 当該名は copy が実行される**前に** copy set から除外されており、init 後もディスク上に存在しない。create-only 判定だけに依存していない — declined ファイルは absent なので create-only は「新規作成」として書いてしまうため、create-only であることだけを assert するテストは init が復活させても green になる。したがって除外は create-only とは独立に観測できる（copy set の内容そのもの、または copy primitive に渡された名前集合として）
+
+## AC-0003-0037: Codex agent profile の init 生成
+
+- US-Refs: US-0003-0006
+- Given `.qfai/assistant/agents/<name>.md` と `assistant/manifest/agent-catalog.yml#agents[].kind` が存在する
+- When `qfai init` を実行する
+- Then `.codex/agents/<name>.toml` が canonical frontmatter (`name` / `description`) とカノニカル body から生成され、`kind: reviewer` の agent は `sandbox_mode = "read-only"` を持つ
+- And 既存 profile は plain run では保持され、`--force` で再生成される。`kind` を判定できない agent は生成せず、その旨を出力する
