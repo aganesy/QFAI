@@ -77,7 +77,9 @@ async function discussionRoutedAgents(tree: string): Promise<string[]> {
 function ownerIds(doc: string): string[] {
   const ownerLine = doc.split(/\r?\n/).find((line) => line.includes("サブエージェント"));
   expect(ownerLine, "no owner line in research-first-protocol.md").toBeDefined();
-  return [...(ownerLine ?? "").matchAll(/`([a-z][a-z0-9-]*)`/g)].map((match) => match[1]);
+  return [...(ownerLine ?? "").matchAll(/`([a-z][a-z0-9-]*)`/g)]
+    .map((match) => match[1])
+    .filter((id): id is string => id !== undefined);
 }
 
 describe.each(TREES)("%s research-first-protocol owner", (tree) => {
