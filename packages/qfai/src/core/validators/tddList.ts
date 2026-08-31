@@ -954,7 +954,19 @@ async function validateSpecTddList(
   // `warning`, like every other rule that lands on ledgers written before it
   // existed: the fix is a `/qfai-sdd` rerun or a `Level` declaration, and an
   // `error` on upgrade would block a branch on a row the project did not write
-  // by hand.
+  // by hand. It takes that severity from `RULE_PROMOTIONS` rather than a
+  // literal, so the window is declared where every other new rule declares one
+  // (`docs/design-principles.md` P7) instead of being a warning with no route
+  // to `error` — `warning` until the pinned release, `error` from it onwards.
+  const tcLevelUndeclaredPromotion = RULE_PROMOTIONS.tddListTcLevelUndeclared.promoteAt;
+  const tcLevelUndeclaredSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    tcLevelUndeclaredPromotion,
+  );
+  const tcLevelUndeclaredWindowNote =
+    tcLevelUndeclaredSeverity === "warning"
+      ? ` Reported as a warning until the ${tcLevelUndeclaredPromotion} release, then an error`
+      : "";
   if (undeclaredLevelTcIds.size > 0) {
     for (const entry of ledgerRows()) {
       const rawLayer = cell(entry, "Layer").toLowerCase();
@@ -988,8 +1000,8 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_TC_LEVEL_UNDECLARED",
-          `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level`,
-          "warning",
+          `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level.${tcLevelUndeclaredWindowNote}`,
+          tcLevelUndeclaredSeverity,
           relPath,
           "tddList.tcLevelUndeclared",
           stale,

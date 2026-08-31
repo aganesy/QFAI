@@ -128,6 +128,15 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_TC_LEVEL_UNDECLARED` — a ledger coverage row still claiming a TC
+   * that declares no `Level`, and so is owned by `/qfai-atdd` under
+   * `tests/integration/**` rather than by `tdd/test-list.md`. The rows this
+   * finds were seeded by the previous rule, which made a `Level`-less TC a
+   * coverage target; every project upgraded from that version meets its whole
+   * backlog at once, on rows nobody wrote by hand.
+   */
+  tddListTcLevelUndeclared: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

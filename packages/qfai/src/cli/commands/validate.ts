@@ -773,6 +773,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
+  TDDLIST_TC_LEVEL_UNDECLARED:
+    "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-LINK-001":
