@@ -247,13 +247,19 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
   `tdd/test-list.md` and `TDDLIST_TC_NOT_COVERED`, not through an annotation in
   a directory ATDD scans.
 
-## TestKind resolution (single source)
+## Directory → AtddTestKind (code-side, derived from the crosswalk)
 
-- `tests/unit/**` -> Unit
-- `tests/component/**` -> Component
-- `tests/e2e/**` -> E2E
-- `tests/api/**` -> API
-- `tests/integration/**` -> Integration
+Derived from `## Layer vocabulary crosswalk (normative)`, which is the
+authority for this mapping. This list only restates the three kinds the ATDD
+scan can resolve:
+
+- `<testsDir>/integration/**` -> Integration
+- `<testsDir>/api/**` -> API
+- `<testsDir>/e2e/**` -> E2E
+
+L1 Unit and L2 Component resolve to no kind. They follow project convention, no
+directory maps to them, and none of them is scanned — see the crosswalk rules
+and `**Unit and Component owe no ATDD annotation.**` above.
 
 ## Annotation schema (code-side)
 
