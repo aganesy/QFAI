@@ -44,7 +44,10 @@ shipped inside the QFAI package and archived by `npx qfai doctor`:
   and schema-valid, which is what separates a statement from a pack somebody forgot to seal. The
   check runs both ways: a pack declaring `reviewers: []` with report files beside it fails too.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
-  ad-hoc per-round filenames inside an existing pack.
+  ad-hoc per-round filenames inside an existing pack. Once the round's last reviewer response has
+  landed, that directory is sealed and the seal is recorded outside it, per round and naming the
+  pack it seals — `evidence-revision.md#review-pack-seal`. A pack nobody sealed is a pack any
+  later edit reaches unnoticed.
 - A **record re-attestation** takes a new pack of this same shape, even though it is not a round
   (`../../../constitution/drift-protocol.md#the-record-defect-queue`). It carries the same
   `Reviewed revision` and `Result` as the verdict it supersedes and a recomputed

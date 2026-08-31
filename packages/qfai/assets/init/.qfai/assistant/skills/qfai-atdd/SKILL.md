@@ -295,7 +295,8 @@ Notes:
 - Evidence file exists and includes work orders + reviewer notes.
 - Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
 - Completion is approved by a reviewer who did not implement tests.
-- **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix, by the stage-review procedure that produced it (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); a mismatch means the evidence moved after the verdict. **Seal the P8 pack too**: when the last reviewer response lands, and before this stage writes its verdict, hash the pack this stage opened — `.qfai/review/review-<timestamp>/`, whole — by the same procedure, and record it **outside the pack** in the stage evidence file's `## Final status` as `Review pack:` (that path) and `Review pack seal:` (that hash). That section is the one part excluded from the P8 audit subject, so writing it there does not stale the verdict, and it exists even on a spec with no ATDD-owned rows — where there is no item evidence entry to hold the seal at all. At completion, recompute the seal over the recorded path and compare it with the **recorded** value — `../qfai-implement/references/evidence-revision.md` states that rule once and it applies here: `## Final status` is outside every audit subject and outside the working-tree revision, so an expected value read from the working tree could be rewritten in the same pass that edited the pack, and every recomputation would still agree, and check that `## Final status` says what that pack says. The recording and the recomputation must be two moments: a value computed from the pack at completion always matches itself whatever was edited in between, and the stage hash covers the evidence but not the verdict, so a `REVISE` edited to `PASS` in the response, the summary and the status together left every recomputation unchanged. On a spec with no ATDD-owned rows `/qfai-implement`'s gate item 10 never runs, so without this the stored hash was written by P8 and read by nobody — and the evidence tree is out of the working-tree revision, so a later edit moved nothing else either.
+- **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix — a mismatch means the evidence moved after the verdict (`references/pack-seal.md#recompute-the-p8-audit-hash-before-declaring-completion`).
+- **The P8 review pack is sealed, and its seal is re-checked at completion against the recorded value** — `Review pack:` and `Review pack seal:` in the stage evidence file's `## Final status`, recorded before this stage writes its verdict (`references/pack-seal.md#seal-the-p8-pack`) and recomputed against that recorded value at completion (`references/pack-seal.md#recompute-the-seal-at-completion-against-the-recorded-value`).
 
 ## Not-done criteria
 
@@ -316,17 +317,11 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Two of them carry a contract
-the heading cannot:
+Required sections: the template below is the list. Three of them carry a contract the heading cannot:
 
-- **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
-  row. Exactly one form per row, never both and never neither; the cell is an
-  anchor and the payload goes in the section
-  (`references/red-provenance.md#evidence-shape`).
-- **Coverage Depth Matrix** — a link to
-  `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
-  The matrix and its per-`❌` justifications live in that committed file;
-  restating them here would lose them.
+- **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per row. Exactly one form per row, never both and never neither; the cell is an anchor and the payload goes in the section (`references/red-provenance.md#evidence-shape`).
+- **Coverage Depth Matrix** — a link to `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live in that committed file; restating them here would lose them.
+- **Final status** — the verdict and its confirmer, plus `Review pack:` and `Review pack seal:` for the P8 pack this stage opened (`references/pack-seal.md#seal-the-p8-pack`). This section is excluded from the P8 audit subject, which is why the seal can be written here without staling the verdict.
 
 Template:
 
@@ -363,6 +358,9 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 ## Gaps / Open risks
 
 ## Final status (PASS/FAIL) + who confirmed
+
+Review pack: `.qfai/review/review-<timestamp>/`
+Review pack seal: <sha256>
 ```
 
 ## ATDD Work Orders (mandatory)
