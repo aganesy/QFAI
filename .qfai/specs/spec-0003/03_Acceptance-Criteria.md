@@ -153,32 +153,44 @@ Scenario: レガシー管理ブロックからの自動移行
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                           | Notes      | Priority |
-| ------------ | ------------------------------- | ---------- | -------- |
-| AC-0003-0001 | 空ディレクトリ初期化            | Happy path | P1       |
-| AC-0003-0002 | 冪等な初期化                    | NFR-0012   | P1       |
-| AC-0003-0003 | --force スキル上書き            | REQ-0003   | P1       |
-| AC-0003-0004 | --dry-run プレビュー            | REQ-0004   | P1       |
-| AC-0003-0005 | skill symlink 統合              | REQ-0008   | P1       |
-| AC-0003-0006 | agent symlink 統合              | REQ-0009   | P1       |
-| AC-0003-0007 | レガシーファイル削除            | REQ-0006   | P1       |
-| AC-0003-0008 | 旧ラッパー prune                | REQ-0007   | P1       |
-| AC-0003-0009 | git config 設定                 | REQ-0010   | P1       |
-| AC-0003-0010 | Windows EPERM エラー            | REQ-0015   | P1       |
-| AC-0003-0011 | instructions 新規配置           | REQ-0012   | P1       |
-| AC-0003-0012 | instructions 既存保護           | REQ-0013   | P1       |
-| AC-0003-0013 | --force instructions 保護       | REQ-0013   | P1       |
-| AC-0003-0014 | instructions アクティベーション | REQ-0014   | P2       |
-| AC-0003-0015 | gitignore 管理ブロック追記      | REQ-0016   | P1       |
-| AC-0003-0016 | レガシーブロック自動移行        | REQ-0017   | P1       |
-| AC-0003-0017 | 4-layer asset-tree seed         | REQ-0018   | P1       |
-| AC-0003-0018 | project-root steering seed      | REQ-0019   | P1       |
-| AC-0003-0019 | --upgrade-assistant-tree flag   | REQ-0020   | P1       |
-| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力      | REQ-0020   | P1       |
-| AC-0003-0021 | migration memo authoring        | REQ-0021   | P1       |
-| AC-0003-0022 | assistantPaths.ts SSOT 経由     | REQ-0022   | P1       |
-| AC-0003-0023 | 旧 layout 読取 backward compat  | REQ-0023   | P1       |
-| AC-0003-0024 | D-DEPRECATED-PATH sunset 明示   | REQ-0023   | P1       |
+| AC_ID        | Title                             | Notes      | Priority |
+| ------------ | --------------------------------- | ---------- | -------- |
+| AC-0003-0001 | 空ディレクトリ初期化              | Happy path | P1       |
+| AC-0003-0002 | 冪等な初期化                      | NFR-0012   | P1       |
+| AC-0003-0003 | --force スキル上書き              | REQ-0003   | P1       |
+| AC-0003-0004 | --dry-run プレビュー              | REQ-0004   | P1       |
+| AC-0003-0005 | skill symlink 統合                | REQ-0008   | P1       |
+| AC-0003-0006 | agent symlink 統合                | REQ-0009   | P1       |
+| AC-0003-0007 | レガシーファイル削除              | REQ-0006   | P1       |
+| AC-0003-0008 | 旧ラッパー prune                  | REQ-0007   | P1       |
+| AC-0003-0009 | git config 設定                   | REQ-0010   | P1       |
+| AC-0003-0010 | Windows EPERM エラー              | REQ-0015   | P1       |
+| AC-0003-0011 | instructions 新規配置             | REQ-0012   | P1       |
+| AC-0003-0012 | instructions 既存保護             | REQ-0013   | P1       |
+| AC-0003-0013 | --force instructions 保護         | REQ-0013   | P1       |
+| AC-0003-0014 | instructions アクティベーション   | REQ-0014   | P2       |
+| AC-0003-0015 | gitignore 管理ブロック追記        | REQ-0016   | P1       |
+| AC-0003-0016 | レガシーブロック自動移行          | REQ-0017   | P1       |
+| AC-0003-0017 | 4-layer asset-tree seed           | REQ-0018   | P1       |
+| AC-0003-0018 | project-root steering seed        | REQ-0019   | P1       |
+| AC-0003-0019 | --upgrade-assistant-tree flag     | REQ-0020   | P1       |
+| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力        | REQ-0020   | P1       |
+| AC-0003-0021 | migration memo authoring          | REQ-0021   | P1       |
+| AC-0003-0022 | assistantPaths.ts SSOT 経由       | REQ-0022   | P1       |
+| AC-0003-0023 | 旧 layout 読取 backward compat    | REQ-0023   | P1       |
+| AC-0003-0024 | D-DEPRECATED-PATH sunset 明示     | REQ-0023   | P1       |
+| AC-0003-0025 | 配布 workflow bounding + 権限     | REQ-0024   | P1       |
+| AC-0003-0026 | 配布 install 経路の保持           | REQ-0024   | P1       |
+| AC-0003-0027 | 配布 action SHA pin + 可読 name   | REQ-0025   | P1       |
+| AC-0003-0028 | leakage guard breadth 維持        | REQ-0025   | P1       |
+| AC-0003-0029 | 配布 set の命名と topology        | REQ-0026   | P1       |
+| AC-0003-0030 | 配布 set の inertness と無 secret | REQ-0026   | P1       |
+| AC-0003-0031 | 配布 detection と green-on-skip   | REQ-0027   | P1       |
+| AC-0003-0032 | runner label 間接化 + header 表   | REQ-0028   | P1       |
+| AC-0003-0033 | portability の degrade 方向       | REQ-0029   | P1       |
+| AC-0003-0034 | 配布 workflow 所有権コントラクト  | REQ-0030   | P1       |
+| AC-0003-0035 | 配布 set structural contract gate | REQ-0031   | P1       |
+| AC-0003-0036 | declined name の copy 前除外      | REQ-0030   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -235,3 +247,87 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given 旧 layout が検出された init 実行
 - When `D-DEPRECATED-PATH` warning が出力される
 - Then warning 本文に sunset minor version (v1.10.0) が文字列として明示されている。曖昧な「次の release」「将来」等の表現は含まない
+
+## AC-0003-0025: 配布 workflow bounding + 権限
+
+- US-Refs: US-0003-0021
+- Given `packages/qfai/assets/init/root/.github/workflows/` 配下の配布 workflow set
+- When 各ファイルの job 定義と checkout step を検査する
+- Then 全 job が job-reachable な `permissions:` ブロック（必要最小 scope。orchestrator の verdict job は empty permission map）と `timeout-minutes` を持ち、全ファイルが `cancel-in-progress: true` を伴う ref-scoped `concurrency:` group を宣言し、全 checkout step が `persist-credentials: false` を設定し、artifact upload があれば cancellation で skip / 欠損ファイル許容 / retention 7 日以下である
+
+## AC-0003-0026: 配布 install 経路の保持
+
+- US-Refs: US-0003-0021, US-0003-0026
+- Given 既存配布 workflow の lockfile 検出 `cache:` 式と lockfile-aware install branch（pnpm / yarn Classic / yarn Berry / npm + no-lockfile）
+- When hardening 後の配布 set を検査する
+- Then 4 package manager と no-lockfile の全ケースが依然として分岐で扱われ、`cache:` 式は単一 package manager 形式に置換されておらず、新規配布ファイルにも同じ install 分岐が拡張されている。かつ配布 header は package が `engines` で宣言していない Node support floor を主張していない
+
+## AC-0003-0027: 配布 action SHA pin + 可読 name
+
+- US-Refs: US-0003-0022
+- Given 配布 workflow set の全 `uses:` 参照
+- When 各参照とそれを含む step の `name:` を検査する
+- Then 全参照が 40-hex commit SHA 形式に pin されており、可読 version は step `name:` 内に leading `v` を付けずに記載され、comment trailer には version が現れない。third-party 参照は closed sanctioned set（package-manager availability の最小限、現在 1 件 = pnpm setup action）のみで、allow-list として assert される（count-of-zero では assert されない）
+
+## AC-0003-0028: leakage guard breadth 維持
+
+- US-Refs: US-0003-0022
+- Given SHA pin 済みの配布 workflow set と `packages/qfai/scripts/check-no-internal-version-leakage.sh`
+- When guard をツリーに対して実行し、続いて配布ファイルへ慣例的な `# v<X.Y.Z>` pin trailer を planted して再実行する
+- Then 前者は exit 0、後者は exit 1 となり、guard の pattern 集合・pragma 対応・許容パスは baseline から一切変更されていない。すなわち解決は配布側の綴りを変えることで得られており、guard の narrowing / pragma 新設 / allow-list entry 追加は行われていない
+
+## AC-0003-0029: 配布 set の命名と topology
+
+- US-Refs: US-0003-0023
+- Given 配布 `.github/` ツリー
+- When 直下の entry と workflows ディレクトリの各 entry、および各配布ファイルの相互参照を検査する
+- Then `.github/` の直下 child は `workflows` のみであり（`actions/` を planted すると pack 検証が throw する）、workflows 配下の全 entry が `^qfai-[a-z0-9-]+\.yml$` に一致し、set は 2 つ以上のファイルから成り、どの配布ファイルも他の配布ファイルを参照せず、layer 分離は orchestrator ファイル内の job / matrix leg として表現されている。この命名パターンは reservation notice（衝突を adopter が文書から予見できるようにするもの）であり、write / removal の selector としては使われない
+
+## AC-0003-0030: 配布 set の inertness と無 secret
+
+- US-Refs: US-0003-0023
+- Given optional な layer 名テストスクリプトを 1 つも宣言していない新規 adopter プロジェクト
+- When `qfai init` を temp ディレクトリに実行し、配布された workflow set を静的に評価する
+- Then 実行される test lane は 0 件（各 lane は宣言済みだが対応スクリプト不在の false 条件で skip される）、dependency install を行う job は validate lane の 1 件のみ（orchestrator の detection / verdict job は install しない）、set 全体で secret 宣言 / secret context 参照 / `secrets: inherit` が 0 件である
+
+## AC-0003-0031: 配布 detection と green-on-skip
+
+- US-Refs: US-0003-0024
+- Given 配布 orchestrator の detection job と verdict job
+- When Markdown のみの diff / source の diff / 認識外パスの diff / shallow clone の 4 入力で detection を走らせ、続いて空 matrix で verdict を評価する
+- Then 選択 lane 集合はそれぞれ minimal / full / full / full となり、detection は third-party action を使わず name-only diff + JSON filtering で実装され full history を自 job のみで要求する。diff 失敗と shallow clone では warning annotation を出して full superset に fail open する。verdict は同一ファイル内に co-located され、empty permission map と always-run condition を持ち、空 matrix で exit 0 する
+
+## AC-0003-0032: runner label 間接化 + header 表
+
+- US-Refs: US-0003-0025
+- Given 配布 workflow set の全 runner selector と各ファイルの header block
+- When selector 値と header table を検査する
+- Then 全 selector が repository variable を読み、その default が public GitHub-hosted label であり、organization-private label literal は set のどこにも現れない。各配布ファイルの header table は読む variable 名・その default・誤値時に GitHub が fail fast せず無期限 queue する失敗モード・`packageManager` manifest field の前提条件を記載している
+
+## AC-0003-0033: portability の degrade 方向
+
+- US-Refs: US-0003-0026
+- Given Node version ファイルを持たない adopter fixture と、`packageManager` field を持たない adopter fixture
+- When 配布 setup-install 列をそれぞれの fixture で走らせる
+- Then Node version ファイル不在は fail **open**: documented literal が使われ warning annotation が出て lane は継続する。package manager 解決不能は fail **closed**: lane は停止し、`packageManager` manifest field を修正箇所として名指しする actionable annotation を出す（不透明な resolution error ではない）
+
+## AC-0003-0034: 配布 workflow 所有権コントラクト
+
+- US-Refs: US-0003-0027
+- Given adopter の workflows ディレクトリに (a) QFAI が配布する名前と衝突する adopter 作成ファイル、(b) 記録上 QFAI が install した後 adopter が削除したファイル、(c) 手編集された install 済みファイル が存在する fixture
+- When `.qfai/contracts/cli/shipped-workflows.md` (`CLI-WFSET`) が定める所有権境界に対して write / prune set 解決経路と provenance reader を検査し、`qfai init` を当該 fixture に対して実行する
+- Then `qfai-` prefix は reservation notice として扱われ selector としては使われていない: write set は in-binary `SHIPPED_WORKFLOW_NAMES`、prune set は in-binary `RETIRED_WORKFLOW_NAMES` と等しく、adopter のディスク上の `qfai-*` glob には由来しない。provenance は `.qfai/install-provenance.json`（tracked、`schemaVersion` なし、QFAI が書いた bytes の sha256）から読まれ、あらゆる overwrite / prune の前に参照される。reader は不在 / `workflows` キー不在 / 不正 JSON を empty として扱い throw しない。file state は `absent` / `adopter-owned` / `installed` / `modified` / `declined` の closed 5-state enum に決まり、(a) は byte 単位で無変更のまま `adopter-owned`、(b) は `declined`、(c) は上書きされず `modified` になる。prune は 5 状態すべてで発生しない。write / removal は `copyTemplateTree` / `copyTemplatePaths` / `pruneMatchingEntries` のみを経由し、当該経路に自前の `copyFile` / `writeFile` / `rm` / `unlink` 呼び出しは存在せず、`pruneMatchingEntries` は export されている（module-private のままだと再実装が唯一の代替になる）
+
+## AC-0003-0035: 配布 set structural contract gate
+
+- US-Refs: US-0003-0028
+- Given テストスイート内に 1 箇所だけ保持された配布 set の宣言された期待形状（値の SSOT はそこであり、spec も contract も値を再記載しない）
+- When 配布 set を clean な状態で gate に掛け、続いて profile 値と failure threshold を planted divergence させて `pnpm ci:lint` を走らせる
+- Then clean では exit 0、planted では exit 1 となり failure code は `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`。期待形状は `CLI-WFSET` §5 が closed set として定める 9 dimension（file set / header block / job 単位の permission・timeout・runner selector / matrix の `fail-fast: false` / lane の subcommand・profile・fail-on threshold / lane の inert 化条件 / third-party allow-list / zero-secret / 配布ファイル間参照ゼロ）をすべて pin しており、1 つでも欠落していれば contract 違反として扱われる。gate の invocation path は `pnpm ci:lint` に現れ、`pnpm ci:gate` には現れない。既存 asset test の ad-hoc 配布 workflow string assertion は subsume して置き換えられ、その test-case 参照は保持または再登録されている
+
+## AC-0003-0036: declined name の copy 前除外
+
+- US-Refs: US-0003-0027
+- Given provenance 記録上 QFAI が install した後 adopter が削除した配布名が 1 件あり、そのファイルはディスク上に存在しない fixture
+- When `qfai init` を実行し、copy set の構築経路を観測する
+- Then 当該名は copy が実行される**前に** copy set から除外されており、init 後もディスク上に存在しない。create-only 判定だけに依存していない — declined ファイルは absent なので create-only は「新規作成」として書いてしまうため、create-only であることだけを assert するテストは init が復活させても green になる。したがって除外は create-only とは独立に観測できる（copy set の内容そのもの、または copy primitive に渡された名前集合として）
