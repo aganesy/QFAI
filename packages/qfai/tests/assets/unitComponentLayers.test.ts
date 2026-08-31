@@ -59,10 +59,23 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
       }
     });
 
-    it(`${tree}: TestKind resolution knows the two new directories`, async () => {
+    it(`${tree}: the kind list carries the three AtddTestKind members only`, async () => {
+      // This list used to be headed "TestKind resolution (single source)" and
+      // gave `tests/unit/**` and `tests/component/**` their own rows, so a
+      // reader scanning for a "single source" heading found a five-member set
+      // that contradicts the `(normative)` crosswalk and that
+      // `resolveTestKind` cannot produce. It now derives from the crosswalk.
       const catalog = await read(tree, CATALOG);
-      expect(catalog).toContain("- `tests/unit/**` -> Unit");
-      expect(catalog).toContain("- `tests/component/**` -> Component");
+      expect(catalog).not.toContain("TestKind resolution (single source)");
+      expect(catalog).toContain(
+        "## Directory → AtddTestKind (code-side, derived from the crosswalk)",
+      );
+      for (const kind of ["Integration", "API", "E2E"]) {
+        expect(catalog).toContain(`\`<testsDir>/${kind.toLowerCase()}/**\` -> ${kind}`);
+      }
+      expect(catalog).not.toContain("-> Unit");
+      expect(catalog).not.toContain("-> Component");
+      expect(catalog).toContain("L1 Unit and L2 Component resolve to no kind.");
     });
 
     it(`${tree}: Unit and Component are stated to owe no ATDD annotation`, async () => {
@@ -135,8 +148,8 @@ describe.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
       );
       expect(catalog).toContain("| `L1`/`Unit` | no ATDD obligation |");
       expect(catalog).toContain("| `L2`/`Component` | no ATDD obligation |");
-      expect(catalog).toContain("| `L3`/`Integration` | `tests/integration/**` |");
-      expect(catalog).toContain("| none declared | `tests/integration/**` |");
+      expect(catalog).toContain("| `L3`/`Integration` | `<testsDir>/integration/**` |");
+      expect(catalog).toContain("| none declared | `<testsDir>/integration/**` |");
       expect(catalog).not.toContain("It does **not** move the traceability annotation.");
       expect(catalog).not.toContain(
         "a `TC-*` reference inside `tests/api/**` or `tests/e2e/**` is rejected outright",
