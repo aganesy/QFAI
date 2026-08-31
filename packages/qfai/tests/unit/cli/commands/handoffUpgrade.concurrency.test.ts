@@ -320,11 +320,13 @@ describe("handoff upgrade places the canonical file exclusively", () => {
   // never reaches the caller. Every retry would add another orphan.
   it("removes the staging sibling when the staging write itself fails", async () => {
     await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
-    hooks.afterWriteFile = async (target) => {
-      if (!isStagingName(target)) return;
+    // Not `async`: this hook awaits nothing, and `tsconfig.tests.json` now enumerates this file, so
+    // `require-await` reads it. Rejecting explicitly is what `async` + `throw` compiled to anyway.
+    hooks.afterWriteFile = (target) => {
+      if (!isStagingName(target)) return Promise.resolve();
       const err: NodeJS.ErrnoException = new Error("ENOSPC: no space left on device");
       err.code = "ENOSPC";
-      throw err;
+      return Promise.reject(err);
     };
     const errs: string[] = [];
     const code = await runHandoffUpgrade({
