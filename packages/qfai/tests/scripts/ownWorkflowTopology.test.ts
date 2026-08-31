@@ -2680,6 +2680,38 @@ describe("release automation performs decisions rather than making them", () => 
     ).toContain("CHANGELOG.md");
   });
 
+  it("treats an existing tag as a re-run only when it names this commit", () => {
+    // Idempotent means "already did exactly this", not "the name is taken". The first version
+    // asked only whether the ref resolved, so a `vX.Y.Z` created against a different commit
+    // between Prepare release and the merge ended the job successfully with this commit
+    // untagged — release.yml never starting, and nothing anywhere saying so.
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const commands = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    expect(
+      commands,
+      "the tag the API returns must be DEREFERENCED to a commit and compared with this one: " +
+        "asking only whether the ref resolves cannot tell a re-run from a collision",
+      // The TEST, inside its brackets — not a mention. Measured: replacing the comparison with
+      // `if true` left this row GREEN, because the reject message beside it names both
+      // `object_sha` and `GITHUB_SHA`. Seventh time in this work that a row matched a sentence
+      // about a check instead of the check; every one of them found by planting.
+    ).toMatch(/\[[^\n]*object_sha[^\n]*=[^\n]*GITHUB_SHA[^\n]*\]/);
+    expect(
+      commands,
+      "and an annotated tag needs the extra hop — its ref points at the tag object, not at the " +
+        "commit, and this workflow creates annotated tags, so that hop is the normal case",
+    ).toMatch(/git\/tags\//);
+  });
+
   it("tags only what an approved release pull request carried", () => {
     // The trigger is `packages/qfai/package.json` changing, which is necessary and NOT
     // sufficient. A pinned feature branch — `feature/vX.Y.Z`, which this repository's version

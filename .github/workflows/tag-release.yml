@@ -122,12 +122,33 @@ jobs:
           fi
 
           # Asked of the API: this checkout is shallow and carries no tags. Re-running a release
-          # commit is an ordinary thing to do, and finding the tag already there is not an error.
-          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${claimed}" > /dev/null 2>&1; then
-            echo "tag-release: v${claimed} already exists; nothing to do"
-            echo "push=false" >> "$GITHUB_OUTPUT"
+          # commit is an ordinary thing to do, and finding the tag already there is not an error
+          # — PROVIDED it names this commit. A tag of the same name created against a different
+          # commit between Prepare release and the merge is not a re-run: this commit would end
+          # up untagged, release.yml would never start from this merge, and the workflow would
+          # report success. Idempotent means "already did exactly this", not "the name is taken".
+          if ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${claimed}" 2>&1)"; then
+            object_type="$(printf '%s' "$ref" | jq -r '.object.type')"
+            object_sha="$(printf '%s' "$ref" | jq -r '.object.sha')"
+            # An annotated tag's ref points at the tag OBJECT; the commit is one hop further.
+            # This workflow creates annotated tags, so that hop is the normal case, not the edge.
+            if [ "$object_type" = "tag" ]; then
+              object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq '.object.sha')"
+            fi
+            if [ "$object_sha" = "${GITHUB_SHA}" ]; then
+              echo "tag-release: v${claimed} already points at ${GITHUB_SHA}; nothing to do"
+              echo "push=false" >> "$GITHUB_OUTPUT"
+            else
+              reject "v${claimed} already exists and points at ${object_sha}, not at this release commit ${GITHUB_SHA}. This is not a re-run: the tag that exists names a different tree, this commit stays untagged, and release.yml will not start from this merge. Resolve by hand."
+            fi
           else
-            echo "push=true" >> "$GITHUB_OUTPUT"
+            # A missing ref and an unreachable API are different answers, and only one of them
+            # means "no tag yet". Treating a transient failure as absence would push a second
+            # tag over a real one — or report success having done nothing.
+            case "$ref" in
+              *"Not Found"* | *404*) echo "push=true" >> "$GITHUB_OUTPUT" ;;
+              *) reject "could not ask whether v${claimed} already exists, so whether this is a re-run is unknown: ${ref}" ;;
+            esac
           fi
           echo "version=${claimed}" >> "$GITHUB_OUTPUT"
         shell: bash
