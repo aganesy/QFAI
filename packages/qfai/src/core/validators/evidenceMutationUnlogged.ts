@@ -57,7 +57,7 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     logTokens: ["logEvidenceMove"],
   },
   {
-    // CHG-006 mutation-log wiring-depth extension: every
+    // Mutation-log wiring-depth extension: every
     // iter-NN/ directory rm-loop (clearEvidenceIterDirs) MUST funnel
     // through `logEvidenceDelete` before the destructive rm. The pair
     // scan keys on the cycle-0 reset call-site tokens.
