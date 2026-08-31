@@ -128,6 +128,21 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * The skill / `agent-routing.yml` cross-check, which ships as one rule in
+   * five findings: `QFAI-AGENT-015` (a declared role nothing routes or selects),
+   * `QFAI-AGENT-016` (a `SKILL.md` whose `roles:` or `routing-profile:` cannot
+   * be read), `QFAI-AGENT-017` (a skill that binds itself to the manifest which
+   * the manifest routes nothing to), `QFAI-AGENT-018` (a route whose review
+   * profile is undefined or contradicted by a second route) and
+   * `QFAI-AGENT-019` (a routed agent the skill's `roles:` omits).
+   *
+   * They share one window because they share one cause: nothing compared the
+   * two sides before, so on the release that introduces them every project
+   * whose `roles:` and manifest drifted apart — which is every project that
+   * customised either — meets the whole backlog in a single run.
+   */
+  skillRolesRoutingCrossCheck: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

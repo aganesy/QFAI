@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 # Contract with each skill's `roles:` frontmatter (validated by
-# `QFAI-AGENT-014` .. `QFAI-AGENT-018`):
+# `QFAI-AGENT-015` .. `QFAI-AGENT-019`):
 #
 # A skill's `roles:` is the closed set of agents it may dispatch, so it must be
 # a SUPERSET of every agent this manifest binds to that skill —

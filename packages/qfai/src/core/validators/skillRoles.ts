@@ -3,8 +3,13 @@ import path from "node:path";
 
 import { parseSkillFrontmatter, type SkillFrontmatter } from "../agentFrontmatter.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
+
+/** The release the five routing cross-check findings stop being warnings at. */
+const CROSS_CHECK_PROMOTION = RULE_PROMOTIONS.skillRolesRoutingCrossCheck.promoteAt;
 
 /**
  * How firmly a phase or a review profile binds an agent.
@@ -90,7 +95,7 @@ export function emptySkillRouting(): SkillRouting {
  *
  * `known`, when given, is the agent catalog. An id outside it is counted as a
  * dispatch attempt but never collected: `QFAI-AGENT-008` already reports the
- * dangling reference, and collecting it here would make `QFAI-AGENT-014` tell
+ * dangling reference, and collecting it here would make `QFAI-AGENT-019` tell
  * the operator to add that same non-existent id to the skill's `roles:`.
  *
  * Returns how many syntactically usable ids the field held — non-empty strings
@@ -137,6 +142,17 @@ export async function validateSkillRoles(
   issues: Issue[],
 ): Promise<void> {
   const skillsDir = resolvePath(root, config, "skillsDir");
+  // Resolved once for the whole run: `resolveToolVersion` reads a file, and
+  // every finding below shares one promotion window (`RULE_PROMOTIONS`). The
+  // cross-check is a new rule landing on manifests and `roles:` blocks that
+  // drifted apart before anything compared them, so it reports as a warning
+  // until the pinned release rather than latching an upgrade.
+  const toolVersion = await resolveToolVersion();
+  const crossCheckSeverity = newRuleSeverity(toolVersion, CROSS_CHECK_PROMOTION);
+  const windowNote =
+    crossCheckSeverity === "warning"
+      ? ` Reported as a warning until the ${CROSS_CHECK_PROMOTION} release, then an error`
+      : "";
   for (const [skill, entry] of routing) {
     const skillPath = path.join(skillsDir, skill, "SKILL.md");
     const rel = path.relative(root, skillPath).replace(/\\/g, "/");
@@ -144,7 +160,15 @@ export async function validateSkillRoles(
     // Behind the read, a skill that ships no `SKILL.md` — or one this rule
     // cannot adjudicate — took a route through an undefined review profile
     // with it, and nothing else in the file checks that reference.
-    let gate = reportManifestGateDefects(skill, entry, profiles, rel, issues);
+    let gate = reportManifestGateDefects(
+      skill,
+      entry,
+      profiles,
+      rel,
+      issues,
+      crossCheckSeverity,
+      windowNote,
+    );
     // A header with no usable phase list dispatches nothing, so neither
     // direction of the cross-check can say anything true about it —
     // `reportUnroutedSkills` reports the header itself as `QFAI-AGENT-017`
@@ -160,21 +184,32 @@ export async function validateSkillRoles(
       // A routed skill whose frontmatter cannot be read is not "makes no
       // claim": the assistant cannot load it either, so reporting nothing let
       // one indentation slip pass the whole family as success.
-      issues.push(unreadableFrontmatter(rel, skill, frontmatter.parseError));
+      issues.push(
+        unreadableFrontmatter(rel, skill, frontmatter.parseError, crossCheckSeverity, windowNote),
+      );
       continue;
     }
     // Ahead of the `roles:` guards below: which review gate the skill and the
     // manifest each name is a divergence in its own right, and a skill that
     // declares no `roles:` still has to agree about its profile.
-    gate = reportSkillGateDefects(skill, entry, frontmatter, rel, issues) && gate;
+    gate =
+      reportSkillGateDefects(
+        skill,
+        entry,
+        frontmatter,
+        rel,
+        issues,
+        crossCheckSeverity,
+        windowNote,
+      ) && gate;
     if (frontmatter.rolesError) {
       // Without this the slip reads as "no `roles:` key" and BOTH directions
       // below are skipped, so a missing mandatory routed agent passes.
       issues.push(
         issue(
           "QFAI-AGENT-016",
-          `${rel} declares an unusable roles: frontmatter (${frontmatter.rolesError}); the ${skill} routing cross-check cannot run`,
-          "error",
+          `${rel} declares an unusable roles: frontmatter (${frontmatter.rolesError}); the ${skill} routing cross-check cannot run.${windowNote}`,
+          crossCheckSeverity,
           rel,
           "agentDefinition.invalidSkillRoles",
         ),
@@ -184,24 +219,39 @@ export async function validateSkillRoles(
     // An untrustworthy review gate is not an empty one. Running the closed-set
     // comparison against a selection the errors above already proved partial
     // flags correctly declared reviewers as unreachable (`QFAI-AGENT-015`) and
-    // stops asking for the mandatory ones (`QFAI-AGENT-014`) — two misleading
+    // stops asking for the mandatory ones (`QFAI-AGENT-019`) — two misleading
     // work items per defect that is already reported once, precisely.
     if (!frontmatter.roles || !gate) {
       continue;
     }
     const selected = collectSelections(skill, entry, profiles);
-    reportUndeclaredRoutedAgents(selected, frontmatter.roles, rel, issues);
-    reportUnselectableRoles(skill, selected, frontmatter.roles, entry.reviewProfile, rel, issues);
+    reportUndeclaredRoutedAgents(selected, frontmatter.roles, rel, issues, toolVersion, windowNote);
+    reportUnselectableRoles(
+      skill,
+      selected,
+      frontmatter.roles,
+      entry.reviewProfile,
+      rel,
+      issues,
+      crossCheckSeverity,
+      windowNote,
+    );
   }
-  await reportUnroutedSkills(root, skillsDir, routing, issues);
+  await reportUnroutedSkills(root, skillsDir, routing, issues, crossCheckSeverity, windowNote);
 }
 
 /** `QFAI-AGENT-016` for a `SKILL.md` whose frontmatter block cannot be read. */
-function unreadableFrontmatter(rel: string, skill: string, reason: string): Issue {
+function unreadableFrontmatter(
+  rel: string,
+  skill: string,
+  reason: string,
+  crossCheckSeverity: "warning" | "error",
+  windowNote: string,
+): Issue {
   return issue(
     "QFAI-AGENT-016",
-    `${rel} carries an unreadable frontmatter block (${reason}); the ${skill} routing cross-check cannot run`,
-    "error",
+    `${rel} carries an unreadable frontmatter block (${reason}); the ${skill} routing cross-check cannot run.${windowNote}`,
+    crossCheckSeverity,
     rel,
     "agentDefinition.unreadableSkillFrontmatter",
   );
@@ -252,6 +302,8 @@ function reportManifestGateDefects(
   profiles: Map<string, ProfileSelection>,
   rel: string,
   issues: Issue[],
+  crossCheckSeverity: "warning" | "error",
+  windowNote: string,
 ): boolean {
   let trusted = true;
   if (entry.reviewProfileConflict) {
@@ -259,8 +311,8 @@ function reportManifestGateDefects(
     issues.push(
       issue(
         "QFAI-AGENT-018",
-        `agent-routing.yml routes "${skill}" through two different review profiles ("${first}" and "${second}"); one skill has one review gate`,
-        "error",
+        `agent-routing.yml routes "${skill}" through two different review profiles ("${first}" and "${second}"); one skill has one review gate.${windowNote}`,
+        crossCheckSeverity,
         rel,
         "agentDefinition.conflictingReviewProfile",
       ),
@@ -283,8 +335,8 @@ function reportManifestGateDefects(
     issues.push(
       issue(
         "QFAI-AGENT-018",
-        `agent-routing.yml routes "${skill}" through review profile "${routed}", which review-profiles.yml does not define`,
-        "error",
+        `agent-routing.yml routes "${skill}" through review profile "${routed}", which review-profiles.yml does not define.${windowNote}`,
+        crossCheckSeverity,
         rel,
         "agentDefinition.unknownReviewProfile",
       ),
@@ -318,13 +370,15 @@ function reportSkillGateDefects(
   frontmatter: SkillFrontmatter,
   rel: string,
   issues: Issue[],
+  crossCheckSeverity: "warning" | "error",
+  windowNote: string,
 ): boolean {
   if (frontmatter.profileError) {
     issues.push(
       issue(
         "QFAI-AGENT-016",
-        `${rel} declares an unusable routing-profile: (${frontmatter.profileError}); the ${skill} review gate cannot be checked`,
-        "error",
+        `${rel} declares an unusable routing-profile: (${frontmatter.profileError}); the ${skill} review gate cannot be checked.${windowNote}`,
+        crossCheckSeverity,
         rel,
         "agentDefinition.invalidRoutingProfile",
       ),
@@ -351,8 +405,8 @@ function reportSkillGateDefects(
   issues.push(
     issue(
       "QFAI-AGENT-018",
-      `${rel} declares routing-profile: ${declared} but the agent-routing.yml route for "${skill}" ${found}`,
-      "error",
+      `${rel} declares routing-profile: ${declared} but the agent-routing.yml route for "${skill}" ${found}.${windowNote}`,
+      crossCheckSeverity,
       rel,
       "agentDefinition.routingProfileMismatch",
     ),
@@ -404,6 +458,8 @@ function reportUndeclaredRoutedAgents(
   declared: readonly string[],
   rel: string,
   issues: Issue[],
+  toolVersion: string,
+  windowNote: string,
 ): void {
   const declaredSet = new Set(declared);
   for (const [agent, selection] of selected) {
@@ -412,9 +468,14 @@ function reportUndeclaredRoutedAgents(
     }
     issues.push(
       issue(
-        "QFAI-AGENT-014",
-        `${rel} omits routed agent "${agent}" from roles: (${selection.source})`,
-        selection.binding === "required" ? "error" : "warning",
+        "QFAI-AGENT-019",
+        `${rel} omits routed agent "${agent}" from roles: (${selection.source})${selection.binding === "required" ? windowNote : ""}`,
+        // A `conditional` omission is a documentation gap and stays a warning
+        // for good; only the `required` half is on the promotion ladder, so
+        // only that half reads the pin.
+        selection.binding === "required"
+          ? newRuleSeverity(toolVersion, RULE_PROMOTIONS.skillRolesRoutingCrossCheck.promoteAt)
+          : "warning",
         rel,
         "agentDefinition.routedAgentNotDeclared",
       ),
@@ -429,6 +490,8 @@ function reportUnselectableRoles(
   profileName: string | undefined,
   rel: string,
   issues: Issue[],
+  crossCheckSeverity: "warning" | "error",
+  windowNote: string,
 ): void {
   const profileLabel = profileName ? `review profile "${profileName}"` : "declared review profile";
   for (const role of declared) {
@@ -438,8 +501,8 @@ function reportUnselectableRoles(
     issues.push(
       issue(
         "QFAI-AGENT-015",
-        `${rel} declares role "${role}" that no ${skill} routing phase and no ${profileLabel} selects`,
-        "warning",
+        `${rel} declares role "${role}" that no ${skill} routing phase and no ${profileLabel} selects.${windowNote}`,
+        crossCheckSeverity,
         rel,
         "agentDefinition.roleNeverSelected",
       ),
@@ -468,6 +531,8 @@ async function reportUnroutedSkills(
   skillsDir: string,
   routing: Map<string, SkillRouting>,
   issues: Issue[],
+  crossCheckSeverity: "warning" | "error",
+  windowNote: string,
 ): Promise<void> {
   let entries: string[];
   try {
@@ -487,7 +552,9 @@ async function reportUnroutedSkills(
     if (frontmatter?.parseError) {
       // The routed loop reports its own; this covers every other skill dir, so
       // an unloadable `SKILL.md` is named exactly once wherever it sits.
-      issues.push(unreadableFrontmatter(rel, name, frontmatter.parseError));
+      issues.push(
+        unreadableFrontmatter(rel, name, frontmatter.parseError, crossCheckSeverity, windowNote),
+      );
       continue;
     }
     if (frontmatter?.profileError) {
@@ -496,8 +563,8 @@ async function reportUnroutedSkills(
       issues.push(
         issue(
           "QFAI-AGENT-016",
-          `${rel} declares an unusable routing-profile: (${frontmatter.profileError}); the ${name} review gate cannot be checked`,
-          "error",
+          `${rel} declares an unusable routing-profile: (${frontmatter.profileError}); the ${name} review gate cannot be checked.${windowNote}`,
+          crossCheckSeverity,
           rel,
           "agentDefinition.invalidRoutingProfile",
         ),
@@ -511,8 +578,8 @@ async function reportUnroutedSkills(
     issues.push(
       issue(
         "QFAI-AGENT-017",
-        `${rel} declares routing-profile: ${profile} but agent-routing.yml routes no phases to "${name}"`,
-        "error",
+        `${rel} declares routing-profile: ${profile} but agent-routing.yml routes no phases to "${name}".${windowNote}`,
+        crossCheckSeverity,
         rel,
         "agentDefinition.skillNotRouted",
       ),

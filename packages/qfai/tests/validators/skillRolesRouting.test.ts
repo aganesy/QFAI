@@ -19,11 +19,37 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 import type { Issue } from "../../src/core/types.js";
+import type * as VersionModule from "../../src/core/version.js";
+
+/**
+ * The version the cross-check reads, overridable per test.
+ *
+ * The five findings ship behind one promotion window
+ * (`RULE_PROMOTIONS.skillRolesRoutingCrossCheck`), so at the shipped version
+ * they are warnings. An empty override means "defer to the real resolver", so
+ * every case below keeps running against the version this package actually
+ * ships.
+ */
+const toolVersion = vi.hoisted(() => ({ override: "" }));
+
+vi.mock("../../src/core/version.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof VersionModule>();
+  return {
+    ...actual,
+    resolveToolVersion: async (): Promise<string> =>
+      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
+  };
+});
+
+afterEach(() => {
+  toolVersion.override = "";
+});
 
 // tests/validators/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -47,7 +73,7 @@ const PROFILES = `profiles:
 `;
 
 const ROLES_ROUTING_CODES = new Set([
-  "QFAI-AGENT-014",
+  "QFAI-AGENT-019",
   "QFAI-AGENT-015",
   "QFAI-AGENT-016",
   "QFAI-AGENT-017",
@@ -209,16 +235,16 @@ async function runManifestFixture(fixture: Fixture): Promise<Issue[]> {
   return issues.filter((entry) => MANIFEST_CODES.has(entry.code));
 }
 
-describe("QFAI-AGENT-014 — routed agents must be declared in the skill's roles:", () => {
-  it("reports an error when a mandatory routed agent is absent from roles:", async () => {
+describe("QFAI-AGENT-019 — routed agents must be declared in the skill's roles:", () => {
+  it("reports a mandatory routed agent absent from roles:", async () => {
     const issues = await runFixture({
       roles: ["delivery-planner", "implementation-reviewer"],
       mandatory: ["delivery-planner", "completion-reviewer"],
       blocking: ["completion-reviewer"],
     });
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-AGENT-014");
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("completion-reviewer");
     expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
   });
@@ -232,20 +258,20 @@ describe("QFAI-AGENT-014 — routed agents must be declared in the skill's roles
       mandatory: ["delivery-planner"],
     });
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-AGENT-014");
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
     expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("implementation-reviewer");
     expect(issues[0]?.message).toContain("conditional_required");
   });
 
-  it("makes an always_required reviewer of the profile an error", async () => {
+  it("reports an always_required reviewer of the profile", async () => {
     const issues = await runFixture({
       roles: ["delivery-planner", "implementation-reviewer"],
       mandatory: ["delivery-planner"],
     });
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-AGENT-014");
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("always_required");
   });
 
@@ -256,7 +282,7 @@ describe("QFAI-AGENT-014 — routed agents must be declared in the skill's roles
       conditional: ["qa-strategist"],
     });
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.code).toBe("QFAI-AGENT-014");
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
     expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("qa-strategist");
   });
@@ -328,7 +354,7 @@ describe("QFAI-AGENT-016 — a malformed roles: declaration is not 'no declarati
     });
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-AGENT-016");
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
   });
 
@@ -350,7 +376,7 @@ describe("QFAI-AGENT-017 — a skill bound to the manifest must be routed", () =
     });
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-AGENT-017");
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.file).toBe(".qfai/assistant/skills/orphan-skill/SKILL.md");
   });
 
@@ -373,7 +399,7 @@ describe("QFAI-AGENT-017 — a skill bound to the manifest must be routed", () =
         phases,
       });
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-017"]);
-      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.severity).toBe("warning");
       expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
     });
   }
@@ -419,7 +445,7 @@ describe("QFAI-AGENT-018 — the skill and the manifest must name the same revie
       skillRoutingProfile: "other-profile",
     });
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("other-profile");
     expect(issues[0]?.message).toContain("demo-profile");
   });
@@ -547,7 +573,7 @@ describe("a broken manifest reference is never pushed onto the skill", () => {
       mandatory: ["delivery-planner", "ghost-agent"],
       skillRoutingProfile: "demo-profile",
     });
-    // QFAI-AGENT-008 owns the dangling reference. QFAI-AGENT-014 must not
+    // QFAI-AGENT-008 owns the dangling reference. QFAI-AGENT-019 must not
     // also tell the operator to add "ghost-agent" to roles:.
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-008"]);
   });
@@ -596,7 +622,7 @@ describe("QFAI-AGENT-016 — an unreadable SKILL.md frontmatter is reported", ()
         rawSkillDoc,
       });
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
-      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.severity).toBe("warning");
       expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
     });
   }
@@ -611,7 +637,7 @@ describe("QFAI-AGENT-016 — an unreadable SKILL.md frontmatter is reported", ()
       rawSkillDoc: "---\nname: demo-skill\nroles: [delivery-planner]\n\n# Demo\n",
     });
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
-    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
   });
 
@@ -648,7 +674,7 @@ describe("QFAI-AGENT-016 — an unusable routing-profile: is not an absent one",
         skillRoutingProfile: declared,
       });
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
-      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.severity).toBe("warning");
       expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
     });
   }
@@ -750,7 +776,7 @@ describe("QFAI-AGENT-018 — manifest-side profile defects do not need a skill d
       (entry) => entry.code === "QFAI-AGENT-018" && entry.message.includes("two different"),
     );
     expect(conflict).toHaveLength(1);
-    expect(conflict[0]?.severity).toBe("error");
+    expect(conflict[0]?.severity).toBe("warning");
     expect(conflict[0]?.message).toContain("demo-profile");
     expect(conflict[0]?.message).toContain("other-profile");
   });
@@ -823,8 +849,8 @@ describe("an untrustworthy review gate short-circuits the roles cross-check", ()
       mandatory: ["delivery-planner"],
       skillRoutingProfile: "demo-profile",
     });
-    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-014", "QFAI-AGENT-014"]);
-    expect(issues.map((entry) => entry.severity).sort()).toEqual(["error", "warning"]);
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-019", "QFAI-AGENT-019"]);
+    expect(issues.map((entry) => entry.severity).sort()).toEqual(["warning", "warning"]);
   });
 });
 
@@ -862,5 +888,79 @@ describe("shipped manifests and skills agree", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * The window itself.
+ *
+ * Nothing compared a skill's `roles:` with `agent-routing.yml` before, so on
+ * the release that introduces this rule every project whose two sides drifted
+ * apart meets the whole backlog at once — the shape P7 exists to keep out of a
+ * consuming repository's `--fail-on error` gate. All five findings therefore
+ * report as warnings until `RULE_PROMOTIONS.skillRolesRoutingCrossCheck`, and
+ * as errors from it. Asserted against the pin rather than a copy of it, so
+ * moving the pin moves these tests with it.
+ */
+describe("the routing cross-check ships behind a promotion window", () => {
+  const promoteAt = RULE_PROMOTIONS.skillRolesRoutingCrossCheck.promoteAt;
+
+  const undeclaredRequired = {
+    roles: ["delivery-planner", "implementation-reviewer"],
+    mandatory: ["delivery-planner", "completion-reviewer"],
+  } as const;
+
+  it("names the release that ends the window while it is open", async () => {
+    const issues = await runFixture(undeclaredRequired);
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
+    expect(issues[0]?.severity).toBe("warning");
+    // P7 step 3: an operator running `--fail-on error` can read the debt.
+    expect(issues[0]?.message).toContain(promoteAt);
+  });
+
+  it("promotes the required half of QFAI-AGENT-019 at the pinned release", async () => {
+    toolVersion.override = promoteAt;
+    const issues = await runFixture(undeclaredRequired);
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
+    expect(issues[0]?.severity).toBe("error");
+    // No window left to advertise once it has closed.
+    expect(issues[0]?.message).not.toContain(promoteAt);
+  });
+
+  it("leaves a conditional omission a warning after the window closes", async () => {
+    // Only the `required` half is on the ladder: a `conditional_agents` /
+    // `conditional_required` omission is a documentation gap, not a gate the
+    // run cannot finish without.
+    toolVersion.override = promoteAt;
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      mandatory: ["delivery-planner"],
+      conditional: ["qa-strategist"],
+    });
+    expect(issues[0]?.code).toBe("QFAI-AGENT-019");
+    expect(issues[0]?.severity).toBe("warning");
+  });
+
+  it("promotes QFAI-AGENT-015 at the pinned release", async () => {
+    toolVersion.override = promoteAt;
+    const issues = await runFixture({
+      roles: [
+        "delivery-planner",
+        "completion-reviewer",
+        "implementation-reviewer",
+        "qa-strategist",
+      ],
+      mandatory: ["delivery-planner"],
+    });
+    expect(issues[0]?.code).toBe("QFAI-AGENT-015");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  it("stays inside the window when the version cannot be read", async () => {
+    // `resolveToolVersion` answers "unknown" on a read failure. An unreadable
+    // version must never be the thing that turns a warning into a build break.
+    toolVersion.override = "unknown";
+    const issues = await runFixture(undeclaredRequired);
+    expect(issues[0]?.severity).toBe("warning");
   });
 });

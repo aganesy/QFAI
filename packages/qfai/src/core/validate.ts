@@ -260,7 +260,7 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
       // and a FIFO blocks it, either way taking the finding down with the run.
       //
       // `prototyping` and `saas-package` run `validateAgentDefinition` too,
-      // and since `QFAI-AGENT-014` / `QFAI-AGENT-015` it reaches the skills
+      // and since `QFAI-AGENT-019` / `QFAI-AGENT-015` it reaches the skills
       // tree as well — it reads every routed skill's `SKILL.md` and `readdir`s
       // the configured skills directory. Listing only the agents tree for them
       // left a FIFO at a routed `SKILL.md` blocking the run forever with the

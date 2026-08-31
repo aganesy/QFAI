@@ -99,7 +99,7 @@ export function parseAgentFrontmatter(content: string): AgentFrontmatterParseRes
  * `rolesError` is set instead when the key IS present but is not a list of
  * non-empty strings. Folding that case into "no declaration" let one notation
  * slip (`roles: completion-reviewer`, valid YAML but a scalar) silently
- * disable both `QFAI-AGENT-014` and `QFAI-AGENT-015` for the skill, so even a
+ * disable both `QFAI-AGENT-019` and `QFAI-AGENT-015` for the skill, so even a
  * missing mandatory routed agent passed as success.
  */
 export type SkillFrontmatter = {
@@ -132,7 +132,7 @@ export type SkillFrontmatter = {
  * The frontmatter fields that bind a skill to `agent-routing.yml`.
  *
  * That manifest and a skill's `roles:` both say who may act inside the skill,
- * and until `QFAI-AGENT-014` / `QFAI-AGENT-015` nothing compared them. Reading
+ * and until `QFAI-AGENT-019` / `QFAI-AGENT-015` nothing compared them. Reading
  * them here rather than in the validator keeps the frontmatter delimiter a
  * single expression, shared with `parseAgentFrontmatter`.
  *

@@ -612,7 +612,7 @@ const PHASE_AGENT_FIELDS = [
  *
  * Two `- skill:` blocks with the same name accumulate their phases and agents,
  * but they cannot both own the review gate. Overwriting silently let the skill
- * satisfy `QFAI-AGENT-014` / `-018` against the last block's profile alone
+ * satisfy `QFAI-AGENT-019` / `-018` against the last block's profile alone
  * while the first block's reviewers went unlisted, so a conflicting second
  * declaration is recorded for `validateSkillRoles` to report and the first one
  * stands.
@@ -620,7 +620,7 @@ const PHASE_AGENT_FIELDS = [
  * A `review_profile:` that is present but is not a usable name is reported
  * here and flagged on the entry. Ignoring the value collected the route as one
  * that declares no review gate at all, which is a different manifest: the
- * skill then passed `QFAI-AGENT-014` / `-018` without any of the reviewers the
+ * skill then passed `QFAI-AGENT-019` / `-018` without any of the reviewers the
  * broken key was meant to bind, and nothing named the key.
  */
 function collectRouteHeader(
@@ -774,7 +774,7 @@ async function validateProfiles(
   root: string,
 ): Promise<Map<string, ProfileSelection> | undefined> {
   const rel = manifestRelativePath(profilesPath, root);
-  // A profile selects reviewers a phase list never names, so `QFAI-AGENT-014`
+  // A profile selects reviewers a phase list never names, so `QFAI-AGENT-019`
   // and `QFAI-AGENT-015` need this side of the manifest too — the first before
   // it can call a profile-selected reviewer undeclared, the second before it
   // can call a declared role unreachable.
@@ -869,7 +869,7 @@ async function validateProfiles(
  * `roles:` is an error, while `conditional_required` is a warning.
  *
  * An id that is not a catalogued reviewer is left out: `QFAI-AGENT-010`
- * already reports it, and keeping it would make `QFAI-AGENT-014` demand that
+ * already reports it, and keeping it would make `QFAI-AGENT-019` demand that
  * every skill on the profile add the invalid id to its `roles:`.
  */
 function collectProfileReviewers(
