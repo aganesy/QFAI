@@ -68,19 +68,17 @@ information the block had already destroyed.
 
 **The departure status is one of `todo` / `red` / `green` / `refactor` /
 `review-fix`** — the active statuses the inbound edge admits. `blocked` is the
-destination, and `done` and `exception` are terminal: neither has work in
-flight for a blocker to stop. `TDDLIST_BLOCKED_MISSING_REF` **errors on either
-half**: a missing blocker, a cell that names no departure status, and a
-departure status outside that set are all the same defect — a `blocked` row
-saved in a state no later session can resume from. Enforcing only the blocker
-half let a bare `CR-20260729-0008` through, and the next session then had to
-guess which round the resumption writes into
-(`round-evidence.md#what-opens-a-round`).
+destination, and `done` and `exception` are terminal: neither has work in flight for
+a blocker to stop. `TDDLIST_BLOCKED_MISSING_REF` **errors on either half**: a
+missing blocker, a cell that names no departure status, and a departure status
+outside that set are all the same defect — a `blocked` row saved in a state no later
+session can resume from. Enforcing only the blocker half let a bare
+`CR-20260729-0008` through, and the next session then had to guess which round the
+resumption writes into (`round-evidence.md#what-opens-a-round`).
 
-`DR-ID` is **not** widened to carry it: that column is
-what distinguishes a parked `exception` from a row that never started, and
-overloading it would merge the two states the `blocked` status exists to
-separate.
+`DR-ID` is **not** widened to carry it: that column is what distinguishes a parked
+`exception` from a row that never started, and overloading it would merge the two
+states the `blocked` status exists to separate.
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
@@ -182,14 +180,13 @@ the ledger shows the debt it will owe.
 
 **A row already at a terminal status satisfies this by backfilling the cell in
 place.** Writing the outcome and its evidence pointer into `Evidence` is not a
-status transition, needs no transition, and is not drift: it records a cycle
-that already ran. Do not move a `done` row backwards to satisfy it — `done` has
-no outgoing edge, and the backward move would be the actual violation. Where the
-run is genuinely gone, the loss is itself the thing to record: add a backfill
-entry to the evidence file stating what was run and that its output was not
-retained, then point the cell at that entry. The cell stays a pointer — prose
-about a missing run is a payload, and the section above says why a payload in
-the cell corrupts the ledger.
+status transition, needs no transition, and is not drift: it records a cycle that
+already ran. Do not move a `done` row backwards to satisfy it — `done` has no
+outgoing edge, and the backward move would be the actual violation. Where the run is
+genuinely gone, the loss is itself the thing to record: add a backfill entry to the
+evidence file stating what was run and that its output was not retained, then point
+the cell at that entry. The cell stays a pointer — prose about a missing run is a
+payload, and the section above says why a payload in the cell corrupts the ledger.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
@@ -222,80 +219,72 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 `TDDLIST_EXCEPTION_PARKED` links here; both defer to what follows.
 
 - Any active status -> `blocked` (the row cannot proceed: an upstream defect, an
-  unresolved Change Request, or an unfinished row in another spec). Name the
-  blocker **and the status the row is leaving** in `Blocked-By`
+  unresolved Change Request, or an unfinished row in another spec). Name the blocker
+  **and the status the row is leaving** in `Blocked-By`
   (`CR-20260421-0004 — blocked at green`) — that cell is the only place the
-  departure status survives the session, and every later read of it depends on
-  it being written here rather than reconstructed;
-  `TDDLIST_BLOCKED_MISSING_REF` errors when either half is absent, and when
-  the departure status is not one the edge admits.
-  **The source is not restricted to `todo`**, and mirrors the `exception` edge
-  below for the same reason: all three blockers named here surface when the work
-  reaches them — an upstream defect when the GREEN implementation hits it, a
-  cross-spec row found unfinished when the integration is wired, a Change
-  Request raised _because_ this row exposed the conflict — so the row is
-  usually already at `red`, `green` or `refactor`. With `todo` as the only
-  source those rows had nowhere legal to record the blocker: `exception` would
-  silently satisfy completion, the upstream reset needs an approved `CR-*` that
-  by definition does not exist yet, and leaving the row at `green` throws away
-  the `Blocked-By` this status exists to hold and re-derives the determination
-  on every pass.
-- `blocked` -> `todo` (the blocker cleared **with this row's obligation
-  intact**). This is a **resumption, not a backward transition**: nothing
-  upstream changed, so nothing is being undone. **An approved Change Request is
-  not this edge.** A row blocked on an unresolved `CR-*` may take it only when
-  that CR resolved **without moving what the row owes** — `rejected` or
-  `superseded`, an upstream defect fixed inside the same obligation, a
-  cross-spec row finished. **Those are status values a Change Request can
-  actually hold**: the template and `constitution/drift-protocol.md` step 2
-  define the set as `open` / `approved` / `rejected` / `superseded`, and
-  `change-request-reset.md` reads exactly `approved`, `rejected` and
-  `superseded` as resolved. There is no `withdrawn`; naming it here told an
-  operator to park a CR in a status the mandatory preflight still counts as
+  departure status survives the session, and every later read of it depends on it
+  being written here rather than reconstructed; `TDDLIST_BLOCKED_MISSING_REF` errors
+  when either half is absent, and when the departure status is not one the edge
+  admits. **The source is not restricted to `todo`**, and mirrors the `exception`
+  edge below for the same reason: all three blockers named here surface when the
+  work reaches them — an upstream defect when the GREEN implementation hits it, a
+  cross-spec row found unfinished when the integration is wired, a Change Request
+  raised _because_ this row exposed the conflict — so the row is usually already at
+  `red`, `green` or `refactor`. With `todo` as the only source those rows had
+  nowhere legal to record the blocker: `exception` would silently satisfy
+  completion, the upstream reset needs an approved `CR-*` that by definition does
+  not exist yet, and leaving the row at `green` throws away the `Blocked-By` this
+  status exists to hold and re-derives the determination on every pass.
+- `blocked` -> `todo` (the blocker cleared **with this row's obligation intact**).
+  This is a **resumption, not a backward transition**: nothing upstream changed, so
+  nothing is being undone. **An approved Change Request is not this edge.** A row
+  blocked on an unresolved `CR-*` may take it only when that CR resolved **without
+  moving what the row owes** — `rejected` or `superseded`, an upstream defect fixed
+  inside the same obligation, a cross-spec row finished. **Those are status values a
+  Change Request can actually hold**: the template and
+  `constitution/drift-protocol.md` step 2 define the set as `open` / `approved` /
+  `rejected` / `superseded`, and `change-request-reset.md` reads exactly `approved`,
+  `rejected` and `superseded` as resolved. There is no `withdrawn`; naming it here
+  told an operator to park a CR in a status the mandatory preflight still counts as
   unresolved, so the row resumed while spec completion stayed shut. Retire a CR
-  nobody will apply as `rejected` — `superseded` when another CR replaced it.
-  **When the CR is approved and changes the obligation the row
-  leaves `blocked` by the upstream reset below**, not here: `any status` ->
-  `todo` with the approving `CR-*`/`DR-*` recorded in `DR-ID` and cited in
-  `Evidence`, and the downstream sweep `constitution/drift-protocol.md` step 5
-  requires. Reading "nothing upstream changed" as unconditional is how a row
-  re-uses, as a mere resumption, the implementation and evidence that approval
-  withdrew — and skips both the record of why and the sweep of the rows that
-  moved with it.
-  The row **restarts its cycle from `todo`** and owes a fresh RED — a blocker
-  that stopped a row mid-cycle has almost always moved the tree its earlier RED
-  was observed on. Its rounds so far are **retained, not discarded**: the round
-  blocks already written stay in the evidence file, and the resumed cycle
-  records `Resumed-from-blocked` on the round it writes into
-  (`round-evidence.md`) — the blocker copied out of `Blocked-By`, which this
-  transition clears, plus the status the row was blocked at. **Which round it
-  writes into depends on whether the block left a round open**, and the
-  departure status `Blocked-By` recorded is what says: a block taken at `red`,
-  or at `review-fix` after the rework had taken its RED, interrupted a round
-  that never got its GREEN pair, so the resumed cycle **continues that round**
-  — **retaining the interrupted RED run** rather than overwriting it, per
-  `round-evidence.md`, or writing the RED as that round's first observation
-  when the block landed before any run existed to retain; a block taken at
-  `green` or at `refactor` left every round closed, so the resumed cycle opens
-  **the next round** under `round-evidence.md`'s numbering, and so does a block
-  taken at `todo` — **round 1 only on a row carrying no rounds**, since an
-  approved upstream reset and `exception` -> `todo` both return a row to `todo`
-  with its earlier rounds retained. A block taken at `review-fix` before the
-  rework opened a round follows the path that `REVISE` took, recorded on that
-  round's reviewer verdict: the behaviour-preserving path **opens no round on
-  resumption either** and returns through a refreshed `Refactor verify` pair.
-  **A row blocked at
-  `review-fix` still owes its reviewer the rework**: the resumption does not
-  discharge the `REVISE`, and the restarted cycle re-submits at `refactor`
-  exactly as the ordinary `review-fix` -> `refactor` return does. **When the block
-  happened at `green` or `refactor` this row's own implementation is still
-  there, so that fresh RED passes on its first run — that is the
-  falsifiability path of `red-not-observable.md`, not `exception`.**
-  `Satisfied-by` names this row's own retained round, the one case where it
-  names the row itself; the `Resumed-from-blocked` field and the round block
-  left behind are the audit trail a sibling row id provides in the ordinary
-  case. Weakening the correct test
-  until it fails is forbidden here as everywhere.
+  nobody will apply as `rejected` — `superseded` when another CR replaced it. **When
+  the CR is approved and changes the obligation the row leaves `blocked` by the
+  upstream reset below**, not here: `any status` -> `todo` with the approving
+  `CR-*`/`DR-*` recorded in `DR-ID` and cited in `Evidence`, and the downstream
+  sweep `constitution/drift-protocol.md` step 5 requires. Reading "nothing upstream
+  changed" as unconditional is how a row re-uses, as a mere resumption, the
+  implementation and evidence that approval withdrew — and skips both the record of
+  why and the sweep of the rows that moved with it. The row **restarts its cycle
+  from `todo`** and owes a fresh RED — a blocker that stopped a row mid-cycle has
+  almost always moved the tree its earlier RED was observed on. Its rounds so far
+  are **retained, not discarded**: the round blocks already written stay in the
+  evidence file, and the resumed cycle records `Resumed-from-blocked` on the round
+  it writes into (`round-evidence.md`) — the blocker copied out of `Blocked-By`,
+  which this transition clears, plus the status the row was blocked at. **Which
+  round it writes into depends on whether the block left a round open**, and the
+  departure status `Blocked-By` recorded is what says: a block taken at `red`, or at
+  `review-fix` after the rework had taken its RED, interrupted a round that never
+  got its GREEN pair, so the resumed cycle **continues that round** — **retaining
+  the interrupted RED run** rather than overwriting it, per `round-evidence.md`, or
+  writing the RED as that round's first observation when the block landed before any
+  run existed to retain; a block taken at `green` or at `refactor` left every round
+  closed, so the resumed cycle opens **the next round** under `round-evidence.md`'s
+  numbering, and so does a block taken at `todo` — **round 1 only on a row carrying
+  no rounds**, since an approved upstream reset and `exception` -> `todo` both
+  return a row to `todo` with its earlier rounds retained. A block taken at
+  `review-fix` before the rework opened a round follows the path that `REVISE` took,
+  recorded on that round's reviewer verdict: the behaviour-preserving path **opens
+  no round on resumption either** and returns through a refreshed `Refactor verify`
+  pair. **A row blocked at `review-fix` still owes its reviewer the rework**: the
+  resumption does not discharge the `REVISE`, and the restarted cycle re-submits at
+  `refactor` exactly as the ordinary `review-fix` -> `refactor` return does. **When
+  the block happened at `green` or `refactor` this row's own implementation is still
+  there, so that fresh RED passes on its first run — that is the falsifiability path
+  of `red-not-observable.md`, not `exception`.** `Satisfied-by` names this row's own
+  retained round, the one case where it names the row itself; the
+  `Resumed-from-blocked` field and the round block left behind are the audit trail a
+  sibling row id provides in the ordinary case. Weakening the correct test until it
+  fails is forbidden here as everywhere.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
@@ -303,19 +292,18 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 - `refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)
 - `review-fix` -> `refactor` (rework complete; re-submit to the reviewer)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
-- **Any status** -> `todo` — **upstream reset**, the only legal reopen,
-  available from every status a row can hold, `blocked` and `review-fix`
-  included. This list is the complete one and an unlisted edge is prohibited,
-  so enumerating five sources here forbade the sweep
-  `constitution/drift-protocol.md` step 5 requires of exactly those two.
-  Permitted **only** when an approved upstream change (Drift Protocol step 4
-  rerun) invalidated the row's obligation. The invalidating CR/DR ID MUST be
-  recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
-  That ID MUST be retained as the row moves on through `red`, `green`,
-  `refactor` and `done` — clearing it on the next transition erases the only
-  record of why a completed row was reopened. A row swept out of `exception`
-  keeps the anomaly's DR-ID alongside the reset ID. A reset without a recorded
-  approval is a backward transition and is prohibited.
+- **Any status** -> `todo` — **upstream reset**, the only legal reopen, available
+  from every status a row can hold, `blocked` and `review-fix` included. This list
+  is the complete one and an unlisted edge is prohibited, so enumerating five
+  sources here forbade the sweep `constitution/drift-protocol.md` step 5 requires of
+  exactly those two. Permitted **only** when an approved upstream change (Drift
+  Protocol step 4 rerun) invalidated the row's obligation. The invalidating CR/DR ID
+  MUST be recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
+  That ID MUST be retained as the row moves on through `red`, `green`, `refactor`
+  and `done` — clearing it on the next transition erases the only record of why a
+  completed row was reopened. A row swept out of `exception` keeps the anomaly's
+  DR-ID alongside the reset ID. A reset without a recorded approval is a backward
+  transition and is prohibited.
 - `exception` -> `todo` — **anomaly resolved**, the item re-enters the cycle
   from the start. This is the exit `exception` previously lacked; without it a
   parked item could never be un-parked without a lifecycle violation. Distinct
@@ -325,25 +313,23 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   The `Test file` existence check is unchanged for `green` / `refactor` /
   `done`: those statuses assert a test that ran.
 
-- `refactor` -> `red` (**QA rejection recovery**): a routed
-  `qa-gatekeeper` returned `REVISE` on this row's RED/GREEN evidence because the
-  cycle itself was wrong. Batched (T1) review defers that confirmation until
-  after the row has left `red`, so without this edge a rejected row could never
-  redo the RED it was faulted for and could never reach `done`. Cite the verdict
-  in `Evidence`, re-run the micro-cycle; rules:
-  `volume-policy.md#group-formation-states-and-transitions`.
+- `refactor` -> `red` (**QA rejection recovery**): a routed `qa-gatekeeper` returned
+  `REVISE` on this row's RED/GREEN evidence because the cycle itself was wrong.
+  Batched (T1) review defers that confirmation until after the row has left `red`,
+  so without this edge a rejected row could never redo the RED it was faulted for
+  and could never reach `done`. Cite the verdict in `Evidence`, re-run the
+  micro-cycle; rules: `volume-policy.md#group-formation-states-and-transitions`.
 
 Any edge not listed above is prohibited. Attempting `green` -> `red` must
 produce: `"Backward transition prohibited: green -> red"`.
 
-**"Backward" is narrower than "moves to an earlier status".** All four edges
-below return a row to an earlier state, and **three of them are not backward
-transitions** — a resumption, an anomaly exit and the rework edge each restart
-an earlier phase of the row's own cycle with nothing upstream changed. The
-third, the approved Change Request reset, **is** the one sanctioned backward
-transition: an upstream obligation moved and the row's completed work is
-withdrawn. The column below therefore asks why each edge is _legal_, not why it
-is not backward:
+**"Backward" is narrower than "moves to an earlier status".** All four edges below
+return a row to an earlier state, and **three of them are not backward transitions**
+— a resumption, an anomaly exit and the rework edge each restart an earlier phase of
+the row's own cycle with nothing upstream changed. The third, the approved Change
+Request reset, **is** the one sanctioned backward transition: an upstream obligation
+moved and the row's completed work is withdrawn. The column below therefore asks why
+each edge is _legal_, not why it is not backward:
 
 | Edge                                      | Why it is legal                                     | Approval needed |
 | ----------------------------------------- | --------------------------------------------------- | --------------- |
@@ -385,13 +371,12 @@ list. Round-by-round evidence rules: `round-evidence.md`.
 ## ATDD-owned rows
 
 A row whose `Layer` is `E2E`, `API` or `Integration` — Integration among them
-because `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared
-`Level`, from `tests/integration/**`, and that stage's P4 writes those tests.
-These rows live in this ledger and follow
-every rule above, but their tests are authored by `/qfai-atdd`
-(`qfai-implement/SKILL.md` Non-goals). The two skills
-therefore share one lifecycle, and the ordering that skill works in makes the
-RED question different rather than absent.
+because `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared `Level`,
+from `tests/integration/**`, and that stage's P4 writes those tests. These rows live
+in this ledger and follow every rule above, but their tests are authored by
+`/qfai-atdd` (`qfai-implement/SKILL.md` Non-goals). The two skills therefore share
+one lifecycle, and the ordering that skill works in makes the RED question different
+rather than absent.
 
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
@@ -404,30 +389,27 @@ after its surface passes on the first run. So:
 - **There is no waiver here.** `todo -> red` still requires an admissible RED,
   and a first-run pass is still not one.
 - **The falsifiability path is the answer, not `exception`.**
-  `red-not-observable.md` already defines the substitute — record
-  `Satisfied-by`, mutate the predicate the journey asserts on, watch this row's
-  test fail, restore, and record `Falsifiability command` /
-  `Falsifiability result` beside the GREEN pair. It was written for an
-  obligation a sibling row had already satisfied; a journey whose surface the
-  same cycle just built is the same situation with the sibling being the
-  surface work. `qa-gatekeeper` accepts that form, and the row proceeds to
-  `green` and `done`.
+  `red-not-observable.md` already defines the substitute — record `Satisfied-by`,
+  mutate the predicate the journey asserts on, watch this row's test fail, restore,
+  and record `Falsifiability command` / `Falsifiability result` beside the GREEN
+  pair. It was written for an obligation a sibling row had already satisfied; a
+  journey whose surface the same cycle just built is the same situation with the
+  sibling being the surface work. `qa-gatekeeper` accepts that form, and the row
+  proceeds to `green` and `done`.
 - **`/qfai-atdd` also has a first branch this ledger cannot see**: writing the
   journey against the tree _before_ the surface exists, which produces an
   ordinary RED. Its stage gate P1b is where that happens.
-- **The evidence file follows the stage that produced it.**
-  `implement-<spec-id>.md` holds the rows this skill runs itself;
-  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
-  because that is the stage that ran the commands. The `Evidence` cell is a
-  pointer either way and its anchor names which file. Calling
-  `implement-<spec-id>.md` the single home was true while one stage produced
-  every pair; it stopped being true the moment another stage did.
-  `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
-  E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
-  matching prohibition condition append the two reviewer verdicts to **that**
-  file. This skill still runs `completion-reviewer` and
-  `implementation-reviewer` for every row it advances — only the RED provenance
-  came from elsewhere.
+- **The evidence file follows the stage that produced it.** `implement-<spec-id>.md`
+  holds the rows this skill runs itself; `atdd-<spec-id>.md` holds
+  `## Ledger rows advanced` for the E2E/API rows, because that is the stage that ran
+  the commands. The `Evidence` cell is a pointer either way and its anchor names
+  which file. Calling `implement-<spec-id>.md` the single home was true while one
+  stage produced every pair; it stopped being true the moment another stage did.
+  `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an E2E/API
+  row whose anchor names the ATDD file reaches `done`; items 11 and the matching
+  prohibition condition append the two reviewer verdicts to **that** file. This
+  skill still runs `completion-reviewer` and `implementation-reviewer` for every row
+  it advances — only the RED provenance came from elsewhere.
 - **`exception` is for a row where both are unavailable** — an obligation with
   no persisted form or no observable surface at L5, recorded with a `DR-*`
   naming what is missing. It is not the routine outcome of surface-first
@@ -447,11 +429,10 @@ after its surface passes on the first run. So:
   status is what the resumption reads to pick its round.
 - It is **completion-prohibiting**, exactly like `todo`. A spec must not close
   over an unimplemented obligation, and naming the blocker does not discharge it.
-- It is **not** selectable. Phase Red picks the first `todo` row and skips
-  `blocked` ones, so the loop head stops re-issuing rows that cannot proceed.
-  A row blocked mid-cycle is not selectable either — no phase selects `red`,
-  `green` or `refactor` — so the status stops the loop at whatever point the
-  blocker appeared.
+- It is **not** selectable. Phase Red picks the first `todo` row and skips `blocked`
+  ones, so the loop head stops re-issuing rows that cannot proceed. A row blocked
+  mid-cycle is not selectable either — no phase selects `red`, `green` or `refactor`
+  — so the status stops the loop at whatever point the blocker appeared.
 - It is **not** `exception`. `exception` is scoped to an anomaly, requires a
   `DR-*`, and satisfies spec completion — filing a blocked row there would
   silently close the obligation.
