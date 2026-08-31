@@ -25,7 +25,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { SUNSETS } from "../../src/core/sunset.js";
+import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
+import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
 // tests/core/<this file> -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -46,6 +47,340 @@ async function collectSources(dir: string): Promise<string[]> {
   return out;
 }
 
+/** The shape of a finding code, shared by every regex below. */
+const CODE = "[A-Z][A-Z0-9_.-]{2,}";
+
+/**
+ * The first argument of an `issue(...)` call: a bare literal, or an identifier
+ * to be resolved. A literal-only regex would have missed every code emitted the
+ * way `validators/handoffSchemaDrift.ts` and `saasPackage/profile.ts` emit
+ * theirs — `const FINDING_CODE = "…"; issue(FINDING_CODE, …)` — which is enough
+ * of the codebase that a new hard error could have followed the house style
+ * straight past the ratchet.
+ */
+const ISSUE_ARG_RE = new RegExp(
+  `\\bissue\\(\\s*\\n?\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))\\s*,`,
+  "g",
+);
+
+/**
+ * `const NAME = "CODE";` — with an optional type annotation, an optional
+ * `as const`, and the `cond ? "A" : "B"` pair that `validators/designFidelity.ts`
+ * uses to pick between two codes.
+ */
+const CODE_CONST_RE = new RegExp(
+  `\\bconst\\s+([A-Za-z_$][\\w$]*)\\s*(?::[^=;\\n]+)?=\\s*(?:[^;\\n]*?\\?\\s*)?"(${CODE})"(?:\\s*:\\s*"(${CODE})")?(?:\\s+as\\s+const)?\\s*;`,
+  "g",
+);
+
+/** The same, exported — visible to every importer, so it resolves globally. */
+const EXPORTED_CODE_CONST_RE = new RegExp(
+  `\\bexport\\s+const\\s+([A-Za-z_$][\\w$]*)\\s*(?::[^=;\\n]+)?=\\s*"(${CODE})"(?:\\s+as\\s+const)?\\s*;`,
+  "g",
+);
+
+/** Any code-shaped literal, for files whose emissions cannot be followed. */
+const CODE_LITERAL_RE = new RegExp(`"(${CODE})"`, "g");
+
+/**
+ * The other way this codebase emits a finding: an `Issue` written out as an
+ * object literal — `{ code: "…", severity: "error", … }` — instead of built by
+ * `issue(...)`. `validators/uix/designSystemPresence.ts`, `core/validate.ts`
+ * and `cli/commands/validate.ts` all ship findings this way, so an extractor
+ * rooted at `issue(` alone leaves a whole emission shape outside the ratchet:
+ * a new hard error added in the house style of those files reaches users while
+ * appearing in neither the baseline nor `RULE_PROMOTIONS`.
+ *
+ * The property name plus a code-shaped literal is the whole test — it does not
+ * try to prove the enclosing literal is an `Issue`. A `code:` of that shape
+ * that turns out not to be a finding costs one baseline line, which is the
+ * direction that fails loudly rather than silently, the same trade the opaque
+ * files above are read under.
+ */
+const OBJECT_CODE_RE = new RegExp(`\\bcode:\\s*"(${CODE})"`, "g");
+
+/** `RegExp`-safe form of a finding code: `.` is legal in {@link CODE}. */
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * The index of the closing quote of the string literal opening at `quoteAt`.
+ *
+ * Template literals are read as opaque up to their closing backtick: the
+ * `${...}` holes in this codebase's finding messages hold quotes and commas,
+ * and none of them holds a backtick that is not escaped.
+ */
+function endOfStringLiteral(body: string, quoteAt: number): number {
+  const quote = body[quoteAt];
+  for (let i = quoteAt + 1; i < body.length; i += 1) {
+    const ch = body[i];
+    if (ch === "\\") {
+      i += 1;
+      continue;
+    }
+    if (ch === quote) return i;
+  }
+  return body.length;
+}
+
+/**
+ * The top-level arguments of the call whose `(` sits at `open`.
+ *
+ * `issue(...)` arguments are what the severity check has to read, and the
+ * severity is the *third* one — a position no regex over the call text can
+ * reach, because the message argument in between is a multi-line template
+ * literal full of commas, parentheses and the occasional `//` inside a string.
+ * Depth counting over the same three skips (string, line comment, block
+ * comment) the compiler makes is what makes the position meaningful.
+ */
+function topLevelArgs(body: string, open: number): string[] {
+  const args: string[] = [];
+  let depth = 0;
+  let start = open + 1;
+  for (let i = open; i < body.length; i += 1) {
+    const ch = body[i];
+    const next = body[i + 1];
+    if (ch === "/" && next === "/") {
+      const nl = body.indexOf("\n", i);
+      i = nl === -1 ? body.length : nl;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      const end = body.indexOf("*/", i + 2);
+      i = end === -1 ? body.length : end + 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      i = endOfStringLiteral(body, i);
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") {
+      depth += 1;
+      continue;
+    }
+    if (ch === ")" || ch === "]" || ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        args.push(body.slice(start, i).trim());
+        return args;
+      }
+      continue;
+    }
+    if (ch === "," && depth === 1) {
+      args.push(body.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  return args;
+}
+
+/**
+ * Every expression `body` uses as the severity of `code`, in either emission
+ * shape: the third argument of an `issue(...)` naming it (directly or through
+ * the file-local `const`), and the `severity:` sibling of a `code: "…"`
+ * property.
+ *
+ * The object-literal half reads the two properties adjacent, which is how all
+ * three files that use the shape write them. A future literal that separates
+ * them yields no expression here, and the assertion below fails for want of a
+ * wired one — the direction that reports a gap instead of assuming one is not
+ * there.
+ */
+function severityExpressionsFor(body: string, code: string): string[] {
+  const found: string[] = [];
+
+  const aliases = new Set<string>();
+  for (const m of body.matchAll(CODE_CONST_RE)) {
+    const [, name, first, second] = m;
+    if (name && (first === code || second === code)) aliases.add(name);
+  }
+
+  for (const m of body.matchAll(/\bissue\(/g)) {
+    const open = (m.index ?? 0) + m[0].length - 1;
+    const args = topLevelArgs(body, open);
+    const first = args[0];
+    if (first === undefined) continue;
+    if (first !== `"${code}"` && !aliases.has(first)) continue;
+    const severity = args[2];
+    if (severity !== undefined) found.push(severity);
+  }
+
+  const escaped = escapeForRegExp(code);
+  for (const re of [
+    new RegExp(`\\bcode:\\s*"${escaped}"\\s*,\\s*severity:\\s*([^,\\n]+)`, "g"),
+    new RegExp(`\\bseverity:\\s*([^,\\n]+),\\s*code:\\s*"${escaped}"`, "g"),
+  ]) {
+    for (const m of body.matchAll(re)) {
+      const severity = m[1];
+      if (severity) found.push(severity.trim().replace(/,$/, ""));
+    }
+  }
+  return found;
+}
+
+/**
+ * The identifiers in `body` that hold the result of a `newRuleSeverity(...)`
+ * call reading `RULE_PROMOTIONS.<key>` — through the member expression itself
+ * or through a `const` bound to it, which is how `validators/tddList.ts` lifts
+ * the pin out of the row loop.
+ */
+function promotionSeverityBindings(body: string, key: string): Set<string> {
+  const aliases = new Set<string>([`RULE_PROMOTIONS.${key}`]);
+  const aliasRe = new RegExp(
+    `\\bconst\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*RULE_PROMOTIONS\\.${escapeForRegExp(key)}\\b[^;]*;`,
+    "g",
+  );
+  for (const m of body.matchAll(aliasRe)) {
+    if (m[1]) aliases.add(m[1]);
+  }
+
+  const bound = new Set<string>();
+  for (const m of body.matchAll(
+    /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?newRuleSeverity\(/g,
+  )) {
+    const name = m[1];
+    const open = (m.index ?? 0) + m[0].length - 1;
+    const args = topLevelArgs(body, open).join(",");
+    if (name && [...aliases].some((alias) => args.includes(alias))) bound.add(name);
+  }
+  return bound;
+}
+
+/** A clean GA release: no prerelease tag, no build metadata, no leading zeros. */
+const GA_SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+
+/**
+ * Every finding code `src/` emits, resolved through the constant when the call
+ * site names one.
+ *
+ * A file whose `issue(...)` first argument is neither a literal nor a resolvable
+ * constant — a code destructured out of a table of tuples
+ * (`validators/agentDefinition.ts`), or one read back off an already-parsed
+ * finding (`validators/reviewerJustification.ts`) — is read as opaque: every
+ * code-shaped literal in it joins the set. The over-read costs a handful of
+ * baseline lines once; skipping the file is the hole this ratchet exists to
+ * close, and it is the direction that fails loudly rather than silently.
+ *
+ * Findings written as object literals join the set too ({@link OBJECT_CODE_RE}):
+ * `issue(...)` is a convenience, not the only door out, and the door it is not
+ * covering is the one three shipped files already use.
+ */
+async function collectIssueCodes(): Promise<Set<string>> {
+  const bodies = new Map<string, string>();
+  for (const file of await collectSources(SRC)) {
+    bodies.set(file, await readFile(file, "utf-8"));
+  }
+
+  const exported = new Map<string, string[]>();
+  for (const body of bodies.values()) {
+    for (const m of body.matchAll(EXPORTED_CODE_CONST_RE)) {
+      const [, name, code] = m;
+      if (name && code) exported.set(name, [code]);
+    }
+  }
+
+  const codes = new Set<string>();
+  for (const body of bodies.values()) {
+    // File-local first: `FINDING_CODE` is declared once per validator with a
+    // different value in each, so a global map would resolve most of them to
+    // whichever file was read last.
+    const local = new Map<string, string[]>();
+    for (const m of body.matchAll(CODE_CONST_RE)) {
+      const [, name, first, second] = m;
+      if (!name || !first) continue;
+      local.set(name, second ? [first, second] : [first]);
+    }
+
+    let opaque = false;
+    for (const m of body.matchAll(ISSUE_ARG_RE)) {
+      const [, literal, identifier] = m;
+      if (literal) {
+        codes.add(literal);
+        continue;
+      }
+      const bound = identifier ? (local.get(identifier) ?? exported.get(identifier)) : undefined;
+      if (bound) {
+        for (const code of bound) codes.add(code);
+        continue;
+      }
+      opaque = true;
+    }
+
+    if (opaque) {
+      for (const m of body.matchAll(CODE_LITERAL_RE)) {
+        const code = m[1];
+        if (code) codes.add(code);
+      }
+    }
+
+    for (const m of body.matchAll(OBJECT_CODE_RE)) {
+      const code = m[1];
+      if (code) codes.add(code);
+    }
+  }
+  return codes;
+}
+
+/**
+ * The **entries** of the `RULE_PROMOTIONS` object literal — the text between
+ * its braces, per-entry JSDoc included. An entry names the finding code it
+ * governs in its doc comment, because the key is an identifier and the value is
+ * the version `newRuleSeverity` compares against; neither can hold
+ * `TDDLIST_EVIDENCE_EMPTY`.
+ *
+ * The declaration's own docstring is deliberately excluded. It explains the
+ * policy by narrating the code that motivated it, so including it would make
+ * that code look registered no matter what the entries say — a check that
+ * cannot fail is the failure this file exists to stop.
+ */
+async function readRulePromotionEntries(): Promise<string> {
+  const body = await readFile(path.join(SRC, "core", "sunset.ts"), "utf-8");
+  const decl = body.indexOf("export const RULE_PROMOTIONS");
+  expect(decl, "RULE_PROMOTIONS declaration not found in sunset.ts").toBeGreaterThan(-1);
+  const start = body.indexOf("{", decl);
+  const end = body.indexOf("} as const;", decl);
+  expect(start, "RULE_PROMOTIONS is not an object literal").toBeGreaterThan(-1);
+  expect(end, "RULE_PROMOTIONS literal is not closed by `} as const;`").toBeGreaterThan(start);
+  return body.slice(start + 1, end);
+}
+
+/**
+ * The registry text belonging to each key: its own JSDoc plus its entry line.
+ *
+ * The key is an identifier and the value is a pair of versions, so the finding
+ * code an entry governs is written only in its doc comment. Slicing per key is
+ * what lets the severity assertion below ask "is *this* entry's code wired to
+ * *this* entry's pin", instead of the weaker "does the registry mention the
+ * code somewhere".
+ */
+async function readPromotionEntryBlocks(): Promise<Map<string, string>> {
+  const entries = await readRulePromotionEntries();
+  const blocks = new Map<string, string>();
+  let cursor = 0;
+  for (const key of Object.keys(RULE_PROMOTIONS)) {
+    const at = entries.indexOf(`${key}:`, cursor);
+    expect(at, `RULE_PROMOTIONS.${key} was not found in the object literal`).toBeGreaterThan(-1);
+    if (at < 0) continue;
+    const lineEnd = entries.indexOf("\n", at);
+    const end = lineEnd === -1 ? entries.length : lineEnd;
+    blocks.set(key, entries.slice(cursor, end));
+    cursor = end;
+  }
+  return blocks;
+}
+
+/** The version this package ships as — the ceiling on any `introducedIn`. */
+async function readShippedVersion(): Promise<string> {
+  const raw: unknown = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf-8"));
+  const version =
+    typeof raw === "object" && raw !== null && "version" in raw && typeof raw.version === "string"
+      ? raw.version
+      : "";
+  expect(version, "package.json#version is not a readable string").toMatch(GA_SEMVER_RE);
+  return version;
+}
+
 /** Every `src/` file, minus `sunset.ts` — the declaration is not a consumer. */
 async function readConsumerSources(): Promise<string> {
   const files = (await collectSources(SRC)).filter(
@@ -64,6 +399,157 @@ describe("sunset ledger", () => {
     const unused = Object.keys(SUNSETS).filter((key) => !sources.includes(`SUNSETS.${key}`));
 
     expect(unused, `declared in SUNSETS but never read: ${unused.join(", ")}`).toEqual([]);
+  });
+
+  it("every RULE_PROMOTIONS key is read by something outside sunset.ts", async () => {
+    // Same half-landed state, mirrored: a new finding code gets its promotion
+    // pin added here and keeps emitting a hard-coded `"error"` at its call
+    // site, which is exactly the shape that latched a consuming repository's
+    // gate on upgrade. A pin nothing reads is a policy nothing applies.
+    const sources = await readConsumerSources();
+    const unused = Object.keys(RULE_PROMOTIONS).filter(
+      (key) => !sources.includes(`RULE_PROMOTIONS.${key}`),
+    );
+
+    expect(unused, `declared in RULE_PROMOTIONS but never read: ${unused.join(", ")}`).toEqual([]);
+  });
+
+  it("every RULE_PROMOTIONS entry decides the severity of the finding it names", async () => {
+    // The assertion above only proves the *key* is mentioned outside
+    // `sunset.ts`. A contributor can satisfy that by quoting the pin in a
+    // message or a comment while the emission keeps a literal
+    // `issue("NEW_CODE", …, "error", …)` beside it — and the registration check
+    // below passes too, because the code is named in the entry's JSDoc. That is
+    // the half-landed state P7 exists to stop: a promotion declared, and a hard
+    // error from day one anyway. So follow the pin to the severity: the code the
+    // entry names must take its severity from a `newRuleSeverity(...)` reading
+    // *this* entry, and must not carry a hard-coded one anywhere.
+    const blocks = await readPromotionEntryBlocks();
+    const files = (await collectSources(SRC)).filter(
+      (f) => !f.endsWith(path.join("core", "sunset.ts")),
+    );
+    const bodies = new Map<string, string>();
+    for (const file of files) bodies.set(file, await readFile(file, "utf-8"));
+
+    const BACKTICKED_CODE = new RegExp(`\`(${CODE})\``, "g");
+
+    for (const key of Object.keys(RULE_PROMOTIONS)) {
+      const block = blocks.get(key) ?? "";
+      const named = [...new Set([...block.matchAll(BACKTICKED_CODE)].map((m) => m[1]))].filter(
+        (code): code is string => code !== undefined,
+      );
+      expect(
+        named,
+        `RULE_PROMOTIONS.${key} names no finding code in its doc comment — the key ` +
+          "and the two versions cannot carry it, so the entry governs nothing this test can follow",
+      ).not.toEqual([]);
+
+      for (const code of named) {
+        const wired: string[] = [];
+        const literal: string[] = [];
+        for (const [file, body] of bodies) {
+          const bound = promotionSeverityBindings(body, key);
+          for (const severity of severityExpressionsFor(body, code)) {
+            const followsPin =
+              bound.has(severity) ||
+              (severity.includes("newRuleSeverity(") && severity.includes(key));
+            const where = `${path.relative(packageRoot, file)}: ${severity}`;
+            if (followsPin) wired.push(where);
+            else literal.push(where);
+          }
+        }
+
+        expect(
+          literal,
+          `${code} is registered under RULE_PROMOTIONS.${key} but emitted with a severity ` +
+            `that does not come from its pin: ${literal.join("; ")} — a promotion whose ` +
+            "severity is decided beside the call is a window that never opens",
+        ).toEqual([]);
+        expect(
+          wired.length,
+          `${code} is named by RULE_PROMOTIONS.${key}, but no emission of it takes its ` +
+            "severity from `newRuleSeverity(…, RULE_PROMOTIONS." +
+            `${key}…)` +
+            "` — mentioning the pin in a message or a comment is not wiring it",
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("every finding code introduced after P7 is named by a RULE_PROMOTIONS entry", async () => {
+    // The other direction, and the one the registry cannot see on its own: the
+    // assertion above iterates `RULE_PROMOTIONS`, so its domain is keys that
+    // already exist — the same structural blindness this file's docstring
+    // charges `sunsetEnforcement.test.ts` with. The failure P7 exists to stop
+    // (a new `issue("NEW_CODE", …, "error", …)` whose promotion was never
+    // registered) writes nothing into the registry, so it has to be found from
+    // the emitting side, measured against a frozen baseline.
+    const codes = await collectIssueCodes();
+    expect(
+      codes.size,
+      "no issue codes extracted — did the `issue(...)` shape change?",
+    ).toBeGreaterThan(FINDING_CODES_BEFORE_PROMOTION_POLICY.length);
+
+    // The association is the promotion entry naming its code: `newRuleSeverity`
+    // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.
+    const promotions = await readRulePromotionEntries();
+    const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
+    const unregistered = [...codes]
+      .filter((code) => !baseline.has(code) && !promotions.includes(code))
+      .sort();
+
+    expect(
+      unregistered,
+      `introduced after P7 but given no RULE_PROMOTIONS entry in sunset.ts: ${unregistered.join(", ")} — ` +
+        "a new finding code ships behind a promotion window (docs/design-principles.md P7); " +
+        "do not add it to findingCodeBaseline.ts, which is frozen at the codes that predate the policy",
+    ).toEqual([]);
+  });
+
+  it("every RULE_PROMOTIONS entry opens a window at least one minor wide", async () => {
+    // Naming a code in the registry is not the same as giving it a window. A
+    // pin at or before the release that introduced the code makes
+    // `newRuleSeverity` return `error` from day one — the exact regression P7
+    // was written after — and a pin that is not parseable semver makes the
+    // conservative fallback in `isAtOrPastSunset` return `warning` forever, so
+    // the promotion never happens at all. Both read as "registered" to the
+    // assertion above.
+    const shipped = await readShippedVersion();
+
+    for (const [key, window] of Object.entries(RULE_PROMOTIONS)) {
+      const introduced = GA_SEMVER_RE.exec(window.introducedIn);
+      const promoted = GA_SEMVER_RE.exec(window.promoteAt);
+
+      expect(
+        introduced,
+        `${key}.introducedIn is not a GA release: ${window.introducedIn}`,
+      ).not.toBeNull();
+      expect(
+        promoted,
+        `${key}.promoteAt is not a GA release: ${window.promoteAt} — ` +
+          "an unparseable pin leaves the finding a warning forever, because " +
+          "`isAtOrPastSunset` treats what it cannot read as pre-sunset",
+      ).not.toBeNull();
+      if (!introduced || !promoted) continue;
+
+      const from = { major: Number(introduced[1]), minor: Number(introduced[2]) };
+      const to = { major: Number(promoted[1]), minor: Number(promoted[2]) };
+      expect(
+        to.major > from.major || (to.major === from.major && to.minor >= from.minor + 1),
+        `${key} promotes at ${window.promoteAt}, less than one minor past the ` +
+          `${window.introducedIn} release that introduced the code — P7 requires a window ` +
+          "the consuming repository can actually migrate inside of",
+      ).toBe(true);
+
+      // The other way the distance can be faked: backdate `introducedIn` to
+      // buy a pin that has already passed. A code cannot have shipped in a
+      // release this package has not cut yet.
+      expect(
+        isAtOrPastSunset(shipped, window.introducedIn),
+        `${key}.introducedIn (${window.introducedIn}) is ahead of the shipped ` +
+          `version ${shipped} — record the release the code actually shipped in`,
+      ).toBe(true);
+    }
   });
 
   it("every finding code named by a sunset-bearing constraint row exists in src/", async () => {

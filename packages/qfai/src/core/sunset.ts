@@ -37,6 +37,50 @@ export const SUNSETS = {
   legacyPrototypingJsonShape: "1.10.0",
 } as const;
 
+/**
+ * The mirror image of {@link SUNSETS}: new finding codes and the release at
+ * which each stops being a `warning` and becomes an `error`.
+ *
+ * A sunset gives an *old* shape a window before it fails. A promotion gives an
+ * *existing repository* the same window against a *new* rule. Both are the same
+ * comparison; only the direction of the migration differs.
+ *
+ * Why the window: a correct new rule still lands on data written before the
+ * rule existed. `TDDLIST_EVIDENCE_EMPTY` shipped straight at `error` and took a
+ * consuming repository from 3 errors to 27 in a single `qfai init` — 20 of them
+ * on rows already at `done`, a state with no transition left that could
+ * re-observe anything. The rule was right; shipping it without a window was
+ * what latched that gate.
+ *
+ * Each entry records both halves of its window: `introducedIn`, the release the
+ * code first shipped in, and `promoteAt`, the release it becomes an `error`
+ * at. The first is not recoverable from the second once the tool has moved
+ * past the pin, and the contract below is about the *distance* between them —
+ * so `tests/core/sunsetLedger.test.ts` needs it written down to check that a
+ * window is a window at all.
+ *
+ * The policy a new code follows:
+ *
+ * 1. ship it here at `warning`, pinned to a promotion release at least one
+ *    minor ahead of the release that introduces the code;
+ * 2. emit the finding through {@link newRuleSeverity} so the severity follows
+ *    the pin instead of a literal beside the `issue(...)` call;
+ * 3. say in the finding itself that it is inside a window and which release
+ *    ends it, so `--fail-on error` keeps working while the operator sees the
+ *    debt they are about to owe;
+ * 4. where the code can fire on rows that are already terminal, document how a
+ *    terminal row is meant to satisfy it — otherwise the only remedy is an
+ *    out-of-lifecycle edit.
+ */
+export const RULE_PROMOTIONS = {
+  /**
+   * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
+   * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
+   * full minor beyond it.
+   */
+  tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
+} as const;
+
 type FullSemver = {
   major: number;
   minor: number;
@@ -118,4 +162,26 @@ export function deprecationSeverity(
   sunsetVersion: string,
 ): "warning" | "error" {
   return isAtOrPastSunset(currentVersion, sunsetVersion) ? "error" : "warning";
+}
+
+/**
+ * The severity a *new* finding code carries at `currentVersion`: `warning`
+ * until its {@link RULE_PROMOTIONS} release, `error` from it onwards.
+ *
+ * Same comparison as {@link deprecationSeverity} — `isAtOrPastSunset` compares
+ * two versions and knows nothing about which of them deprecates what — but the
+ * two are not interchangeable at a call site: one reads a sunset, the other a
+ * promotion, and a reader must be able to tell which migration a finding is in
+ * without opening the registry.
+ *
+ * Conservative default is inherited: an unparseable current version (e.g. the
+ * `"unknown"` `resolveToolVersion` falls back to) is treated as inside the
+ * window, so a version that cannot be read never escalates a warning into a
+ * build failure.
+ */
+export function newRuleSeverity(
+  currentVersion: string,
+  promotionVersion: string,
+): "warning" | "error" {
+  return isAtOrPastSunset(currentVersion, promotionVersion) ? "error" : "warning";
 }
