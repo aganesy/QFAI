@@ -56,6 +56,9 @@ import { issue } from "./utils.js";
 /** The release `QFAI-TRIAGE-008` stops being a warning at. */
 const TRIAGE_HEADING_PROMOTION = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
 
+/** The release `QFAI-TRIAGE-009` stops being a warning at. */
+const EXISTING_SPEC_PROMOTION = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
+
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
   "obj_id",
@@ -857,19 +860,32 @@ function validateCreateRows(
  * gone means it has and the row is the tombstone. A row where only *some*
  * targets resolve is in neither state — one of its sources is misspelled or
  * was never allocated — and it is reported.
+ *
+ * The grammar this enforces is itself new, so the rule necessarily lands on
+ * cells written before it existed — on rows already approved, where the cell
+ * is no longer rewritten by anything. Severity therefore comes from the
+ * promotion window (`RULE_PROMOTIONS.triageExistingSpecCell`) rather than a
+ * literal beside the call, so an upgrade cannot latch a consuming repository's
+ * `--fail-on error` gate the moment it lands.
  */
 function validateExistingSpecCell(
   cell: string,
   opUpper: "UPDATE" | TriageTopLevelOp,
   rowLabel: string,
   deltaPath: string,
+  toolVersion: string,
   knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
+  const existingSpecSeverity = newRuleSeverity(toolVersion, EXISTING_SPEC_PROMOTION);
+  const windowNote =
+    existingSpecSeverity === "warning"
+      ? `（${EXISTING_SPEC_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+      : "";
   const report = (message: string, refs: string[]): Issue[] => [
     issue(
       "QFAI-TRIAGE-009",
-      `${message} (${rowLabel})`,
-      "error",
+      `${message} (${rowLabel})${windowNote}`,
+      existingSpecSeverity,
       deltaPath,
       "triage.existingSpec",
       refs,
@@ -946,8 +962,9 @@ function validateExistingSpecCell(
 
 /**
  * `toolVersion` は必須引数。既定値を持たせると、渡し忘れた呼び出しでは
- * `QFAI-TRIAGE-008` が永久に warning のまま据え置かれ、promotion window が
- * 黙って無効化される。呼び出し側は `resolveToolVersion()` の結果を渡す。
+ * `QFAI-TRIAGE-008` / `QFAI-TRIAGE-009` が永久に warning のまま据え置かれ、
+ * promotion window が黙って無効化される。呼び出し側は `resolveToolVersion()`
+ * の結果を渡す。
  *
  * `knownSpecIds` は任意。delta.md を単体で検証する呼び出し (spec ツリーを
  * 持たないユニットテスト等) では `QFAI-TRIAGE-009` の文法だけを見て、
@@ -1013,7 +1030,9 @@ export function validateTriageSection(
   // Validate every canonical `## Triage` section, and every table inside
   // each of them (PR #206 review LWri covered the tables only).
   for (const section of sections) {
-    issues.push(...validateTriageSectionBody(section, sections.length, deltaPath, knownSpecIds));
+    issues.push(
+      ...validateTriageSectionBody(section, sections.length, deltaPath, toolVersion, knownSpecIds),
+    );
   }
 
   return issues;
@@ -1023,6 +1042,7 @@ function validateTriageSectionBody(
   section: TriageSection,
   sectionCount: number,
   deltaPath: string,
+  toolVersion: string,
   knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
@@ -1074,7 +1094,9 @@ function validateTriageSectionBody(
       continue;
     }
 
-    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel, knownSpecIds));
+    issues.push(
+      ...validateTriageRows(table, headerMap, deltaPath, tableLabel, toolVersion, knownSpecIds),
+    );
   }
 
   return issues;
@@ -1085,6 +1107,7 @@ function validateTriageRows(
   headerMap: Map<string, number>,
   deltaPath: string,
   tableLabel: string,
+  toolVersion: string,
   knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
@@ -1122,7 +1145,14 @@ function validateTriageRows(
     // so it is evaluated for every row whose Operation parsed, and the
     // row keeps flowing through the remaining checks.
     issues.push(
-      ...validateExistingSpecCell(existingSpecCell, opUpper, rowLabel, deltaPath, knownSpecIds),
+      ...validateExistingSpecCell(
+        existingSpecCell,
+        opUpper,
+        rowLabel,
+        deltaPath,
+        toolVersion,
+        knownSpecIds,
+      ),
     );
 
     if (opUpper === "UPDATE") {

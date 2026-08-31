@@ -128,6 +128,13 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
+   * declared grammar, or names a spec that is not on disk. The grammar is new,
+   * so every delta file written before it carries whatever spelling its author
+   * chose, and the cell is never rewritten once a row is approved.
+   */
+  triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {
