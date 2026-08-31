@@ -8,7 +8,7 @@
  * assert nothing about the thing that was missing.
  */
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { validateUpstreamSsotGuard } from "../../src/core/validators/upstreamSsotGuard.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const tempDirs: string[] = [];
 
@@ -63,7 +64,7 @@ const config = { ...defaultConfig, baseBranch: "base" };
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
-    if (dir) await rm(dir, { recursive: true, force: true });
+    if (dir) await removeTempTree(dir);
   }
 });
 
