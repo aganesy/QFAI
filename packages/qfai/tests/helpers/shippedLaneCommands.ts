@@ -1242,24 +1242,34 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
   ".gitignore",
+  "AGENTS.md",
+  "CLAUDE.md",
   "DESIGN.md",
   "qfai.config.yaml",
 ]);
 
 /**
- * And the CONTENT of the four that are not workflows.
+ * And the CONTENT of the six that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
- * planted in the shipped `DESIGN.md` was invisible — four of the six were pinned by name only, which
- * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these four are
- * byte-pinned here, and between them every adopter-facing file this tree writes is pinned by content.
+ * planted in the shipped `DESIGN.md` was invisible — four of the six files then shipped were pinned by
+ * name only, which round 18's gate measured. The two workflows are byte-pinned by
+ * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
+ * this tree writes is pinned by content.
+ *
+ * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
+ * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
+ * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
+ * so their bytes are the reviewed surface.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
     ".github/copilot-instructions.md",
-    "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
+    "439cbe672bff64e110b13440d86eb18cf83685f73f41ccb12947408b5cd80b46",
   ],
   [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
+  ["AGENTS.md", "04061092ed7048349ad93404145a9e3d71cb7c21bd37f5a531d0cd61147b313d"],
+  ["CLAUDE.md", "040faf04c46b85d0064ca561ca813f66a3989b4f3ab44802f8c447908a0b455d"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);
@@ -1373,8 +1383,14 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/distributed-surface.md",
+  "root/.agents/rules/root-additions-policy.md",
+  "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/version-discipline.md",
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
+  "root/AGENTS.md",
+  "root/CLAUDE.md",
   "root/DESIGN.md",
   "root/qfai.config.yaml",
   ".github/instructions/code-review.instructions.md",
