@@ -212,6 +212,80 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
 }
 
 /**
+ * Remove comments in ONE left-to-right scan, optionally blanking literals.
+ *
+ * Two `replace` passes cannot do this, because each delimiter occurs inside
+ * the other's body. Whichever regex runs first reads the other's content as
+ * its own opener. Measured in `src/core/validate.ts`: a line comment citing
+ * the glob `references` + slash + star + `.md` carries a block-comment
+ * opener, the block pass ran first, and its non-greedy match ran twenty-seven
+ * lines to the next real closer — taking the
+ * `validateStaleReferences(root, { config })` call between them with it. The
+ * guard then reported that validator as a barrel entry with no call site: a
+ * false accusation whose trigger was an unrelated JSDoc added below it, which
+ * is why the same file passed until one appeared. Reversing the two passes
+ * only moves the bug, since a block comment may likewise contain `//` — this
+ * very docblock cannot spell its own closer for the same reason.
+ *
+ * String and template literals are tracked in the same pass and for the same
+ * reason: a `//` or `/*` inside one is data, not an opener. That subsumes the
+ * quote and `:` guards the two-pass version used to approximate it with. A
+ * backslash still suppresses both openers, because `/\\/\\//` is a regular
+ * expression and not a comment.
+ *
+ * @param blankLiterals replace each string / template literal with `""`.
+ *   `codeOnly` wants that — prose in a literal is not a call site — while the
+ *   module-edge walk needs the specifier text it would erase.
+ */
+function stripCommentsScan(source: string, blankLiterals: boolean): string {
+  let out = "";
+  let index = 0;
+  while (index < source.length) {
+    const char = source[index];
+    const next = source[index + 1];
+    const escaped = source[index - 1] === "\\";
+
+    if (!escaped && char === "/" && next === "*") {
+      const end = source.indexOf("*/", index + 2);
+      out += " ";
+      index = end === -1 ? source.length : end + 2;
+      continue;
+    }
+    if (!escaped && char === "/" && next === "/") {
+      const end = source.indexOf("\n", index);
+      // The newline stays: line-anchored patterns downstream depend on it.
+      index = end === -1 ? source.length : end;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      let scan = index + 1;
+      while (scan < source.length) {
+        const inner = source[scan];
+        if (inner === "\\") {
+          scan += 2;
+          continue;
+        }
+        if (inner === char) {
+          scan += 1;
+          break;
+        }
+        // An unterminated quote is an apostrophe in prose far more often than
+        // it is a literal, so a non-template one ends at the line break.
+        if (char !== "`" && inner === "\n") break;
+        scan += 1;
+      }
+      out += blankLiterals ? '""' : source.slice(index, scan);
+      index = scan;
+      continue;
+    }
+
+    out += char;
+    index += 1;
+  }
+  return out;
+}
+
+/**
  * Reduce a module to the text that can actually execute: block and line
  * comments, string / template literals, and `import … from "…"` /
  * `export { … } from "…"` declarations all go away.
@@ -223,18 +297,10 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
  * a call site either: it only moves the name one module further along.
  */
 function codeOnly(source: string): string {
-  return (
-    source
-      .replace(/\/\*[\s\S]*?\*\//g, " ")
-      // A `//` preceded by `:`, a quote or a backslash belongs to a URL, a
-      // string or an escaped regex atom, not to a comment.
-      .replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1")
-      .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
-      .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
-      .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ")
-      .replace(/`(?:\\.|[^`\\])*`/g, '""')
-      .replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, '""')
-  );
+  return stripCommentsScan(source, true)
+    .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
+    .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
+    .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ");
 }
 
 /**
@@ -251,9 +317,16 @@ function referencesName(source: string, name: string): boolean {
   return new RegExp(`(?<![\\w$])${name}(?![\\w$])(?!\\s*:)`).test(codeOnly(source));
 }
 
-/** Comments out; everything else — imports included — kept verbatim. */
+/**
+ * Comments out; everything else — imports included — kept verbatim.
+ *
+ * The same scan as `codeOnly`, and for the same reason: this text feeds the
+ * module-edge walk, so a phantom block comment here drops real import edges
+ * and shrinks the reachable set, which reads downstream as validators nobody
+ * calls.
+ */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1");
+  return stripCommentsScan(source, false);
 }
 
 /** `import … from "./x.js"` / `export … from "./x.js"` targets. */
@@ -389,6 +462,58 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(referencesName("issues.push(...(await validateFoo(root)));", "validateFoo")).toBe(true);
     expect(referencesName("const gates = [validateFoo];", "validateFoo")).toBe(true);
     expect(referencesName("const gates = { tdd: validateFoo };", "validateFoo")).toBe(true);
+  });
+
+  it("does not let one comment's delimiter open the other kind of comment", () => {
+    // The measured case. A line comment citing a glob carries `/*`; strip
+    // block comments first and it opens one that runs to the next real `*/`,
+    // swallowing every call between. `validate.ts` shipped exactly this and
+    // the guard accused `validateStaleReferences` of having no call site.
+    const globInLineComment = [
+      "  // `references/*.md` + SKILL.md as warning during the deprecation",
+      "  ...(await validateFoo(root, { config })),",
+      "",
+      "/**",
+      " * Any JSDoc at all is enough to close the phantom comment.",
+      " */",
+      "function unrelated(): void {}",
+    ].join("\n");
+    expect(referencesName(globInLineComment, "validateFoo")).toBe(true);
+
+    // And the mirror image, which is why reversing the two passes is not the
+    // fix: a block comment may carry `//`, and stripping line comments first
+    // would eat the `*/` that closes it.
+    const slashesInBlockComment = [
+      "/*",
+      " * See docs // and the note below.",
+      " */",
+      "issues.push(...(await validateFoo(root)));",
+    ].join("\n");
+    expect(referencesName(slashesInBlockComment, "validateFoo")).toBe(true);
+
+    // A delimiter inside a literal is data. The old quote guards approximated
+    // this; tracking the literal is what actually decides it.
+    expect(referencesName('const glob = "a/*b"; validateFoo(root);', "validateFoo")).toBe(true);
+    expect(referencesName('const url = "https://x"; validateFoo(root);', "validateFoo")).toBe(true);
+    // An escaped pair is a regular expression, not a comment.
+    expect(referencesName("const re = /\\/\\//; validateFoo(root);", "validateFoo")).toBe(true);
+
+    // Over-correction pin: a real comment must still be a comment.
+    expect(referencesName("/* validateFoo(root) */", "validateFoo")).toBe(false);
+    expect(referencesName("// validateFoo(root)", "validateFoo")).toBe(false);
+    expect(referencesName('const name = "validateFoo";', "validateFoo")).toBe(false);
+  });
+
+  it("keeps import edges the module-edge walk reads", () => {
+    // `stripComments` feeds `MODULE_EDGE_RE`, so the specifier text has to
+    // survive — and the same phantom-comment bug would drop edges here, which
+    // shrinks the reachable set and reads as validators nobody calls.
+    const source = [
+      "  // a glob `references/*.md` in prose",
+      'import { validateFoo } from "./foo.js";',
+      "/** and a JSDoc to close the phantom */",
+    ].join("\n");
+    expect(stripComments(source)).toContain('"./foo.js"');
   });
 
   it("counts call sites only from modules the validate.ts graph reaches", async () => {
