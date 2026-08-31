@@ -52,7 +52,7 @@ const TEMPLATE_PATH_FORM = `## Appendix: Screen Mock
 `;
 
 // Strict validator (no `/path/`-accept clause). Mirrors the real
-// htmlMockParser classification: bare same-origin paths fall through to
+// htmlMockDom classification: bare same-origin paths fall through to
 // result.localRefs.push(rawUrl) â†’ QFAI-MOCK-010.
 const VALIDATOR_STRICT = `// strict classifier
 result.localRefs.push(rawUrl);
@@ -112,7 +112,7 @@ describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on templateâ
     expect(f?.severity).toBe("error");
     // 3-part justification names modified file, un-paired counterpart, clause.
     expect(f?.message).toMatch(/03_Story-Workshop\.md/);
-    expect(f?.message).toMatch(/htmlMockParser\.ts/);
+    expect(f?.message).toMatch(/htmlMockDom\.ts/);
     expect(f?.message).toMatch(/clause=/);
   });
 
