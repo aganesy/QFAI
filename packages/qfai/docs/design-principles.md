@@ -93,3 +93,38 @@ ensures each layer has at least one preventive mechanism:
 
 When adding new code, the contributor must ask: "if this code is silently
 broken, which layer detects it?" — and at least one layer MUST answer.
+
+## P7. A new finding code ships behind a promotion window
+
+A new rule is correct the day it ships and still lands on data written before
+it existed. `TDDLIST_EVIDENCE_EMPTY` shipped straight at `error` and took a
+consuming repository from 3 errors to 27 in one `qfai init` — 20 of them on
+rows already at `done`, a status with no transition left that could re-observe
+anything, so the upgrade latched that repository's gate for every row that had
+not finished yet.
+
+A new code therefore ships at `warning` and is pinned to a promotion release at
+least one minor ahead of the release that introduces it:
+
+1. declare the promotion in `core/sunset.ts#RULE_PROMOTIONS` — the mirror image
+   of `SUNSETS`, which gives an old shape a window before it fails — recording
+   both `introducedIn` and `promoteAt`, because the contract is the distance
+   between them and the first is unrecoverable once the tool ships past the pin;
+2. emit the finding through `newRuleSeverity(await resolveToolVersion(), …)`,
+   never a literal `"error"` beside the `issue(...)` call;
+3. name the ending release in the finding text, so `--fail-on error` keeps
+   working while the operator can read the debt they are about to owe;
+4. when the code can fire on rows that are already terminal, document how a
+   terminal row satisfies it — otherwise the only remedy left is an
+   out-of-lifecycle edit, which the Drift Protocol treats as drift.
+
+Enforcement: `tests/core/sunsetLedger.test.ts` fails on either half-landed
+state — a `RULE_PROMOTIONS` key with no consumer outside `sunset.ts` (declared,
+never wired), and a finding code emitted by `src/` that is neither in the frozen
+`tests/core/findingCodeBaseline.ts` nor named by a promotion entry (wired, never
+declared). The emitting side is read through the constant a call site names, not
+only through a bare literal, so the house `const FINDING_CODE = "…"` style
+cannot walk past the ratchet. A third assertion checks the pin itself: a
+promotion that is not a GA release would leave the finding a warning forever
+under the conservative fallback, and one less than a minor past `introducedIn`
+would be a window nobody can migrate inside of.
