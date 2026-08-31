@@ -14,6 +14,7 @@ import {
   readlink,
   rename,
   rm,
+  rmdir,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -1700,9 +1701,6 @@ async function ensureSymlink(
  * makes the claim and the test one operation; the counter only has to produce
  * candidates, not guarantee anything by itself.
  */
-/** Names {@link claimSidecar} produces, so prune leaves them alone. */
-const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
-
 /**
  * How much of a sidecar the copy fallback will hold in memory.
  *
@@ -2224,6 +2222,343 @@ async function collectCanonicalAgentNames(assistantAssetsDir: string): Promise<s
 // Prune deprecated wrappers
 // ---------------------------------------------------------------------------
 
+/**
+ * `.claude/commands/` と `.github/prompts/` に qfai が実際に書いたことのある
+ * wrapper の basename (拡張子を除いた stem)。
+ *
+ * この 2 ディレクトリへの書き込みは symlink 方式への移行時に廃止され、以降
+ * init は一切書き込まない — つまりこの閉じた集合に載っていない名前は、確実に
+ * プロジェクトが自分で置いたものである。`qfai-*` という開いた glob で消して
+ * いたため、`.claude/commands/qfai-release.md` のようなプロジェクト固有の
+ * slash command が `--force` のたびに消えていた。
+ *
+ * 逆は成り立たない (集合に載っている = qfai が書いた、ではない) ので、削除の
+ * 可否は {@link isInitWrittenWrapper} が本文まで見て決める。
+ */
+const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
+  "qfai-atdd",
+  "qfai-configure",
+  "qfai-discuss",
+  "qfai-discussion",
+  "qfai-implement",
+  "qfai-pr",
+  "qfai-prototyping",
+  "qfai-require",
+  "qfai-scenario-test",
+  "qfai-sdd",
+  // SDD が 3 skill に分かれていた期間 (recut より前) に roster に載っていたので、
+  // 当時の generator は両方に command / prompt wrapper を書いている。
+  "qfai-sdd-planning",
+  "qfai-sdd-refinement",
+  "qfai-spec",
+  "qfai-tdd-green",
+  "qfai-tdd-red",
+  "qfai-tdd-refactor",
+  "qfai-unit-test",
+  "qfai-verify",
+]);
+
+/**
+ * その名前が「過去に qfai が書いたことのある wrapper の名前」か。
+ *
+ * 名前だけで決まるので `readdir` の snapshot に対して答えられる —
+ * {@link pruneMatchingEntries} の `predicate` が見られるのはそこまでで、
+ * 所有権そのものはこれでは決まらない。候補を絞るだけの前段であり、削除の
+ * 可否は本文を読む {@link isInitWrittenWrapper} が決める。
+ */
+function isLegacyWrapperName(name: string, suffix: string): boolean {
+  if (!name.endsWith(suffix)) {
+    return false;
+  }
+  return LEGACY_WRAPPER_STEMS.has(name.slice(0, -suffix.length));
+}
+
+/**
+ * その wrapper を init が書いたと本文が証明するか。
+ *
+ * stem は「過去に qfai がその名前を使った」ことしか示さない。プロジェクトが
+ * 自分で `.claude/commands/qfai-spec.md` を書いた場合も、旧 wrapper を自前の
+ * 内容に差し替えた場合も、名前だけで消せばユーザのコンテンツを失う。qfai が
+ * 配ってきた wrapper は例外なく「同じ stem の canonical doc」への委譲行を持ち
+ * ({@link DELEGATION_LINES})、出荷された全世代の wrapper がそうなっている。
+ * この行が生成物である証拠であり、これを持たないファイルは stem が一致しても
+ * 触らない。
+ *
+ * 判定は **行単位の完全一致** で行う。canonical パスが本文のどこかに現れる
+ * ことを証拠にすると、同名のプロジェクト独自 command が説明文・否定文・コード
+ * 例でそのパスに言及しただけで init 生成物と誤認され、`--force` で消える。
+ * 生成された wrapper では委譲行がその行の全体なので、部分一致を許す理由がない。
+ *
+ * 本文は {@link WRAPPER_EVIDENCE_MAX_BYTES} までしか読まない。出荷された
+ * wrapper はどの世代も 1 KB 未満だが、同名の通常ファイルが何であるかは
+ * こちらの都合ではない — 巨大なログや FIFO が `qfai-spec.md` に置かれていた
+ * とき、削除可否を判定するためだけに全内容を文字列へ展開すると init 全体が
+ * OOM で止まる。上限を超えるものは「所有権を証明できないもの」として残す。
+ *
+ * {@link pruneMatchingEntries} の `confirm` として渡されるので、読む対象
+ * (`target`) と stem を導く名前 (`name`) は別々に受け取る: 隔離のために
+ * 退避されたあとの `target` は quarantine 側の名前を持っており、その basename
+ * から stem を取ると元の wrapper 名ではなくなる。同じ理由で、この判定は
+ * 退避の前後で二度問われる — 名前が指すファイルが入れ替わっていれば、
+ * 二度目で「証明できないもの」に倒れて元へ戻される。
+ */
+async function isInitWrittenWrapper(
+  target: string,
+  name: string,
+  suffix: string,
+  delegations: DelegationForms,
+): Promise<boolean> {
+  if (!isLegacyWrapperName(name, suffix)) {
+    return false;
+  }
+  const stem = name.slice(0, -suffix.length);
+
+  const body = await readWrapperEvidence(target);
+  if (body === null) {
+    return false;
+  }
+
+  return hasDelegationLine(body, delegations(stem));
+}
+
+/**
+ * 本文のどれかの行が、その stem の委譲行と **バイト単位で** 一致するか。
+ *
+ * 行を trim して比べるとインデントが無視され、自作 command が Markdown の
+ * コード例として `    @.qfai/assistant/prompts/qfai-spec.md` を書いただけで
+ * 生成物と誤認されてファイルごと消える。出荷された wrapper では委譲行が
+ * 常に桁 0 から始まるので、前後の空白を許す理由がない。CRLF の `\r` だけは
+ * split で落ちる。
+ *
+ * fenced code block の中も見ない。字下げなしでも ``` で囲めば「引用」であり、
+ * 旧 wrapper の中身を自分の doc に転記しただけの自作 command が生成物として
+ * 消えていた。qfai が配った wrapper は委譲行を fence の中に置かない。
+ */
+function hasDelegationLine(body: string, forms: readonly string[]): boolean {
+  const delegations = new Set(forms);
+  let open: { marker: string; length: number } | null = null;
+  for (const line of body.split(/\r?\n/)) {
+    const fence = FENCE_RE.exec(line);
+    if (fence !== null) {
+      const run = fence[1] ?? "";
+      const marker = run[0] ?? "";
+      const tail = fence[2] ?? "";
+      if (open === null) {
+        open = { marker, length: run.length };
+        continue;
+      }
+      // CommonMark: 閉じるのは「開いたときと同じ文字」「同じ長さ以上」で、
+      // かつ marker 列の後ろが空白だけの行。文字と長さしか見ていなかったため、
+      // 情報文字列つきの行 (```md ブロックの中に書かれた ```js など) — 本来は
+      // 中身であって閉じ fence ではない — で閉じたと誤認し、その後ろの
+      // 引用行を「本物の委譲行」として数えていた。
+      if (marker === open.marker && run.length >= open.length && FENCE_CLOSE_TAIL_RE.test(tail)) {
+        open = null;
+      }
+      continue;
+    }
+    if (open === null && delegations.has(line)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Markdown の code fence 行 (``` / ~~~、字下げ 0-3、情報文字列可)。 */
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
+/** 閉じ fence の marker 列の後ろに許される文字 — CommonMark では空白だけ。 */
+const FENCE_CLOSE_TAIL_RE = /^[ \t]*$/;
+
+/** その stem に対して、ある surface で出荷実績のある委譲行の全形。 */
+type DelegationForms = (stem: string) => readonly string[];
+
+/**
+ * 出荷実績のある委譲行 — surface ごとに形が違う。
+ *
+ * Claude の slash command は `@<path>`、Copilot prompt と skill wrapper の
+ * `SKILL.md` は箇条書きの `- <path>`。両方を全 surface で受理すると、qfai が
+ * その場所へ一度も書いたことのない形まで所有権の証拠になり、参照一覧に
+ * `- .qfai/...` を並べただけの自作 command が消える。
+ *
+ * canonical の置き場所は `assistant/prompts/<stem>.md` から
+ * `assistant/skills/<stem>/SKILL.md` へ移っており、command / prompt には
+ * どちらの世代の wrapper もまだプロジェクトに残りうる。skill wrapper が
+ * 配られたのは後者になってからなので、そちらは 1 形だけ。
+ */
+const CLAUDE_COMMAND_DELEGATIONS: DelegationForms = (stem) => [
+  `@.qfai/assistant/prompts/${stem}.md`,
+  `@.qfai/assistant/skills/${stem}/SKILL.md`,
+];
+
+const GITHUB_PROMPT_DELEGATIONS: DelegationForms = (stem) => [
+  `- .qfai/assistant/prompts/${stem}.md`,
+  `- .qfai/assistant/skills/${stem}/SKILL.md`,
+];
+
+const SKILL_DOC_DELEGATIONS: DelegationForms = (id) => [`- .qfai/assistant/skills/${id}/SKILL.md`];
+
+/**
+ * 所有権判定のために読む wrapper 本文の上限。
+ *
+ * 出荷実績のある wrapper は `.claude/commands/*.md` が 400 bytes 未満、
+ * skill wrapper の `SKILL.md` でも 1 KB 未満で、近傍の flattened-link 判定
+ * ({@link isFlattenedLink}) や修復 sidecar の復元が使う上限と同じ 4 KB あれば
+ * どの世代も丸ごと収まる。
+ */
+const WRAPPER_EVIDENCE_MAX_BYTES = 4096;
+
+/**
+ * 所有権判定用に、上限つきで読んだ本文。読めない / 上限超過なら `null`。
+ *
+ * `readPinnedRegularFile` と同じく、上限は lstat が見た inode ではなく実際に
+ * 読む inode に効く。ここでの失敗はすべて「qfai が書いたと証明できない」に
+ * 倒す — prune は削除であり、判定不能なら残すのが安全側。
+ */
+async function readWrapperEvidence(filePath: string): Promise<string | null> {
+  try {
+    return await readPinnedRegularFile(filePath, WRAPPER_EVIDENCE_MAX_BYTES);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * かつて出荷され、いまの roster から外れた skill id。
+ *
+ * init が wrapper を置くのは出荷 roster の skill だけなので、「出荷中」でも
+ * 「引退済み」でもない名前の entry は init の生成物ではない。
+ * プロジェクトが自前の `.qfai/assistant/skills/my-skill/` を持つことは
+ * 許可されており (`integrationSurface.ts` の `canonicalSkillIds` 参照)、
+ * それを `.claude/skills/my-skill` から symlink するのは正当な運用なので、
+ * リンク先が canonical tree 内であることだけを根拠に消してはいけない。
+ */
+const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
+  "qfai-discuss",
+  "qfai-pr",
+  "qfai-prototyping-full-harness",
+  "qfai-require",
+  "qfai-scenario-test",
+  "qfai-sdd-planning",
+  "qfai-sdd-refinement",
+  "qfai-spec",
+  "qfai-tdd-green",
+  "qfai-tdd-red",
+  "qfai-tdd-refactor",
+  "qfai-unit-test",
+]);
+
+/**
+ * その entry が init の張った skill symlink か — 名前ではなくリンク先で判定する。
+ *
+ * 所有権の証拠は名前ではない。`qfai-` は予約された prefix ではなく、canonical
+ * roster 自身が `web-research` という prefix を持たない skill を含む。名前で
+ * 判定していたため、プロジェクトが自分で用意した `.claude/skills/qfai-deploy`
+ * が `--force` でディレクトリごと消えていた。init が張るのは canonical tree へ
+ * 解決される symlink だけなので、これは必要条件 — ただし十分条件ではないため、
+ * 呼び出し側で {@link RETIRED_SKILL_IDS} と併せて判定する。
+ *
+ * リンク先は canonical tree の **同名の子** でなければならない。init が張る
+ * のは常に `<id> -> .qfai/assistant/skills/<id>` であり、
+ * `qfai-spec -> .../skills/my-skill` のような alias はプロジェクトが自分で
+ * 作ったものなので、canonical tree 内を指すというだけで消してはいけない。
+ */
+async function linksIntoCanonicalSkill(
+  entryPath: string,
+  canonicalSkill: string,
+): Promise<boolean> {
+  let target: string;
+  try {
+    target = await readlink(entryPath);
+  } catch {
+    // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
+    return false;
+  }
+  return path.resolve(path.dirname(entryPath), target) === path.resolve(canonicalSkill);
+}
+
+/**
+ * その entry が init の置いた skill wrapper か — 形は三通りある。
+ *
+ * 1. **symlink** — recut 後の init が張る形。リンク先で判定する
+ *    ({@link linksIntoCanonicalSkills})。
+ * 2. **実ディレクトリ** — recut 前の init は `.codex/skills/<id>/SKILL.md`
+ *    のようなディレクトリを配っていた。symlink だけを見ていると、recut 前の
+ *    release から直接アップグレードしたプロジェクトに残る引退済み wrapper
+ *    (`qfai-spec/` など) が prune を素通りする — 名前が現 roster にないので
+ *    {@link ensureSymlink} の上書きにも当たらず、`--force` 後も廃止済みの
+ *    指示がアシスタントからロードできる状態で残ってしまう。所有権は
+ *    `.claude/commands/` の wrapper と同じ基準 ({@link isInitWrittenWrapper})
+ *    で決める: 配ってきた `SKILL.md` は例外なく同じ id の canonical doc への
+ *    委譲行を持つ。これを持たないディレクトリはプロジェクトが自分で作った
+ *    ものなので、名前が引退済み id と衝突していても触らない。
+ * 3. **flatten された symlink** — `core.symlinks = false` の checkout では
+ *    symlink がリンク先文字列を内容とする通常ファイルになる。近傍の
+ *    {@link isFlattenedLink} が扱うのと同じ形で、これも init の生成物である。
+ *    通常ファイルを一律に非生成物としていると、その checkout では引退済み
+ *    wrapper が消えないままになる。
+ *
+ * 残る通常ファイルは修復 sidecar (`qfai-atdd.qfai-repair-1234`) で、これは
+ * 名前が引退済み id と一致しないためそもそもここへ来ない。prune は repair
+ * より先に走るので、消すと前回の失敗した修復が残した唯一の控えを失う。
+ */
+async function classifyInitWrittenSkillWrapper(
+  entry: Dirent,
+  entryPath: string,
+  canonicalSkillsDir: string,
+): Promise<"link" | "directory" | null> {
+  const canonicalSkill = path.join(canonicalSkillsDir, entry.name);
+  if (entry.isSymbolicLink()) {
+    return (await linksIntoCanonicalSkill(entryPath, canonicalSkill)) ? "link" : null;
+  }
+  if (entry.isDirectory()) {
+    const doc = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
+    return doc !== null && hasDelegationLine(doc, SKILL_DOC_DELEGATIONS(entry.name))
+      ? "directory"
+      : null;
+  }
+  if (!entry.isFile()) {
+    return null;
+  }
+  // flatten された link は「git が展開したリンク先そのもの」であり、それ以外
+  // ではない。近傍の {@link isFlattenedLink} と同じく byte-exact で比べる —
+  // 内容を解決してみて canonical tree の中に落ちれば十分、としてしまうと
+  // `echo '../../.qfai/assistant/skills/qfai-spec' > .claude/skills/qfai-spec`
+  // で作られた手書きファイルや、`//` や `./` を含む別綴りまで消える。
+  const expected = path.relative(path.dirname(entryPath), canonicalSkill);
+  try {
+    return (await isFlattenedLink(entryPath, expected)) ? "link" : null;
+  } catch {
+    // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
+    // ここで throw すると prune の途中で init 全体が落ちる。
+    return null;
+  }
+}
+
+/**
+ * Removes the wrapper entries QFAI itself installed and no longer ships.
+ *
+ * ONE ownership rule, stated where the retired-workflow prune states it: a name
+ * selects candidates, and never authorises a delete. The `qfai-` prefix is a
+ * reservation notice, so a prefix predicate is forbidden here too — an adopter's
+ * own `.claude/commands/qfai-release.md`, `.claude/skills/qfai-deploy/` or
+ * `.github/prompts/qfai-ship.prompt.md` must survive `--force`, and each of those
+ * was being deleted by one.
+ *
+ * What differs between the two prunes is only the EVIDENCE, because the surfaces
+ * carry different receipts. A shipped workflow has a provenance entry, so its
+ * evidence is the recorded digest. These wrappers predate that record and have no
+ * entry, so the evidence is in the file: every generation QFAI shipped delegates
+ * to the canonical doc of the same stem on a line of its own, and a file without
+ * that line is the adopter's whatever its name. Both prunes ask their question
+ * through {@link pruneMatchingEntries}, and therefore ask it twice — once against
+ * the name, once against the object after it has been moved aside.
+ *
+ * The two prunes stay in separate directories on purpose. `.github/workflows/` is
+ * adopter CI: nothing here enumerates it, and the shipped workflows it holds are
+ * created rather than overwritten, so `--force` never rewrites a lane an adopter
+ * is running.
+ */
 async function pruneStaleQfaiWrappers(
   destRoot: string,
   canonicalSkills: string[],
@@ -2232,24 +2567,31 @@ async function pruneStaleQfaiWrappers(
   const canonical = new Set(canonicalSkills);
   const removed: string[] = [];
 
-  // 1. Remove ALL .claude/commands/qfai-*.md (deprecated category)
+  // 1. Remove the .claude/commands/*.md wrappers qfai itself once wrote.
+  // Name in `predicate`, ownership in `confirm` — the same split the retired-workflow
+  // prune uses, and for the same reason: `predicate` only ever sees the `readdir`
+  // snapshot, so a test that reads the file belongs where it is asked again after the
+  // entry has been moved aside. A project file that takes the name between the snapshot
+  // and the delete carries no delegation line, so the second question refuses it.
   await pruneMatchingEntries(
     path.join(destRoot, ".claude", "commands"),
-    (entry) => entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".md"),
+    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".md"),
     removed,
     dryRun,
+    (target, name) => isInitWrittenWrapper(target, name, ".md", CLAUDE_COMMAND_DELEGATIONS),
   );
 
-  // 2. Remove ALL .github/prompts/qfai-*.prompt.md (deprecated category)
+  // 2. Remove the .github/prompts/*.prompt.md wrappers qfai itself once wrote
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "prompts"),
-    (entry) =>
-      entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".prompt.md"),
+    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".prompt.md"),
     removed,
     dryRun,
+    (target, name) => isInitWrittenWrapper(target, name, ".prompt.md", GITHUB_PROMPT_DELEGATIONS),
   );
 
-  // 3. Remove stale or non-symlink qfai-* entries in skill integration dirs
+  // 3. Remove the skill symlinks init installed for skills no longer shipped
+  const canonicalSkillsDir = path.join(destRoot, ".qfai", "assistant", "skills");
   for (const integDir of SKILL_INTEGRATION_DIRS) {
     const fullDir = path.join(destRoot, integDir);
     if (!(await exists(fullDir))) {
@@ -2257,26 +2599,36 @@ async function pruneStaleQfaiWrappers(
     }
     const entries = await readdir(fullDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.name.startsWith("qfai-")) {
+      if (canonical.has(entry.name)) {
         continue;
       }
-      // A repair sidecar is not a stale wrapper. It is named after the wrapper
-      // it holds — `qfai-atdd.qfai-repair-1234` — so it matches this prefix,
-      // and prune runs before the repair does: a `--force` re-run would delete
-      // the very file an earlier failed repair preserved, which is the one
-      // case the sidecar exists for.
-      if (SIDECAR_RE.test(entry.name)) {
+      // 出荷中でも引退済みでもない名前は init が wrapper を置いた skill では
+      // ない — プロジェクトが自前で用意したものなので残す。
+      if (!RETIRED_SKILL_IDS.has(entry.name)) {
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);
-      const isStale = !canonical.has(entry.name);
-      const isNonSymlink = !entry.isSymbolicLink();
+      const kind = await classifyInitWrittenSkillWrapper(entry, entryPath, canonicalSkillsDir);
+      if (kind === null) {
+        continue;
+      }
 
-      if (isStale || isNonSymlink) {
+      if (kind === "link") {
         removed.push(entryPath);
         if (!dryRun) {
           await rm(entryPath, { recursive: true, force: true });
         }
+        continue;
+      }
+
+      // ディレクトリ形式では所有権を証明できたのは `SKILL.md` だけ。プロジェクト
+      // がそこへ自前の reference やメモを足していることがあり、ディレクトリごと
+      // 再帰削除するとそれも失う。生成物だけ消して、空になったときだけ殻を畳む。
+      const doc = path.join(entryPath, "SKILL.md");
+      removed.push(doc);
+      if (!dryRun) {
+        await rm(doc, { force: true });
+        await removeIfEmpty(entryPath);
       }
     }
   }
@@ -2288,6 +2640,24 @@ async function pruneStaleQfaiWrappers(
   // Manual removal is required when a canonical agent is deleted.
 
   return removed;
+}
+
+/**
+ * 空ならそのディレクトリを消す。中身が残っていれば何もしない。
+ *
+ * `ENOTEMPTY` / `EEXIST` は「プロジェクトのファイルが残っている」という
+ * 正常な結果であり、失敗ではない。
+ */
+async function removeIfEmpty(dir: string): Promise<void> {
+  try {
+    await rmdir(dir);
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (code === "ENOTEMPTY" || code === "EEXIST" || code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -2682,11 +3052,15 @@ async function recordInstalledWorkflows(
  *
  * `confirm` is the ownership question, and it is asked TWICE: once against the path as the
  * snapshot named it, and once against the object after it has been moved aside. `predicate`
- * can only ever see the `readdir` snapshot, and every caller here decides ownership by
- * CONTENT — the file still holds the bytes QFAI recorded writing. A caller with no content
- * test passes `undefined` and gets the snapshot behaviour. `confirm` receives the path to
- * READ and, separately, the entry's original name, because after the move the two differ and
- * a caller looking its digest up by basename would be looking up the quarantine name.
+ * can only ever see the `readdir` snapshot, so a name selects candidates and never authorises
+ * a delete: every caller here decides ownership by CONTENT. What counts as the content differs
+ * by surface — a shipped workflow still holds the bytes QFAI recorded writing, and a legacy
+ * command or prompt wrapper, which predates that record, still carries the delegation line
+ * every generation of it was shipped with — but the shape of the question does not. A caller
+ * with no content test passes `undefined` and gets the snapshot behaviour. `confirm` receives
+ * the path to READ and, separately, the entry's original name, because after the move the two
+ * differ and a caller resolving its evidence by basename would be resolving it against the
+ * quarantine name.
  *
  * Why the move at all — review finding [33]. Checking a pathname, re-checking it and then
  * deleting it are three operations on a NAME, and between any two of them the adopter can put

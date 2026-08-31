@@ -519,6 +519,17 @@ Canonical agent markdown under `.qfai/assistant/agents/**` uses a shared YAML fr
 subset (`name`, `description`, `tools`) compatible with Claude Code and GitHub Copilot,
 while Codex consumes mirrored `.codex/agents/*.toml` profiles.
 If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
+`--force` deletes as well as overwrites: it removes the command and prompt wrappers earlier releases
+installed under `.claude/commands/` and `.github/prompts/`, and the skill wrappers it installed under
+`.claude/skills/`, `.agents/skills/`, `.codex/skills/` and `.github/skills/` for skills QFAI no longer
+ships — the directory wrappers releases before the symlink recut copied there as well as the symlinks
+that replaced them. Files it did not write — a project's own slash command, prompt file or skill,
+including one published from a project-authored `.qfai/assistant/skills/` entry — are left in place,
+whatever they are named. Ownership is read from the file, not the name: a wrapper is removed only when
+it carries the delegation line to the canonical document of the same name, or is a symlink into
+`.qfai/assistant/skills/`. One consequence of that: a symlink has no content to prove who wrote it, so
+if you publish a canonical skill of your own under a name QFAI itself once shipped, `--force` removes
+that link. Your `.qfai/assistant/skills/` entry is untouched; re-create the link to publish it again.
 
 ## Contributing (for QFAI maintainers)
 
