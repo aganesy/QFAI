@@ -251,9 +251,10 @@ export async function removeProvenanceEntry(dir: string, name: string): Promise<
  * The file itself is destroyed: only the NAME survives a directory read, and
  * it now names a directory. A subsequent `qfai init` neither repairs that nor
  * fails on it (measured, not assumed): the root template copy is create-only
- * regardless of `--force` — force reaches only `assistant/skills` and the
- * integration wrappers — and its existence probe is an `access()` that a
- * directory satisfies, so the name is SKIPPED, the directory survives, and no
+ * regardless of `--force` — force reaches only `assistant/skills`,
+ * `assistant/agents`, the integration wrappers and the add-only
+ * `agent-routing.yml` phase merge — and its existence probe is an `access()`
+ * that a directory satisfies, so the name is SKIPPED, the directory survives, and no
  * provenance entry is added for it. A caller that needs a real file back at
  * that path must allocate a fresh tree instead of re-installing over this one.
  *
