@@ -37,6 +37,56 @@ export async function listSourceFiles(dir: string): Promise<string[]> {
   return out;
 }
 
+/** Whitespace and comments — the tokens that cannot end an expression. */
+function isTrivia(token: ts.SyntaxKind): boolean {
+  return (
+    token === ts.SyntaxKind.WhitespaceTrivia ||
+    token === ts.SyntaxKind.NewLineTrivia ||
+    token === ts.SyntaxKind.SingleLineCommentTrivia ||
+    token === ts.SyntaxKind.MultiLineCommentTrivia ||
+    token === ts.SyntaxKind.ShebangTrivia ||
+    token === ts.SyntaxKind.ConflictMarkerTrivia
+  );
+}
+
+/**
+ * Whether a `/` following `previous` opens a regular expression.
+ *
+ * The listed tokens are the ones an expression can end on, and only there is
+ * the slash division. Everything else — an operator, a keyword, `(`, `,`, the
+ * start of the file — puts the scanner where only an operand may follow, and a
+ * regular expression is an operand. `)` and `}` are read as expression ends,
+ * which mis-reads the regular expression in `if (x) /re/.test(y)`; nothing in
+ * `src/**` writes that, while `(a + b) / 2` is ordinary.
+ */
+function regexAllowedAfter(previous: ts.SyntaxKind | undefined): boolean {
+  switch (previous) {
+    case undefined:
+      return true;
+    case ts.SyntaxKind.Identifier:
+    case ts.SyntaxKind.PrivateIdentifier:
+    case ts.SyntaxKind.NumericLiteral:
+    case ts.SyntaxKind.BigIntLiteral:
+    case ts.SyntaxKind.StringLiteral:
+    case ts.SyntaxKind.NoSubstitutionTemplateLiteral:
+    case ts.SyntaxKind.TemplateTail:
+    case ts.SyntaxKind.RegularExpressionLiteral:
+    case ts.SyntaxKind.CloseParenToken:
+    case ts.SyntaxKind.CloseBracketToken:
+    case ts.SyntaxKind.CloseBraceToken:
+    case ts.SyntaxKind.PlusPlusToken:
+    case ts.SyntaxKind.MinusMinusToken:
+    case ts.SyntaxKind.ThisKeyword:
+    case ts.SyntaxKind.SuperKeyword:
+    case ts.SyntaxKind.TrueKeyword:
+    case ts.SyntaxKind.FalseKeyword:
+    case ts.SyntaxKind.NullKeyword:
+      return false;
+    default:
+      return true;
+  }
+}
+
 /**
  * Blank out comments so only code — string literals included — is scanned.
  *
@@ -52,6 +102,15 @@ export async function listSourceFiles(dir: string): Promise<string[]> {
  * that closes a substitution is told apart from one closing a block or object
  * literal inside it, and only the former is re-scanned.
  *
+ * A `/` needs the same treatment for the opposite reason: the scanner returns
+ * it as a plain slash and leaves the regex-or-division decision to the parser,
+ * so `` /^ {0,3}(`{3,}|~{3,})$/ `` — a fence matcher, of which `src/**` holds
+ * several — lexes its backtick as the start of a template literal and swallows
+ * every comment up to the next backtick in the file. `regexAllowedAfter`
+ * makes that decision from the previous token, which is the same rule a
+ * JavaScript lexer uses: the slash is division only where an expression has
+ * just ended.
+ *
  * Replacing comments with spaces rather than deleting them keeps line numbers
  * intact, so a failure report points at the line the offending string is
  * really on.
@@ -62,8 +121,15 @@ export function stripComments(source: string): string {
   const chars = source.split("");
   const templateBraces: number[] = [];
   let braceDepth = 0;
+  let previous: ts.SyntaxKind | undefined;
   let token = scanner.scan();
   while (token !== ts.SyntaxKind.EndOfFileToken) {
+    if (
+      (token === ts.SyntaxKind.SlashToken || token === ts.SyntaxKind.SlashEqualsToken) &&
+      regexAllowedAfter(previous)
+    ) {
+      token = scanner.reScanSlashToken();
+    }
     if (token === ts.SyntaxKind.TemplateHead) {
       templateBraces.push(braceDepth);
     } else if (token === ts.SyntaxKind.OpenBraceToken) {
@@ -86,6 +152,9 @@ export function stripComments(source: string): string {
           chars[index] = " ";
         }
       }
+    }
+    if (!isTrivia(token)) {
+      previous = token;
     }
     token = scanner.scan();
   }

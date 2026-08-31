@@ -39,7 +39,9 @@
  * an operator, and this repository keeps Japanese prose in them. They are
  * removed with the TypeScript scanner rather than by regex, so a comment
  * marker *inside* an operator-facing string literal — a plain one or a
- * template literal spanning an interpolation — cannot hide a violation.
+ * template literal spanning an interpolation — cannot hide a violation, and
+ * a backtick inside a regular expression literal does not turn the comments
+ * that follow it into a template literal and hide *them*.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -199,6 +201,29 @@ describe("operator-facing CLI message language", () => {
       "sample.ts:1: info(`prefix ${value} // 日本語`);",
       "sample.ts:2: info(`prefix ${value} /* 日本語 */`);",
       "sample.ts:3: info(`outer ${obj.f({ k: `inner ${x} // 日本語` })} tail`);",
+    ]);
+  });
+
+  it("does not mistake a backtick inside a regular expression for a template literal", () => {
+    const source = [
+      "const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;",
+      "// 日本語のコメント",
+      'info("日本語のメッセージ");',
+    ].join("\n");
+
+    expect(reportJapaneseLines("sample.ts", source)).toEqual([
+      'sample.ts:3: info("日本語のメッセージ");',
+    ]);
+  });
+
+  it("does not mistake a division slash for a regular expression", () => {
+    const source = [
+      "const ratio = (done + skipped) / total; // 日本語のコメント",
+      'info("日本語のメッセージ");',
+    ].join("\n");
+
+    expect(reportJapaneseLines("sample.ts", source)).toEqual([
+      'sample.ts:2: info("日本語のメッセージ");',
     ]);
   });
 

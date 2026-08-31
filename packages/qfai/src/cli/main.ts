@@ -59,6 +59,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
           ...(options.profile ? { profile: options.profile } : {}),
+          ...(options.reportSpecIds.length > 0 ? { specIds: options.reportSpecIds } : {}),
         });
       }
       return;
@@ -270,6 +271,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     default:
       error(`Unknown command: ${command}`);
       info(usage());
+      process.exitCode = options.invalidExitCode;
       return;
   }
 }
@@ -299,9 +301,16 @@ Options:
   --root <path>   Target directory
   --dir <path>    init: output directory
   --force         init: overwrite .qfai/assistant/{skills,agents}/** and the published skills/agents (everything else, including assistant/manifest/**, is skipped when it already exists)
+                  It deletes as well as overwrites: the wrappers a past qfai placed in
+                  .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
+                  that are no longer shipped (including the real directories from before they
+                  became symlinks). Ownership is decided by a file's content and not by its name,
+                  so your own command / prompt / skill files survive; a symlink has no content of
+                  its own, so one you published under a retired QFAI skill name is deleted (its
+                  target .qfai/assistant/skills/<id>/ stays, so you can re-link it).
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
-                              (legacy .qfai/assistant/{instructions,steering,manifest}/ -> constitution/manifest/catalog/process/)
+                              (legacy .qfai/assistant/{instructions,steering}/ -> constitution/manifest/catalog/process/)
   --dry-run       Show what would change without writing anything
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
@@ -313,7 +322,7 @@ Options:
   --fail-on <error|warning|never>  validate: failure threshold
   --fail-on <error|warning>        doctor / prototyping preflight: failure threshold
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
-  --out <path>                  report/doctor/prototyping preflight: output path
+  --out <path>                  report/doctor/prototyping preflight: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
   --base-url <url>              report: base URL
@@ -338,8 +347,9 @@ Options:
   --clean                       doctor: move review packs past their TTL into _archive/ (combinable with --dry-run)
   --autoremediate               doctor: run install + clean + config-fill together
   --spec <id>                   atdd scaffold: target spec (e.g. spec-0006)
-  --spec <id>                   validate: restrict to the given spec (repeatable; e.g. --spec 0003 --spec spec-0004)
+  --spec <id>                   validate/report: restrict to the given spec (repeatable; e.g. --spec 0003 --spec spec-0004)
                                  Excludes spec-owned findings and specs-coverage report output for every other spec
+                                 report: also switches the default input/output to validate.spec-<ids>.json / report.spec-<ids>.md
   -h, --help      Show this help
 `;
 }

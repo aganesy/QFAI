@@ -38,7 +38,11 @@ import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
-import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
+import {
+  probeSkillManifest,
+  SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
+  type SkillManifestProbeResult,
+} from "./doctor/skillManifestProbe.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
@@ -911,16 +915,92 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
+/**
+ * Report a manifest the probe could not read. An unprobed manifest is
+ * NOT a clean bill of health: nothing was probed.
+ *
+ * The four unprobed states are diagnosed apart because they call for
+ * different actions:
+ * - `unparseable` / `unreadable` — the path is occupied by something
+ *   unusable, so this is an error the user must repair (bad JSON,
+ *   permissions, I/O, or a skill "directory" that is a regular file).
+ * - skills root missing — the project is uninitialized (or its
+ *   configured `paths.skillsDir` is gone). Every skill name resolves
+ *   to a missing directory then, so blaming `--profile` would be a
+ *   misdiagnosis; this is the same "run init" condition that the
+ *   `paths.skillsDir` / `skills.integrity` checks report, and it stays
+ *   a warning so `--fail-on error` is not tripped by it.
+ * - skill directory missing inside an existing skills root — only
+ *   here is the `--profile` value itself wrong (a typo, or a skill
+ *   that was renamed), so that case is an error.
+ */
+function buildUnreadableManifestCheck(
+  root: string,
+  skill: string,
+  result: SkillManifestProbeResult,
+): DoctorCheck {
+  const manifestRel = toRelativePath(root, result.manifestPath);
+  const skillDirRel = toRelativePath(root, path.dirname(result.manifestPath));
+  const skillsRootRel = toRelativePath(root, result.skillsRootPath);
+  const details = {
+    skill,
+    manifest: result.manifest,
+    manifestPath: manifestRel,
+    skillDirExists: result.skillDirExists,
+    skillsRootExists: result.skillsRootExists,
+    skillsRoot: skillsRootRel,
+  };
+  const base = { id: "skill.runtimeDependencies", title: "Skill runtimeDependencies", details };
+  if (result.manifest === "unparseable") {
+    return {
+      ...base,
+      severity: "error",
+      message: `manifest for skill '${skill}' at ${manifestRel} is not JSON declaring a '${SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD}' array — runtimeDependencies were not probed`,
+    };
+  }
+  if (result.manifest === "unreadable") {
+    return {
+      ...base,
+      severity: "error",
+      message: `manifest for skill '${skill}' at ${manifestRel} could not be read (permissions, a directory in its place, a path component that is a regular file instead of a directory, or an I/O error) — runtimeDependencies were not probed`,
+    };
+  }
+  if (!result.skillsRootExists) {
+    return {
+      ...base,
+      severity: "warning",
+      message: `skills root ${skillsRootRel} does not exist, so skill '${skill}' could not be resolved (run 'qfai init', or fix paths.skillsDir) — runtimeDependencies were not probed`,
+    };
+  }
+  if (!result.skillDirExists) {
+    return {
+      ...base,
+      severity: "error",
+      message: `unknown skill '${skill}': no skill directory at ${skillDirRel} — check the --profile value; runtimeDependencies were not probed`,
+    };
+  }
+  return {
+    ...base,
+    severity: "warning",
+    message: `no manifest for skill '${skill}' at ${manifestRel} — runtimeDependencies were not probed`,
+  };
+}
+
 async function buildSkillManifestProbeChecks(root: string, skill: string): Promise<DoctorCheck[]> {
-  const findings = await probeSkillManifestRuntimeDeps(root, skill);
+  const result = await probeSkillManifest(root, skill);
+  if (result.manifest !== "found") {
+    return [buildUnreadableManifestCheck(root, skill, result)];
+  }
+  const findings = result.findings;
+  const manifestPath = toRelativePath(root, result.manifestPath);
   if (findings.length === 0) {
     return [
       {
         id: "skill.runtimeDependencies",
         severity: "ok",
         title: "Skill runtimeDependencies",
-        message: `no runtimeDependencies declared in manifest for skill '${skill}' (or manifest absent)`,
-        details: { skill },
+        message: `manifest for skill '${skill}' declares no runtimeDependencies (${manifestPath})`,
+        details: { skill, manifestPath },
       },
     ];
   }
@@ -934,6 +1014,7 @@ async function buildSkillManifestProbeChecks(root: string, skill: string): Promi
         message: `all runtimeDependencies for skill '${skill}' are installed (count=${findings.length})`,
         details: {
           skill,
+          manifestPath,
           deps: findings.map((finding) => ({ name: finding.name, status: finding.status })),
         },
       },
@@ -949,6 +1030,7 @@ async function buildSkillManifestProbeChecks(root: string, skill: string): Promi
         .join(", ")}`,
       details: {
         skill,
+        manifestPath,
         missing: missing.map((finding) => ({
           name: finding.name,
           installCommand: finding.installCommand,

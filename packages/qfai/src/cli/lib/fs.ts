@@ -21,12 +21,6 @@ export type CopyOptions = {
    */
   conflictPolicy?: "error" | "skip";
   /**
-   * Protect specific relative paths from overwriting.
-   * - Even when force=true, existing files under these paths are never overwritten.
-   * - When force=false, existing files under these paths do not block the copy.
-   */
-  protect?: string[];
-  /**
    * Exclude specific relative paths from copying.
    * - Files under these paths are never copied.
    * - They do not participate in conflict detection.
@@ -74,25 +68,10 @@ async function copyFiles(
   const skipped: string[] = [];
   const conflicts: string[] = [];
 
-  const protectPrefixes = (options.protect ?? [])
-    .map((p) => p.replace(/^[\\/]+/, "").replace(/[\\/]+$/, ""))
-    .filter((p) => p.length > 0)
-    .map((p) => p + path.sep);
-
   const excludePrefixes = (options.exclude ?? [])
     .map((p) => p.replace(/^[\\/]+/, "").replace(/[\\/]+$/, ""))
     .filter((p) => p.length > 0)
     .map((p) => p + path.sep);
-
-  const isProtectedRelative = (relative: string): boolean => {
-    if (protectPrefixes.length === 0) {
-      return false;
-    }
-    const normalized = relative.replace(/[\\/]+/g, path.sep);
-    return protectPrefixes.some(
-      (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
-    );
-  };
 
   const isExcludedRelative = (relative: string): boolean => {
     if (excludePrefixes.length === 0) {
@@ -110,9 +89,6 @@ async function copyFiles(
     for (const file of files) {
       const relative = resolveTemplateDestinationRelativePath(path.relative(sourceRoot, file));
       if (isExcludedRelative(relative)) {
-        continue;
-      }
-      if (isProtectedRelative(relative)) {
         continue;
       }
       const dest = path.join(destRoot, relative);
@@ -133,9 +109,7 @@ async function copyFiles(
     }
     const dest = path.join(destRoot, relative);
 
-    const forceForThisFile = isProtectedRelative(relative) ? false : options.force;
-
-    if (!(await shouldWrite(dest, forceForThisFile))) {
+    if (!(await shouldWrite(dest, options.force))) {
       skipped.push(dest);
       continue;
     }
@@ -153,7 +127,7 @@ async function copyFiles(
       // QFAI's to delete. `COPYFILE_EXCL` makes the create the decision, and an `EEXIST` means the
       // adopter won the race — which is the same outcome `shouldWrite` intended for a file that was
       // already there.
-      if (!forceForThisFile) {
+      if (!options.force) {
         try {
           await copyFile(file, dest, fsConstants.COPYFILE_EXCL);
         } catch (error) {
