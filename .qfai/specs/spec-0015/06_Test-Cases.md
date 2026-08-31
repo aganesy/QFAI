@@ -239,3 +239,19 @@
 - Type: error
 - Level: integration
 - Verify that a `references/*.md` still describing pre-implementation behavior surfaces as a warning during the deprecation window and fails (error) at HEAD after sunset under the zero-stale-reference obligation.
+
+## TC-0015-0035: Reviewer-Gate ingests hygiene drift without demanding a justification
+
+- EX-Ref: EX-0015-0018
+- AC-Refs: AC-0015-0022
+- Type: normal
+- Level: integration
+- Verify that a fixture lane report carrying `R-WORKFLOW-HYGIENE-DRIFT` (file, job, rule name) is surfaced by the Reviewer Gate with all three fields intact, and that no `justification:` is demanded. The oracle MUST assert the exemption against an explicitly enumerated divergence list naming exactly the two `CLI-WFSET` codes (BR-0015-0017), and MUST NOT derive it from the emitter or from absence-by-default: a code absent from that list stays justification-gated whatever emits it. Pin the deferral by asserting the list has exactly two members; when OQ-0015-0001 resolves by registering them, this oracle is expected to flip rather than to keep passing silently.
+
+## TC-0015-0036: Shipped-shape drift is ingested and never justification-gated
+
+- EX-Ref: EX-0015-0018
+- AC-Refs: AC-0015-0022
+- Type: error
+- Level: integration
+- Verify that a fixture report carrying `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` with an empty `justification:` is still surfaced rather than rejected. Negative control: `R-PACK-LOCATION-DRIFT` — an error-class, script-emitted catalog member — with an empty `justification:` MUST still be rejected in the same run, so the assertion proves the exemption is an enumerated per-code deferral rather than an emitter-derived rule or a blanket weakening of the justification contract.
