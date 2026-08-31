@@ -1,7 +1,7 @@
 /**
  * Canonical UIX aggregate validator.
  *
- * Runs the eight canonical UIX checks against the discussion pack under
+ * Runs the canonical UIX checks against the discussion pack under
  * validation — resolved from a repo root, or taken directly when the target is
  * already a pack root.
  */
@@ -24,6 +24,39 @@ import {
   validateThreeLayerFamilyCompleteness,
 } from "./threeLayer.js";
 import { validateScreenContractSchema } from "./screenContract.js";
+import { validateTrendScan } from "./trendScan.js";
+
+type UixValidator = (root: string, config: QfaiConfig) => Promise<Issue[]>;
+
+/**
+ * The canonical UIX validator set — the whole UIX surface `qfai validate`
+ * runs.
+ *
+ * Exported because the non-UI over-fire regression (`nonUiOverfire.ts`) has to
+ * measure *this* list. Its own copy of the list drifted into naming modules
+ * that had been unwired from here when the pre-`DESIGN.md` uiux sidecars were
+ * retired, so the regression asserted zero fires from validators production
+ * never executed.
+ */
+export const CANONICAL_UIX_VALIDATORS: readonly UixValidator[] = [
+  // Explicit UI-bearing classification (must run before sidecar checks)
+  validateClassification,
+  // Sidecar presence
+  validateSidecarMissing,
+  // Exploration-first sidecar family
+  validateThreeLayerModel,
+  validateForbiddenLegacyFiles,
+  validateThreeLayerFamilyCompleteness,
+  // Strong screen contract schema
+  validateScreenContractSchema,
+  // Exploration brief / rubric / evaluator calibration
+  validateExplorationArtifacts,
+  // OQ closure
+  validateOqClosure,
+  // Trend scan — `04_Sources.md#Trend Scan` is live SSOT; only the
+  // `uiux/20_trend_scan.md` sidecar was retired.
+  validateTrendScan,
+];
 
 /**
  * Run the canonical UIX validator set and return combined issues.
@@ -36,33 +69,17 @@ export async function runCanonicalUixValidators(
   // The admission probe used to be `<root>/01_Spec.md`, and both call sites
   // pass the repo root. `01_Spec.md` is a *spec* file that no discussion pack
   // contains — a pack has `01_Context.md`, which is what everything behind this
-  // gate then reads. So all eight validators were inert on every documented
-  // invocation, including `qfai validate --profile discussion --fail-on error`.
+  // gate then reads. So every validator behind this gate was inert on every
+  // documented invocation, including
+  // `qfai validate --profile discussion --fail-on error`.
   const packRoots = await resolvePackRoots(root, config);
   if (packRoots.length === 0) {
     return [];
   }
 
-  const validators = [
-    // Explicit UI-bearing classification (must run before sidecar checks)
-    validateClassification,
-    // Sidecar presence
-    validateSidecarMissing,
-    // Exploration-first sidecar family
-    validateThreeLayerModel,
-    validateForbiddenLegacyFiles,
-    validateThreeLayerFamilyCompleteness,
-    // Strong screen contract schema
-    validateScreenContractSchema,
-    // Exploration brief / rubric / evaluator calibration
-    validateExplorationArtifacts,
-    // OQ closure
-    validateOqClosure,
-  ];
-
   const perPack = await Promise.all(
     packRoots.map(async (packRoot) => {
-      const results = await Promise.all(validators.map((v) => v(packRoot, config)));
+      const results = await Promise.all(CANONICAL_UIX_VALIDATORS.map((v) => v(packRoot, config)));
       return results.flat();
     }),
   );
