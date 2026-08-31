@@ -80,6 +80,12 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.
   "QFAI-REVIEW-010",
+  // A US whose E2E obligation is deferred by `- x-qfai-status: planned`. The
+  // deferral is the author's declared intent, so the finding exists to keep it
+  // visible rather than silent — there is no release at which a legitimately
+  // deferred story should fail the build, and promoting it would make the
+  // marker unusable for the case it was added for.
+  "QFAI-ATDD-118",
 ];
 
 // tests/core/<this file> -> packages/qfai
