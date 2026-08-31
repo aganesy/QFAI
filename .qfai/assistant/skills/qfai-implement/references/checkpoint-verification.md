@@ -117,10 +117,11 @@ boundary and only at it — it is the boundary whose owner can act on what they 
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and — for
-the per-spec set, the only one that includes it — step 4 reports zero `QFAI-TEST-001` findings.
-A step outside the applicable set is not owed, and its absence is not a partial run. Any non-zero
-exit is a FAIL: for a per-item checkpoint the item stays at `refactor`, the failure is fixed, and
-the whole set is re-run. A partial run of the applicable set is not a pass.
+the per-spec set, the only one that includes it — step 4 reports zero `QFAI-TEST-001` findings; the
+JS/TS `.skip` family is the separate warning rule `QFAI-TEST-003` and is not counted there. A step
+outside the applicable set is not owed, and its absence is not a partial run. Any non-zero exit is a
+FAIL: for a per-item checkpoint the item stays at `refactor`, the failure is fixed, and the whole
+set is re-run. A partial run of the applicable set is not a pass.
 
 ### The one substitution: a measured delta for step 4
 

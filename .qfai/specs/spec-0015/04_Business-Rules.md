@@ -94,12 +94,14 @@
 - Legacy ad-hoc files (e.g. `session-handoff.yaml`) are accepted during the deprecation window with a `D-HANDOFF-LEGACY-FORMAT` warning; at sunset the old-form acceptance is removed.
 - Reviewer Gate emits `R-HANDOFF-SCHEMA-DRIFT` (severity error, non-empty `justification:`) when a skill writes a non-conforming handoff file OR the schema ↔ writer pair is edited asymmetrically.
 
-## BR-0015-0013: Reviewer-Gate finding-code catalog severity + justification posture
+## BR-0015-0013: Reviewer-Gate finding-code catalog membership + justification posture
 
 - AC-Refs: AC-0015-0018
-- The eight catalog codes — `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT` — MUST be enforced at severity error with a mandatory non-empty `justification:` (prior-pack OQ-0109 Option A / TC-71 advisory-failing).
-- `qfai validate` ingestion MUST reject any catalog finding emitted with empty / whitespace-only `justification:` (advisory-failing, R-WORKLOG-DRIFT family pattern reuse).
-- Note: `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is documented at severity warning per REQ-0151 / the glossary row; its participation in the catalog covers presence + justification discipline, not severity-error escalation.
+- The eight catalog codes — `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT` — MUST be registered in the catalog with a mandatory non-empty `justification:` (prior-pack OQ-0109 Option A / TC-71 advisory-failing).
+- The catalog stores membership only and MUST NOT declare a per-code severity column: each code's severity belongs to the detector that emits it, and is documented per code in the `_policies/06_Glossary.md` row.
+- That constrains the stored shape, not the admission test. Which codes are eligible for registration is decided by severity class per BR-0015-0017 (warning-class advisory-only auxiliary signal stays out); that criterion is applied when the closed set is amended and MUST NOT be materialized as a field on the entry it admits. A registered code keeps whatever severity its own detector emits.
+- `qfai validate` ingestion MUST reject any catalog finding emitted with empty / whitespace-only `justification:` (advisory-failing, R-WORKLOG-DRIFT family pattern reuse). That rejection is severity error for every one of the eight without exception, because what it reports is the missing justification, not the underlying finding.
+- Note: `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is emitted at severity warning per REQ-0151 / the glossary row; its participation in the catalog covers presence + justification discipline, not severity-error escalation of the finding itself.
 - The Reviewer subagent prompt / tool-augmentation timing for these codes inherits the OQ-0119 carry-forward deferral and MUST NOT be resolved by this slice.
 
 ## BR-0015-0014: `qfai audit log` filter + format surface
