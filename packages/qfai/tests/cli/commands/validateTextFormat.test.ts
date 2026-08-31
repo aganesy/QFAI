@@ -257,8 +257,9 @@ const SYNTHETIC_ISSUES: Issue[] = [
 describe("validate --format text matches the shipped CLI UX guideline", () => {
   it("emits every issue in the grammar documented by cli-ux-guidelines.md", async () => {
     const grammar = extractGrammar(await readGuideline());
-    const output = await captureStdout(async () => {
+    const output = await captureStdout(() => {
       emitText(resultOf(SYNTHETIC_ISSUES));
+      return Promise.resolve();
     });
     const lines = output.split("\n");
 
@@ -315,8 +316,9 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     expect(multiline).toBeDefined();
     if (multiline === undefined) return;
 
-    const output = await captureStdout(async () => {
+    const output = await captureStdout(() => {
       emitText(resultOf([multiline]));
+      return Promise.resolve();
     });
     const lines = output.split("\n");
     const headerIndex = lines.findIndex((line) => line.startsWith(`[error] ${multiline.code} `));
@@ -334,8 +336,9 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("counts: info=<n> warning=<n> error=<n>");
 
-    const output = await captureStdout(async () => {
+    const output = await captureStdout(() => {
       emitText(resultOf(SYNTHETIC_ISSUES));
+      return Promise.resolve();
     });
     // QFAI-TEST-004 prints but is not counted — same rule as `countIssues`.
     expect(output).toContain("counts: info=1 warning=2 error=1\n");
@@ -389,8 +392,9 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
       if (parseError === undefined) return;
       expect(parseError.message).toContain("\n");
 
-      const output = await captureStdout(async () => {
+      const output = await captureStdout(() => {
         emitText(resultOf([parseError]));
+        return Promise.resolve();
       });
       // The whole (multi-line) header block is exactly what the grammar renders,
       // trailing slots included — they land on the last physical line.
@@ -415,21 +419,23 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
       "[warn] <command>: file scan truncated: collected <n> files (limit <n>)",
     );
 
-    const truncated = await captureStdout(async () => {
+    const truncated = await captureStdout(() => {
       warnIfTruncated(
         { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
         "validate",
       );
+      return Promise.resolve();
     });
     expect(truncated).toBe(
       "[warn] validate: file scan truncated: collected 20001 files (limit 20000)\n",
     );
 
-    const complete = await captureStdout(async () => {
+    const complete = await captureStdout(() => {
       warnIfTruncated(
         { globs: [], excludeGlobs: [], matchedFileCount: 12, truncated: false, limit: 20000 },
         "validate",
       );
+      return Promise.resolve();
     });
     expect(complete).toBe("");
   });
