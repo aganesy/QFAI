@@ -15,8 +15,14 @@ version: 2.0.0
 
 # エージェント選択ガイド（QFAI Toolkit）
 
-QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする。  
+QFAI のサブエージェントの**選定**は、**agent-catalog + agent-routing + review-profiles** を SSOT とする。  
 選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。
+
+ただしエージェントの**本文（mission / responsibilities / stop conditions 等）**の SSOT は
+`.qfai/assistant/agents/<id>.md` である。`agent-catalog.yml` の `developer_instructions`
+はそこから導出される派生コピーであり、そこに新しい内容を書き起こさない。本文を変更するときは
+markdown 側を編集し、その `## Mission` 見出し以降をそのままブロックへ写して一致させる
+（乖離もブロックの欠落も `QFAI-AGENT-014` が警告する）。
 
 ## 中核原則
 
