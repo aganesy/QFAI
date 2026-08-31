@@ -4,6 +4,48 @@
 
 ## [Unreleased]
 
+### Added
+
+- **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
+  `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
+  `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を作成
+  する。その PR が main に入ると `Tag release commit` が三者（コミットメッセージ・manifest・CHANGELOG
+  見出し）の一致を確認したうえで `vX.Y.Z` を push し、`release.yml` が起動する。publish は従来どおり
+  `release` environment の必須レビュアー承認で止まる。
+- **リリース文面は自動生成しない。** 内容は各変更の作者が `## [Unreleased]` に書き足したものがそのまま
+  使われ、GitHub Release の本文も同じセクションから抽出される。裏返しとして `## [Unreleased]` が空なら
+  `Prepare release` は失敗する — 誰も書いていないリリースノートは「何も起きなかった」と読めるため。
+- **版番号も自動化は選ばない。** `.agents/rules/version-discipline.md` が版番号の決定権をユーザに置いて
+  いるため、入力は必須で既定値を持たない。作成されるブランチ名が pin を運ぶので
+  `check-branch-version-pin.sh` が manifest との一致を検証できる。書き込みは
+  `RELEASE_AUTOMATION_TOKEN` 経由で行うため、ワークフローの `permissions:` は `contents: read` のままで、
+  `BR-0017-0016` の閉じた逸脱集合は広がらない。
+
+### Fixed
+
+- **リリース自動化のレビュー指摘 10 件を修正した。** 主なもの:
+  `feature/vX.Y.Z` のような pinned branch が manifest と CHANGELOG 見出しを同期していれば、
+  release PR でなくてもマージ時に tag が付いてしまう問題 (tag の発行には release PR という
+  独立した指示が要る) を、コミットを運んだ PR の head branch を API に問うて `release/vX.Y.Z`
+  であることを要求する形で塞いだ。CHANGELOG 見出しの照合が正規表現だったため `1.10.2` が
+  `1010.2` に一致していたのをリテラル照合に変更。既存タグを dereference せず no-op 扱いして
+  いたため、別コミットに同名タグがあると成功したまま何もしない状態になっていたのを、
+  この commit を指す場合のみ no-op とし、異なる場合は失敗させるよう変更。`01.11.0` のような
+  先頭ゼロ入りの版 (node-semver が拒否するため publish 時まで失敗しない) を両ワークフローで
+  拒否。`### Added` だけの `## [Unreleased]` を「説明あり」と判定していたのを修正。
+  `gh pr create` 失敗後に release branch だけが残り、force-push が規則で禁止されているため
+  推奨フローを再開できなくなる問題を、既存 branch / 既存 PR の検出で冪等化。PR 本文の一時
+  ファイルを `mktemp` (= `/tmp`) からリポジトリの `tmp/` へ移し、EXIT で削除。CHANGELOG の
+  日付が「準備日」であってリリース日ではないことを、まだ直せる場所 (release PR 本文) と
+  `RELEASE.md` に明記し、tag 実行時のずれを notice に記録するようにした。
+- **GitHub Release の本文が長すぎるときに、リリースを失敗させずに切り詰めるようにした。**
+  `release.yml` の抽出ステップは本文が空の場合しか検査しておらず、CHANGELOG のセクションが
+  GitHub Release 本文の上限 125,000 文字を超えると `gh release create` が 422 を返して
+  Release が作られなかった (v1.10.1 のセクションは 160,679 文字)。npm publish は別ジョブの
+  ため成功しており、run を読むまで表面化しなかった。切り詰めはエントリ境界・文書順で行い、
+  どこまで残したかと全文へのリンクを本文末尾に付ける。どのエントリが重要かはこの機構が
+  決めない。
+
 ## [1.10.1] - 2026-08-31
 
 ### Added
