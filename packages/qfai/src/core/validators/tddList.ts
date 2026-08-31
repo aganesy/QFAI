@@ -1344,12 +1344,25 @@ async function validateSpecTddList(
   // `/qfai-implement` acts on: it opens, fills and closes a T1 review group by
   // this cell, and nothing else in the ledger can contradict it. A mistyped or
   // retired `BR-*` therefore does not fail loudly — it regroups rows into a
-  // review unit nobody chose. `warning`, for the same reason the DR-ID referent
-  // checks are: a ledger written against an older `04_Business-Rules.md` must
-  // not start failing CI on upgrade.
+  // review unit nobody chose.
+  //
+  // The three checks run one promotion window (`RULE_PROMOTIONS`), for the same
+  // reason the DR-ID referent checks are soft: a ledger written against an
+  // older `04_Business-Rules.md`, or keyed under the superseded AC-first
+  // derivation, must not start failing CI on upgrade. So the severity comes
+  // from the pin rather than a literal, and the message names the release that
+  // ends the window. One entry covers the three because they are one claim
+  // read three ways — an operator repairing a `BR-Ref` cell answers all of
+  // them in the same edit.
   if (anyTableHasColumn(coverageTables, BR_REF_COLUMN)) {
     const declaredBrIds = await collectDeclaredBrIds(specDir);
     const layerRefs = await collectV1421LayerRefs(specEntry);
+    const brRefPromotion = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
+    const brRefSeverity = newRuleSeverity(await resolveToolVersion(), brRefPromotion);
+    const brRefWindowNote =
+      brRefSeverity === "warning"
+        ? `. Reported as a warning until the ${brRefPromotion} release, then an error`
+        : "";
     for (const ref of ledgerRows()) {
       const brRef = cell(ref, BR_REF_COLUMN);
       // Empty and `-` are the same legal state — "not resolved" — and
@@ -1362,8 +1375,8 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_BR_REF_INVALID",
-            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN-NNNN, or \`-\` when no BR reaches the row`,
-            "warning",
+            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN-NNNN, or \`-\` when no BR reaches the row${brRefWindowNote}`,
+            brRefSeverity,
             relPath,
             "tddList.brRefFormat",
             [brRef],
@@ -1377,8 +1390,8 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_BR_REF_UNRESOLVED",
-            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${BR_DECLARATION_FILE}. The T1 review group would be keyed on a rule that does not exist`,
-            "warning",
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${BR_DECLARATION_FILE}. The T1 review group would be keyed on a rule that does not exist${brRefWindowNote}`,
+            brRefSeverity,
             relPath,
             "tddList.brRefResolves",
             [token],
@@ -1401,8 +1414,8 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_BR_REF_MISMATCH",
-            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}`,
-            "warning",
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}${brRefWindowNote}`,
+            brRefSeverity,
             relPath,
             "tddList.brRefDerivation",
             [token, expected],

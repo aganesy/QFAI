@@ -128,6 +128,17 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_BR_REF_INVALID`, `TDDLIST_BR_REF_UNRESOLVED` and
+   * `TDDLIST_BR_REF_MISMATCH` — a ledger's declared review-group key is
+   * malformed, names a rule no Business Rules file declares, or is not the key
+   * the row's own `TC-Refs` derive. Every one of them reads a cell written
+   * against an older `04_Business-Rules.md`, or under the superseded
+   * AC-first derivation, so the rule necessarily lands on ledgers that were
+   * correct under the procedure of their day — including rows already at
+   * `done`, whose remedy is an edit to the cell rather than a transition.
+   */
+  tddListBrRefKey: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

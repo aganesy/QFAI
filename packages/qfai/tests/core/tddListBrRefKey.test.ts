@@ -18,6 +18,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const WITH_KEY = `# TDD Execution Ledger
@@ -267,6 +268,37 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
         testCases: derivationTestCases("EX-0001-0005"),
       });
       expect(degraded.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    }
+  });
+
+  it("takes all three severities from the promotion pin, not a literal", async () => {
+    // P7: a finding code introduced after the policy ships behind a window, and
+    // the window is only real if the severity follows the pin. Warning alone
+    // does not prove that — a literal `"warning"` reads the same today and
+    // never promotes. The release name in the message is what only the pin can
+    // put there, and it is the operator's notice of the debt.
+    const promoteAt = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
+    const options = {
+      rules: DERIVATION_RULES,
+      examples: derivationExamples("BR-0001-0004"),
+      testCases: derivationTestCases("EX-0001-0005"),
+    };
+    const found = [
+      ...(await run(`${WITH_KEY}\n${keyedRow("BR-9999")}`, options)),
+      ...(await run(`${WITH_KEY}\n${keyedRow("BR-0404-0404")}`, options)),
+      ...(await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options)),
+    ].filter((i) => i.code.startsWith("TDDLIST_BR_REF"));
+
+    expect(
+      [...new Set(found.map((i) => i.code))].sort(),
+      "the fixtures no longer trip all three codes, so the pin below is unproven",
+    ).toEqual(["TDDLIST_BR_REF_INVALID", "TDDLIST_BR_REF_MISMATCH", "TDDLIST_BR_REF_UNRESOLVED"]);
+    for (const finding of found) {
+      expect(finding.severity).toBe("warning");
+      expect(
+        finding.message,
+        `${finding.code} does not name the release ending its window`,
+      ).toContain(promoteAt);
     }
   });
 
