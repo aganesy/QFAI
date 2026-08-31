@@ -1890,6 +1890,46 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("generated agent instruction files reference no QFAI monorepo path", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The per-tool entry points ...
+      const entryPoints = [
+        path.join(root, ".github", "copilot-instructions.md"),
+        path.join(root, ".codex", "README.md"),
+        path.join(root, ".agents", "README.md"),
+        path.join(root, ".claude", "agents", "README.md"),
+        path.join(root, ".github", "agents", "README.md"),
+      ];
+      // ... plus the whole instruction surface they hand the agent:
+      // constitution, catalog contracts, skills and their references.
+      const assistantSurface = await fg("assistant/**/*.{md,yml,yaml}", {
+        cwd: path.join(root, ".qfai"),
+        onlyFiles: true,
+        followSymbolicLinks: false,
+        absolute: true,
+      });
+      expect(assistantSurface.length).toBeGreaterThan(0);
+
+      const generated = [...entryPoints, ...assistantSurface];
+
+      for (const generatedPath of generated) {
+        const content = await readFile(generatedPath, "utf-8");
+        // `packages/qfai` only exists inside the QFAI monorepo; a rule that
+        // names it is unresolvable in the consuming project it is written into.
+        // The bare directory name counts: `Inspect \`packages/qfai\` structure`
+        // is just as unresolvable as a path below it, so no trailing `/`.
+        expect(content, `${generatedPath} names a QFAI monorepo path`).not.toMatch(
+          /packages\/qfai\b/,
+        );
+      }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("keeps README.md as regular files (not symlinked)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

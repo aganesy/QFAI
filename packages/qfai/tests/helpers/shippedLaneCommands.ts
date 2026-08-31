@@ -1256,8 +1256,12 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
+    // Re-pinned when the version-discipline line stopped naming `packages/qfai/package.json#version`:
+    // that path exists only inside this monorepo, so the rule it stated was unresolvable in the tree
+    // it is written into. Reverting that one line reproduces the previous digest byte for byte, which
+    // is what makes this a review of one line rather than a re-blessing of the whole file.
     ".github/copilot-instructions.md",
-    "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
+    "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
   [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
