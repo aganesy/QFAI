@@ -290,14 +290,8 @@ and `**Unit and Component owe no ATDD annotation.**` above.
   - Scoping applies only when the project declares at least one UI-bearing
     spec. A project that has never declared a surface has not opted into
     surface typing, so the obligation stays project-wide for it.
-  - **Deferral.** A story whose acceptance cannot be observed at E2E in the current slice defers with a
-    `- x-qfai-status: planned` meta line inside its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry)
-    in `02_User-stories.md` — the same token the two contract kinds use. It leaves `QFAI-ATDD-111` and is reported as
-    `QFAI-ATDD-118` (`info`); remove the marker when the slice is implemented. It counts only inside the story block it is
-    written in, so one above the first `US-XXXX` heading defers nothing — one line must not drop the obligation for a whole
-    file. It removes the test obligation, not the declaration. A deferred `US-*` stays a known ID, so an early E2E test is
-    counted, not an unknown reference. This is per story, unlike the surface-type scoping above, a whole-spec property that
-    would erase the siblings too.
+  - **Deferral.** A story whose acceptance cannot be observed at E2E in the current slice defers with a `- x-qfai-status: planned` meta line inside its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) in `02_User-stories.md` — the same token the two contract kinds use. It leaves `QFAI-ATDD-111` and is reported as `QFAI-ATDD-118` (`info`); remove the marker when the slice is implemented. It counts only inside the story block it is written in, so one above the first
+    `US-XXXX` heading defers nothing — one line must not drop the obligation for a whole file. It removes the test obligation, not the declaration. A deferred `US-*` stays a known ID, so an early E2E test is counted, not an unknown reference. This is per story, unlike the surface-type scoping above, a whole-spec property that would erase the siblings too.
   - Do not create an E2E tree whose only purpose is to receive annotations.
     That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
