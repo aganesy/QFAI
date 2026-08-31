@@ -3,9 +3,9 @@
 - Contract scope: frontmatter and body schema for `.qfai/steering/*.md` entries
 - Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
-- SSOT modules:
-  - `packages/qfai/src/core/worklog/parseEntry.ts` (pure parser: `string → Result<Entry, SchemaError>`)
-  - `packages/qfai/src/core/worklog/validateLinks.ts` (link-integrity check)
+- SSOT modules (shipped inside the QFAI package, run by `npx qfai validate`):
+  - the work-log entry parser (`string → Result<Entry, SchemaError>`)
+  - the work-log link-integrity check
 
 ## Storage model
 
