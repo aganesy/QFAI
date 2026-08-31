@@ -958,8 +958,18 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-/* eslint-disable-next-line no-control-regex -- the point of this class is to match control characters */
-const MESSAGE_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/g;
+/**
+ * Whether one code point is a C0, DEL or C1 control character.
+ *
+ * Read as code points rather than matched with the equivalent character-class
+ * regular expression: that pattern needs an `eslint-disable no-control-regex`,
+ * and the universal quality rule forbids adding a suppression without the
+ * user’s explicit permission. `reviewerJustification.ts` refuses control
+ * characters the same way, for the same reason.
+ */
+function isControlCodePoint(code: number): boolean {
+  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+}
 
 /**
  * Makes one path safe to splice into a single-line finding message.
@@ -972,10 +982,15 @@ const MESSAGE_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/g;
  * is escaped.
  */
 function escapeForMessage(value: string): string {
-  return value.replace(
-    MESSAGE_CONTROL_CHARACTERS,
-    (character) => `\\x${character.charCodeAt(0).toString(16).padStart(2, "0")}`,
-  );
+  let escaped = "";
+  for (const character of value) {
+    const code = character.codePointAt(0);
+    escaped +=
+      code !== undefined && isControlCodePoint(code)
+        ? `\\x${code.toString(16).padStart(2, "0")}`
+        : character;
+  }
+  return escaped;
 }
 
 function formatMessagePaths(paths: ReadonlyArray<string>): string {
