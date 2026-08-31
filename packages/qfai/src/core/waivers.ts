@@ -1180,11 +1180,6 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // not recognise a waiver written against the alias.
   { keys: [EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID], severity: "warning" },
   { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
-  // Emitted at `warning` by core/report.ts for a delta file the Change Type
-  // counters could not use. `validate` never raises it, so a project that
-  // accepts an intentionally unfilled delta would otherwise have its waiver
-  // read as an unknown rule on every `qfai validate` run.
-  { keys: ["QFAI-CTYPE-004", "CTYPE-004"], severity: "warning" },
   // The waivable half of the test-stub gate. `validateTestTodoStubs` only runs
   // under the profiles that include it (`--profile sdd` does not), so on every
   // other profile the rule never reaches `buildRuleSeverityIndex` from a
