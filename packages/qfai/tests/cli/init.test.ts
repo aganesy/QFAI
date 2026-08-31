@@ -616,6 +616,239 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("removes agent wrappers naming a retired agent on --force, keeping the canonical file", async () => {
+    // A retired agent used to leave three files nothing removed: the canonical
+    // document and one wrapper per integration dir, each carrying a different
+    // suffix. `--force` recreated the current roster around them and pruned
+    // nothing, so `QFAI-LINK-001` reported them forever with a manual `rm` as
+    // the only remedy.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "agents", "retired-agent.md");
+      await writeFile(canonical, "# retired agent\n", "utf-8");
+
+      const claudeWrapper = path.join(root, ".claude", "agents", "retired-agent.md");
+      const githubWrapper = path.join(root, ".github", "agents", "retired-agent.agent.md");
+      await symlink("../../.qfai/assistant/agents/retired-agent.md", claudeWrapper, "file");
+      await symlink("../../.qfai/assistant/agents/retired-agent.md", githubWrapper, "file");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(claudeWrapper)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(lstat(githubWrapper)).rejects.toMatchObject({ code: "ENOENT" });
+
+      // The canonical tree is create-only and a project may add agents of its
+      // own to it, so init does not delete there.
+      await access(canonical);
+
+      // A shipped agent keeps both of its wrappers.
+      await expectSymlink(path.join(root, ".claude", "agents", "orchestrator.md"));
+      await expectSymlink(path.join(root, ".github", "agents", "orchestrator.agent.md"));
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes a flattened retired agent wrapper on --force", async () => {
+    // A `core.symlinks false` checkout writes the target bytes into a regular
+    // file. Pruning only symlinks would miss the retired wrapper on exactly the
+    // platform where flattening is the default.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const flattened = path.join(root, ".claude", "agents", "retired-agent.md");
+      await writeFile(flattened, "../../.qfai/assistant/agents/retired-agent.md", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(flattened)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("preserves agent entries init did not write and prunes nothing without --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // An agent document a project wrote by hand: a regular file whose content
+      // is not a path into the canonical agents directory.
+      const projectAgent = path.join(root, ".claude", "agents", "project-owned.md");
+      await writeFile(projectAgent, "# project agent\n\nInstructions.\n", "utf-8");
+
+      // A link pointing outside the canonical agents directory is somebody
+      // else's link.
+      const foreignWrapper = path.join(root, ".claude", "agents", "foreign.md");
+      await symlink("../../docs/foreign.md", foreignWrapper, "file");
+
+      // A retired wrapper survives a run without `--force`, which prunes nothing.
+      const retiredWrapper = path.join(root, ".claude", "agents", "retired-agent.md");
+      await symlink("../../.qfai/assistant/agents/retired-agent.md", retiredWrapper, "file");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await lstat(retiredWrapper);
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await access(projectAgent);
+      expect(await readFile(projectAgent, "utf-8")).toBe("# project agent\n\nInstructions.\n");
+      expect((await lstat(foreignWrapper)).isSymbolicLink()).toBe(true);
+      await expect(lstat(retiredWrapper)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a one-line agent file padded with whitespace out of the prune", async () => {
+    // Git writes a flattened link's target verbatim — no trailing newline and
+    // none of the padding an editor or a shell `echo` leaves behind. A
+    // project's own note that happens to end in a space is not a wrapper, and
+    // `--force` must not delete it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const padded = path.join(root, ".claude", "agents", "custom-note.md");
+      const content = "../../.qfai/assistant/agents/custom.md ";
+      await writeFile(padded, content, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(padded, "utf-8")).toBe(content);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a one-line agent file spelling the target some other way out of the prune", async () => {
+    // Only the bytes `path.relative` produces are what init writes. Resolving
+    // the content and comparing destinations accepted a redundant `./` and an
+    // absolute path to the same file as things init had written, and `--force`
+    // deleted a one-line file somebody wrote by hand. Same line
+    // `isFlattenedLink` already holds for the repair path.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const dotted = path.join(root, ".claude", "agents", "dotted-note.md");
+      const dottedContent = "../../.qfai/assistant/agents/./retired-agent.md";
+      await writeFile(dotted, dottedContent, "utf-8");
+
+      const absolute = path.join(root, ".claude", "agents", "absolute-note.md");
+      const absoluteContent = path
+        .join(root, ".qfai", "assistant", "agents", "retired-agent.md")
+        .split(path.sep)
+        .join("/");
+      await writeFile(absolute, absoluteContent, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(dotted, "utf-8")).toBe(dottedContent);
+      expect(await readFile(absolute, "utf-8")).toBe(absoluteContent);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a repair sidecar for a retired agent out of the prune", async () => {
+    // `claimSidecar` renames a wrapper aside before repairing it, and when that
+    // repair dies the sidecar is the only copy of what was there. It is also
+    // the exact thing this prune hunts: it matches on the RESOLVED target, and
+    // a sidecar renamed off a retired wrapper still resolves to the retired
+    // agent — under either name, since `isGeneratedWrapperTarget` compares the
+    // target bytes against `path.relative(dir, resolved)` and never reads the
+    // entry's own name. So `--force` would delete the rescue copy. The skill
+    // prune next door needs no such test because it deletes by retired skill
+    // id, and no sidecar name is one; this prune needs the name test, and
+    // without a case over it the constant reads as unused.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "agents", "retired-agent.md");
+      await writeFile(canonical, "# retired agent\n", "utf-8");
+      const target = "../../.qfai/assistant/agents/retired-agent.md";
+
+      // Both shapes a sidecar can take, because both are shapes the prune
+      // otherwise accepts: the renamed symlink, and the renamed flattened file
+      // a `core.symlinks false` checkout leaves. The `-1` suffix is the
+      // collision form `claimSidecar` falls back to.
+      const linkSidecar = path.join(root, ".claude", "agents", "retired-agent.md.qfai-repair-4242");
+      await symlink(target, linkSidecar, "file");
+      const fileSidecar = path.join(
+        root,
+        ".github",
+        "agents",
+        "retired-agent.agent.md.qfai-repair-4242-1",
+      );
+      await writeFile(fileSidecar, target, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(linkSidecar)).isSymbolicLink()).toBe(true);
+      expect(await readFile(fileSidecar, "utf-8")).toBe(target);
+
+      // Over-correction pin: the plain retired wrapper beside them still goes,
+      // so this is a carve-out for the sidecar name and not a disabled prune.
+      const retiredWrapper = path.join(root, ".claude", "agents", "retired-agent.md");
+      await symlink(target, retiredWrapper, "file");
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      await expect(lstat(retiredWrapper)).rejects.toMatchObject({ code: "ENOENT" });
+      expect((await lstat(linkSidecar)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps an agent wrapper pointing below the canonical agents directory", async () => {
+    // The prune is limited to a direct child of `.qfai/assistant/agents/`, the
+    // only shape init writes. `QFAI-LINK-001` reports a nested target too, and
+    // its remedy says so — it is a manual delete, not something `--force` does.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const nested = path.join(root, ".claude", "agents", "nested.md");
+      await symlink("../../.qfai/assistant/agents/group/legacy.md", nested, "file");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(nested)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("does not prune through an integration directory that is a symlink", async () => {
+    // `readdir` follows the link, so enumerating `.claude/agents` lists an
+    // external tree — while an entry's target is resolved against the lexical
+    // in-project path. A link living out there reads as a retired wrapper, and
+    // the delete that follows destroys data the project never owned.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const foreign = path.join(outside, "retired-agent.md");
+      await symlink("../../.qfai/assistant/agents/retired-agent.md", foreign, "file");
+
+      const claudeAgents = path.join(root, ".claude", "agents");
+      await removeTempTree(claudeAgents);
+      await symlink(outside, claudeAgents, process.platform === "win32" ? "junction" : "dir");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(foreign)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
   it("keeps project-authored qfai-* commands, prompts and skills on --force", async () => {
     // Ownership is what init wrote, not the `qfai-` prefix: nothing reserves
     // that prefix (the shipped roster itself carries `web-research`), and init

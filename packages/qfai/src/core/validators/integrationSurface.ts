@@ -484,9 +484,14 @@ async function canonicalLinkProblem(
  * The roster is the **current** one, so a wrapper left by a shipped document
  * since removed or renamed is enumerated by nobody: it still resolves, and the
  * assistant goes on loading retired instructions while every profile reports a
- * clean surface. `pruneStaleQfaiWrappers` does not reach it either — it matches
- * a `qfai-` prefix, and `web-research` is the standing proof that a shipped
- * name need not have one.
+ * clean surface. `pruneStaleQfaiWrappers` reaches only part of it: the agent
+ * dirs are pruned under `--force` by resolved target, and only when that target
+ * is a **direct child** of `.qfai/assistant/agents/`, while the skill dirs are
+ * still matched by a `qfai-` prefix — and `web-research` is the standing proof
+ * that a shipped name need not have one. This rule reports a target landing
+ * anywhere under `.qfai/assistant/`, so a nested or cross-kind agent target is
+ * reported and never pruned; the remedy names that gap rather than promising a
+ * repair that will not happen.
  *
  * Identified by what init writes rather than by the name: an entry inside an
  * integration directory whose target lands under `.qfai/assistant/`. A wrapper
@@ -1521,7 +1526,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
         "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
         "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
-        "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init` は現行 roster の wrapper しか作らないので再実行では消えません。該当パスを削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください。",
+        "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init --force` が削除するのは **解決先が `.qfai/assistant/agents/` の直下にある agent wrapper（`.claude/agents/` / `.github/agents/`）と `qfai-` で始まる skill wrapper** だけです（`--force` なしの再実行では消えません）。`web-research` のような prefix を持たない skill の wrapper、および `.qfai/assistant/agents/<sub>/…` のような下位ディレクトリや `.qfai/assistant/skills/…` を指す agent wrapper は prune 対象外なので、報告されたパスを手で削除してください。**canonical 側（`.qfai/assistant/skills/…` / `.qfai/assistant/agents/…`）は init が削除しません。** プロジェクトが独自の skill / agent をそこへ追加している場合と区別できないためで、退役した canonical を消したいときは手で削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください（agent wrapper は解決先が `.qfai/assistant/agents/` 直下かつ現行 roster に無い場合にのみ `--force` で削除されます）。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
         "Windows では Developer Mode の有効化が必要な場合があります。",
       ].join("\n"),

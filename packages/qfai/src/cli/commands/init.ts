@@ -2014,7 +2014,7 @@ async function syncIntegrationWrappers(
 
   // Step 1: Prune deprecated wrappers (commands, prompts, old non-symlink dirs)
   const removed = options.force
-    ? await pruneStaleQfaiWrappers(destRoot, skills, options.dryRun)
+    ? await pruneStaleQfaiWrappers(destRoot, skills, agents, options.dryRun)
     : [];
 
   // Step 2: Write README files as regular files
@@ -2247,6 +2247,18 @@ async function ensureSymlink(
  * makes the claim and the test one operation; the counter only has to produce
  * candidates, not guarantee anything by itself.
  */
+/**
+ * Names {@link claimSidecar} produces, so prune leaves them alone.
+ *
+ * The skill-wrapper prune no longer needs this — it now deletes only names in
+ * `RETIRED_SKILL_IDS`, and no sidecar name is a retired skill id. The
+ * agent-wrapper prune still does: it matches on the resolved target, and a
+ * sidecar holding a retired wrapper's flattened bytes resolves to exactly the
+ * retired agent the prune is looking for. Deleting it would take the only copy
+ * an earlier failed repair preserved.
+ */
+const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
+
 /**
  * How much of a sidecar the copy fallback will hold in memory.
  *
@@ -3132,6 +3144,7 @@ async function classifyInitWrittenSkillWrapper(
 async function pruneStaleQfaiWrappers(
   destRoot: string,
   canonicalSkills: string[],
+  canonicalAgents: string[],
   dryRun: boolean,
 ): Promise<string[]> {
   const canonical = new Set(canonicalSkills);
@@ -3203,13 +3216,246 @@ async function pruneStaleQfaiWrappers(
     }
   }
 
-  // 4. Agent symlinks: NOT auto-pruned.
-  // Agent symlinks use different suffixes per integration dir (.md vs .agent.md),
-  // so stale agent symlinks (agents removed from canonical) are not auto-detected.
-  // ensureSymlink --force recreates existing entries but does not remove orphaned ones.
-  // Manual removal is required when a canonical agent is deleted.
+  // 4. Remove agent wrappers that name an agent this version no longer ships.
+  await pruneStaleAgentWrappers(destRoot, canonicalAgents, removed, dryRun);
 
   return removed;
+}
+
+/**
+ * Agent wrappers whose target names a canonical agent the shipped roster no
+ * longer contains.
+ *
+ * Matched by the **resolved target**, not by the entry name: agent wrappers
+ * carry a different suffix per integration directory (`.md` vs `.agent.md`),
+ * so a name test cannot tell a retired wrapper from a file somebody wrote, and
+ * that is why this step used to be skipped altogether. The target is the thing
+ * init actually writes, and it is the same predicate `QFAI-LINK-001` reports on
+ * — so detection and repair stay in agreement by construction.
+ *
+ * The canonical `.qfai/assistant/agents/*.md` behind a retired wrapper is
+ * deliberately **not** deleted. That tree is create-only and a project may add
+ * agents of its own to it; removing a file there would destroy content init
+ * never wrote. `QFAI-LINK-001` says so in its remedy.
+ */
+async function pruneStaleAgentWrappers(
+  destRoot: string,
+  canonicalAgents: string[],
+  removed: string[],
+  dryRun: boolean,
+): Promise<void> {
+  const shipped = new Set(canonicalAgents.map((name) => `${name}.md`));
+  const agentsDir = path.join(destRoot, ".qfai", "assistant", "agents");
+
+  for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
+    const fullDir = path.join(destRoot, dir);
+    if (!(await isSymlinkFreeDirectory(destRoot, dir))) {
+      continue;
+    }
+    const entries = await readdir(fullDir, { withFileTypes: true });
+    for (const entry of entries) {
+      // A `.qfai-repair-<n>` file holds the content a failed repair preserved,
+      // and is sometimes the only copy of it left. The skill-wrapper prune
+      // reaches the same conclusion through `RETIRED_SKILL_IDS` — no sidecar
+      // name is a retired skill id — but this prune matches on the resolved
+      // target, and a sidecar holding a retired wrapper's flattened bytes
+      // resolves to exactly the agent being pruned. It needs the name test.
+      if (SIDECAR_RE.test(entry.name)) {
+        continue;
+      }
+      const entryPath = path.join(fullDir, entry.name);
+      const target = await agentWrapperTarget(entryPath, entry);
+      if (target === null) {
+        continue;
+      }
+      const resolved = path.resolve(fullDir, target);
+      // Only an entry init itself could have written: a direct child of the
+      // canonical agents directory. Anything pointing elsewhere is somebody
+      // else's link, and anything pointing deeper is not a wrapper shape init
+      // produces.
+      if (path.dirname(resolved) !== agentsDir || shipped.has(path.basename(resolved))) {
+        continue;
+      }
+      // A **regular** file is a wrapper only when it holds the exact bytes init
+      // writes for that target — `path.relative` from this directory, nothing
+      // else. Resolving the content and comparing the destination accepted
+      // `../../.qfai/assistant/agents/./retired.md`, and an absolute path to
+      // the same file, as things init had written; neither is a byte sequence
+      // it produces, and `--force` deleted a one-line file somebody wrote by
+      // hand. `isFlattenedLink` already keeps those non-canonical spellings on
+      // the preserve side, and this is a delete, so it holds the same line. A
+      // symlink is left to the resolved-target test: its content is the link,
+      // not a document, and `ensureSymlink` normalises it the same way.
+      if (!entry.isSymbolicLink() && !isGeneratedWrapperTarget(target, fullDir, resolved)) {
+        continue;
+      }
+      if (dryRun) {
+        removed.push(entryPath);
+        continue;
+      }
+      if (await removeJudgedAgentWrapper(entryPath, target)) {
+        removed.push(entryPath);
+      }
+    }
+  }
+}
+
+/**
+ * True when `dir` is a real directory under `root` reached without crossing a
+ * symlink.
+ *
+ * `readdir` follows a link. A `.claude/agents` — or any ancestor of it —
+ * pointing at a tree outside the project therefore lists somebody else's
+ * entries, while the target of an entry found there is resolved against the
+ * **lexical** in-project path: a link or a one-line file living in that
+ * external directory reads as a retired wrapper, and the delete that follows
+ * destroys data the project never owned. `retiredWrappers` refuses to
+ * enumerate a damaged directory for exactly this reason, and prune — which
+ * deletes rather than reports — has to refuse too.
+ *
+ * An `lstat` that cannot answer counts as "do not enumerate": for a step whose
+ * action is a delete, refusing is the safe direction to be wrong in. Only the
+ * components **below** `root` are examined, because a project legitimately
+ * sits behind a symlinked parent (`/tmp` on macOS is one).
+ */
+async function isSymlinkFreeDirectory(root: string, dir: string): Promise<boolean> {
+  let current = root;
+  for (const segment of dir.split("/")) {
+    current = path.join(current, segment);
+    const stats = await safeLstat(current);
+    if (stats === undefined || !stats.isDirectory()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Delete a wrapper this prune has judged, claiming its pathname first.
+ *
+ * Reading the target and deleting by pathname are two operations, and between
+ * them another process — an editor, a second agent, a concurrent
+ * `qfai init --force` — can leave a different file, or a whole directory, at
+ * the same path. A delete on the strength of the earlier read then destroyed
+ * content nothing had examined. `rename` is atomic against the pathname, so
+ * afterwards this process holds the very entry it is about to remove: it
+ * re-derives the target from what actually moved, and anything that is no
+ * longer the wrapper it judged goes straight back. Same claim-then-verify
+ * shape as {@link recreateFlattenedLink}, and the sidecar it claims carries
+ * the one name prune leaves alone.
+ *
+ * Returns whether the wrapper was removed.
+ */
+async function removeJudgedAgentWrapper(entryPath: string, target: string): Promise<boolean> {
+  const sidecar = await claimSidecar(entryPath);
+  try {
+    await rename(entryPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing moved, so the claim is a stray empty file — and it is one prune
+    // deliberately leaves alone, while a later attempt sidesteps it with a
+    // numbered name. Absence is a race with something else removing the
+    // wrapper: there is nothing left to prune.
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    if (isEnoent(renameErr)) {
+      return false;
+    }
+    throw renameErr;
+  }
+  // What actually moved, not what `readdir` reported a moment ago. A probe that
+  // cannot answer is not a licence to delete: the entry goes back, `validate`
+  // reports it again, and the operator still has the file.
+  const moved = await safeLstat(sidecar);
+  const movedTarget =
+    moved === undefined ? null : await agentWrapperTarget(sidecar, moved).catch(() => null);
+  if (movedTarget !== target) {
+    try {
+      await restoreSidecar(sidecar, entryPath);
+    } catch (restoreErr: unknown) {
+      throw new Error(
+        [
+          `退役 wrapper の削除を中止しましたが、退避したファイルを元に戻せませんでした: ${entryPath}`,
+          `原因: ${describeError(restoreErr)}`,
+          `元のファイルは次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: restoreErr },
+      );
+    }
+    info(`  note: ${entryPath} は検査後に内容が変わったため削除していません`);
+    return false;
+  }
+  // A symlink or a small regular file — that is all the check above accepts —
+  // so `recursive` would only widen this to a directory it never judged.
+  await rm(sidecar, { force: true });
+  return true;
+}
+
+/**
+ * Whether `target` is the byte sequence init writes for a wrapper in
+ * `wrapperDir` pointing at `resolved`.
+ *
+ * `createAgentSymlinks` builds every agent target with `path.relative`, so that
+ * is the only spelling a flattened wrapper can legitimately hold. Comparing
+ * resolved destinations instead accepted every other spelling of the same file
+ * — a redundant `./`, a doubled separator, an absolute path — and none of those
+ * are bytes init produced. Separator-insensitive on Windows only, for the same
+ * reason {@link toComparableTarget} is.
+ */
+function isGeneratedWrapperTarget(target: string, wrapperDir: string, resolved: string): boolean {
+  return toComparableTarget(target) === toComparableTarget(path.relative(wrapperDir, resolved));
+}
+
+/**
+ * The path an agent wrapper points at, in either form a checkout can leave it
+ * in, or `null` when the entry is not a wrapper.
+ *
+ * A flattened wrapper — the regular file a `core.symlinks false` checkout
+ * writes, holding the target bytes — has to answer too, or a retired wrapper
+ * survives the prune on exactly the platform where flattening is the default.
+ * A file holding anything else (an agent document a project wrote by hand) is
+ * not a wrapper and is preserved: the content has to be a single-line relative
+ * path landing on a canonical agent for this to remove it.
+ *
+ * Takes whatever already carries the entry's kind — the `Dirent` from the
+ * listing, or the `Stats` of the inode that was claimed for deletion — so the
+ * second read judges the thing that moved rather than a pathname.
+ */
+async function agentWrapperTarget(
+  entryPath: string,
+  entry: Pick<Dirent, "isSymbolicLink" | "isFile">,
+): Promise<string | null> {
+  if (entry.isSymbolicLink()) {
+    try {
+      return await readlink(entryPath);
+    } catch (err: unknown) {
+      // Absence is a race with something else removing the entry — there is
+      // nothing left to prune. Any other fault means the target could not be
+      // read, and answering "not a wrapper" would silently keep it.
+      if (isEnoent(err)) {
+        return null;
+      }
+      throw err;
+    }
+  }
+  if (!entry.isFile()) {
+    return null;
+  }
+  const content = await readPinnedRegularFile(entryPath, 4096).catch((err: unknown) => {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  });
+  // **No whitespace anywhere**, the same test `wrapperTarget` applies in the
+  // validator. Git writes the target for mode `120000` verbatim, with no
+  // trailing newline and none of the padding an editor or a shell `echo`
+  // leaves behind — so a project's own one-line note ending in a space or a
+  // tab is not a flattened wrapper. Refusing only `\r` and `\n` accepted
+  // `../../.qfai/assistant/agents/custom.md ` as one, and `--force` deleted a
+  // file init had never written.
+  if (content === null || content.length === 0 || /\s/.test(content)) {
+    return null;
+  }
+  return content;
 }
 
 /**
