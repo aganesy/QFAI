@@ -52,9 +52,59 @@ tokens (e.g. `bg-primary`, `text-text`, `rounded-md`, `shadow-lg`,
 
 The compliance gate scans rendered HTML — `<style>` blocks, inline
 `style="..."` attributes, AND Tailwind `class="..."` attributes — for
-four categories of forbidden literals. Findings are **advisory-failing**:
-the gate blocks convergence by default, but a Reviewer can override
-when a finding is a known false positive.
+four categories of forbidden literals. The gate is **hard and
+non-waivable**: any finding blocks convergence, and there is no
+Reviewer override. Ordinary cycles carry no scanner output —
+`designMdViolations` stays `[]` in every Reviewer report — because the
+scan runs at the two checkpoints below, not once per cycle. A
+**convergence** stop takes more than the four scores: it needs all
+four axes `exceptional` **and both finding arrays empty** —
+`layoutAntiPatternsDetected` and `designMdViolations` alike — so one
+surviving `lap-*` keeps the loop running on four exceptional scores,
+and clearing it is the next cycle's work. On that stop the accepted
+iteration's HTML is re-scanned before the stop is honoured, so a
+hand-written `[]` in the Reviewer report is discarded and the loop
+keeps iterating (the re-scan drives that decision only; it is not
+written back into the review). The re-scan reaches the captured HTML
+that is **present and readable**: a missing `iter-NN/` directory, or a
+file it cannot stat or read, yields no findings and therefore does not
+block the stop — a clean re-scan is not proof the evidence was
+inspected. Certify is the backstop there as well; it refuses to seal
+at all when the accepted iteration has no readable HTML under it. A
+**max-iterations** stop skips that re-scan —
+it reports an exhausted budget, not a clean bill of health — but
+`npx qfai prototyping certify` re-scans every captured HTML file of
+the accepted iteration unconditionally and exits 2 on any finding, so
+no certificate is **issued** over a violation **the capture evidence
+shows**. That is the whole guarantee: certify reads
+`.qfai/evidence/prototyping/iter-NN/` only and never opens the
+authoring tree (see _Output layout_), so a literal that survives in
+`.qfai/prototypes/iter-NN/index.html` but is not rendered into the
+capture — a stale `--target-url` build, a branch CAPTURE never
+exercised — is outside it. Keep the two trees in step. One carve-out:
+`npx qfai prototyping certify --upgrade-scope full` is not an issuing
+path — it re-gates an already-sealed scope-limited certificate against
+the validate-side gate signal and rewrites the scope marker without
+re-scanning HTML. If the final HTML moved after the seal, re-run
+`npx qfai prototyping certify --check`, which recomputes the evidence
+digests and reports the mismatch.
+
+Within a frozen run the only way past a finding is to change the HTML:
+use a token already declared in `DESIGN.md`, or drop the literal. Do
+**not** edit `DESIGN.md` to widen the allowlist mid-loop — every cycle
+≥ 1 compares live `DESIGN.md`, `DESIGN.md.lock.yaml` and the cycle-0
+cached sha256 before anything else, so the next iterate exits 2 with a
+hash mismatch. A genuine brand change is a separate operation:
+refreeze the lock via `/qfai-sdd`, then restart the loop with
+`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`.
+`--force` is not optional here — the prior loop's `iter-00` is still on
+disk and cycle 0 refuses to overwrite it without one; with it,
+`.qfai/evidence/prototyping/iter-00` is renamed to
+`iter-00.backup-<ISO>` before the reset. Only the **evidence** tree is
+backed up: `.qfai/prototypes/iter-00/` is left in place and your next
+cycle-0 `index.html` overwrites it with no backup, so copy that
+directory aside yourself first if the prior loop's authoring artifact
+still matters.
 
 ### 1. color literal ban
 
