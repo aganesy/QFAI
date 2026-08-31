@@ -12,6 +12,7 @@ export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateContractReferences } from "./contractReferences.js";
 export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
+export { validateAtddCoverageDepth } from "./atddCoverageDepth.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
@@ -19,7 +20,6 @@ export {
   validateDelegationMapIssues,
   validatePrototypingDelegationMap,
 } from "./prototyping/delegationMap.js";
-export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
 export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
@@ -85,6 +85,12 @@ export {
 } from "./autopilotPolicy.js";
 export type { AutopilotPolicyParseResult } from "./autopilotPolicy.js";
 export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
+export {
+  PACKAGE_SELF_GOVERNANCE_FAMILIES,
+  PACKAGE_SOURCE_ROOT_REL,
+  unevaluatedPackageSelfGovernanceFamilies,
+  runPackageSelfGovernanceValidators,
+} from "./packageSelfGovernance.js";
 export {
   CATALOG_ADVISORY_FAILING_CODES,
   JUSTIFICATION_CATALOG,

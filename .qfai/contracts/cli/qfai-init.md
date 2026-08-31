@@ -75,7 +75,9 @@ Behavior:
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
-Relocates files from the pre-recut layout (`.qfai/assistant/instructions/*`, `.qfai/assistant/steering/*`) to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table. The pre-recut `manifest/` layer is deliberately excluded: the recut leaves its path unchanged, so it is already the canonical destination and probing it would report ordinary post-init files as pre-recut surfaces. Migrating stale _content_ inside those files is a separate concern and is not handled here.
+Relocates files from the two pre-recut surfaces the recut actually moved — `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*` — to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table.
+
+`.qfai/assistant/manifest/*` is **not** walked, even though it is a pre-recut surface: its path is identical before and after the recut, so walking it would re-label freshly seeded canonical files as legacy content and emit spurious `W-USER-EDIT-PRESERVED` notes (`runUpgradeAssistantTree`'s `legacySurfaces`, `packages/qfai/src/cli/commands/init.ts`). The consequence is that a user-authored document sitting in a pre-recut `manifest/` is left exactly where it is — it is not re-classified into `catalog/` — and `qfai-configure` stays the supported entrypoint for that layer. Migrating stale _content_ inside those files is a separate concern and is not handled here.
 
 Behavior:
 
@@ -87,15 +89,29 @@ Behavior:
 Required preconditions:
 
 - `packages/qfai/package.json#version` is greater than the version that introduced the recut (referenced in `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md`).
-- Working tree is clean OR `--allow-dirty` is supplied (recommended: clean working tree to allow simple rollback). **`--allow-dirty` NOT YET IMPLEMENTED in v1.9.0** — scheduled for v1.10.0+. Currently the helper proceeds without checking the working tree; users should ensure a clean state before invocation.
+- Working tree state is NOT inspected, and there is no `--allow-dirty` escape hatch. Nothing in this invocation is gated on VCS state, and a clean tree is a recommendation, not a precondition.
+- The recommendation is real, though, and it applies to the invocation rather than to the migration step alone. Only the **migration helper** is additive: it copies legacy content to the new path, never deletes a legacy path, and never overwrites an existing destination (an existing destination is preserved and reported as `W-USER-EDIT-PRESERVED`). The flag then falls through into the ordinary `qfai init` flow, which is not additive — it rewrites the managed block of the root `.gitignore` in place (`ensureRootGitignoreEntries`) and re-syncs the integration wrappers. `--force` is not rejected alongside `--upgrade-assistant-tree`, and adding it also regenerates `assistant/skills/**` and `assistant/agents/**` and deletes legacy wrappers and `10_workflow.md`. So "roll back by deleting what was copied" covers the migration step only; for the run as a whole, a clean tree is what lets `git diff` separate init's edits from work already in progress.
+- If a working-tree probe or an `--allow-dirty` flag is ever added, these two bullets are the lines that must change with it.
 
 Exit codes (additional):
 
-| Code | Meaning                                                                                                                                                                                                                                                    |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed                                                                                                                                                                  |
-| 64   | I/O error during relocation; pre-relocation state preserved                                                                                                                                                                                                |
-| 65   | Cannot resolve relocation — old-layout file path not in the canonical relocation table. **NOT YET IMPLEMENTED in v1.9.0** — `classifyLegacySteeringEntry` currently has a `catalog` fallback for unknown files (does not exit 65). Scheduled for v1.10.0+. |
+| Code | Meaning                                                                                   |
+| ---- | ----------------------------------------------------------------------------------------- |
+| 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed |
+| 64   | I/O error during relocation; pre-relocation state preserved                               |
+
+There is no "cannot resolve relocation" exit code. Within the two surfaces the helper walks, `classifyLegacySteeringEntry` routes any path the canonical relocation table does not name to the `catalog/` layer, preserving the subpath it had under the legacy surface. That is the intended behaviour, not a gap: those surfaces hold user-authored documents next to the seeded ones, so refusing to place an unrecognised file would abort the migration on exactly the projects that most need it. Such files land under `catalog/` and the run still exits 0.
+
+The run does not tell the operator which paths those were: the summary counts copies (`created: N`) and enumerates paths only for `skipped` and `removed` (`report` in `packages/qfai/src/cli/commands/init.ts`). Because the helper never overwrites and never deletes, every copy is a new file, so on a tree that was clean before the invocation the listing has to be reconstructed from Git — with `git status --short --untracked-files=all .qfai/assistant/`. The `--untracked-files=all` mode is load-bearing, not cosmetic: the default `normal` mode collapses a wholly-new directory into a single `?? .qfai/assistant/catalog/` entry that names no file at all, and acting on that entry means deleting the directory rather than the copies.
+
+That listing is the **invocation's**, not the migration step's, and only its `??` rows are additions. The ordinary `qfai init` flow the flag falls through into seeds its own files into the same four layers, and nothing in the output distinguishes a relocated document from a freshly seeded one — so a directory-wide `rm` takes both. With `--force` the same flow also **regenerates** `assistant/skills/**` and `assistant/agents/**`, so the listing carries `M` and `D` rows for files that were already tracked; deleting those would take assets the invocation never added.
+
+Roll back in two moves, by status:
+
+- `??` rows — files this invocation created. Delete the individual paths, never the enclosing directory.
+- `M` / `D` rows — files that existed before. Restore them with Git (`git restore -- <path>`); they are not the addition set.
+
+Then read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
 
 ## Shipped GitHub Actions workflows
 

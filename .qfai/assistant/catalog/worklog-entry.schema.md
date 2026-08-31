@@ -4,11 +4,12 @@
 - Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
 - Enforced by: `npx qfai validate` (`--profile sdd` and `--profile full`), whose
-  work-log surface checks — the frontmatter parser and the link-integrity check
-  alike — ship already compiled inside the installed package. The QFAI source
-  tree is not part of the npm distribution, so this contract names no local
-  module path on purpose: the schema below plus the `npx qfai validate` output
-  are the surface you can actually read here.
+  work-log surface checks ship already compiled inside the installed package:
+  - the work-log entry parser (`string → Result<Entry, SchemaError>`)
+  - the work-log link-integrity check
+  The QFAI source tree is not part of the npm distribution, so this contract
+  names no local module path on purpose: the schema below plus the
+  `npx qfai validate` output are the surface you can actually read here.
 
 ## Storage model
 
