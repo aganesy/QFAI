@@ -56,8 +56,8 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "internal spec id (spec-0010+)", re: /spec-0*[1-9][0-9]+/gi },
   { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
   {
-    name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",
-    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b/g,
+    name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
+    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b/g,
   },
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];
@@ -81,6 +81,18 @@ const TEXT_EXTENSIONS = new Set([
   ".css",
   ".txt",
 ]);
+
+/**
+ * Extensionless text files `qfai init` seeds. `path.extname(".gitkeep")` is
+ * `""`, so an extension allowlist alone never reads them — the `.gitkeep`
+ * bodies seeded for every assistant layer carry prose and are as much a
+ * distributed surface as the `.md` files beside them.
+ */
+const TEXT_BASENAMES = new Set([".gitkeep", ".gitignore", ".gitattributes"]);
+
+function isScannableTextFile(file: string): boolean {
+  return TEXT_EXTENSIONS.has(path.extname(file)) || TEXT_BASENAMES.has(path.basename(file));
+}
 
 async function* walk(dir: string): AsyncGenerator<string> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -110,8 +122,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     const visitedRelative: string[] = [];
     for await (const file of walk(tmpDir)) {
       visitedRelative.push(path.relative(tmpDir, file));
-      const ext = path.extname(file);
-      if (!TEXT_EXTENSIONS.has(ext)) continue;
+      if (!isScannableTextFile(file)) continue;
       const stats = await stat(file);
       if (stats.size > 1_000_000) continue;
       const content = await readFile(file, "utf-8");
