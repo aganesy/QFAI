@@ -1,5 +1,5 @@
 /**
- * Reviewer-Gate validators for CHG-005 findings:
+ * Reviewer-Gate validators for the second-wave findings:
  *   - R-CERTIFY-VERIFY-CIRCULAR: emitted when a prototyping-phase
  *     certify path reads a verify.json whose scope requires
  *     `/qfai-atdd` or `/qfai-implement` artifacts (option-B violation).
