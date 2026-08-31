@@ -191,15 +191,29 @@ describe("Layer and Test file must agree", () => {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
+/**
+ * Whitespace-collapsed, because these needles quote sentences and not line
+ * breaks. Written with the wrapping baked in, an assertion fails when the
+ * reference is re-wrapped — a change that moves no word — and the failure
+ * reads as a missing rule.
+ */
+const flat = (value: string): string => value.replace(/\s+/g, " ");
+
 describe("the DR-ID column definition covers the reset row", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the column definition is not "exception items only"`, async () => {
       // The ledger schema and its transitions moved out of SKILL.md into this
       // reference under the progressive-disclosure budget (#414); SKILL.md now
       // carries a summary and points here, so the rules are asserted here.
-      const skill = await readFile(
-        path.join(repoRoot, tree, "assistant/skills/qfai-implement/references/execution-ledger.md"),
-        "utf-8",
+      const skill = flat(
+        await readFile(
+          path.join(
+            repoRoot,
+            tree,
+            "assistant/skills/qfai-implement/references/execution-ledger.md",
+          ),
+          "utf-8",
+        ),
       );
       // The old wording let an agent blank the approval ID on the next
       // transition, and no validator checks DR-ID outside `exception`.
@@ -211,7 +225,7 @@ describe("the DR-ID column definition covers the reset row", () => {
         "a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses",
       );
       expect(skill).toContain(
-        "MUST be retained as the row moves on through `red`, `green`,\n  `refactor` and `done`",
+        "MUST be retained as the row moves on through `red`, `green`, `refactor` and `done`",
       );
     });
 
@@ -222,19 +236,25 @@ describe("the DR-ID column definition covers the reset row", () => {
       // The ledger schema and its transitions moved out of SKILL.md into this
       // reference under the progressive-disclosure budget (#414); SKILL.md now
       // carries a summary and points here, so the rules are asserted here.
-      const skill = await readFile(
-        path.join(repoRoot, tree, "assistant/skills/qfai-implement/references/execution-ledger.md"),
-        "utf-8",
+      const skill = flat(
+        await readFile(
+          path.join(
+            repoRoot,
+            tree,
+            "assistant/skills/qfai-implement/references/execution-ledger.md",
+          ),
+          "utf-8",
+        ),
       );
       // The enumeration was itself too narrow: the list declares itself
       // complete and prohibits every unlisted edge, so naming five sources
       // forbade the sweep for a row at `blocked` or `review-fix` — the two
       // statuses `drift-protocol.md` step 5 is most likely to find in flight.
       expect(skill).toContain(
-        "- **Any status** -> `todo` — **upstream reset**, the only legal reopen,\n  available from every status a row can hold, `blocked` and `review-fix`\n  included.",
+        "- **Any status** -> `todo` — **upstream reset**, the only legal reopen, available from every status a row can hold, `blocked` and `review-fix` included.",
       );
       expect(skill).toContain(
-        "A row swept out of `exception`\n  keeps the anomaly's DR-ID alongside the reset ID.",
+        "A row swept out of `exception` keeps the anomaly's DR-ID alongside the reset ID.",
       );
 
       const drift = await readFile(
