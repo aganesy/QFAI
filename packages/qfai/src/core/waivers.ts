@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
+import { EMITTED_RULE_CODES, ERROR_ONLY_RULE_CODES, RULE_ID_ALIASES } from "./emittedRuleCodes.js";
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
 import {
@@ -41,6 +42,16 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * legacy stripped `ATDD-112`.
  */
 const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
+
+/**
+ * A `QFAI-`-prefixed code, with the back-compat stripped spelling as capture 1.
+ *
+ * Waiver files written before the grammar widened name the stripped form, so
+ * both spellings have to resolve to the same rule — when matching a finding
+ * ({@link resolveRuleKeys}) and when deciding whether a rule exists at all
+ * ({@link buildKnownRuleIds}).
+ */
+const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\d{3})$/;
 
 /**
  * Rules whose findings are *always* per-row, so the waiver is rejected outright
@@ -502,7 +513,12 @@ async function loadWaivers(
     }
 
     const ruleSeverity = ruleSeverityIndex.get(ruleId);
-    if (!ruleSeverity) {
+    // Unknown means "nothing in this package emits it", not "absent from this
+    // run's findings". A rule that exists but stayed quiet — the normal state of
+    // a waiver whose root cause has been fixed — keeps the waiver active so it
+    // stays in the audit record until it expires. The index is still consulted
+    // first: a finding in hand proves the rule exists whatever the scan found.
+    if (ruleSeverity === undefined && !isKnownRuleId(ruleId)) {
       blocked = true;
       validationIssues.push(
         issue(
@@ -517,7 +533,11 @@ async function loadWaivers(
       );
     }
 
-    if (ruleSeverity === "error") {
+    // An observed `error` decides it outright. Where this run produced no
+    // finding, the generated registry still answers for the rules every emitter
+    // raises at `error`: without that the same waiver file would be active on a
+    // clean run and rejected on the run that finally produced the finding.
+    if (ruleSeverity === "error" || (ruleSeverity === undefined && isErrorOnlyRuleId(ruleId))) {
       blocked = true;
       validationIssues.push(
         issue(
@@ -887,19 +907,120 @@ function resolveRuleKeys(finding: Issue): string[] {
     }
   };
   push(finding.code);
-  push(finding.code.match(/^QFAI-([A-Z]+-\d{3})$/)?.[1]);
+  push(finding.code.match(STRIPPED_CODE_RE)?.[1]);
   push(normalizeRuleId(finding.rule));
   return keys;
+}
+
+let knownRuleIdsCache: ReadonlySet<string> | null = null;
+
+/**
+ * Whether any emitter in this package can produce a finding a waiver would
+ * match by this id.
+ *
+ * This is the question `QFAI-WAIVER-004` is meant to ask. Asking the current
+ * run's findings instead made the answer depend on whether the rule happened to
+ * fire, so a waiver kept on file after its defect was fixed — the intended end
+ * state — was reported as naming a rule that does not exist and dropped from
+ * `waivers.active`.
+ */
+function isKnownRuleId(ruleId: string): boolean {
+  knownRuleIdsCache ??= buildKnownRuleIds();
+  return knownRuleIdsCache.has(ruleId);
+}
+
+/**
+ * Every id a waiver may name: the generated set of emitted codes, each with its
+ * back-compat stripped spelling, plus the rule-id aliases — the spellings
+ * ({@link EXCEPTION_PARKED_RULE_ID} and friends) that a finding carries as its
+ * `rule` and that no `code` literal would yield.
+ *
+ * The aliases come from the generator ({@link RULE_ID_ALIASES}) as well as the
+ * static table, because the static table only lists the ids whose severity it
+ * has to declare. `tddList.ts`'s `TDDLIST-003` / `TDDLIST-004` are absent from
+ * it — nothing about their severity is fixed — so a waiver naming either was
+ * refused as a rule that does not exist. Reading the generated set instead
+ * keeps a new alias known the moment it is emitted, with no second list to
+ * remember.
+ *
+ * Built lazily so it does not depend on where {@link STATIC_RULE_SEVERITY} sits
+ * in this module.
+ */
+function buildKnownRuleIds(): ReadonlySet<string> {
+  const known = new Set<string>();
+  for (const code of EMITTED_RULE_CODES) {
+    addRuleIdSpellings(known, code);
+  }
+  for (const alias of RULE_ID_ALIASES) {
+    addRuleIdSpellings(known, alias, false);
+  }
+  for (const entry of STATIC_RULE_SEVERITY) {
+    for (const key of entry.keys) {
+      addRuleIdSpellings(known, key, false);
+    }
+  }
+  return known;
+}
+
+let errorOnlyRuleIdsCache: ReadonlySet<string> | null = null;
+
+/**
+ * Whether every emitter of this rule raises it at `error`.
+ *
+ * A waiver may only target `warning` / `info` findings, so such a rule has to be
+ * refused (`QFAI-WAIVER-002`) even on the runs where it stays quiet. Deciding
+ * that from this run's findings alone would make the same waiver file active on
+ * a clean run and rejected on the run that finally produced the finding.
+ *
+ * Only rules the generator could pin to a single literal severity are listed;
+ * one emitted at more than one severity, or at a severity read from a variable,
+ * is left to {@link buildRuleSeverityIndex} and the run that observes it.
+ */
+function isErrorOnlyRuleId(ruleId: string): boolean {
+  errorOnlyRuleIdsCache ??= buildErrorOnlyRuleIds();
+  return errorOnlyRuleIdsCache.has(ruleId);
+}
+
+function buildErrorOnlyRuleIds(): ReadonlySet<string> {
+  const errorOnly = new Set<string>();
+  for (const code of ERROR_ONLY_RULE_CODES) {
+    addRuleIdSpellings(errorOnly, code);
+  }
+  for (const entry of STATIC_RULE_SEVERITY) {
+    if (entry.severity === "error") {
+      for (const key of entry.keys) {
+        addRuleIdSpellings(errorOnly, key, false);
+      }
+    }
+  }
+  return errorOnly;
+}
+
+/**
+ * Add `value` to `target` under every spelling a waiver may write it as.
+ *
+ * @param withStripped whether to also register the back-compat form of a
+ *   `QFAI-`-prefixed code. Static-table keys already list both spellings.
+ */
+function addRuleIdSpellings(target: Set<string>, value: string, withStripped = true): void {
+  if (!RULE_ID_RE.test(value)) {
+    return;
+  }
+  target.add(value);
+  const stripped = withStripped ? value.match(STRIPPED_CODE_RE)?.[1] : undefined;
+  if (stripped && RULE_ID_RE.test(stripped)) {
+    target.add(stripped);
+  }
 }
 
 /**
  * Severity per waiver key: what this run observed, falling back to what the
  * package declares.
  *
- * Observed beats declared. A static entry only says the rule exists so a waiver
- * for it does not read as unknown on the runs where it stays quiet; letting that
- * declaration outrank a finding actually in hand would judge the waiver against
- * a severity this run never produced.
+ * Observed beats declared: letting a declared severity outrank a finding
+ * actually in hand would judge the waiver against a severity this run never
+ * produced. An id absent from this index is not thereby unknown — see
+ * {@link isKnownRuleId}.
  */
 function buildRuleSeverityIndex(findings: Issue[]): Map<string, IssueSeverity> {
   const map = new Map<string, IssueSeverity>();
@@ -1032,19 +1153,19 @@ async function exists(targetPath: string): Promise<boolean> {
 }
 
 /**
- * Rules a waiver may name before any run has produced one.
+ * Severities a waiver is judged against before any run has produced the finding.
+ *
+ * Whether a rule exists is no longer decided here — {@link isKnownRuleId} reads
+ * the generated set of every emitted code for that, and {@link isErrorOnlyRuleId}
+ * answers the quiet-run severity question for every rule the generator could pin
+ * to a single literal severity. What remains is the handful of ids the generator
+ * cannot see: the rule-id aliases below, and the severities that go with them.
  *
  * Each entry lists **every** spelling `resolveRuleKeys` would yield had the rule
- * actually fired, so a waiver does not read as an unknown rule on the quiet runs
- * merely because it was written with the code the CLI prints rather than the
- * stripped rule id. Severities match the emitters — a static entry that
- * understates severity would let `QFAI-WAIVER-002` pass a waiver it must block.
- *
- * Deliberately small: an entry here is a promise the rule exists. `COMPAT-*`,
- * `DELTA-*`, `VFY-*` and most of `CTYPE-*` were listed and are emitted by
- * nothing under `src/`, so they told an operator a rule was real and waivable
- * when it could never fire — while the codes that do fire were rejected
- * outright by the grammar above.
+ * actually fired, which is also how the rule-id aliases that no `code` literal
+ * spells reach {@link buildKnownRuleIds}. Severities must match the emitters —
+ * an entry that understates severity would let `QFAI-WAIVER-002` pass a waiver
+ * it must block.
  */
 const STATIC_RULE_SEVERITY: ReadonlyArray<{
   readonly keys: readonly string[];
@@ -1054,19 +1175,26 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // them is refused as an error-severity target rather than as an unknown rule.
   { keys: ["QFAI-SCOPE-001", "SCOPE-001"], severity: "error" },
   { keys: ["QFAI-SCOPE-002", "SCOPE-002"], severity: "error" },
-  // Registered so a project can pre-record an accepted-risk waiver without
-  // QFAI-WAIVER-004 calling the rule unknown on the runs where no item is
-  // currently parked.
+  // Listed for their rule-id spellings: the findings carry these as `rule`, and
+  // no `code` literal under src/ spells them, so the generated set alone would
+  // not recognise a waiver written against the alias.
   { keys: [EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID], severity: "warning" },
-  // Registered so a project using its own Level vocabulary can pre-record the
-  // waiver without QFAI-WAIVER-004 calling the rule unknown on the runs where
-  // every Level is recognized.
   { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
   // Emitted at `warning` by core/report.ts for a delta file the Change Type
   // counters could not use. `validate` never raises it, so a project that
   // accepts an intentionally unfilled delta would otherwise have its waiver
   // read as an unknown rule on every `qfai validate` run.
   { keys: ["QFAI-CTYPE-004", "CTYPE-004"], severity: "warning" },
+  // The waivable half of the test-stub gate. `validateTestTodoStubs` only runs
+  // under the profiles that include it (`--profile sdd` does not), so on every
+  // other profile the rule never reaches `buildRuleSeverityIndex` from a
+  // finding — and a global `.qfai/waivers.yml` entry parking a deliberately
+  // skipped suite would be rejected as an unknown rule (QFAI-WAIVER-004) on
+  // those runs, failing `--fail-on warning` in profiles that have nothing to do
+  // with it. `warning` matches the emitter in
+  // `validators/testTodoStubs.ts` (SKIPPED_TEST_WARNING), so the waiver stays
+  // accepted rather than being refused as an error-severity target.
+  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "warning" },
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },

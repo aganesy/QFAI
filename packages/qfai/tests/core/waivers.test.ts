@@ -567,6 +567,47 @@ describe("applyWaivers", () => {
     }
   });
 
+  // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
+  // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
+  // no finding. Without a static entry a legitimate global waiver for a
+  // deliberately parked suite was rejected as an unknown rule on every such
+  // run, failing `--fail-on warning` in profiles unrelated to the gate.
+  it.each([["QFAI-TEST-003"], ["TEST-003"]])(
+    "accepts a waiver naming %s even when the stub validator did not run",
+    async (rule) => {
+      const root = await createRoot();
+      try {
+        await writeWaivers(
+          root,
+          [
+            "version: 1",
+            "waivers:",
+            "  - id: WVR-20260222-01",
+            `    rule: ${rule}`,
+            "    scope:",
+            '      paths: ["tests/**"]',
+            '    reason: "suite parked deliberately"',
+            '    expires: "2099-01-01"',
+            '    evidence: "delta.md#DL-20260222-01"',
+            "",
+          ].join("\n"),
+        );
+
+        // A run of a profile that never invokes the stub validator: no
+        // QFAI-TEST-003 finding is in hand.
+        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+        // Registered as `warning`, so it is not refused as an error-severity
+        // target either.
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
+        expect(result.waivers.active).toHaveLength(1);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("reports a well-formed but unemitted rule as WAIVER-004, not WAIVER-001", async () => {
     const root = await createRoot();
     try {
@@ -591,6 +632,286 @@ describe("applyWaivers", () => {
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(false);
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The normal end state of a waiver: the rule fired, the waiver was written,
+  // the defect was fixed. From then on the rule is quiet, and the waiver must
+  // not be reported as naming a rule that does not exist. Every rule here is
+  // waivable — one emitted only at `error` is refused for that reason instead,
+  // which the error-only case below covers.
+  it.each([
+    ["QFAI-CONTRACT-031", "a code the emitter names through a constant"],
+    ["CONTRACT-031", "the back-compat stripped alias"],
+    ["E_OQ_STATUS_UNPARSEABLE", "an underscore-shaped code"],
+    ["W-STALE-REFERENCE", "a single-segment prefixed code"],
+  ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-12",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "root cause fixed; kept on file until expiry"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      // None of the rules above appear in this run's findings.
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active.map((item) => item.id)).toEqual(["WVR-20260208-12"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The run that produces the finding judges the waiver against the severity it
+  // observed, whatever the generated registry says.
+  it("still blocks a waiver for an error finding the run produced", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-13",
+          "    rule: QFAI-ATDD-112",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "error target"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [
+        buildIssue({ code: "QFAI-ATDD-112", rule: "atdd.codeTraceability", severity: "error" }),
+      ]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A rule every emitter raises at `error` can never be waived, so the answer
+  // must not depend on whether this run happened to produce the finding: the
+  // same waiver file would otherwise be active on a clean run and rejected on
+  // the run that finally fires the rule.
+  it.each([
+    ["QFAI-ATDD-112", "the code the CLI prints"],
+    ["ATDD-112", "the back-compat stripped alias"],
+  ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-14",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "error target on a quiet run"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      // The rule produced nothing on this run.
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Prototyping's exploration mode downgrades its relaxable codes error →
+  // warning before `applyWaivers` sees them, so `error` is not the only
+  // severity these can reach the engine at. Classifying them from the raw
+  // emitter would reject on a clean run the very waiver the run that produces
+  // the (relaxed) finding accepts.
+  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"], ["QFAI-DCON-031"], ["QFAI-DCON-032"]])(
+    "keeps a waiver for the exploration-relaxable rule %s active on a quiet run",
+    async (rule) => {
+      const root = await createRoot();
+      try {
+        await writeWaivers(
+          root,
+          [
+            "version: 1",
+            "waivers:",
+            "  - id: WVR-20260208-15",
+            `    rule: ${rule}`,
+            "    scope:",
+            '      paths: [".qfai/prototyping/**"]',
+            '    reason: "soft-rubric gate, relaxed under exploration"',
+            '    expires: "2099-01-01"',
+            '    evidence: "delta.md#DL-20260208-01"',
+            "",
+          ].join("\n"),
+        );
+
+        // The rule produced nothing on this run.
+        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+        expect(result.waivers.active.map((item) => item.id)).toEqual(["WVR-20260208-15"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  // The property-resolved emitters must reach the registry too: a waiver for
+  // one of them read as an unknown rule on every run where it stayed quiet.
+  it.each([["QFAI-AUD-001"], ["QFAI-ORPHAN-100"], ["QFAI-PLAN-002"]])(
+    "recognises the quiet rule %s, whose emitter names it through a property",
+    async (rule) => {
+      const root = await createRoot();
+      try {
+        await writeWaivers(
+          root,
+          [
+            "version: 1",
+            "waivers:",
+            "  - id: WVR-20260208-16",
+            `    rule: ${rule}`,
+            "    scope:",
+            '      paths: [".qfai/specs/**"]',
+            '    reason: "root cause fixed; kept on file until expiry"',
+            '    expires: "2099-01-01"',
+            '    evidence: "delta.md#DL-20260208-01"',
+            "",
+          ].join("\n"),
+        );
+
+        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  // Some emitters key the finding on a broad code and narrow it with a
+  // per-defect `rule`; `tddList.ts` publishes `TDDLIST-003` / `TDDLIST-004`
+  // that way and no `code` literal yields either. The static severity table
+  // does not list them — nothing about their severity is fixed — so a waiver
+  // naming the documented spelling was refused as a rule that does not exist.
+  // `QFAI-FID-010` / `-011` are the other half: one `const` picks between them
+  // before the factory call ever sees a literal.
+  it.each([
+    ["TDDLIST-003", "an alias carried only as Issue.rule"],
+    ["TDDLIST-004", "an alias carried only as Issue.rule"],
+    ["QFAI-FID-010", "a code named through a conditional constant"],
+    ["QFAI-FID-011", "a code named through a conditional constant"],
+  ])("recognises the quiet rule %s (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-17",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "root cause fixed; kept on file until expiry"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `QFAI-PROFILE-001` is appended by `cli/commands/validate.ts` after
+  // `core/validate.ts` has already run `applyWaivers`, so no waiver can ever
+  // suppress it. Reporting such a waiver as `active` is the same lie
+  // `QFAI-WAIVER-004` exists to prevent, pointing the other way.
+  it("still reports a waiver naming a rule emitted after the waiver pass", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-18",
+          "    rule: QFAI-PROFILE-001",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "partial profile is intentional here"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The other half of the post-waiver check: `D-DEPRECATED-PATH` is *also*
+  // emitted by `validators/assistantTreeMigration.ts`, which runs inside the
+  // waiver pass. A blanket "the CLI emits it, so drop it" would have taken a
+  // rule that is genuinely waivable with it.
+  it("recognises a rule the CLI re-emits but a validator raises too", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-19",
+          "    rule: D-DEPRECATED-PATH",
+          "    scope:",
+          '      paths: [".qfai/assistant/**"]',
+          '    reason: "migration scheduled for the next minor"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
