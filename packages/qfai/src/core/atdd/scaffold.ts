@@ -15,10 +15,11 @@
  * considered progressed.
  */
 
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
+import { DEFAULT_SCAFFOLD_DIALECT, type ScaffoldDialect } from "./scaffoldDialect.js";
 
 /** Single parsed Test-Case entry. */
 export type TCEntry = {
@@ -290,50 +291,53 @@ export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
   return out;
 }
 
-/**
- * Build the test-skeleton body for a single TC entry.
- *
- * The body carries:
- *   - a vitest framework import,
- *   - the per-TC annotation header (`QFAI:SPEC-XXXX:TC-YYYY-YYYY`),
- *   - reference comments for related AC / EX entries,
- *   - the placeholder sentinel + `// TODO: implement assertion for <TC>`,
- *   - a `describe(...)` with a single `it.skip(...)` placeholder.
- */
-export function buildSkeleton(entry: TCEntry, specId: string): string {
-  const annotation = `QFAI:${specId.toUpperCase()}:${entry.tcId}`;
-  const referenceLines: string[] = [];
+/** Reference comments (AC / EX / US / CON-API / Type) for one entry. */
+function buildReferenceLines(entry: TCEntry, commentPrefix: string): string[] {
+  const refs: string[] = [];
   if (entry.acRefs.length > 0) {
-    referenceLines.push(`// AC refs: ${entry.acRefs.join(", ")}`);
+    refs.push(`${commentPrefix} AC refs: ${entry.acRefs.join(", ")}`);
   }
   if (entry.exRefs.length > 0) {
-    referenceLines.push(`// EX refs: ${entry.exRefs.join(", ")}`);
+    refs.push(`${commentPrefix} EX refs: ${entry.exRefs.join(", ")}`);
   }
   if (entry.usRefs !== undefined && entry.usRefs.length > 0) {
-    referenceLines.push(`// US refs: ${entry.usRefs.join(", ")}`);
+    refs.push(`${commentPrefix} US refs: ${entry.usRefs.join(", ")}`);
   }
   if (entry.conApiRefs !== undefined && entry.conApiRefs.length > 0) {
-    referenceLines.push(`// CON-API refs: ${entry.conApiRefs.join(", ")}`);
+    refs.push(`${commentPrefix} CON-API refs: ${entry.conApiRefs.join(", ")}`);
   }
   if (entry.type !== undefined && entry.type.length > 0) {
-    referenceLines.push(`// Type: ${entry.type}`);
+    refs.push(`${commentPrefix} Type: ${entry.type}`);
   }
+  return refs;
+}
+
+/**
+ * Build the test-skeleton body for a single TC entry, in the project's own
+ * test language (`dialect`, resolved from `testFileGlobs` by the caller).
+ *
+ * The body carries:
+ *   - the per-TC annotation header (`QFAI:SPEC-XXXX:TC-YYYY-YYYY`),
+ *   - reference comments for related AC / EX entries,
+ *   - the placeholder sentinel + `TODO: implement assertion for <TC>`,
+ *   - the dialect's own runner idiom for an unimplemented test.
+ */
+export function buildSkeleton(
+  entry: TCEntry,
+  specId: string,
+  dialect: ScaffoldDialect = DEFAULT_SCAFFOLD_DIALECT,
+): string {
+  const annotation = `QFAI:${specId.toUpperCase()}:${entry.tcId}`;
+  const prefix = dialect.commentPrefix;
 
   const lines: string[] = [];
-  lines.push(`// ${annotation}`);
-  lines.push(`// ${SCAFFOLD_PLACEHOLDER_MARKER} — replace this block with a real assertion.`);
-  if (referenceLines.length > 0) {
-    lines.push(...referenceLines);
-  }
+  lines.push(`${prefix} ${annotation}`);
+  lines.push(
+    `${prefix} ${SCAFFOLD_PLACEHOLDER_MARKER} — replace this block with a real assertion.`,
+  );
+  lines.push(...buildReferenceLines(entry, prefix));
   lines.push("");
-  lines.push(`import { describe, it } from "vitest";`);
-  lines.push("");
-  lines.push(`describe(${JSON.stringify(entry.tcId)}, () => {`);
-  lines.push(`  // TODO: implement assertion for ${entry.tcId}`);
-  lines.push(`  it.skip(${JSON.stringify("pending — scaffold placeholder")}, () => {`);
-  lines.push(`    // TODO: implement assertion for ${entry.tcId}`);
-  lines.push(`  });`);
-  lines.push(`});`);
+  lines.push(...dialect.buildBody(entry.tcId));
   lines.push("");
   return lines.join("\n");
 }
@@ -351,6 +355,48 @@ export function isStillPlaceholder(fileBody: string, tcId: string): boolean {
     fileBody.includes(SCAFFOLD_PLACEHOLDER_MARKER) &&
     fileBody.includes(`TODO: implement assertion for ${tcId}`)
   );
+}
+
+/**
+ * Tells whether a file is still the PRISTINE skeleton `dialect` emits for
+ * `tcId` — nothing of the operator's has landed in it.
+ *
+ * Stricter than `isStillPlaceholder`, and deliberately so: that predicate is a
+ * two-marker heuristic, and the JS/TS skeleton carries the
+ * `TODO: implement assertion for <TC>` line TWICE (once above `it.skip`, once
+ * inside it). An operator who replaces the inner TODO with a real assertion
+ * but leaves the outer one — and the sentinel header — still satisfies
+ * `isStillPlaceholder`. Deleting on that signal destroys their assertions.
+ *
+ * "Pristine" is therefore judged on the EXECUTABLE body: every line from the
+ * first non-comment, non-blank one onward must be byte-for-byte the dialect's
+ * own `buildBody(tcId)`. The comment header above it is skipped rather than
+ * compared, because its reference lines (`// AC refs: ...`) track the spec's
+ * Test-Cases catalogue and legitimately differ from the run that wrote the
+ * file. CRLF and trailing whitespace are normalised so a checkout that
+ * rewrote line endings is not mistaken for operator work.
+ */
+export function isPristineSkeleton(
+  fileBody: string,
+  tcId: string,
+  dialect: ScaffoldDialect,
+): boolean {
+  if (!isStillPlaceholder(fileBody, tcId)) {
+    return false;
+  }
+  const lines = fileBody.replace(/\r\n/g, "\n").split("\n");
+  let start = 0;
+  while (start < lines.length) {
+    const line = (lines[start] ?? "").trim();
+    if (line === "" || line.startsWith(dialect.commentPrefix)) {
+      start += 1;
+      continue;
+    }
+    break;
+  }
+  const actual = lines.slice(start).join("\n").replace(/\s+$/, "");
+  const expected = dialect.buildBody(tcId).join("\n").replace(/\s+$/, "");
+  return actual === expected;
 }
 
 export type EmitSkeletonResult = {
@@ -416,7 +462,7 @@ export async function emitSkeleton(
 
 /**
  * Resolve the canonical scaffold output path for a (spec, TC) pair:
- * `<root>/<testsDir>/atdd/<specId>/<TC-ID>.test.ts`.
+ * `<root>/<testsDir>/integration/<specId>/<dialect basename>`.
  *
  * `testsDir` defaults to `"tests"` PURELY as a back-compat fallback
  * for external callers; the production caller in `cli/commands/
@@ -445,7 +491,18 @@ export function scaffoldDestPath(
   specId: string,
   tcId: string,
   testsDir: string = "tests",
+  dialect: ScaffoldDialect = DEFAULT_SCAFFOLD_DIALECT,
 ): string {
+  // The basename comes from the dialect, not a literal `.test.ts`.
+  //
+  // `QFAI-ATDD-112` derives the extensions it scans from
+  // `validation.traceability.testFileGlobs`, so on a project whose globs derive
+  // `{feature,markdown,md,py}` a `.test.ts` skeleton sat inside the scanned
+  // directory with an extension the scan never opens — uncovered, and not even
+  // reported as uncounted (`QFAI-ATDD-105` only sees files OUTSIDE the three
+  // roots). Same class of failure as the `atdd/` -> `integration/` move below,
+  // on the extension axis instead of the directory axis.
+  //
   // `<testsDir>/integration/`, not `<testsDir>/atdd/`.
   //
   // The scaffold is the only command qfai ships that PRODUCES ATDD test files,
@@ -455,22 +512,29 @@ export function scaffoldDestPath(
   // `TC-*` as uncovered, with no diagnostic saying why. `integration` is the
   // directory `catalog/test-layers.md` and `qfai-atdd/SKILL.md` already assign
   // to `TC-*`, so the writer now agrees with the gate rather than the reverse.
-  return path.resolve(root, testsDir, SCAFFOLD_LAYER_DIR, specId, `${tcId}.test.ts`);
+  return path.resolve(root, testsDir, SCAFFOLD_LAYER_DIR, specId, dialect.fileName(tcId));
 }
 
 /**
- * Convenience guard reused by the CLI command: does the on-disk file
- * (if any) still match the placeholder shape?
+ * On-disk form of `isPristineSkeleton` — the predicate the CLI deletes on.
+ *
+ * There is deliberately no on-disk form of `isStillPlaceholder` beside it: the
+ * only caller that ever had one used it to decide a `rm`, and that predicate is
+ * too weak for that decision (see `isPristineSkeleton`). `isStillPlaceholder`
+ * stays for the read-only "has a real test landed?" judgements in
+ * `emitSkeleton` and `D-SCAFFOLD-PLACEHOLDER`.
+ *
+ * Fails CLOSED: an unreadable or missing file is reported as "not pristine",
+ * so a read error can never be the reason a file is removed.
  */
-export async function isFilePlaceholder(filePath: string, tcId: string): Promise<boolean> {
-  try {
-    await access(filePath);
-  } catch {
-    return false;
-  }
+export async function isFilePristineSkeleton(
+  filePath: string,
+  tcId: string,
+  dialect: ScaffoldDialect,
+): Promise<boolean> {
   try {
     const body = await readFile(filePath, "utf-8");
-    return isStillPlaceholder(body, tcId);
+    return isPristineSkeleton(body, tcId, dialect);
   } catch {
     return false;
   }
