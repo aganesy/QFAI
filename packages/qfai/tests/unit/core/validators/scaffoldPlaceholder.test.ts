@@ -55,6 +55,34 @@ async function seedScaffold(specId: string, tcId: string, body: string): Promise
 // the on-disk fixture content is identical.
 const SKIP = ".skip";
 
+/**
+ * The pytest shape `qfai atdd scaffold` emits on a project whose
+ * `testFileGlobs` derive `.py`: neither the `*.test.ts` basename this
+ * validator used to glob, nor the `//` comment prefix its TODO marker used to
+ * anchor on. Both had to move with the writer, or the stack-aware skeleton
+ * would be a placeholder no gate ever reports.
+ */
+async function seedPythonScaffold(specId: string, tcId: string): Promise<void> {
+  const dir = path.join(root, "tests", "integration", specId);
+  await mkdir(dir, { recursive: true });
+  const snake = tcId.toLowerCase().replace(/-/g, "_");
+  const body = [
+    `# QFAI:SPEC-0008:${tcId}`,
+    `# QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.`,
+    `# AC refs: AC-0008-0001`,
+    "",
+    `import unittest`,
+    "",
+    "",
+    `class Test_${tcId.replace(/-/g, "_")}(unittest.TestCase):`,
+    `    def test_${snake}(self) -> None:`,
+    `        # TODO: implement assertion for ${tcId}`,
+    `        raise NotImplementedError("pending — scaffold placeholder")`,
+    "",
+  ].join("\n");
+  await writeFile(path.join(dir, `test_${snake}.py`), body, "utf-8");
+}
+
 function placeholderBodyFor(tcId: string): string {
   return `// QFAI:SPEC-0008:${tcId}
 // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.
@@ -94,6 +122,15 @@ describe("validateScaffoldPlaceholder", () => {
     expect(finding?.severity).toBe("warning");
     expect(finding?.message ?? "").toMatch(/TC-0008-0001/);
     expect(finding?.message ?? "").toMatch(/tests\/atdd\/spec-0008\/TC-0008-0001\.test\.ts/);
+  });
+
+  it("emits D-SCAFFOLD-PLACEHOLDER for a pytest skeleton (`#` comments, `test_*.py` name)", async () => {
+    await seedPythonScaffold("spec-0008", "TC-0008-0001");
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    const finding = issues.find((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toMatch(/TC-0008-0001/);
+    expect(finding?.message ?? "").toMatch(/tests\/integration\/spec-0008\/test_tc_0008_0001\.py/);
   });
 
   it("does NOT emit when the placeholder marker has been removed (operator filled the scaffold)", async () => {

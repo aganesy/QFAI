@@ -115,7 +115,7 @@ export type QfaiPrototypingConfig = {
    */
   primarySpecId?: string;
   /**
-   * CHG-006 second-wave loop posture discriminator.
+   * Second-wave loop posture discriminator.
    *
    *   - `convergence` (default): every prototyping gate applies at the
    *     declared severity (today's behavior).
