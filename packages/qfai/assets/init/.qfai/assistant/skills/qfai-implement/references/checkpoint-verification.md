@@ -105,7 +105,8 @@ failure, which is what makes it attributable.
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
-reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
+reports zero `QFAI-TEST-001` findings — the JS/TS `.skip` family is the separate warning rule
+`QFAI-TEST-003` and is not counted here. Any non-zero exit is a FAIL: for a per-item checkpoint the
 item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
 pass.
 

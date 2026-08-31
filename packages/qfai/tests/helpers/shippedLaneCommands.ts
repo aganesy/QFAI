@@ -1256,15 +1256,20 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
+    // Re-pinned when the version-discipline line stopped naming `packages/qfai/package.json#version`:
+    // that path exists only inside this monorepo, so the rule it stated was unresolvable in the tree
+    // it is written into. Reverting that one line reproduces the previous digest byte for byte, which
+    // is what makes this a review of one line rather than a re-blessing of the whole file.
     ".github/copilot-instructions.md",
-    "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
+    "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
   // Re-pinned when `Phase: Skeleton` added `!.qfai/evidence/skeleton.md` to
   // `QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`: the shipped `.gitignore` IS the generated managed block,
-  // so a governance negation moves this digest by construction. Re-derived from
-  // `QFAI_GITIGNORE_BLOCK`, not re-typed from a failure message, and the predecessor
-  // (`96abd2e4…`) is the same block without that one line — which is the whole delta.
-  [".gitignore", "ab5a7c032953af6db5b678554c54abe31db610d949da0f4b9b434708d1981764"],
+  // so a governance negation moves this digest by construction. Re-derived by running `init` into a
+  // fresh root on this tree, not re-typed from a failure message: the same derivation reproduces the
+  // predecessor (`2cfeb083…`) byte for byte from a tree without the negation, and the two generated
+  // files differ by exactly that one line — which is the whole delta.
+  [".gitignore", "7a7482c60a1b67e2978e1d503e01f6e95a3094ef2117ff95bc5345a2f71bb8a3"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);

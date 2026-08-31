@@ -2193,12 +2193,12 @@ exactly what the mechanism below says the line's movement means.
 
 **And a third time, on the merge that brought this branch up to date.** The `Phase: Skeleton` work
 added `packages/qfai/tests/assets/walkingSkeleton.test.ts` with 28 callsites, and `tests/assets/**`
-is one of the `e2e` project's two include globs — so the count moved 925 to 953 without a line of
+is one of the `e2e` project's two include globs — so the count moved 927 to 955 without a line of
 `spec-0017` changing, and the guard reddened at the merge rather than at either parent. That is the
 mechanism working: the line is corrected here, and both suite totals above stay known-invalid for
 the current tree until the block above is re-run.
 
-e2e callsites at this tree: 953
+e2e callsites at this tree: 955
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
