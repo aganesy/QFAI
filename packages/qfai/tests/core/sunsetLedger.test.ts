@@ -26,7 +26,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
-import { collectIssueCodeUsage } from "../helpers/issueCodes.js";
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
 /**
@@ -53,6 +52,34 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-REQCTX-021",
   "QFAI-REQINDEX-001",
   "QFAI-REQINDEX-002",
+];
+
+/**
+ * Post-baseline codes that ship at `info` and stay there.
+ *
+ * P7's window is a ladder from `warning` to `error`: `newRuleSeverity` returns
+ * exactly those two, so routing an `info` finding through it would RAISE its
+ * severity on the day it is registered and turn it into a build failure at the
+ * pin — the opposite of what a migration window is for. An `info` code is not a
+ * softened error waiting to harden; it is off the ladder entirely, and each
+ * line here is the reviewed statement that one particular code is.
+ *
+ * `warning` is deliberately NOT exempt. It is where P7 says a new code STARTS,
+ * so a rule keyed on "cannot currently reach error" would excuse the whole
+ * population this guard exists to cover: a new warning with no registration
+ * would pass forever and never promote.
+ *
+ * The exemption is verified before it is applied ({@link verifiedInfoOnlyCodes}):
+ * an entry must be a code `src/` still emits, must not be a baseline code, and
+ * every one of its emissions must pass a literal `"info"`. A code that gains a
+ * `warning`, an `error`, or a computed severity falls out of the exemption and
+ * owes a promotion entry like any other new code.
+ */
+const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
+  // `.qfai/review/` holds a directory whose name is not a pack timestamp. The
+  // finding tells the operator that directory is not inspected; it does not
+  // claim the tree is wrong, and nothing about it is a gate waiting to close.
+  "QFAI-REVIEW-010",
 ];
 
 // tests/core/<this file> -> packages/qfai
@@ -408,6 +435,43 @@ async function readShippedVersion(): Promise<string> {
   return version;
 }
 
+/**
+ * {@link INFO_ONLY_SINCE_BASELINE}, checked against the tree before any code is
+ * excused by it. Severities are read with this file's own extractor, the same
+ * one the "entry decides the severity" assertion above follows the pin with —
+ * an exemption measured by a second reader could disagree with the rule it is
+ * exempting a code from.
+ */
+async function verifiedInfoOnlyCodes(baseline: ReadonlySet<string>): Promise<Set<string>> {
+  const files = (await collectSources(SRC)).filter(
+    (f) => !f.endsWith(path.join("core", "sunset.ts")),
+  );
+  const bodies = await Promise.all(files.map((f) => readFile(f, "utf-8")));
+
+  const exempt = new Set<string>();
+  for (const code of INFO_ONLY_SINCE_BASELINE) {
+    expect(
+      baseline.has(code),
+      `${code} predates the promotion policy, so the baseline already covers it — ` +
+        "this list is for codes introduced after P7",
+    ).toBe(false);
+
+    const severities = [...new Set(bodies.flatMap((body) => severityExpressionsFor(body, code)))];
+    expect(
+      severities,
+      `${code} is listed as info-only but nothing in src/ emits it — retire the line`,
+    ).not.toEqual([]);
+    expect(
+      severities.sort(),
+      `${code} is listed as info-only but is emitted with ${severities.join(", ")} — ` +
+        "only a finding that is `info` at every site is off P7's ladder; anything that " +
+        "can reach `warning` or `error` owes a RULE_PROMOTIONS entry",
+    ).toEqual(['"info"']);
+    exempt.add(code);
+  }
+  return exempt;
+}
+
 /** Every `src/` file, minus `sunset.ts` — the declaration is not a consumer. */
 async function readConsumerSources(): Promise<string> {
   const files = (await collectSources(SRC)).filter(
@@ -529,21 +593,9 @@ describe("sunset ledger", () => {
     // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.
     const promotions = await readRulePromotionEntries();
     const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
-    // Scoped to codes that can reach `error`, which is what P7 is about: the
-    // window softens a NEW ERROR into a warning until the promote release. A
-    // code that already ships at `warning` or `info` has nothing to soften, so
-    // demanding an entry for it buys a registration that governs nothing — the
-    // "relaxation dressed up as a policy" this repository refuses elsewhere.
-    // Severity comes from `tests/helpers/issueCodes.ts`, the same collector
-    // `issueCodeUniqueness` uses, rather than a second extractor beside it.
-    //
-    // Fail-closed on disagreement: a code this file extracts that the usage map
-    // does not know stays in the list. Silence from the second reader must not
-    // be what exempts a code from the first.
-    const usage = await collectIssueCodeUsage(SRC);
+    const infoOnly = await verifiedInfoOnlyCodes(baseline);
     const unregistered = [...codes]
-      .filter((code) => !baseline.has(code) && !promotions.includes(code))
-      .filter((code) => usage.get(code)?.errorCapable !== false)
+      .filter((code) => !baseline.has(code) && !promotions.includes(code) && !infoOnly.has(code))
       .sort();
 
     expect(

@@ -5,8 +5,13 @@ import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import type { QfaiConfig } from "../config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
+
+/** The release `QFAI-AGENT-014` stops being a warning at. */
+const DEVELOPER_INSTRUCTIONS_PROMOTION = RULE_PROMOTIONS.agentDeveloperInstructionsDrift.promoteAt;
 
 const REQUIRED_AGENT_SECTIONS = [
   "## Mission",
@@ -128,14 +133,29 @@ function normalizeBody(body: string): string {
  * Warning, not error: the derived copy is regenerable, and a stale or absent
  * block does not make the tree unusable — it makes it ambiguous, which is
  * exactly what a warning is for.
+ *
+ * The severity comes from the promotion window rather than a literal, because
+ * the rule necessarily lands on catalogs written before the comparison existed:
+ * every repository that customised an agent already carries the divergence.
+ * `toolVersion` is resolved once per validator run and passed in, so the
+ * comparison costs nothing per finding.
  */
 function checkDeveloperInstructions(
   agent: CatalogAgent,
   markdown: string,
   agentRel: string,
   catalogRel: string,
+  toolVersion: string,
   issues: Issue[],
 ): void {
+  const developerInstructionsSeverity = newRuleSeverity(
+    toolVersion,
+    DEVELOPER_INSTRUCTIONS_PROMOTION,
+  );
+  const windowNote =
+    developerInstructionsSeverity === "warning"
+      ? ` Reported as a warning until the ${DEVELOPER_INSTRUCTIONS_PROMOTION} release, then an error`
+      : "";
   const declared = agent.developerInstructions;
   if (declared === undefined) {
     // Present but not a string: QFAI-AGENT-006 already named it at parse time,
@@ -149,8 +169,8 @@ function checkDeveloperInstructions(
     issues.push(
       issue(
         "QFAI-AGENT-014",
-        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim`,
-        "warning",
+        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim.${windowNote}`,
+        developerInstructionsSeverity,
         catalogRel,
         "agentDefinition.developerInstructionsMissing",
         undefined,
@@ -167,8 +187,8 @@ function checkDeveloperInstructions(
   issues.push(
     issue(
       "QFAI-AGENT-014",
-      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim`,
-      "warning",
+      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim.${windowNote}`,
+      developerInstructionsSeverity,
       catalogRel,
       "agentDefinition.developerInstructionsDrift",
       undefined,
@@ -189,6 +209,10 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
   if (!(await exists(agentsDir)) && !(await exists(catalogPath))) {
     return [];
   }
+
+  // Resolved once for the whole run: `resolveToolVersion` reads a file, and the
+  // promotion window it feeds is the same for every agent in the catalog.
+  const toolVersion = await resolveToolVersion();
 
   for (const [fileName, code, resolved] of [
     ["agent-catalog.yml", "QFAI-AGENT-001", catalogPath],
@@ -265,7 +289,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
         ),
       );
     }
-    checkDeveloperInstructions(agent, content, rel, catalogRel, issues);
+    checkDeveloperInstructions(agent, content, rel, catalogRel, toolVersion, issues);
     for (const heading of REQUIRED_AGENT_SECTIONS) {
       if (!content.includes(heading)) {
         issues.push(

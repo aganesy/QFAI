@@ -157,6 +157,15 @@ describe("TC-0012-0475: the hard-error allowlist is the pipeline's real gate set
       "validateUiEvidenceArtifacts",
       "validateConfigReferenceIntegrity",
       "runCanonicalUixValidators",
+      // Reached only through `CANONICAL_UIX_VALIDATORS`, the module-level array
+      // `runCanonicalUixValidators` maps over. The walk used to stop at the
+      // aggregate because its resolver expanded imports and function bodies but
+      // not array initializers, so the whole canonical UI/UX family read as
+      // unreachable and twenty gates it really does raise were dropped from the
+      // hard list. Pinned here so a resolver that stops expanding arrays fails
+      // on the cause rather than on the equality set it silently shrinks.
+      "validateClassification",
+      "validateOqClosure",
     ]) {
       expect(reachesFunction(surface, validator), `${validator} must be reachable`).toBe(true);
     }

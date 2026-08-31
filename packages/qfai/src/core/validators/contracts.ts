@@ -21,10 +21,15 @@ import {
   parseSqlContract,
   type SqlParseError,
 } from "../sqlContract.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { issue } from "./utils.js";
+
+/** The release `QFAI-CONTRACT-015` stops being a warning at. */
+const DEPENDENCY_DECLARATION_PROMOTION = RULE_PROMOTIONS.contractDependencyUndeclared.promoteAt;
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\bDROP\s+TABLE\b/i, label: "DROP TABLE" },
@@ -85,14 +90,17 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     );
   }
 
+  // Resolved once for the whole run rather than per contract file: the promotion
+  // window is a property of the tool, not of the file being read.
+  const toolVersion = await resolveToolVersion();
   for (const file of uiFiles) {
-    issues.push(...(await validateContractFile(file, "UI")));
+    issues.push(...(await validateContractFile(file, "UI", toolVersion)));
   }
   for (const file of apiFiles) {
-    issues.push(...(await validateContractFile(file, "API")));
+    issues.push(...(await validateContractFile(file, "API", toolVersion)));
   }
   for (const file of dbFiles) {
-    issues.push(...(await validateContractFile(file, "DB")));
+    issues.push(...(await validateContractFile(file, "DB", toolVersion)));
   }
 
   const contractIndex = await buildContractIndex(root, config);
@@ -105,12 +113,16 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   return issues;
 }
 
-async function validateContractFile(file: string, kind: ContractKind): Promise<Issue[]> {
+async function validateContractFile(
+  file: string,
+  kind: ContractKind,
+  toolVersion: string,
+): Promise<Issue[]> {
   const issues: Issue[] = [];
   const text = await readFile(file, "utf-8");
   const declaredIds = extractDeclaredContractIds(text);
   issues.push(...validateDeclaredContractIds(declaredIds, file, kind));
-  issues.push(...validateDependencyDeclaration(text, declaredIds, file));
+  issues.push(...validateDependencyDeclaration(text, declaredIds, file, toolVersion));
 
   if (kind === "DB") {
     issues.push(...lintSql(text, file));
@@ -280,8 +292,16 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
  *
  * `warning`, not `error`: an unstated apply order is a gap in the record, not a
  * contradiction in it, and existing contract sets predate the requirement.
+ * That last clause is the whole reason the severity comes from the promotion
+ * window rather than a literal — every contract written before the rule states
+ * none, so the finding arrives on the entire existing set at once.
  */
-function validateDependencyDeclaration(text: string, ids: string[], file: string): Issue[] {
+function validateDependencyDeclaration(
+  text: string,
+  ids: string[],
+  file: string,
+  toolVersion: string,
+): Issue[] {
   // `QFAI-CONTRACT-010` / `-011` already own a file with no id or several; a
   // second finding on the same file would only dilute theirs.
   if (ids.length !== 1) {
@@ -290,12 +310,20 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
   if (hasDependencyDeclaration(text, file)) {
     return [];
   }
+  const dependencyDeclarationSeverity = newRuleSeverity(
+    toolVersion,
+    DEPENDENCY_DECLARATION_PROMOTION,
+  );
+  const windowNote =
+    dependencyDeclarationSeverity === "warning"
+      ? `（${DEPENDENCY_DECLARATION_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+      : "";
   const id = ids[0] ?? "";
   return [
     issue(
       "QFAI-CONTRACT-015",
-      `契約ファイルが適用順の依存関係を宣言していません: ${id}`,
-      "warning",
+      `契約ファイルが適用順の依存関係を宣言していません: ${id}${windowNote}`,
+      dependencyDeclarationSeverity,
       file,
       "contracts.dependencyDeclaration",
       [id],

@@ -46,8 +46,13 @@ import {
   type TriageUpdateSubOp,
 } from "../sddTriage.js";
 import { loadLayerPolicy } from "../layerPolicy.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
+
+/** The release `QFAI-TRIAGE-008` stops being a warning at. */
+const TRIAGE_HEADING_PROMOTION = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
 
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
@@ -112,6 +117,10 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
 
   const contractIndex = await buildContractIndex(root, config);
   const layerPolicy = await loadLayerPolicy(root, config);
+  // Resolved once for the whole run rather than per spec entry: the promotion
+  // window `QFAI-TRIAGE-008` sits in is a property of the tool, not of the
+  // delta file being read.
+  const toolVersion = await resolveToolVersion();
   const issues: Issue[] = [...layerPolicy.issues];
 
   const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
@@ -132,7 +141,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
-    issues.push(...(await validateTriageSectionForEntry(entry)));
+    issues.push(...(await validateTriageSectionForEntry(entry, toolVersion)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
@@ -142,12 +151,15 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // (PR #206 review LW-F). Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
-  issues.push(...(await validatePoliciesDeltaTriage(specsRoot)));
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion)));
 
   return issues;
 }
 
-async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> {
+async function validatePoliciesDeltaTriage(
+  specsRoot: string,
+  toolVersion: string,
+): Promise<Issue[]> {
   const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
   let text: string;
   try {
@@ -158,7 +170,7 @@ async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> 
     return [];
   }
   const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
-  const issues = validateTriageSection(text, deltaPath);
+  const issues = validateTriageSection(text, deltaPath, toolVersion);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
   return issues;
 }
@@ -420,7 +432,10 @@ function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
   return TRIAGE_SUB_OPS.has(value);
 }
 
-async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]> {
+async function validateTriageSectionForEntry(
+  entry: SpecEntry,
+  toolVersion: string,
+): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
   if (!deltaPath) {
     return [];
@@ -431,7 +446,7 @@ async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]>
   } catch {
     return [];
   }
-  const issues = validateTriageSection(text, deltaPath);
+  const issues = validateTriageSection(text, deltaPath, toolVersion);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
   return issues;
 }
@@ -523,18 +538,27 @@ function collectUncheckedTriageHeadings(text: string): string[] {
 /**
  * QFAI-TRIAGE-008: canonical でない Triage 見出しは、どの Triage
  * validator にも読まれないまま行を抱え込む。見出し文字列を変えただけで
- * append-first / 承認 gate が静かに外れる状態を、warning で可視化する。
+ * append-first / 承認 gate が静かに外れる状態を可視化する。
+ *
+ * 既存の delta ファイルは、この規則が無かった時代の見出しをそのまま
+ * 抱えている。だから severity は literal ではなく promotion window から
+ * 取る (`toolVersion` は validator 実行ごとに 1 回だけ解決して渡される)。
  */
-function validateTriageHeadings(text: string, deltaPath: string): Issue[] {
+function validateTriageHeadings(text: string, deltaPath: string, toolVersion: string): Issue[] {
   const unchecked = collectUncheckedTriageHeadings(text);
   if (unchecked.length === 0) {
     return [];
   }
+  const triageHeadingSeverity = newRuleSeverity(toolVersion, TRIAGE_HEADING_PROMOTION);
+  const windowNote =
+    triageHeadingSeverity === "warning"
+      ? `（${TRIAGE_HEADING_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+      : "";
   return [
     issue(
       "QFAI-TRIAGE-008",
-      `canonical でない Triage 見出しは QFAI-TRIAGE-* の検査対象外です: ${unchecked.join(", ")}`,
-      "warning",
+      `canonical でない Triage 見出しは QFAI-TRIAGE-* の検査対象外です: ${unchecked.join(", ")}${windowNote}`,
+      triageHeadingSeverity,
       deltaPath,
       "triage.headingCanonical",
       unchecked,
@@ -696,7 +720,16 @@ function validateCreateRows(
   return issues;
 }
 
-export function validateTriageSection(text: string, deltaPath: string): Issue[] {
+/**
+ * `toolVersion` は必須引数。既定値を持たせると、渡し忘れた呼び出しでは
+ * `QFAI-TRIAGE-008` が永久に warning のまま据え置かれ、promotion window が
+ * 黙って無効化される。呼び出し側は `resolveToolVersion()` の結果を渡す。
+ */
+export function validateTriageSection(
+  text: string,
+  deltaPath: string,
+  toolVersion: string,
+): Issue[] {
   const issues: Issue[] = [];
   // `collectTriageSections` と同じ masked テキストから読む。生テキストのまま
   // だと、書式例として fenced code block / HTML コメントに `## Change Summary`
@@ -710,7 +743,7 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
 
   // Fires regardless of the canonical sections' state: a Triage heading
   // nobody validates must never be silent.
-  issues.push(...validateTriageHeadings(text, deltaPath));
+  issues.push(...validateTriageHeadings(text, deltaPath, toolVersion));
 
   if (hasChangeSummary && !hasTriage) {
     // QFAI-TRIAGE-001 is intentionally a warning rather than an error

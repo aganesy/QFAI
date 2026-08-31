@@ -55,6 +55,12 @@ type Module = {
   readonly reexports: Map<string, Binding>;
   readonly stars: string[];
   readonly consts: Map<string, string>;
+  /**
+   * Module-level array constants, name -> initializer text (brackets included).
+   * A validator set collected into one of these is referenced, never called, at
+   * the site that dispatches it — see {@link parseArrayConsts}.
+   */
+  readonly arrays: Map<string, string>;
 };
 
 /** A resolved function: the file that defines it and its name there. */
@@ -65,7 +71,11 @@ export type Emissions = ReadonlyMap<string, ReadonlySet<string>>;
 
 export type GateSurface = {
   readonly emissions: Emissions;
-  /** `<package-relative file>#<function>` for every reachable function. */
+  /**
+   * `<package-relative file>#<name>` for every reachable declaration — a
+   * function, or a module-level array constant the walk expanded to get at its
+   * members.
+   */
   readonly reached: ReadonlySet<string>;
   /** package-relative module -> `code expression -> call-site count`. */
   readonly dynamicSites: ReadonlyMap<string, ReadonlyMap<string, number>>;
@@ -124,8 +134,8 @@ function copyStringLiteral(source: string, start: number, sink: (text: string) =
   return j - start;
 }
 
-/** Index of the `}` closing the `{` at `open`. */
-function matchBrace(source: string, open: number): number {
+/** Index of the delimiter closing the `opener` at `open`, string-literal aware. */
+function matchPair(source: string, open: number, opener: string, closer: string): number {
   let depth = 0;
   for (let i = open; i < source.length; i += 1) {
     const ch = source[i] ?? "";
@@ -133,13 +143,23 @@ function matchBrace(source: string, open: number): number {
       i += copyStringLiteral(source, i, () => {}) - 1;
       continue;
     }
-    if (ch === "{") depth += 1;
-    else if (ch === "}") {
+    if (ch === opener) depth += 1;
+    else if (ch === closer) {
       depth -= 1;
       if (depth === 0) return i;
     }
   }
   return source.length;
+}
+
+/** Index of the `}` closing the `{` at `open`. */
+function matchBrace(source: string, open: number): number {
+  return matchPair(source, open, "{", "}");
+}
+
+/** Index of the `]` closing the `[` at `open`. */
+function matchBracket(source: string, open: number): number {
+  return matchPair(source, open, "[", "]");
 }
 
 /**
@@ -225,6 +245,38 @@ const FUNCTION_DECL = /(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z
 const CONST_FUNCTION =
   /(?:^|\n)\s*(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]*)?=\s*(?:async\s+)?(?:function\b\s*)?[(<]/g;
 
+/** `const NAME = [` / `export const NAME: readonly T[] = [`. */
+const CONST_ARRAY =
+  /(?:^|\n)[ \t]*(?:export[ \t]+)?const[ \t]+([A-Za-z_$][\w$]*)[ \t]*(?::[^=\n]*)?=[ \t]*\[/g;
+
+/**
+ * Module-level array constants, name -> the text of the initializer.
+ *
+ * The canonical UI/UX aggregate is the reason this exists: it collects its
+ * validators into `export const CANONICAL_UIX_VALIDATORS = [validateClassification, …]`
+ * and dispatches them with `CANONICAL_UIX_VALIDATORS.map((v) => v(root, config))`,
+ * so the only reference to each validator is a member of an array initializer.
+ * A walk that expands imports and function bodies but not arrays stops at
+ * `runCanonicalUixValidators` and reads the whole family as unreachable — which
+ * is how twenty gates the pipeline really does raise came to be dropped from
+ * `EXPLORATION_HARD_ERROR_CODES` as "unreachable".
+ *
+ * The initializer is kept as text and later scanned exactly like a function
+ * body, so an array reaches whatever its members name — a bare identifier, a
+ * spread of another list, an inline arrow that calls something — by the same
+ * "any identifier is an edge" rule the walk already applies everywhere else.
+ */
+function parseArrayConsts(source: string): Map<string, string> {
+  const arrays = new Map<string, string>();
+  for (const match of source.matchAll(CONST_ARRAY)) {
+    const name = match[1];
+    if (name === undefined || arrays.has(name)) continue;
+    const open = match.index + match[0].length - 1;
+    arrays.set(name, source.slice(open, matchBracket(source, open) + 1));
+  }
+  return arrays;
+}
+
 function parseFunctionDefs(source: string): Map<string, FunctionDef> {
   const defs = new Map<string, FunctionDef>();
   for (const pattern of [FUNCTION_DECL, CONST_FUNCTION]) {
@@ -281,7 +333,15 @@ function parseModule(source: string): Module {
     if (match[1] !== undefined && match[2] !== undefined) consts.set(match[1], match[2]);
   }
 
-  return { source, defs: parseFunctionDefs(source), imports, reexports, stars, consts };
+  return {
+    source,
+    defs: parseFunctionDefs(source),
+    imports,
+    reexports,
+    stars,
+    consts,
+    arrays: parseArrayConsts(source),
+  };
 }
 
 async function loadModules(): Promise<Map<string, Module>> {
@@ -302,9 +362,11 @@ function resolveSpecifier(modules: Map<string, Module>, from: string, spec: stri
 }
 
 /**
- * Resolve an identifier used in `file` to the function that defines it,
- * following named imports and re-export barrels. A name that resolves to no
- * function definition (a type, a value, a built-in) yields null.
+ * Resolve an identifier used in `file` to the declaration that defines it,
+ * following named imports and re-export barrels. A declaration is a function
+ * definition or a module-level array constant — the two shapes this graph
+ * traverses. A name that resolves to neither (a type, a scalar, a built-in)
+ * yields null.
  */
 function resolveRef(
   modules: Map<string, Module>,
@@ -323,7 +385,7 @@ function resolveRef(
     const target = resolveSpecifier(modules, file, imported.spec);
     return target === null ? null : resolveRef(modules, target, imported.name, seen);
   }
-  if (module.defs.has(name)) return { file, name };
+  if (module.defs.has(name) || module.arrays.has(name)) return { file, name };
   const reexported = module.reexports.get(name);
   if (reexported !== undefined) {
     const target = resolveSpecifier(modules, file, reexported.spec);
@@ -338,13 +400,21 @@ function resolveRef(
 }
 
 /**
- * Every function transitively referenced from the entry function.
+ * Every declaration transitively referenced from the entry function.
  *
  * Any identifier is an edge, not only `name(` call syntax: the canonical UI/UX
  * aggregate collects its validators as bare references
  * (`const validators = [validateClassification, …]`) and dispatches them
  * through a local variable, so a call-syntax-only walk misses that whole
  * family.
+ *
+ * The same argument reaches one step further, which is what {@link parseArrayConsts}
+ * adds: when that list is a MODULE-LEVEL constant rather than a local, the
+ * reference the walk finds in the dispatching body is the array's name. Stopping
+ * there — expanding only function bodies — leaves every member unvisited, which
+ * is the shape `validators/uix/canonical.ts` ships. So an array constant is
+ * queued like a function and its initializer is scanned like a body: the members
+ * are references of exactly the kinds already followed, just written inside `[]`.
  */
 function buildReachable(modules: Map<string, Module>): Set<string> {
   const reached = new Set<string>([`${entryFile}#${ENTRY_FUNCTION}`]);
@@ -352,9 +422,10 @@ function buildReachable(modules: Map<string, Module>): Set<string> {
   while (queue.length > 0) {
     const current = queue.shift();
     if (current === undefined) continue;
-    const def = modules.get(current.file)?.defs.get(current.name);
-    if (def === undefined) continue;
-    for (const match of def.body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
+    const module = modules.get(current.file);
+    const body = module?.defs.get(current.name)?.body ?? module?.arrays.get(current.name);
+    if (body === undefined) continue;
+    for (const match of body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
       if (match[1] === undefined) continue;
       const ref = resolveRef(modules, current.file, match[1]);
       if (ref === null) continue;
