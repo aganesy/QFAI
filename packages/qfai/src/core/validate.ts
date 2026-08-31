@@ -485,7 +485,7 @@ async function runPrototypingValidators(
   const raw: Issue[] = [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await detectMockHrefDrift(root)),
-    // CHG-006 second-wave reviewer-gate findings (prototyping
+    // Second-wave reviewer-gate findings (prototyping
     // surface). Both detectors no-op when their gating files are
     // absent (consumer repo without the validator source / without a
     // DESIGN.md.backup snapshot), so the prototyping profile stays
@@ -508,7 +508,7 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDelegationMap(root)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
-  // CHG-006 prototyping-mode relaxation: under `mode: exploration` the
+  // Prototyping-mode relaxation: under `mode: exploration` the
   // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
   // error → warning. Schema / path / license gates stay hard error.
   // The mode is read from `prototyping.json#mode` written by iterate

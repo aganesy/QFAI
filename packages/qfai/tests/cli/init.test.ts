@@ -1883,6 +1883,10 @@ describe("qfai init", { timeout: 60000 }, () => {
         expect(stat.isFile()).toBe(true);
         const body = await readFile(gitkeep, "utf-8");
         expect(body).toContain(`.qfai/assistant/${layer}/`);
+        // The seeded body lands in every consuming repo, so it must carry no
+        // QFAI-internal cross-spec change ID (`CHG-NNN`) — that ID resolves
+        // to nothing outside this repository's own `_policies/10_delta.md`.
+        expect(body).not.toMatch(/\bCHG-[0-9]+\b/);
       }
     } finally {
       await removeTempTree(root);

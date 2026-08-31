@@ -380,7 +380,7 @@ export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
  *
  * Single source for the literal; reviewer subagents read the tag and
  * compare it to the current contract phase to detect drift. When a
- * future migration (CHG-006 / Phase 5 / etc.) lands, update this
+ * future migration (Phase 5 / etc.) lands, update this
  * constant in one place — the iterate-context payload picks it up
  * automatically.
  */
@@ -647,7 +647,7 @@ export async function runPrototypingIterate(
 
   const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
 
-  // CHG-006 prototyping-mode discriminator: resolve the per-loop prototyping mode
+  // Prototyping-mode discriminator: resolve the per-loop prototyping mode
   // (cli flag overrides config; absence of both defaults to
   // `convergence`). Lazily imported so the helper module is not
   // required to load until iterate is actually invoked.
@@ -960,7 +960,7 @@ export async function runPrototypingIterate(
   const dir = path.join(options.root, iterationDir(options.cycle));
   await mkdir(dir, { recursive: true });
 
-  // CHG-006 emit-skeletons: cycle-0 `--emit-skeletons` placeholder
+  // Emit-skeletons: cycle-0 `--emit-skeletons` placeholder
   // HTML emission. Token-driven (no per-screen LLM call). Default OFF
   // preserves bit-for-bit prior-release behavior; only fires when both
   // `cycle === 0` AND `options.emitSkeletons === true`. Screens are
@@ -1400,7 +1400,7 @@ async function runCapturePath(
 }
 
 /**
- * CHG-006 emit-skeletons helper: emit one placeholder HTML per
+ * Emit-skeletons helper: emit one placeholder HTML per
  * `screens[].id` from the cycle-0 `frozenSurfaceUnion`. Token-driven
  * (consumes DESIGN.md color / font / radius / shadow tokens). Returns
  * `0` on success, `2` when any per-screen write fails (the offending
@@ -2008,7 +2008,7 @@ type SeedMetadata = {
    */
   declaredScreens?: readonly string[];
   /**
-   * Resolved per-loop prototyping mode (CHG-006: convergence default,
+   * Resolved per-loop prototyping mode (convergence default,
    * exploration enables medium gate relaxation). Persisted as
    * `prototyping.json#mode` AND copied onto the seed iteration record
    * so certify can refuse to seal a loop that produced any
@@ -2088,7 +2088,7 @@ function buildSeedIterations(
         screenshot: screenshotRef,
         html: htmlRef,
       },
-      // CHG-006 prototyping-mode discriminator: per-iteration mode slot.
+      // Prototyping-mode discriminator: per-iteration mode slot.
       // Certify reads `prototyping.json#iterations[i].mode` to refuse
       // sealing a loop that produced any exploration-mode iteration.
       // Default `convergence` keeps legacy iterations
@@ -2132,7 +2132,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   body.iterations = buildSeedIterations(seed.declaredScreens ?? [], seed.mode);
   body.acceptedIterationIndex = 0;
   body.stopReason = null;
-  // CHG-006 prototyping-mode discriminator: the resolved per-loop mode is
+  // Prototyping-mode discriminator: the resolved per-loop mode is
   // persisted ONLY as `iterations[i].mode` (per-iteration slot).
   // The top-level `mode` slot in prototyping.json is an
   // operator-defined object schema preserved verbatim across the
@@ -2273,7 +2273,7 @@ async function clearEvidenceIterDirs(
     if (isEnoent(err)) return { ok: true };
     return { ok: false, failedDir: evidenceRootAbs, cause: err };
   }
-  // CHG-006 mutation-log wiring: every destructive iter-NN mutation
+  // Mutation-log wiring: every destructive iter-NN mutation
   // funnels through the mutation-log writer. Lazy import keeps the
   // helper out of the hot path when no iter-NN dirs exist.
   let logEvidenceDelete:
@@ -2871,7 +2871,7 @@ function buildIterateContextFromRecord(record: PrototypingJsonShape | null): Ite
     // (preflight + var(--token) + Tailwind --*-shadow). The literal
     // tag is advisory; downstream subagents can compare it to the
     // current contract phase to detect drift. Sourced from
-    // CURRENT_TAILWIND_CONTRACT_PHASE so a future Phase 5 / CHG-006
+    // CURRENT_TAILWIND_CONTRACT_PHASE so a future Phase 5
     // migration updates the tag in a single place.
     priorTailwindContract: CURRENT_TAILWIND_CONTRACT_PHASE,
   };

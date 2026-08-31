@@ -492,7 +492,7 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
     "",
     purposes[layer],
     "",
-    "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+    "Seeded by qfai init (4-layer assistant-tree recut).",
     "",
   ].join("\n");
 }

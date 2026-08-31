@@ -56,7 +56,7 @@ const TRANSITIONS_REF =
  * **The ordinal counts ledger tables, not tables in the file**, and says so.
  * `collectLedgerTables` admits only schema-complete tables outside fenced and
  * commented regions, so the shipped `test-list.md` template — a `## Ledger`
- * table, a `## Schema` documentation table, a `## CHG-001` ledger table — makes
+ * table, a `## Schema` documentation table, a `## CHG-NNN` ledger table — makes
  * its third table the *second* ledger table. An unqualified `table 2` sent the
  * reader to the documentation table that has no rows to fix.
  */
@@ -1452,7 +1452,7 @@ async function validateSpecTddList(
   // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
   //
   // Read from every ledger table, not just the first. A ledger that appends a
-  // per-change-request section (`## CHG-006 …` + its own table) is a shape the
+  // per-change-request section (`## CHG-NNN …` + its own table) is a shape the
   // implement skill produces, and scoring coverage against table 1 alone
   // reports every TC the later tables cover as uncovered. That was survivable
   // while this was the second gate behind `QFAI-ATDD-112`; with L1/L2 now
