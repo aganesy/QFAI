@@ -126,3 +126,11 @@ evidence.
   `.qfai/evidence/coverage-depth-<spec-id>.md`; a matrix that exists only in an
   ATDD per-item evidence file is a missing matrix.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.
+- `npx qfai validate --profile atdd` reports the three file-level facts the readings
+  above assume: `QFAI-ATDD-131` when a spec with ATDD-owned tests has no matrix,
+  `QFAI-ATDD-132` when the matrix is excluded by a `.gitignore` — any of them,
+  from the git worktree root down — without already being tracked, and
+  `QFAI-ATDD-133` when the stage evidence has no `## Coverage Depth Matrix`
+  section at all, inlines the table, points at no matrix file, or points at one
+  without the counted `✅ N / ⚠️ N / ❌ N` totals beside it. None of them reads
+  the cells — that judgement stays with the reviewer.

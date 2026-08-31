@@ -66,7 +66,7 @@ which is the one thing the contract says must not happen.
 
 - [ ] Review verdict is explicit
 - [ ] Findings cite concrete artifacts or evidence
-- [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding has `Traces to: none`
+- [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding traces to `none` or `record:*`
 - [ ] Required gates and residual risks are recorded
 
 ## When to use

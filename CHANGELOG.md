@@ -73,6 +73,24 @@
   どこまで残したかと全文へのリンクを本文末尾に付ける。どのエントリが重要かはこの機構が
   決めない。
 
+- **`QFAI-WAIVER-004` is answered from the emitters, not from this run.**
+  Whether a waiver names a rule that exists was decided from the findings the
+  current run produced, so a waiver kept on file after its defect was fixed —
+  the intended end state — was reported as naming a rule that does not exist
+  and dropped from `waivers.active`. The known set is now generated from the
+  package's own emitters, and reaches the three shapes a literal scan missed: a
+  code picked between on a `const` (`QFAI-FID-010` / `-011`), a code carried on
+  a record and handed to the factory as a property, and an id that only ever
+  reaches a finding as its `rule` (`TDDLIST-003` / `TDDLIST-004`). Codes the
+  CLI appends _after_ the waiver pass (`QFAI-PROFILE-001`) are deliberately
+  excluded: no waiver can suppress them, so reporting one as `active` is the
+  same lie pointing the other way. A code the CLI re-emits but a validator also
+  raises — `D-DEPRECATED-PATH` — stays waivable.
+- **A rule whose severity is decided by the same condition as its code keeps
+  its error-only classification.** `reviewArtifacts.ts` picks
+  `QFAI-REVIEW-007` / `-009` and `error` / `warning` off one flag; reading the
+  two independently left both severities unknown and withdrew the
+  `QFAI-WAIVER-002` refusal from a rule that only ever fails hard.
 - **Per-item TDD evidence survives `qfai init` and is checked on a fresh clone.**
   The managed `.gitignore` block now re-includes
   `.qfai/evidence/implement-*.md` and `.qfai/evidence/atdd-*.md`, so the files
