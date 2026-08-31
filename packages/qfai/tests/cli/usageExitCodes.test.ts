@@ -348,17 +348,21 @@ describe("qfai --help exit-code section", () => {
     }
   });
 
-  it("documents that an invalid --fail-on value falls back to the default threshold", async () => {
+  it("documents that an invalid --fail-on value is a usage error", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
-    // args.ts consumes the value without markInvalid(), unlike --cycle.
+    // args.ts calls markInvalid() for an unknown threshold, exactly as it does
+    // for --cycle: falling back to the config default would leave the gate
+    // silently differing from the flag the caller wrote, in either direction.
     const parsed = parseArgs(["validate", "--fail-on", "typo"], process.cwd());
-    expect(parsed.invalid).toBe(false);
+    expect(parsed.invalid).toBe(true);
     expect(parsed.options.failOn).toBeUndefined();
 
     expect(section).toContain("--fail-on の不正値");
-    expect(section).toMatch(new RegExp(`--fail-on の不正値[\\s\\S]*?${EXIT_CODES.ok} を返す`));
+    expect(section).toMatch(
+      new RegExp(`--fail-on の不正値[\\s\\S]*?${EXIT_CODES.findings} を返す`),
+    );
   });
 
   it("treats a mistyped command as a usage error even with --help", async () => {
