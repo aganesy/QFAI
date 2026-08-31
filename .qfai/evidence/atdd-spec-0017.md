@@ -2193,9 +2193,12 @@ exactly what the mechanism below says the line's movement means. It has now move
 the same direction: merging `main` into the checkpoint-selector branch brought eight new callsites
 into `tests/assets/implementCheckpointVerification.test.ts`, taking the count from 915 to 923. Again
 nothing about `spec-0017` changed, and again both suite totals above are known-invalid rather than
-assumed current.
+assumed current. It has now moved a fourth time, and again from outside: taking `main` back in brought
+ten further callsites, spread across eight `tests/assets` files none of which this branch touches, so
+the count at the merged tree is 923 + 10 = 933. The line below is re-derived from the merged tree
+rather than carried from either side, and both suite totals above remain known-invalid.
 
-e2e callsites at this tree: 923
+e2e callsites at this tree: 933
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
