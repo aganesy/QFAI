@@ -741,6 +741,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
+  "QFAI-TRIAGE-008":
+    "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
@@ -956,6 +958,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
+  "QFAI-AGENT-014":
+    "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
+  "QFAI-RESEARCH-012":
+    "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
@@ -966,8 +972,22 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BREAK-008":
     "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
   "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
+  // The apply-order family. Each of these reads a column or a declaration that
+  // nothing read before them, so each carries a promotion window
+  // (`core/sunset.ts`) and reaches `error` only at its pinned release. The
+  // expected state is the same either way — the window decides how loudly a
+  // gap is reported, not what the gap is.
+  "QFAI-CONTRACT-015":
+    "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
+  "QFAI-CONTRACT-032":
+    "Every contract index table carries a `Depends On` column, the one place a multi-file schema's apply order is written down.",
+  "QFAI-CONTRACT-033":
+    "Every contract index row's `Depends On` cell mirrors the apply order its contract file declares, with `-` for none; a blank cell records nothing and is not read as 'no dependencies'.",
+  "QFAI-CONTRACT-034": "Every declared contract has a row in a contract index.",
+  "QFAI-CONTRACT-035":
+    "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
   // `paths.contractsDir` is configurable, so the expected state names the file
@@ -1008,6 +1028,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // `paths.skillsDir` is configurable and the diff is taken against whatever it
   // resolves to, so the expected state names the tree by role. The directory
   // actually compared is on the finding's `target:` line.
+  "QFAI-TABLE-001":
+    "Every Markdown table row carries the same cell count as its header, so a positionally-read ledger cannot silently shift a column.",
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
@@ -1052,6 +1074,11 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
   "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
   "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+  // The agent-catalog drift emitter passes no `suggested_action` on either of
+  // its paths (absent block, stale block), so both depend on this catalog for
+  // their `fix:` line. One repair covers both: the markdown file is the source.
+  "QFAI-AGENT-014":
+    "Copy the agent markdown file from its `## Mission` heading onward, verbatim, into that agent's `developer_instructions` block in the catalog. When the instructions themselves need to change, edit the markdown file first and regenerate the block from it — never the other way round.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an

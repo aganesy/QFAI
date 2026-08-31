@@ -207,8 +207,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-ASSETS-002",
   "QFAI-ATDD-104",
   "QFAI-ATDD-115",
-  "QFAI-BFLOW-001",
-  "QFAI-BFLOW-002",
   "QFAI-CONTRACT-010",
   "QFAI-CONTRACT-011",
   "QFAI-CONTRACT-012",
@@ -230,10 +228,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-CRIT-009",
   "QFAI-CRIT-010",
   "QFAI-DB-002",
-  "QFAI-DOC-CONVERGENCE-INCOMPLETE",
-  "QFAI-DOC-CONVERGENCE-MISSING",
-  "QFAI-DOC-VOCABULARY-CONTRADICTION",
-  "QFAI-DOC-VOCABULARY-PROHIBITED",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-004",
@@ -292,9 +286,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-PROT-007",
   "QFAI-PROT-008",
   "QFAI-PROT-009",
-  "QFAI-REQCTX-003",
-  "QFAI-REQCTX-020",
-  "QFAI-REQCTX-021",
   "QFAI-RESEARCH-001",
   "QFAI-RESEARCH-003",
   "QFAI-RESEARCH-004",
@@ -420,24 +411,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "UIX-VAL-SKILL-SECTION-MISSING",
   "UIX-VAL-SKILL-STATIC-FIRST",
   "UIX-VAL-SKILL-UI-BEARING-FALSE",
-  "UIX-VAL-STRATEGY-CANDIDATE-OPTIONS",
-  "UIX-VAL-STRATEGY-CHOSEN-OPTION",
-  "UIX-VAL-STRATEGY-DUPLICATE-CANDIDATE-OPTION",
-  "UIX-VAL-STRATEGY-DUPLICATE-FILENAME",
-  "UIX-VAL-STRATEGY-INCOMPLETE",
-  "UIX-VAL-STRATEGY-INVALID-CANDIDATE-OPTION",
-  "UIX-VAL-STRATEGY-INVALID-CHOSEN-OPTION",
-  "UIX-VAL-STRATEGY-INVALID-DECISION",
-  "UIX-VAL-STRATEGY-INVALID-SURFACE",
-  "UIX-VAL-STRATEGY-LEGACY-FILENAME",
-  "UIX-VAL-STRATEGY-NONE-CANDIDATES-REQUIRED",
-  "UIX-VAL-STRATEGY-NONE-CHOSEN-REQUIRED",
-  "UIX-VAL-STRATEGY-NONE-DECISION-REQUIRED",
-  "UIX-VAL-STRATEGY-SELECTION-BOOLEAN",
-  "UIX-VAL-STRATEGY-SELECTION-REQUIRES-CHOSEN",
-  "UIX-VAL-STRATEGY-SELECTION-REQUIRES-DECISION",
-  "UIX-VAL-TASTE-INCOMPLETE",
-  "UIX-VAL-TASTE-MISSING",
   "UIX-VAL-TREND-CATEGORY-MISSING",
   "UIX-VAL-TREND-ENTRY-MISSING",
   "UIX-VAL-TREND-FIELD-MISSING",
@@ -611,9 +584,12 @@ describe("issue report metadata", () => {
     expect(usage.has("D-SAAS-PACKAGE-ATTESTATION-MISSING")).toBe(true);
     expect(usage.has("D-SAAS-PACKAGE-HANDOFF-SCHEMA")).toBe(true);
     expect(usage.has("QFAI-PROT-273")).toBe(true);
-    // A code emitted only at `warning` severity stays out of the error census
-    // even when its constant now resolves.
-    expect(usage.has("QFAI-TABLE-001")).toBe(false);
+    // A code emitted only below `error` stays out of the error census even when
+    // its constant now resolves. `VERIFY_SKIPPED_CODE` is the exemplar because it
+    // sits in the same file, behind the same kind of `const` binding, as the two
+    // error-capable codes asserted above — so the contrast is the severity and
+    // nothing else. (`QFAI-TABLE-001` held this role until it was raised to error.)
+    expect(usage.has("D-SAAS-PACKAGE-VERIFY-SKIPPED")).toBe(false);
   });
 
   it("counts codes forwarded through a validator's own Issue factory", async () => {

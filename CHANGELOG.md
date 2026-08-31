@@ -42,6 +42,29 @@
 
 ### Fixed
 
+- **昇格 window を持たない 9 個の finding code を、ガードの母集団を狭めるのではなく登録して塞いだ。**
+  56 本の PR をまとめて取り込んだ後、`RULE_PROMOTIONS` に登録の無い code が 9 個残っていた。
+  最初の修正はガードの母集団を `errorCapable` な code に絞るものだったが、これは誤りだった —
+  P7 は「新しい code は `warning` で出荷し、1 minor 以上先の release に昇格を pin する」と
+  定めており、`errorCapable: false` は新しい code の**正しい初期状態**である。あの filter は
+  ガードが守るべき母集団そのもの (登録の無い新しい warning は永久に素通りし、昇格もされない)
+  を除外していた。filter を撤回し、`QFAI-AGENT-014` / `QFAI-CONTRACT-015` / `-032` / `-033` /
+  `-034` / `-035` / `QFAI-RESEARCH-012` / `QFAI-TRIAGE-008` の 8 個を `RULE_PROMOTIONS` に
+  登録した。severity は literal ではなく `newRuleSeverity` が pin から決め、finding 本文は
+  window の終わる release を名乗る (P7 step 2 / 3)。`resolveToolVersion()` は validator 実行
+  ごとに 1 回だけ解決する。error に到達しうる code として、8 個には `expected:` / `fix:` の
+  catalog 行も揃えた。`QFAI-REVIEW-010` だけは `info` のまま据え置いた: P7 の梯子は
+  warning → error であり、`newRuleSeverity` は `info` を返さない。info の code をそこへ通すと
+  登録した日に severity が上がり、pin の release で build が落ちる — window の目的と逆になる。
+  除外は「src/ のどの emission site でも `info` である」ことをテストが毎回検証する、
+  名前つきの 1 行として置いた。
+- **exploration の hard-error 一覧から落ちていた UIX gate を戻した (24 個)。**
+  到達可能性 walk が module-level の配列定数を展開しないため、`CANONICAL_UIX_VALIDATORS` を
+  `map` で回す canonical UI/UX validator 群が「到達不能」と読まれ、その gate 20 個が
+  `EXPLORATION_HARD_ERROR_CODES` から削除されていた。削除ではなく walk 側の盲点だった —
+  discussion pack がある限りこれらは実際に走る。walk が配列 initializer も関数本体と同じ
+  規則で辿るようにしたところ、equality テストが 24 個を要求した (以前の 20 個に加えて、
+  一度も一覧に載ったことのない `validateTrendScan` の 4 個)。
 - **GitHub Release の本文が長すぎるときに、リリースを失敗させずに切り詰めるようにした。**
   `release.yml` の抽出ステップは本文が空の場合しか検査しておらず、CHANGELOG のセクションが
   GitHub Release 本文の上限 125,000 文字を超えると `gh release create` が 422 を返して

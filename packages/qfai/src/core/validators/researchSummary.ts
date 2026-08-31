@@ -6,8 +6,13 @@ import fg from "fast-glob";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
+
+/** The release `QFAI-RESEARCH-012` stops being a warning at. */
+const SECTION_MISSING_PROMOTION = RULE_PROMOTIONS.researchSummarySectionMissing.promoteAt;
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const SOURCE_ENTRY_RE = /^\s*-\s*id:\s*(\S+)/gm;
@@ -215,7 +220,16 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   // above judges a section the project chose to write, and declining the
   // requirement is not a licence to record the protocol wrongly.
   if (config.uiux?.requireResearchSummary !== false) {
-    const missing = await buildMissingSectionIssue(root, discussionRoot, files, filesWithHeading);
+    // Resolved here rather than inside the builder: the promotion window is a
+    // property of the tool, and the builder runs once per validator run anyway.
+    const toolVersion = await resolveToolVersion();
+    const missing = await buildMissingSectionIssue(
+      root,
+      discussionRoot,
+      files,
+      filesWithHeading,
+      toolVersion,
+    );
     if (missing) {
       issues.push(missing);
     }
@@ -254,6 +268,7 @@ async function buildMissingSectionIssue(
   discussionRoot: string,
   files: readonly string[],
   filesWithHeading: ReadonlySet<string>,
+  toolVersion: string,
 ): Promise<Issue | null> {
   const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
   if (!latestPackDir) {
@@ -270,10 +285,15 @@ async function buildMissingSectionIssue(
   }
 
   const rel = path.relative(root, latestPackDir).replace(/\\/g, "/");
+  const sectionMissingSeverity = newRuleSeverity(toolVersion, SECTION_MISSING_PROMOTION);
+  const windowNote =
+    sectionMissingSeverity === "warning"
+      ? ` Reported as a warning until the ${SECTION_MISSING_PROMOTION} release, then an error`
+      : "";
   return issue(
     "QFAI-RESEARCH-012",
-    'Discussion pack has no "Research Summary" section, so the research-first protocol is never checked',
-    "warning",
+    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${windowNote}`,
+    sectionMissingSeverity,
     rel,
     "researchSummary.sectionMissing",
     undefined,

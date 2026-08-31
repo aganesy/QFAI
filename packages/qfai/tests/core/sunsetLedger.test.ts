@@ -28,6 +28,60 @@ import { describe, expect, it } from "vitest";
 import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
+/**
+ * Baseline codes whose emitters have since been deleted, newest retirement last.
+ * An entry earns its place by the validator that raised it being removed from
+ * the tree; it is not a place to silence a code that still exists.
+ */
+const RETIRED_SINCE_BASELINE: string[] = [
+  "QFAI-ATDD-001",
+  "QFAI-BFLOW-001",
+  "QFAI-BFLOW-002",
+  "QFAI-BFLOW-004",
+  "QFAI-DOC-CONVERGENCE-INCOMPLETE",
+  "QFAI-DOC-CONVERGENCE-MISSING",
+  "QFAI-DOC-VOCABULARY-CONTRADICTION",
+  "QFAI-DOC-VOCABULARY-PROHIBITED",
+  "QFAI-REQCTX-000",
+  "QFAI-REQCTX-001",
+  "QFAI-REQCTX-002",
+  "QFAI-REQCTX-003",
+  "QFAI-REQCTX-004",
+  "QFAI-REQCTX-010",
+  "QFAI-REQCTX-020",
+  "QFAI-REQCTX-021",
+  "QFAI-REQINDEX-001",
+  "QFAI-REQINDEX-002",
+];
+
+/**
+ * Post-baseline codes that ship at `info` and stay there.
+ *
+ * P7's window is a ladder from `warning` to `error`: `newRuleSeverity` returns
+ * exactly those two, so routing an `info` finding through it would RAISE its
+ * severity on the day it is registered and turn it into a build failure at the
+ * pin — the opposite of what a migration window is for. An `info` code is not a
+ * softened error waiting to harden; it is off the ladder entirely, and each
+ * line here is the reviewed statement that one particular code is.
+ *
+ * `warning` is deliberately NOT exempt. It is where P7 says a new code STARTS,
+ * so a rule keyed on "cannot currently reach error" would excuse the whole
+ * population this guard exists to cover: a new warning with no registration
+ * would pass forever and never promote.
+ *
+ * The exemption is verified before it is applied ({@link verifiedInfoOnlyCodes}):
+ * an entry must be a code `src/` still emits, must not be a baseline code, and
+ * every one of its emissions must pass a literal `"info"`. A code that gains a
+ * `warning`, an `error`, or a computed severity falls out of the exemption and
+ * owes a promotion entry like any other new code.
+ */
+const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
+  // `.qfai/review/` holds a directory whose name is not a pack timestamp. The
+  // finding tells the operator that directory is not inspected; it does not
+  // claim the tree is wrong, and nothing about it is a gate waiting to close.
+  "QFAI-REVIEW-010",
+];
+
 // tests/core/<this file> -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
@@ -381,6 +435,43 @@ async function readShippedVersion(): Promise<string> {
   return version;
 }
 
+/**
+ * {@link INFO_ONLY_SINCE_BASELINE}, checked against the tree before any code is
+ * excused by it. Severities are read with this file's own extractor, the same
+ * one the "entry decides the severity" assertion above follows the pin with —
+ * an exemption measured by a second reader could disagree with the rule it is
+ * exempting a code from.
+ */
+async function verifiedInfoOnlyCodes(baseline: ReadonlySet<string>): Promise<Set<string>> {
+  const files = (await collectSources(SRC)).filter(
+    (f) => !f.endsWith(path.join("core", "sunset.ts")),
+  );
+  const bodies = await Promise.all(files.map((f) => readFile(f, "utf-8")));
+
+  const exempt = new Set<string>();
+  for (const code of INFO_ONLY_SINCE_BASELINE) {
+    expect(
+      baseline.has(code),
+      `${code} predates the promotion policy, so the baseline already covers it — ` +
+        "this list is for codes introduced after P7",
+    ).toBe(false);
+
+    const severities = [...new Set(bodies.flatMap((body) => severityExpressionsFor(body, code)))];
+    expect(
+      severities,
+      `${code} is listed as info-only but nothing in src/ emits it — retire the line`,
+    ).not.toEqual([]);
+    expect(
+      severities.sort(),
+      `${code} is listed as info-only but is emitted with ${severities.join(", ")} — ` +
+        "only a finding that is `info` at every site is off P7's ladder; anything that " +
+        "can reach `warning` or `error` owes a RULE_PROMOTIONS entry",
+    ).toEqual(['"info"']);
+    exempt.add(code);
+  }
+  return exempt;
+}
+
 /** Every `src/` file, minus `sunset.ts` — the declaration is not a consumer. */
 async function readConsumerSources(): Promise<string> {
   const files = (await collectSources(SRC)).filter(
@@ -485,17 +576,26 @@ describe("sunset ledger", () => {
     // registered) writes nothing into the registry, so it has to be found from
     // the emitting side, measured against a frozen baseline.
     const codes = await collectIssueCodes();
+    // Non-vacuity, stated as the RETIRED SET rather than as `size > baseline`.
+    // The baseline is a frozen historical record, so the old form assumed the
+    // code set only ever grows — and it went red the moment retiring a dead
+    // validator legitimately removed codes from the tree. Pinning what is gone
+    // keeps the check non-vacuous (a broken extractor reports every baseline
+    // code as retired) while making each retirement a reviewed line.
+    const retired = FINDING_CODES_BEFORE_PROMOTION_POLICY.filter((code) => !codes.has(code)).sort();
     expect(
-      codes.size,
-      "no issue codes extracted — did the `issue(...)` shape change?",
-    ).toBeGreaterThan(FINDING_CODES_BEFORE_PROMOTION_POLICY.length);
+      retired,
+      "a baseline code no longer emitted: retire it here in the same change, or " +
+        "the `issue(...)` shape changed and extraction is silently returning less",
+    ).toEqual(RETIRED_SINCE_BASELINE);
 
     // The association is the promotion entry naming its code: `newRuleSeverity`
     // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.
     const promotions = await readRulePromotionEntries();
     const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
+    const infoOnly = await verifiedInfoOnlyCodes(baseline);
     const unregistered = [...codes]
-      .filter((code) => !baseline.has(code) && !promotions.includes(code))
+      .filter((code) => !baseline.has(code) && !promotions.includes(code) && !infoOnly.has(code))
       .sort();
 
     expect(

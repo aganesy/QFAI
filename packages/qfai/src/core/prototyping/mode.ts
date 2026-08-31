@@ -78,12 +78,6 @@ export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
  *
  *   - `QFAI-PROT-010` (screen-id casing) is emitted at `warning`, so
  *     there is nothing for the relaxation to downgrade.
- *   - `QFAI-PROT-311` (delegation map integrity) has an emitter that
- *     nothing invokes: `validateDelegationMapIssues` is only
- *     re-exported from the validators barrel, never called from the
- *     pipeline, so the error cannot occur and listing it would restore
- *     the vacuity this list exists to remove. It belongs here once the
- *     validator is wired, and the unit test fails the moment it is.
  *   - `R-EXPLORATION-CERTIFY-ATTEMPT` is raised by the certify
  *     command, which does not run this post-filter at all.
  *   - The license gate has no code. `licenseVerify` produces no
@@ -109,6 +103,7 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   // validators/prototyping/** — linkage, paths, completion certificate
   "QFAI-PROT-008", // specsCovered[] id format / missing spec
   "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
+  "QFAI-PROT-311", // delegation map: entries must name a role the skill declares
   "QFAI-PROT-335", // completion certificate: required evidence
   "QFAI-PROT-336", // completion certificate: completion claimed without seal
   // validators/uiEvidenceArtifacts.ts — evidence artifact presence / naming
@@ -197,7 +192,12 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-RESEARCH-009",
   "QFAI-RESEARCH-010",
   "QFAI-RESEARCH-011",
-  // validators/uix/** — canonical discussion-pack gates
+  // validators/uix/** — canonical discussion-pack gates.
+  //
+  // Reached through `CANONICAL_UIX_VALIDATORS`, the module-level array
+  // `runCanonicalUixValidators` maps over: the aggregate holds the only
+  // reference to each of these validators, so they run whenever a discussion
+  // pack is present and their errors are real gates.
   "UIX-VAL-3LAYER-FORBIDDEN-FILE",
   "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
   "UIX-VAL-3LAYER-LEGACY-FORMAT",
@@ -218,6 +218,13 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
   "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
   "UIX-VAL-SIDECAR-MISSING",
+  // `validateTrendScan` joined the aggregate after this list was last derived,
+  // and the walk could not see it either; its gates are listed for the first
+  // time here.
+  "UIX-VAL-TREND-CATEGORY-MISSING",
+  "UIX-VAL-TREND-ENTRY-MISSING",
+  "UIX-VAL-TREND-FIELD-MISSING",
+  "UIX-VAL-TREND-SCAN-MISSING",
 ] as const;
 
 /**

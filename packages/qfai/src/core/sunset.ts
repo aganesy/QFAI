@@ -79,6 +79,55 @@ export const RULE_PROMOTIONS = {
    * full minor beyond it.
    */
   tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-AGENT-014` — the agent catalog's embedded copy of an agent body is
+   * absent, or disagrees with the markdown file it is derived from. Every
+   * repository that customised an agent before the comparison existed carries
+   * the divergence already.
+   */
+  agentDeveloperInstructionsDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
+   * Contract sets written before the declaration was required state none, so
+   * the rule lands on every one of them at once.
+   */
+  contractDependencyUndeclared: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-032` — a contract index table with no `Depends On` column.
+   * The column is in the shipped template, so a table predating it is missing
+   * a column its author never had.
+   */
+  contractIndexDependsOnColumnMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-033` — an index row whose `Depends On` cell is blank, or
+   * disagrees with the apply order the contract file declares. Nothing read
+   * the column before, so the mirror it asks for was never maintained.
+   */
+  contractIndexDependsOnMirror: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-034` — a contract that appears in no contract index. The
+   * rule fires once per unlisted contract, so a repository that indexed only
+   * part of its set meets the whole backlog in one run.
+   */
+  contractIndexCoverageMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-035` — an index row whose `File` cell points at a file that
+   * does not declare the row's id. A wrong pointer is silent until something
+   * reads it, so the finding arrives on rows nobody knew were wrong.
+   */
+  contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-RESEARCH-012` — a discussion pack with no Research Summary section.
+   * A pack is written once and rarely revisited, so the rule necessarily lands
+   * on packs that were complete under the schema of their day.
+   */
+  researchSummarySectionMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TRIAGE-008` — a Triage heading that is not the canonical `## Triage`,
+   * so no triage validator reads the rows under it. Existing delta files carry
+   * whatever heading they were written with.
+   */
+  triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {
