@@ -47,6 +47,27 @@ const REQUIRED_SKILLS = [
 const execFile = promisify(execFileCb);
 
 /**
+ * The pre-fix `qfai init` placeholder body for an assistant layer, verbatim.
+ * Only an exact copy of this is removable, so the tests that exercise the
+ * migration have to write the real thing rather than an approximation.
+ */
+function legacyGitkeepBody(layer: "catalog" | "manifest"): string {
+  const purposes = {
+    catalog:
+      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
+    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+  } as const;
+  return [
+    `# .qfai/assistant/${layer}/`,
+    "",
+    purposes[layer],
+    "",
+    "Seeded by qfai init (4-layer assistant-tree recut).",
+    "",
+  ].join("\n");
+}
+
+/**
  * A wrapper body shaped like the ones qfai used to ship: the delegation line
  * pointing at the canonical doc of the same stem is what marks the file as
  * init's own, so prune keys on it rather than on the basename.
@@ -2434,6 +2455,84 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(gitkeep, "utf-8")).toBe("# our own note, do not delete\n");
     } finally {
       await removeTempTree(root);
+    }
+  });
+
+  it("does not delete a .gitkeep that is a symlink to a legacy body", async () => {
+    // The decision is about a five-line placeholder, but the read was
+    // unbounded and against a path the adopter controls, so it followed
+    // whatever the name resolved to. A symlink pointing at a legacy body read
+    // as "unedited generator output" and the link itself was then deleted. A
+    // regular-file reader refuses the symlink instead, which is the same
+    // refusal that keeps a FIFO from hanging `qfai init` in `open` and a
+    // multi-gigabyte file from being read into memory to answer a question
+    // about five lines.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-symlink-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
+      const gitkeep = path.join(layerDir, ".gitkeep");
+      const target = path.join(root, "our-placeholder");
+      await writeFile(target, legacyGitkeepBody("catalog"), "utf-8");
+      await rm(gitkeep, { force: true });
+      await symlink(target, gitkeep, "file");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await lstat(gitkeep)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves no quarantine residue behind when it removes a legacy .gitkeep", async () => {
+    // Verifying a name and unlinking that name are two resolutions of one
+    // string, so the removal moves the object aside and re-reads it: what is
+    // measured and what is deleted are then the same inode. The move is an
+    // implementation detail, but a botched one would strand
+    // `.gitkeep.qfai-legacy-*` files in the adopter's tree, so the layer has to
+    // come out holding neither the placeholder nor any residue of moving it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-residue-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
+      const gitkeep = path.join(layerDir, ".gitkeep");
+      await writeFile(gitkeep, legacyGitkeepBody("catalog"), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      const left = await readdir(layerDir);
+      expect(left.filter((name) => name.startsWith(".gitkeep"))).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("refuses the legacy .gitkeep removal when an ancestor is a symlink", async () => {
+    // `.qfai/assistant/` pointing into a shared tree makes every check resolve
+    // through the link, and the removal would then delete a file outside the
+    // project. A populated link target also makes the copy skip everything, so
+    // the deletion would be the only effect the run had.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-symlink-"));
+    const shared = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-shared-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const assistant = path.join(root, ".qfai", "assistant");
+      // Move the real tree out to `shared` and leave a symlink behind.
+      await rename(assistant, path.join(shared, "assistant"));
+      await symlink(path.join(shared, "assistant"), assistant, "junction");
+
+      const outside = path.join(shared, "assistant", "catalog", ".gitkeep");
+      await writeFile(outside, legacyGitkeepBody("catalog"), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Untouched: the file lives outside the repository.
+      expect(await readFile(outside, "utf-8")).toBe(legacyGitkeepBody("catalog"));
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(shared);
     }
   });
 
