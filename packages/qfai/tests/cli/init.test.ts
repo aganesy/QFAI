@@ -758,7 +758,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         );
       }
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
