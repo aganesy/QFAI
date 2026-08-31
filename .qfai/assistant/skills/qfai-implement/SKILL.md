@@ -95,7 +95,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Execution Ledger: test-list.md
 
-The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
+The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`;
 the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> `done` plus the re-entry edges the reference enumerates, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
 The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
