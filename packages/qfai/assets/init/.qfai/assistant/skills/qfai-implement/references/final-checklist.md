@@ -46,12 +46,15 @@ releases completion.
       `QFAI-REVIEW-*` finding, so a review that never reached a pack passes every mechanical check
       there is. Never waived — the verdict is required even on a row whose review produced only
       advisories (`finding-classification.md`).
-- [ ] Every UI-affecting row carries a `product-surface-reviewer` prototype-parity PASS, **and that
-      reviewer's response is in the round's review pack** — its own `R0N_product-surface-reviewer.md`
-      file with a matching `reviewers[]` entry in `summary.json`, like the two verdicts above
-      (`review-artifact-layout.md`). `Prototype parity: PASS` in the evidence entry records the
-      verdict; it is not the verdict, and the `--profile tdd` run this list ends on reports no
-      `QFAI-REVIEW-*` finding, so a pack that never held a UI review passes it (gate item 9).
+- [ ] Every UI-affecting row carries a `product-surface-reviewer` PASS — **prototype parity** on a
+      visual-prototyping target, and on a cli-only target a surface review of the captured command
+      output in its place, since `/qfai-prototyping` rejects `cli` and leaves no prototype to compare
+      against — **and that reviewer's response is in the round's review pack**: its own
+      `R0N_product-surface-reviewer.md` file with a matching `reviewers[]` entry in `summary.json`,
+      like the two verdicts above (`review-artifact-layout.md`). `Prototype parity: PASS` in the
+      evidence entry records the verdict on either target — the field name does not change — and it
+      is not the verdict; the `--profile tdd` run this list ends on reports no `QFAI-REVIEW-*`
+      finding, so a pack that never held a UI review passes it (gate item 9).
 - [ ] `test-list.md` statuses are accurate **and** each row's `Evidence` anchor resolves to a fresh
       entry in the file its `Layer` owns, with `Review pack seal` and each `Audited evidence hash`
       recomputed, **and the entry's identity copy still matches the ledger row** — `TDD-ID`, `Layer`,

@@ -245,8 +245,14 @@ const GATE_ITEM_PARITY: readonly {
   },
   {
     item: 9,
-    condition: "UI-affecting items have prototype parity PASS from `product-surface-reviewer`",
-    box: "`product-surface-reviewer` prototype-parity PASS",
+    condition: "UI-affecting items have `product-surface-reviewer` PASS",
+    box: "`product-surface-reviewer` PASS",
+  },
+  {
+    item: 9,
+    condition:
+      "on a cli-only target (see `#visual-review-guard`) a surface review of the captured command output in its place",
+    box: "on a cli-only target a surface review of the captured command output in its place",
   },
   {
     item: 10,
@@ -327,7 +333,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   6: "aaaff54532bbe37f4bea22f5caa5e661d0c11474558e3ccdc91ba9ff309f7fba",
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
-  9: "031e9b26a54f4c45dd2f2af468efc2be1cd84a3bff4f57bdb3c74e266902a394",
+  9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
   10: "e35884f66fd75d7c91d73e33658880ec7f8c6551ab09ef5a804564bdeeacd15c",
   11: "e4c7de62d79995caf9578da4383a0281b120867d5ffb54246ea541ccbe8d1dba",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
@@ -534,7 +540,7 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     );
     expect(checklist).toContain("appended to the evidence file the row's `Layer` owns");
     expect(checklist).toContain("leaving 0 blocking reviewer issues");
-    expect(checklist).toContain("`product-surface-reviewer` prototype-parity PASS");
+    expect(checklist).toContain("`product-surface-reviewer` PASS — **prototype parity**");
   });
 
   it("requires both core reviewer responses in the pack, not only the evidence append", async () => {
