@@ -41,7 +41,10 @@ const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
  */
 const MERMAID_DECLARATION_RE =
   /^\s*(?:sequenceDiagram|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|mindmap|flowchart(?:\s+(?:TB|BT|RL|LR|TD))?|graph\s+(?:TB|BT|RL|LR|TD))\s*(?:;.*|%%.*)?$/i;
-const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/i;
+// 行頭アンカー必須: 判定したいのは「この図が flowchart / sequenceDiagram である」
+// ことなので、mermaid fence 内の `%%` コメントなど単に語を含むだけの行で
+// 満たしてはならない。`MERMAID_DECLARATION_RE` と同じ行頭形に揃える。
+const FLOW_OR_SEQUENCE_RE = /^\s*(?:sequenceDiagram|flowchart)\b/i;
 
 type ScanResult = {
   issues: Issue[];
