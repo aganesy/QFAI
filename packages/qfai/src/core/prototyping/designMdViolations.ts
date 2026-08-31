@@ -21,6 +21,17 @@
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
  *
+ * Because the input is the capture fan-out, the routing shape the generator
+ * declares decides which screens this scanner ever sees. Under `--auto-serve`
+ * that shape is SPA-style: `defaultServerRunner.ts#resolveServablePath` serves
+ * `index.html` to a document request (GET/HEAD carrying `text/html` in
+ * `Accept`) that matches no file, so path routes, `history.pushState` shells
+ * and parameterized contract routes render and their CSS reaches these
+ * scanners. Only sub-resource requests — no `text/html` in `Accept` — still
+ * 404, behind the path-traversal 403 guard. The routing-shapes list in
+ * `generator-prompt.md` states the same contract for the generator; as the
+ * paired halves of that SSOT, the two move together.
+ *
  * Consumption: the violations this scanner returns are persisted as the
  * `designMdViolations` array of `iter-NN/review.json`, which the generator
  * reads back on every post-seed cycle (`generator-prompt.md#read-order`,
