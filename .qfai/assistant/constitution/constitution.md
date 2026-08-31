@@ -45,10 +45,30 @@ Do **not** guess file paths, existing commands, or project policies.
 Before producing deliverables, read **project memory**:
 
 1. `.qfai/assistant/constitution/*`
-2. `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
+2. `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`,
+   and `.qfai/assistant/catalog/*`
+   (`.qfai/assistant/manifest/agent-catalog.yml` for the acting `orchestrator` — the standing
+   commander named in `constitution/agent-selection.md`, which no routing phase or review
+   profile lists, so it is never reached as a "routed role" — and for every routed role:
+   `owned_artifacts`, `tool_profile`, `permission_profile`, and `specialization_tags` are SSOT
+   and appear in no agent card, so never skip them. Only the entry's `developer_instructions`
+   body is a generated mirror of `.qfai/assistant/agents/<id>.md`, and **the mirror can be
+   stale**: `npx qfai init --force` regenerates the card while deliberately leaving `manifest/`
+   alone, so a taxonomy tuned through `/qfai-configure` survives an upgrade — and an upgraded
+   or customised project can then hold two different bodies for one role. So **skip that body
+   only when it matches the card in context; when they differ, the catalog entry is the role
+   contract and wins**, and the divergence is a stale manifest to repair
+   (`skills/qfai-atdd/references/stale-manifest.md`). Read the body on demand when no card is
+   in context. Each `agents/<id>.md` card repeats this same scope in its own
+   `## Inputs you must read`.)
 3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)
+
+At the start of a stage this read composes with the **Stage 0 — Steering refresh contract**
+in `constitution/workflow.md`: items 1-2 above cover _reading_ project memory, Stage 0 adds the
+obligation to _check and update_ the four `catalog/` steering files it names. One bootstrap, two
+obligations — do not treat them as competing lists.
 
 Outputs MUST align with:
 

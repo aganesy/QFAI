@@ -90,7 +90,8 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
-  - `.qfai/assistant/manifest/agent-catalog.yml`
+  - `.qfai/assistant/manifest/agent-catalog.yml` — the acting `orchestrator`'s and every routed
+    role's entry, per the Inputs Priority scope below; not the file whole
   - `.qfai/assistant/manifest/agent-routing.yml`
   - `.qfai/assistant/manifest/review-profiles.yml`
 
@@ -98,7 +99,7 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
 2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
-3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
+3. P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the file whole — its `developer_instructions` bodies mirror the agent cards (`constitution/constitution.md` Article III).
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`
