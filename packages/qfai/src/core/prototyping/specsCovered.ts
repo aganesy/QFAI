@@ -35,7 +35,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *
  * Disambiguation cheat-sheet for call sites (codex r3264482141):
  *   - `readFrozenSpecsCovered(record)`          → record.specsCovered          (legacy single-spec field)
- *   - `readFrozenSpecsCoveredMultiSpec(record)` → record.frozenSpecsCovered    (CHG-002 multi-spec field; SSOT)
+ *   - `readFrozenSpecsCoveredMultiSpec(record)` → record.frozenSpecsCovered    (multi-spec field; SSOT)
  *   - `readFrozenSpecsCoveredField(record)`     → record.frozenSpecsCovered    (iterate-local copy)
  *
  * Accepts an arbitrary `unknown` so the `iterate` call site (which
