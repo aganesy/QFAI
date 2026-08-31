@@ -47,9 +47,9 @@ specs whose AC/BR reference the changed concept).
 ## Category definitions
 
 - `structural`: framework-level pack definitions such as spec-pack and discussion-pack.
-- `cli`: commands implemented under `packages/qfai/src/cli/commands/`. One command maps to one spec.
-- `skill`: skills defined under `packages/qfai/assets/init/.qfai/assistant/skills/`. One skill maps to one spec.
-- `agent`: sub-agents defined under `packages/qfai/assets/init/.qfai/assistant/agents/`. All agents are grouped into one shared spec unless a newer approved slice policy says otherwise.
+- `cli`: commands implemented under this project's CLI command source directory. One command maps to one spec.
+- `skill`: skills this project itself authors, in its own skill source directory. One skill maps to one spec. The QFAI skills installed under `.qfai/assistant/skills/` are generated artifacts, not sliceable subjects.
+- `agent`: sub-agents this project itself authors, in its own agent source directory. All agents are grouped into one shared spec unless a newer approved slice policy says otherwise. The QFAI role cards under `.qfai/assistant/agents/` are generated artifacts, not sliceable subjects.
 
 ## Triage operations (8 first-class)
 
