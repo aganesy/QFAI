@@ -52,7 +52,7 @@ what the run did, and the round. That drain gates the **spec** boundary only —
 a `record:*` finding never holds an individual row out of `done`.
 
 **The class needs a drain, and `/qfai-implement` is the stage that has one.**
-The queue is named in this skill's `#spec-completion-conditions`; no other
+The queue is named in `../SKILL.md#spec-completion-conditions`; no other
 stage's completion conditions mention it, so a `/qfai-sdd`, `/qfai-atdd`,
 `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` or `/web-research`
 reviewer MUST NOT classify a finding `record:*` — there it keeps the class it
