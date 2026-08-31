@@ -204,6 +204,30 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   Resolution is a containment check over the selector text and its last
   identifier token, not a runner-specific parse; waive `TDDLIST-006` for a
   selector form it cannot resolve.
+- `Evidence` is a **pointer**, not the payload: one legal shape
+  (`RED:… GREEN:pass ORACLE:… [TIER:…] REV:… -> .qfai/evidence/<implement|atdd>-<spec-id>.md#<tdd-nnnn>`),
+  capped at 240 characters (`TDDLIST_EVIDENCE_CELL_MALFORMED` /
+  `TDDLIST_EVIDENCE_CELL_OVERSIZE`, both `warning`). `ORACLE:` is a required
+  token so oracle-proof coverage is countable rather than buried in prose; and
+  `REV:` takes only the two spellings `evidence-revision.md` defines, so the
+  uncommitted `working-tree+<sha256>` form is legal here too. The anchor is
+  bound to the row on all three halves: its stage is the one the `Layer`
+  assigns, its `<spec-id>` is this spec's, and its fragment is this row's own
+  `### TDD-NNNN` section — so evidence from another spec, from the stage that
+  did not author the test, or from a neighbouring row is rejected too. A
+  binding breach is reported even when the cell is also oversize —
+  `TDDLIST-008` must not waive it. Ledgers predating the grammar waive
+  `TDDLIST-007` / `TDDLIST-008` while they migrate.
+- `RED:n-a` on an `Integration` / `API` / `E2E` row is
+  `TDDLIST_EVIDENCE_RED_PROVENANCE` (`error`, rule `TDDLIST-009`) and carries
+  no waiver: those rows owe an observed RED or a falsifiability argument, and
+  `execution-ledger.md#atdd-owned-rows` says of exactly them "There is no
+  waiver here". A waiver may only target `warning` / `info`, so `error` is how
+  that is spelled.
+- A ledger row may not carry more cells than its table's header declares —
+  `TDDLIST_ROW_EXTRA_CELLS` (`warning`, rule `TDDLIST-010`). Cells are read by
+  header index, so a surplus column is read by no rule at all: the payload the
+  `Evidence` cap forbids simply moved one column right.
 - `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
   references, so it carries the approval that authorised an upstream reset, not
   only `Status = exception`. A row reset by a Drift Protocol sweep records the

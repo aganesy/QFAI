@@ -157,6 +157,23 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `TDDLIST_EVIDENCE_CELL_OVERSIZE` — an `Evidence` cell past the character
+   * cap. The cap arrives with the rule that made the cell a pointer, so it
+   * lands on every cell written while the column was documented as holding the
+   * commands and their output — which is most of them, and on rows already at
+   * `done`. A terminal row satisfies it by moving the payload into the evidence
+   * file and leaving the anchor in the cell; that is an edit to the cell, not a
+   * status transition, so the row needs none.
+   */
+  tddListEvidenceCellOversize: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_ROW_EXTRA_CELLS` — a ledger row carrying cells its table's header
+   * does not declare. Nothing read past the last column before, so a surplus
+   * cell was never reported and ledgers accumulated them silently. A terminal
+   * row satisfies it by deleting the surplus, again without a transition.
+   */
+  tddListRowExtraCells: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed

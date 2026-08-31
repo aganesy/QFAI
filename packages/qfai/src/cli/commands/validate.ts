@@ -1081,6 +1081,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  TDDLIST_EVIDENCE_CELL_OVERSIZE:
+    "Every ledger `Evidence` cell stays inside the 240-character cap: the cell is a pointer to the proof, and the commands and their output live in the evidence file its anchor names.",
+  TDDLIST_ROW_EXTRA_CELLS:
+    "Every ledger row carries exactly the cells its table's header declares, so no content sits past the last column where the per-column rules cannot read it.",
 };
 
 /**
