@@ -312,6 +312,7 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Rationale: 静的配置が最もシンプル。init.ts への自動生成ロジック追加は複雑度が高い
 - Rejected: init.ts で自動生成（カノニカル MD → TOML 変換ロジックの複雑度が高い）
   - DO NOT: v1.6.4 で init.ts に TOML 自動生成を追加しない。Temptation: 自動化で同期負荷を減らしたい
+- Status: RE-OPENED — spec-0003 DR-0003-0012 が本決定を置き換える。配布 asset に `.codex/agents/` が存在せず、`qfai init` を実行したプロジェクトの Codex には agent が 1 件も届かないという前提誤りが根拠。以降 `.codex/agents/*.toml` は `qfai init` の生成物として扱う（上記 Rejected / DO NOT はこの spec-0003 の範囲では失効）
 
 ### DR-0031: DDP 必須化（OQ-0001 discussion-20260324054332396）
 
