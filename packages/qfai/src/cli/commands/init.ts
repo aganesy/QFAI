@@ -26,7 +26,7 @@ import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
-import { error, info } from "../lib/logger.js";
+import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import {
@@ -50,8 +50,10 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  hasInitMarkerSignature,
   joinAssistantAssetLayer,
   joinAssistantLayer,
+  joinAssistantReadme,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
@@ -343,6 +345,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  // The copy above is create-only, so it cannot repair a marker-less README a
+  // previous version of init left behind.
+  const markerRewritten = await ensureAssistantMarker(assistantAssets, destRoot, options.dryRun);
+  const rewrittenPaths = new Set(markerRewritten);
 
   // The routing manifest is user configuration, so it is never overwritten —
   // but the skills just regenerated above may name phases an older project's
@@ -467,6 +473,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...rootResult.copied,
       ...qfaiResult.copied,
       ...skillsResult.copied,
+      ...markerRewritten,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
@@ -474,6 +481,10 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
     ],
+    // The marker rewrite runs after a create-only copy that has already
+    // recorded the same README as skipped. Reporting it in both columns tells
+    // a reader running without `--force` that the file was left untouched at
+    // the same time as saying it was written, so the rewrite's paths win.
     [
       ...rootResult.skipped,
       ...qfaiResult.skipped,
@@ -484,7 +495,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
-    ],
+    ].filter((entry) => !rewrittenPaths.has(entry)),
     [...removed, ...upgradeResult.removed],
     options.dryRun,
     "init",
@@ -507,6 +518,332 @@ export async function runInit(options: InitOptions): Promise<void> {
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Assistant-tree marker (the one file init owns outright)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ceiling on the README this rewrite will read before deciding.
+ *
+ * The same bound `QFAI-LINK-001` reads the marker under: generous against what
+ * init writes — a few hundred bytes — and small enough that a document somebody
+ * else put at that path costs nothing to decline.
+ */
+const ASSISTANT_README_MAX_BYTES = 64 * 1024;
+
+/**
+ * Rewrites `.qfai/assistant/README.md` when it does not carry init's signature.
+ *
+ * `qfai validate` reads that README to tell "init ran here and the integration
+ * surface was deleted" from "init never ran here"; once every wrapper is gone
+ * the two are indistinguishable from the integration directories alone, and
+ * only one of them is a defect. Every other `.qfai/**` path is copied
+ * create-only, so a project initialised before this README carried the
+ * signature keeps its older one forever — the marker is then never written, and
+ * deleting all six surfaces reads as a project that never ran init: nothing
+ * checked, every profile passing, and the assistant loading nothing.
+ *
+ * Only a regular file that is missing the signature is rewritten. One that has
+ * it is left as it is, notes a project added below init's own text and all, and
+ * anything else at that path — a directory, a symlink, a document too large to
+ * be init's — is somebody else's to remove, not init's.
+ *
+ * The rewrite **keeps** what was there. Every `.qfai/**` path is create-only,
+ * so a project could reasonably annotate the README an older init wrote, and
+ * this repair runs on a plain `qfai init` — without `--force`. Discarding those
+ * notes to gain a marker is not a trade init gets to make on the project's
+ * behalf, so the previous text is filed below the template under
+ * {@link PRESERVED_BODY_HEADING} instead. A second run then sees the signature
+ * and leaves the file alone, so nothing accumulates.
+ *
+ * The replacement claims the pathname rather than writing through it: a sidecar
+ * in the same directory, then `rename`. `writeFile` on the checked path follows
+ * whatever the entry resolves to — a symlink another process put there between
+ * the check and the write, or a hard link the README already shared with a file
+ * outside the project — and would have written the template into it. `rename`
+ * replaces the directory entry, so the other name keeps its inode. What the
+ * entry carried comes with it: its mode, and its bytes exactly as they were.
+ *
+ * Two conditions make the repair decline rather than proceed, both of them
+ * cases where going ahead is worse than leaving the file alone: a merge that
+ * would overshoot the ceiling the rule reads the marker under, and a pathname
+ * that stopped being the inode this read while the merge was being written.
+ *
+ * Absence is not this function's case: the template copy that runs before it
+ * creates the file, and reporting the same path twice would double-count it.
+ * That copy has already recorded an existing README as *skipped*, so a path
+ * this returns is removed from the skipped column by {@link runInit}.
+ */
+async function ensureAssistantMarker(
+  assistantAssetsDir: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const dest = joinAssistantReadme(destRoot);
+  let current: Stats;
+  try {
+    current = await lstat(dest);
+  } catch (err: unknown) {
+    // Only absence is the template copy's case. Every other failure — an ACL,
+    // a transient `EIO` — used to reach the same silent `return []` through
+    // `safeLstat`, and the copy before this one had already filed the path as
+    // *skipped*, so `qfai init` reported a clean run over a project whose
+    // marker is still missing and whose integration surface still reads as
+    // never initialised. Saying so is the whole difference.
+    if (isEnoent(err)) {
+      return [];
+    }
+    warn(
+      [
+        `WARN: ${dest} の状態を取得できませんでした（${describeError(err)}）。`,
+        `      qfai init のマーカーは書き込まれていないため、QFAI-LINK-001 は引き続き「未初期化」と判定します。パーミッションを確認して qfai init を再実行してください。`,
+      ].join("\n"),
+    );
+    return [];
+  }
+  if (!current.isFile()) {
+    return [];
+  }
+  const previous = await readExistingReadme(dest);
+  if (previous === null || hasInitMarkerSignature(decodeForDetection(previous.content))) {
+    return [];
+  }
+  const template = await readTemplateReadme(path.join(assistantAssetsDir, "README.md"));
+  if (template === null) {
+    return [];
+  }
+  const merged = mergeAssistantReadme(template, previous.content);
+  // The marker is only a marker while the rule can read it, and the rule reads
+  // it under this same ceiling. Writing a merge that overshoots would report a
+  // repair while leaving the project exactly as unreadable as before — and the
+  // next `qfai init` would decline the oversized file too, so nothing would
+  // ever come back for it. Declining and saying so leaves the operator the one
+  // move that works.
+  if (merged.byteLength > ASSISTANT_README_MAX_BYTES) {
+    warn(
+      [
+        `WARN: ${dest} に qfai init のマーカーを書き込めません（既存の内容と結合すると ${String(ASSISTANT_README_MAX_BYTES)} bytes の上限を超えます）。`,
+        `      既存の内容は変更していません。プロジェクト固有の注記を別ファイルへ移して短くしてから qfai init を再実行してください。`,
+      ].join("\n"),
+    );
+    return [];
+  }
+  if (!dryRun) {
+    await mkdir(path.dirname(dest), { recursive: true });
+    if (!(await replaceViaSidecar(dest, merged, previous))) {
+      // Somebody else put a different file at the pathname while this ran.
+      // Theirs is the newer decision; overwriting it is not this repair's call.
+      warn(
+        `WARN: ${dest} は qfai init の実行中に別のプロセスが置き換えたため、マーカーの書き込みを見送りました。qfai init を再実行してください。`,
+      );
+      return [];
+    }
+  }
+  return [dest];
+}
+
+/** Heading the previous README's text is filed under. */
+const PRESERVED_BODY_HEADING = "## qfai init が置き換える前の README";
+
+const PRESERVED_BODY_NOTE = [
+  "以下は `qfai init` がこのファイルにマーカーを書き込む前からあった内容です。",
+  "プロジェクト固有の注記が含まれている可能性があるため保持しています。不要であれば削除してください。",
+].join("\n");
+
+/**
+ * The template with the previous README filed below it.
+ *
+ * **The previous body is carried as bytes.** It is somebody else's file: it
+ * may be Shift_JIS, or hold a sequence that is not UTF-8 at all, and a round
+ * trip through a string replaces every byte it cannot decode with U+FFFD —
+ * irreversibly, since this result is what goes back to the pathname. Only the
+ * text init contributes is encoded here; what was already there is spliced in
+ * untouched.
+ *
+ * An empty previous body has nothing to keep, and appending a heading over
+ * nothing only leaves the operator a section to delete.
+ */
+function mergeAssistantReadme(template: string, previous: Buffer): Buffer {
+  const head = Buffer.from(template.endsWith("\n") ? template : `${template}\n`, "utf-8");
+  if (isBlankBytes(previous)) {
+    return head;
+  }
+  const preamble = Buffer.from(
+    `\n---\n\n${PRESERVED_BODY_HEADING}\n\n${PRESERVED_BODY_NOTE}\n\n`,
+    "utf-8",
+  );
+  const parts = [head, preamble, previous];
+  if (previous[previous.length - 1] !== 0x0a) {
+    parts.push(Buffer.from("\n", "utf-8"));
+  }
+  return Buffer.concat(parts);
+}
+
+/**
+ * Whether these bytes are whitespace only.
+ *
+ * Asked of the bytes rather than of a decoded string: the encoding is unknown,
+ * and every encoding this could plausibly be agrees on space / tab / CR / LF.
+ * Any other byte counts as content worth keeping.
+ */
+function isBlankBytes(bytes: Buffer): boolean {
+  return bytes.every((byte) => byte === 0x20 || byte === 0x09 || byte === 0x0a || byte === 0x0d);
+}
+
+/**
+ * Put `content` at `filePath` without writing through the entry already there,
+ * and without discarding a file that arrived while this ran.
+ *
+ * The sidecar is created exclusively in the same directory — same filesystem,
+ * so `rename` is the atomic swap and not a copy — and removed again if the
+ * swap fails, so a failure leaves the original exactly as it was.
+ *
+ * The staging file is written **through the handle `wx` opened**, never re-opened
+ * by name. `wx` proves the sidecar was ours at creation and nothing more: a
+ * process that can write this directory may delete the predictable pathname and
+ * put a symlink or a hard link there, and a second `writeFile(sidecar, …)`
+ * would have followed it and written the template into whatever it resolved to.
+ * The handle is the file itself, so nothing the pathname does afterwards can
+ * redirect the write — and the same handle answers for the mode and for the
+ * inode the swap is about to move.
+ *
+ * Two things are carried over from the entry that was read: its **mode**, so a
+ * README a project keeps at `0600` does not come back world-readable under the
+ * umask the sidecar was created with; and its **content**, re-read and compared
+ * immediately before the swap. `rename` replaces unconditionally, so an editor
+ * or a concurrent `qfai init` that touched the file after the read would
+ * otherwise have had its work deleted and replaced by a merge of content that
+ * is no longer there. Comparing the bytes rather than only `dev`/`ino` is what
+ * catches the ordinary case: an editor that truncates and rewrites **keeps the
+ * inode**, so an identity check alone read it as untouched.
+ *
+ * Neither check closes its window — a replacement of either pathname between
+ * the last check and `rename` would take an exclusive claim the platform does
+ * not offer for a replacement — but each turns the common case of it from a
+ * silent overwrite into a declined repair. Returns `false` when it declines.
+ */
+async function replaceViaSidecar(
+  filePath: string,
+  content: Buffer,
+  pinned: PinnedFileRead,
+): Promise<boolean> {
+  const { path: sidecar, handle } = await openSidecar(filePath);
+  let staged: { dev: number; ino: number };
+  try {
+    await handle.writeFile(content);
+    await handle.chmod(pinned.mode);
+    const written = await handle.stat();
+    staged = { dev: written.dev, ino: written.ino };
+  } catch (err: unknown) {
+    await handle.close().catch(() => undefined);
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    throw err;
+  }
+  await handle.close();
+
+  try {
+    if (!(await isUnchanged(filePath, pinned))) {
+      await discardSidecar(sidecar, staged);
+      return false;
+    }
+    if (!(await sidecarStillOurs(sidecar, staged))) {
+      // The staging pathname is somebody else's file now. Renaming it over the
+      // README would install content this repair never wrote, and removing it
+      // would delete a file that is not ours to delete.
+      return false;
+    }
+    await rename(sidecar, filePath);
+    return true;
+  } catch (err: unknown) {
+    // Best-effort: the swap already failed, and a sidecar that cannot be
+    // removed is a leftover to report through the original error, not a second
+    // failure to raise in its place.
+    await discardSidecar(sidecar, staged);
+    throw err;
+  }
+}
+
+/**
+ * Whether the pathname still holds exactly what {@link readExistingReadme} read.
+ *
+ * Identity first, then the bytes: the inode answers "is this still the same
+ * file", the content answers "has that file been rewritten underneath us". Only
+ * both together mean nothing has happened since the read.
+ */
+async function isUnchanged(filePath: string, pinned: PinnedFileRead): Promise<boolean> {
+  const now = await readExistingReadme(filePath).catch(() => null);
+  if (now === null) {
+    return false;
+  }
+  return isSameEntry(now, pinned) && now.content.equals(pinned.content);
+}
+
+/** Whether the staging pathname still names the inode this run wrote. */
+async function sidecarStillOurs(
+  sidecar: string,
+  staged: { dev: number; ino: number },
+): Promise<boolean> {
+  const current = await safeLstat(sidecar);
+  if (current === undefined || !current.isFile()) {
+    return false;
+  }
+  return current.ino === 0 || staged.ino === 0
+    ? true
+    : current.dev === staged.dev && current.ino === staged.ino;
+}
+
+/** Remove the staging file, but only while it is still the one this run wrote. */
+async function discardSidecar(
+  sidecar: string,
+  staged: { dev: number; ino: number },
+): Promise<void> {
+  if (!(await sidecarStillOurs(sidecar, staged))) {
+    return;
+  }
+  await rm(sidecar, { force: true }).catch(() => undefined);
+}
+
+/**
+ * The bytes at `filePath`, or `null` when it is not a bounded regular file.
+ *
+ * Bytes, not text: what comes back is spliced into the replacement verbatim.
+ */
+async function readExistingReadme(filePath: string): Promise<PinnedFileRead | null> {
+  try {
+    return await readPinnedRegularFileBytes(filePath, ASSISTANT_README_MAX_BYTES);
+  } catch (err: unknown) {
+    // Removed between the `lstat` above and this read. Nothing to repair, and
+    // the caller's other branches all mean "leave it alone" too.
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * The signature test's view of a body whose encoding is unknown.
+ *
+ * Lossy on purpose, and safe to be: the decoded string is only ever asked
+ * whether init's ASCII heading and section are in it, and it is thrown away
+ * afterwards. Nothing this returns is written anywhere.
+ */
+function decodeForDetection(bytes: Buffer): string {
+  return bytes.toString("utf-8");
+}
+
+/** The shipped template's text, or `null` when it is not a bounded file. */
+async function readTemplateReadme(filePath: string): Promise<string | null> {
+  try {
+    return await readPinnedRegularFile(filePath, ASSISTANT_README_MAX_BYTES);
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
   }
 }
 
@@ -2964,12 +3301,26 @@ const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
 const SIDECAR_COPY_MAX_BYTES = 4096;
 
 async function claimSidecar(linkPath: string): Promise<string> {
+  const { path: claimed, handle } = await openSidecar(linkPath);
+  await handle.close();
+  return claimed;
+}
+
+/**
+ * The same claim, handing back the **open handle** rather than only the name.
+ *
+ * A caller that goes on to write the staging file must write through this
+ * handle. Closing it and re-opening by pathname gives up everything `wx` bought:
+ * a process that can write the directory may delete the predictable name and
+ * put a symlink or a hard link there between the two, and the re-opened write
+ * follows it out of the project.
+ */
+async function openSidecar(linkPath: string): Promise<{ path: string; handle: FileHandle }> {
   const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
   for (let attempt = 0; attempt < 1000; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
     try {
-      await writeFile(candidate, "", { flag: "wx" });
-      return candidate;
+      return { path: candidate, handle: await open(candidate, "wx") };
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
     }
@@ -3354,6 +3705,24 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 }
 
 /**
+ * Whether `stats` names the inode `pinned` was read from.
+ *
+ * `ino` is `0` on the filesystems that have no such number (and on a few
+ * Windows volumes). There is nothing to compare there, so the answer is "yes"
+ * — the check narrows a race where the platform lets it and never blocks a
+ * repair where it cannot.
+ */
+function isSameEntry(stats: FileIdentity, pinned: FileIdentity): boolean {
+  if (pinned.ino === 0 || stats.ino === 0) {
+    return true;
+  }
+  return stats.dev === pinned.dev && stats.ino === pinned.ino;
+}
+
+/** The two fields an inode is identified by. `Stats` and {@link PinnedFileRead} both carry them. */
+type FileIdentity = { dev: number; ino: number };
+
+/**
  * One bounded read of a regular file: its bytes, and everything a replacement
  * has to put back.
  *
@@ -3376,6 +3745,10 @@ type PinnedFileRead = {
  * The restore copy writes back what it read, and decoding as UTF-8 first
  * replaces every invalid sequence with U+FFFD — irreversibly, since the sidecar
  * is removed straight after.
+ *
+ * `dev` / `ino` come off the same handle as the content, so a caller that
+ * replaces the pathname afterwards can check that the entry it is about to
+ * replace is still the inode it read.
  */
 async function readPinnedRegularFileBytes(
   filePath: string,

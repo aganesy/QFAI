@@ -5,6 +5,7 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { ASSISTANT_README_SEGMENTS, hasInitMarkerSignature } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
 
@@ -64,37 +65,6 @@ function isMissing(error: unknown): boolean {
 }
 
 /**
- * Files `qfai init` writes and never removes, used as proof it ran.
- *
- * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
- * is enough: a project with any of the integration surfaces has run init.
- *
- * **Known gap.** These are create-only, so a project that already had a file at
- * one of those paths keeps it and init writes no marker there. If it later has
- * every wrapper deleted as well, this rule reads it as never initialised. A
- * marker init always owns would close it, which is a change to what init
- * writes rather than to what this reads.
- */
-/**
- * The line every one of those READMEs carries.
- *
- * `.agents/` and `.github/agents/` are conventional directories a project can
- * have for its own reasons, and a `README.md` in one of them is not evidence of
- * anything. Requiring the sentence `qfai init` writes makes the marker QFAI's:
- * a project that never ran it is not told that all six surfaces are missing.
- */
-const INIT_MARKER_SIGNATURE = ".qfai/assistant/";
-
-/**
- * The rest of the signature: a title `qfai init` writes and the section every
- * one of these READMEs has.
- *
- * One mention of `.qfai/assistant/` is not a signature — a project documenting
- * where it keeps its own QFAI tree writes that sentence, and one of those made a
- * checkout that never ran init read as initialised, with all six surfaces then
- * reported missing. All three parts together are init's.
- */
-/**
  * Ceiling on a file this rule will read looking for the init signature.
  *
  * Generous against what init writes — a few hundred bytes — and small enough
@@ -113,9 +83,12 @@ const OPEN_READ_FLAGS =
     ? constants.O_RDONLY | constants.O_NONBLOCK
     : constants.O_RDONLY;
 
-const INIT_MARKER_TITLE = /^# QFAI /;
-const INIT_MARKER_SECTION = "## Canonical entrypoint";
-
+/**
+ * Files `qfai init` writes and never removes, used as proof it ran.
+ *
+ * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
+ * is enough: a project with any of the integration surfaces has run init.
+ */
 const INIT_MARKERS: readonly (readonly string[])[] = [
   // The one marker that cannot be pre-empted. The four below sit in
   // conventional directories, and `qfai init` writes a README there only when
@@ -123,10 +96,12 @@ const INIT_MARKERS: readonly (readonly string[])[] = [
   // init and got no marker at all, and deleting every wrapper afterwards left
   // the surface reading as never initialised: nothing checked, every profile
   // passing, and the assistant loading nothing. This one is inside `.qfai/`,
-  // which init owns outright and creates, so there is nothing there to preserve
-  // and no project file to collide with. It also outlives every integration
+  // which init owns outright and creates, and init rewrites it whenever it does
+  // not carry the signature — so a project initialised before this README
+  // carried one gets the marker on its next run, instead of keeping an older
+  // README that answers nothing forever. It also outlives every integration
   // directory, which is the state the evidence is needed for.
-  [".qfai", "assistant", "README.md"],
+  [...ASSISTANT_README_SEGMENTS],
   [".agents", "README.md"],
   [".codex", "README.md"],
   [".claude", "agents", "README.md"],
@@ -848,12 +823,7 @@ async function hasInitSignature(filePath: string): Promise<boolean> {
   // profile in proportion to somebody else's document — or ended it on a large
   // enough one.
   const body = await readPinnedFile(filePath, MARKER_MAX_BYTES);
-  return (
-    body !== null &&
-    INIT_MARKER_TITLE.test(body) &&
-    body.includes(INIT_MARKER_SECTION) &&
-    body.includes(INIT_MARKER_SIGNATURE)
-  );
+  return body !== null && hasInitMarkerSignature(body);
 }
 
 /**

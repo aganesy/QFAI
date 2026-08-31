@@ -2,6 +2,7 @@ import {
   access,
   chmod,
   chown,
+  link,
   lstat,
   mkdtemp,
   mkdir,
@@ -31,7 +32,21 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
+import { hasInitMarkerSignature } from "../../src/core/paths/assistantPaths.js";
+import {
+  INTEGRATION_SURFACE_DIRS,
+  validateIntegrationSurface,
+} from "../../src/core/validators/integrationSurface.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+
+/** The README `qfai init` wrote before it carried a marker signature. */
+const LEGACY_ASSISTANT_README = [
+  "# assistant/",
+  "This folder contains AI assistance assets.",
+  "",
+  "- `agents/` : subagent definitions (general job roles)",
+  "",
+].join("\n");
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -3544,6 +3559,182 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(r.legacyFile, "utf-8")).toBe("legacy content\n");
     } finally {
       if (root) await removeTempTree(root);
+    }
+  });
+
+  it("rewrites an assistant README that carries no init marker", async () => {
+    // `.qfai/assistant/README.md` is what the integration-surface rule reads to
+    // tell "init ran here and the surface was deleted" from "init never ran
+    // here". Every `.qfai/**` path is copied create-only, so a project
+    // initialised before that README carried the signature keeps its older one
+    // — and deleting every wrapper then reads as a project that never ran init:
+    // nothing checked, every profile passing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const rewritten = await readFile(marker, "utf-8");
+      expect(hasInitMarkerSignature(rewritten)).toBe(true);
+      // And the text that was there is kept: this repair runs on a plain
+      // `qfai init`, and `.qfai/**` is create-only, so a project may well have
+      // annotated the README an older init wrote.
+      expect(rewritten).toContain("This folder contains AI assistance assets.");
+      expect(rewritten).toContain("- `agents/` : subagent definitions (general job roles)");
+
+      // And the surface it is evidence for is reported once it is deleted.
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await removeTempTree(path.join(root, ...dir.split("/")));
+      }
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.message).join("\n")).toContain("missing");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves an assistant README that already carries the marker alone", async () => {
+    // The rewrite repairs a missing signature; it is not a `--force` on a file
+    // a project may have annotated below init's own text.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      const annotated = `${await readFile(marker, "utf-8")}\n## Project note\n\nkept.\n`;
+      await writeFile(marker, annotated, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(marker, "utf-8")).toBe(annotated);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("does not write the marker through a hard link to a file outside the project", async () => {
+    // The rewrite replaces the directory entry, it does not write through it.
+    // `writeFile` on the checked path would have written the template into
+    // every other name sharing that inode — the same breakage a symlink swapped
+    // in between the check and the write causes.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    const outside = path.join(root, "outside.md");
+    try {
+      await writeFile(outside, LEGACY_ASSISTANT_README, "utf-8");
+      const marker = path.join(root, "project", ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      try {
+        await link(outside, marker);
+      } catch {
+        // No hard links on this filesystem — nothing for this case to assert.
+        return;
+      }
+
+      await runInit({ dir: path.join(root, "project"), force: false, dryRun: false, yes: true });
+
+      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+      expect(await readFile(outside, "utf-8")).toBe(LEGACY_ASSISTANT_README);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps the previous README's bytes when they are not UTF-8", async () => {
+    // The previous body is somebody else's file and may be in any encoding.
+    // Decoding it to a string and writing that back replaces every byte that
+    // is not valid UTF-8 with U+FFFD, irreversibly.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      // Shift_JIS for「プロジェクト」— not a valid UTF-8 sequence.
+      const shiftJis = Buffer.from([
+        0x83, 0x76, 0x83, 0x8d, 0x83, 0x57, 0x83, 0x46, 0x83, 0x4e, 0x83, 0x67,
+      ]);
+      const legacy = Buffer.concat([Buffer.from("# assistant/\n\n", "utf-8"), shiftJis]);
+
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      await writeFile(marker, legacy);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const rewritten = await readFile(marker);
+      expect(hasInitMarkerSignature(rewritten.toString("utf-8"))).toBe(true);
+      expect(rewritten.includes(shiftJis)).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves the README alone when the merge would outgrow the marker ceiling", async () => {
+    // The rule reads the marker under a 64 KiB bound. A merge past it would
+    // report a repair and leave the project exactly as unreadable as before —
+    // and every later init would decline the oversized file too.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      // Just under the 64 KiB the marker is read under, so the file itself is
+      // readable — it is the merge with the template that overshoots.
+      const huge = `# assistant/\n\n${"note.\n".repeat(10800)}`;
+      expect(Buffer.byteLength(huge, "utf-8")).toBeLessThan(64 * 1024);
+      await writeFile(marker, huge, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(await readFile(marker, "utf-8")).toBe(huge);
+      expect(output).toContain("上限を超えます");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps the previous README's mode", async () => {
+    // A README a project keeps at 0600 must not come back world-readable
+    // because the sidecar it was replaced through was created under the umask.
+    if (process.platform === "win32") {
+      // Windows maps `chmod` onto the read-only attribute; there is no mode to
+      // carry over.
+      return;
+    }
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
+      await chmod(marker, 0o600);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+      expect((await lstat(marker)).mode & 0o777).toBe(0o600);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("does not report the rewritten README as skipped", async () => {
+    // The create-only copy that runs first records the existing README as
+    // skipped. Leaving it there tells a reader running without `--force` that
+    // the file was untouched at the same time as counting it as written.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+      expect(output).not.toContain(path.join(".qfai", "assistant", "README.md"));
+    } finally {
+      await removeTempTree(root);
     }
   });
 });
