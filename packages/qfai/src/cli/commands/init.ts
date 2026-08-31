@@ -125,10 +125,12 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   // If --upgrade-assistant-tree is supplied, run the migration FIRST.
-  // This relocates user-edited content from the legacy pre-recut
-  // surfaces (instructions/, steering/, manifest/) into the new 4-layer
-  // tree BEFORE copyTemplateTree fills the same destinations from the
-  // asset defaults. The subsequent copyTemplateTree uses
+  // This relocates user-edited content from the 2 legacy pre-recut
+  // surfaces (instructions/, steering/) into the new 4-layer tree
+  // BEFORE copyTemplateTree fills the same destinations from the
+  // asset defaults. The pre-recut manifest/ layer is deliberately out
+  // of scope — see runUpgradeAssistantTree's legacySurfaces comment.
+  // The subsequent copyTemplateTree uses
   // conflictPolicy: "skip", so migrated user edits are preserved.
   const upgradeResult = options.upgradeAssistantTree
     ? await runUpgradeAssistantTree(destRoot, options.dryRun, toolVersion)
@@ -775,10 +777,10 @@ async function runUpgradeAssistantTree(
   const preservedNotes: string[] = [];
 
   // Per .qfai/contracts/cli/qfai-init.md#--upgrade-assistant-tree, the
-  // relocation covers 3 pre-recut surfaces: instructions/, steering/,
-  // and manifest/. Each is walked independently and routed into the new
-  // 4-layer tree via the classifier; the classifier is name-driven so
-  // it works regardless of which legacy surface a file lived in.
+  // relocation covers 2 pre-recut surfaces: instructions/ and steering/.
+  // Each is walked independently and routed into the new 4-layer tree
+  // via the classifier; the classifier is name-driven so it works
+  // regardless of which legacy surface a file lived in.
   // Pre-recut legacy surfaces that the migration helper walks. The
   // pre-recut `manifest/` layer is intentionally NOT included here:
   // its path is identical to the canonical post-recut manifest/ layer,
@@ -792,8 +794,8 @@ async function runUpgradeAssistantTree(
   const surfaceExistence = await Promise.all(legacySurfaces.map((s) => pathExists(s.dir)));
   const anyLegacyExists = surfaceExistence.some(Boolean);
   // Detected surfaces list — passed to buildMigrationMemo so the memo's
-  // Status block reflects all 3 pre-recut surfaces (steering /
-  // instructions / manifest), not just steering[0].
+  // Status block reflects both probed pre-recut surfaces (steering /
+  // instructions), not just steering[0].
   const detectedSurfaces = legacySurfaces
     .filter((_, i) => surfaceExistence[i] === true)
     .map((s) => s.name);
@@ -815,7 +817,7 @@ async function runUpgradeAssistantTree(
     // Already-upgraded project: emit info-only note so the operator
     // sees the migration helper ran (REQ-0020 + W-USER-EDIT-PRESERVED).
     preservedNotes.push(
-      "  W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions,manifest}/) found; no migration was needed.",
+      "  W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found; no migration was needed.",
     );
     return { copied, skipped, removed, preservedNotes };
   }
@@ -956,12 +958,12 @@ function buildMigrationMemo(version: string, detectedSurfaces: readonly string[]
   const surfacesLine =
     detectedSurfaces.length > 0
       ? `- Detected pre-recut surfaces: ${detectedSurfaces.map((s) => `\`.qfai/assistant/${s}/\``).join(", ")} — files copied into the new 4-layer tree.`
-      : "- No pre-recut surfaces (`.qfai/assistant/{steering,instructions,manifest}/`) found — fresh layout adopted.";
+      : "- No pre-recut surfaces (`.qfai/assistant/{steering,instructions}/`) found — fresh layout adopted.";
   return [
     `# qfai assistant-layer recut migration (v${version})`,
     "",
     `- Generated: ${stamp}`,
-    `- Source layout: .qfai/assistant/{steering, instructions, manifest}/ (pre-recut)`,
+    `- Source layout: .qfai/assistant/{steering, instructions}/ (pre-recut)`,
     `- Target layout: .qfai/assistant/{constitution, manifest, catalog, process}/`,
     "",
     "## Status",

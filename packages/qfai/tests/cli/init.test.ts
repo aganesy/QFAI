@@ -2057,9 +2057,10 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade walks instructions/ AND manifest/ in addition to steering/
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree relocates files from all 3 pre-recut surfaces (instructions/, steering/, manifest/)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-3s-"));
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade walks instructions/ in
+  // addition to steering/, and leaves the canonical manifest/ layer untouched
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree relocates files from both probed pre-recut surfaces (instructions/, steering/) and keeps manifest/ in place", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-2s-"));
     try {
       // legacy instructions/drift-protocol.md → constitution/drift-protocol.md
       const legacyInstructions = path.join(root, ".qfai", "assistant", "instructions");
@@ -2073,8 +2074,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       const legacyStg = path.join(root, ".qfai", "assistant", "steering");
       await mkdir(legacyStg, { recursive: true });
       await writeFile(path.join(legacyStg, "test-layers.md"), "# legacy layers\n", "utf-8");
-      // pre-existing manifest/spec_required_files.json (already at canonical
-      // location after upgrade — same-layer self-copy is a no-op).
+      // pre-existing manifest/spec_required_files.json — manifest/ is never
+      // probed by the helper because the recut leaves its path unchanged, so
+      // the file must simply stay where it is.
       const legacyManifest = path.join(root, ".qfai", "assistant", "manifest");
       await mkdir(legacyManifest, { recursive: true });
       await writeFile(
@@ -2101,7 +2103,8 @@ describe("qfai init", { timeout: 60000 }, () => {
         "utf-8",
       );
       expect(layers).toContain("legacy layers");
-      // manifest/spec_required_files.json was already at canonical location.
+      // manifest/spec_required_files.json is left exactly as seeded: the
+      // helper does not walk manifest/, so nothing relocates or rewrites it.
       const manifestFile = await readFile(
         path.join(root, ".qfai", "assistant", "manifest", "spec_required_files.json"),
         "utf-8",
@@ -2323,6 +2326,50 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       const secondBody = await readFile(memoPath, "utf-8");
       expect(secondBody).toBe(firstBody);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("names only the pre-recut surfaces it probed when reporting that none were found", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-upgrade-manifest-"));
+    try {
+      // Populate the canonical manifest/ layer and leave the two pre-recut
+      // surfaces (steering/, instructions/) absent. The helper deliberately
+      // never stats manifest/ — its path is unchanged by the recut — so
+      // neither the note nor the memo may claim it was examined.
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      await mkdir(manifestDir, { recursive: true });
+      await writeFile(path.join(manifestDir, "my-routing.yml"), "phases: []\n", "utf-8");
+
+      const stdout = await captureStdout(async () => {
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        });
+      });
+
+      expect(stdout).toContain(
+        "W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found",
+      );
+      expect(stdout).not.toContain("{steering,instructions,manifest}");
+
+      const memoMatches = await fg(
+        ".qfai/assistant/process/migrations/v*-assistant-layer-recut.md",
+        { cwd: root, dot: true },
+      );
+      expect(memoMatches.length).toBe(1);
+      const memoBody = await readFile(path.join(root, memoMatches[0] ?? ""), "utf-8");
+      expect(memoBody).toContain(
+        "No pre-recut surfaces (`.qfai/assistant/{steering,instructions}/`) found",
+      );
+      expect(memoBody).not.toContain("{steering,instructions,manifest}");
+      expect(memoBody).not.toContain(
+        "Source layout: .qfai/assistant/{steering, instructions, manifest}/",
+      );
     } finally {
       await removeTempTree(root);
     }

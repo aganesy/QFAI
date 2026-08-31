@@ -53,7 +53,7 @@ Exit codes:
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
-Relocates files from the pre-recut layout (`.qfai/assistant/instructions/*`, `.qfai/assistant/steering/*`, `.qfai/assistant/manifest/*`) to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table.
+Relocates files from the pre-recut layout (`.qfai/assistant/instructions/*`, `.qfai/assistant/steering/*`) to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table. The pre-recut `manifest/` layer is deliberately excluded: the recut leaves its path unchanged, so it is already the canonical destination and probing it would report ordinary post-init files as pre-recut surfaces. Migrating stale _content_ inside those files is a separate concern and is not handled here.
 
 Behavior:
 
@@ -114,7 +114,7 @@ Both `init` and `validate` MUST read assistant-tree paths from `packages/qfai/sr
 
 ## Deprecation window
 
-Old-layout file paths (under `.qfai/assistant/instructions/`, `.qfai/assistant/steering/`, `.qfai/assistant/manifest/`) remain readable for **exactly one minor release** after the recut ships (NFR-0002). The migration memo at `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` names both the introducing version and the sunset version.
+Old-layout file paths (under `.qfai/assistant/instructions/` and `.qfai/assistant/steering/`) remain readable for **exactly one minor release** after the recut ships (NFR-0002). `.qfai/assistant/manifest/` is not in that list: the recut keeps its path, so it is canonical rather than deprecated and no sunset applies to it. The migration memo at `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` names both the introducing version and the sunset version.
 
 The sunset is `SUNSETS.legacyAssistantSteering` in `packages/qfai/src/core/sunset.ts`, and every surface that reports the layout computes its severity from it: `qfai validate` escalates `D-DEPRECATED-PATH` to error, `qfai init` reports the same finding on stderr at the same severity, and `W-SKILL-DOC-BROKEN-REF` escalates alongside them. The readers keep accepting the old paths — per `qfai-validate.md`, the old-layout reader is removed in the minor _after_ the sunset, not at it — so `--upgrade-assistant-tree` still works and `init` still exits 0.
 
