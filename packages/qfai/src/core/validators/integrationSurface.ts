@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { isInside, issue } from "./utils.js";
 
 /**
  * Skill wrapper directories `qfai init` fills with symlinks, and the agent
@@ -724,12 +724,6 @@ async function canonicalDamage(
     return null;
   }
   return null;
-}
-
-/** Whether `candidate` is `base` itself or sits under it. */
-function isInside(base: string, candidate: string): boolean {
-  const relative = path.relative(base, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 /** The message for a path that is damaged rather than absent or usable. */
