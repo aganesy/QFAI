@@ -599,8 +599,8 @@ async function ensureAssistantMarker(
     }
     warn(
       [
-        `WARN: ${dest} の状態を取得できませんでした（${describeError(err)}）。`,
-        `      qfai init のマーカーは書き込まれていないため、QFAI-LINK-001 は引き続き「未初期化」と判定します。パーミッションを確認して qfai init を再実行してください。`,
+        `WARN: could not stat ${dest} (${describeError(err)}).`,
+        `      The qfai init marker was not written, so QFAI-LINK-001 still reads this project as uninitialised. Check the permissions and run qfai init again.`,
       ].join("\n"),
     );
     return [];
@@ -626,8 +626,8 @@ async function ensureAssistantMarker(
   if (merged.byteLength > ASSISTANT_README_MAX_BYTES) {
     warn(
       [
-        `WARN: ${dest} に qfai init のマーカーを書き込めません（既存の内容と結合すると ${String(ASSISTANT_README_MAX_BYTES)} bytes の上限を超えます）。`,
-        `      既存の内容は変更していません。プロジェクト固有の注記を別ファイルへ移して短くしてから qfai init を再実行してください。`,
+        `WARN: cannot write the qfai init marker to ${dest} (merging it with the existing content would exceed the ${String(ASSISTANT_README_MAX_BYTES)} byte ceiling).`,
+        `      The existing content is unchanged. Move this project's own notes into another file to shorten it, then run qfai init again.`,
       ].join("\n"),
     );
     return [];
@@ -638,7 +638,7 @@ async function ensureAssistantMarker(
       // Somebody else put a different file at the pathname while this ran.
       // Theirs is the newer decision; overwriting it is not this repair's call.
       warn(
-        `WARN: ${dest} は qfai init の実行中に別のプロセスが置き換えたため、マーカーの書き込みを見送りました。qfai init を再実行してください。`,
+        `WARN: another process replaced ${dest} while qfai init was running, so the marker was not written. Run qfai init again.`,
       );
       return [];
     }
@@ -647,11 +647,11 @@ async function ensureAssistantMarker(
 }
 
 /** Heading the previous README's text is filed under. */
-const PRESERVED_BODY_HEADING = "## qfai init が置き換える前の README";
+const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
 
 const PRESERVED_BODY_NOTE = [
-  "以下は `qfai init` がこのファイルにマーカーを書き込む前からあった内容です。",
-  "プロジェクト固有の注記が含まれている可能性があるため保持しています。不要であれば削除してください。",
+  "The following was in this file before `qfai init` wrote its marker into it.",
+  "It is kept because it may hold notes that belong to this project. Delete it if you do not need it.",
 ].join("\n");
 
 /**
@@ -2412,8 +2412,8 @@ async function gitSymlinksEnabled(
 
 /** Disclosed when the local pin is in place but something outranks it. */
 const WORKTREE_OVERRIDE_NOTE =
-  "  warning: core.symlinks の実効値は false のままです（worktree スコープの上書き）。" +
-  "解除するには linked worktree で `git config --worktree core.symlinks true` を実行してください。";
+  "  warning: the effective value of core.symlinks is still false (a worktree-scope override). " +
+  "To clear it, run `git config --worktree core.symlinks true` in the linked worktree.";
 
 /**
  * Configures `core.symlinks`, the one change init makes outside the working
@@ -2783,10 +2783,10 @@ async function findUnsafeWrapperComponent(
       return undefined;
     }
     if (stats.isSymbolicLink()) {
-      return `${current} が symlink のため生成先として使えません`;
+      return `${current} is a symlink, so it cannot be used as an output location`;
     }
     if (!stats.isDirectory()) {
-      return `${current} がディレクトリではありません`;
+      return `${current} is not a directory`;
     }
   }
   return undefined;
@@ -2868,7 +2868,7 @@ async function planCodexAgentProfile(
     return { status: "unavailable", reason: markdown.reason };
   }
   if (markdown.status === "absent") {
-    return { status: "unavailable", reason: "canonical markdown が見つかりません" };
+    return { status: "unavailable", reason: "canonical markdown not found" };
   }
 
   const rendered = renderCodexAgentToml(markdown.content, kind, agentName);
@@ -2883,8 +2883,8 @@ function classifyFailureReason(agentName: string, classification: AgentClassific
     return classification.unusable;
   }
   return classification.rejected.has(agentName)
-    ? `agent-catalog.yml の ${agentName} の kind が不正です`
-    : `agent-catalog.yml に ${agentName} の kind がありません`;
+    ? `agent-catalog.yml declares an invalid kind for ${agentName}`
+    : `agent-catalog.yml declares no kind for ${agentName}`;
 }
 
 /**
@@ -2940,7 +2940,7 @@ type AgentClassification = {
  * of. A project initialised by an older release keeps its catalog verbatim, so
  * returning the first non-empty map left every agent a later release added
  * permanently un-classified — markdown and two wrappers written, Codex profile
- * skipped as "kind がありません" forever.
+ * skipped as "declares no kind" forever.
  *
  * It fills in **only** those, though. An ID the project names without a usable
  * `kind` is a broken local statement about that agent, and answering it with
@@ -2967,7 +2967,7 @@ async function loadAgentClassification(
     return {
       kinds: new Map(),
       rejected: new Set(),
-      unusable: "agent-catalog.yml を agents リストとして読めません",
+      unusable: "agent-catalog.yml cannot be read as an agents list",
     };
   }
 
@@ -2998,7 +2998,7 @@ async function removeSymlinkAt(target: string): Promise<void> {
 }
 
 const NON_REGULAR_DESTINATION =
-  "通常ファイル以外のエントリ（FIFO / ソケット / デバイス）が存在するため生成できません";
+  "a non-regular entry (FIFO / socket / device) is in the way, so nothing can be generated here";
 
 /**
  * Why this destination cannot take generator output, or `undefined`.
@@ -3020,7 +3020,9 @@ function describeUnwritableDestination(stats: Stats | undefined): string | undef
   if (stats === undefined || stats.isFile() || stats.isSymbolicLink()) {
     return undefined;
   }
-  return stats.isDirectory() ? "ディレクトリが存在するため生成できません" : NON_REGULAR_DESTINATION;
+  return stats.isDirectory()
+    ? "a directory is in the way, so nothing can be generated here"
+    : NON_REGULAR_DESTINATION;
 }
 
 /**
@@ -3144,7 +3146,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
     if (hasErrnoCode(err) && UNREADABLE_OPEN_CODES.has(err.code)) {
       return {
         status: "rejected",
-        reason: `${filePath} は通常ファイルとして開けません (${err.code})`,
+        reason: `${filePath} cannot be opened as a regular file (${err.code})`,
       };
     }
     throw err;
@@ -3152,7 +3154,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
   try {
     const stats = await handle.stat();
     if (!stats.isFile()) {
-      return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
+      return { status: "rejected", reason: `${filePath} is not a regular file` };
     }
     const chunks: Buffer[] = [];
     let total = 0;
@@ -3166,7 +3168,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
       if (total > MAX_CANONICAL_INPUT_BYTES) {
         return {
           status: "rejected",
-          reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+          reason: `${filePath} exceeds the ${MAX_CANONICAL_INPUT_BYTES} byte ceiling`,
         };
       }
       chunks.push(chunk.subarray(0, bytesRead));
@@ -4441,14 +4443,14 @@ async function removeJudgedAgentWrapper(entryPath: string, target: string): Prom
     } catch (restoreErr: unknown) {
       throw new Error(
         [
-          `退役 wrapper の削除を中止しましたが、退避したファイルを元に戻せませんでした: ${entryPath}`,
-          `原因: ${describeError(restoreErr)}`,
-          `元のファイルは次の場所にあります: ${sidecar}`,
+          `Aborted the retired-wrapper deletion but could not put the moved file back: ${entryPath}`,
+          `Cause: ${describeError(restoreErr)}`,
+          `The original file is at: ${sidecar}`,
         ].join("\n"),
         { cause: restoreErr },
       );
     }
-    info(`  note: ${entryPath} は検査後に内容が変わったため削除していません`);
+    info(`  note: ${entryPath} changed after it was checked, so it was not deleted`);
     return false;
   }
   // A symlink or a small regular file — that is all the check above accepts —

@@ -367,8 +367,8 @@ function warnOnProfileMismatch(
     return;
   }
   warn(
-    `report: --profile ${profile} を指定しましたが、入力 ${inputPath} は profile "${validation.profile}" の実行結果です。` +
-      `そのままの数値でレポートを生成します。`,
+    `report: --profile ${profile} was given, but the input ${inputPath} is the result of a run with ` +
+      `profile "${validation.profile}". The report is generated from those numbers as they are.`,
   );
 }
 
