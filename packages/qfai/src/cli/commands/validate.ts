@@ -83,8 +83,12 @@ function normalizeForLegacyMatch(p: string): string {
  * treated as legacy — the legacy SSOT is the relative repo-rooted
  * literal only; operators who deliberately point at an absolute path
  * have explicitly opted out of the canonical SSOT.
+ *
+ * Exported so `report --run-validate` gates on the same predicate. That command
+ * writes a validate result too, and a private copy of the rule here meant the
+ * report path bypassed the migration gate the validate path enforces.
  */
-function configTargetsLegacyValidateJsonPath(configuredPath: string): boolean {
+export function configTargetsLegacyValidateJsonPath(configuredPath: string): boolean {
   if (path.isAbsolute(configuredPath)) return false;
   return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
 }
