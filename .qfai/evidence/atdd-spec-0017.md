@@ -2202,9 +2202,14 @@ It has since moved a fifth time, and this time from inside: answering the round'
 threads added five `it` callsites to `tests/assets/implementCheckpointVerification.test.ts` — the
 file-scoped selector check, the argv/shell-escaping rule, pytest's node-ID selection, the legacy
 comma-cell migration, and the authoring-side per-element requirement. So 933 + 5 = 938, re-derived
-from the tree rather than read off a failure message.
+from the tree rather than read off a failure message. It has now moved a sixth time, and again from
+outside: a newer `main` was taken in, which puts the base count at 927, and the thirteen callsites this
+branch adds to `tests/assets/implementCheckpointVerification.test.ts` are the only ones it contributes
+under the e2e project's include globs, so the merged tree is 927 + 13 = 940. That figure is measured on
+the merged tree with the guard's own `CALLSITE` rule rather than carried from either side of the merge,
+and both suite totals above remain known-invalid.
 
-e2e callsites at this tree: 938
+e2e callsites at this tree: 940
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

@@ -182,7 +182,8 @@ the full suite.
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
-reports zero `QFAI-TEST-001` findings. **Step 1 is not settled by its exit code, in either form.**
+reports zero `QFAI-TEST-001` findings — the JS/TS `.skip` family is the separate warning rule
+`QFAI-TEST-003` and is not counted here. **Step 1 is not settled by its exit code, in either form.**
 File-scoped it cannot select nothing, but it can select only the _other_ rows sharing the file, so
 its output must name every `Selector` entry of the row being checkpointed; **narrowed**, each of its
 per-entry runs passes only when the recorded output names that entry as having run — the same thing
