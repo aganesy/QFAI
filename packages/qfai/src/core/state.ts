@@ -75,10 +75,23 @@ export class StateUnreadableError extends Error {
   }
 }
 
+/**
+ * Outcome of reading `.qfai/state.json`.
+ *
+ * `"absent"` (no file) and `"unreadable"` are deliberately NOT the same case.
+ * An absent state file is the ordinary state of a project that never ran
+ * `qfai discussion use`; an unreadable one is broken runtime state that only a
+ * repair can clear. Collapsing the two lets a consumer treat "nothing was ever
+ * pinned" and "the pin cannot be read" identically and silently substitute an
+ * inferred answer.
+ *
+ * `reason` is the short phrase {@link StateUnreadableError} embeds; `detail` is
+ * the operator-facing sentence that names the file and what is wrong with it.
+ */
 type StateLoad =
   | { kind: "ok"; state: Record<string, unknown> }
   | { kind: "absent" }
-  | { kind: "unreadable"; reason: string; cause: unknown };
+  | { kind: "unreadable"; reason: string; detail: string; cause: unknown };
 
 /**
  * True when `abs` is a symlink whose target does not resolve. `readFile`
@@ -112,20 +125,40 @@ async function loadState(root: string): Promise<StateLoad> {
       // itself with a regular file — losing both the repairable link and
       // the target another writer shares. Refuse instead.
       if (await isDanglingSymlink(abs)) {
-        return { kind: "unreadable", reason: "dangling symlink", cause: err };
+        return {
+          kind: "unreadable",
+          reason: "dangling symlink",
+          detail: `${STATE_REL} is a symlink whose target does not exist`,
+          cause: err,
+        };
       }
       return { kind: "absent" };
     }
-    return { kind: "unreadable", reason: hasErrnoCode(err) ? err.code : "read failed", cause: err };
+    return {
+      kind: "unreadable",
+      reason: hasErrnoCode(err) ? err.code : "read failed",
+      detail: `${STATE_REL} could not be read (${describeError(err)})`,
+      cause: err,
+    };
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    return { kind: "unreadable", reason: "invalid JSON", cause: err };
+    return {
+      kind: "unreadable",
+      reason: "invalid JSON",
+      detail: `${STATE_REL} is not valid JSON (${describeError(err)})`,
+      cause: err,
+    };
   }
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { kind: "unreadable", reason: "not a JSON object", cause: null };
+    return {
+      kind: "unreadable",
+      reason: "not a JSON object",
+      detail: `${STATE_REL} is not a JSON object`,
+      cause: null,
+    };
   }
   // `Record<string, unknown>` is the structural supertype of any parsed
   // JSON object; callers narrow each field they read.
@@ -529,22 +562,85 @@ export async function writeStateFile(root: string, state: Record<string, unknown
 }
 
 /**
+ * Outcome of reading `discussion.currentId`.
+ *
+ * `"unset"` means the pointer was never written (no state file, no
+ * `discussion` block, no `currentId` key) — the ordinary state of a project
+ * that never ran `qfai discussion use`. `"corrupt"` means the pointer cannot
+ * be read because the surrounding state is broken (invalid JSON, a
+ * non-object document, a non-object `discussion`, a non-string or blank
+ * `currentId`).
+ *
+ * Consumers that pick a *fallback* when no pointer is available must branch on
+ * this: inferring "latest pack" from a corrupt file substitutes a pack nobody
+ * selected, which is how a stale/broken pointer silently drops a gate.
+ */
+export type DiscussionCurrentIdRead =
+  | { kind: "set"; currentId: string }
+  | { kind: "unset" }
+  | { kind: "corrupt"; detail: string };
+
+/**
+ * Read `discussion.currentId` from `.qfai/state.json`, discriminating
+ * "never pinned" from "pinned but unreadable". Never throws.
+ */
+export async function readDiscussionCurrentIdState(root: string): Promise<DiscussionCurrentIdRead> {
+  const read = await loadState(root);
+  if (read.kind === "absent") return { kind: "unset" };
+  if (read.kind === "unreadable") return { kind: "corrupt", detail: read.detail };
+
+  const discussion: unknown = read.state.discussion;
+  if (discussion === undefined) return { kind: "unset" };
+  if (!isJsonObject(discussion)) {
+    return {
+      kind: "corrupt",
+      detail: `${STATE_REL}#discussion must be an object (got ${describeJsonValue(discussion)})`,
+    };
+  }
+  const currentIdField: unknown = discussion.currentId;
+  if (currentIdField === undefined) return { kind: "unset" };
+  if (typeof currentIdField !== "string") {
+    return {
+      kind: "corrupt",
+      detail: `${STATE_REL}#discussion.currentId must be a string (got ${describeJsonValue(currentIdField)})`,
+    };
+  }
+  if (currentIdField.trim().length === 0) {
+    return {
+      kind: "corrupt",
+      detail: `${STATE_REL}#discussion.currentId is blank`,
+    };
+  }
+  return { kind: "set", currentId: currentIdField };
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function describeJsonValue(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
+}
+
+/** The message of a thrown value, for the operator-facing `detail` strings. */
+function describeError(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
+}
+
+/**
  * Read `discussion.currentId` from `.qfai/state.json`. Returns `null`
  * when the file, the `discussion` object, or the `currentId` string is
  * absent / not a non-empty string.
+ *
+ * Callers that must distinguish an unset pointer from a corrupt state file
+ * (because they fall back to an inferred pack when none is set) should use
+ * {@link readDiscussionCurrentIdState} instead.
  */
 export async function readDiscussionCurrentId(root: string): Promise<string | null> {
-  const state = await readStateTolerant(root);
-  if (state === null) return null;
-  const discussion = state.discussion;
-  if (discussion === null || typeof discussion !== "object" || Array.isArray(discussion)) {
-    return null;
-  }
-  const currentIdField = (discussion as Record<string, unknown>).currentId;
-  if (typeof currentIdField !== "string" || currentIdField.trim().length === 0) {
-    return null;
-  }
-  return currentIdField;
+  const read = await readDiscussionCurrentIdState(root);
+  return read.kind === "set" ? read.currentId : null;
 }
 
 /**
@@ -558,13 +654,10 @@ export async function readDiscussionCurrentId(root: string): Promise<string | nu
 export async function writeDiscussionCurrentId(root: string, currentId: string): Promise<void> {
   const existing = (await readStateStrict(root)) ?? {};
 
-  const discussionField = existing.discussion;
-  const discussion =
-    discussionField !== null &&
-    typeof discussionField === "object" &&
-    !Array.isArray(discussionField)
-      ? { ...(discussionField as Record<string, unknown>) }
-      : {};
+  const discussionField: unknown = existing.discussion;
+  const discussion: Record<string, unknown> = isJsonObject(discussionField)
+    ? { ...discussionField }
+    : {};
   discussion.currentId = currentId;
 
   const next: Record<string, unknown> = { ...existing, discussion };

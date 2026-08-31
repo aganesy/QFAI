@@ -122,6 +122,18 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
     );
   });
 
+  it("exempts every canonical `## Triage` section, not just the first", async () => {
+    // A re-run appends a second `## Triage` rather than extending the first
+    // table; `validateTriageSection` reads both, so both must be exempt or
+    // the two rules are jointly unsatisfiable for the appended one.
+    await withPolicies(
+      ["# 10 Delta", "", ...TRIAGE_SECTION, "", ...TRIAGE_SECTION, ""].join("\n"),
+      (issues) => {
+        expect(policyScopeFindings(issues)).toEqual([]);
+      },
+    );
+  });
+
   it("only exempts the canonical `## Triage` H2, not near-miss headings", async () => {
     const row = "| REQ-0042 | x | spec-0007 | UPDATE | MODIFY | - | AC-0007-0004 renamed |";
     const table = [
@@ -253,6 +265,67 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
       (issues) => {
         const refs = policyScopeFindings(issues);
         expect(refs).not.toContain("AC-0007-0004");
+      },
+    );
+  });
+
+  it("does not open a section for a `## Triage` example inside a fenced block", async () => {
+    // The heading scan ran on raw text, so a format example in a fence opened a
+    // section no Triage validator reads — and the carve-out then blanked the
+    // prohibited IDs of the next seven-column table.
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        ...TRIAGE_SECTION,
+        "",
+        "## Notes",
+        "",
+        "追記するときの書式:",
+        "",
+        "```markdown",
+        "## Triage",
+        "",
+        "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+        "| ------ | ------- | ------------- | --------- | ------ | ----------- | --------- |",
+        "```",
+        "",
+        "| Source   | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale            |",
+        "| -------- | ------- | ------------- | --------- | ------ | ----------- | -------------------- |",
+        "| REQ-0043 | rename  | spec-0008     | UPDATE    | MODIFY | -           | AC-0008-0004 renamed |",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        // The table after the fence sits in no Triage section at all.
+        expect(refs).toContain("AC-0008-0004");
+        // The real section above keeps its exemption.
+        expect(refs).not.toContain("AC-0007-0004");
+      },
+    );
+  });
+
+  it("does not open a section for a `## Triage` example inside an HTML comment", async () => {
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        ...TRIAGE_SECTION,
+        "",
+        "## Notes",
+        "",
+        "<!--",
+        "## Triage",
+        "(過去の草案。復活させる場合は上の表に追記する)",
+        "-->",
+        "",
+        "| Source   | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale            |",
+        "| -------- | ------- | ------------- | --------- | ------ | ----------- | -------------------- |",
+        "| REQ-0043 | rename  | spec-0008     | UPDATE    | MODIFY | -           | AC-0008-0004 renamed |",
+        "",
+      ].join("\n"),
+      (issues) => {
+        expect(policyScopeFindings(issues)).toContain("AC-0008-0004");
       },
     );
   });
