@@ -128,6 +128,14 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_UNKNOWN_TIER` — a `Tier` cell that is neither `T1`/`T2`/`T3` nor
+   * `-`. The column itself is new, so the first ledgers to carry one were
+   * hand-filled against prose rather than against this value set, and a
+   * spelling the rule rejects (`T@`, `Tier 2`, `t2 (authz)`) is a cell its
+   * author believed was fine. Every such row fails at once on upgrade.
+   */
+  tddListUnknownTier: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

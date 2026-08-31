@@ -1294,6 +1294,21 @@ async function validateSpecTddList(
   // only safe while a value that is *present* is a value that was understood:
   // `T@`, `Tier 2` or `t2 (authz)` match no tier, and reading them as blank
   // would hand a row its author escalated the batched ceremony instead.
+  //
+  // Behind a promotion window (`RULE_PROMOTIONS`, design principle P7), for the
+  // reason the registry entry states: the column is new, so the ledgers that
+  // have one filled it against prose rather than against this value set, and
+  // every row whose spelling misses lands on the same upgrade. `warning` until
+  // the pinned release, `error` from it. `resolveToolVersion` resolves rather
+  // than rejects — a read failure returns `"unknown"`, which the comparator
+  // reads as inside the window, so an unreadable version cannot be what turns
+  // this into a build failure.
+  const unknownTierPromotion = RULE_PROMOTIONS.tddListUnknownTier.promoteAt;
+  const unknownTierSeverity = newRuleSeverity(await resolveToolVersion(), unknownTierPromotion);
+  const unknownTierWindowNote =
+    unknownTierSeverity === "warning"
+      ? ` Reported as a warning until the ${unknownTierPromotion} release, then an error.`
+      : "";
   for (const ref of ledgerRows()) {
     const tier = cell(ref, "Tier");
     if (tier.length === 0 || tier === "-") continue;
@@ -1301,8 +1316,8 @@ async function validateSpecTddList(
     issues.push(
       issue(
         "TDDLIST_UNKNOWN_TIER",
-        `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}"`,
-        "error",
+        `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}".${unknownTierWindowNote}`,
+        unknownTierSeverity,
         relPath,
         "tddList.tier",
         undefined,
