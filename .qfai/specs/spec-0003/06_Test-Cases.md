@@ -79,6 +79,7 @@ stays the first markdown table in this file):
 | TC-0003-0052 | unit        | AC-0003-0034               | EX-0003-0049 | normal   | pruneMatchingEntries の export と predicate           |
 | TC-0003-0053 | integration | AC-0003-0033               | EX-0003-0040 | normal   | version ファイルと packageManager が揃う happy path   |
 | TC-0003-0054 | integration | AC-0003-0036               | EX-0003-0048 | normal   | declined でない absent name は書き出して記録する      |
+| TC-0003-0055 | integration | AC-0003-0037               |              | normal   | Codex agent profile 生成 + --force 再生成             |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -696,3 +697,19 @@ Verify:
 - init 後にファイルが存在する
 - provenance に entry が記録され、`sha256` は書き出した bytes の digest である
 - `absent` と `declined` が copy set の構築段階で別扱いされている
+
+## TC-0003-0055: Codex agent profile 生成 + --force 再生成
+
+**Level:** integration
+**AC Refs:** AC-0003-0037
+**Type:** normal
+
+Setup: 空 temp dir に `runInit` を実行した直後の project。
+Action: profile を書き換えた上で `runInit` (plain) と `runInit --force` を実行。
+Verify:
+
+- canonical agent 1 件につき `.codex/agents/<name>.toml` が 1 件生成される
+- `name` / `description` が canonical frontmatter と一致し、body は `## Mission` 以降と一致する
+- `kind: reviewer` の agent のみ `sandbox_mode = "read-only"` を持つ
+- 既存 profile は plain run で保持され、`--force` で生成物へ再生成される
+- `--dry-run` では `.codex/agents/` が作成されない
