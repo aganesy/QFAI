@@ -154,6 +154,8 @@ export type ParsedArgs = {
     atddSpecId?: string;
     /** `--spec <id>` values for `qfai validate` (repeatable; empty = whole repo). */
     validateSpecIds: string[];
+    /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
+    reportSpecIds: string[];
     help: boolean;
     invalidExitCode: number;
   };
@@ -175,6 +177,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     strict: false,
     guardrailsPaths: [],
     validateSpecIds: [],
+    reportSpecIds: [],
     help: false,
     invalidExitCode: 1,
   };
@@ -313,6 +316,33 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
+  // `prototyping` の subcommand token は flag ループの前に確定するので、
+  // iterate 専用 flag の accept 判定はここで一度だけ組み立てる。
+  const isPrototypingIterate = command === "prototyping" && options.prototypingAction === "iterate";
+
+  // Value-taking flag-handling contract. Every `case` below that reads
+  // a value token consumes it (rule 1) and rejects use on a command
+  // that does not own the flag (rule 2). There are no exempt arms.
+  //   1. Always read and consume the value token via
+  //      `readOptionValue(args, i)` + `i += 1`. A missing value
+  //      (`null`) is a parse error → `markInvalid()`.
+  //   2. When the flag is used on a command / subcommand that does NOT
+  //      accept it, also call `markInvalid()` so the misuse is
+  //      surfaced rather than silently dropped. The value token
+  //      is STILL consumed so it cannot leak into the positional
+  //      stream — keeping consumption symmetric across all
+  //      value-taking flags.
+  //   3. The accepting-command branch performs any per-flag
+  //      enum / domain validation and routes the value to the
+  //      right option slot. A rejected value also consumes the token.
+  // Cross-command flags (`--root`, `--dir`, `--profile`, `--fail-on`,
+  // `--phase`) have no owning command, so rule 2 is vacuous for them;
+  // rule 1 still applies.
+  // Boolean flags carry no value token, so rule 1 cannot apply to
+  // them. Their cross-subcommand misuse is still silent today
+  // (`--check`, `--check-convergence`, `--capture`, `--auto-serve`,
+  // `--emit-skeletons`, `--active`, `--clean`, `--autoremediate`);
+  // TODO(next-minor): extend rule 2 to that set.
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     switch (arg) {
@@ -446,6 +476,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
+        } else {
+          // An unknown threshold must not fall through to the config
+          // default: the gate would then silently differ from the flag
+          // the caller wrote, in either direction.
+          markInvalid(badValue("--fail-on", next, "never|warning|error"));
         }
         i += 1;
         break;
@@ -475,7 +510,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--in"));
           break;
         }
-        options.reportIn = next;
+        if (command === "report") {
+          options.reportIn = next;
+        } else {
+          markInvalid(notValidHere("--in"));
+        }
         i += 1;
         break;
       }
@@ -488,64 +527,70 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--base-url"));
           break;
         }
-        options.reportBaseUrl = next;
+        if (command === "report") {
+          options.reportBaseUrl = next;
+        } else {
+          markInvalid(notValidHere("--base-url"));
+        }
         i += 1;
         break;
       }
       case "--path": {
-        if (command !== "guardrails") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid(missingValue("--path"));
           break;
         }
-        options.guardrailsPaths.push(next);
+        if (command === "guardrails") {
+          options.guardrailsPaths.push(next);
+        } else {
+          markInvalid(notValidHere("--path"));
+        }
         i += 1;
         break;
       }
       case "--max": {
-        if (command !== "guardrails") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid(missingValue("--max"));
           break;
         }
         const parsed = Number.parseInt(next, 10);
-        if (Number.isNaN(parsed)) {
+        if (command !== "guardrails") {
+          markInvalid(notValidHere("--max"));
+        } else if (Number.isNaN(parsed)) {
           markInvalid(badValue("--max", next, "an integer"));
-          break;
+        } else {
+          options.guardrailsMax = parsed;
         }
-        options.guardrailsMax = parsed;
         i += 1;
         break;
       }
       case "--keyword": {
-        if (command !== "guardrails") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid(missingValue("--keyword"));
           break;
         }
-        options.guardrailsKeyword = next;
+        if (command === "guardrails") {
+          options.guardrailsKeyword = next;
+        } else {
+          markInvalid(notValidHere("--keyword"));
+        }
         i += 1;
         break;
       }
       case "--platform": {
-        if (command !== "validate") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid(missingValue("--platform"));
           break;
         }
-        options.platform = next;
+        if (command === "validate") {
+          options.platform = next;
+        } else {
+          markInvalid(notValidHere("--platform"));
+        }
         i += 1;
         break;
       }
@@ -555,7 +600,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--target-url"));
           break;
         }
-        options.prototypingTargetUrl = next;
+        // `doctor --profile prototyping` / `prototyping preflight` /
+        // `prototyping iterate` の 3 経路のみが targetUrl を読む。
+        if (
+          command === "doctor" ||
+          (command === "prototyping" && options.prototypingAction === "preflight") ||
+          isPrototypingIterate
+        ) {
+          options.prototypingTargetUrl = next;
+        } else {
+          markInvalid(notValidHere("--target-url"));
+        }
         i += 1;
         break;
       }
@@ -566,7 +621,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         const parsed = parseNonNegativeInteger(next);
-        if (parsed === null) {
+        if (!isPrototypingIterate) {
+          markInvalid(notValidHere("--cycle"));
+        } else if (parsed === null) {
           markInvalid(badValue("--cycle", next, "a non-negative integer"));
         } else {
           options.prototypingCycle = parsed;
@@ -586,7 +643,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--license-patch"));
           break;
         }
-        options.prototypingLicensePatch = next;
+        if (isPrototypingIterate) {
+          options.prototypingLicensePatch = next;
+        } else {
+          markInvalid(notValidHere("--license-patch"));
+        }
         i += 1;
         break;
       }
@@ -596,7 +657,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--primary-spec-id"));
           break;
         }
-        options.prototypingPrimarySpecId = next;
+        if (isPrototypingIterate) {
+          options.prototypingPrimarySpecId = next;
+        } else {
+          markInvalid(notValidHere("--primary-spec-id"));
+        }
         i += 1;
         break;
       }
@@ -605,28 +670,25 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // value; presence flips the boolean. Only meaningful for
         // `qfai prototyping iterate`; main.ts wires it through only on
         // the iterate path. Currently silently ignored for
-        // `preflight` / `certify` / `show-spec` (consistent with
-        // `--check` / `--license-patch` / `--primary-spec-id`); see
+        // `preflight` / `certify` / `show-spec` — see the boolean-flag
+        // note in the value-taking flag contract above, and
         // .qfai/contracts/cli/qfai-prototyping-iterate.md.
-        // TODO(next-minor): cross-subcommand `markInvalid()` follow-up.
         options.prototypingCheckConvergence = true;
         break;
       }
       case "--capture": {
         // Opt-in PNG/HTML capture. No value; presence flips the
         // boolean. Only meaningful for `qfai prototyping iterate`;
-        // silently ignored on other prototyping subcommands today.
-        // TODO(next-minor): cross-subcommand markInvalid() follow-up
-        // (see `--check-convergence` note above).
+        // silently ignored on other prototyping subcommands today
+        // (see the boolean-flag note in the contract block above).
         options.prototypingCapture = true;
         break;
       }
       case "--auto-serve": {
         // Opt-in local HTTP server spawn. No value; presence flips the
         // boolean. Only meaningful for `qfai prototyping iterate`;
-        // silently ignored on other prototyping subcommands today.
-        // TODO(next-minor): cross-subcommand markInvalid() follow-up
-        // (see `--check-convergence` note above).
+        // silently ignored on other prototyping subcommands today
+        // (see the boolean-flag note in the contract block above).
         options.prototypingAutoServe = true;
         break;
       }
@@ -644,7 +706,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--skeleton-mode"));
           break;
         }
-        if (next === "placeholder" || next === "full" || next === "stub") {
+        if (
+          isPrototypingIterate &&
+          (next === "placeholder" || next === "full" || next === "stub")
+        ) {
           options.prototypingSkeletonMode = next;
         } else {
           markInvalid(badValue("--skeleton-mode", next, "placeholder|full|stub"));
@@ -658,7 +723,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--mode"));
           break;
         }
-        if (next === "convergence" || next === "exploration") {
+        if (isPrototypingIterate && (next === "convergence" || next === "exploration")) {
           options.prototypingMode = next;
         } else {
           markInvalid(badValue("--mode", next, "convergence|exploration"));
@@ -666,24 +731,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
-      // Value-taking flag-handling contract (uniform across `--spec`,
-      // `--scope`, `--upgrade-scope`, `--operator`, `--clause`):
-      //   1. Always read and consume the value token via
-      //      `readOptionValue(args, i)` + `i += 1`. A missing value
-      //      (`null`) is a parse error → `markInvalid()`.
-      //   2. When the flag is used on a subcommand that does NOT
-      //      accept it, also call `markInvalid()` so the misuse is
-      //      surfaced rather than silently dropped. The value token
-      //      is STILL consumed so it cannot leak into the positional
-      //      stream — keeping consumption symmetric across all
-      //      value-taking flags.
-      //   3. The accepting-subcommand branch performs any per-flag
-      //      enum / domain validation and routes the value to the
-      //      right option slot.
-      // Pre-fix `--scope` (consumed-on-misuse) and `--upgrade-scope`
-      // (not-consumed-on-misuse) used opposite conventions for the
-      // same goal; this contract block plus the unified shape below
-      // resolves the asymmetry.
       case "--spec": {
         const next = readOptionValue(args, i);
         if (next === null) {
@@ -695,6 +742,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else if (command === "validate") {
           // Repeatable: `--spec 0003 --spec 0004` scopes the run to both.
           options.validateSpecIds.push(next);
+        } else if (command === "report") {
+          // Repeatable, same shape as `validate`. Without this branch the
+          // per-spec scoping `validate --spec` introduced stopped one command
+          // later: a slice worker holding `validate.spec-0003.json` had no way
+          // to render its own slice without writing the shared `report.md`.
+          options.reportSpecIds.push(next);
         } else {
           markInvalid(notValidHere("--spec"));
         }

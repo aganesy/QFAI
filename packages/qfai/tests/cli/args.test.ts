@@ -21,6 +21,30 @@ describe("parseArgs", () => {
     expect(parsed.options.validateFormat).toBe("github");
   });
 
+  it("parses --fail-on {never|warning|error} and rejects other values", () => {
+    const cwd = process.cwd();
+    for (const value of ["never", "warning", "error"] as const) {
+      const parsed = parseArgs(["validate", "--fail-on", value], cwd);
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.failOn).toBe(value);
+    }
+    // A misspelled or mis-cased threshold must not fall through to the
+    // config default: the gate would then silently differ from the flag.
+    for (const value of ["errr", "nver", "ERROR"]) {
+      const bogus = parseArgs(["validate", "--fail-on", value], cwd);
+      expect(bogus.invalid).toBe(true);
+      expect(bogus.options.help).toBe(true);
+      expect(bogus.options.failOn).toBeUndefined();
+    }
+  });
+
+  it("requires a value for --fail-on", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--fail-on"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
   it("does not consume other options as a value for --out", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["report", "--out", "--format", "json"], cwd);
@@ -241,6 +265,27 @@ describe("parseArgs", () => {
     });
   });
 
+  // `report` accepts the same flag: the scoping `validate --spec` introduced
+  // used to stop at the report boundary, where `markInvalid()` rejected it.
+  describe("report --spec", () => {
+    it("collects --spec values without marking the parse invalid", () => {
+      const parsed = parseArgs(
+        ["report", "--spec", "0003", "--spec", "spec-0004", "--format", "json"],
+        process.cwd(),
+      );
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.reportSpecIds).toEqual(["0003", "spec-0004"]);
+      expect(parsed.options.reportFormat).toBe("json");
+      // The validate slot must stay untouched — the two scopes are separate.
+      expect(parsed.options.validateSpecIds).toEqual([]);
+    });
+
+    it("defaults to an empty scope, which means the whole repo", () => {
+      const parsed = parseArgs(["report"], process.cwd());
+      expect(parsed.options.reportSpecIds).toEqual([]);
+    });
+  });
+
   // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
   // --clause silently dropped on misuse, and --upgrade-scope did
   // not consume its value. Per-flag assertions follow.
@@ -368,15 +413,126 @@ describe("parseArgs", () => {
     });
 
     it("reports a flag used on a command that does not accept it", () => {
-      const parsed = parseArgs(["report", "--spec", "0003"], process.cwd());
+      // `init` rather than `report`: `report --spec` is a real scoping flag
+      // now, so it is no longer an example of this class.
+      const parsed = parseArgs(["init", "--spec", "0003"], process.cwd());
       expect(parsed.invalid).toBe(true);
-      expect(parsed.invalidReason).toBe("qfai report: --spec is not valid for this command.");
+      expect(parsed.invalidReason).toBe("qfai init: --spec is not valid for this command.");
     });
 
     it("leaves invalidReason unset when the arguments parse", () => {
       const parsed = parseArgs(["validate", "--profile", "full"], process.cwd());
       expect(parsed.invalid).toBe(false);
       expect(parsed.invalidReason).toBeUndefined();
+    });
+  });
+
+  // The contract block in args.ts claims to govern EVERY value-taking
+  // arm of the flag switch. These cases pin the arms that used to opt
+  // out of it: the command-guarded four (`--path` / `--max` /
+  // `--keyword` / `--platform`, which returned before `i += 1` and so
+  // left the value token unconsumed) and the eight that carried no
+  // guard at all and were therefore accepted on any command.
+  describe("command-scoped value-taking flags: markInvalid + consume value token", () => {
+    const cwd = process.cwd();
+
+    it("--path / --max / --keyword outside guardrails mark invalid AND consume the value", () => {
+      for (const [flag, value] of [
+        ["--path", "18_delta.md"],
+        ["--max", "12"],
+        ["--keyword", "layout"],
+      ] as const) {
+        const parsed = parseArgs(["validate", flag, value, "--format", "github"], cwd);
+        expect(parsed.invalid).toBe(true);
+        // The value must NOT have shifted into a positional, so the
+        // trailing --format is still honored.
+        expect(parsed.options.validateFormat).toBe("github");
+        expect(parsed.options.guardrailsPaths).toEqual([]);
+        expect(parsed.options.guardrailsMax).toBeUndefined();
+        expect(parsed.options.guardrailsKeyword).toBeUndefined();
+      }
+    });
+
+    it("a misplaced --path consumes its value before a downstream audit --scope", () => {
+      const parsed = parseArgs(
+        ["audit", "log", "--path", "README.md", "--scope", "deviation"],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.auditScope).toBe("deviation");
+    });
+
+    it("--platform outside validate marks invalid AND consumes the value", () => {
+      const parsed = parseArgs(["report", "--platform", "linux", "--format", "json"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.platform).toBeUndefined();
+      expect(parsed.options.reportFormat).toBe("json");
+    });
+
+    it("--in / --base-url outside report mark invalid AND consume the value", () => {
+      for (const flag of ["--in", "--base-url"] as const) {
+        const parsed = parseArgs(["validate", flag, "value", "--format", "github"], cwd);
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.reportIn).toBeUndefined();
+        expect(parsed.options.reportBaseUrl).toBeUndefined();
+        expect(parsed.options.validateFormat).toBe("github");
+      }
+    });
+
+    it("--target-url is accepted on doctor, prototyping preflight and prototyping iterate", () => {
+      const doctor = parseArgs(
+        ["doctor", "--profile", "prototyping", "--target-url", "http://127.0.0.1:9"],
+        cwd,
+      );
+      expect(doctor.invalid).toBe(false);
+      expect(doctor.options.prototypingTargetUrl).toBe("http://127.0.0.1:9");
+
+      const preflight = parseArgs(
+        ["prototyping", "preflight", "--target-url", "http://127.0.0.1:9"],
+        cwd,
+      );
+      expect(preflight.invalid).toBe(false);
+      expect(preflight.options.prototypingTargetUrl).toBe("http://127.0.0.1:9");
+
+      const iterate = parseArgs(
+        ["prototyping", "iterate", "--cycle", "0", "--target-url", "http://127.0.0.1:9"],
+        cwd,
+      );
+      expect(iterate.invalid).toBe(false);
+      expect(iterate.options.prototypingTargetUrl).toBe("http://127.0.0.1:9");
+    });
+
+    it("--target-url elsewhere marks invalid AND consumes the value", () => {
+      const parsed = parseArgs(
+        ["validate", "--target-url", "http://127.0.0.1:9", "--format", "github"],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.prototypingTargetUrl).toBeUndefined();
+      expect(parsed.options.validateFormat).toBe("github");
+    });
+
+    it("iterate-only value flags outside `prototyping iterate` mark invalid AND consume the value", () => {
+      for (const [flag, value] of [
+        ["--cycle", "5"],
+        ["--license-patch", "patch.json"],
+        ["--primary-spec-id", "0003"],
+        ["--skeleton-mode", "stub"],
+        ["--mode", "exploration"],
+      ] as const) {
+        const parsed = parseArgs(["validate", flag, value, "--format", "github"], cwd);
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.validateFormat).toBe("github");
+        expect(parsed.options.prototypingCycle).toBeUndefined();
+        expect(parsed.options.prototypingLicensePatch).toBeUndefined();
+        expect(parsed.options.prototypingPrimarySpecId).toBeUndefined();
+        expect(parsed.options.prototypingSkeletonMode).toBeUndefined();
+        expect(parsed.options.prototypingMode).toBeUndefined();
+
+        // Same flag on a sibling prototyping subcommand is equally invalid.
+        const sibling = parseArgs(["prototyping", "certify", flag, value], cwd);
+        expect(sibling.invalid).toBe(true);
+      }
     });
   });
 });
