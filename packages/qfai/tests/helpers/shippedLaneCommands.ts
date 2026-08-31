@@ -1264,10 +1264,18 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
+    // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
+    // prose lines now say the masters are seeded by `qfai init` rather than assumed to exist, and the
+    // two bullets that stated QFAI-internal policy were reworded: the version-discipline one named
+    // `packages/qfai/package.json#version`, a path that exists only inside this monorepo, and the
+    // distributed-surface one named QFAI's own identifiers — neither has a referent in the project
+    // the file is written into. Reverting those five lines reproduces the previous digest
+    // (`df81d579…`) byte for byte, which is what makes this a review of five lines rather than a
+    // re-blessing of the whole file.
     ".github/copilot-instructions.md",
     "439cbe672bff64e110b13440d86eb18cf83685f73f41ccb12947408b5cd80b46",
   ],
-  [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
+  [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
   ["AGENTS.md", "04061092ed7048349ad93404145a9e3d71cb7c21bd37f5a531d0cd61147b313d"],
   ["CLAUDE.md", "040faf04c46b85d0064ca561ca813f66a3989b4f3ab44802f8c447908a0b455d"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
