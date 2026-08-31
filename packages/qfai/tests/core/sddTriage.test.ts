@@ -253,7 +253,7 @@ describe("classifyTriage", () => {
   it("marks the targetless DELETE proposal as a placeholder the validator will refuse", () => {
     // No active spec absorbs the removal, so the classifier can only propose
     // DELETE with an unresolved target. DELETE removes a whole spec
-    // directory, so `QFAI-TRIAGE-008` refuses the rendered row until the
+    // directory, so `QFAI-TRIAGE-009` refuses the rendered row until the
     // target is filled in — the rationale has to say so, the same contract
     // the CREATE placeholder has with `QFAI-TRIAGE-006`.
     const rows = classifyTriage({
@@ -270,15 +270,19 @@ describe("classifyTriage", () => {
     const proposal = rows[0];
     expect(proposal?.op).toBe("DELETE");
     expect(proposal?.existingSpec).toBeNull();
-    expect(proposal?.rationale).toContain("QFAI-TRIAGE-008");
+    expect(proposal?.rationale).toContain("QFAI-TRIAGE-009");
     expect(proposal?.rationale).toMatch(/Existing Spec/);
     if (!proposal) return;
     const rendered = renderTriageMarkdown([{ ...proposal, approvedBy: "user@host" }]);
     expect(
-      validateTriageSection(`# 09 Delta\n\n${rendered}`, "spec-0042/09_delta.md").map(
+      // A version inside every promotion window, so a rule still inside its
+      // window reports at its pre-promotion severity. `renderTriageMarkdown`
+      // writes a canonical `## Triage`, so nothing here reaches the heading
+      // rule and this stays a single-code assertion either way.
+      validateTriageSection(`# 09 Delta\n\n${rendered}`, "spec-0042/09_delta.md", "0.0.0").map(
         (entry) => entry.code,
       ),
-    ).toEqual(["QFAI-TRIAGE-008"]);
+    ).toEqual(["QFAI-TRIAGE-009"]);
   });
 
   it("classifies removal hint with multiple capability matches as MERGE", () => {

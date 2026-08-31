@@ -158,10 +158,17 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 
+The heading must be exactly `## Triage` (H2). Every such section in the
+file is validated, so a re-run may append another `## Triage` section
+instead of extending the first table. A decorated heading
+(`## Triage — 2026-07-26`) or a demoted one (`### Triage`) is read by no
+Triage validator; put the date or the note in the section body, not in
+the heading.
+
 ### `Existing Spec` grammar
 
 `Existing Spec` is the cell that binds the row to the spec it acts on, so
-it has exactly one grammar (enforced by `QFAI-TRIAGE-008`). The **whole
+it has exactly one grammar (enforced by `QFAI-TRIAGE-009`). The **whole
 cell** must be one of these — a valid target with anything else beside it is
 still a rejected cell:
 
@@ -214,18 +221,21 @@ catches a source that was misspelled or never allocated.
   `UPDATE:APPEND`, and deleting one item is `UPDATE:REMOVE`.
   `QFAI-TRIAGE-003` is a membership check on the Operation label and provably
   cannot catch this.
-- `QFAI-TRIAGE-008` (error): `Existing Spec` does not follow the grammar
+- `QFAI-TRIAGE-006` (error): CREATE row without a `CAP-NNNN` reference
+  in the Rationale column, or referencing a CAP that is not registered
+  in `_policies/03_Capabilities.md`. This is the structural gate that
+  enforces the append-first principle: CREATE is only permitted when a
+  new capability is being added to the catalog.
+- `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
+  `Triage` but is not a canonical `## Triage` section — its rows are read by
+  none of the checks above. Rename the heading to `## Triage`.
+- `QFAI-TRIAGE-009` (error): `Existing Spec` does not follow the grammar
   above — the cell is empty, uses range notation, carries a malformed or
   suffixed spec token, holds anything outside the grammar beside a valid
   target, gives a spec-scoped operation a `_policies` target, names a
   `spec-NNNN` that has no directory under `.qfai/specs/` (on a removal
   operation, only when the row's other targets do resolve), names nothing
   resolvable, or is a non-CREATE row left on `-`.
-- `QFAI-TRIAGE-006` (error): CREATE row without a `CAP-NNNN` reference
-  in the Rationale column, or referencing a CAP that is not registered
-  in `_policies/03_Capabilities.md`. This is the structural gate that
-  enforces the append-first principle: CREATE is only permitted when a
-  new capability is being added to the catalog.
 
 ## Status field interaction
 

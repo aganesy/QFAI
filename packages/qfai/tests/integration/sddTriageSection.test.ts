@@ -165,7 +165,7 @@ describe("validateSpecPacks - status & triage integration", () => {
     expect(codes(issues)).toEqual([]);
   });
 
-  it("emits QFAI-TRIAGE-008 when a triage row names a spec with no directory on disk", async () => {
+  it("emits QFAI-TRIAGE-009 when a triage row names a spec with no directory on disk", async () => {
     const root = await newTempRoot();
     await seedLayeredSpec(root, "0001", {
       status: "active",
@@ -180,7 +180,7 @@ describe("validateSpecPacks - status & triage integration", () => {
       ].join("\n"),
     });
     const issues = await validateSpecPacks(root, defaultConfig);
-    expect(codes(issues)).toContain("QFAI-TRIAGE-008");
+    expect(codes(issues)).toContain("QFAI-TRIAGE-009");
   });
 
   it("emits QFAI-TRIAGE-001 when delta has Change Summary but no Triage", async () => {

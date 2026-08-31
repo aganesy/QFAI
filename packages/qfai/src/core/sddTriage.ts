@@ -430,7 +430,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
         // The `Existing Spec` cell is part of that placeholder. DELETE
         // removes a whole spec directory, so a row that names none is not
         // executable; the rationale names the follow-up and the validator
-        // (`QFAI-TRIAGE-008`) refuses the row until the target is settled,
+        // (`QFAI-TRIAGE-009`) refuses the row until the target is settled,
         // the same producer/validator contract CREATE has with
         // `QFAI-TRIAGE-006`.
         rows.push({
@@ -439,7 +439,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
           existingSpec: null,
           op: "DELETE",
           rationale:
-            "no active spec absorbed the removal-shaped REQ; verify the subject is genuinely retired, then replace the Existing Spec placeholder with the spec this DELETE removes before persisting (QFAI-TRIAGE-008) — otherwise downgrade to UPDATE:REMOVE on the relevant spec",
+            "no active spec absorbed the removal-shaped REQ; verify the subject is genuinely retired, then replace the Existing Spec placeholder with the spec this DELETE removes before persisting (QFAI-TRIAGE-009) — otherwise downgrade to UPDATE:REMOVE on the relevant spec",
         });
       }
       continue;
