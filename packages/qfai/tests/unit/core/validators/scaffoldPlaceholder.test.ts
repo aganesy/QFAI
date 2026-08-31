@@ -49,6 +49,12 @@ async function seedScaffold(specId: string, tcId: string, body: string): Promise
   await writeFile(path.join(dir, `${tcId}.test.ts`), body, "utf-8");
 }
 
+// Source-level split of the `*.skip(` token so this fixture does not
+// false-positive when `validateTestTodoStubs` scans this repo's own test
+// files. Mirrors the `const TODO = ".todo"` split in `testTodoStubs.test.ts`;
+// the on-disk fixture content is identical.
+const SKIP = ".skip";
+
 /**
  * The pytest shape `qfai atdd scaffold` emits on a project whose
  * `testFileGlobs` derive `.py`: neither the `*.test.ts` basename this
@@ -87,7 +93,7 @@ import { describe, it } from "vitest";
 
 describe("${tcId}", () => {
   // TODO: implement assertion for ${tcId}
-  it.skip("pending — scaffold placeholder", () => {
+  it${SKIP}("pending — scaffold placeholder", () => {
     // TODO: implement assertion for ${tcId}
   });
 });
@@ -349,8 +355,8 @@ describe("a skeleton that moved to its declared home is still a skeleton", () =>
     // directories, and a move without an implementation used to leave every
     // gate at once: this scan did not reach it, the ATDD scan counted its
     // annotation as coverage so `QFAI-ATDD-112` and `-123` both cleared, and
-    // the generated `it.skip(...)` is not the `*.todo` form `QFAI-TEST-001`
-    // matches. Following the remediation literally turned a reported
+    // the generated skip call was not the `*.todo` form `QFAI-TEST-001`
+    // matched. Following the remediation literally turned a reported
     // placeholder into a silent one.
     for (const kind of ["api", "e2e"]) {
       const dir = path.join(root, "tests", kind, "spec-0008");
