@@ -16,7 +16,8 @@
  */
 
 import { existsSync } from "node:fs";
-import { readFile, readdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,19 +54,33 @@ async function constitutionFilenames(tree: string): Promise<ReadonlySet<string>>
 }
 
 /**
- * Every citation of a constitution document found under `assistant/`.
+ * Every citation of a constitution document found under one `assistant/` tree.
  *
  * The manifest YAML is scanned alongside the markdown: `agent-catalog.yml`
  * carries whole agent cards as its `developer_instructions`, so a citation
  * there reaches an agent just as directly as one in the card itself.
  *
- * Filtering by basename is what keeps runtime artifact paths (`test-list.md`,
+ * Two ways in, and the order matters. A citation carrying the canonical prefix
+ * is claimed **whatever it names**, because the prefix is the claim: it says
+ * "this is a constitution document" and the resolution check below is what
+ * decides whether that is true. Recognising a citation only by the names the
+ * directory currently holds made deletion self-concealing — retire or rename
+ * `quality.md` and its three surviving citations stop being collected at all,
+ * so the dangling check never sees them and the non-vacuity floor is still
+ * cleared by the ~145 that remain.
+ *
+ * The filename set is then the second door, for the non-canonical short forms
+ * (`x.md`, `constitution/x.md`, `../../../constitution/x.md`) that the
+ * full-path rule exists to catch and that carry no prefix to recognise them
+ * by. That is also what keeps runtime artifact paths (`test-list.md`,
  * `.qfai/evidence/implement-<spec-id>.md`) out — those correctly do not exist
  * in the shipped tree.
  */
-async function collectCitations(tree: string): Promise<readonly Citation[]> {
-  const names = await constitutionFilenames(tree);
-  const assistant = path.join(repoRoot, tree, "assistant");
+async function citationsUnder(
+  assistant: string,
+  names: ReadonlySet<string>,
+  label: string,
+): Promise<readonly Citation[]> {
   const files = await fg(["**/*.md", "**/*.yml", "**/*.yaml"], { cwd: assistant, absolute: false });
   const found: Citation[] = [];
   for (const relative of files.sort()) {
@@ -77,13 +92,72 @@ async function collectCitations(tree: string): Promise<readonly Citation[]> {
       for (const match of line.matchAll(CITATION)) {
         const cited = match[0];
         const withoutAnchor = cited.split("#")[0] ?? "";
-        if (!names.has(path.posix.basename(withoutAnchor))) continue;
-        found.push({ location: `${tree}/assistant/${relative}:${i + 1}`, cited });
+        const canonical = cited.startsWith(CANONICAL_PREFIX);
+        if (!canonical && !names.has(path.posix.basename(withoutAnchor))) continue;
+        found.push({ location: `${label}/${relative}:${i + 1}`, cited });
       }
     }
   }
   return found;
 }
+
+async function collectCitations(tree: string): Promise<readonly Citation[]> {
+  return await citationsUnder(
+    path.join(repoRoot, tree, "assistant"),
+    await constitutionFilenames(tree),
+    `${tree}/assistant`,
+  );
+}
+
+describe("the collector does not lose a citation when its document does", () => {
+  /** A two-file assistant tree: one constitution document and one citer. */
+  async function fixture(cited: string): Promise<{ dir: string; cleanup: () => Promise<void> }> {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-citation-"));
+    const assistant = path.join(dir, "assistant");
+    await mkdir(path.join(assistant, "constitution"), { recursive: true });
+    await mkdir(path.join(assistant, "skills", "qfai-x"), { recursive: true });
+    await writeFile(
+      path.join(assistant, "constitution", "drift-protocol.md"),
+      "# Drift Protocol\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(assistant, "skills", "qfai-x", "SKILL.md"),
+      `Follow \`${cited}\` before proceeding.\n`,
+      "utf-8",
+    );
+    return { dir, cleanup: async () => await rm(dir, { recursive: true, force: true }) };
+  }
+
+  it("collects a canonical citation of a document the directory no longer holds", async () => {
+    // Retiring `quality.md` used to retire its dangling citations with it: the
+    // basename was no longer in the constitution directory, so the collector
+    // dropped them before the resolution check ran, and the ~145 survivors
+    // kept the non-vacuity floor satisfied. Deletion has to make the citations
+    // *fail*, not disappear.
+    const { dir, cleanup } = await fixture(`${CANONICAL_PREFIX}quality.md`);
+    try {
+      const names = new Set(["drift-protocol.md"]);
+      const found = await citationsUnder(path.join(dir, "assistant"), names, "fixture");
+      expect(found.map((citation) => citation.cited)).toEqual([`${CANONICAL_PREFIX}quality.md`]);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it("still ignores a runtime artifact path that names no constitution document", async () => {
+    // The filename set is what keeps `tdd/test-list.md` and
+    // `.qfai/evidence/implement-<spec-id>.md` out; widening the prefix door
+    // must not open that one.
+    const { dir, cleanup } = await fixture(".qfai/evidence/implement-spec-0001.md");
+    try {
+      const names = new Set(["drift-protocol.md"]);
+      expect(await citationsUnder(path.join(dir, "assistant"), names, "fixture")).toEqual([]);
+    } finally {
+      await cleanup();
+    }
+  });
+});
 
 describe.each(QFAI_TREES)("%s constitution citations", { timeout: 30000 }, (tree) => {
   it("states the base path convention where the authoring shape is defined", async () => {
