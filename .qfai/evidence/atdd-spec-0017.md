@@ -2193,11 +2193,11 @@ exactly what the mechanism below says the line's movement means.
 
 **And a third time, on merge rather than on commit.** Bringing `main` into the branch that gives the
 matrix-row split an owning phase added `packages/qfai/tests/assets/matrixRowSplitOwnership.test.ts`,
-26 callsites under the e2e project's `tests/assets/**` glob, taking the count from 915 to 941.
+26 callsites under the e2e project's `tests/assets/**` glob, taking the count from 925 to 951.
 Nothing about `spec-0017` changed again, and neither suite total above was re-run for this tree — the
 line below is what records that, exactly as the mechanism after it describes.
 
-e2e callsites at this tree: 941
+e2e callsites at this tree: 951
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

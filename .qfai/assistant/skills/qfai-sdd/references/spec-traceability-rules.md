@@ -229,7 +229,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - The `Evidence` **cell** is checked too, not only the header: on a row at
   `green` / `refactor` / `review-fix` / `done`, an empty-or-dash cell is
   `TDDLIST_EVIDENCE_EMPTY` and a verdict with no command is
-  `TDDLIST_EVIDENCE_STATUS_ONLY`, both at `error`.
+  `TDDLIST_EVIDENCE_STATUS_ONLY`. Both are reported at `warning`:
+  `TDDLIST_EVIDENCE_STATUS_ONLY` permanently (waivable as `TDDLIST-004`), and
+  `TDDLIST_EVIDENCE_EMPTY` until the promotion release its finding names.
 
 ## Traceability Ledger (`16_Traceability-ledger.md`)
 
