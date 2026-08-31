@@ -2198,7 +2198,7 @@ project's own includes — taking the count from 925 to 928. Again nothing about
 and again both suite totals above are known-invalid for this tree rather than assumed current: the
 line below is what says so.
 
-e2e callsites at this tree: 928
+e2e callsites at this tree: 930
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
