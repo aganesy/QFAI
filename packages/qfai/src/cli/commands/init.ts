@@ -30,6 +30,15 @@ import { error, info } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import {
+  CODEX_AGENT_WRAPPER_DIR,
+  CODEX_AGENT_WRAPPER_SUFFIX,
+  isGeneratedCodexAgentToml,
+  parseAgentCatalogDeclarations,
+  parseAgentCatalogKinds,
+  renderCodexAgentToml,
+  type CodexAgentKind,
+} from "../../core/codexAgentToml.js";
+import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
@@ -2243,6 +2252,12 @@ async function syncIntegrationWrappers(
   copied.push(...agentResult.copied);
   skipped.push(...agentResult.skipped);
 
+  // Step 6: Generate Codex agent profiles (.codex/agents/<name>.toml)
+  const codexResult = await createCodexAgentTomls(assistantAssetsDir, destRoot, agents, options);
+  copied.push(...codexResult.copied);
+  skipped.push(...codexResult.skipped);
+  removed.push(...codexResult.removed);
+
   return { copied, skipped, removed };
 }
 
@@ -2303,6 +2318,530 @@ async function createAgentSymlinks(
 
   return { copied, skipped };
 }
+
+/**
+ * Writes `.codex/agents/<name>.toml`, one Codex profile per canonical agent.
+ *
+ * Unlike the other two agent wrappers this one cannot be a symlink — Codex
+ * wants the whole body escaped into a `developer_instructions` string — so it
+ * is a snapshot, and a snapshot needs a regeneration trigger. It gets the same
+ * one `assistant/agents/**` has: create-only on a plain run, rewritten under
+ * `--force`. Without it a correction to an agent definition reached Claude and
+ * Copilot the moment it landed (they follow the symlink) and never reached
+ * Codex at all.
+ */
+async function createCodexAgentTomls(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agents: string[],
+  options: WrapperSyncOptions,
+): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+
+  const roster = await collectCodexAgentRoster(destRoot, agents);
+  if (roster.length === 0) {
+    return { copied, skipped, removed };
+  }
+
+  const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+  const unsafeComponent = await findUnsafeWrapperComponent(destRoot, CODEX_AGENT_WRAPPER_DIR);
+  if (unsafeComponent !== undefined) {
+    info(`  skip: ${wrapperDir} (${unsafeComponent})`);
+    return { copied, skipped, removed };
+  }
+
+  const classification = await loadAgentClassification(assistantAssetsDir, destRoot);
+
+  for (const agentName of roster) {
+    const destination = path.join(wrapperDir, `${agentName}${CODEX_AGENT_WRAPPER_SUFFIX}`);
+    const destinationStats = await safeLstat(destination);
+    const existing = destinationStats !== undefined;
+    if (existing && !options.force) {
+      skipped.push(destination);
+      continue;
+    }
+    const occupant = describeUnwritableDestination(destinationStats);
+    if (occupant !== undefined) {
+      info(`  skip: ${destination} (${occupant})`);
+      skipped.push(destination);
+      continue;
+    }
+
+    const plan = await planCodexAgentProfile(
+      assistantAssetsDir,
+      destRoot,
+      agentName,
+      classification,
+      options,
+    );
+    if (plan.status === "unavailable") {
+      info(`  skip: ${destination} (${plan.reason})`);
+      // `--force` means "make the wrappers match the canonical agents". A
+      // profile we cannot regenerate is no evidence the old one is still
+      // right: a stale `worker` TOML keeps exactly the write access the
+      // classification guard below just refused to grant, and Codex keeps
+      // loading it. So drop it rather than leave it unexplained.
+      if (existing && options.force) {
+        removed.push(destination);
+        if (!options.dryRun) {
+          await rm(destination, { recursive: true, force: true });
+        }
+      }
+      continue;
+    }
+
+    if (!options.dryRun) {
+      await mkdir(path.dirname(destination), { recursive: true });
+      // `writeFile` follows a symlink and truncates whatever it points at, so a
+      // `.codex/agents/<name>.toml` committed as a link would turn the
+      // documented `--force` refresh into an overwrite of an arbitrary file,
+      // this repository or not. The wrapper is generator output: drop the link.
+      await removeSymlinkAt(destination);
+      if (!(await writeGeneratedProfile(destination, plan.toml))) {
+        // The `lstat` above already refused everything that is not a regular
+        // file; this is the same refusal for an entry that arrived after it.
+        info(`  skip: ${destination} (${NON_REGULAR_DESTINATION})`);
+        skipped.push(destination);
+        continue;
+      }
+    }
+    copied.push(destination);
+  }
+
+  if (options.force) {
+    removed.push(...(await pruneOrphanCodexProfiles(wrapperDir, new Set(roster), options.dryRun)));
+  }
+
+  return { copied, skipped, removed };
+}
+
+/**
+ * The first component of `relativeDir` under `destRoot` that must not be
+ * written through, or `undefined` when the whole chain is safe.
+ *
+ * `.codex/agents` is a path an untrusted repository controls, and a directory
+ * component of it can be a symlink out of the tree — a checked-in
+ * `.codex/agents -> /home/user/.config` is enough. `mkdir` follows it,
+ * `writeFile` follows it, and `removeSymlinkAt` cannot see it: that guard
+ * looks at the leaf `<name>.toml` only. A plain `qfai init` would then write
+ * every profile into that external directory and `--force` would let
+ * {@link pruneOrphanCodexProfiles} delete files there. So every component is
+ * `lstat`-ed before anything is written or removed, and one link anywhere in
+ * the chain skips the step whole rather than writing part of it somewhere
+ * unexpected.
+ *
+ * A component that does not exist yet ends the walk: `mkdir` creates real
+ * directories, and nothing below an absent parent can exist either.
+ */
+async function findUnsafeWrapperComponent(
+  destRoot: string,
+  relativeDir: string,
+): Promise<string | undefined> {
+  let current = destRoot;
+  for (const segment of relativeDir.split("/")) {
+    current = path.join(current, segment);
+    const stats = await safeLstat(current);
+    if (stats === undefined) {
+      return undefined;
+    }
+    if (stats.isSymbolicLink()) {
+      return `${current} が symlink のため生成先として使えません`;
+    }
+    if (!stats.isDirectory()) {
+      return `${current} がディレクトリではありません`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Deletes the generated profiles of agents that left the roster.
+ *
+ * The loop above only ever visits agents that still exist, so deleting an agent
+ * from both the catalog and `assistant/agents/` left its TOML untouched — and a
+ * Codex profile is a self-contained snapshot, not a symlink that goes dangling
+ * with its referent. Codex alone kept loading a retired agent, write access
+ * included. Scoped to `--force`, which is already the mode that rewrites this
+ * tree, and to files carrying the generator's own shape so a project's
+ * hand-written Codex profile survives.
+ */
+async function pruneOrphanCodexProfiles(
+  wrapperDir: string,
+  roster: Set<string>,
+  dryRun: boolean,
+): Promise<string[]> {
+  const removed: string[] = [];
+  let entries: Dirent[];
+  try {
+    entries = await readdir(wrapperDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return removed;
+    }
+    throw err;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory() || !entry.name.endsWith(CODEX_AGENT_WRAPPER_SUFFIX)) {
+      continue;
+    }
+    const agentName = entry.name.slice(0, -CODEX_AGENT_WRAPPER_SUFFIX.length);
+    if (roster.has(agentName)) {
+      continue;
+    }
+    const target = path.join(wrapperDir, entry.name);
+    const read = await readBoundedTextFile(target);
+    if (read.status !== "ok" || !isGeneratedCodexAgentToml(read.content, agentName)) {
+      continue;
+    }
+    removed.push(target);
+    if (!dryRun) {
+      await rm(target, { force: true });
+    }
+  }
+  return removed;
+}
+
+type CodexAgentProfilePlan =
+  | { status: "render"; toml: string }
+  | { status: "unavailable"; reason: string };
+
+/** Renders one profile, or says why the agent cannot get one. */
+async function planCodexAgentProfile(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agentName: string,
+  classification: AgentClassification,
+  options: WrapperSyncOptions,
+): Promise<CodexAgentProfilePlan> {
+  const kind = classification.kinds.get(agentName);
+  if (kind === undefined) {
+    // Guessing `worker` would drop `sandbox_mode` from a reviewer and hand a
+    // read-only agent write access; guessing `reviewer` would break a worker.
+    return { status: "unavailable", reason: classifyFailureReason(agentName, classification) };
+  }
+
+  const markdown = await readCanonicalAgentMarkdown(
+    assistantAssetsDir,
+    destRoot,
+    agentName,
+    options,
+  );
+  if (markdown.status === "rejected") {
+    return { status: "unavailable", reason: markdown.reason };
+  }
+  if (markdown.status === "absent") {
+    return { status: "unavailable", reason: "canonical markdown が見つかりません" };
+  }
+
+  const rendered = renderCodexAgentToml(markdown.content, kind, agentName);
+  if (!rendered.ok) {
+    return { status: "unavailable", reason: rendered.error };
+  }
+  return { status: "render", toml: rendered.toml };
+}
+
+function classifyFailureReason(agentName: string, classification: AgentClassification): string {
+  if (classification.unusable !== undefined) {
+    return classification.unusable;
+  }
+  return classification.rejected.has(agentName)
+    ? `agent-catalog.yml の ${agentName} の kind が不正です`
+    : `agent-catalog.yml に ${agentName} の kind がありません`;
+}
+
+/**
+ * Every agent that deserves a Codex profile: the shipped roster plus whatever
+ * the project added under `.qfai/assistant/agents/`.
+ *
+ * A project may declare its own agent — `agent-catalog.yml` plus a canonical
+ * markdown file is exactly what `validateAgentDefinition` accepts, and
+ * `--force` preserves the extra file rather than pruning it. Enumerating the
+ * shipped assets alone left that agent with Claude and Copilot wrappers and no
+ * Codex profile, which is the same one-integration-behind split this whole
+ * step exists to close.
+ */
+async function collectCodexAgentRoster(destRoot: string, shipped: string[]): Promise<string[]> {
+  const roster = new Set(shipped);
+  const projectAgentsDir = path.join(destRoot, ".qfai", "assistant", "agents");
+  let entries: Dirent[];
+  try {
+    entries = await readdir(projectAgentsDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return [...roster].sort();
+    }
+    throw err;
+  }
+  for (const entry of entries) {
+    // `isFile()` is false for the symlinked agent docs some layouts leave here,
+    // so accept anything that is not a directory and reads as an agent doc.
+    if (entry.isDirectory() || !entry.name.endsWith(".md") || entry.name === "README.md") {
+      continue;
+    }
+    roster.add(entry.name.slice(0, -".md".length));
+  }
+  return [...roster].sort();
+}
+
+type AgentClassification = {
+  kinds: Map<string, CodexAgentKind>;
+  /** IDs the project's own catalog names but does not classify. */
+  rejected: Set<string>;
+  /** Set — to the reason — when the project's catalog cannot be read at all. */
+  unusable: string | undefined;
+};
+
+/**
+ * The project's own copy wins over the shipped template, for both the catalog
+ * and the canonical markdown: `assistant/manifest/**` is copied create-only and
+ * `qfai-configure` edits it in place, so a project that retyped an agent must
+ * see that reflected in its Codex profile rather than the default.
+ *
+ * The template is not just a fallback for the empty destination `--dry-run`
+ * sees, though: it also *fills in* the IDs the project's catalog never heard
+ * of. A project initialised by an older release keeps its catalog verbatim, so
+ * returning the first non-empty map left every agent a later release added
+ * permanently un-classified — markdown and two wrappers written, Codex profile
+ * skipped as "kind がありません" forever.
+ *
+ * It fills in **only** those, though. An ID the project names without a usable
+ * `kind` is a broken local statement about that agent, and answering it with
+ * the shipped value re-grants exactly the access the classification guard
+ * exists to withhold: a project that had pinned an agent to `reviewer` and then
+ * mistyped the key would get the shipped `worker` profile, `sandbox_mode` and
+ * all, from a `--force` run. Those IDs — and every ID, when the project's
+ * catalog is not a catalog at all — stay unclassified, so the profile is
+ * refused and, under `--force`, removed.
+ */
+async function loadAgentClassification(
+  assistantAssetsDir: string,
+  destRoot: string,
+): Promise<AgentClassification> {
+  const projectCatalog = joinAssistantLayer(destRoot, "manifest", "agent-catalog.yml");
+  const project = await readBoundedTextFile(projectCatalog);
+  if (project.status === "rejected") {
+    return { kinds: new Map(), rejected: new Set(), unusable: project.reason };
+  }
+
+  const declarations =
+    project.status === "ok" ? parseAgentCatalogDeclarations(project.content) : undefined;
+  if (declarations?.unusable === true) {
+    return {
+      kinds: new Map(),
+      rejected: new Set(),
+      unusable: "agent-catalog.yml を agents リストとして読めません",
+    };
+  }
+
+  const kinds = new Map(declarations?.kinds ?? []);
+  const rejected = declarations?.unclassified ?? new Set<string>();
+  const shipped = await readBoundedTextFile(
+    path.join(assistantAssetsDir, "manifest", "agent-catalog.yml"),
+  );
+  if (shipped.status === "ok") {
+    for (const [id, kind] of parseAgentCatalogKinds(shipped.content)) {
+      if (!kinds.has(id) && !rejected.has(id)) {
+        kinds.set(id, kind);
+      }
+    }
+  }
+  return { kinds, rejected, unusable: undefined };
+}
+
+/**
+ * Drops `target` when it is a symlink, leaving its referent untouched — `rm`
+ * unlinks the entry, it does not follow it.
+ */
+async function removeSymlinkAt(target: string): Promise<void> {
+  const stats = await safeLstat(target);
+  if (stats?.isSymbolicLink() === true) {
+    await rm(target, { force: true });
+  }
+}
+
+const NON_REGULAR_DESTINATION =
+  "通常ファイル以外のエントリ（FIFO / ソケット / デバイス）が存在するため生成できません";
+
+/**
+ * Why this destination cannot take generator output, or `undefined`.
+ *
+ * Absent is fine — the write creates it. A regular file is fine — it is the
+ * profile being refreshed. A symlink is fine — {@link removeSymlinkAt} drops
+ * the link, and the write then creates a real file beside it rather than
+ * through it.
+ *
+ * Nothing else is. A directory failed the write `EISDIR` and aborted the run
+ * with every earlier agent's profile already rewritten; a **FIFO** is worse
+ * still, because `writeFile` on one blocks until a reader appears and `qfai
+ * init --force` simply stops, with no diagnostic and no exit. A socket or a
+ * device node fails mid-run the way the directory did. None of them is
+ * generator output, so each is refused rather than replaced — a refusal costs
+ * one profile, and going ahead costs the run.
+ */
+function describeUnwritableDestination(stats: Stats | undefined): string | undefined {
+  if (stats === undefined || stats.isFile() || stats.isSymbolicLink()) {
+    return undefined;
+  }
+  return stats.isDirectory() ? "ディレクトリが存在するため生成できません" : NON_REGULAR_DESTINATION;
+}
+
+/**
+ * Write the profile, refusing anything that is not a regular file.
+ *
+ * The `lstat` before the write answers for the entry that was there then; this
+ * answers for the one the write actually lands on. `O_NOFOLLOW` refuses a
+ * symlink that arrived in between (`ELOOP`), `O_NONBLOCK` turns opening a FIFO
+ * with no reader into `ENXIO` instead of a hang, and the `fstat` on the open
+ * handle refuses a FIFO that *does* have a reader, a socket, or a device before
+ * a byte is written. Returns `false` when it refuses.
+ */
+async function writeGeneratedProfile(destination: string, content: string): Promise<boolean> {
+  const flags =
+    constants.O_WRONLY |
+    constants.O_CREAT |
+    constants.O_TRUNC |
+    (typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0) |
+    (typeof constants.O_NONBLOCK === "number" ? constants.O_NONBLOCK : 0);
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(destination, flags, 0o644);
+    if (!(await handle.stat()).isFile()) {
+      return false;
+    }
+    await handle.writeFile(content, "utf-8");
+    return true;
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException | null)?.code;
+    // The three the guards above produce. Anything else is a real failure.
+    if (code === "ELOOP" || code === "ENXIO" || code === "EISDIR") {
+      return false;
+    }
+    throw err;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/**
+ * The canonical body to snapshot, from the project's copy or the shipped asset.
+ *
+ * The project's copy wins on a plain run — it is what the two symlink wrappers
+ * resolve to. Under `--force` the asset wins instead, because `--force` has
+ * already overwritten that copy with the asset (`STANDARD_ASSET_PATHS` includes
+ * `assistant/agents`) — except under `--dry-run`, where the copy is only
+ * announced. Reading the destination there made the preview describe a project
+ * state that the real run replaces one step earlier: a stale agent document
+ * missing its `## Mission` heading had `--force --dry-run` announce the removal
+ * of a profile the real `--force` regenerates.
+ */
+async function readCanonicalAgentMarkdown(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agentName: string,
+  options: WrapperSyncOptions,
+): Promise<BoundedRead> {
+  const projectCopy = path.join(destRoot, ".qfai", "assistant", "agents", `${agentName}.md`);
+  const shippedAsset = path.join(assistantAssetsDir, "agents", `${agentName}.md`);
+  const candidates = options.force ? [shippedAsset, projectCopy] : [projectCopy, shippedAsset];
+  for (const candidate of candidates) {
+    const read = await readBoundedTextFile(candidate);
+    if (read.status !== "absent") {
+      return read;
+    }
+  }
+  return { status: "absent" };
+}
+
+type BoundedRead =
+  | { status: "ok"; content: string }
+  | { status: "absent" }
+  | { status: "rejected"; reason: string };
+
+/**
+ * A canonical agent document is a few kilobytes of markdown; a catalog is
+ * smaller still. The ceiling is generous enough that no honest input meets it
+ * and small enough that a hostile one cannot exhaust memory.
+ */
+const MAX_CANONICAL_INPUT_BYTES = 4 * 1024 * 1024;
+
+/** Read granularity. One chunk, reused nowhere, so the peak stays the total. */
+const CANONICAL_READ_CHUNK_BYTES = 64 * 1024;
+
+/** `O_NONBLOCK` keeps `open` off a FIFO's blocking path; Windows has neither. */
+const NONBLOCKING_READ_FLAGS =
+  process.platform === "win32" ? constants.O_RDONLY : constants.O_RDONLY | constants.O_NONBLOCK;
+
+/**
+ * Reads a regular file of bounded size, or says why it would not.
+ *
+ * Both inputs this reads are named by an untrusted repository — the roster
+ * accepts whatever `.qfai/assistant/agents/` holds, symlinks included — so a
+ * plain `readFile` was a hang or an OOM away: pointed at a FIFO it waits for a
+ * writer that never comes, pointed at `/dev/zero` it reads until the heap is
+ * gone. The file type is checked against the *opened* handle, so swapping the
+ * path after the check does not get past it.
+ *
+ * The ceiling is applied to the bytes actually read, not to the size `fstat`
+ * reports. A reported size is a claim, and on Linux a procfs file
+ * (`/proc/self/pagemap`, say) is a regular file that claims 0 and then yields
+ * as much as it is asked for — so a symlink pointing there passed both checks
+ * and `readFile` consumed memory to the same effect as `/dev/zero`. Reading in
+ * chunks and stopping one byte past the ceiling makes the bound the one thing
+ * the file cannot lie about.
+ *
+ * `absent` for a missing file (a dangling symlink included); every other I/O
+ * failure propagates.
+ */
+async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
+  let handle: FileHandle;
+  try {
+    handle = await open(filePath, NONBLOCKING_READ_FLAGS);
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return { status: "absent" };
+    }
+    // A directory, a symlink cycle or a device with no reader is the same
+    // answer as a special file: not something to snapshot. Anything else
+    // (EACCES, EIO, ...) is the caller's problem, not a classification.
+    if (hasErrnoCode(err) && UNREADABLE_OPEN_CODES.has(err.code)) {
+      return {
+        status: "rejected",
+        reason: `${filePath} は通常ファイルとして開けません (${err.code})`,
+      };
+    }
+    throw err;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) {
+      return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
+    }
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for (;;) {
+      const chunk = Buffer.alloc(CANONICAL_READ_CHUNK_BYTES);
+      const { bytesRead } = await handle.read(chunk, 0, CANONICAL_READ_CHUNK_BYTES, total);
+      if (bytesRead === 0) {
+        break;
+      }
+      total += bytesRead;
+      if (total > MAX_CANONICAL_INPUT_BYTES) {
+        return {
+          status: "rejected",
+          reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+        };
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    return { status: "ok", content: Buffer.concat(chunks, total).toString("utf-8") };
+  } finally {
+    await handle.close();
+  }
+}
+
+const UNREADABLE_OPEN_CODES = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENXIO"]);
 
 async function ensureSymlink(
   linkPath: string,
