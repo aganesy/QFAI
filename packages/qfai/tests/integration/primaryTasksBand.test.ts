@@ -17,10 +17,16 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateDesignAudit } from "../../src/core/validators/designAudit.js";
+import { extractUiScreens } from "../../src/core/contracts/screenContracts.js";
+import {
+  PRIMARY_TASKS_BAND_MAX,
+  PRIMARY_TASKS_BAND_MIN,
+  validateDesignAudit,
+} from "../../src/core/validators/designAudit.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = path.resolve(TEST_DIR, "..", "..");
@@ -140,5 +146,34 @@ describe("TC-0013-0033: primary_tasks below 3 / above 7 warns; 3, 5, 7 do not", 
         expect(warning, `expected no QFAI-AUD-020 for count=${count}`).toBeUndefined();
       });
     }
+  });
+});
+
+describe("the shipped ui-contract.sample.yaml sits inside its own 3..7 band", () => {
+  it("copied verbatim into .qfai/contracts/ui, the sample emits no QFAI-AUD-020", async () => {
+    const template = await readFile(TEMPLATE_PATH, "utf-8");
+    await withWorkspace(template, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      const banded = issues.filter((issue) => issue.code === "QFAI-AUD-020");
+      expect(banded.map((issue) => issue.message)).toEqual([]);
+    });
+  });
+
+  it("the sample demonstrates the structured {id, label, acceptance} shape cleanly", async () => {
+    const template = await readFile(TEMPLATE_PATH, "utf-8");
+    const parsed: unknown = parseYaml(template);
+    const screens = extractUiScreens(parsed);
+
+    expect(screens.length).toBeGreaterThan(0);
+    for (const screen of screens) {
+      expect(screen.primaryTaskShapeFindings).toEqual([]);
+      expect(screen.primaryTasks.length).toBeGreaterThanOrEqual(PRIMARY_TASKS_BAND_MIN);
+      expect(screen.primaryTasks.length).toBeLessThanOrEqual(PRIMARY_TASKS_BAND_MAX);
+    }
+
+    await withWorkspace(template, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      expect(issues.filter((issue) => issue.code === "QFAI-AUD-021")).toEqual([]);
+    });
   });
 });
