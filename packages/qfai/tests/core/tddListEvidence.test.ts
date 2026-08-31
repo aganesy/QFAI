@@ -11,6 +11,12 @@
  * These tests pin the two rules that have a machine form. Freshness (hard rule
  * 3) deliberately has none — the ledger records no run identity — and the skill
  * now says so instead of advertising a gate that does not exist.
+ *
+ * They also pin `TDDLIST_EVIDENCE_EMPTY`'s promotion window. Shipped straight
+ * at `error`, the rule took a consuming repository from 3 errors to 27 in one
+ * `qfai init`, 20 of them on rows already at `done`. The finding still fires on
+ * exactly the same rows; what the window changes is whether an upgrade can
+ * convert them into a build failure before the operator has seen them.
  */
 
 import { createHash } from "node:crypto";
@@ -18,10 +24,33 @@ import { lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
+import type * as VersionModule from "../../src/core/version.js";
+
+/**
+ * The version the validator reads, overridable per test.
+ *
+ * An empty string means "defer to the real `resolveToolVersion`", so every
+ * other case in this file keeps running against the shipped version.
+ */
+const toolVersion = vi.hoisted(() => ({ override: "" }));
+
+vi.mock("../../src/core/version.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof VersionModule>();
+  return {
+    ...actual,
+    resolveToolVersion: async (): Promise<string> =>
+      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
+  };
+});
+
+afterEach(() => {
+  toolVersion.override = "";
+});
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 
@@ -365,19 +394,20 @@ const HEADER = `# TDD Execution Ledger
 | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs |
 | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ |`;
 
-function ledger(
-  rows: Array<{
-    status: string;
-    evidence: string;
-    tddId?: string;
-    layer?: string;
-    testFile?: string;
-    selector?: string;
-    tcRefs?: string;
-    usRefs?: string;
-    conApiRefs?: string;
-  }>,
-): string {
+type Row = {
+  status: string;
+  evidence: string;
+  tddId?: string;
+  /** Defaults to `Unit`; the ATDD-owned layers pick a different evidence file. */
+  layer?: string;
+  testFile?: string;
+  selector?: string;
+  tcRefs?: string;
+  usRefs?: string;
+  conApiRefs?: string;
+};
+
+function ledger(rows: Row[]): string {
   const body = rows
     .map((r, i) => {
       const layer = r.layer ?? "Unit";
@@ -400,21 +430,20 @@ async function withProject(fn: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
-async function runOn(
+/**
+ * Seeds a project whose ledger is `testList`.
+ *
+ * `extraTestFiles` exists for a row whose `Test file` is not `TEST_FILE`;
+ * `evidenceFiles` and `options` seed the durable evidence records, the stage
+ * pack and the review packs the anchor checks resolve against.
+ */
+async function seedProject(
   root: string,
   testList: string,
+  extraTestFiles: string[] = [],
   evidenceFiles: Readonly<Record<string, string>> = {},
   options: EvidenceOptions = {},
-): Promise<string[]> {
-  return (await runIssuesOn(root, testList, evidenceFiles, options)).map((issue) => issue.code);
-}
-
-async function runIssuesOn(
-  root: string,
-  testList: string,
-  evidenceFiles: Readonly<Record<string, string>> = {},
-  options: EvidenceOptions = {},
-): Promise<Array<{ code: string; message: string }>> {
+): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   await mkdir(path.join(root, ".qfai", "specs", "_policies"), { recursive: true });
@@ -427,9 +456,11 @@ async function runIssuesOn(
     await writeFile(path.join(specDir, name), body, "utf-8");
   }
   await writeFile(path.join(specDir, "tdd", "test-list.md"), testList, "utf-8");
-  const testPath = path.join(root, TEST_FILE);
-  await mkdir(path.dirname(testPath), { recursive: true });
-  await writeFile(testPath, "// test\n", "utf-8");
+  for (const rel of [TEST_FILE, ...extraTestFiles]) {
+    const testPath = path.join(root, rel);
+    await mkdir(path.dirname(testPath), { recursive: true });
+    await writeFile(testPath, "// test\n", "utf-8");
+  }
   if (options.stagePack !== undefined) await writeStagePack(root, options);
   for (const [relativePath, content] of Object.entries(evidenceFiles)) {
     const evidencePath = path.join(root, relativePath);
@@ -446,15 +477,42 @@ async function runIssuesOn(
   if (options.stagePack === "absent") {
     await rm(path.join(root, STAGE_PACK_PATH), { recursive: true, force: true });
   }
+}
 
+async function runOn(
+  root: string,
+  testList: string,
+  evidenceFiles: Readonly<Record<string, string>> = {},
+  options: EvidenceOptions = {},
+): Promise<string[]> {
+  return (await runIssuesOn(root, testList, evidenceFiles, options)).map((issue) => issue.code);
+}
+
+async function runIssuesOn(
+  root: string,
+  testList: string,
+  evidenceFiles: Readonly<Record<string, string>> = {},
+  options: EvidenceOptions = {},
+): Promise<Array<{ code: string; message: string }>> {
+  await seedProject(root, testList, [], evidenceFiles, options);
   const issues = await validateTddList(root, defaultConfig);
   return issues.map((i) => ({ code: i.code, message: i.message }));
+}
+
+/** The one `TDDLIST_EVIDENCE_EMPTY` a single-row ledger produces. */
+async function remediationFor(root: string, row: Row): Promise<string> {
+  const testFile = row.testFile;
+  await seedProject(root, ledger([row]), testFile === undefined ? [] : [testFile]);
+  const issues = await validateTddList(root, defaultConfig);
+  const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
+  expect(found, "TDDLIST_EVIDENCE_EMPTY did not fire on the fixture row").toBeDefined();
+  return found?.suggested_action ?? "";
 }
 
 describe("TDDLIST_EVIDENCE_EMPTY", () => {
   // The observed failure: 63 rows of `Evidence: -` reported clean.
   for (const status of ["green", "refactor", "review-fix", "done"]) {
-    it(`errors on a dash placeholder at Status=${status}`, async () => {
+    it(`fires on a dash placeholder at Status=${status}`, async () => {
       await withProject(async (root) => {
         const codes = await runOn(root, ledger([{ status, evidence: "-" }]));
         expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
@@ -462,14 +520,14 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
     });
   }
 
-  it("errors on an empty cell", async () => {
+  it("fires on an empty cell", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: "" }]));
       expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
     });
   });
 
-  it("errors on en/em dash placeholders, not only the ASCII hyphen", async () => {
+  it("fires on en/em dash placeholders, not only the ASCII hyphen", async () => {
     await withProject(async (root) => {
       const codes = await runOn(
         root,
@@ -504,14 +562,189 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
 
   it("reports the TDD-ID so the offending row is identifiable", async () => {
     await withProject(async (root) => {
-      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-      await mkdir(path.join(specDir, "tdd"), { recursive: true });
-      await runOn(root, ledger([{ status: "done", evidence: "-", tddId: "TDD-0042" }]));
+      await seedProject(root, ledger([{ status: "done", evidence: "-", tddId: "TDD-0042" }]));
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
       expect(found?.message).toContain("TDD-0042");
-      expect(found?.severity).toBe("error");
     });
+  });
+
+  it("tells a terminal row how to satisfy the rule without a transition", async () => {
+    // `done` has no outgoing edge, so "go back to red" is not a remedy there.
+    // The advice has to name the in-place backfill or the only reading left is
+    // an out-of-lifecycle status edit.
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "done", evidence: "-" });
+      expect(action).toContain("Status を変えずに Evidence セルだけを追記");
+    });
+  });
+
+  it("routes the payload to the evidence file and leaves a pointer in the cell", async () => {
+    // The remedy has to match the ledger the same release redefined: the cell
+    // is a pointer, and a command plus its output pasted into it ends the row
+    // at the first newline or splits it at the first `|`. Advice that says
+    // "write the command and its result here" would reintroduce exactly the
+    // corruption `references/execution-ledger.md` documents.
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "done", evidence: "-" });
+      expect(action).toContain("evidence ファイルに記録");
+      expect(action).toContain("pointer");
+      // The terminal-row remedy is a backfill entry in that file, anchored
+      // from the cell — not prose about the missing run written into the row.
+      expect(action).toContain("backfill entry");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_EMPTY remediation — the pointer it hands back", () => {
+  // The example used to be a constant, `implement-spec-<n>.md#tdd-0042`. Two
+  // things were wrong with it at once: the anchor named an entry that exists
+  // for exactly one row in the world, and the file named the implement stage
+  // for every row including the ones `/qfai-atdd` runs, whose evidence lives in
+  // `atdd-<spec-id>.md` and whose completion gate reads that split. Following
+  // the advice on any other row produced a pointer that resolves to nothing.
+  it("anchors the example at the row's own TDD-ID", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, {
+        status: "done",
+        evidence: "-",
+        tddId: "TDD-0007",
+      });
+      expect(action).toContain(".qfai/evidence/implement-spec-0001.md#tdd-0007");
+      expect(action).not.toContain("#tdd-0042");
+    });
+  });
+
+  for (const [layer, testFile] of [
+    ["Integration", "tests/integration/sample.test.ts"],
+    ["API", "tests/api/sample.test.ts"],
+    ["E2E", "tests/e2e/sample.test.ts"],
+  ] as const) {
+    it(`sends a ${layer} row at the ATDD evidence file`, async () => {
+      await withProject(async (root) => {
+        const action = await remediationFor(root, {
+          status: "done",
+          evidence: "-",
+          tddId: "TDD-0007",
+          layer,
+          testFile,
+        });
+        expect(action).toContain(".qfai/evidence/atdd-spec-0001.md#tdd-0007");
+        expect(action).not.toContain("implement-spec-0001.md");
+      });
+    });
+  }
+
+  // The over-correction pin: every non-ATDD layer keeps the implement file.
+  for (const [layer, testFile] of [
+    ["Unit", "tests/unit/sample.test.ts"],
+    ["Component", "tests/unit/sample.test.ts"],
+  ] as const) {
+    it(`keeps a ${layer} row on the implement evidence file`, async () => {
+      await withProject(async (root) => {
+        const action = await remediationFor(root, {
+          status: "done",
+          evidence: "-",
+          tddId: "TDD-0007",
+          layer,
+          testFile,
+        });
+        expect(action).toContain(".qfai/evidence/implement-spec-0001.md#tdd-0007");
+        expect(action).not.toContain("atdd-spec-0001.md");
+      });
+    });
+  }
+});
+
+describe("TDDLIST_EVIDENCE_EMPTY remediation — the recovery it names", () => {
+  // The finding fires only at `green`, `refactor`, `review-fix` and `done`, and
+  // the advice closed with "if you have not run it yet, put the row back to
+  // todo / red" on all four. `references/execution-ledger.md` prohibits that on
+  // three of them: `green -> red` is the transition table's own example of a
+  // prohibited backward edge, `refactor -> red` needs a routed `qa-gatekeeper`
+  // REVISE, and **any status** -> `todo` is the upstream reset, which needs an
+  // approved `CR-*` in `DR-ID`. An operator with no run to show was being told
+  // to commit a second lifecycle violation to clear the first.
+  for (const status of ["green", "refactor", "review-fix", "done"]) {
+    it(`does not tell a ${status} row to move back to todo / red`, async () => {
+      await withProject(async (root) => {
+        const action = await remediationFor(root, { status, evidence: "-" });
+        expect(action).not.toContain("Status を todo / red に戻して");
+      });
+    });
+  }
+
+  it("routes a green row through exception, the only edge it has", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "green", evidence: "-" });
+      expect(action).toContain("`green -> red` は禁止");
+      expect(action).toContain("exception");
+    });
+  });
+
+  it("gates a refactor row's return to red on a qa-gatekeeper REVISE", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "refactor", evidence: "-" });
+      expect(action).toContain("qa-gatekeeper");
+      expect(action).toContain("`refactor -> red`");
+    });
+  });
+
+  it("tells a review-fix row it can re-run without changing status", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "review-fix", evidence: "-" });
+      expect(action).toContain("Status を変えないまま RED/GREEN サイクルを再実行");
+    });
+  });
+
+  it("leaves a done row only the approved upstream reset", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "done", evidence: "-" });
+      expect(action).toContain("upstream reset");
+      expect(action).toContain("CR-*");
+      // The pin that must keep working: the in-place backfill is still the
+      // remedy a terminal row reaches for first.
+      expect(action).toContain("Status を変えずに Evidence セルだけを追記");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_EMPTY promotion window", () => {
+  const promotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
+
+  async function severityAt(version: string): Promise<{ severity: string; message: string }> {
+    toolVersion.override = version;
+    let found: { severity: string; message: string } = { severity: "", message: "" };
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const issue = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
+      if (issue) found = { severity: issue.severity, message: issue.message };
+    });
+    return found;
+  }
+
+  it("reports a warning before the promotion release, naming the release", async () => {
+    // The regression this is here for: a `--fail-on error` gate that was
+    // passing must not latch on an upgrade, and the operator must be able to
+    // read when it will.
+    const found = await severityAt("1.9.9");
+    expect(found.severity).toBe("warning");
+    expect(found.message).toContain(promotion);
+  });
+
+  it("reports an error from the promotion release onwards", async () => {
+    const found = await severityAt("99.0.0");
+    expect(found.severity).toBe("error");
+    // No window left to advertise once the window has closed.
+    expect(found.message).not.toContain("until the");
+  });
+
+  it("stays inside the window when the version cannot be read", async () => {
+    // `resolveToolVersion` answers "unknown" on a read failure. An unreadable
+    // version must never be the thing that turns a warning into a build break.
+    const found = await severityAt("unknown");
+    expect(found.severity).toBe("warning");
   });
 });
 

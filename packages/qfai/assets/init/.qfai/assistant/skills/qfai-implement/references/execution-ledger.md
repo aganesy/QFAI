@@ -137,12 +137,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                              | Fires when                                                                              | Severity |
-| ------------------------------------ | --------------------------------------------------------------------------------------- | -------- |
-| `TDDLIST_EVIDENCE_EMPTY`             | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | error    |
-| `TDDLIST_EVIDENCE_STATUS_ONLY`       | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning  |
-| `TDDLIST_EVIDENCE_ANCHOR_MISSING`    | a `done` row's cell carries no anchor at all                                            | warning  |
-| `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error    |
+| Finding                              | Fires when                                                                              | Severity            |
+| ------------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`             | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY`       | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `TDDLIST_EVIDENCE_ANCHOR_MISSING`    | a `done` row's cell carries no anchor at all                                            | warning             |
+| `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error               |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -151,8 +151,26 @@ are accepted directly.
 
 `TDDLIST_EVIDENCE_STATUS_ONLY` is a warning, waivable under `TDDLIST-004`: a
 ledger written before the check exists carries prose verdicts, and failing a
-build on them is a migration rather than a gate. An empty cell is unambiguous,
-so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
+build on them is a migration rather than a gate.
+
+`TDDLIST_EVIDENCE_EMPTY` is inside a **promotion window**: it is reported as a
+warning until the release the finding itself names, and as an error from that
+release onwards. An empty cell is unambiguous and the rule is not in doubt — but
+it also fires on cells written before the check existed, so an upgrade that
+started erroring on them would latch a gate that was passing. The finding text
+states which release ends the window, so `--fail-on error` keeps working while
+the ledger shows the debt it will owe.
+
+**A row already at a terminal status satisfies this by backfilling the cell in
+place.** Writing the outcome and its evidence pointer into `Evidence` is not a
+status transition, needs no transition, and is not drift: it records a cycle
+that already ran. Do not move a `done` row backwards to satisfy it — `done` has
+no outgoing edge, and the backward move would be the actual violation. Where the
+run is genuinely gone, the loss is itself the thing to record: add a backfill
+entry to the evidence file stating what was run and that its output was not
+retained, then point the cell at that entry. The cell stays a pointer — prose
+about a missing run is a payload, and the section above says why a payload in
+the cell corrupts the ledger.
 
 `TDDLIST_EVIDENCE_ANCHOR_MISSING` is a warning for the same reason, waivable
 under `TDDLIST-007`. Every completion check hangs off the anchor, so a `done`
