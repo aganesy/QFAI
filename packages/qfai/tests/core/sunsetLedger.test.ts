@@ -80,6 +80,13 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.
   "QFAI-REVIEW-010",
+  // The BR/AC to implementation integrity check (`QFAI-TRACE-001`) could not be
+  // run: the base ref is unfetchable, or a spec present in the diff is absent
+  // from the working tree. Both say a check did not execute — neither says the
+  // tree is wrong — so there is nothing here for a window to promote into an
+  // error. Promoting it would fail every shallow CI clone on the pin date for
+  // the shape of its checkout rather than for anything in the repository.
+  "QFAI-TRACE-003",
 ];
 
 // tests/core/<this file> -> packages/qfai
