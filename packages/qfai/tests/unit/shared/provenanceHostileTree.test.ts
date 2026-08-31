@@ -428,6 +428,27 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     // Six writers observe that same stale lock at the same moment. Reclaiming it by `unlink`
     // meant the second one deleted the first one's FRESH lock and both entered the section; the
     // symptom is an entry that is simply not in the record afterwards.
+    //
+    // What this row IS an oracle for, measured rather than assumed, because the sibling row below
+    // is described as "the deterministic half" and that reads as a stronger claim than it is:
+    //
+    //   - the lock removed outright — RED, 8 runs out of 8 (7 of 8 before the retry repair)
+    //   - `clearAbandonedLock` reverted to unlinking through the lock NAME — GREEN, 5 of 5
+    //   - `updateInstallProvenance`'s verify-and-re-apply removed — GREEN
+    //
+    // So it guards the end-to-end property, "no entry lost", and it does fail when there is no
+    // lock at all. It is NOT a mutation oracle for either repair on its own: the two defend the
+    // same property, so reverting one leaves the other to carry it, which is what defence in
+    // depth is for and also what makes each half invisible from here. Both numbers were taken on
+    // this revision and on the one before it, so the repair below neither strengthened nor
+    // weakened the row.
+    //
+    // Nothing better is available in-process, and that is the same limit six source-asserting
+    // rows in this file already name: two writers being inside the section at once is only
+    // observable across the awaits that span it, and the one seam under the lock is `mutate`,
+    // which is synchronous by contract. A fixture that watches the lock directory instead would
+    // be exposed to the reclaim window it cannot distinguish from the defect — a flake in the
+    // suite that exists to catch flakes.
     const names = ["a", "b", "c", "d", "e", "f"].map((n) => `qfai-${n}.yml`);
     await Promise.all(
       names.map((name) =>

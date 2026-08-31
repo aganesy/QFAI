@@ -938,6 +938,14 @@ async function markerAges(dir: string): Promise<number[] | undefined> {
  * the check is why the guard is honest about its limit rather than silent: if another writer has
  * published a lock in the interval, the name is theirs and the holder we moved has lost its lock.
  * That is a lost update, which the caller's verify-and-re-apply loop recovers from.
+ *
+ * NOT recovered from, and recorded here rather than repaired because it is its own change: on that
+ * branch the quarantine directory is neither restored nor removed, so a
+ * `.install-provenance.lock.d.reclaimed-<uuid>` stays in the adopter's `.qfai/` for good. The
+ * sibling row that watches for litter after a contended write filters on `staging`, so it does not
+ * see this name; nothing in the suite does. It is bounded — one directory holding one marker, per
+ * reclaim that gets overtaken — but it is litter in a tree QFAI asks adopters to keep clean, and
+ * the next run has no way to tell it apart from a quarantine another process is mid-way through.
  */
 async function restoreLockDirectory(quarantine: string, lockDir: string): Promise<void> {
   if (
