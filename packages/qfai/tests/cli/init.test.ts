@@ -1455,6 +1455,356 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("previews and reports the core.symlinks write to .git/config", async () => {
+    // `git config core.symlinks true` is the only change init makes outside
+    // the working tree. Neither mode used to mention it, so --dry-run
+    // enumerated every change except that one and a repository that later
+    // carried the setting gave no clue who wrote it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      // Shadow any true in the user's global config so the write is observable.
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: root });
+
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(dryRunOutput).toContain("would set: git config --local core.symlinks true");
+      const { stdout: afterDryRun } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: root },
+      );
+      expect(afterDryRun.trim()).toBe("false");
+
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(realOutput).toContain("git config: core.symlinks=true");
+      const { stdout: afterInit } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: root },
+      );
+      expect(afterInit.trim()).toBe("true");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("skips the core.symlinks write when it is already true", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      await execFile("git", ["config", "--local", "core.symlinks", "true"], { cwd: root });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks already true");
+      expect(output).not.toContain("git config: core.symlinks=true");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("treats git's other true spellings of core.symlinks as already enabled", async () => {
+    // Git accepts `yes` / `on` / `1` / a valueless key as true, so a raw string
+    // comparison against "true" would announce a change that is not one and
+    // then rewrite a setting that was already in effect.
+    for (const spelling of ["yes", "on", "1"]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+      try {
+        await execFile("git", ["init"], { cwd: root });
+        await execFile("git", ["config", "--local", "core.symlinks", spelling], { cwd: root });
+
+        const output = await captureStdout(async () => {
+          await runInit({ dir: root, force: false, dryRun: true, yes: true });
+        });
+
+        expect(output).toContain("git config: core.symlinks already true");
+        expect(output).not.toContain("would set: git config --local core.symlinks true");
+        const { stdout: stored } = await execFile(
+          "git",
+          ["config", "--local", "--get", "core.symlinks"],
+          { cwd: root },
+        );
+        expect(stored.trim()).toBe(spelling);
+      } finally {
+        await removeTempTree(root);
+      }
+    }
+  });
+
+  it("discloses the core.symlinks write before the steps that can fail after it", async () => {
+    // The note used to be held back until after the report summary, so any
+    // throw in between (an EPERM from symlink creation on Windows without
+    // Developer Mode, say) lost the disclosure of a change that had already
+    // been persisted outside the working tree.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: root });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      const noteIndex = output.indexOf("git config: core.symlinks=true");
+      // The summary, not the bare `qfai init:` prefix: init now opens with a
+      // `qfai init: dest=` disclosure line, so the prefix alone matches at
+      // index 0 and the ordering this case exists to pin goes untested.
+      const summaryIndex = output.indexOf("qfai init: done");
+      expect(noteIndex).toBeGreaterThanOrEqual(0);
+      expect(summaryIndex).toBeGreaterThanOrEqual(0);
+      expect(noteIndex).toBeLessThan(summaryIndex);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("still pins core.symlinks locally when only the global config enables it", async () => {
+    // The skip decision has to read the same scope the write targets. An
+    // unscoped read also sees global/system config, so a `true` inherited from
+    // there suppressed the local pin and left the repository depending on a
+    // setting that can be removed outside it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const globalConfig = path.join(root, "fake-global-gitconfig");
+    const previousGlobal = process.env.GIT_CONFIG_GLOBAL;
+    try {
+      await writeFile(globalConfig, "[core]\n\tsymlinks = true\n", "utf8");
+      process.env.GIT_CONFIG_GLOBAL = globalConfig;
+
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      await execFile("git", ["init"], { cwd: repo });
+      // Git for Windows may seed a local value at init time; clear it so the
+      // only `true` in play comes from the global config above.
+      await execFile("git", ["config", "--local", "--unset-all", "core.symlinks"], {
+        cwd: repo,
+      }).catch(() => undefined);
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: repo, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks=true");
+      expect(output).not.toContain("already true");
+      const { stdout: localValue } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: repo },
+      );
+      expect(localValue.trim()).toBe("true");
+    } finally {
+      if (previousGlobal === undefined) {
+        delete process.env.GIT_CONFIG_GLOBAL;
+      } else {
+        process.env.GIT_CONFIG_GLOBAL = previousGlobal;
+      }
+      await removeTempTree(root);
+    }
+  });
+
+  it("reports the common .git/config when init runs inside a linked worktree", async () => {
+    // `--absolute-git-dir` answers `.git/worktrees/<name>` there, which holds
+    // no `config` file at all, while the local-scope write lands in the common
+    // `.git/config`. Reporting the per-worktree dir pointed at nothing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+
+      const reported = /git config: core\.symlinks=true \(([^)]+)\)/.exec(output);
+      expect(reported).not.toBeNull();
+      const reportedPath = reported?.[1] ?? "";
+      expect(reportedPath).not.toContain("worktrees");
+      // The reported file must be the one git actually wrote to.
+      await access(reportedPath);
+      const { stdout: origin } = await execFile(
+        "git",
+        ["config", "--local", "--show-origin", "--get", "core.symlinks"],
+        { cwd: linked },
+      );
+      expect(origin.trim()).toContain("true");
+      expect(origin.replace(/\\/g, "/").toLowerCase()).toContain(
+        reportedPath.replace(/\\/g, "/").toLowerCase(),
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("stays silent about core.symlinks outside a git repository", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], { cwd: root }).then(
+        () => true,
+        () => false,
+      );
+      if (insideRepo) {
+        return; // The temp dir happens to sit inside a repository.
+      }
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).not.toContain("core.symlinks");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("previews the core.symlinks write when --dir does not exist yet", async () => {
+    // --dry-run creates nothing, so the target directory is still missing when
+    // the git probe runs; spawning a child in a missing cwd fails with ENOENT
+    // and the preview said nothing about a write the real run performs against
+    // the enclosing repository (the template copy creates the directory first).
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      await execFile("git", ["init"], { cwd: repo });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: repo });
+
+      const missing = path.join(repo, "not-created-yet");
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: missing, force: false, dryRun: true, yes: true });
+      });
+
+      expect(dryRunOutput).toContain("would set: git config --local core.symlinks true");
+
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: missing, force: false, dryRun: false, yes: true });
+      });
+
+      expect(realOutput).toContain("git config: core.symlinks=true");
+      const { stdout: after } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: repo },
+      );
+      expect(after.trim()).toBe("true");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("reports that a worktree-scope override keeps core.symlinks off", async () => {
+    // `--local` reads the common .git/config, but with
+    // extensions.worktreeConfig=true the per-worktree config.worktree outranks
+    // it. A local `true` there was reported as "already true" while the
+    // effective value git acts on stayed false.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "true"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+      await execFile("git", ["config", "extensions.worktreeConfig", "true"], { cwd: linked });
+      await execFile("git", ["config", "--worktree", "core.symlinks", "false"], { cwd: linked });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks already true");
+      expect(output).toContain("core.symlinks の実効値は false のままです");
+      const { stdout: effective } = await execFile("git", ["config", "--get", "core.symlinks"], {
+        cwd: linked,
+      });
+      expect(effective.trim()).toBe("false");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("still writes core.symlinks when GIT_CONFIG is set in the environment", async () => {
+    // GIT_CONFIG is a historical alias for --file, so git counts it as a second
+    // config-file selection and every --local form exits 129 with
+    // "only one config file at a time". The read swallowed that, so the failure
+    // only surfaced at the write — after the template copy had already run.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const previous = process.env.GIT_CONFIG;
+    try {
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      await execFile("git", ["init"], { cwd: repo });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: repo });
+      process.env.GIT_CONFIG = path.join(root, "unrelated-gitconfig");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: repo, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks=true");
+      // The verification read must not inherit GIT_CONFIG either — git would
+      // refuse it for the same reason.
+      delete process.env.GIT_CONFIG;
+      const { stdout: stored } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: repo },
+      );
+      expect(stored.trim()).toBe("true");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.GIT_CONFIG;
+      } else {
+        process.env.GIT_CONFIG = previous;
+      }
+      await removeTempTree(root);
+    }
+  });
+
   it("does not overwrite specs/contracts even with --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

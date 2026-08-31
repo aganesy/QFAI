@@ -15,6 +15,7 @@ import {
   rename,
   rm,
   rmdir,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -343,7 +344,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     : [];
 
   // git config core.symlinks true（symlink 生成の前提条件）
-  await configureGitSymlinks(destRoot, options.dryRun);
+  // 唯一のワーキングツリー外への変更なので、書き込み直後にその場で報告する
+  // （dry-run でもプレビュー行を出す）。report() まで保留すると、後続の
+  // syncIntegrationWrappers などが throw した場合（Windows で Developer Mode
+  // が無効なときの EPERM など）に、既に永続化された設定の開示だけが失われる。
+  for (const note of await configureGitSymlinks(destRoot, options.dryRun)) {
+    info(note);
+  }
 
   // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
@@ -1942,31 +1949,181 @@ async function pathExists(target: string): Promise<boolean> {
 // Git config
 // ---------------------------------------------------------------------------
 
-async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<void> {
+/**
+ * Resolves the `.git/config` this init would configure, or null outside a
+ * repository. `git rev-parse` resolves upward from `cwd`, so `--dir subdir`
+ * inside an existing repository configures that repository rather than
+ * `subdir`; naming the resolved file in the report makes that visible.
+ *
+ * The common git dir is what matters, not the per-worktree one: inside a
+ * linked worktree the per-worktree git dir is `.git/worktrees/<name>`, which
+ * holds no `config` file at all, while the local-scope write lands in the
+ * common `.git/config`. Every fallback therefore stays on `--git-common-dir`
+ * until the option itself runs out: git old enough to lack it is also old
+ * enough to lack linked worktrees, so `--git-dir` is the common dir there.
+ * All three forms may answer relative to `destRoot`, so resolve the answer.
+ */
+async function resolveGitConfigPath(probeDir: string): Promise<string | null> {
+  const gitDir =
+    (await runGitRevParse("git rev-parse --path-format=absolute --git-common-dir", probeDir)) ??
+    (await runGitRevParse("git rev-parse --git-common-dir", probeDir)) ??
+    (await runGitRevParse("git rev-parse --git-dir", probeDir));
+  return gitDir === null ? null : path.join(path.resolve(probeDir, gitDir), "config");
+}
+
+/** Runs one `git rev-parse` form, answering null when it fails or is empty. */
+async function runGitRevParse(command: string, probeDir: string): Promise<string | null> {
   try {
-    await execAsync("git rev-parse --git-dir", { cwd: destRoot });
+    const { stdout } = await execAsync(command, { cwd: probeDir, env: gitChildEnv() });
+    const resolved = stdout.trim();
+    return resolved === "" ? null : resolved;
   } catch {
-    // Not a git repository — skip
-    return;
+    // Not a git repository, or a git too old for this rev-parse form.
+    return null;
+  }
+}
+
+/**
+ * The environment the git children run in, with `GIT_CONFIG` removed.
+ *
+ * `GIT_CONFIG` is a historical alias for `--file`: when it is set, `git
+ * config` counts it as a config-file selection, so every `--local` form here
+ * dies with `error: only one config file at a time` (exit 129). The read
+ * swallows that failure, but the write is the one change init makes outside
+ * the working tree and the setting is what lets git expand the rules symlinks
+ * on Windows — it must not be defeated by an ambient variable aimed at some
+ * unrelated file. Dropping the variable pins every child to the repository
+ * config that `--local` names.
+ */
+function gitChildEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.GIT_CONFIG;
+  return env;
+}
+
+/**
+ * The directory the git probes run in: `destRoot` when it exists, otherwise
+ * its nearest existing ancestor, or null when even that is unreachable.
+ *
+ * `--dir` may name a directory that does not exist yet. The real run creates
+ * it during the template copy, which runs before this step, so the probes see
+ * the enclosing repository and the write lands there. A `--dry-run` creates
+ * nothing, and spawning a child in a missing `cwd` fails with ENOENT, so the
+ * preview used to stay silent about a write the real run performs. Walking up
+ * finds the same repository, because creating a plain directory never starts
+ * a new one.
+ */
+async function nearestExistingDir(destRoot: string): Promise<string | null> {
+  let current = path.resolve(destRoot);
+  for (;;) {
+    try {
+      if ((await stat(current)).isDirectory()) {
+        return current;
+      }
+    } catch {
+      // Missing (ENOENT), shadowed by a file (ENOTDIR), or unreadable — none
+      // of which init can fix here. Keep walking; the loop ends at the root.
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    current = parent;
+  }
+}
+
+/**
+ * Reads `core.symlinks` at one scope, answering false when it is unset.
+ *
+ * Both scopes matter. `--local` is the scope the write targets: an unscoped
+ * read also sees global and system config, so a `true` inherited from there
+ * would suppress the local pin and leave the repository dependent on a
+ * setting that can be removed outside it. The unscoped read is the effective
+ * value, which `--local` alone cannot predict — in a linked worktree with
+ * `extensions.worktreeConfig=true`, `config.worktree` outranks the common
+ * `.git/config`, so a local `true` can still resolve to `false`.
+ *
+ * `--bool` canonicalises the stored spelling, so the values git itself
+ * accepts as true (`yes`, `on`, `1`, a valueless key) are recognised instead
+ * of being rewritten as if they were unset.
+ */
+async function gitSymlinksEnabled(
+  probeDir: string,
+  scope: "local" | "effective",
+): Promise<boolean> {
+  const command =
+    scope === "local"
+      ? "git config --local --bool --get core.symlinks"
+      : "git config --bool --get core.symlinks";
+  try {
+    const { stdout } = await execAsync(command, { cwd: probeDir, env: gitChildEnv() });
+    return stdout.trim() === "true";
+  } catch {
+    // Exit 1 = unset. Any other failure is treated the same: write and let the
+    // write's own error reporting speak.
+    return false;
+  }
+}
+
+/** Disclosed when the local pin is in place but something outranks it. */
+const WORKTREE_OVERRIDE_NOTE =
+  "  warning: core.symlinks の実効値は false のままです（worktree スコープの上書き）。" +
+  "解除するには linked worktree で `git config --worktree core.symlinks true` を実行してください。";
+
+/**
+ * Configures `core.symlinks`, the one change init makes outside the working
+ * tree, and returns the report lines that disclose it. Both modes speak: a
+ * dry-run that stayed silent about `.git/config` understated the real run, and
+ * a real run that stayed silent left the setting unattributable afterwards.
+ */
+async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<string[]> {
+  const probeDir = await nearestExistingDir(destRoot);
+  if (probeDir === null) {
+    return [];
+  }
+
+  const configPath = await resolveGitConfigPath(probeDir);
+  if (configPath === null) {
+    return [];
+  }
+
+  if (await gitSymlinksEnabled(probeDir, "local")) {
+    const lines = [`  git config: core.symlinks already true (${configPath}) — left untouched`];
+    if (!(await gitSymlinksEnabled(probeDir, "effective"))) {
+      lines.push(WORKTREE_OVERRIDE_NOTE);
+    }
+    return lines;
   }
 
   if (dryRun) {
-    return;
+    return [`  would set: git config --local core.symlinks true (${configPath})`];
   }
 
   try {
-    await execAsync("git config core.symlinks true", { cwd: destRoot });
+    await execAsync("git config --local core.symlinks true", {
+      cwd: probeDir,
+      env: gitChildEnv(),
+    });
   } catch (err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       [
-        "git config core.symlinks true の設定に失敗しました。",
+        "git config --local core.symlinks true の設定に失敗しました。",
         "手動で以下を実行してください:",
-        "  git config core.symlinks true",
+        "  git config --local core.symlinks true",
         `原因: ${detail}`,
       ].join("\n"),
     );
   }
+
+  const lines = [`  git config: core.symlinks=true (${configPath})`];
+  if (!(await gitSymlinksEnabled(probeDir, "effective"))) {
+    // The write landed in the common config but does not govern: only a
+    // higher-precedence scope can do that, and per-worktree config is the one
+    // git offers. Say so rather than reporting an enablement that is not one.
+    lines.push(WORKTREE_OVERRIDE_NOTE);
+  }
+  return lines;
 }
 
 // ---------------------------------------------------------------------------
