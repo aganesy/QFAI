@@ -1279,14 +1279,24 @@ async function validateSpecTddList(
   // while the payload sat one column further right — unread, uncapped and
   // unreported. Reported per row rather than per surplus cell: one row, one
   // repair.
+  //
+  // Behind a promotion window, for the reason `RULE_PROMOTIONS` gives: nothing
+  // read past the last declared column before this rule, so every surplus cell
+  // a ledger accumulated arrives at once, including on rows already at `done`.
+  const rowExtraCellsPromotion = RULE_PROMOTIONS.tddListRowExtraCells.promoteAt;
+  const rowExtraCellsSeverity = newRuleSeverity(await resolveToolVersion(), rowExtraCellsPromotion);
+  const rowExtraCellsWindowNote =
+    rowExtraCellsSeverity === "warning"
+      ? ` Reported as a warning until the ${rowExtraCellsPromotion} release, then an error`
+      : "";
   for (const ref of ledgerRows()) {
     const declared = ref.scan.headers.length;
     if (ref.row.length <= declared) continue;
     issues.push(
       issue(
         "TDDLIST_ROW_EXTRA_CELLS",
-        `A ledger row in tdd/test-list.md for spec-${specNumber} (${ref.label}) has ${ref.row.length} cells but the table declares ${declared} columns. The surplus is read by nothing — content parked past the last column escapes every per-column rule, the Evidence grammar and its ${EVIDENCE_CELL_MAX_CHARS}-character cap included`,
-        "warning",
+        `A ledger row in tdd/test-list.md for spec-${specNumber} (${ref.label}) has ${ref.row.length} cells but the table declares ${declared} columns. The surplus is read by nothing — content parked past the last column escapes every per-column rule, the Evidence grammar and its ${EVIDENCE_CELL_MAX_CHARS}-character cap included.${rowExtraCellsWindowNote}`,
+        rowExtraCellsSeverity,
         relPath,
         ROW_EXTRA_CELLS_RULE_ID,
         undefined,
@@ -1848,6 +1858,20 @@ async function validateSpecTddList(
     evidenceEmptySeverity === "warning"
       ? ` Reported as a warning until the ${evidenceEmptyPromotion} release, then an error`
       : "";
+
+  // The cap runs its own window, for the same reason and on a wider blast
+  // radius: the column was documented as holding the commands and their output
+  // until this change, so the cells that outgrow the cap are the cells written
+  // to the contract of their day.
+  const evidenceOversizePromotion = RULE_PROMOTIONS.tddListEvidenceCellOversize.promoteAt;
+  const evidenceOversizeSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    evidenceOversizePromotion,
+  );
+  const evidenceOversizeWindowNote =
+    evidenceOversizeSeverity === "warning"
+      ? ` Reported as a warning until the ${evidenceOversizePromotion} release, then an error`
+      : "";
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -1928,8 +1952,8 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_CELL_OVERSIZE",
-          `Evidence for spec-${specNumber} ${rowLabel} is ${evidence.length} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names`,
-          "warning",
+          `Evidence for spec-${specNumber} ${rowLabel} is ${evidence.length} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names.${evidenceOversizeWindowNote}`,
+          evidenceOversizeSeverity,
           relPath,
           EVIDENCE_CELL_OVERSIZE_RULE_ID,
           undefined,

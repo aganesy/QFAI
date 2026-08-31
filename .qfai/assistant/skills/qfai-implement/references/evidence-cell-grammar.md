@@ -20,8 +20,8 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
   argument recorded for a row whose RED cannot be observed directly
   (`red-not-observable.md`); `n-a` is a row that owes no RED at all — a
   documentation row, and nothing else. **`n-a` is not available on an
-  ATDD-owned row**: "ATDD-owned rows" below says of `E2E` / `API` /
-  `Integration` that "There is no waiver here", and routes the case that looks
+  ATDD-owned row**: `execution-ledger.md#atdd-owned-rows` says of `E2E` / `API`
+  / `Integration` that "There is no waiver here", and routes the case that looks
   like one — a journey whose surface the same cycle just built — to
   `falsifiability`. The validator rejects it there per `Layer`.
 - `GREEN:` — `pass` is the only legal value. A row that is not green does not

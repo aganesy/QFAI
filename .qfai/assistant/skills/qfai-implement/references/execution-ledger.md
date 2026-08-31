@@ -144,14 +144,14 @@ assert a cycle has run:
 | `TDDLIST_EVIDENCE_EMPTY`          | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | warning, then error |
 | `TDDLIST_EVIDENCE_STATUS_ONLY`    | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning             |
 | `TDDLIST_EVIDENCE_CELL_MALFORMED` | the cell does not match the grammar above                           | warning             |
-| `TDDLIST_EVIDENCE_CELL_OVERSIZE`  | the cell is longer than 240 characters                              | warning             |
+| `TDDLIST_EVIDENCE_CELL_OVERSIZE`  | the cell is longer than 240 characters                              | warning, then error |
 | `TDDLIST_EVIDENCE_RED_PROVENANCE` | `RED:n-a` on an `E2E` / `API` / `Integration` row                   | error               |
 
 One more rule reads the row rather than a cell:
 
-| Finding                   | Fires when                                              | Severity |
-| ------------------------- | ------------------------------------------------------- | -------- |
-| `TDDLIST_ROW_EXTRA_CELLS` | the row has more cells than the table's header declares | warning  |
+| Finding                   | Fires when                                              | Severity            |
+| ------------------------- | ------------------------------------------------------- | ------------------- |
+| `TDDLIST_ROW_EXTRA_CELLS` | the row has more cells than the table's header declares | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -162,13 +162,17 @@ are accepted directly.
 ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate.
 
-`TDDLIST_EVIDENCE_EMPTY` is inside a **promotion window**: it is reported as a
-warning until the release the finding itself names, and as an error from that
-release onwards. An empty cell is unambiguous and the rule is not in doubt — but
-it also fires on cells written before the check existed, so an upgrade that
-started erroring on them would latch a gate that was passing. The finding text
-states which release ends the window, so `--fail-on error` keeps working while
-the ledger shows the debt it will owe.
+Three findings are inside a **promotion window**: `TDDLIST_EVIDENCE_EMPTY`,
+`TDDLIST_EVIDENCE_CELL_OVERSIZE` and `TDDLIST_ROW_EXTRA_CELLS` are reported as
+warnings until the release each finding itself names, and as errors from that
+release onwards. Each rule is right and none is in doubt — but each also fires
+on ledgers written before the check existed, so an upgrade that started erroring
+on them would latch a gate that was passing. An empty cell was always wrong; the
+cap and the surplus column arrive with the change that made `Evidence` a
+pointer, so they land on every cell written while the column was documented as
+holding the commands and their output. The finding text states which release
+ends the window, so `--fail-on error` keeps working while the ledger shows the
+debt it will owe.
 
 **A row already at a terminal status satisfies this by backfilling the cell in
 place.** Writing the outcome and its evidence pointer into `Evidence` is not a
