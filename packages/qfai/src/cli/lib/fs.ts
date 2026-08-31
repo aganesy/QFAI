@@ -1,5 +1,15 @@
+import { constants as fsConstants } from "node:fs";
 import { copyFile, lstat, mkdir, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+
+/** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+  const code: unknown = Reflect.get(error, "code");
+  return typeof code === "string" ? code : undefined;
+}
 
 export type CopyOptions = {
   force: boolean;
@@ -132,7 +142,30 @@ async function copyFiles(
 
     if (!options.dryRun) {
       await mkdir(path.dirname(dest), { recursive: true });
-      await copyFile(file, dest);
+      // EXCLUSIVE unless the caller asked to overwrite, and `copied` records only what this call
+      // actually created.
+      //
+      // `shouldWrite` answered a question about a moment that has passed. A second process — another
+      // `qfai init`, or the adopter's own editor — can create the file between that check and this
+      // copy, and a plain `copyFile` then OVERWRITES it. Worse than the lost bytes: the path lands
+      // in `copied`, so `recordInstalledWorkflows` stamps the packaged digest as QFAI's own, doctor
+      // reports no drift on a file QFAI never wrote, and the retired-workflow prune considers it
+      // QFAI's to delete. `COPYFILE_EXCL` makes the create the decision, and an `EEXIST` means the
+      // adopter won the race — which is the same outcome `shouldWrite` intended for a file that was
+      // already there.
+      if (!forceForThisFile) {
+        try {
+          await copyFile(file, dest, fsConstants.COPYFILE_EXCL);
+        } catch (error) {
+          if (errorCode(error) === "EEXIST") {
+            skipped.push(dest);
+            continue;
+          }
+          throw error;
+        }
+      } else {
+        await copyFile(file, dest);
+      }
     }
     copied.push(dest);
   }
