@@ -11,9 +11,15 @@
  * A SET rather than a count. A count lets an addition and a removal cancel out, and this
  * repository has already been bitten by that once, in the pinned-bytes comparison.
  *
- * These twenty-four predate this change and are not endorsed by being listed. The list says what
- * is there, so that adding to it is an edit a reviewer approves; removing one needs no permission
- * at all and only makes this row happier.
+ * Twenty-four of these predate this change and are not endorsed by being listed. The list says
+ * what is there, so that adding to it is an edit a reviewer approves; removing one needs no
+ * permission at all and only makes this row happier.
+ *
+ * The two added here are the `config.ts` compat shims this change restores: the deprecated
+ * `testStrategy` knobs stay parsed until the next major, and `normalizeValidation` reading a
+ * property this same change marks `@deprecated` is what `@typescript-eslint/no-deprecated` fires
+ * on. Directly above them, the `promptsDir` shim carries the identical directive for the identical
+ * reason, so the file already establishes the shape. Listing them is that permission being sought.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -81,6 +87,9 @@ function suppressions(): string[] {
 
 /** The census, as measured on the commit that removed review finding [133]'s suppression. */
 const PINNED: readonly string[] = [
+  // `paths.promptsDir`, then the two `validation.testStrategy` compat shims.
+  "packages/qfai/src/core/config.ts :: @typescript-eslint/no-deprecated",
+  "packages/qfai/src/core/config.ts :: @typescript-eslint/no-deprecated",
   "packages/qfai/src/core/config.ts :: @typescript-eslint/no-deprecated",
   "packages/qfai/src/core/critique/adapter.ts :: no-console",
   "packages/qfai/src/core/critique/adapter.ts :: no-console",

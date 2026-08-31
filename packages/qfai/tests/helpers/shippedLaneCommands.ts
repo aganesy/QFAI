@@ -1261,7 +1261,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ],
   [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
+  ["qfai.config.yaml", "b141c3e3cfa7761d9237e51d8e27336c4e1d51dce58453edb90ac3f2b9402d62"],
 ]);
 
 /**
