@@ -128,6 +128,21 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SKILLS-013` — a file under a skill's `references/` that no reachable
+   * document cites, so no run ever opens it. Progressive disclosure was never
+   * checked before, so a skill tree that grew a reference and lost its citation
+   * meets the whole backlog on the first upgrade.
+   */
+  skillReferenceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SKILLS-014` — a document under the skills tree that cannot be read at
+   * all. Nothing read these files before, so an unreadable one (a mode bit, a
+   * dangling symlink, a checkout that never materialised it) is discovered by
+   * the upgrade rather than caused by it, and hard-failing on discovery is the
+   * shape of latch P7 exists to stop.
+   */
+  skillDocumentUnreadable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

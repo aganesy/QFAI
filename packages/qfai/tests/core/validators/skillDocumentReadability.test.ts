@@ -16,7 +16,9 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { loadConfig } from "../../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
 import { validateAssistantAssets } from "../../../src/core/validators/assistantAssets.js";
+import { resolveToolVersion } from "../../../src/core/version.js";
 
 const UNREADABLE_BASENAME = "unreadable.md";
 const READ_FAILURE_CODE = "QFAI-SKILLS-014";
@@ -64,8 +66,21 @@ describe("skill document readability", { timeout: 30000 }, () => {
 
       expect(readFailures).toHaveLength(1);
       expect(readFailures[0]?.file).toBe(path.join(referencesDir, UNREADABLE_BASENAME));
-      expect(readFailures[0]?.severity).toBe("error");
+      // The severity comes from the code's promotion window (P7), not from a
+      // literal beside the `issue(...)` call: nothing read these files before,
+      // so an unreadable one is discovered by the upgrade rather than caused by
+      // it. Asserting the computed value rather than the token of the day keeps
+      // this pinned through the promotion instead of failing on the release
+      // that performs it.
+      expect(readFailures[0]?.severity).toBe(
+        newRuleSeverity(
+          await resolveToolVersion(),
+          RULE_PROMOTIONS.skillDocumentUnreadable.promoteAt,
+        ),
+      );
       expect(readFailures[0]?.message).toContain("EACCES");
+      // The remediation is on the finding, not only in the report catalog.
+      expect(readFailures[0]?.suggested_action ?? "").not.toBe("");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

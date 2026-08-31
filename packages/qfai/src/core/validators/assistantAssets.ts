@@ -5,7 +5,9 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
 import { escapeRegExp } from "../regex.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
@@ -119,22 +121,39 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * reference is opened only when a document already read names it. A file under
  * `references/` with no inbound citation from a reachable document therefore
  * ships to every consuming repository and is loaded in no run at all, which is
- * a property of the graph rather than a probability. Reported as `warning`:
- * the unread guidance is soft rule text, so nothing hard is being skipped.
+ * a property of the graph rather than a probability.
+ *
+ * The severity is the code's promotion window rather than a literal: the
+ * unread guidance is soft rule text, so nothing hard is being skipped today,
+ * and a tree that grew a reference and lost its citation before anything
+ * checked gets the window to reconnect it.
  */
 async function collectReferenceGraphIssues(root: string, skillsDir: string): Promise<Issue[]> {
-  const { documents, unreadable } = await readSkillDocuments(skillsDir);
+  // Both codes below are new, so P7 gives each a promotion window instead of a
+  // severity literal beside its `issue(...)` call. `resolveToolVersion`
+  // resolves rather than rejects — its own read failures return `"unknown"`,
+  // which the comparator reads as inside the window — so a version that cannot
+  // be read is never what escalates either code into a build failure.
+  const toolVersion = await resolveToolVersion();
+  const { documents, unreadable } = await readSkillDocuments(skillsDir, toolVersion);
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
+  const promoteAt = RULE_PROMOTIONS.skillReferenceUnreachable.promoteAt;
+  const severity = newRuleSeverity(toolVersion, promoteAt);
+  const windowNote =
+    severity === "warning" ? ` ${promoteAt} までは warning、以降は error です。` : "";
   const unreachable = [...documents.keys()]
     .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
       issue(
         "QFAI-SKILLS-013",
-        "references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。",
-        "warning",
+        `references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。${windowNote}`,
+        severity,
         file,
         "skills.referenceReachability",
+        undefined,
+        "canonical",
+        "このファイルを読ませたいステップの本文からファイルへの相対パスを引用してください（SKILL.md から到達可能な文書のいずれかに書く必要があります）。読ませる必要がなくなった文書であれば削除してください。",
       ),
     );
   return [...unreadable, ...unreachable];
@@ -156,10 +175,14 @@ type SkillDocuments = {
  * all. An unusable reference is a worse outcome than an uncited one, so the
  * read error becomes its own issue.
  */
-async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
+async function readSkillDocuments(skillsDir: string, toolVersion: string): Promise<SkillDocuments> {
   const files = await collectFiles(skillsDir, { extensions: [".md", ".yaml", ".yml"] });
   const documents = new Map<string, string>();
   const unreadable: Issue[] = [];
+  const promoteAt = RULE_PROMOTIONS.skillDocumentUnreadable.promoteAt;
+  const severity = newRuleSeverity(toolVersion, promoteAt);
+  const windowNote =
+    severity === "warning" ? ` ${promoteAt} までは warning、以降は error です。` : "";
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
     try {
       documents.set(file, await readFile(file, "utf-8"));
@@ -167,10 +190,13 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
       unreadable.push(
         issue(
           "QFAI-SKILLS-014",
-          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
-          "error",
+          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。${windowNote}`,
+          severity,
           file,
           "skills.documentReadable",
+          undefined,
+          "canonical",
+          "メッセージが示す I/O エラーを解消してください（読み取り権限の付与、切れた symlink の張り直し、materialise されていないファイルの取得など）。skills 配下から外すべき文書であれば削除してください。",
         ),
       );
     }
