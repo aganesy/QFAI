@@ -350,7 +350,8 @@ is a defect.
   false `Authored/edited under review` attestation do not merely mis-state the work — they claim
   work that was not done, or independence the reviewer did not have. `agents/qa-gatekeeper.md`
   rejects the first two outright and
-  `shared-skill-delegation-baseline.md#reviewer-response-template` forbids a `PASS` on the third,
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`
+  forbids a `PASS` on the third,
   so classifying them `record:*` would let an advisory-only review return `PASS` and release
   `done` over the very evidence the gate exists to reject. They stay **blocking** as
   `defect:code-quality` and MUST NOT be filed as `record:*`. `record:*` covers a record that is
@@ -399,7 +400,8 @@ one queue per spec, and it is defined by a destination, an owner, an entry shape
   Never `08_Open-questions.md`: that file is upstream SSOT owned by `/qfai-sdd` (see
   `#core-rule`), and a record defect is not a product obligation.
 - **The class needs a drain, so a stage whose completion contract has none does not use it.** Every
-  stage sharing `shared-skill-delegation-baseline.md` reads the provenance rules, but an entry is
+  stage sharing `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` reads the
+  provenance rules, but an entry is
   only worth filing where something consumes it, and the queue above is defined as much by the
   drain as by the destination. The test is textual and local: **that stage's own completion
   conditions must require this queue drained before it declares completion.** `/qfai-implement`

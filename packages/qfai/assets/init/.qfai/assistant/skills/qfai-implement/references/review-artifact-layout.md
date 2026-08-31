@@ -46,7 +46,7 @@ shipped inside the QFAI package and archived by `npx qfai doctor`:
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
 - A **record re-attestation** takes a new pack of this same shape, even though it is not a round
-  (`../../../constitution/drift-protocol.md#the-record-defect-queue`). It carries the same
+  (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`). It carries the same
   `Reviewed revision` and `Result` as the verdict it supersedes and a recomputed
   `Audited evidence hash`; `summary.json` names the same `revision`. It is a separate pack because
   the superseded verdict's pack is fixed by a `Review pack seal` the completion gate recomputes —
