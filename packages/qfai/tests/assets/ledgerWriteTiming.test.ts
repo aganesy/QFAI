@@ -98,4 +98,40 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // different contract.
     expect(policy).toContain("returns Status, `DR-ID` and Evidence, the orchestrator writes them");
   });
+
+  it("claims the interruption guarantee for serial mode only", async () => {
+    // The per-phase write is what makes an interrupted run leave a current
+    // ledger, and a parallel worker cannot perform it: it may not write the
+    // file and it reports once, at the end of its slice. Claiming the
+    // guarantee unconditionally told a reader that a `todo` row after an
+    // interrupted parallel run meant "never attempted".
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain("in serial mode a row is written when its phase completes");
+    expect(skill).toContain(
+      "**Under coordinated parallel dispatch that currency is not available and this step does not supply it**",
+    );
+    // The unqualified spelling is the claim that was false for parallel mode.
+    expect(skill).not.toContain("first write: a row is written when its phase completes");
+    // The per-phase mandate carries the same qualifier, so the two rules do
+    // not disagree again the way this file's docblock describes.
+    expect(skill).toContain("That per-phase cadence is the **serial** write point");
+  });
+
+  it("says why parallel mode cannot write per phase, and what recovery is instead", async () => {
+    const policy = await read(
+      tree,
+      "assistant/skills/qfai-implement/references/parallelization-policy.md",
+    );
+    expect(policy).toContain(
+      "**Per-phase writes are a serial-mode property, and parallel mode does not have them.**",
+    );
+    // Both reasons, because either alone reads as a gap to close by contract.
+    expect(policy).toContain(
+      "A worker **cannot** write the ledger, and it reports **once** — at the end of",
+    );
+    expect(policy).toContain("The trunk row **must not** advance before its slice merges");
+    // And the reading a `todo` row gets after an interrupted parallel run.
+    expect(policy).toContain("recovery is re-dispatching the unmerged slices");
+    expect(policy).toContain('as "not merged", not as "not attempted"');
+  });
 });

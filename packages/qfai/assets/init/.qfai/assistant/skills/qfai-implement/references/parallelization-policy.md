@@ -193,6 +193,27 @@ So:
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 
+**Per-phase writes are a serial-mode property, and parallel mode does not have
+them.** `../SKILL.md`'s Orchestrator Protocol requires the trunk ledger to be
+written as each phase completes, so an interrupted run leaves the recovery
+passages something current to read. Two facts above make that unreachable under
+parallel dispatch, and neither is a gap to close by contract:
+
+- A worker **cannot** write the ledger, and it reports **once** — at the end of
+  its slice, not at each phase. A per-phase trunk write would need a per-phase
+  return, which means dispatching each phase separately and dissolving the
+  slice that parallel mode exists to run.
+- The trunk row **must not** advance before its slice merges. A row at `done`
+  whose code is not yet in the trunk is the same false report the reconcile
+  exists to prevent, inverted — and gate item 10 reads that row.
+
+So the write point stays where it is, and the recovery story differs by mode:
+an interrupted **parallel** run leaves every dispatched row at its pre-dispatch
+status, and recovery is re-dispatching the unmerged slices. That is safe
+precisely _because_ no trunk write happened — a discarded worktree holds
+nothing the trunk was owed. Read a `todo` row after an interrupted parallel run
+as "not merged", not as "not attempted", and re-run the slice.
+
 In serial mode the same rule holds with no merge step: the implementation agent
 returns Status, `DR-ID` and Evidence, the orchestrator writes them.
 

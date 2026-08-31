@@ -2199,7 +2199,7 @@ the invariant stated below is what named the obligation: a commit that changes a
 `e2e` project's two globs owes this line a re-measurement, and it owes it whether the commit is a
 feature or a merge. The two suite totals above stay known-invalid for the same reason as before.
 
-e2e callsites at this tree: 930
+e2e callsites at this tree: 932
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
