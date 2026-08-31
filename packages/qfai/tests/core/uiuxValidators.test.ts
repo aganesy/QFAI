@@ -605,11 +605,26 @@ async function seedAgentDefinitionFixture(root: string, agentMarkdown: string): 
   await mkdir(steeringDir, { recursive: true });
   await mkdir(agentsDir, { recursive: true });
 
+  // The catalog embeds a verbatim copy of the agent body under
+  // `developer_instructions`; QFAI-AGENT-014 warns when an entry omits it or
+  // lets it drift. Derive the block from this fixture's own markdown so the
+  // fixture stays a clean tree whatever body a caller passes.
+  const body = agentMarkdown.slice(agentMarkdown.indexOf("## Mission")).trimEnd();
+  const block = body
+    .split("\n")
+    .map((line) => (line.length === 0 ? "" : `      ${line}`))
+    .join("\n");
   await writeFile(
     path.join(steeringDir, "agent-catalog.yml"),
-    ['schema_version: "1.0"', "agents:", "  - id: frontend-engineer", "    kind: worker", ""].join(
-      "\n",
-    ),
+    [
+      'schema_version: "1.0"',
+      "agents:",
+      "  - id: frontend-engineer",
+      "    kind: worker",
+      "    developer_instructions: |",
+      block,
+      "",
+    ].join("\n"),
     "utf-8",
   );
   await writeFile(

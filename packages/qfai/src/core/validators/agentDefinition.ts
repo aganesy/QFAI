@@ -20,6 +20,19 @@ const REQUIRED_AGENT_SECTIONS = [
 type CatalogAgent = {
   id: string;
   kind: "worker" | "reviewer";
+  /**
+   * The catalog's copy of the agent body. Optional on this type only because
+   * the entry may be missing or malformed on disk — QFAI-AGENT-014 reports
+   * either. Kept rather than discarded at parse time so that rule can compare
+   * it against the source.
+   */
+  developerInstructions?: string;
+  /**
+   * Whether the entry carried the key at all, whatever its type. A key that is
+   * present but not a string is already reported as a catalog shape error, so
+   * QFAI-AGENT-014 must not name it a second time as a missing block.
+   */
+  hasDeveloperInstructionsKey: boolean;
 };
 
 type RoutingPhase = {
@@ -81,6 +94,91 @@ function manifestRelativePath(absolute: string, root: string): string {
   return path.relative(root, absolute).replace(/\\/g, "/");
 }
 
+/**
+ * The canonical agent body: `## Mission` onward, i.e. everything after the
+ * frontmatter and the title heading. Returns undefined when the section is
+ * absent — QFAI-AGENT-005 already reports that, and a second finding for the
+ * same missing heading would only add noise.
+ */
+function canonicalAgentBody(markdown: string): string | undefined {
+  const content = markdown.replace(/\r\n/g, "\n");
+  let offset = 0;
+  if (content.startsWith("---\n")) {
+    // Anchor the search past the frontmatter: a description that merely
+    // mentions `## Mission` must not become the start of the body.
+    const close = content.indexOf("\n---", "---\n".length - 1);
+    if (close >= 0) offset = close + 1;
+  }
+  const match = /^## Mission[ \t]*$/m.exec(content.slice(offset));
+  if (match === null) return undefined;
+  return content.slice(offset + match.index);
+}
+
+function normalizeBody(body: string): string {
+  return body.replace(/\r\n/g, "\n").trim();
+}
+
+/**
+ * `agent-catalog.yml` embeds a verbatim copy of each agent body under
+ * `developer_instructions`. The markdown file is the source; the catalog block
+ * is derived. Nothing compared them, so a project that customised an agent
+ * silently shipped two disagreeing copies of the same instructions and
+ * `qfai validate` reported nothing.
+ *
+ * Warning, not error: the derived copy is regenerable, and a stale or absent
+ * block does not make the tree unusable — it makes it ambiguous, which is
+ * exactly what a warning is for.
+ */
+function checkDeveloperInstructions(
+  agent: CatalogAgent,
+  markdown: string,
+  agentRel: string,
+  catalogRel: string,
+  issues: Issue[],
+): void {
+  const declared = agent.developerInstructions;
+  if (declared === undefined) {
+    // Present but not a string: QFAI-AGENT-006 already named it at parse time,
+    // and a second finding for the same broken block would only add noise.
+    if (agent.hasDeveloperInstructionsKey) return;
+    // A deleted block is not "this catalog does not duplicate" — it is the
+    // cheapest way to defeat the drift comparison, and it silently starves the
+    // downstream loaders the field exists for, which read the catalog and
+    // nothing else. Warning, like the drift case: the block is derived, so the
+    // repair is mechanical.
+    issues.push(
+      issue(
+        "QFAI-AGENT-014",
+        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim`,
+        "warning",
+        catalogRel,
+        "agentDefinition.developerInstructionsMissing",
+        undefined,
+        "canonical",
+        undefined,
+        { relatedFiles: [agentRel] },
+      ),
+    );
+    return;
+  }
+  const canonical = canonicalAgentBody(markdown);
+  if (canonical === undefined) return;
+  if (normalizeBody(declared) === normalizeBody(canonical)) return;
+  issues.push(
+    issue(
+      "QFAI-AGENT-014",
+      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim`,
+      "warning",
+      catalogRel,
+      "agentDefinition.developerInstructionsDrift",
+      undefined,
+      "canonical",
+      undefined,
+      { relatedFiles: [agentRel] },
+    ),
+  );
+}
+
 export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
@@ -120,6 +218,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     return issues;
   }
 
+  const catalogRel = manifestRelativePath(catalogPath, root);
   const catalogIds = new Set(catalog.map((agent) => agent.id));
   const reviewerIds = new Set(
     catalog.filter((agent) => agent.kind === "reviewer").map((agent) => agent.id),
@@ -166,6 +265,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
         ),
       );
     }
+    checkDeveloperInstructions(agent, content, rel, catalogRel, issues);
     for (const heading of REQUIRED_AGENT_SECTIONS) {
       if (!content.includes(heading)) {
         issues.push(
@@ -255,9 +355,30 @@ async function readCatalog(
         continue;
       }
 
+      // A present-but-non-string block (`null`, a list, a number) is a broken
+      // derived copy, not an absent one. Dropping it silently would make the
+      // drift rule return as if the catalog simply carried no copy, so the
+      // shape error is reported here and the entry keeps its identity for the
+      // remaining per-agent rules.
+      const declared: unknown = agent.developer_instructions;
+      const declaredIsString = typeof declared === "string";
+      if (declared !== undefined && !declaredIsString) {
+        issues.push(
+          issue(
+            "QFAI-AGENT-006",
+            `agent-catalog.yml agents[${index}] developer_instructions must be a string when present`,
+            "error",
+            rel,
+            "agentDefinition.invalidCatalogEntry",
+          ),
+        );
+      }
+
       agents.push({
         id: agent.id,
         kind: agent.kind,
+        hasDeveloperInstructionsKey: declared !== undefined,
+        ...(declaredIsString ? { developerInstructions: declared } : {}),
       });
     }
     return agents;
