@@ -2194,12 +2194,12 @@ exactly what the mechanism below says the line's movement means.
 **And a third time, on the merge that brought this spec's scaffold into a foreign branch.** Merging
 `main` into `chore/issue-778-ledger-write-points` carried in that branch's new
 `tests/assets/ledgerWriteTiming.test.ts` — five `it` callsites pinning `/qfai-implement`'s ledger
-write points — taking the count from 915 to 920. Again nothing about `spec-0017` changed, and again
+write points — taking the count from 925 to 930. Again nothing about `spec-0017` changed, and again
 the invariant stated below is what named the obligation: a commit that changes a callsite under the
 `e2e` project's two globs owes this line a re-measurement, and it owes it whether the commit is a
 feature or a merge. The two suite totals above stay known-invalid for the same reason as before.
 
-e2e callsites at this tree: 920
+e2e callsites at this tree: 930
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

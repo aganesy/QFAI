@@ -182,11 +182,11 @@ So:
   `DR-ID` that status requires, and the `Evidence` payload in the per-item
   evidence contract's form.
 - The orchestrator writes those rows into the trunk ledger during
-  `#post-parallel-integration-verify`, before the verify runs — **all three
-  unconditional carve-out cells**, not Status and Evidence alone. A worker
-  cannot write the ledger, and `/qfai-implement`'s Completion step reconciles
-  rather than writes, so a `DR-ID` dropped here is written by nobody: an
-  `exception` row lands without the `DR-*` that
+  `../SKILL.md#post-parallel-integration-verify`, before the verify runs —
+  **all three unconditional carve-out cells**, not Status and Evidence alone. A
+  worker cannot write the ledger, and `/qfai-implement`'s Completion step
+  reconciles rather than writes, so a `DR-ID` dropped here is written by nobody:
+  an `exception` row lands without the `DR-*` that
   `TDDLIST_EXCEPTION_MISSING_DR` requires at `error`, and a row reset by an
   approved Change Request loses the `CR-*` it must retain through its later
   statuses.
