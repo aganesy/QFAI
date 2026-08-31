@@ -229,7 +229,7 @@ So:
 - Each worker returns, per item it processed: `TDD-ID`, final `Status`, and the
   `Evidence` payload in the per-item evidence contract's form.
 - The orchestrator writes those rows into the trunk ledger during
-  `#post-parallel-integration-verify`, before the verify runs.
+  `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
 - **The reconciliation write replays the row's own path, one listed edge at a
   time.** A dispatched row is still `todo` in the trunk — workers never edited
   it — so assigning the returned status directly is a single unlisted jump:

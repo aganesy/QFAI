@@ -1,11 +1,11 @@
 # Evidence revision (what state the observation describes)
 
 Four of the twelve gate items — 3, 5, 7 and 8 — are sub-agent observations, and
-item 6 re-confirms GREEN after the refactor; `#evidence-hard-rules` says stale
-evidence MUST NOT be reused. That rule needs something to compare against. This
-file defines it. Which of the five addresses which tree is the table under
-_Which tree each gate item addresses_, which carries item 12's checkpoint
-address as well.
+item 6 re-confirms GREEN after the refactor; `../SKILL.md#evidence-hard-rules`
+says stale evidence MUST NOT be reused. That rule needs something to compare
+against. This file defines it. Which of the five addresses which tree is the
+table under _Which tree each gate item addresses_, which carries item 12's
+checkpoint address as well.
 
 ## The field
 

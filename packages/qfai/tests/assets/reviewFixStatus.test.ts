@@ -53,6 +53,26 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       );
     });
 
+    it(`${relativePath}: the SKILL.md status enumeration is not one value short`, async () => {
+      // SKILL.md's "Status values are ..." line is the only place in the skill
+      // that answers what a `Status` cell may contain. Dropping `review-fix`
+      // from it made a legal status read as illegal: an agent validating a cell
+      // against this line either refuses `refactor` -> `review-fix` (stranding
+      // an open REVISE) or rewrites the cell to `refactor`, which marks
+      // unfinished rework as finished and clears the completion gate below.
+      const skill = await read(relativePath, "SKILL.md");
+      expect(flat(skill)).toContain(
+        "Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`;",
+      );
+
+      // And it stays in step with the reference that owns the value set.
+      const ledger = await read(relativePath, "references/execution-ledger.md");
+      const owned = /Valid status values: ([^.]+)\./.exec(ledger)?.[1];
+      const summarised = /Status values are ([^;]+);/.exec(flat(skill))?.[1];
+      expect(owned).toBeDefined();
+      expect(summarised).toBe(owned);
+    });
+
     it(`${relativePath}: the evidence contract is a repeatable round shape`, async () => {
       const skill = await read(relativePath, "SKILL.md");
       expect(flat(skill)).toContain("Each RED/GREEN cycle is one **round block**");
