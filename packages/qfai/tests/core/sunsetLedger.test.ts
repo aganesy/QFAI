@@ -28,6 +28,32 @@ import { describe, expect, it } from "vitest";
 import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
+/**
+ * Baseline codes whose emitters have since been deleted, newest retirement last.
+ * An entry earns its place by the validator that raised it being removed from
+ * the tree; it is not a place to silence a code that still exists.
+ */
+const RETIRED_SINCE_BASELINE: string[] = [
+  "QFAI-ATDD-001",
+  "QFAI-BFLOW-001",
+  "QFAI-BFLOW-002",
+  "QFAI-BFLOW-004",
+  "QFAI-DOC-CONVERGENCE-INCOMPLETE",
+  "QFAI-DOC-CONVERGENCE-MISSING",
+  "QFAI-DOC-VOCABULARY-CONTRADICTION",
+  "QFAI-DOC-VOCABULARY-PROHIBITED",
+  "QFAI-REQCTX-000",
+  "QFAI-REQCTX-001",
+  "QFAI-REQCTX-002",
+  "QFAI-REQCTX-003",
+  "QFAI-REQCTX-004",
+  "QFAI-REQCTX-010",
+  "QFAI-REQCTX-020",
+  "QFAI-REQCTX-021",
+  "QFAI-REQINDEX-001",
+  "QFAI-REQINDEX-002",
+];
+
 // tests/core/<this file> -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
@@ -485,10 +511,18 @@ describe("sunset ledger", () => {
     // registered) writes nothing into the registry, so it has to be found from
     // the emitting side, measured against a frozen baseline.
     const codes = await collectIssueCodes();
+    // Non-vacuity, stated as the RETIRED SET rather than as `size > baseline`.
+    // The baseline is a frozen historical record, so the old form assumed the
+    // code set only ever grows — and it went red the moment retiring a dead
+    // validator legitimately removed codes from the tree. Pinning what is gone
+    // keeps the check non-vacuous (a broken extractor reports every baseline
+    // code as retired) while making each retirement a reviewed line.
+    const retired = FINDING_CODES_BEFORE_PROMOTION_POLICY.filter((code) => !codes.has(code)).sort();
     expect(
-      codes.size,
-      "no issue codes extracted — did the `issue(...)` shape change?",
-    ).toBeGreaterThan(FINDING_CODES_BEFORE_PROMOTION_POLICY.length);
+      retired,
+      "a baseline code no longer emitted: retire it here in the same change, or " +
+        "the `issue(...)` shape changed and extraction is silently returning less",
+    ).toEqual(RETIRED_SINCE_BASELINE);
 
     // The association is the promotion entry naming its code: `newRuleSeverity`
     // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.

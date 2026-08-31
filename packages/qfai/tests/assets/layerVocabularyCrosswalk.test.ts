@@ -30,16 +30,20 @@ const cells = (row: string): string[] =>
     .map((cell) => cell.trim());
 
 /**
- * Drops the two regions of the layer SSOT where the literal `tests/` spelling
- * is deliberate: the bullet that introduces it as what `<testsDir>` expands to
- * by default, and the `## TestKind resolution (single source)` list, whose own
- * rows are tracked separately. Everywhere else the file states a location rule
- * it must defer to `paths.testsDir`.
+ * Drops the one region of the layer SSOT where the literal `tests/` spelling is
+ * deliberate: the bullet that introduces it as what `<testsDir>` expands to by
+ * default. Everywhere else the file states a location rule it must defer to
+ * `paths.testsDir`.
+ *
+ * The `## TestKind resolution (single source)` list used to be exempt too. It
+ * was renamed to `## Directory → AtddTestKind (code-side, derived from the
+ * crosswalk)` and rewritten to spell `<testsDir>` itself, so it no longer needs
+ * an exemption and is now covered like the rest of the file. The assertion
+ * below is what surfaced the rename rather than letting it strip nothing.
  */
 function withoutDefaultExpansionRegions(content: string): string {
   const regions = [
     /- \*\*`<testsDir>` is `paths\.testsDir`[\s\S]*?(?=\n- L1 and L2 have no mandated directory)/,
-    /## TestKind resolution \(single source\)[\s\S]*?(?=\n## )/,
   ];
   return regions.reduce((rest, region) => {
     // Asserted before replacing: a renamed section would otherwise silently

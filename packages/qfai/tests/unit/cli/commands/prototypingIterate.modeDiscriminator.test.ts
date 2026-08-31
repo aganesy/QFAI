@@ -164,14 +164,18 @@ describe("TC-0012-0475: the hard-error allowlist is the pipeline's real gate set
 
   it("excludes codes whose emitter the pipeline never reaches", async () => {
     const surface = await gateSurface();
-    // QFAI-PROT-311's validator is exported and re-exported but never called,
-    // and R-EXPLORATION-CERTIFY-ATTEMPT is raised by the certify command,
-    // which does not run this post-filter. Listing either would put a gate in
-    // the audit that cannot fire. When the delegation-map validator is wired,
-    // this flips and the equality test above demands the code be listed.
-    expect(reachesFunction(surface, "validateDelegationMapIssues")).toBe(false);
+    // R-EXPLORATION-CERTIFY-ATTEMPT is raised by the certify command, which does
+    // not run this post-filter, so listing it would put a gate in the audit that
+    // cannot fire.
+    //
+    // `validateDelegationMapIssues` used to sit here too, and the note said "when
+    // the delegation-map validator is wired, this flips and the equality test
+    // above demands the code be listed". It has been wired into the prototyping
+    // profile, so the flip happened: the pipeline reaches it, and QFAI-PROT-311 is
+    // now a real gate carried by the hard list rather than an unreachable one.
+    expect(reachesFunction(surface, "validateDelegationMapIssues")).toBe(true);
+    expect(EXPLORATION_HARD_ERROR_CODES).toContain("QFAI-PROT-311");
     expect(reachesFunction(surface, "detectExplorationCertifyAttempt")).toBe(false);
-    expect(EXPLORATION_HARD_ERROR_CODES).not.toContain("QFAI-PROT-311");
     expect(EXPLORATION_HARD_ERROR_CODES).not.toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
   });
 

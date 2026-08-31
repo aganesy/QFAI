@@ -34,20 +34,18 @@ const ENTRY_POINTS = ["validate.ts", "../index.ts", "../cli/index.ts", "../cli/m
  * hiding the module.
  */
 const KNOWN_UNREACHABLE = new Map<string, string>([
-  ["validators/atddLedger.ts", "#402 — QFAI-ATDD-001 is in no profile"],
   ["validators/auditProfile.ts", "unfiled — same class as #402"],
-  ["validators/businessFlow.ts", "unfiled — same class as #402"],
   ["validators/mermaidFence.ts", "unfiled — same class as #402"],
   ["validators/requirePack.ts", "unfiled — same class as #402"],
   ["validators/requirementsContext.ts", "unfiled — same class as #402"],
+  // Its last importer went with the retired validators; the module itself is
+  // still on disk, so the walk sees it and nothing reaches it.
+  ["validators/requireIndex.ts", "unfiled — QFAI-REQINDEX-* cannot fire; no importer left"],
   ["validators/skill/phaseOrdering.ts", "unfiled — same class as #402"],
   ["validators/skill/sidecarFlowOrdering.ts", "unfiled — same class as #402"],
-  ["validators/uix/antiPreference.ts", "#403 — retired uix/ validators"],
   ["validators/uix/designSystemPresence.ts", "#403 — retired uix/ validators"],
   ["validators/uix/fixtureCoverage.ts", "#403 — retired uix/ validators"],
-  ["validators/uix/index.ts", "#403 — retired uix/ validators"],
   ["validators/uix/nonUiOverfire.ts", "#403 — retired uix/ validators"],
-  ["validators/uix/tasteReflection.ts", "#403 — retired uix/ validators"],
 ]);
 
 /**
@@ -59,18 +57,8 @@ const KNOWN_UNREACHABLE = new Map<string, string>([
  * entry has to go the moment its validator is wired up.
  */
 const KNOWN_UNDISPATCHED = new Map<string, string>([
-  // Only referenced by `uix/nonUiOverfire.ts`, itself unreachable above.
-  ["validateStrategyStrong", "#403 — retired uix/ validators"],
-  ["validateTasteInterview", "#403 — retired uix/ validators"],
-  ["validateTrendScan", "#403 — retired uix/ validators"],
-  ["validateImportLiteEvidencePresence", "unfiled — QFAI-IMPLITE-* cannot fire; as #402"],
-  ["validateRequireIndexShape", "unfiled — QFAI-REQINDEX-* cannot fire; as #402"],
   // `validate.ts` imports the `inspectIntegrationSurface` wrapper instead.
   ["validateIntegrationSurface", "unfiled — superseded by inspectIntegrationSurface"],
-  // `tests/unit/validators-are-wired.test.ts` calls this one wired, but it only
-  // checks that the name appears in the barrel's text — which is the very
-  // re-export that hides the missing call site.
-  ["validateDelegationMapIssues", "unfiled — re-exported and tested, never called"],
 ]);
 
 const parsed = new Map<string, ts.SourceFile | null>();

@@ -1008,6 +1008,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // `paths.skillsDir` is configurable and the diff is taken against whatever it
   // resolves to, so the expected state names the tree by role. The directory
   // actually compared is on the finding's `target:` line.
+  "QFAI-TABLE-001":
+    "Every Markdown table row carries the same cell count as its header, so a positionally-read ledger cannot silently shift a column.",
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
