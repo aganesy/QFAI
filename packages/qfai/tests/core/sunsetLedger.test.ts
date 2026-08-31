@@ -42,6 +42,11 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-DOC-CONVERGENCE-MISSING",
   "QFAI-DOC-VOCABULARY-CONTRADICTION",
   "QFAI-DOC-VOCABULARY-PROHIBITED",
+  // Both retired by this change: the two performance findings are replaced by
+  // the `timings` record `validate.json` now carries, so nothing emits either
+  // code any more. Listed in sorted order because the assertion compares this
+  // against a sorted `retired`.
+  "QFAI-MOCK-099",
   "QFAI-REQCTX-000",
   "QFAI-REQCTX-001",
   "QFAI-REQCTX-002",
@@ -52,6 +57,7 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-REQCTX-021",
   "QFAI-REQINDEX-001",
   "QFAI-REQINDEX-002",
+  "QFAI-UIUX-PERF",
 ];
 
 /**
