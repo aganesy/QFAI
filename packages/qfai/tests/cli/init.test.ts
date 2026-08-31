@@ -754,6 +754,56 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps a repair sidecar for a retired agent out of the prune", async () => {
+    // `claimSidecar` renames a wrapper aside before repairing it, and when that
+    // repair dies the sidecar is the only copy of what was there. It is also
+    // the exact thing this prune hunts: it matches on the RESOLVED target, and
+    // a sidecar renamed off a retired wrapper still resolves to the retired
+    // agent — under either name, since `isGeneratedWrapperTarget` compares the
+    // target bytes against `path.relative(dir, resolved)` and never reads the
+    // entry's own name. So `--force` would delete the rescue copy. The skill
+    // prune next door needs no such test because it deletes by retired skill
+    // id, and no sidecar name is one; this prune needs the name test, and
+    // without a case over it the constant reads as unused.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "agents", "retired-agent.md");
+      await writeFile(canonical, "# retired agent\n", "utf-8");
+      const target = "../../.qfai/assistant/agents/retired-agent.md";
+
+      // Both shapes a sidecar can take, because both are shapes the prune
+      // otherwise accepts: the renamed symlink, and the renamed flattened file
+      // a `core.symlinks false` checkout leaves. The `-1` suffix is the
+      // collision form `claimSidecar` falls back to.
+      const linkSidecar = path.join(root, ".claude", "agents", "retired-agent.md.qfai-repair-4242");
+      await symlink(target, linkSidecar, "file");
+      const fileSidecar = path.join(
+        root,
+        ".github",
+        "agents",
+        "retired-agent.agent.md.qfai-repair-4242-1",
+      );
+      await writeFile(fileSidecar, target, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(linkSidecar)).isSymbolicLink()).toBe(true);
+      expect(await readFile(fileSidecar, "utf-8")).toBe(target);
+
+      // Over-correction pin: the plain retired wrapper beside them still goes,
+      // so this is a carve-out for the sidecar name and not a disabled prune.
+      const retiredWrapper = path.join(root, ".claude", "agents", "retired-agent.md");
+      await symlink(target, retiredWrapper, "file");
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      await expect(lstat(retiredWrapper)).rejects.toMatchObject({ code: "ENOENT" });
+      expect((await lstat(linkSidecar)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("keeps an agent wrapper pointing below the canonical agents directory", async () => {
     // The prune is limited to a direct child of `.qfai/assistant/agents/`, the
     // only shape init writes. `QFAI-LINK-001` reports a nested target too, and
