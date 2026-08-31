@@ -61,8 +61,8 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "internal spec id (spec-0010+)", re: /spec-0*[1-9][0-9]+/gi },
   { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
   {
-    name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",
-    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b/g,
+    name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
+    re: /\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b/g,
   },
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];
@@ -83,6 +83,18 @@ const TEXT_EXTENSIONS = new Set([
   ".css",
   ".txt",
 ]);
+
+/**
+ * Extensionless text files `qfai init` seeds. `path.extname(".gitkeep")` is
+ * `""`, so an extension allowlist alone never reads them — the `.gitkeep`
+ * bodies seeded for every assistant layer carry prose and are as much a
+ * distributed surface as the `.md` files beside them.
+ */
+const TEXT_BASENAMES = new Set([".gitkeep", ".gitignore", ".gitattributes"]);
+
+function isScannableTextFile(file: string): boolean {
+  return TEXT_EXTENSIONS.has(path.extname(file)) || TEXT_BASENAMES.has(path.basename(file));
+}
 
 /** One entry of the init output. `isFile` gates the content scan; every
  *  entry's *name* is scanned regardless of what kind it is. */
@@ -183,10 +195,11 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       const relative = path.relative(tmpDir, file);
       visitedRelative.push(relative);
       nameHits.push(...scanPathName(relative));
-      // Name scanned above for every entry; only a regular file has content.
+      // Name scanned above for every entry; only a regular file has content —
+      // and `isScannableTextFile` decides which of those bodies are text,
+      // extensionless `.gitkeep` / `.gitignore` / `.gitattributes` included.
       if (!isFile) continue;
-      const ext = path.extname(file);
-      if (!TEXT_EXTENSIONS.has(ext)) continue;
+      if (!isScannableTextFile(file)) continue;
       const stats = await stat(file);
       if (stats.size > 1_000_000) continue;
       const content = await readFile(file, "utf-8");
@@ -272,7 +285,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       "internal spec id (spec-0010+)",
     ]);
     expect(classNames(path.join(".qfai", "DR-0007", "notes.md"))).toEqual([
-      "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",
+      "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
     ]);
 
     const memoDir = path.join(".qfai", "assistant", "process", "migrations");
