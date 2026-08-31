@@ -18,6 +18,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 // Source-level split of the `*.todo(` token: this validator scans the repo's
@@ -209,6 +210,29 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       });
       // The gate `qfai-implement`'s FINAL CHECKLIST reads stays todo-only.
       expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
+    });
+  });
+
+  it("takes its severity from the promotion pin, not a literal", async () => {
+    // The warning above is right today and, written as a literal, stays right
+    // forever: nothing would ever promote it, and the operator is never told a
+    // debt is coming. P7 wants that soft landing pinned to a release instead.
+    // The release name in the message is the half only the pin can put there —
+    // `warning` alone reads identically either way.
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = (await validateTestTodoStubs(root, CONFIG)).filter(
+        (i) => i.code === "QFAI-TEST-003",
+      );
+      expect(issues, "the fixture stopped producing skip findings").not.toEqual([]);
+      for (const found of issues) {
+        expect(found.severity).toBe("warning");
+        expect(found.message).toContain(RULE_PROMOTIONS.testSkippedSuite.promoteAt);
+      }
+      // The `.todo` rule is not inside the window and keeps its hard error.
+      const todo = await withTests({ "tests/b.test.ts": JS_STUB }, (r) =>
+        validateTestTodoStubs(r, CONFIG),
+      );
+      expect(todo.find((i) => i.code === "QFAI-TEST-001")?.severity).toBe("error");
     });
   });
 

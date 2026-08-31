@@ -39,8 +39,10 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
 import { issue } from "./utils.js";
 
@@ -82,7 +84,7 @@ type StubDialect = {
    * to route its `.skip` form to the waivable warning rule — see the module
    * docstring.
    */
-  grade?: (match: RegExpMatchArray) => StubGrade;
+  grade?: (match: RegExpMatchArray, skippedTestSeverity: IssueSeverity) => StubGrade;
   /**
    * Whether one construct of this dialect may be written across a line break.
    * Defaults to `false`, and {@link collectStubIssues} enforces it by dropping
@@ -123,7 +125,34 @@ type StubGrade = {
 };
 
 const STUB_ERROR: StubGrade = { code: "QFAI-TEST-001", severity: "error" };
-const SKIPPED_TEST_WARNING: StubGrade = { code: "QFAI-TEST-003", severity: "warning" };
+
+/** The release `QFAI-TEST-003` stops being a warning at. */
+const SKIPPED_TEST_PROMOTION = RULE_PROMOTIONS.testSkippedSuite.promoteAt;
+
+/**
+ * The `.skip` grade, with the severity the promotion window decides.
+ *
+ * The severity was the literal `"warning"` the module docstring argues for,
+ * which is the right severity *today* and never becomes anything else. P7 wants
+ * the same soft landing said once, in a place a release can move: a repository
+ * that has been parking suites since before this code existed meets its whole
+ * backlog on upgrade, so the finding is a warning until the pinned release and
+ * an error from there — and it says so, because `--fail-on error` passing is
+ * the only reason an operator would not look.
+ */
+function skippedTestGrade(skippedTestSeverity: IssueSeverity): StubGrade {
+  return {
+    code: "QFAI-TEST-003",
+    severity: skippedTestSeverity,
+  };
+}
+
+/** The sentence a `QFAI-TEST-003` finding carries while its window is open. */
+function skippedTestWindowNote(severity: IssueSeverity): string {
+  return severity === "warning"
+    ? ` Reported as a warning until the ${SKIPPED_TEST_PROMOTION} release, then an error.`
+    : "";
+}
 
 /**
  * A `.` in a member chain, with the line break a formatter is free to put on
@@ -174,7 +203,8 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     // grouping key on, so the vocabulary stays the six root×token spellings
     // instead of fragmenting once per modifier combination.
     label: (match) => `${match[1]}.${match[2]}`,
-    grade: (match) => (match[2] === "skip" ? SKIPPED_TEST_WARNING : STUB_ERROR),
+    grade: (match, skippedTestSeverity) =>
+      match[2] === "skip" ? skippedTestGrade(skippedTestSeverity) : STUB_ERROR,
     // The member chain is the one construct here a formatter may break, and a
     // comment or literal is the one place the construct's text appears without
     // a test being parked. Both opt-ins are the JS dialect's alone.
@@ -215,7 +245,8 @@ function stubIssue(
     isSkip
       ? `Skipped test found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
           `A skipped test is silent in ${dialect.runner} and rots as missed work. ` +
-          `Drop the skip modifier to put it back in the run.`
+          `Drop the skip modifier to put it back in the run.` +
+          skippedTestWindowNote(grade.severity)
       : `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
           `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
           `Implement the body or delete the stub.`,
@@ -262,7 +293,12 @@ function stubIssue(
  * gates whether a match may carry a newline. Both default to the narrow
  * behaviour, so a dialect added later cannot inherit either hazard silently.
  */
-function collectStubIssues(relFile: string, content: string, dialect: StubDialect): Issue[] {
+function collectStubIssues(
+  relFile: string,
+  content: string,
+  dialect: StubDialect,
+  skippedTestSeverity: IssueSeverity,
+): Issue[] {
   const issues: Issue[] = [];
   // Offsets and line breaks survive the mask, so a match position in the
   // scanned text is still a position in the file the finding names.
@@ -286,7 +322,7 @@ function collectStubIssues(relFile: string, content: string, dialect: StubDialec
     // The whitespace a fallback label carries can now include the newline the
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
-    const grade = dialect.grade ? dialect.grade(match) : STUB_ERROR;
+    const grade = dialect.grade ? dialect.grade(match, skippedTestSeverity) : STUB_ERROR;
     issues.push(stubIssue(relFile, dialect, matchedKind, grade, lineNumber));
   }
   return issues;
@@ -321,6 +357,12 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
 
+  // Resolved once for the whole run: the window `QFAI-TEST-003` sits in is a
+  // property of the tool, not of the file being scanned. `resolveToolVersion`
+  // resolves rather than rejects — an unreadable version reads as inside the
+  // window, so it can never be what escalates a skip into a build failure.
+  const skippedTestSeverity = newRuleSeverity(await resolveToolVersion(), SKIPPED_TEST_PROMOTION);
+
   const issues: Issue[] = [];
   const unscannedExtensions = new Set<string>();
   for (const absFile of files) {
@@ -340,7 +382,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
       continue;
     }
 
-    issues.push(...collectStubIssues(relFile, content, dialect));
+    issues.push(...collectStubIssues(relFile, content, dialect, skippedTestSeverity));
   }
 
   if (unscannedExtensions.size > 0) {
