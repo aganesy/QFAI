@@ -80,6 +80,26 @@ export const RULE_PROMOTIONS = {
    */
   tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
   /**
+   * `QFAI-ATDD-131` — a spec with ATDD-owned tests and no Coverage Depth
+   * Matrix file. Specs annotated before the matrix became a Mandatory Output
+   * own no such file, so the rule meets the whole backlog on the first run
+   * after the upgrade.
+   */
+  atddCoverageDepthMatrixMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-ATDD-132` — a Coverage Depth Matrix that `.gitignore` excludes and
+   * git does not track, so the judgement never reaches history. The ignore
+   * line predates the matrix in every repository that has one, and only a
+   * `qfai init` or a hand edit moves it.
+   */
+  atddCoverageDepthMatrixIgnored: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-ATDD-133` — an ATDD stage evidence file whose `## Coverage Depth
+   * Matrix` section is missing, inlines the table, or names no matrix. The
+   * section shape is a template younger than the evidence files it lands on.
+   */
+  atddCoverageDepthInlineMatrix: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-AGENT-014` — the agent catalog's embedded copy of an agent body is
    * absent, or disagrees with the markdown file it is derived from. Every
    * repository that customised an agent before the comparison existed carries
@@ -117,6 +137,14 @@ export const RULE_PROMOTIONS = {
    */
   contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-PLATFORM-003` — a `--platform` the requested profile never reads.
+   * The flag has parsed on every profile for as long as it has existed, so
+   * every CI matrix that passes it uniformly across profiles meets the finding
+   * on its `discussion` / `sdd` / `atdd` / `tdd` legs at once, for invocations
+   * that were legal when they were written.
+   */
+  platformOptionUnusedByProfile: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-RESEARCH-012` — a discussion pack with no Research Summary section.
    * A pack is written once and rarely revisited, so the rule necessarily lands
    * on packs that were complete under the schema of their day.
@@ -128,6 +156,13 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
+   * construct is silent in the runner, so a repository accumulates them
+   * without ever being told; every one written before the check existed
+   * arrives in the first run after the upgrade.
+   */
+  testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
    * `TDDLIST_UNKNOWN_TIER` — a `Tier` cell that is neither `T1`/`T2`/`T3` nor
    * `-`. The column itself is new, so the first ledgers to carry one were
