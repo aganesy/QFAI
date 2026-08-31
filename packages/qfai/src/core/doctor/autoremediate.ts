@@ -8,8 +8,10 @@
  *   3. write missing default-keyed config fields (does NOT overwrite
  *      user-authored values).
  *
- * Disabled in CI by default (`process.env.CI === "true"` → emit
- * `"autoremediate disabled in CI"` and return without remediating).
+ * Disabled in CI by default: the caller detects CI via the framework's
+ * `isCiEnvironment` predicate (any truthy `CI` value, or
+ * `GITHUB_ACTIONS=true`) and passes `isCi`, on which this orchestrator
+ * emits `"autoremediate disabled in CI"` and returns without remediating.
  * Honors `--dry-run` by surfacing the plan without side effects.
  * Honors `--yes` by skipping interactive confirmation; this CLI is
  * non-interactive today, so `--yes` mostly serves as a documented
@@ -28,7 +30,7 @@ import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
-import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
+import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
 
@@ -130,6 +132,22 @@ async function tryFillConfigDefaults(
   return { written, lines };
 }
 
+/**
+ * Phrase for a manifest that was never probed. "not found" is reserved
+ * for a genuinely missing file inside an existing skills root; a
+ * missing skills root is an uninitialized project, and a read fault is
+ * neither of those.
+ */
+function describeUnprobedManifest(probe: SkillManifestProbeResult): string {
+  if (probe.manifest === "unparseable") {
+    return "unparseable";
+  }
+  if (probe.manifest === "unreadable") {
+    return "present but unreadable";
+  }
+  return probe.skillsRootExists ? "not found" : "not found (skills root missing; run qfai init)";
+}
+
 export async function runAutoremediate(
   options: AutoremediateOptions,
 ): Promise<AutoremediateSummary> {
@@ -156,9 +174,18 @@ export async function runAutoremediate(
   // (1) Probe runtimeDependencies and (optionally) install missing ones.
   const installed: string[] = [];
   if (options.skill) {
-    const findings = await probeSkillManifestRuntimeDeps(options.root, options.skill);
-    const missing = findings.filter((finding) => finding.status === "missing");
-    if (missing.length === 0) {
+    const probe = await probeSkillManifest(options.root, options.skill);
+    const missing = probe.findings.filter((finding) => finding.status === "missing");
+    if (probe.manifest !== "found") {
+      // Claiming "all installed" for a skill whose manifest was never
+      // read reads as a positive result; say what actually happened so
+      // a typo'd `--profile`, an uninitialized project, and a real
+      // filesystem fault stay distinguishable in the remediation log.
+      const reason = describeUnprobedManifest(probe);
+      lines.push(
+        `autoremediate: runtimeDependencies — manifest ${reason} at ${path.relative(options.root, probe.manifestPath)}; nothing installed`,
+      );
+    } else if (missing.length === 0) {
       lines.push("autoremediate: runtimeDependencies — all installed");
     } else {
       for (const finding of missing) {
