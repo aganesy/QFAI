@@ -2213,7 +2213,18 @@ all four unchanged — and `942 + 3 = 945` here. Nothing about `spec-0017` chang
 either; the two suite totals above stay known-invalid for this tree, and are not re-run here for the
 same reason the merge did not re-run them.
 
-e2e callsites at this tree: 945
+**And a fifth time, from a second merge of `main` into the same branch.** `main` moved from 925 to 927
+while this branch sat — two `it` callsites added to `tests/assets/assets.test.ts`, which is inside the
+e2e project's globs and has nothing to do with `spec-0017` — so bringing `35f74b14d` in takes the count
+to 947. The two deltas are disjoint: `main`'s two are in `assets.test.ts` (72 to 74) and this branch's
+twenty are in `atddRedProvenance.test.ts` (212 to 232), so neither is counted twice. Every endpoint was
+**re-measured** with the guard's own `CALLSITE` rule rather than carried forward, for the reason the
+paragraph above gives: 925 at the previous `main` (`2643bc3a`), 927 at `main` (`35f74b14d`), 945 at the
+branch tip before this merge (`7784f78e`), 947 at this merge — and `945 + (927 - 925) = 947`. Nothing
+about `spec-0017` changed here either; the two suite totals above stay known-invalid for this tree, and
+are not re-run here for the same reason the earlier merge did not re-run them.
+
+e2e callsites at this tree: 947
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
