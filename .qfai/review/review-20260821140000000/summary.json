@@ -1,0 +1,15 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-21T14:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "a66be5c6",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 26 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 20 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 16 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count in this file was produced by running that rule over the reports rather than by hand, and it reproduces as B6+M9+m11, B5+M7+m8 and B9+A7"
+}
