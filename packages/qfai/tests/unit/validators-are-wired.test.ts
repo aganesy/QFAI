@@ -1,7 +1,7 @@
 /**
  * Meta-test: every prototyping validator function with `Issue[]` return must
- * be referenced from the validate.ts symbol graph (validate.ts itself, OR a
- * module imported by validate.ts).
+ * be called from the validate.ts symbol graph (validate.ts itself, OR an
+ * orchestrator imported by validate.ts).
  *
  * This catches the "validator written but never invoked" failure mode that
  * allowed `validateExecutionPlan` and `validateDelegationMap` to lurk as dead
@@ -11,20 +11,35 @@
  * Implementation strategy:
  *   1. Walk every TS file under src/core/validators/prototyping/
  *   2. Extract every `export function validate*(`
- *   3. Collect the names `validate.ts` actually **calls**, off its AST.
- *   4. Assert each validator is one of them, OR is on the documented
+ *   3. Load the module graph: validate.ts plus every file it imports under
+ *      `./validators/...`, and their imports in turn, to a fixed point. This
+ *      reaches the delegation pattern where validate.ts calls a wrapper and
+ *      the wrapper internally calls a sibling validator.
+ *   4. Walk that graph one *function body* at a time: every loaded module's
+ *      top-level code and validate.ts's *exported* functions are the seeds,
+ *      and any other body — including validate.ts's own orchestrators — joins
+ *      them only once reachable code uses its name. Assert each validator is
+ *      used from what that walk reaches, OR is on the documented
  *      PENDING_WIRING allowlist (existing dead code that requires a
  *      follow-up wiring effort).
  *
- * Step 3 used to build a "reachable text" blob — validate.ts plus every file
- * it imports, plus the files those re-export — and ask whether the name
- * appeared anywhere in it. That is not a wiring check: the barrel re-exports
- * every prototyping validator, so the 2-hop walk pulled in each validator's
- * own implementation file, where its own `export function` line made the name
- * "reachable" from its own declaration. Every validator passed by existing.
- * `validateDelegationMapIssues` was the proof — re-exported, never imported by
- * `validate.ts`, never called, so an invalid delegation map raised no
- * `QFAI-PROT-311` — and this guard called it wired.
+ * Step 4 is the load-bearing one. This guard used to decide reachability with
+ * `String.includes` over raw file text, which counted a name mentioned in a
+ * doc comment and a name re-exported from the validators barrel as evidence of
+ * wiring. Both are non-calls, and `src/core/validators/index.ts` re-exports
+ * every prototyping validator by design (the second test below requires it),
+ * so the guard could not fail for the situation it was written for — and
+ * because that barrel pulls every validator file into the module graph, mere
+ * membership in the graph is not wiring either: one dead validator calling
+ * another must not vouch for it. See `tests/helpers/wiringGraph.ts`.
+ *
+ * `validateDelegationMapIssues` was the proof: re-exported by the barrel,
+ * never imported by `validate.ts`, never called, so an invalid `delegationMap`
+ * raised no `QFAI-PROT-311` on any run — and the old guard called it wired. It
+ * could not be called directly: it takes the parsed map, not the project.
+ * `validatePrototypingDelegationMap` reads
+ * `prototyping.json#executionPlan.delegationMap` itself and hands it over, and
+ * `runPrototypingValidators` dispatches that.
  */
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -32,6 +47,14 @@ import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+
+import {
+  buildWiringGraph,
+  collectModuleBindings,
+  stripCommentsAndLiterals,
+  type WiringGraph,
+  type WiringModule,
+} from "../helpers/wiringGraph.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,17 +76,36 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
 ]);
 
 /**
- * Validators known to be dead code awaiting wiring. This set is empty: the
- * unwired validators the Phase 2 meta-test discovered were subsequently
- * deleted rather than adapted, so no name is left to track here. Every
- * prototyping validator that survives is dispatched from
- * runPrototypingValidators.
+ * Validators known to be dead code awaiting wiring.
+ *
+ * Empty, and that is the target state. The unwired validators the Phase 2
+ * meta-test discovered were deleted rather than adapted, so no name is left
+ * from that round; `validateDelegationMapIssues` (QFAI-PROT-311) was the last
+ * entry — defined, unit-tested and re-exported from the barrel while nothing
+ * called it, which the old raw-text guard read as wiring — and `validate.ts`
+ * now calls it through `validatePrototypingDelegationMap`. Every prototyping
+ * validator that survives is dispatched from `runPrototypingValidators`.
  *
  * This list MUST shrink over time and MUST never grow without explicit
- * justification. The sentinel `expect(PENDING_WIRING.size).toBe(0)` keeps
- * accidental regressions visible.
+ * justification. The sentinel below pins its exact contents and re-checks that
+ * every entry is still genuinely unwired, so neither a new entry nor an
+ * exemption that has outlived its reason goes unnoticed.
  */
 const PENDING_WIRING: ReadonlySet<string> = new Set<string>();
+
+/**
+ * Validators this guard names explicitly, keyed by the issue code they own.
+ *
+ * Every entry must resolve to a real definition under
+ * validators/prototyping/. `validateExecutionPlanIssues` (QFAI-PROT-310) used
+ * to be asserted here and no longer exists anywhere in `src/`: its only
+ * occurrence was prose inside a doc comment, which the raw-text guard happily
+ * accepted. Its catalog entry is gone too — orphaned catalog keys are tracked
+ * separately, and that one has since been removed.
+ */
+const CATALOG_OWNERS: ReadonlyMap<string, string> = new Map<string, string>([
+  ["QFAI-PROT-311", "validateDelegationMapIssues"],
+]);
 
 /**
  * Validator names this guard mentions on purpose even though `src/` does not
@@ -76,9 +118,15 @@ const PENDING_WIRING: ReadonlySet<string> = new Set<string>();
  * neither is declared under `src/` any more. They are still named in
  * `KNOWN_UNWIRED_BARREL_EXPORTS`, where they are inert — the barrel does not
  * export either name — so pruning that list is a separate change.
+ *
+ * `validateExecutionPlanIssues` is the same case one layer down: CATALOG_OWNERS
+ * above cites it as the entry that was asserted while its only occurrence
+ * anywhere was prose inside a doc comment. Naming that regression is the point
+ * of the sentence, and the function is gone from `src/` by design.
  */
 const HISTORICAL_REFERENCES: ReadonlySet<string> = new Set<string>([
   "validateExecutionPlan",
+  "validateExecutionPlanIssues",
   "validateDelegationMap",
   "validateTasteInterview",
   "validateStrategyStrong",
@@ -96,6 +144,9 @@ const FIXTURE_REFERENCES: ReadonlySet<string> = new Set<string>([
   "validateB",
   "validateX",
   "validateAtddFoo",
+  // Quoted in buildValidateWiringGraph's docblock as the shape of an aliased
+  // import (`import { validateFoo as runFoo }`), not as a validator to find.
+  "validateFoo",
 ]);
 
 const COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*|\*)/;
@@ -156,12 +207,14 @@ async function collectPublicValidators(
   const files = await listTsFiles(dir);
   const out: Array<{ name: string; file: string }> = [];
   for (const file of files) {
-    const body = await readFile(file, "utf-8");
+    // Comment-stripped, so a commented-out declaration cannot register as a
+    // definition the rest of this file then treats as real.
+    const body = stripCommentsAndLiterals(await readFile(file, "utf-8"));
     PUBLIC_VALIDATOR_RE.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = PUBLIC_VALIDATOR_RE.exec(body)) !== null) {
       const name = match[1];
-      if (!DEPRECATED_LEGACY_VALIDATORS.has(name)) {
+      if (name !== undefined && !DEPRECATED_LEGACY_VALIDATORS.has(name)) {
         out.push({ name, file });
       }
     }
@@ -169,13 +222,92 @@ async function collectPublicValidators(
   return out;
 }
 
+/** Resolves a relative import specifier to a `.ts` path inside `src/`. */
+function resolveLocalImport(fromFile: string, specifier: string): string | undefined {
+  const resolved = path.resolve(path.dirname(fromFile), specifier.replace(/\.js$/, ".ts"));
+  return resolved.startsWith(SRC_ROOT) ? resolved : undefined;
+}
+
+/** Reads a source file, returning undefined for anything unresolvable. */
+async function readSourceOrUndefined(file: string): Promise<string | undefined> {
+  try {
+    return await readFile(file, "utf-8");
+  } catch {
+    // A directory index or a specifier that does not map 1:1 onto a file —
+    // best-effort traversal, the caller simply gets no fragment.
+    return undefined;
+  }
+}
+
 /**
- * Every function `validate.ts` calls by name.
+ * The relative specifiers this module actually evaluates at runtime.
  *
- * A call, not a mention: an `import` of the name and a comment naming it both
- * leave the validator unrun, and the text-reachability check this replaced
- * counted both. Read off the AST so a rename or a re-format cannot make a
- * dispatched validator look undispatched, or the reverse.
+ * Only value `import` / `export … from` statements count. Matching every
+ * `from "./…"` in the raw text pulled in modules reached by an `import type`
+ * edge — erased at compile time — as well as any specifier written in a
+ * comment or a string, and each such module's top-level code was then treated
+ * as reachable. A validator used at the top level of a module nobody evaluates
+ * would have read as wired. {@link collectModuleBindings} strips comments,
+ * template and regex literals and keeps only runtime edges.
+ */
+function localImportSpecifiers(body: string): string[] {
+  return collectModuleBindings(body).runtimeSpecifiers.filter((specifier) =>
+    specifier.startsWith("."),
+  );
+}
+
+/**
+ * Build the call graph rooted at validate.ts: validate.ts plus every local file
+ * it imports, and their local imports in turn, to a fixed point. Orchestrators
+ * that wrap multiple sibling validators are detected this way, however many
+ * modules deep the delegation runs.
+ *
+ * Being *in* that module graph is not wiring. `validators/index.ts` is a barrel
+ * that re-exports every prototyping validator, so every one of those files is
+ * loaded no matter what calls it; a dead validator calling another dead
+ * validator would otherwise make the second look wired. {@link buildWiringGraph}
+ * therefore admits a function body only once code already proven reachable uses
+ * that function — import aliases (`import { validateFoo as runFoo }`) included,
+ * and validate.ts's own non-exported orchestrators held to the same rule, so
+ * deleting the `runPrototypingValidators(...)` call is caught rather than
+ * masked by that orchestrator's body still being scanned.
+ */
+async function buildValidateWiringGraph(): Promise<WiringGraph> {
+  const validateBody = await readFile(VALIDATE_TS, "utf-8");
+  const visited = new Set<string>([VALIDATE_TS]);
+  const frontier: Array<{ file: string; source: string }> = [
+    { file: VALIDATE_TS, source: validateBody },
+  ];
+  const imported: WiringModule[] = [];
+
+  // Fixed point, not a fixed depth: an orchestrator reached through the barrel
+  // may itself delegate through a helper module, and stopping at two hops would
+  // report the validator that helper calls as unwired.
+  while (frontier.length > 0) {
+    const current = frontier.pop();
+    if (current === undefined) continue;
+    for (const rel of localImportSpecifiers(current.source)) {
+      const resolved = resolveLocalImport(current.file, rel);
+      if (resolved === undefined || visited.has(resolved)) continue;
+      visited.add(resolved);
+      const source = await readSourceOrUndefined(resolved);
+      if (source === undefined) continue;
+      imported.push({ file: resolved, source });
+      frontier.push({ file: resolved, source });
+    }
+  }
+  return buildWiringGraph({ file: VALIDATE_TS, source: validateBody }, imported);
+}
+
+/**
+ * Every function `validate.ts` calls **directly**, off its AST.
+ *
+ * Narrower than {@link buildValidateWiringGraph} on purpose: the graph answers
+ * "does anything reachable use this name", which is the wiring question, while
+ * this answers "does validate.ts itself name it in a call position". The
+ * re-export case below needs the narrow answer — `validateDelegationMapIssues`
+ * IS wired, through `validatePrototypingDelegationMap`, yet must never appear
+ * as a direct dispatch, and only the narrow reader tells those two apart.
  */
 async function collectDispatchedNames(): Promise<Set<string>> {
   const source = ts.createSourceFile(
@@ -200,47 +332,6 @@ async function collectDispatchedNames(): Promise<Set<string>> {
   };
   walk(source);
   return called;
-}
-
-/** Every function name called anywhere inside one module. */
-async function collectCallsIn(file: string): Promise<Set<string>> {
-  const source = ts.createSourceFile(
-    file,
-    await readFile(file, "utf-8"),
-    ts.ScriptTarget.Latest,
-    /* setParentNodes */ true,
-  );
-  const called = new Set<string>();
-  const walk = (node: ts.Node): void => {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-      called.add(node.expression.text);
-    }
-    ts.forEachChild(node, walk);
-  };
-  walk(source);
-  return called;
-}
-
-/**
- * Whether this validator runs: `validate.ts` calls it, or a sibling in the
- * same module that `validate.ts` does call calls it.
- *
- * The second branch is one hop and stays inside the module, which is how
- * `validateDelegationMapIssues` is reached — it takes the parsed map rather
- * than the project, so the dispatched `validatePrototypingDelegationMap`
- * reads the map and hands it over. A re-export satisfies neither branch: a
- * barrel calls nothing.
- */
-async function isDispatched(
-  name: string,
-  file: string,
-  dispatched: ReadonlySet<string>,
-  publicNames: ReadonlySet<string>,
-): Promise<boolean> {
-  if (dispatched.has(name)) return true;
-  const moduleHasEntryPoint = [...publicNames].some((sibling) => dispatched.has(sibling));
-  if (!moduleHasEntryPoint) return false;
-  return (await collectCallsIn(file)).has(name);
 }
 
 /** Every `validate*` function name declared anywhere under src/. */
@@ -507,24 +598,19 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
 });
 
 describe("meta-test: prototyping validators are wired into the pipeline", () => {
-  it("every public Issue[]-returning validator under validators/prototyping/ is reachable from validate.ts", async () => {
+  it("every public Issue[]-returning validator under validators/prototyping/ is called from validate.ts", async () => {
     const validators = await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR);
-    const dispatched = await collectDispatchedNames();
+    const graph = await buildValidateWiringGraph();
 
     expect(validators.length, "expected at least one public validator").toBeGreaterThan(0);
-    expect(dispatched.size, "expected validate.ts to call something").toBeGreaterThan(0);
-
-    const perFile = new Map<string, Set<string>>();
-    for (const { name, file } of validators) {
-      const names = perFile.get(file) ?? new Set<string>();
-      names.add(name);
-      perFile.set(file, names);
-    }
+    // Non-vacuity: a graph that reached nothing would report every validator
+    // identically, so a broken walk must fail loudly rather than pass all.
+    expect(graph.usedNames.size, "expected the graph to reach some code").toBeGreaterThan(0);
 
     const unwired: Array<{ name: string; file: string }> = [];
     for (const { name, file } of validators) {
       if (PENDING_WIRING.has(name)) continue;
-      if (!(await isDispatched(name, file, dispatched, perFile.get(file) ?? new Set()))) {
+      if (!graph.isCalled(name)) {
         unwired.push({ name, file });
       }
     }
@@ -534,21 +620,21 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
         .map((u) => `  - ${u.name} (${path.relative(process.cwd(), u.file)})`)
         .join("\n");
       throw new Error(
-        `The following prototyping validators are exported but never called by validate.ts:\n${lines}\n\n` +
-          "Dispatch the validator from runPrototypingValidators in src/core/validate.ts before " +
-          "merging. Re-exporting it from validators/index.ts is not dispatch. This guard exists " +
-          "to prevent the v1.8.3 dead-code-validator regression (RR §8.6).",
+        `The following prototyping validators are exported but never called from validate.ts:\n${lines}\n\n` +
+          "Wire the validator into runPrototypingValidators, directly or through a wrapper " +
+          "it dispatches, before merging. A barrel re-export or a doc-comment mention is not " +
+          "wiring. This guard exists to prevent the v1.8.3 dead-code-validator " +
+          "regression (RR §8.6).",
       );
     }
   });
 
-  it("validators/index.ts re-exports every public prototyping validator (excluding pending-wiring)", async () => {
+  it("validators/index.ts re-exports every public prototyping validator", async () => {
     const validators = await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR);
     const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
 
     const missingExports: string[] = [];
     for (const { name } of validators) {
-      if (PENDING_WIRING.has(name)) continue;
       if (!indexBody.includes(name)) {
         missingExports.push(name);
       }
@@ -560,11 +646,45 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     ).toEqual([]);
   });
 
+  it("every validator named by this guard still exists and is called", async () => {
+    const defined = new Set(
+      (await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR)).map((v) => v.name),
+    );
+    const graph = await buildValidateWiringGraph();
+
+    const missingDefinitions: string[] = [];
+    const notCalled: string[] = [];
+    for (const [code, name] of CATALOG_OWNERS) {
+      if (!defined.has(name)) missingDefinitions.push(`${name} (${code})`);
+      else if (!PENDING_WIRING.has(name) && !graph.isCalled(name)) {
+        notCalled.push(`${name} (${code})`);
+      }
+    }
+
+    expect(
+      missingDefinitions,
+      "a validator named here no longer exists under validators/prototyping/ — " +
+        "restore it, or drop the entry together with its catalog code",
+    ).toEqual([]);
+    expect(notCalled, "named validators must reach runPrototypingValidators").toEqual([]);
+  });
+
   it("the delegation map is judged on a real run (QFAI-PROT-311)", async () => {
-    // The case that proved text-reachability was not a wiring check.
-    // `validateDelegationMapIssues` takes the map, not the project, so nothing
-    // could call it once the extractor was deleted — it is dispatched through
-    // `validatePrototypingDelegationMap`, which reads the map itself.
+    // The case that proved text-reachability was not a wiring check, and the
+    // named pin for the one code CATALOG_OWNERS tracks: the generic check above
+    // would also catch an unwiring, but naming the code keeps the failure
+    // message pointed at the rule an operator actually sees.
+    const graph = await buildValidateWiringGraph();
+    expect(
+      graph.isCalled("validateDelegationMapIssues"),
+      "validateDelegationMapIssues must reach runPrototypingValidators",
+    ).toBe(true);
+
+    // Reachability alone does not say through what. `validateDelegationMapIssues`
+    // takes the map, not the project, so nothing could call it directly once the
+    // extractor was deleted — it is dispatched through
+    // `validatePrototypingDelegationMap`, which reads the map itself. Pin that
+    // hop with the narrow reader, which sees only validate.ts's own calls.
     const dispatched = await collectDispatchedNames();
     expect(
       dispatched.has("validatePrototypingDelegationMap"),
@@ -592,24 +712,48 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
   // A name appearing in the reachable text can be satisfied by a barrel
   // re-export or a doc comment alone — which is how QFAI-PROT-311 stayed
   // dead while this suite was green. Pin the actual call site in
-  // runPrototypingValidators so unwiring the reader fails here.
+  // runPrototypingValidators so unwiring the reader fails here: the literal
+  // call syntax in validate.ts, and the reachability the graph reports.
   it("runPrototypingValidators calls the delegationMap reader (QFAI-PROT-311)", async () => {
     const validateBody = await readFile(VALIDATE_TS, "utf-8");
     expect(
       /validatePrototypingDelegationMap\(/.test(validateBody),
       "validate.ts must invoke validatePrototypingDelegationMap(), not merely re-export it",
     ).toBe(true);
+
+    const graph = await buildValidateWiringGraph();
+    expect(
+      graph.isCalled("validatePrototypingDelegationMap"),
+      "the validatePrototypingDelegationMap() call must sit in reachable code, not in a " +
+        "body nothing runs",
+    ).toBe(true);
   });
 
-  it("PENDING_WIRING list does not grow silently (target: stay at 0)", () => {
-    // Tripwire: if a contributor adds to PENDING_WIRING without justification,
-    // this assertion documents the current count and forces a deliberate
-    // update when changing it. The list MUST shrink, not grow.
-    //
-    // v1.8.4 Phase 3: PENDING_WIRING is empty. Every prototyping validator
-    // is now reachable from runPrototypingValidators. NEW dead-code
-    // validators cannot enter the codebase silently.
-    expect(PENDING_WIRING.size).toBe(0);
+  it("PENDING_WIRING lists exactly the known-unwired validators", async () => {
+    // Tripwire: a new entry means a contributor shipped a validator nothing
+    // calls, and must be justified here in writing. The list MUST shrink, not
+    // grow. It is empty now — every prototyping validator is reachable from
+    // runPrototypingValidators, so a new dead-code validator cannot enter the
+    // codebase silently.
+    expect([...PENDING_WIRING].sort()).toEqual([]);
+
+    const defined = new Set(
+      (await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR)).map((v) => v.name),
+    );
+    const stale = [...PENDING_WIRING].filter((name) => !defined.has(name));
+    expect(stale, "PENDING_WIRING names a validator that no longer exists").toEqual([]);
+
+    // An exemption must expire the moment it stops being true. Without this,
+    // wiring an allowlisted validator would leave a permanent exemption
+    // behind: the main test and CATALOG_OWNERS both skip allowlisted names, so
+    // a later regression that unwires it again would go unnoticed.
+    const graph = await buildValidateWiringGraph();
+    const nowWired = [...PENDING_WIRING].filter((name) => graph.isCalled(name));
+    expect(
+      nowWired,
+      "these validators are wired now — delete them from PENDING_WIRING (and from the " +
+        "expectation above) so the guard starts enforcing their wiring again",
+    ).toEqual([]);
   });
 
   it("documents only validators that src/ actually declares", async () => {

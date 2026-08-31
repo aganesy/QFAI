@@ -52,6 +52,7 @@
     "tests/helpers/shippedLaneCommands.ts",
     "tests/helpers/shippedWorkflowFixtures.ts",
     "tests/helpers/tempTree.ts",
+    "tests/helpers/wiringGraph.ts",
     "tests/helpers/workflowsIntegrityFixtures.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
     "tests/integration/cli/commands/validate.tddProfileTableArity.test.ts",
@@ -110,6 +111,7 @@
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
     "tests/validators/importLite.test.ts",
-    "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts"
+    "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts",
+    "tests/unit/wiringGraph.test.ts"
   ]
 }
