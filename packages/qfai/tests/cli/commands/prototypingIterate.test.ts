@@ -1135,7 +1135,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     expect(body.iterations[0].scores.informationArchitecture).toBe("weak");
   });
 
-  it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness on cycle 0", async () => {
+  it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness / executionPlan on cycle 0", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
@@ -1148,6 +1148,13 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
         status: "complete",
         scoringTrace: [{ axis: "ux", score: 5 }],
       },
+      // Legacy per-loop plan block: no current writer produces it, but
+      // validatePrototypingDelegationMap reads it, so a stale assignment
+      // must not survive the hard reset and block the fresh loop.
+      executionPlan: {
+        delegationMap: { スクリーンショット: "frontend-engineer" },
+        plannedAt: "2025-01-01T00:00:00Z",
+      },
     });
 
     expect(
@@ -1155,9 +1162,10 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     ).toBe(0);
 
     const body = await readProtoJson(root);
-    // reviewerGate and fullHarness remain deleted (per-loop state).
+    // reviewerGate, fullHarness and executionPlan remain deleted (per-loop state).
     expect("reviewerGate" in body).toBe(false);
     expect("fullHarness" in body).toBe(false);
+    expect("executionPlan" in body).toBe(false);
     // Phase 3: acceptedIterationIndex=0 (the seed) and stopReason=null
     // (loop running) replace the prior stale values rather than being
     // removed.
