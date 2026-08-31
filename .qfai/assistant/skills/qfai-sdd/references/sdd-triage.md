@@ -95,9 +95,31 @@ and that none were added or dropped — in the `Rationale` column of the
 ## Inputs
 
 1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
+   **Import-lite exception** — when Stage 0 took the missing-pack route
+   (specs present, no discussion pack at all), input 1 is instead the
+   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md`. That
+   path is canonical and does not follow `paths.discussionDir`: a project
+   that moved its discussion packs still reads and writes the evidence
+   under `.qfai/evidence/`, which is where the check looks. Its
+   `## Sources` and `## User provided excerpt` are the canonical REQ/NFR
+   intake for this run, and its `## Assumptions / Missing information`
+   items become Open Questions on whichever spec each row lands on.
+   The evidence file is a pointer, not SSOT — do not invent REQs beyond
+   what it cites; if it cites nothing usable, delete the evidence file and
+   stop to ask, so an input-less pointer cannot silence `QFAI-IMPLITE-001`
+   on the next validate.
+   Item provenance follows the input: US and AC rows this route adds or
+   changes carry `Source: import-lite-<ts>#<REQ-ID>` — the evidence file's
+   basename without the `.md`, then the requirement ID as the imported
+   material names it — in place of the `<pack-id>#<discussion-id>` pair.
+   The form is defined in `spec-traceability-rules.md`; never record `-`
+   here, and never invent a discussion ID for a pack that does not exist.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
-4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.
+4. Active spec summaries from `01_Spec.md` headers across `<paths.specsDir>/spec-*`
+   (`.qfai/specs/spec-*` at the default). Read the resolved path: on a project
+   that moved `paths.specsDir`, a fixed `.qfai/specs` enumerates nothing and every
+   append-first REQ is misclassified as CREATE.
 
 ## Procedure
 

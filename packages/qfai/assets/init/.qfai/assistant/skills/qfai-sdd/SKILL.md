@@ -49,7 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
-When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
+Missing-pack exception (imported spec set): when `.qfai/specs/` already holds specs and no discussion-pack directory exists at all, do not back-fill one — record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). An incomplete pack is not covered: the stop rule above still applies. Validator: `QFAI-IMPLITE-001`; see Evidence below.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
@@ -256,6 +256,8 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight/run-<timestamp>/preflight_summary.md`, plus the `.qfai/report/preflight_summary.md` pointer
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
+- Evidence file: `.qfai/evidence/import-lite-<ts>.md` — imported spec sets only (specs present, no
+  discussion pack); see Evidence below
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
@@ -326,6 +328,55 @@ Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row
 Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
 Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
 `shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
+
+### Import-lite evidence (imported spec sets only)
+
+Producer: Stage 0, in every invocation form. When Stage 0 finds specs under `.qfai/specs/` and no
+`.qfai/discussion/discussion-*/` pack directory at all, create `.qfai/evidence/import-lite-<ts>.md`
+from `templates/evidence/import-lite.md` and record where the requirements actually came from. That
+is the documented route for a spec set imported from outside QFAI, and it satisfies
+`QFAI-IMPLITE-001` without fabricating a discussion pack. A pack that exists but is incomplete is
+not this case: the Stage 0 stop rule still applies — complete the pack, never import-lite past it.
+
+The `-<ts>` suffix is what makes one file per import run possible. The check does also accept a copy
+kept under the template's own name (`import-lite.md`), but that is a single fixed path, so a second
+import would overwrite the first run's trail. `<ts>` is the canonical 17-digit run stamp
+(`YYYYMMDDhhmmssSSS`, the same form discussion packs use); a suffix that is not exactly that stamp
+is rejected, so a `-<n>` collision counter does not work here. Claim the name with an exclusive
+create (`wx` / `O_EXCL`) — listing the directory and picking a free name is not a reservation, so
+two runs inside the same millisecond would both read the same name as free and the later write
+would erase the earlier run's trail. When the exclusive create fails because the file exists,
+re-stamp and retry: one file per import run, never an overwrite of an earlier one.
+
+Create it only once at least one `## Sources` entry or a `## User provided excerpt` is in hand, and
+delete it if the run then stops for want of an input source: an otherwise empty `import-lite-*` file
+silences `QFAI-IMPLITE-001` while leaving preflight with nothing to read. This artifact is a pointer
+for preflight, never requirement/spec SSOT — carry unresolved items into the spec's Open Questions.
+
+The packaged `runSddPreflight` API takes this route itself, so do not hand-write the summary. When
+the pack check blocks and the evidence resolves, it returns `source: import-lite` with the evidence
+file as the selected input, an unknown `Imported REQ count` (a pointer artifact carries no REQ ids)
+and `/qfai-sdd` as the next command — so the summary names its real input source instead of a pack
+that does not exist. It writes both copies under `<paths.outDir>`: the run-scoped
+`preflight/run-<timestamp>/preflight_summary.md` that evidence cites, and the
+`preflight_summary.md` pointer each rerun rewrites — the latter is
+`.qfai/report/preflight_summary.md` only when `qfai.config.yaml` leaves `paths.outDir` at its
+default; a hand-written copy in the old place would be a second, unread one. Evidence is an
+entrypoint, never an override: a pack that exists but is incomplete or misnamed still blocks.
+
+On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file
+instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` /
+`07_NFR.md`. See `references/sdd-triage.md`, Inputs — never guess the intake from existing specs.
+US and AC items this route writes carry the evidence pair `Source: import-lite-<ts>#<REQ-ID>` in
+place of the `<pack-id>#<discussion-id>` one; the form is defined in
+`references/spec-traceability-rules.md`.
+
+The specs and discussion paths above are defaults: when `qfai.config.yaml` overrides
+`paths.specsDir` or `paths.discussionDir`, the check resolves those first. The evidence path is not
+one of them — `.qfai/evidence/` is canonical and stays put even under a `paths.discussionDir`
+override, because every writer (`npx qfai init`, prototyping, audit log) uses it. Writing the evidence
+beside a relocated discussion directory puts it where nothing looks, leaving `QFAI-IMPLITE-001`
+unclearable.
 
 ## Done Declaration
 
