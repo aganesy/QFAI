@@ -122,9 +122,14 @@ describe("qfai-sdd ships a template for every required spec file", () => {
       // `_policies/**` must not define or own `US`/`AC`/`BR`/`EX`/`TC` items,
       // and `QFAI-LAYER-100` is a token scan — a template that carried one
       // would ship a guaranteed finding.
+      //
+      // Any digit count counts, not just the four the ban patterns match
+      // (#782): a short placeholder such as `EX-01` reads as a reserved-layer
+      // ID to the author, and renumbering it to the pack's own four-digit
+      // house convention turns the file into a hard `error`.
       for (const name of REQUIRED._policies) {
         const text = await readTemplate(tree, `_policies/${name}`);
-        expect(text.match(/\b(?:US|AC|BR|EX|TC)-\d{4}/g) ?? [], name).toEqual([]);
+        expect(text.match(/\b(?:US|AC|BR|EX|TC)-\d+/g) ?? [], name).toEqual([]);
       }
     });
 
