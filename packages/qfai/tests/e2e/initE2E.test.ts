@@ -181,25 +181,50 @@ describe(
   "E2E: commands/prompts deprecation + skill symlink integration (US-0003-0007)",
   { timeout: 60000 },
   () => {
-    it("--force removes stale .claude/commands/qfai-*.md and .github/prompts/qfai-*.prompt.md", async () => {
+    it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
       const tmpDir = await createTempDir();
       try {
         await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-        // Place old-style wrappers
+        // Place an old-style wrapper qfai itself wrote — a shipped basename
+        // whose body still delegates to the canonical doc of the same stem —
+        // alongside a file the project wrote for itself.
+        // Each surface carries the form qfai actually shipped there: `@` for
+        // the slash command, the bullet for the prompt file.
+        const shippedCommand = [
+          "Follow the canonical QFAI prompt exactly:",
+          "@.qfai/assistant/prompts/qfai-spec.md",
+          "",
+        ].join("\n");
+        const shippedPrompt = [
+          "1) Open and follow the canonical QFAI prompt:",
+          "- .qfai/assistant/prompts/qfai-spec.md",
+          "",
+        ].join("\n");
         await mkdir(path.join(tmpDir, ".claude", "commands"), { recursive: true });
-        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "old");
+        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"), shippedCommand);
+        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "mine");
         await mkdir(path.join(tmpDir, ".github", "prompts"), { recursive: true });
-        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "old");
+        await writeFile(
+          path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md"),
+          shippedPrompt,
+        );
+        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "mine");
 
         await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
 
-        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(
+        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"))).toBe(
           false,
         );
         expect(
-          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md")),
+          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md")),
         ).toBe(false);
+        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(
+          true,
+        );
+        expect(
+          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md")),
+        ).toBe(true);
       } finally {
         await cleanupTempDir(tmpDir);
       }
