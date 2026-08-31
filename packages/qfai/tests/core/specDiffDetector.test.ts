@@ -2,7 +2,7 @@
  * specDiffDetector tests — TDD-0002 through TDD-0010 (spec-0038).
  */
 import { execFileSync } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -129,7 +129,7 @@ describe("TDD-0004: detectSourceC", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("marks spec as stale when spec file is newer than evidence", async () => {
@@ -195,7 +195,7 @@ describe("TDD-0005: detectSourceD", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("extracts spec IDs from Adopted section in delta.md", async () => {
@@ -250,6 +250,7 @@ describe("TDD-0005: detectSourceD", () => {
 // ---------------------------------------------------------------------------
 import { detectPolicyChanges, detectSpecChanges } from "../../src/core/specDiffDetector.js";
 import type { QfaiConfig } from "../../src/core/config.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const stubConfig: QfaiConfig = {
   paths: {
@@ -295,7 +296,7 @@ describe("TDD-0006: detectSpecChanges union", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("merges results from multiple sources without duplication", async () => {
@@ -346,7 +347,7 @@ describe("TDD-0007: fallback when zero diff", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("returns all specs with fullScan when all sources empty", async () => {
@@ -391,7 +392,7 @@ describe("TDD-0008: git absent", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("works using only Source C and D when git is unavailable", async () => {
@@ -430,7 +431,7 @@ describe("TDD-0009: --full flag", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("returns all specs with fullScan=true when full option set", async () => {
@@ -492,7 +493,7 @@ describe("TDD-0010: policy changes trigger all specs", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("includes all specs when policy changes detected", async () => {
