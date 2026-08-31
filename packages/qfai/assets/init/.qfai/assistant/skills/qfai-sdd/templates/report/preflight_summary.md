@@ -4,8 +4,8 @@
 
 - status: <ready | blocked>
 - run id: run-<timestamp>
-- source: discussion-pack
-- selected discussion-pack: <path | (not found)>
+- source: <discussion-pack | import-lite>
+- selected <discussion-pack | import-lite evidence>: <path | (not found)>
 
 ## Blockers
 

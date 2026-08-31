@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
+import { resolveImportLiteEntrypoint } from "./importLiteEvidence.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
@@ -19,7 +20,15 @@ const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
  */
 const PREFLIGHT_RUN_ROOT = "preflight";
 
-export type SddPreflightSource = "discussion-pack";
+/**
+ * `import-lite` is the entrypoint for a project that already carries specs but
+ * never ran `/qfai-discussion`: Stage 0 records the input source as
+ * `.qfai/evidence/import-lite-<timestamp>.md` instead, which is the same
+ * artifact `QFAI-IMPLITE-001` accepts. Without it here, a consumer driving
+ * Stage 0 through this public entrypoint stayed `blocked` forever on a project
+ * the validator considered compliant.
+ */
+export type SddPreflightSource = "discussion-pack" | "import-lite";
 export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
@@ -66,6 +75,28 @@ export async function runSddPreflight(
   const blockers = resolvePreflightBlockers(readiness);
 
   if (blockers.length > 0) {
+    // `resolveImportLiteEntrypoint` gates the fallback to the shape the shipped
+    // Stage 0 step describes: specs already exist and there is no discussion
+    // pack at all (a pack that exists but is incomplete or misnamed still
+    // blocks — evidence is an entrypoint, never an override).
+    const importLiteEvidencePath = await resolveImportLiteEntrypoint(root, config);
+    if (importLiteEvidencePath !== null) {
+      return await completeReadyPreflight({
+        source: "import-lite",
+        selectedInputPath: importLiteEvidencePath,
+        // The shipped template is an explicit pointer artifact, "not
+        // requirement/spec SSOT", so it carries no REQ ids. Counting them would
+        // report a confident `0` for a project whose requirements live in the
+        // specs; the count is genuinely unknown on this path.
+        importedReqCount: null,
+        run,
+        openQuestions: carryOverOpenQuestions,
+        // `/qfai-discussion` is not the follow-up here — the input source is
+        // already recorded, so the caller continues the SDD workflow.
+        nextCommands: ["/qfai-sdd"],
+      });
+    }
+
     await publishPreflightSummary(
       run,
       buildBlockedPreflightSummary({
@@ -90,28 +121,51 @@ export async function runSddPreflight(
 
   const selectedInputPath = readiness.latestPackDir;
   const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md");
-  const reqText = reqPath ? await readSafe(reqPath) : "";
-  const reqCount = countReqIds(reqText);
 
-  await publishPreflightSummary(
+  return await completeReadyPreflight({
+    source: "discussion-pack",
+    selectedInputPath,
+    importedReqCount: countReqIds(reqPath === null ? "" : await readSafe(reqPath)),
     run,
+    openQuestions: carryOverOpenQuestions,
+    nextCommands,
+  });
+}
+
+/**
+ * Write the ready summary and return the result. Shared by both sources so
+ * `preflight_summary.md` and the returned record cannot drift apart between
+ * them. `importedReqCount: null` means "not countable from this input source"
+ * and renders as `unknown` rather than a confident zero.
+ */
+async function completeReadyPreflight(input: {
+  source: SddPreflightSource;
+  selectedInputPath: string | null;
+  importedReqCount: number | null;
+  run: PreflightRun;
+  openQuestions: string[];
+  nextCommands: string[];
+}): Promise<SddPreflightResult> {
+  await publishPreflightSummary(
+    input.run,
     buildReadyPreflightSummary({
-      runId: run.runId,
-      selectedDiscussionPack: selectedInputPath,
-      importedReqCount: reqCount,
-      openQuestions: carryOverOpenQuestions,
+      runId: input.run.runId,
+      source: input.source,
+      selectedInputPath: input.selectedInputPath,
+      importedReqCount: input.importedReqCount,
+      openQuestions: input.openQuestions,
     }),
   );
 
   return {
     status: "ready",
-    source: "discussion-pack",
-    selectedInputPath,
-    importedReqCount: reqCount,
-    openQuestions: carryOverOpenQuestions,
+    source: input.source,
+    selectedInputPath: input.selectedInputPath,
+    importedReqCount: input.importedReqCount,
+    openQuestions: input.openQuestions,
     blockers: [],
-    nextCommands,
-    ...toSummaryPaths(run),
+    nextCommands: input.nextCommands,
+    ...toSummaryPaths(input.run),
   };
 }
 
@@ -258,12 +312,15 @@ function buildBlockedPreflightSummary(input: {
 
 function buildReadyPreflightSummary(input: {
   runId: string;
-  selectedDiscussionPack: string | null;
-  importedReqCount: number;
+  source: SddPreflightSource;
+  selectedInputPath: string | null;
+  importedReqCount: number | null;
   openQuestions: string[];
 }): string {
   const openQuestions =
     input.openQuestions.length > 0 ? input.openQuestions.map((item) => `- ${item}`) : ["- none"];
+  const inputLabel =
+    input.source === "import-lite" ? "selected import-lite evidence" : "selected discussion-pack";
 
   return [
     "# Preflight Summary",
@@ -272,12 +329,12 @@ function buildReadyPreflightSummary(input: {
     "",
     "- status: ready",
     `- run id: ${input.runId}`,
-    "- source: discussion-pack",
-    `- selected discussion-pack: ${input.selectedDiscussionPack ?? "(unknown)"}`,
+    `- source: ${input.source}`,
+    `- ${inputLabel}: ${input.selectedInputPath ?? "(unknown)"}`,
     "",
     "## Requirement Intake",
     "",
-    `- Imported REQ count: ${input.importedReqCount}`,
+    `- Imported REQ count: ${input.importedReqCount ?? "unknown"}`,
     "",
     "## Open Questions (Carry-over)",
     "",
