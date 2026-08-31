@@ -69,3 +69,60 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 });
+
+describe("cli usage text", () => {
+  async function captureHelp(): Promise<string> {
+    const chunks: string[] = [];
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      process.stdout.write = (chunk: string | Uint8Array): boolean => {
+        chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+        return true;
+      };
+      await run(["--help"], process.cwd());
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = previousExitCode;
+    }
+    return chunks.join("");
+  }
+
+  /** The `--force` help entry, including its wrapped continuation lines. */
+  function forceEntry(help: string): string {
+    const lines = help.split("\n");
+    const start = lines.findIndex((candidate) => candidate.trimStart().startsWith("--force"));
+    expect(start).toBeGreaterThanOrEqual(0);
+
+    const entry = [lines[start]];
+    for (const candidate of lines.slice(start + 1)) {
+      if (candidate.trim() === "" || candidate.trimStart().startsWith("--")) break;
+      entry.push(candidate);
+    }
+    return entry.join("\n");
+  }
+
+  it("describes --force as covering the regenerated symlink asset surfaces", async () => {
+    const entry = forceEntry(await captureHelp());
+
+    expect(entry).toContain(".agents");
+    expect(entry).toContain(".claude");
+    expect(entry).toContain(".github");
+    expect(entry).toContain(".codex");
+  });
+
+  it("names copilot-instructions.md among the files --force rewrites", async () => {
+    const entry = forceEntry(await captureHelp());
+
+    expect(entry).toContain("copilot-instructions.md");
+    expect(entry).toContain("README.md");
+  });
+
+  it("does not claim everything outside skills/agents is skipped when it exists", async () => {
+    const entry = forceEntry(await captureHelp());
+
+    expect(entry).not.toContain("それ以外は既存があればスキップ");
+    expect(entry).toContain("assistant/manifest/**");
+  });
+});
