@@ -505,6 +505,179 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("documents the DESIGN.md compliance gate as non-waivable in both prompts", async () => {
+    // The prompts once advertised the findings as "advisory-failing" with
+    // "a Reviewer can override when a finding is a known false positive".
+    // No override input exists: `prototypingCertify` exits 2 on any
+    // violation, `isConverged` requires `designMdViolations.length === 0`,
+    // and `recomputeFinalIterDesignMdViolations` re-scans the accepted
+    // iteration's HTML, discarding whatever the Reviewer recorded. An
+    // operator who believed the promise had no legal way forward.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const referencesDir = path.join(
+        tree,
+        "assistant",
+        "skills",
+        "qfai-prototyping",
+        "references",
+      );
+      const [generatorRef, reviewerRef] = await Promise.all([
+        readFile(path.join(referencesDir, "generator-prompt.md"), "utf-8"),
+        readFile(path.join(referencesDir, "reviewer-prompt.md"), "utf-8"),
+      ]);
+
+      // The retracted promise must not come back on either side.
+      expect(generatorRef).not.toContain("advisory-failing");
+      expect(generatorRef).not.toMatch(/Reviewer can override/i);
+      expect(reviewerRef).not.toMatch(/Reviewer can override/i);
+
+      // Whitespace-tolerant: the statements wrap mid-phrase today and a
+      // reflow must not fail this test without the meaning changing.
+      expect(generatorRef).toMatch(/hard and\s+non-waivable/);
+      expect(generatorRef).toMatch(/there is no\s+Reviewer override/);
+      // The reader must also learn why a hand-written `[]` does not work.
+      // The re-scan guarantee is scoped to the CONVERGENCE stop:
+      // `prototypingIterate` only calls
+      // `recomputeFinalIterDesignMdViolations` when `shouldStop()`
+      // returned "axes-exceptional", so a max-iterations stop must not be
+      // advertised as re-scanned. `certify` is what closes that path.
+      expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
+      expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
+      expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
+      // `allFourAxesExceptional` is not what its name says: it also requires
+      // `layoutAntiPatternsDetected.length === 0` and
+      // `designMdViolations.length === 0`. A prompt that defines the stop as
+      // the four scores alone leaves the generator unable to explain why a
+      // run with four `exceptional` axes did not stop, or what to fix next.
+      expect(generatorRef).toMatch(/\*\*and both finding arrays empty\*\*/);
+      expect(generatorRef).toMatch(/`layoutAntiPatternsDetected` and `designMdViolations`/);
+      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop running/);
+      // And the re-scan is not a proof of inspection.
+      // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
+      // directory and `continue`s past a file it cannot stat or read, so an
+      // absent or unreadable evidence tree honours the exit-64 stop with
+      // nothing examined. Certify is the half that fails closed: it exits 2
+      // when the accepted iteration has no readable HTML at all.
+      expect(generatorRef).toMatch(/\*\*present and readable\*\*/);
+      expect(generatorRef).toMatch(/yields no findings and therefore does not\s+block the stop/);
+      expect(generatorRef).toMatch(/refuses to seal\s+at all/);
+      expect(generatorRef).toMatch(
+        /certify` re-scans every captured HTML file of\s+the accepted iteration unconditionally/,
+      );
+      // `findIterationHtmlFiles(evidenceRoot, …)` is certify's only scan
+      // input, so the guarantee covers the CAPTURE tree and not the
+      // authoring `prototypes/` tree the operator actually ships. An
+      // unqualified "no certificate is issued over a violation" would
+      // over-promise for a literal CAPTURE never rendered.
+      expect(generatorRef).toMatch(/the capture evidence\s+shows\*\*/);
+      expect(generatorRef).toMatch(/never opens the\s+authoring tree/);
+      // No scanner injects `designMdViolations` into an ordinary cycle's
+      // review — `recomputeFinalIterDesignMdViolations` runs only on the
+      // convergence stop and its result is never written back. The prompt
+      // must not tell the generator to expect prior-review findings.
+      expect(generatorRef).toMatch(/Ordinary cycles carry no scanner output/);
+      expect(generatorRef).toMatch(/stays `\[\]` in every Reviewer report/);
+      expect(generatorRef).toMatch(/not\s+written back into the review/);
+      // `runPrototypingCertify` branches to `runUpgradeScopeFull` BEFORE
+      // the HTML scan, so `--upgrade-scope full` rewrites a sealed
+      // certificate without re-scanning. The "unconditional" claim above
+      // must therefore be scoped to the issuing path and the carve-out
+      // named, with `--check` as the recovery.
+      expect(generatorRef).toMatch(/certify --upgrade-scope full` is not an issuing/);
+      expect(generatorRef).toMatch(/without\s+re-scanning HTML/);
+      expect(generatorRef).toMatch(/certify --check`/);
+      expect(reviewerRef).toMatch(/cannot\s+waive a finding by writing `\[\]` yourself/);
+      expect(reviewerRef).toMatch(/on a convergence stop/);
+      expect(reviewerRef).toMatch(/gate is\s+non-waivable/);
+      // The reviewer half must carry the same `--upgrade-scope full`
+      // carve-out as the generator half: `runPrototypingCertify` branches
+      // to `runUpgradeScopeFull` before the HTML scan, so an unqualified
+      // "certify re-scans unconditionally" here would tell a Reviewer that
+      // promoting a scope-limited certificate re-checks HTML it never
+      // reads. `--check` is the named recovery on both sides.
+      // The reviewer half carries the same readability scoping, or a Reviewer
+      // reads "the re-scan result wins" as a guarantee the evidence was read.
+      expect(reviewerRef).toMatch(/\*\*present and readable\*\*/);
+      expect(reviewerRef).toMatch(/yields no findings and lets the stop through/);
+      expect(reviewerRef).toMatch(/captured HTML before it seals/);
+      expect(reviewerRef).toMatch(/never opens the\s+authoring `prototypes\/` tree/);
+      expect(reviewerRef).toMatch(/certify --upgrade-scope full` is not\s+an issuing path/);
+      expect(reviewerRef).toMatch(/without re-scanning HTML/);
+      expect(reviewerRef).toMatch(/certify --check`/);
+
+      // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
+      // compares live DESIGN.md / lock / cycle-0 cached sha256 and exits 2
+      // on any mismatch, so "widen DESIGN.md" is not a mid-loop escape
+      // hatch. The prompt must route a brand change through a refreeze +
+      // cycle-0 restart instead.
+      expect(generatorRef).toMatch(
+        /Do\s+\*\*not\*\* edit `DESIGN\.md` to widen the allowlist mid-loop/,
+      );
+      expect(generatorRef).toMatch(/exits 2 with a\s+hash mismatch/);
+      expect(generatorRef).toMatch(/refreeze the lock via `\/qfai-sdd`/);
+      // The restart must be a runnable command: the prior loop always left
+      // an `iter-00` behind, and the cycle-0 destructive-rerun gate in
+      // `prototypingIterate` exits 2 without `--force`. A bare `--cycle 0`
+      // hint cannot recover the run.
+      expect(generatorRef).toMatch(
+        /restart the loop with\s+`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`/,
+      );
+      expect(generatorRef).toMatch(/`--force` is not optional here/);
+      // The cycle-0 `--force` backup in `prototypingIterate` renames
+      // `PROTOTYPING_EVIDENCE_REL/iter-00` only; `.qfai/prototypes/iter-00`
+      // is left in place and the next cycle-0 write clobbers it. The
+      // prompt must name the tree that is backed up and the one that is
+      // not, or "iter-00 is renamed" promises recoverability it lacks.
+      expect(generatorRef).toMatch(
+        /`\.qfai\/evidence\/prototyping\/iter-00` is renamed to\s+`iter-00\.backup-<ISO>`/,
+      );
+      expect(generatorRef).toMatch(/Only the \*\*evidence\*\* tree is\s+backed up/);
+      expect(generatorRef).toMatch(/copy that\s+directory aside yourself/);
+    }
+  });
+
+  it("keeps the DESIGN.md scanner doc in sync with the non-waivable prompt wording", async () => {
+    // `designMdViolations.ts` and `generator-prompt.md` are an SSOT-sync
+    // pair (scripts/check-prompt-scanner-pair.mjs). The gate's posture is
+    // stated on both halves so a future edit to one is visibly unpaired.
+    const scanner = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "prototyping",
+        "designMdViolations.ts",
+      ),
+      "utf-8",
+    );
+    // Match against the prose with the JSDoc `*` gutter and line wrapping
+    // removed, so a re-wrap of the block comment cannot fail this test
+    // without the statement itself changing.
+    const scannerProse = scanner.replace(/^\s*\*\s?/gm, "").replace(/\s+/g, " ");
+    expect(scannerProse).toContain("hard and non-waivable");
+    expect(scannerProse).toContain("there is no Reviewer override");
+    // Same scoping as the prompt half: the iterate-side re-scan covers the
+    // convergence stop only; certify is the unconditional backstop.
+    expect(scannerProse).toContain("CONVERGENCE stop");
+    expect(scannerProse).toContain("`max-iterations` stop skips that re-scan");
+    expect(scannerProse).toContain("unconditionally");
+    // And the same capture-tree scoping both prompts now carry.
+    expect(scannerProse).toContain("accepted iteration's captured HTML");
+    expect(scannerProse).toContain("the capture evidence shows");
+    // And the same two carve-outs the prompt now carries: no per-cycle
+    // injection, and `--upgrade-scope full` does not re-scan.
+    expect(scannerProse).toContain("stays `[]`");
+    expect(scannerProse).toContain("not written back into `prototyping.json`");
+    expect(scannerProse).toContain("`certify --upgrade-scope full`");
+    // And the readability scoping the two prompts now carry: the iterate-side
+    // re-scan returns `[]` for an ENOENT directory and skips a file it cannot
+    // stat or read, so an empty result is not evidence of inspection.
+    expect(scannerProse).toContain("PRESENT AND READABLE");
+    expect(scannerProse).toContain("skips a file it cannot stat or read");
+  });
+
   it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {
     // `--auto-serve` gained an SPA route fallback: a document request that
     // matches no file on disk is served `index.html`. generator-prompt.md is
@@ -1730,7 +1903,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       const reportTemplate = await readFile(reportTemplatePath, "utf-8");
       expect(reportTemplate).toContain("status:");
       expect(reportTemplate).toContain("/qfai-sdd");
+      expect(reportTemplate).toContain("run id:");
     }
+
+    // The evidence section the completion reviewer grades must resolve to one
+    // preflight. `.qfai/report/preflight_summary.md` is rewritten by every
+    // rerun, so citing it makes every spec's evidence print the same constant.
+    const evidenceTemplate = await readFile(
+      path.join(
+        templateQfaiDir,
+        "assistant",
+        "skills",
+        "qfai-sdd",
+        "templates",
+        "evidence",
+        "sdd-spec.md",
+      ),
+      "utf-8",
+    );
+    const preflightSection = sectionOf(evidenceTemplate, "## Preflight summary path");
+    expect(preflightSection).toContain(
+      "`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` (run id: <run-id>)",
+    );
+    expect(preflightSection).not.toMatch(/^- `\.qfai\/report\/preflight_summary\.md`$/m);
+
+    const sddSkill = await readFile(
+      path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md"),
+      "utf-8",
+    );
+    expect(sddSkill).toContain("`.qfai/report/preflight/run-<timestamp>/preflight_summary.md`");
 
     const businessFlowTemplatePath = path.join(
       templateQfaiDir,
@@ -2117,6 +2318,15 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 });
+
+/** Body of `heading` up to the next `## ` heading, so a sibling section cannot satisfy the assertion. */
+function sectionOf(content: string, heading: string): string {
+  const start = content.indexOf(`${heading}\n`);
+  expect(start, `${heading} is missing`).toBeGreaterThanOrEqual(0);
+  const rest = content.slice(start + heading.length);
+  const end = rest.indexOf("\n## ");
+  return end === -1 ? rest : rest.slice(0, end);
+}
 
 /** Every `options.<key>` the given slice of CLI source touches. */
 function collectOptionKeys(source: string): Set<string> {
