@@ -2789,9 +2789,14 @@ describe("release automation performs decisions rather than making them", () => 
     // which entries matter — that judgement belongs to whoever wrote the CHANGELOG, and it is
     // the same thing every other row in this describe refuses to let the machinery do.
     // `split` always yields at least one element, but the index signature is
-    // `string | undefined` under this tree's settings and the two rows below
-    // pass it where a `string` is required.
-    const kept = notes.split("\n\n---\n\n")[0] ?? "";
+    // `string | undefined` under this tree's settings and the two rows below pass it where a
+    // `string` is required. REFUSED rather than defaulted to an empty string:
+    // `section.startsWith("")` is true for every section, so a `?? ""` here would write a
+    // vacuous pass into the one row that checks the cap reordered nothing.
+    const [kept] = notes.split("\n\n---\n\n");
+    if (kept === undefined) {
+      throw new Error("the capped notes carry no body before the footer");
+    }
     expect(
       section.startsWith(kept),
       "what it keeps must be a PREFIX of the section: no reordering, no selection, no summary",
