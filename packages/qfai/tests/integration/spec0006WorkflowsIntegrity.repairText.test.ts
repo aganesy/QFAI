@@ -91,6 +91,7 @@ const CLI_SUBCOMMANDS = [
   "doctor",
   "guardrails",
   "audit",
+  "sdd",
   "atdd",
   "handoff",
   "discussion",
