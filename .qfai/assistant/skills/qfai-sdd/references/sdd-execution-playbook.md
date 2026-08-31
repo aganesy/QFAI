@@ -21,6 +21,24 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 3. Stop if blocking OQ remain.
 4. Stop if the latest UI-bearing pack is missing valid `prototyping.yaml`.
 
+### Import-lite entrypoint (no discussion-pack at all)
+
+Steps 1-2 assume a pack exists. When the project has **no** discussion-pack
+whatsoever and specs already exist, do not stop — record the input source
+instead and continue:
+
+1. Write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from
+   `templates/evidence/import-lite.md` before editing any spec. `import-lite.md`
+   without a stamp is also accepted; any other suffix is not.
+2. Fill `generated_at` with an ISO8601 datetime, plus at least one real
+   `Sources` entry or user excerpt. `<...>` placeholders and fillers (`TBD`,
+   `none.`, `n/a`) are rejected, and an unclosed excerpt fence with them.
+3. Select that file as the input source and report it in
+   `.qfai/report/preflight_summary.md` as `source: import-lite`.
+
+A pack that exists under a non-canonical name is not an absent pack: rename it
+rather than falling back here. Validator: `QFAI-IMPLITE-001`.
+
 ## Stage 1: Triage
 
 1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).

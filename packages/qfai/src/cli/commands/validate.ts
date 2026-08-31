@@ -193,7 +193,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   const format = options.format ?? "text";
   if (format === "text") {
-    emitText(normalized);
+    emitText(normalized, failOn);
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
@@ -407,6 +407,11 @@ const GATE_GROUP_FAMILIES = {
   "assistant-assets": ["QFAI-ASSETS-*"],
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*", "QFAI-RESEARCH-*", "UIX-VAL-*"],
   sdd: [
+    // `runSddValidators` dispatches the preflight input-source rule, so a
+    // partial profile that skips the `sdd` group has not evaluated it either.
+    // Leaving it off this list let `--profile tdd` PASS look input-source
+    // checked when nothing had looked.
+    "QFAI-IMPLITE-*",
     "QFAI-SPACK-*",
     "QFAI-COV-*",
     "QFAI-ID-*",
@@ -530,7 +535,7 @@ function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
   return fallback;
 }
 
-function emitText(result: ValidationResult): void {
+function emitText(result: ValidationResult, failOn: FailOn): void {
   for (const item of result.issues) {
     const location = item.file ? ` (${item.file})` : "";
     const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
@@ -538,7 +543,7 @@ function emitText(result: ValidationResult): void {
     process.stdout.write(
       `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}\n`,
     );
-    if (item.severity === "error") {
+    if (shouldEmitIssueDetail(item, failOn)) {
       emitTextField("error_code", item.code);
       emitTextField("target", resolveIssueTarget(item));
       emitTextField("expected", resolveIssueExpected(item));
@@ -576,11 +581,25 @@ function emitGitHubOutput(
 
   const issues = deduped.slice(0, GITHUB_ANNOTATION_LIMIT);
   for (const issue of issues) {
-    emitGitHub(issue);
+    emitGitHub(issue, status.failOn);
   }
 }
 
-function emitGitHub(issue: Issue): void {
+/**
+ * Whether an issue prints its `expected` / `fix` detail. This was hard-wired to
+ * `severity === "error"`, which left the rule-description catalogue unreachable
+ * for every warning-severity code: under `--strict` / `--fail-on warning` the
+ * warning is exactly what fails the run, yet neither formatter printed its
+ * expected state or remedy.
+ */
+function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
+  if (issue.severity === "error") {
+    return true;
+  }
+  return failOn === "warning" && issue.severity === "warning";
+}
+
+function emitGitHub(issue: Issue, failOn: FailOn): void {
   const level = issue.suppressed
     ? "notice"
     : issue.severity === "error"
@@ -601,10 +620,9 @@ function emitGitHub(issue: Issue): void {
   const line = issue.loc?.line ? `,line=${issue.loc.line}` : "";
   const column = issue.loc?.column ? `,col=${issue.loc.column}` : "";
   const location = file ? ` ${file}${line}${column}` : "";
-  const suffix =
-    issue.severity === "error"
-      ? ` expected=${resolveIssueExpected(issue)} | fix=${resolveIssueFix(issue)}`
-      : "";
+  const suffix = shouldEmitIssueDetail(issue, failOn)
+    ? ` expected=${resolveIssueExpected(issue)} | fix=${resolveIssueFix(issue)}`
+    : "";
   const message = escapeGitHubCommandValue(`${issue.code}: ${issue.message}${suffix}`);
   process.stdout.write(`::${level}${location}::${message}\n`);
 }
@@ -762,6 +780,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
   "QFAI-DPACK-010":
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
+  "QFAI-IMPLITE-001":
+    "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001":

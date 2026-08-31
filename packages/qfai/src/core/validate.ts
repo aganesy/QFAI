@@ -85,6 +85,7 @@ import {
   validateAutopilotPolicy,
   detectHandoffSchemaDrift,
   validateStaleReferences,
+  validateImportLiteEvidencePresence,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -364,6 +365,12 @@ async function runSddValidators(
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
+    // Preflight input source: a project that has spec packs must be able to
+    // point at what they were derived from — a discussion pack `06_REQ.md` or
+    // an `.qfai/evidence/import-lite-*.md`. The check was written but never
+    // dispatched, so `QFAI-IMPLITE-001` could not fire and a project with
+    // specs and no input source passed preflight silently.
+    ...(await validateImportLiteEvidencePresence(root, config)),
     ...(await validateSpecPacks(root, config)),
     // The catalog wins over the in-code required-file sets, so a divergence
     // silently changes which files are mandatory. Report it.
