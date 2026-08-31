@@ -30,7 +30,9 @@ const ADVISORY_FAILING_CODES = new Set<string>([
   "R-PROMPT-SCANNER-DRIFT",
   // The 8-code spec governance catalog (AC-0015-0018) is
   // merged in via the catalog SSOT so this set stays in lockstep with
-  // the catalog by construction.
+  // the catalog by construction. The catalog contributes membership
+  // only — it declares no severity, and the ingestion issue below is
+  // always `error` (see below).
   ...CATALOG_ADVISORY_FAILING_CODES,
 ]);
 
@@ -226,6 +228,11 @@ export async function validateReviewerJustification(
       const justification =
         typeof finding.justification === "string" ? finding.justification.trim() : "";
       if (justification.length === 0) {
+        // Severity is `error` for every advisory-failing code, without
+        // exception: the violation reported here is the missing
+        // justification, not the finding itself. A code whose own
+        // detector emits `warning` (e.g. R-DESIGN-MD-PATCH-OUT-OF-ZONE)
+        // is still an `error` on this path.
         issues.push(
           issue(
             code,
