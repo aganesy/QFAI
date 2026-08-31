@@ -18,19 +18,34 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only and runs a multi-spec evolution loop driven by
-  `qfai prototyping iterate --cycle <n>`. The skill resolves every
-  UI-bearing spec in one invocation, freezes that set at cycle 0, and
-  iterates `cycle 0..9` (max 10 cycles) with deterministic stop conditions
-  (exit codes 0 continue / 64 convergence / 65 max-iterations /
-  66 license-verify failure / 2 input or lock drift).
+- Prototyping is UI-only and runs a primary-spec evolution loop driven by
+  `qfai prototyping iterate --cycle <n>`. Each run resolves exactly one
+  primary UI-bearing spec (`prototyping.primarySpecId` in `qfai.config.yaml`,
+  a `surface_type: ui-bearing` marker, or `--primary-spec-id`), freezes it at
+  cycle 0, and iterates `cycle 0..9` (max 10 cycles) with deterministic stop
+  conditions (exit codes 0 continue / 64 convergence / 65 max-iterations /
+  66 license-verify failure / 2 input or lock drift). The full set of
+  UI-bearing specs is frozen at cycle 0 as `frozenSurfaceUnion` and is read
+  only to detect surface drift on later cycles: secondary specs are **not**
+  evaluated by that run. Only one primary spec can therefore be evolved per
+  project: re-running cycle 0 for a second spec is refused without `--force`,
+  and with `--force` it re-seeds `prototyping.json` (`runId`, `specsCovered`,
+  `frozenSpecsCovered`) around the new single spec, so the earlier spec's
+  iterations do not survive as a valid loop. Iterating a second UI-bearing
+  spec has to wait for the per-spec iteration layout.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iter evidence is a single `<screen>.review.json` per declared spec ×
   screen pair (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
   bounded to 200 words each, `layoutAntiPatternsDetected[]`,
-  `designMdViolations[]`, and `pivotDirective`). Reviewer-emitted
-  `<screen>.review.json` is the only per-cycle artifact — no `screenshot.png`,
-  `index.html`, or `interaction.json`.
+  `designMdViolations[]`, and `pivotDirective`). It is the only
+  reviewer-authored file, not the only per-cycle artifact: the CLI itself
+  always writes `iterate-plan.json` into the same `iter-NN/` directory, and
+  from cycle 1 onward — once the previous cycle is recorded in
+  `prototyping.json#iterations[]` — an advisory `iterate-context.json` holding
+  the prior scores and open blockers. The opt-in `--capture` and
+  `--cycle 0 --emit-skeletons` flags additionally write `<screen>.png` /
+  `<screen>.html` there. Archive the whole `iter-NN/` directory; no
+  `interaction.json` is written on any path.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 
 ## Installation
@@ -107,7 +122,7 @@ npx qfai report
     Use `npx qfai prototyping preflight --target-url <url>` for a focused
     prototyping preflight before the skill starts; it surfaces blocking
     `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the multi-spec
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the primary-spec
     evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
     Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs
     (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/prototyping/iter-03/home.png`).
@@ -148,7 +163,7 @@ a `TC` obligation is routed by the `Level` its spec declares for it.
   | none declared, or unreadable  | `tests/integration/**` |
 
 - Unit and Component test cases carry **no** ATDD annotation obligation. They are gated by the
-  `tdd/test-list.md` ledger instead, so do not copy them into `tests/integration/**` to satisfy this gate.
+  per-spec `test-list.md` ledger instead, so do not copy them into `tests/integration/**` to satisfy this gate.
 - A `TC` annotation outside the directory its declared `Level` names is rejected. The rule is `Level`-relative,
   not a blanket ban: a `TC` in `tests/api/**` is accepted only for a test case that declares `L4`/`API`, and in
   `tests/e2e/**` only for `L5`/`E2E`.
@@ -188,9 +203,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted
   (`QFAI-TRIAGE-006`). Every `01_Spec.md` declares a lifecycle
   `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
-- **qfai-prototyping**: Multi-spec parallel design evolution loop. Resolves
-  every UI-bearing spec in one invocation, freezes that set at cycle 0,
-  and iterates each `spec × screen` pair through up to 10 cycles
+- **qfai-prototyping**: Primary-spec design evolution loop. Resolves exactly
+  one primary UI-bearing spec per invocation and freezes it at cycle 0 (the
+  full UI-bearing set is recorded as `frozenSurfaceUnion` for drift detection
+  only), then iterates each `spec × screen` pair through up to 10 cycles
   (`cycle 0..9`) of generate → capture → review with a 4-axis ordinal
   rubric, 6 `*Feel` short-prose impressions (200-word bounded), explicit
   layout anti-pattern detection (`lap-001..lap-008`), DESIGN.md token
@@ -489,6 +505,7 @@ Typical customizations.
 │   │       ├── spec_required_files.json
 │   │       ├── structure.md
 │   │       ├── tech.md
+│   │       ├── test-layers-ci-lanes.md
 │   │       ├── test-layers.md
 │   │       ├── ui-definition-protocol.md
 │   │       └── worklog-entry.schema.md
@@ -503,7 +520,7 @@ README files. Those files are created later by QFAI skills when real work exists
 ### AI work-log surface (`.qfai/steering/`)
 
 `qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
-AI coding agents, with a `README.md` and `_templates/entry.md`. Each entry is a
+AI coding agents, with a `README.md` and an `entry.md` template under `_templates/`. Each entry is a
 markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
 the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
 `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
@@ -520,7 +537,7 @@ Integration wrappers are also generated for immediate use:
 - Agents/Codex VS Code: `.agents/skills/**`
 - Claude Code: `.claude/skills/**`, `.claude/agents/**`
 - GitHub Copilot: `.github/skills/**`, `.github/agents/**`
-- Codex: `.codex/skills/**`
+- Codex: `.codex/skills/**`, `.codex/agents/**`
 
 ## Agent integrations
 
@@ -528,8 +545,10 @@ Integration wrappers are also generated for immediate use:
 and generates thin wrapper assets for Agents/Codex VS Code / Copilot / Claude Code / Codex.
 Canonical agent markdown under `.qfai/assistant/agents/**` uses a shared YAML frontmatter
 subset (`name`, `description`, `tools`) compatible with Claude Code and GitHub Copilot,
-while Codex consumes mirrored `.codex/agents/*.toml` profiles.
-If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
+while Codex consumes `.codex/agents/*.toml` profiles generated from that same markdown.
+The `.claude` / `.github` agent wrappers are symlinks and follow the canonical document
+automatically; the Codex profiles are generated files, so rerun `npx qfai init --force`
+to refresh them (and any other wrapper asset that has drifted).
 `--force` deletes as well as overwrites: it removes the command and prompt wrappers earlier releases
 installed under `.claude/commands/` and `.github/prompts/`, and the skill wrappers it installed under
 `.claude/skills/`, `.agents/skills/`, `.codex/skills/` and `.github/skills/` for skills QFAI no longer
@@ -544,7 +563,12 @@ that link. Your `.qfai/assistant/skills/` entry is untouched; re-create the link
 
 ## Contributing (for QFAI maintainers)
 
-This repository is a monorepo, and the distributable package is under `packages/qfai`; if you change documentation, keep the repository root README and the package README aligned (the CI enforces this).
+This repository is a monorepo, and the distributable package is under `packages/qfai`.
+The repository root `README.md` and `packages/qfai/README.md` are kept aligned by
+`scripts/check-readme-alignment.mjs`, which CI runs as part of `pnpm ci:lint`: every line
+outside a `readme-align:ignore-start` / `readme-align:ignore-end` HTML-comment block must be
+identical in both files. When you change documentation, apply the edit to both READMEs, or
+wrap the intentionally file-specific part in those markers.
 
 ## License
 
