@@ -412,6 +412,83 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {
+    // `--auto-serve` gained an SPA route fallback: a document request that
+    // matches no file on disk is served `index.html`. generator-prompt.md is
+    // injected into the generator sub-agent every cycle, so a stale "no SPA
+    // fallback" claim there makes the generator declare hash routes and avoid
+    // the parameterized contract routes the fallback exists to make capturable.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const generatorRef = await readFile(
+        path.join(
+          tree,
+          "assistant",
+          "skills",
+          "qfai-prototyping",
+          "references",
+          "generator-prompt.md",
+        ),
+        "utf-8",
+      );
+
+      // The stale claims must be gone.
+      expect(generatorRef).not.toContain("it has no SPA fallback");
+      expect(generatorRef).not.toContain("they will 404 under `--auto-serve`");
+      expect(generatorRef).not.toContain("so a `/settings` route 404s while");
+
+      // The behaviour the server actually implements must be stated.
+      expect(generatorRef).toContain("`index.html` instead of 404");
+      expect(generatorRef).toContain("`text/html`");
+      expect(generatorRef).toContain("/pairs/:instrument");
+
+      // The two genuine non-fallback cases stay documented.
+      expect(generatorRef).toContain("Sub-resource requests");
+      expect(generatorRef).toContain("path-traversal 403 guard");
+
+      // The third one: the fallback needs an index.html to fall back TO.
+      // `resolveServablePath` returns null when the served directory has
+      // none, so a skeleton-only cycle-0 tree still 404s path routes and
+      // loses that screen's evidence. Saying the fallback is unconditional
+      // would send the generator into exactly that hole.
+      expect(generatorRef).toContain("The fallback needs an `index.html` to fall back _to_");
+      expect(generatorRef).toMatch(/skeleton-only cycle-0 tree[\s\S]{0,120}still \*\*404s\*\*/);
+    }
+
+    // generator-prompt.md is one half of an SSOT-sync pair; the scanner it is
+    // paired with documents which screens ever reach it, which is exactly what
+    // the routing shape decides. Assert the scanner half states the same
+    // fallback contract so the pair cannot drift back apart.
+    const scannerSource = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "prototyping",
+        "designMdViolations.ts",
+      ),
+      "utf-8",
+    );
+    expect(scannerSource).toContain("`index.html` to a document request");
+    expect(scannerSource).toContain("parameterized contract routes");
+    expect(scannerSource).toContain("path-traversal 403 guard");
+
+    // The operator-facing half of the same contract. certify's missing-HTML
+    // recovery text is what an operator reads after a capture gap, and it is
+    // inside the same CLI as the prompt above: if it keeps advising "the
+    // server 404s path routes, use hash routes", the operator rewrites the
+    // contract routes the generator was told to keep.
+    const certifySource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "prototypingCertify.ts"),
+      "utf-8",
+    );
+    expect(certifySource).not.toContain("use hash routes or point --target-url");
+    expect(certifySource).toContain("serves index.html to any document ");
+    expect(certifySource).toContain("Do not reshape contract routes into hash ");
+    expect(certifySource).toContain("has nothing to fall back to and still 404s");
+  });
+
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
     const skillPath = path.join(
       templateQfaiDir,

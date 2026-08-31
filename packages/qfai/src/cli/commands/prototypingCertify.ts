@@ -506,10 +506,20 @@ export async function runPrototypingCertify(
       // existing iter-00 without `--force`. There is no capture-only
       // entry point today, so the two routes below are the ones an
       // operator can actually execute.
+      // Keep this in step with `defaultServerRunner.ts#resolveServablePath`
+      // and the routing-shapes list in `generator-prompt.md`: --auto-serve
+      // has an SPA fallback, so telling the operator to reshape contract
+      // routes into hash routes would contradict the prompt the generator
+      // is given and rewrite the contract for nothing.
       error(
         "  Recovery: first make each missing screen's contract route reachable from the " +
-          "capture target (the built-in --auto-serve server is a static file server and 404s " +
-          "path routes; use hash routes or point --target-url at a server with SPA fallback). " +
+          "capture target. The built-in --auto-serve server serves index.html to any document " +
+          "request that matches no file, so path routes resolve as long as the served " +
+          "directory has an index.html — a skeleton-only tree (--emit-skeletons writes " +
+          "<screenId>.html and no index.html) has nothing to fall back to and still 404s, so " +
+          "author index.html alongside the skeletons. Do not reshape contract routes into hash " +
+          "routes. Against --target-url, the route must be reachable on whatever that server " +
+          "does with an unknown path. " +
           "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
           "will not work: that iteration is already recorded in prototyping.json#iterations, " +
           "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
