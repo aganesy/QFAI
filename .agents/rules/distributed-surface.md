@@ -20,6 +20,7 @@ QFAI npm パッケージとして配布されるファイル群を「配布サ�
 | QFAI 内部 decision ID         | `DEC-NNNN-NNNN`                     | `DEC-0001-0042`                  |
 | QFAI 内部 design rationale    | `DR-NNNN`                           | `DR-0007`                        |
 | QFAI 内部 open-question ID    | `OQ-NNNN-NNNN`                      | `OQ-0012-0006`                   |
+| QFAI 内部 change ID           | `CHG-NNN` (`_policies/10_delta.md`) | `CHG-003`, `CHG-006`             |
 | QFAI 内部 trace prefix        | `QFAI-PROT2-NNN` 等の廃止 prefix    | (廃止済み)                       |
 | 内部バージョンマーカー        | `vN.M`, `vN.M.P`, `v1.x`            | `v2.0`, `v3.0`                   |
 | 内部 schemaVersion フィールド | `"schemaVersion"`, `schemaVersion:` | (永続アーティファクトに置かない) |
@@ -44,7 +45,7 @@ minor / major 上げで表現する。
    regex セットで scan し、tsup が `dist/*.d.ts` に retain する
    経路を pre-build で塞ぐ。`spec-NNNN` / `.qfai/specs/spec-NNNN/` /
    `vN.M[.P]` / `CAP-0010+` / `DEC-NNNN-NNNN` / `DR-NNNN` /
-   `OQ-NNNN-NNNN` / `QFAI-PROT2-NNN` / `schemaVersion` を全て catch。行頭が
+   `OQ-NNNN-NNNN` / `QFAI-PROT2-NNN` / `CHG-NNN` / `schemaVersion` を全て catch。行頭が
    comment marker の行のみ検出 — 末尾 `//` や行内 `/* */` は
    layer 2 (post-build) で catch する known limitation。
    PR #206 review Ntbp / NwM- で導入。
@@ -55,6 +56,9 @@ minor / major 上げで表現する。
 3. **smoke test** — `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts`。
    `qfai init` を temp dir に走らせ、出力ツリーを同じ正規表現で grep。
    `copyTemplateTree` のロジック / asset 取り込みフィルタの抜けを catch。
+   拡張子 allowlist に加えて `.gitkeep` 等の拡張子なしテキストファイルも
+   basename allowlist で走査する (`path.extname(".gitkeep") === ""` のため
+   拡張子だけでは読まれない)。
 4. **規約文書** — このファイル。寄稿者の認識合わせ用。
 
 **SSOT-sync invariant**: layer 1 / 2 / 3 は同じ forbidden class 集合を
