@@ -6,16 +6,15 @@
  * This catches the "validator written but never invoked" failure mode that
  * allowed `validateExecutionPlan` and `validateDelegationMap` to lurk as dead
  * code in v1.8.3 (RR §8.6). Adding a new prototyping validator without
- * wiring it into runPrototypingValidators (directly or via an orchestrator
- * like validateStateGate) MUST fail this test in CI.
+ * dispatching it from runPrototypingValidators MUST fail this test in CI.
  *
  * Implementation strategy:
  *   1. Walk every TS file under src/core/validators/prototyping/
  *   2. Extract every `export function validate*(`
  *   3. Load the module graph: validate.ts plus every file it imports under
- *      `./validators/...`, and their imports in turn (2-hop). This reaches the
- *      orchestrator pattern where validate.ts imports `validateStateGate` and
- *      the orchestrator internally calls a sibling validator.
+ *      `./validators/...`, and their imports in turn, to a fixed point. This
+ *      reaches the delegation pattern where validate.ts calls a wrapper and
+ *      the wrapper internally calls a sibling validator.
  *   4. Walk that graph one *function body* at a time: every loaded module's
  *      top-level code and validate.ts's *exported* functions are the seeds,
  *      and any other body — including validate.ts's own orchestrators — joins
@@ -33,6 +32,14 @@
  * because that barrel pulls every validator file into the module graph, mere
  * membership in the graph is not wiring either: one dead validator calling
  * another must not vouch for it. See `tests/helpers/wiringGraph.ts`.
+ *
+ * `validateDelegationMapIssues` was the proof: re-exported by the barrel,
+ * never imported by `validate.ts`, never called, so an invalid `delegationMap`
+ * raised no `QFAI-PROT-311` on any run — and the old guard called it wired. It
+ * could not be called directly: it takes the parsed map, not the project.
+ * `validatePrototypingDelegationMap` reads
+ * `prototyping.json#executionPlan.delegationMap` itself and hands it over, and
+ * `runPrototypingValidators` dispatches that.
  */
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -71,11 +78,13 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
 /**
  * Validators known to be dead code awaiting wiring.
  *
- * Empty, and that is the target state: `validateDelegationMapIssues`
- * (QFAI-PROT-311) was the last entry — defined, unit-tested and re-exported
- * from the barrel while nothing called it, which the old raw-text guard read
- * as wiring — and `validate.ts` now calls it through
- * `validatePrototypingDelegationMap`.
+ * Empty, and that is the target state. The unwired validators the Phase 2
+ * meta-test discovered were deleted rather than adapted, so no name is left
+ * from that round; `validateDelegationMapIssues` (QFAI-PROT-311) was the last
+ * entry — defined, unit-tested and re-exported from the barrel while nothing
+ * called it, which the old raw-text guard read as wiring — and `validate.ts`
+ * now calls it through `validatePrototypingDelegationMap`. Every prototyping
+ * validator that survives is dispatched from `runPrototypingValidators`.
  *
  * This list MUST shrink over time and MUST never grow without explicit
  * justification. The sentinel below pins its exact contents and re-checks that
@@ -98,6 +107,52 @@ const CATALOG_OWNERS: ReadonlyMap<string, string> = new Map<string, string>([
   ["QFAI-PROT-311", "validateDelegationMapIssues"],
 ]);
 
+/**
+ * Validator names this guard mentions on purpose even though `src/` does not
+ * declare them: they identify dead-code regressions this meta-test was
+ * written to prevent, and every one of these functions has since been deleted.
+ *
+ * `validateTasteInterview` and `validateStrategyStrong` join the first two by
+ * the same rule: the reachability commentary below cites them as rules that
+ * once read as live while sitting outside every production call path, and
+ * neither is declared under `src/` any more. They are still named in
+ * `KNOWN_UNWIRED_BARREL_EXPORTS`, where they are inert — the barrel does not
+ * export either name — so pruning that list is a separate change.
+ *
+ * `validateExecutionPlanIssues` is the same case one layer down: CATALOG_OWNERS
+ * above cites it as the entry that was asserted while its only occurrence
+ * anywhere was prose inside a doc comment. Naming that regression is the point
+ * of the sentence, and the function is gone from `src/` by design.
+ */
+const HISTORICAL_REFERENCES: ReadonlySet<string> = new Set<string>([
+  "validateExecutionPlan",
+  "validateExecutionPlanIssues",
+  "validateDelegationMap",
+  "validateTasteInterview",
+  "validateStrategyStrong",
+]);
+
+/**
+ * Names that exist only as synthetic inputs to this file's own fixtures. The
+ * graph tests below build little source blobs to prove what does and does not
+ * count as a call site, and their comments quote those blobs; a quoted fixture
+ * is not an instruction pointing at a mechanism, which is what the guard
+ * downstream is protecting.
+ */
+const FIXTURE_REFERENCES: ReadonlySet<string> = new Set<string>([
+  "validateA",
+  "validateB",
+  "validateX",
+  "validateAtddFoo",
+  // Quoted in buildValidateWiringGraph's docblock as the shape of an aliased
+  // import (`import { validateFoo as runFoo }`), not as a validator to find.
+  "validateFoo",
+]);
+
+const COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*|\*)/;
+const VALIDATOR_MENTION_RE = /validate[A-Z]\w*/g;
+const VALIDATOR_DECLARATION_RE = /(?:function|const|let)\s+(validate\w+)\s*[(=]/g;
+
 /** `export { a, b } from "./mod.js";` — `export type { … }` is not matched. */
 const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
 
@@ -113,7 +168,10 @@ const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
  * been passing surfaced at once. They are pre-existing gaps, each out of scope
  * here:
  * - `validateImportLiteEvidencePresence` (QFAI-IMPLITE-001);
- * - `validateDelegationMapIssues` — reached only through the barrel;
+ * - `validateDelegationMapIssues` — its one call site is inside its own
+ *   module (`validatePrototypingDelegationMap` reads the map and hands it
+ *   over), and `namesWithReachableCallSite` skips the defining module on
+ *   purpose, so it still reads as unwired here;
  * - `validateTasteInterview`, `validateTrendScan`, `validateStrategyStrong` —
  *   UI-bearing checks absent from `runCanonicalUixValidators`, whose only
  *   caller is the test-only helper `uix/nonUiOverfire.ts`. Wiring them changes
@@ -239,6 +297,70 @@ async function buildValidateWiringGraph(): Promise<WiringGraph> {
     }
   }
   return buildWiringGraph({ file: VALIDATE_TS, source: validateBody }, imported);
+}
+
+/**
+ * Every function `validate.ts` calls **directly**, off its AST.
+ *
+ * Narrower than {@link buildValidateWiringGraph} on purpose: the graph answers
+ * "does anything reachable use this name", which is the wiring question, while
+ * this answers "does validate.ts itself name it in a call position". The
+ * re-export case below needs the narrow answer — `validateDelegationMapIssues`
+ * IS wired, through `validatePrototypingDelegationMap`, yet must never appear
+ * as a direct dispatch, and only the narrow reader tells those two apart.
+ */
+async function collectDispatchedNames(): Promise<Set<string>> {
+  const source = ts.createSourceFile(
+    VALIDATE_TS,
+    await readFile(VALIDATE_TS, "utf-8"),
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ true,
+  );
+  const called = new Set<string>();
+  const walk = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = node.expression;
+      if (ts.isIdentifier(callee)) {
+        called.add(callee.text);
+      } else if (ts.isPropertyAccessExpression(callee)) {
+        // `mod.someValidator(…)` — a dynamic import's namespace, which
+        // `runPrototypingValidators` uses for the mode reader.
+        called.add(callee.name.text);
+      }
+    }
+    ts.forEachChild(node, walk);
+  };
+  walk(source);
+  return called;
+}
+
+/** Every `validate*` function name declared anywhere under src/. */
+async function collectDeclaredValidatorNames(): Promise<Set<string>> {
+  const files = await listTsFiles(SRC_ROOT);
+  const declared = new Set<string>();
+  for (const file of files) {
+    const body = await readFile(file, "utf-8");
+    VALIDATOR_DECLARATION_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = VALIDATOR_DECLARATION_RE.exec(body)) !== null) {
+      declared.add(match[1]);
+    }
+  }
+  return declared;
+}
+
+/** Every `validate*` name this guard names in one of its own comments. */
+function collectDocumentedValidatorNames(guardSource: string): Set<string> {
+  const documented = new Set<string>();
+  for (const line of guardSource.split(/\r?\n/)) {
+    if (!COMMENT_LINE_RE.test(line)) continue;
+    VALIDATOR_MENTION_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = VALIDATOR_MENTION_RE.exec(line)) !== null) {
+      documented.add(match[0]);
+    }
+  }
+  return documented;
 }
 
 /**
@@ -481,6 +603,9 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     const graph = await buildValidateWiringGraph();
 
     expect(validators.length, "expected at least one public validator").toBeGreaterThan(0);
+    // Non-vacuity: a graph that reached nothing would report every validator
+    // identically, so a broken walk must fail loudly rather than pass all.
+    expect(graph.usedNames.size, "expected the graph to reach some code").toBeGreaterThan(0);
 
     const unwired: Array<{ name: string; file: string }> = [];
     for (const { name, file } of validators) {
@@ -496,9 +621,9 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
         .join("\n");
       throw new Error(
         `The following prototyping validators are exported but never called from validate.ts:\n${lines}\n\n` +
-          "Wire the validator into runPrototypingValidators (directly or via an orchestrator " +
-          "like validateStateGate) before merging. A barrel re-export or a doc-comment mention " +
-          "is not wiring. This guard exists to prevent the v1.8.3 dead-code-validator " +
+          "Wire the validator into runPrototypingValidators, directly or through a wrapper " +
+          "it dispatches, before merging. A barrel re-export or a doc-comment mention is not " +
+          "wiring. This guard exists to prevent the v1.8.3 dead-code-validator " +
           "regression (RR §8.6).",
       );
     }
@@ -544,15 +669,44 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     expect(notCalled, "named validators must reach runPrototypingValidators").toEqual([]);
   });
 
-  it("validateDelegationMapIssues is wired (QFAI-PROT-311)", async () => {
-    // The named pin for the one code CATALOG_OWNERS tracks. The generic check
-    // above would also catch this, but naming the code keeps the failure
+  it("the delegation map is judged on a real run (QFAI-PROT-311)", async () => {
+    // The case that proved text-reachability was not a wiring check, and the
+    // named pin for the one code CATALOG_OWNERS tracks: the generic check above
+    // would also catch an unwiring, but naming the code keeps the failure
     // message pointed at the rule an operator actually sees.
     const graph = await buildValidateWiringGraph();
     expect(
       graph.isCalled("validateDelegationMapIssues"),
       "validateDelegationMapIssues must reach runPrototypingValidators",
     ).toBe(true);
+
+    // Reachability alone does not say through what. `validateDelegationMapIssues`
+    // takes the map, not the project, so nothing could call it directly once the
+    // extractor was deleted — it is dispatched through
+    // `validatePrototypingDelegationMap`, which reads the map itself. Pin that
+    // hop with the narrow reader, which sees only validate.ts's own calls.
+    const dispatched = await collectDispatchedNames();
+    expect(
+      dispatched.has("validatePrototypingDelegationMap"),
+      "validate.ts must call validatePrototypingDelegationMap",
+    ).toBe(true);
+
+    // And the dispatched form must actually reach the judgement.
+    const module = await readFile(
+      path.resolve(__dirname, "../../src/core/validators/prototyping/delegationMap.ts"),
+      "utf-8",
+    );
+    expect(module).toContain("return validateDelegationMapIssues(");
+  });
+
+  it("does not count a re-export as dispatch", async () => {
+    // The regression this guard now closes: the barrel re-exports every
+    // prototyping validator, so a check that read the imported files' text
+    // found each declaration and called it reachable. Naming is not calling.
+    const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+    const dispatched = await collectDispatchedNames();
+    expect(indexBody).toContain("validateDelegationMapIssues");
+    expect(dispatched.has("validateDelegationMapIssues")).toBe(false);
   });
 
   // A name appearing in the reachable text can be satisfied by a barrel
@@ -599,6 +753,31 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
       nowWired,
       "these validators are wired now — delete them from PENDING_WIRING (and from the " +
         "expectation above) so the guard starts enforcing their wiring again",
+    ).toEqual([]);
+  });
+
+  it("documents only validators that src/ actually declares", async () => {
+    // The guard tells the next contributor how to wire a validator. If its
+    // own prose names functions that no longer exist, the instructions send
+    // that contributor after a mechanism no file implements — the same
+    // dead-surface defect the guard was built to catch.
+    const guardSource = await readFile(__filename, "utf-8");
+    const documented = collectDocumentedValidatorNames(guardSource);
+    const declared = await collectDeclaredValidatorNames();
+
+    const phantom = [...documented]
+      .filter(
+        (name) =>
+          !declared.has(name) && !HISTORICAL_REFERENCES.has(name) && !FIXTURE_REFERENCES.has(name),
+      )
+      .sort();
+
+    expect(
+      phantom,
+      "these validators are named in this guard's comments but declared nowhere in src/: " +
+        `${phantom.join(", ")}. Rewrite the prose to name a mechanism that exists, or add the ` +
+        "name to HISTORICAL_REFERENCES if it is deliberately cited as a past regression, or to " +
+        "FIXTURE_REFERENCES if it only ever names a synthetic fixture in this file.",
     ).toEqual([]);
   });
 });
