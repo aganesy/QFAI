@@ -160,6 +160,13 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 
+The heading must be exactly `## Triage` (H2). Every such section in the
+file is validated, so a re-run may append another `## Triage` section
+instead of extending the first table. A decorated heading
+(`## Triage — 2026-07-26`) or a demoted one (`### Triage`) is read by no
+Triage validator; put the date or the note in the section body, not in
+the heading.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no
@@ -182,6 +189,9 @@ ops), `Rationale` (recommended for every row).
   in `_policies/03_Capabilities.md`. This is the structural gate that
   enforces the append-first principle: CREATE is only permitted when a
   new capability is being added to the catalog.
+- `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
+  `Triage` but is not a canonical `## Triage` section — its rows are read by
+  none of the checks above. Rename the heading to `## Triage`.
 
 ## Status field interaction
 
