@@ -90,16 +90,19 @@ describe("Stage 0 treats prototyping.yaml as optional for UI-bearing packs", () 
       // Option A keeps the producer as the owner of the decision; if a later
       // change makes emission unconditional, Stage 0's wording must move too.
       expect(skill).toContain(
-        "Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.",
+        "Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping " +
+          "execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping " +
+          "recommendation is useful.",
       );
       expect(skill).toContain(
         "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact",
       );
-      // The UI-bearing completion gate must keep omitting it.
-      const uiBearing = matrix.slice(
-        matrix.indexOf("## UI-bearing Packs"),
-        matrix.indexOf("## Non-UI Packs"),
-      );
+      // The UI-bearing completion gate must keep omitting it. The slice ends at
+      // the next `## ` heading rather than at `## Non-UI Packs`, because the
+      // sections between them describe packs rather than gate them: `## CLI
+      // Packs` names `prototyping.yaml` only to say a cli-only pack has none.
+      const uiBearingStart = matrix.indexOf("## UI-bearing Packs");
+      const uiBearing = matrix.slice(uiBearingStart, matrix.indexOf("\n## ", uiBearingStart + 1));
       expect(uiBearing.length).toBeGreaterThan(0);
       expect(uiBearing).not.toContain("prototyping.yaml");
     });

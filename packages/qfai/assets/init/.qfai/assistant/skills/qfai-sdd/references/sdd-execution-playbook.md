@@ -23,9 +23,31 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    against the schema in
    `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
    Absence is legal and must not stop Stage 0: `/qfai-discussion` emits the file only when the
-   pack is UI-bearing **and** an explicit prototyping recommendation is useful, so a complete
-   UI-bearing pack may legitimately omit it. Never author one to clear this gate — a
-   recommendation the discussion did not make is a fabricated rationale record.
+   pack is UI-bearing on a **visual-prototyping** surface — its `01_Context.md` classification
+   names `web`, `mobile`, `desktop` or `mixed` as `primary_surface` or in `secondary_surfaces` —
+   **and** an explicit prototyping recommendation is useful, so a complete UI-bearing pack may
+   legitimately omit it. A cli-only pack (`primary_surface: cli` with no visual
+   `secondary_surfaces`) emits none at all: `/qfai-prototyping` rejects `cli` as an execution
+   surface. Never author one to clear this gate — a recommendation the discussion did not make is
+   a fabricated rationale record.
+
+### Import-lite entrypoint (no discussion-pack at all)
+
+Steps 1-2 assume a pack exists. When the project has **no** discussion-pack
+whatsoever and specs already exist, do not stop — record the input source
+instead and continue:
+
+1. Write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from
+   `templates/evidence/import-lite.md` before editing any spec. `import-lite.md`
+   without a stamp is also accepted; any other suffix is not.
+2. Fill `generated_at` with an ISO8601 datetime, plus at least one real
+   `Sources` entry or user excerpt. `<...>` placeholders and fillers (`TBD`,
+   `none.`, `n/a`) are rejected, and an unclosed excerpt fence with them.
+3. Select that file as the input source and report it in
+   `.qfai/report/preflight_summary.md` as `source: import-lite`.
+
+A pack that exists under a non-canonical name is not an absent pack: rename it
+rather than falling back here. Validator: `QFAI-IMPLITE-001`.
 
 ## Stage 1: Triage
 
