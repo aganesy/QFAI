@@ -52,16 +52,19 @@ function slug(heading: string): string {
 describe.each(TREES)("%s qfai-implement Phase Red sub-steps", (tree) => {
   it("addresses 3a, 3b and 3c by heading, in that order", async () => {
     const skill = await read(tree);
-    const positions = SUBSTEP_HEADINGS.map((heading) => {
+    const [firstAt, secondAt, thirdAt] = SUBSTEP_HEADINGS.map((heading) => {
       const at = skill.indexOf(`\n${heading}\n`);
       expect(at, `heading not found: ${heading}`).toBeGreaterThan(-1);
       return at;
     });
+    if (firstAt === undefined || secondAt === undefined || thirdAt === undefined) {
+      throw new Error("SUBSTEP_HEADINGS must declare exactly the three Phase Red sub-steps");
+    }
 
     // Reached from 3b, never before it: an ordered read that met 3c first ran
     // the production mutation before 3b had checked the entry's provenance.
-    expect(positions[0]).toBeLessThan(positions[1]);
-    expect(positions[1]).toBeLessThan(positions[2]);
+    expect(firstAt).toBeLessThan(secondAt);
+    expect(secondAt).toBeLessThan(thirdAt);
   });
 
   it("keeps every sub-step heading inside Phase Red", async () => {
@@ -93,7 +96,10 @@ describe.each(TREES)("%s qfai-implement Phase Red sub-steps", (tree) => {
     // Every ordinal the prose points at, however it is emphasised in between:
     // "step 3c", "step **3c**", "Phase Red **step 3c**".
     const pointers = new Set(
-      [...skill.matchAll(/\b[Ss]teps?\s+\**(3[abc])\**/g)].map((match) => match[1]),
+      [...skill.matchAll(/\b[Ss]teps?\s+\**(3[abc])\**/g)].flatMap((match) => {
+        const ordinal = match[1];
+        return ordinal === undefined ? [] : [ordinal];
+      }),
     );
 
     expect(
