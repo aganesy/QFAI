@@ -1038,6 +1038,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT":
+    "Every `qfai-*` SKILL.md lists exactly the pinned hard-required entries — no entry outside the set, and none of the set missing.",
 };
 
 /**
@@ -1121,6 +1123,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
   "QFAI-PROT-276":
     "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
+  "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT":
+    "Restore the SKILL.md hard-required bucket to the pinned entries, adding none and dropping none. `npx qfai init --force` regenerates the shipped wording; the message names which entries drifted.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */
