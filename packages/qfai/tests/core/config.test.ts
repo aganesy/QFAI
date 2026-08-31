@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
-import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
+import { RULE_PROMOTIONS, SUNSETS, newRuleSeverity } from "../../src/core/sunset.js";
 import { resolveToolVersion } from "../../src/core/version.js";
 
 describe("baseBranch config", () => {
@@ -309,12 +309,13 @@ describe("retired validation.traceability keys", () => {
       const { config, issues } = await loadConfig(root);
 
       const deprecated = issues.filter((issue) => issue.code === "QFAI_CONFIG_DEPRECATED");
-      // Severity is the central sunset's, not a literal: warning inside the
-      // window opened at 1.10.0, error from `SUNSETS.retiredTraceabilityKeys`.
-      const expected = deprecationSeverity(
-        await resolveToolVersion(),
-        SUNSETS.retiredTraceabilityKeys,
-      );
+      // Severity is the central promotion pin's, not a literal: warning
+      // inside the window, error from
+      // `RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt`. P7 keys the
+      // window on the finding code, and `QFAI_CONFIG_DEPRECATED` is new even
+      // though the config shape it names is old.
+      const { promoteAt } = RULE_PROMOTIONS.retiredTraceabilityKeys;
+      const expected = newRuleSeverity(await resolveToolVersion(), promoteAt);
       expect(deprecated.map((issue) => issue.severity)).toEqual([expected, expected, expected]);
       for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
         expect(
@@ -323,9 +324,7 @@ describe("retired validation.traceability keys", () => {
         ).toBe(true);
       }
       // The window's end is stated to the operator, not just enforced silently.
-      expect(
-        deprecated.every((issue) => issue.message.includes(SUNSETS.retiredTraceabilityKeys)),
-      ).toBe(true);
+      expect(deprecated.every((issue) => issue.message.includes(promoteAt))).toBe(true);
       // The retired keys must not be rejected outright: an existing config still loads,
       // and the key that is actually wired keeps its effect.
       expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);

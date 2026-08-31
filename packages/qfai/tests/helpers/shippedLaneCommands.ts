@@ -1261,7 +1261,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ],
   [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
+  // Re-pinned with the three retired `validation.traceability` knobs removed
+  // (`brMustHaveSc`, `scNoTestSeverity`, `orphanContractsPolicy`). The pin
+  // exists so a content change is a reviewed line rather than a silent one, so
+  // it moves in the same change that moves the file — never afterwards to
+  // chase a red lane.
+  ["qfai.config.yaml", "3dc2919fd3d040ec3d0b0756e989a2eed857f1e63a6733448fb6d136bc87773e"],
 ]);
 
 /**

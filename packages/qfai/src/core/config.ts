@@ -4,7 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
-import { SUNSETS, deprecationSeverity, isAtOrPastSunset } from "./sunset.js";
+import { RULE_PROMOTIONS, SUNSETS, isAtOrPastSunset, newRuleSeverity } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
@@ -16,7 +16,7 @@ export type TraceabilitySeverity = "warning" | "error";
  * 廃止された orphanContractsPolicy の値集合。互換フィールドの型注釈はこちらを
  * 参照する: 公開 alias を参照すると `@typescript-eslint/no-deprecated` が発火し、
  * 静的解析抑制コメントを足す羽目になるため。この内部型は互換期間の終了
- * (`SUNSETS.retiredTraceabilityKeys`) とともに削除する。
+ * (`RULE_PROMOTIONS.retiredTraceabilityKeys`) とともに削除する。
  */
 type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
 
@@ -24,7 +24,7 @@ type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
  * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
  * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
  * が import している場合に型検査が壊れないよう、互換期間中のみ残す
- * (sunset: `SUNSETS.retiredTraceabilityKeys`)。
+ * (promotion: `RULE_PROMOTIONS.retiredTraceabilityKeys`)。
  */
 export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
@@ -68,20 +68,20 @@ export type QfaiValidationConfig = {
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
      * 読み込み時に QFAI_CONFIG_DEPRECATED が出る (severity は
-     * `SUNSETS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
+     * `RULE_PROMOTIONS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
      * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
      */
     brMustHaveSc?: boolean;
     /**
      * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
-     * いるため、この値は読まれない。互換期間中 (sunset:
-     * `SUNSETS.retiredTraceabilityKeys`) のみ optional で残す。
+     * いるため、この値は読まれない。互換期間中 (promotion:
+     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
      */
     scNoTestSeverity?: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
-     * この値は読まれない。互換期間中 (sunset:
-     * `SUNSETS.retiredTraceabilityKeys`) のみ optional で残す。
+     * この値は読まれない。互換期間中 (promotion:
+     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
      */
     orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
@@ -957,10 +957,15 @@ function readTraceabilitySeverity(
  * knob shaped like a gate control that changes nothing is worse than no knob,
  * because it also misreports the gate the code actually runs.
  *
- * The acceptance is bounded like every other deprecation in the tool — the
- * severity comes from {@link SUNSETS.retiredTraceabilityKeys} through
- * {@link deprecationSeverity}, not from a literal here, so the window ends by
+ * The acceptance is bounded like every other new code in the tool — the
+ * severity comes from {@link RULE_PROMOTIONS.retiredTraceabilityKeys} through
+ * {@link newRuleSeverity}, not from a literal here, so the window ends by
  * itself instead of warning forever.
+ *
+ * A promotion rather than a sunset, even though the *shape* is what is being
+ * retired: `QFAI_CONFIG_DEPRECATED` is a finding code that did not exist
+ * before, and P7 measures the window from the code, because the code is what
+ * an upgrading repository meets.
  */
 const RETIRED_TRACEABILITY_KEYS = [
   "brMustHaveSc",
@@ -977,7 +982,8 @@ function reportRetiredTraceabilityKeys(
   if (!traceabilityRaw) {
     return;
   }
-  const severity = deprecationSeverity(toolVersion, SUNSETS.retiredTraceabilityKeys);
+  const promoteAt = RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt;
+  const promotedSeverity = newRuleSeverity(toolVersion, promoteAt);
   for (const key of RETIRED_TRACEABILITY_KEYS) {
     if (traceabilityRaw[key] === undefined) {
       continue;
@@ -987,9 +993,9 @@ function reportRetiredTraceabilityKeys(
         configPath,
         `validation.traceability.${key} は廃止されました。` +
           `どの検証も参照しないため、設定しても挙動は変わりません。` +
-          `互換受理は qfai ${SUNSETS.retiredTraceabilityKeys} で終了します (同版以降は error)。` +
+          `互換受理は qfai ${promoteAt} で終了します (同版以降は error)。` +
           `qfai.config.yaml から削除してください。`,
-        severity,
+        promotedSeverity,
       ),
     );
   }
@@ -1257,14 +1263,23 @@ function configIssue(file: string, message: string): Issue {
   };
 }
 
+/**
+ * The severity argument is named for where it comes from, and the property is
+ * written out rather than shorthanded, because both are what make the pin
+ * followable. `tests/core/sunsetLedger.test.ts` reads the `severity:` sibling
+ * of `code: "…"` and asks whether that expression is one the file bound to
+ * `newRuleSeverity(…, RULE_PROMOTIONS.retiredTraceabilityKeys…)`. A shorthand
+ * `severity` yields no expression at all, so a correctly wired promotion read
+ * to that assertion exactly like an unwired one.
+ */
 function configDeprecatedIssue(
   file: string,
   message: string,
-  severity: "warning" | "error",
+  promotedSeverity: "warning" | "error",
 ): Issue {
   return {
     code: "QFAI_CONFIG_DEPRECATED",
-    severity,
+    severity: promotedSeverity,
     category: "canonical",
     message,
     file,
