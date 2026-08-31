@@ -39,6 +39,7 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
+import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -115,6 +116,23 @@ const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
 function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
+
+/**
+ * `title` of every `workflows.integrity` emission.
+ *
+ * Extracted on the schedule its own call sites set: the drift branch's comment
+ * held two literal copies with "extract both into a module constant when the
+ * third copy arrives with the next emission branch", and TDD-0039's unresolved
+ * skip is that branch. The four `skills.integrity` copies below are left inline —
+ * different check, and this constant is not theirs to share.
+ *
+ * A LITERAL, and it must stay one. `TDD-0030` pins it with `toBe` against a
+ * test-owned `.github/workflows` and records why deriving it from
+ * `WorkflowsIntegrityDiff.workflowsDir` was rejected: that makes the assertion
+ * check production against itself under the coordinated edit that moves the title
+ * and the payload together.
+ */
+const WORKFLOWS_INTEGRITY_TITLE = "Workflows integrity (.github/workflows)";
 
 export async function createDoctorData(options: CreateDoctorDataOptions): Promise<DoctorData> {
   const startDir = path.resolve(options.startDir);
@@ -251,6 +269,326 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
+
+  // Installed shipped-workflow drift. `modified` is emitted as the `info`
+  // advisory below, the content-identical `ok` state as the `ok` check after it,
+  // and the unresolved-packaged-copy skip as the `info` skip after that.
+  //
+  // The chain is now TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
+  // whose three members each have an arm — where it previously stated the general
+  // rule "every status without a branch registers nothing" because the skip had no
+  // arm yet. Scoped to the STATUS TESTS on purpose, because DISPATCH is not total:
+  // the `modified.length > 0` paragraph below says why, a `modified` status whose
+  // `modified` list is empty matching this arm's status test and still registering
+  // nothing. (Named rather than counted in lines — "the conjunct 16 lines below" was
+  // true when written and this commit moved it to 18.)
+  //
+  // The stronger form is worth having explicitly: a fourth status added to that
+  // union would fall through this chain silently, and the declaration of
+  // `WorkflowsIntegrityStatus` now carries a note saying so. Corrected where it
+  // lived — this read "the union is the only place a reader can see that it must
+  // not", which was false when written, that declaration having carried no comment
+  // at all.
+  //
+  // Severity is `info` deliberately, and unlike the skills-integrity branch
+  // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
+  // under `--fail-on warning`, so a `warning` here would change the exit code
+  // for every adopter running behind the current package — exactly the
+  // population this advisory exists to inform, and none of whom has a repair
+  // command to run. `info` is the only severity that leaves the exit code
+  // untouched under every `--fail-on` value, and the 2-group text renderer
+  // routes `info` into the advisory group all the same.
+  //
+  // The `modified.length > 0` conjunct is NOT redundant with the status test
+  // and lint cannot prove it either way (TS will not correlate a string
+  // literal with an array length), so it has to be stated: BR-0006-0022
+  // forbids a finding whose `modified` is empty, and once `declined` lands the
+  // status is derived from ANY non-empty bucket — the sibling diff already
+  // reports `modified` for a `changed`-only or `missing`-only tree. Under that
+  // derivation the status test alone would emit an empty-`modified` finding.
+  // Do not simplify this to the status test.
+  //
+  // The `packagedDir !== undefined` conjunct is the third of these and, like
+  // the other two, TS cannot correlate it with the status literal. It is a
+  // CONTENT gate, not a type workaround: the doctor contract's required message
+  // content includes the packaged source path to copy from, so a finding that
+  // cannot name that path is not the finding the contract describes.
+  //
+  // It is UNREACHABLE at this revision — an unresolvable packaged tree yields
+  // `skipped_unresolved`, which this branch's status test already excludes — and
+  // that is the whole of its warrant. Deliberately NOT "routing it to silence
+  // here matches what the unresolved status produces": that reading goes stale
+  // the moment the unresolved skip lands its own emission at severity `info`
+  // with an empty `modified`, at which point silence is no longer what that
+  // status produces, while the unreachability is unaffected.
+  //
+  // That moment has arrived — the skip arm below is TDD-0039's — and the two
+  // halves of the sentence above landed as predicted: silence is no longer what
+  // the status produces, and the conjunct is still unreachable, because `status`
+  // still carries one value per run. So it is NOT this row that pays for it: the
+  // state needs a reader reporting `modified` with an unresolved operand, which no
+  // row has opened.
+  //
+  // Kept as an EQUIVALENT MUTANT by construction, and recorded as one rather
+  // than as covered code: deleting it leaves this file's behaviour, `tsc -b` and
+  // `eslint` all unchanged (measured — it is not load-bearing for lint either),
+  // so no oracle exists in the deletion direction and none can be written while
+  // the state is unreachable. It survives as an executable statement of the
+  // contract's content requirement, to be paid for by the row that makes the
+  // state reachable.
+  const workflowsDiff = await diffInstalledShippedWorkflows(root);
+  if (
+    workflowsDiff.status === "modified" &&
+    workflowsDiff.modified.length > 0 &&
+    workflowsDiff.packagedDir !== undefined
+  ) {
+    addCheck(checks, {
+      id: "workflows.integrity",
+      severity: "info",
+      title: WORKFLOWS_INTEGRITY_TITLE,
+      // `title` has no consumer in the text renderer — it prints
+      // `[severity] id: message` — so the prose has to live in `message`,
+      // including all four items the contract requires of it: the stale paths,
+      // the packaged source path, the no-overwrite statement, and NO imperative
+      // naming a `qfai` subcommand.
+      //
+      // That last one is why this message may not copy the `skills.integrity`
+      // branch above, which puts `qfai init --force` in `details.nextActions`.
+      // That string is honest there — `init --force` really does restore
+      // skills — but no command refreshes an installed shipped workflow at this
+      // revision, so naming one here would tell every adopter running a version
+      // behind to run something that does not exist. The command arrives in the
+      // same release that rewrites this message.
+      //
+      // `packagedDir` is emitted ABSOLUTE and unrelativized. Not an exception to
+      // this file's `toRelativePath` habit but the FIRST MEMBER OF A CLASS it has
+      // never had: every other `toRelativePath` call here relativizes a path
+      // INSIDE the adopter root and does it in `details`, never in a `message`.
+      // It is the operand the operator has to copy FROM, and it is frequently
+      // outside the adopter root (a global install, a pnpm store, or — as in this
+      // repo's own tests — a workspace checkout against a temp-dir root), where
+      // `path.relative` degrades to a `../..` chain or, across Windows drives,
+      // silently back to the absolute path it started from. A package-relative
+      // rendering was rejected for the same reason from the other side: under
+      // pnpm the install root is `node_modules/.pnpm/qfai@<version>/node_modules/qfai`,
+      // which an operator cannot guess.
+      //
+      // The cost is real and is stated rather than left silent: this is the first
+      // absolute HOST path in any human-facing `qfai doctor` output, and on a
+      // default Windows or global install it carries the OS username in text
+      // operators routinely paste into issues. The contract requires the packaged
+      // source path, so it is not a defect and nothing here suppresses it; the
+      // JSON surface is unaffected because `details.workflowsDir` stays
+      // root-relative. Raise redaction with the owner before adding any, rather
+      // than quietly truncating the one path the repair depends on.
+      //
+      // The stale file names are NOT repeated on the packaged side. Each is
+      // already listed above by its adopter-relative path, so directory plus
+      // "the copy of the same name" states the source path completely while
+      // keeping one path in the message instead of one per file. It also keeps
+      // the packaged clause incapable of carrying a FILENAME, which is the
+      // property the provenance-gate suite's absence assertion leans on.
+      //
+      // THIS MESSAGE IS PINNED BY EXACT EQUALITY. The repair-text integration
+      // suite (`tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts`)
+      // composes the expected string test-side and asserts `toBe`, so ANY edit
+      // here — a comma, a reordering, an added sentence — reddens it. Editing
+      // this template means editing that expectation in the same commit, and the
+      // point of the pin is that you cannot do the first without being made to
+      // re-read the contract while doing the second. Do not "fix" the failure by
+      // pasting the new string in without checking the four required items; the
+      // labelled assertions beside the pin exist to catch exactly that, and they
+      // name which item you broke.
+      //
+      // The pin replaced four rounds of pattern oracles, each of which admitted a
+      // message asserting the opposite of a contract item — the last set carried
+      // a governing negation ("Do NOT do the following: replace …") that no
+      // adjacency pattern can see.
+      //
+      // THREE LABELLED NEEDLES are also asserted separately, and they are the
+      // ones that survive a careless re-pinning. All three are BROADER THAN THE
+      // CONTRACT, so a compliant rewording of this message can redden with no
+      // contract violation — deliberate on the test side, warned about here
+      // because the rewording happens in this file. Every one fails RED, never
+      // silently.
+      //
+      // The individual patterns are NOT restated here: a prose copy of them is a
+      // second SSOT that keeps claiming a constraint after the needle is
+      // loosened. What is stable is the two rules they are built from, and those
+      // are what a rewriter needs:
+      //   1. GAPS ARE BOUND IN WHOLE WORDS, never in characters, so no comma,
+      //      semicolon, dash, colon or parenthesis may appear inside a clause a
+      //      needle spans.
+      //   2. EVERY OPERAND THE REQUIREMENT NAMES IS BOUND — subject, verb, object
+      //      and instrument — so each is pinned as a noun phrase and cannot be
+      //      renamed, reordered or moved into another clause.
+      // Both are tight on purpose: every looser form was green on a message
+      // asserting the OPPOSITE of the contract item it was written for, including
+      // one that told the adopter their hand-edited file would be "refreshed in
+      // place on your next install". Loosen only with a witness set in hand.
+      //
+      // On a red, read the ASSERTION LABEL rather than the pattern. Each names
+      // its contract item and, where a needle over-fires, says so — the labels
+      // alone identified the broken requirement in every mutation run against
+      // this row so far.
+      message:
+        `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
+        `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
+        `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`,
+      // BR-0006-0022's payload. `declined` is carried here and NOWHERE in
+      // `message`: the message's repair instruction tells the operator to replace
+      // each listed file with the packaged copy, and a declined file listed there
+      // would instruct them to undo a removal this check has promised never to
+      // undo. `packagedDir` appears in both, and that is not a duplication to
+      // collapse — the message needs it as prose the operator copies from, and
+      // `details` needs it as a machine-readable field a JSON consumer can read
+      // without parsing English.
+      //
+      // This branch is gated on `packagedDir !== undefined`, so the field is a
+      // string here and the `string | undefined` on the diff does not leak out.
+      details: {
+        workflowsDir: workflowsDiff.workflowsDir,
+        modified: workflowsDiff.modified,
+        declined: workflowsDiff.declined,
+        packagedDir: workflowsDiff.packagedDir,
+      },
+    });
+  } else if (workflowsDiff.status === "ok" && workflowsDiff.comparedCount > 0) {
+    // The `comparedCount > 0` conjunct is the mirror of the `modified.length`
+    // one above, and it is a CORRECTNESS gate, not a tidiness one. The
+    // provenance record is empty for a missing, unreadable or malformed file by
+    // contract, and `status: "ok"` is what the reader returns after comparing
+    // NOTHING. Every shipped name in that tree is `adopter-owned` or `absent`
+    // in the shipped-workflows state enum (§3) and both rows require silence;
+    // the doctor contract keys `ok` to `installed` alone and says outright that
+    // it reports nothing for a workflow with no provenance entry. Emitting here
+    // would tell an adopter their workflows match a packaged copy that was
+    // never opened — including the adopter who installed before the record
+    // existed, for whom §3's known limitation says this channel is silent.
+    //
+    // Deliberately the count and not "some name resolved to `installed`":
+    // BR-0006-0022 requires `ok` on a tree whose recorded files were all
+    // deliberately removed, which has zero `installed` names and where the
+    // claim is nonetheless true.
+    //
+    // `details` carries `workflowsDir` and NOTHING else. The four-key payload
+    // of BR-0006-0022 belongs to the drift emission alone: `modified` here
+    // would render an empty file list as a drift report, and `declined` here
+    // would contradict the declined-only tree's requirement that severity be
+    // `ok` while `details.declined` does not appear at all.
+    //
+    // `message` is non-empty because the text renderer prints
+    // `[severity] id: message` and nothing else — an empty message would print
+    // the bare line `[ok] workflows.integrity:`. It is phrased in English to
+    // match the drift emission directly above it, which is the same check id
+    // the same operator reads; the Japanese `skills.integrity` ok branch is a
+    // different check and its language is not this one's to inherit.
+    addCheck(checks, {
+      id: "workflows.integrity",
+      severity: "ok",
+      title: WORKFLOWS_INTEGRITY_TITLE,
+      // Two messages, because ONE of them would be false on one of the two
+      // trees that reach this arm. A tree whose every recorded name was
+      // deliberately removed has NO installed workflow at all, so claiming its
+      // installed files match a packaged copy states something QFAI never
+      // observed — the check is still `ok` (a declined name is never reported
+      // again), but the prose has to say what was actually established.
+      message:
+        workflowsDiff.declined.length === workflowsDiff.comparedCount
+          ? "every recorded shipped workflow was removed by this repository; nothing to compare"
+          : "installed shipped workflow(s) match the packaged copy",
+      details: { workflowsDir: workflowsDiff.workflowsDir },
+    });
+  } else if (workflowsDiff.status === "skipped_unresolved") {
+    // BR-0006-0020's closing clause — 「package 同梱 copy を解決できない場合は
+    // severity `info` で skip する」 (TC-0006-0030 leg (c) / AC-0006-0023). The
+    // packaged operand could not be resolved, so nothing was compared and nothing
+    // may be claimed about the adopter's files in either direction.
+    //
+    // The shape is the sibling's: the `skills.integrity` chain above emits its own
+    // unresolvable-assets skip at `info` with only its directory in `details`,
+    // from the same `getInitAssetsDir` throw. Same cause, same severity, same
+    // payload width.
+    //
+    // GATED ON `status` ALONE, which is this row's decision rather than its
+    // omission. Both arms above carry a count conjunct and the `ok` one exists
+    // because review caught that arm making a positive claim about a tree it had
+    // never opened, so the question is whether a status-only gate reproduces that.
+    // It does not, and the mirror conjunct would introduce the inverse defect:
+    //   - `ok` is the reader's FALL-THROUGH value, produced both by "compared
+    //     names, all matched" and by "compared nothing"; the count is what
+    //     separates them. `skipped_unresolved` is returned from exactly ONE site,
+    //     the reader's early return on an unresolvable operand, with `modified:
+    //     []`, `comparedCount: 0` and `packagedDir: undefined` all constant there
+    //     — so no second tree arrives here to be mis-described.
+    //   - the EXCLUDED tree is what matters, more than the ambiguity.
+    //     `comparedCount > 0` excludes a tree the contract requires to be SILENT.
+    //     A conjunct here (`packagedDir === undefined`, `comparedCount === 0`)
+    //     would exclude a tree BR-0006-0020 requires to SKIP: a reader that ever
+    //     reported this status with a resolved-but-unusable operand would fall
+    //     through all three arms and emit nothing, which is precisely the defect
+    //     this row closes, reintroduced one state along.
+    // And neither conjunct could be FALSE at this revision, so neither would have an
+    // oracle: falsifying one needs a reader that returns `skipped_unresolved` with a
+    // RESOLVED `packagedDir` or a non-zero `comparedCount`, and the single producing
+    // site sets both constants. Corrected in place — this said "the state that would
+    // falsify either is the unreachable one above", which names the DRIFT arm's
+    // unreachable state (`modified` reported with an unresolved operand); that is a
+    // different state on the other side of the chain, and it falsifies neither of
+    // these two conjuncts. The drift arm does already carry one such predicate,
+    // recorded there as an equivalent mutant; a second would be a second untestable
+    // one on the same emission.
+    //
+    // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
+    // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
+    // no two arms' status tests can both be true, and `else if` makes that
+    // structural rather than value-dependent. The chain form is the belt and not
+    // the load — measured, converting this arm to a standalone `if` leaves both of
+    // those suites green — so keep it anyway rather than resting the pins on the
+    // reader continuing to return one status per run.
+    //
+    // `details` carries `workflowsDir` and NOTHING else, the same width as the
+    // `ok` arm: `modified: []` would claim nothing is stale about a tree that was
+    // never compared, `packagedDir` is `undefined` here by construction, and
+    // `declined` is part of BR-0006-0022's payload for the DRIFT finding, owned by
+    // TDD-0036. This arm adds no key of its own, so it decides nothing for that
+    // row.
+    //
+    // `message` is English to match the two arms above — one check id, one
+    // operator — and interpolates NOTHING: the only operand this state has is the
+    // unresolved packaged directory, and rendering it would print the literal
+    // `undefined`.
+    //
+    // Its WORDING is not contract-fixed, the emission table having no row for this
+    // state — but "leaves the text editable", which stood here, is wrong about what
+    // TDD-0039 leaves. FOUR pins hold this string, enumerated so an editor knows
+    // which one will redden: `/\S/` for non-emptiness (the renderer prints
+    // `[severity] id: message` and nothing else); `details.modified` must stay
+    // `undefined`; and two NEGATIVE sweeps over this text — drift vocabulary
+    // (`differ`, `stale`, `outdated`, `out of date`, `mismatch`, `drifted`) and the
+    // literal `undefined`. Both sweeps are broader than the contract deliberately: a
+    // negative sweep fails only in the FALSE-RED direction, so breadth cannot admit a
+    // violation while narrowing could — hence a COMPLIANT rewording can redden, the
+    // same warning the drift arm above carries about its three needles. The bare noun
+    // `drift` is excluded from the vocabulary sweep for one reason only: THIS text
+    // denies drift using it. Reword that denial and re-read the needle before
+    // widening it.
+    //
+    // It also carries no command token, which is measured rather than asserted:
+    // under the mutation that makes this arm fire in TDD-0032's fixture, all eight
+    // of that row's tokens pass on this text. BR-0006-0020 scopes the no-command
+    // rule to the DRIFT finding's body, so no oracle holds it here — but that row's
+    // sweeps do read this message under that mutation, so an edit adding a `qfai`
+    // subcommand to it would surface there and not here.
+    addCheck(checks, {
+      id: "workflows.integrity",
+      severity: "info",
+      title: WORKFLOWS_INTEGRITY_TITLE,
+      message:
+        "the packaged shipped-workflow copy could not be resolved, so installed shipped workflow(s) were not compared and no drift is reported",
+      details: { workflowsDir: workflowsDiff.workflowsDir },
+    });
+  }
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
