@@ -200,6 +200,28 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("When it is arguable whether a row is critical, it is critical");
     });
 
+    it(`${tree}: cites the volume-policy subsections by file, not as bare sections`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const section = await read(tree, REFERENCE);
+      // `Volume Policy > X` reads as a pointer inside SKILL.md, but its own
+      // `## Volume Policy (MUST)` section carries none of those subsections —
+      // they live in `references/volume-policy.md`. Cite the file, the way
+      // every other reference in SKILL.md does.
+      expect(skill).not.toMatch(/Volume Policy\s*>/);
+      const citations: ReadonlyArray<readonly [string, string]> = [
+        ["references/volume-policy.md#multi-spec-queue", "## Multi-spec queue"],
+        ["references/volume-policy.md#advancing-the-queue", "### Advancing the queue"],
+        [
+          "references/volume-policy.md#group-formation-states-and-transitions",
+          "### Group formation (states and transitions)",
+        ],
+      ];
+      for (const [citation, heading] of citations) {
+        expect(skill, `SKILL.md does not cite ${citation}`).toContain(citation);
+        expect(section, `volume-policy.md has no ${heading}`).toContain(heading);
+      }
+    });
+
     it(`${tree}: the multi-spec queue defines how it advances and when it exits`, async () => {
       const section = unwrap(await read(tree, REFERENCE));
       const skill = unwrap(await read(tree, SKILL));
