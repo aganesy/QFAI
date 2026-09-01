@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,7 @@ import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateProject } from "../../src/core/validate.js";
 import {
   extractSsotModuleEntries,
+  literalPathPrefix,
   validateContractSsotModules,
 } from "../../src/core/validators/contractSsotModules.js";
 
@@ -391,6 +392,130 @@ describe("validateContractSsotModules", () => {
  * contract routes to. A profile that could not observe the dead route it had
  * just created was a gate in name only.
  */
+describe("the boundary this gate claims", () => {
+  // `resolveWithinRoot` compares pathnames, and `exists` follows links, so a
+  // name inside the root pointing outside it satisfied "repository-relative
+  // implementation path" without being one.
+  it.skipIf(process.platform === "win32")(
+    "reports an entry that reaches outside the root through a symlink",
+    async () => {
+      const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-link-"));
+      try {
+        const root = path.join(parent, "project");
+        await mkdir(path.join(root, "src"), { recursive: true });
+        const outside = path.join(parent, "outside.ts");
+        await writeFile(outside, "export const a = 1;\n", "utf-8");
+        await symlink(outside, path.join(root, "src", "external.ts"));
+        await seedContract(root, "qfai-init.md", [
+          "# CLI Contract: `qfai init`",
+          "",
+          "- SSOT modules:",
+          "  - `src/external.ts`",
+        ]);
+
+        const issues = await validateContractSsotModules(root, defaultConfig);
+        const dead = issues.filter((item) => item.code === "QFAI-CONTRACT-050");
+        expect(dead).toHaveLength(1);
+        expect(dead[0]?.message).toContain("プロジェクトルート外");
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    },
+  );
+
+  // The narrow charset recognised neither a root-level file nor an ordinary
+  // route path, and an entry the matcher does not recognise is one no gate
+  // ever sees.
+  it("reads a root-level file and a bracketed route as entries", () => {
+    const entries = extractSsotModuleEntries(
+      [
+        "# CLI Contract",
+        "",
+        "- SSOT modules:",
+        "  - `package.json`",
+        "  - `src/app/(admin)/[id]/page.tsx`",
+        "  - `resolvePlaywrightLauncher`",
+        "  - `v1.12.0`",
+        "  - `MAX_ITERATIONS = 10`",
+        "",
+      ].join("\n"),
+    );
+    // Over-correction pin: an identifier, a version and an assignment stay out.
+    expect(entries.map((entry) => entry.modulePath)).toEqual([
+      "package.json",
+      "src/app/(admin)/[id]/page.tsx",
+    ]);
+  });
+
+  // A contract may point at a set; the literal prefix is what must exist.
+  it("checks the literal prefix of a globbed entry, not the pattern", async () => {
+    expect(literalPathPrefix("assets/init/root/.github/workflows/**")).toBe(
+      "assets/init/root/.github/workflows",
+    );
+    expect(literalPathPrefix("**/*.ts")).toBeNull();
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-glob-"));
+    try {
+      await mkdir(path.join(root, "src", "core"), { recursive: true });
+      await seedContract(root, "qfai-init.md", [
+        "# CLI Contract: `qfai init`",
+        "",
+        "- SSOT modules:",
+        "  - `src/core/**`",
+        "  - `src/gone/**`",
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+      const dead = issues.filter((item) => item.code === "QFAI-CONTRACT-050");
+      expect(dead).toHaveLength(1);
+      expect(dead[0]?.refs).toContain("src/gone/**");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `readSafe` answered "" to an unreadable file and to an empty one, and the
+  // caller skipped both — so a contract that failed on EACCES was certified
+  // rather than reported.
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "reports a contract it could not read instead of skipping it",
+    async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-unreadable-"));
+      try {
+        const file = await seedContract(root, "qfai-init.md", [
+          "# CLI Contract: `qfai init`",
+          "",
+          "- SSOT modules:",
+          "  - `src/core/gone.ts`",
+        ]);
+        await chmod(file, 0o000);
+
+        const issues = await validateContractSsotModules(root, defaultConfig);
+        const reported = issues.filter((item) => item.code === "QFAI-CONTRACT-050");
+        expect(reported).toHaveLength(1);
+        expect(reported[0]?.rule).toBe("contracts.ssotModuleUnreadable");
+      } finally {
+        await chmod(path.join(root, ".qfai", "contracts", "cli", "qfai-init.md"), 0o600).catch(
+          () => undefined,
+        );
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  // An empty contract is still not a finding.
+  it("says nothing about a contract that is genuinely empty", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-empty-"));
+    try {
+      await seedContract(root, "qfai-init.md", [""]);
+      const issues = await validateContractSsotModules(root, defaultConfig);
+      expect(issues.filter((item) => item.code === "QFAI-CONTRACT-050")).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the tdd profile checks contract SSOT routing", () => {
   it("reports a dead SSOT modules entry under --profile tdd", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-tdd-"));

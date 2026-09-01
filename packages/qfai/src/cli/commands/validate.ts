@@ -1033,8 +1033,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
+  // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
+  // the expected state names the contracts root by role. Pinning the default
+  // path sent a project that moved its contracts to repair a directory it does
+  // not use, and the offending file is already on the finding's own line.
   "QFAI-CONTRACT-050":
-    "Every `- SSOT modules:` entry in a contract under .qfai/contracts/** must resolve to a file or directory on disk.",
+    "Every `- SSOT modules:` entry in a contract under the configured contracts directory must resolve to a readable file or directory that travels with the project.",
   // `paths.contractsDir` is configurable, so the expected state names the file
   // by role rather than pinning the default location: a project that moved its
   // contracts must not be told to repair a directory it does not use. The

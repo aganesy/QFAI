@@ -17,6 +17,7 @@
  * block format — or one that comments an obsolete route out — cannot be read as
  * declaring one.
  */
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -25,7 +26,7 @@ import { collectFiles } from "../fs.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
-import { exists, issue, readSafe } from "./utils.js";
+import { exists, isInside, issue } from "./utils.js";
 
 /** The release `QFAI-CONTRACT-050` stops being a warning at. */
 const SSOT_MODULE_PROMOTION = RULE_PROMOTIONS.contractSsotModuleUnresolved.promoteAt;
@@ -47,11 +48,35 @@ const ENTRY_RE = /^\s+-\s+`([^`]+)`/;
 const INDENTED_ITEM_RE = /^\s+-\s+/;
 
 /**
- * A backticked token is treated as a path only when it is separator-joined and
- * made purely of path-safe characters. `packages/qfai/src/core/doctor.ts` is a
- * path; `resolvePlaywrightLauncher` and `MAX_ITERATIONS = 10` are not.
+ * One path segment: anything but a separator, whitespace, a backtick or a
+ * control character.
+ *
+ * The charset used to be `[A-Za-z0-9_@.-]`, which is not what filesystems
+ * accept and not what real projects write: `src/app/(admin)/[id]/page.tsx` — an
+ * ordinary Next.js route — was not recognised, and an entry the matcher does
+ * not recognise is an entry no gate ever sees. Whitespace stays excluded
+ * because it is what separates a path from the prose around it, and it is what
+ * keeps `MAX_ITERATIONS = 10` out.
  */
-const RELATIVE_PATH_LIKE_RE = /^[A-Za-z0-9_@.-]+(?:\/[A-Za-z0-9_@.-]+)+\/?$/;
+const SEGMENT = String.raw`[^\s/\\\`\u0000-\u001f]+`;
+
+/**
+ * A backticked token is treated as a path when it is separator-joined, or when
+ * a single segment carries a file extension.
+ *
+ * `packages/qfai/src/core/doctor.ts` and `package.json` are paths;
+ * `resolvePlaywrightLauncher` is not. The extension must start with a letter,
+ * so a version-shaped token such as `v1.12.0` is not read as a file either.
+ *
+ * A **bare directory name at the root** — `src` — stays unrecognised, and that
+ * is a deliberate limit rather than an oversight: nothing separates it from an
+ * identifier, so accepting it would make every backticked symbol in a contract
+ * a path claim this gate then reports as missing.
+ */
+const RELATIVE_PATH_LIKE_RE = new RegExp(String.raw`^${SEGMENT}(?:/${SEGMENT})+/?$`);
+
+/** A single segment that names a file, by carrying an extension. */
+const SINGLE_FILE_LIKE_RE = new RegExp(String.raw`^${SEGMENT}\.[A-Za-z][A-Za-z0-9]*$`);
 
 /**
  * The same shape, rooted: a POSIX absolute path (`/etc/passwd`), a
@@ -62,12 +87,17 @@ const RELATIVE_PATH_LIKE_RE = /^[A-Za-z0-9_@.-]+(?:\/[A-Za-z0-9_@.-]+)+\/?$/;
  * this validator exists to prevent. `resolveWithinRoot` then reports it as
  * leaving the project root.
  */
-const ABSOLUTE_PATH_LIKE_RE =
-  /^(?:\/|\\\\|[A-Za-z]:[\\/])[A-Za-z0-9_@.-]+(?:[\\/][A-Za-z0-9_@.-]+)*[\\/]?$/;
+const ABSOLUTE_PATH_LIKE_RE = new RegExp(
+  String.raw`^(?:/|\\\\|[A-Za-z]:[\\/])${SEGMENT}(?:[\\/]${SEGMENT})*[\\/]?$`,
+);
 
 /** Whether a backticked token names a filesystem path, rooted or not. */
 function isPathShaped(token: string): boolean {
-  return RELATIVE_PATH_LIKE_RE.test(token) || ABSOLUTE_PATH_LIKE_RE.test(token);
+  return (
+    RELATIVE_PATH_LIKE_RE.test(token) ||
+    SINGLE_FILE_LIKE_RE.test(token) ||
+    ABSOLUTE_PATH_LIKE_RE.test(token)
+  );
 }
 
 /** An opening or closing fence: three or more backticks or tildes. */
@@ -164,6 +194,10 @@ function maskedContent(lines: readonly string[]): string[] {
  * anything that leaves it. The matcher admits `..` segments, so without this an
  * entry such as `../../etc/passwd` would resolve to a file that happens to
  * exist outside the project and pass as a valid SSOT module.
+ *
+ * **Lexical only.** A name inside the root that is a symlink to somewhere
+ * outside it passes here, because nothing has been resolved yet — see
+ * {@link travelsWithProject}, which the caller applies to the answer.
  */
 export function resolveWithinRoot(root: string, modulePath: string): string | null {
   // A rooted path leaves the project by construction. Both conventions are
@@ -185,6 +219,76 @@ export function resolveWithinRoot(root: string, modulePath: string): string | nu
     return null;
   }
   return resolved;
+}
+
+/**
+ * Whether the entry a contract names is really part of the project.
+ *
+ * {@link resolveWithinRoot} compares pathnames, which says nothing about what
+ * the last component points at: `src/external.ts` as a symlink to a file
+ * outside the repository was inside the root lexically, and `exists` then
+ * followed the link and answered `true`, so the rule "SSOT modules are
+ * repository-relative implementation paths" was satisfiable by a link. Both
+ * sides are `realpath`-resolved — the root too, because comparing a resolved
+ * target against an unresolved base reports every path inside a symlinked
+ * checkout as outside it — and compared with the same `isInside` helper the
+ * other validators use, so the boundary is one rule rather than several.
+ *
+ * A path that cannot be resolved at all is not reported here: it does not
+ * exist, which the caller's own branch already says, and more precisely.
+ */
+async function travelsWithProject(root: string, resolved: string): Promise<boolean> {
+  try {
+    return isInside(await realpath(root), await realpath(resolved));
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * The part of an entry that names something on disk, with any glob tail removed.
+ *
+ * A contract may point at a set rather than one module —
+ * `assets/init/root/.github/workflows/**` is how the shipped-workflow contract
+ * names its own directory — and the literal prefix of such an entry is what has
+ * to exist. The narrow charset this matcher replaced excluded `*` and so
+ * dropped those entries entirely, which is the silence this validator exists to
+ * end; checking the prefix keeps them in the gate without asking a wildcard to
+ * resolve. An entry whose very first segment is a pattern names no anchor and
+ * is left alone.
+ */
+export function literalPathPrefix(modulePath: string): string | null {
+  const segments = modulePath.split("/");
+  const literal: string[] = [];
+  for (const segment of segments) {
+    if (/[*?]/.test(segment)) {
+      break;
+    }
+    literal.push(segment);
+  }
+  const prefix = literal.join("/").replace(/\/$/, "");
+  return prefix.length === 0 ? null : prefix;
+}
+
+/** The contract could not be read at all, with the reason. */
+type ContractReadFailure = { readonly kind: "unreadable"; readonly reason: string };
+
+/**
+ * Reads a contract, distinguishing an empty file from one that could not be
+ * read.
+ *
+ * `readSafe` answers `""` to both, and the caller skipped an empty file — so a
+ * contract that `collectFiles` had just enumerated and that then failed on
+ * `EACCES`, or vanished, was silently dropped from the gate and every profile
+ * passed with its entries unchecked. Reporting beats certifying what was never
+ * opened.
+ */
+async function readContract(file: string): Promise<string | ContractReadFailure> {
+  try {
+    return await readFile(file, "utf-8");
+  } catch (error: unknown) {
+    return { kind: "unreadable", reason: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export type SsotModuleEntry = {
@@ -282,13 +386,35 @@ export async function validateContractSsotModules(
   const windowNote = promotionWindowNote(ssotModuleSeverity, SSOT_MODULE_PROMOTION);
 
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
-    const text = await readSafe(file);
+    const contract = await readContract(file);
+    const relFile = path.relative(root, file).replace(/\\/g, "/");
+    if (typeof contract !== "string") {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-050",
+          `契約を読み取れなかったため SSOT modules を検査できませんでした: ${contract.reason}${windowNote}`,
+          ssotModuleSeverity,
+          relFile,
+          "contracts.ssotModuleUnreadable",
+          [relFile],
+          "canonical",
+          "契約ファイルの権限と実体を確認してから再実行してください。読み取れない契約は「問題なし」ではありません。",
+        ),
+      );
+      continue;
+    }
+    const text = contract;
     if (text.trim().length === 0) {
       continue;
     }
-    const relFile = path.relative(root, file).replace(/\\/g, "/");
     for (const entry of extractSsotModuleEntries(text)) {
-      const resolved = resolveWithinRoot(root, entry.modulePath);
+      const target = literalPathPrefix(entry.modulePath);
+      if (target === null) {
+        // A pure pattern (`**/*.ts`) anchors nothing, so there is no path to
+        // check and nothing to report.
+        continue;
+      }
+      const resolved = resolveWithinRoot(root, target);
       if (resolved === null) {
         issues.push(
           issue(
@@ -306,6 +432,22 @@ export async function validateContractSsotModules(
         continue;
       }
       if (await exists(resolved)) {
+        if (await travelsWithProject(root, resolved)) {
+          continue;
+        }
+        issues.push(
+          issue(
+            "QFAI-CONTRACT-050",
+            `契約の SSOT modules がプロジェクトルート外を参照しています: ${entry.modulePath}${windowNote}`,
+            ssotModuleSeverity,
+            relFile,
+            "contracts.ssotModuleExists",
+            [entry.modulePath],
+            "canonical",
+            "SSOT modules はプロジェクトルート相対の実装経路のみを指せます。プロジェクト外を指す symlink ではなく、リポジトリと一緒に移動する実体を指してください。",
+            { loc: { line: entry.line } },
+          ),
+        );
         continue;
       }
       issues.push(
