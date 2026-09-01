@@ -325,7 +325,18 @@ describe("reviewer finding provenance", () => {
     }
     // The gate recomputes the superseding hash and both seals.
     expect(skill).toMatch(/compared against \*\*that\*\* hash and not the superseded original/);
-    expect(skill.replace(/\s+/g, " ")).toContain("beside the round's `Review pack seal`");
+    // The review pack and its seal are per review ATTEMPT, not per round: a
+    // `REVISE` and the `PASS` answering it sit inside one round and seal two
+    // packs (`references/round-evidence.md`), so gate item 10 names the
+    // attempt's seal. The property pinned here is the one that matters and is
+    // unchanged — the re-attestation seal is recomputed BESIDE the review pack
+    // seal rather than instead of it — and the second assertion keeps the gate
+    // reaching every seal the entry carries rather than only the latest.
+    const flatSkill = skill.replace(/\s+/g, " ");
+    expect(flatSkill).toContain("beside the attempt's `Review pack seal`");
+    expect(flatSkill).toContain(
+      "Every `Review pack seal` the entry carries — one per review attempt",
+    );
     // The pack layout recognizes the shape, so it is not an ad-hoc directory.
     expect(layout).toMatch(/record re-attestation/i);
     expect(layout).toMatch(/not a round/);
