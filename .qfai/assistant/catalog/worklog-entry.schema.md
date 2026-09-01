@@ -7,6 +7,7 @@
   work-log surface checks ship already compiled inside the installed package:
   - the work-log entry parser (`string → Result<Entry, SchemaError>`)
   - the work-log link-integrity check
+
   The QFAI source tree is not part of the npm distribution, so this contract
   names no local module path on purpose: the schema below plus the
   `npx qfai validate` output are the surface you can actually read here.
