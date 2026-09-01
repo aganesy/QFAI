@@ -464,8 +464,12 @@ defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 
-- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
-  run logs, reports. Reproducible by rerunning the owner skill; not committed.
+- **Durable per-item TDD evidence** — `.qfai/evidence/implement-<spec-id>.md`
+  and `.qfai/evidence/atdd-<spec-id>.md`. Ledger `Evidence` cells point to
+  anchors in these files, and validation resolves those anchors on a fresh
+  clone, so the managed `.gitignore` block re-includes and commits them.
+- **Regenerable** — other stage logs, run logs, and reports. Reproducible by
+  rerunning the owner skill; not committed.
 - **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
   durable decision records (`.qfai/evidence/decisions/*.json`). They carry
   user approval and cannot be regenerated, so they are committed. The managed

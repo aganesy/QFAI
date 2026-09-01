@@ -53,6 +53,19 @@ shipped inside the QFAI package and archived by `npx qfai doctor`:
   editing that pack to restamp a hash would break the seal, and editing only the evidence file's
   copy would leave the sealed response disagreeing with it. Both packs are sealed and both seals
   are recomputed at the gate.
+- A response's `Result`, `Reviewed revision` and `Audited evidence hash`, and the `TDD-ID` in
+  `review_request.md`, are read from the **visible** Markdown and must each appear exactly once.
+  A line inside a fenced sample or an HTML comment is not a verdict — it is invisible to the
+  person reading the response — and two `Result` lines are not a verdict either, they are a
+  document a reader can take either answer from. A blocking `REVISE` beside a hidden or duplicated
+  `PASS` is rejected.
+- Review packs are local-only by default and therefore are absent in an ordinary fresh clone.
+  The producer still creates and validates the pack before closing the row. At a later validation,
+  gate item 10 recomputes the pack seal and its request/summary/response bindings whenever the
+  named directory is present; when the exact directory is absent, it validates the committed
+  verdict, revision, audited-evidence hash, canonical pack path, recorded seal and checkpoint
+  instead. A pack path that exists but is malformed is always an error — deleting or renaming
+  files inside a present pack is not the fresh-clone case.
 - `QFAI-REVIEW-*` is reported by `--profile sdd` and `--profile discussion` — the profiles whose
   RCP footer mandates the pack — and by the full-scan profiles. `--profile tdd` does not report it,
   so a malformed or missing `summary.json` still passes the implementation gate on its own. Run

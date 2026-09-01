@@ -94,6 +94,11 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   "!.qfai/evidence/decisions/**",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
+  // Per-item TDD evidence is the durable payload behind each ledger row's
+  // Evidence anchor. The validator resolves those anchors on a fresh clone,
+  // so both implementation- and ATDD-owned records must be committed.
+  "!.qfai/evidence/implement-*.md",
+  "!.qfai/evidence/atdd-*.md",
   // The Coverage Depth Matrix and the justification behind each `❌` cell.
   // `/qfai-atdd` makes "no unjustified ❌ cells" both a Definition-of-Done
   // condition and a Not-done criterion, and `qa-gatekeeper` REVISEs a missing
@@ -535,6 +540,12 @@ export function missingRecommendedGitignoreEntries(content: string): string[] {
  */
 export function negationSamplePath(negation: string): string {
   const body = negation.replace(/^!/, "");
+  // These globs are consumed only by canonical `*-spec-NNNN.md` records.
+  // A generic `sample` did not overlap a later `implement-spec-*.md` rule,
+  // so migration incorrectly treated a losing negation as effective.
+  if (/(?:^|\/)(?:implement|atdd)-\*\.md$/.test(body)) {
+    return body.replace(/\*\.md$/, "spec-0001.md");
+  }
   const withContents = body.endsWith("/") ? `${body}sample` : body;
   return withContents.replace(/\*\*/g, "sample/leaf").replace(/\*/g, "sample");
 }

@@ -2045,6 +2045,8 @@ function rebuildManagedBlock(existingBlock: string): string {
 const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!change-request-*.md",
   "!decision-*.md",
+  "!implement-*.md",
+  "!atdd-*.md",
   "!coverage-depth-*.md",
   "!decisions/",
   "!decisions/**",

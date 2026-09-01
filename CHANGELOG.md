@@ -91,6 +91,13 @@
   `QFAI-REVIEW-007` / `-009` and `error` / `warning` off one flag; reading the
   two independently left both severities unknown and withdrew the
   `QFAI-WAIVER-002` refusal from a rule that only ever fails hard.
+- **Per-item TDD evidence survives `qfai init` and is checked on a fresh clone.**
+  The managed `.gitignore` block now re-includes
+  `.qfai/evidence/implement-*.md` and `.qfai/evidence/atdd-*.md`, so the files
+  required by gate item 10 are committed instead of existing only on the
+  machine that ran the test. `QFAI-TDDLIST-008` (warning, then error) also
+  rejects an `evidence at` pointer when it names the wrong layer-owned file or
+  TDD item, or when the referenced file or Markdown heading is absent.
 
 ## [1.10.1] - 2026-08-31
 

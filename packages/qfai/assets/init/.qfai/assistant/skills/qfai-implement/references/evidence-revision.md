@@ -12,6 +12,14 @@ Every observation records the revision it was made against.
 Revision: <git rev> | working-tree+<content hash>
 ```
 
+**The form is checked, in the committed evidence.** A value that is neither a
+git rev nor `working-tree+<content hash>` addresses no tree, so nothing can be
+recomputed against it and staleness has nothing to compare — and the review pack
+is local-only, so on a fresh clone the committed entry is the only thing left to
+check. Gate item 10 rejects any other shape wherever a revision is recorded:
+`Revision`, `RED revision`, `Falsifiability revision` and both
+`reviewed revision` fields.
+
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
   observation. Preferred: it is exact and someone else can reproduce from it.
 - **`working-tree+<content hash>`** — for an uncommitted tree. Not as good as
@@ -83,10 +91,10 @@ Revision: <git rev> | working-tree+<content hash>
      same hand can update it. Three successive homes were tried and each fell to
      the same move — beside the artifact, in a commit, in the newest commit that
      introduces the line — and a fourth would fall too. **Committing the seal is
-     not the answer either**, and not available: stage evidence is regenerable
-     and deliberately not committed (`.qfai/evidence/*` is ignored, with only
-     the governance records negated back in), so a rule requiring a committed
-     copy of `implement-<spec-id>.md` would have stopped every completion.
+     not the answer either.** Per-item stage evidence is a committed governance
+     record (the managed `.gitignore` block negates `implement-*.md` and
+     `atdd-*.md` back in), but the record and its seal are still writable by the
+     same authority.
 
      A consistent rewrite is caught where consistent rewrites are caught: by
      review of the change itself, against a history the seals make legible.

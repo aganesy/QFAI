@@ -1263,7 +1263,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
-  [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
+  // Re-reviewed for the two `.qfai/evidence/` negations this change adds
+  // (`implement-*.md`, `atdd-*.md`). Re-derived rather than transcribed: a real
+  // `qfai init` was run against this tree, and deleting exactly those two lines
+  // from the `.gitignore` it wrote reproduces the previously reviewed digest
+  // (`2cfeb083…`) byte for byte. Those two lines are the whole delta.
+  [".gitignore", "9e535a0c2b74c8371b1b55e26c025d1e05120e343dc3ad6b8dd3e8f96190934e"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);

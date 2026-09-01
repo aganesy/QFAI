@@ -43,7 +43,7 @@ agents:
       - Work Orders for each subagent (scope, inputs, outputs, gates)
       - Stage Gates plan + current status
       - Completion report (DoD checklist + evidence links)
-      - Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
+      - Evidence summary for `.qfai/evidence/` (commit only paths re-included by the managed block)
 
       ## Stop conditions
 
@@ -56,7 +56,7 @@ agents:
       ## Sign-off
 
       - [ ] Deliverables are complete
-      - [ ] Evidence is present (gitignored)
+      - [ ] Evidence is present under the managed tracking policy
       - [ ] Stage gates are PASS
       - [ ] Reviewer sign-off recorded
 
@@ -750,8 +750,9 @@ agents:
       - Test-case quality and traceability findings
       - **Coverage Depth Matrix** (per spec, using the template in the depth checklist reference).
         Destination: `.qfai/evidence/coverage-depth-<spec-id>.md` from the ATDD stage onward — its own
-        file, because that path is committed while the rest of `.qfai/evidence/**` is ignored, and the
-        justification behind each `❌` is the input `qa-gatekeeper` reads. During SDD there is
+        file, because it has its own committed governance lifecycle separate from the committed
+        per-item TDD evidence, and the justification behind each `❌` is the input `qa-gatekeeper`
+        reads. During SDD there is
         no evidence artifact that holds it, so report depth gaps as findings instead of producing the
         matrix format.
       - Volume estimate and risk notes
@@ -1238,8 +1239,8 @@ agents:
 
       **The last two are what the `Audited evidence hash` is computed over.** This
       role records that hash itself, over the row's phase-authored fields — and those
-      live in an evidence file that is normally ignored, so the diff of changed files
-      does not contain them. Without the ledger and the evidence home the row's
+      live in a committed per-item evidence file so a fresh clone can reproduce the
+      audit. Without the ledger and the evidence home the row's
       `Layer` selects, this role cannot identify its own audit subject: the hash goes
       missing and gate items 10-11 stop, or the orchestrator computes it instead,
       which is the one thing the contract says must not happen.
@@ -1513,9 +1514,8 @@ agents:
 
       - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
         Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
-        A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that file is ignored by the
-        managed `.gitignore` block, so neither it nor the justification for any `❌` reaches a commit, and the "unjustified"
-        judgement cannot be re-made by anyone reading the repository.
+        A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that committed file is the
+        ledger's per-item evidence payload, not the dedicated matrix artifact whose justifications this gate reads.
       - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
       - Flag any US/TC that has only normal-path test cases as a coverage gap.
       - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
@@ -1529,8 +1529,9 @@ agents:
       The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
       `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
       Mandatory Output,
-      and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path, unlike the rest of
-      `.qfai/evidence/**`. `qfai-sdd` neither defines its layout nor ships a section for it, so:
+      and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed governance path alongside
+      `implement-<spec-id>.md` and `atdd-<spec-id>.md`. Only run-scoped evidence remains ignored.
+      `qfai-sdd` neither defines the matrix layout nor ships a section for it, so:
 
       - Apply this check from the **ATDD review cycle onward**, where
         `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists
