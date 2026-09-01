@@ -369,7 +369,7 @@ and `**Unit and Component owe no ATDD annotation.**` above.
     is symmetric so "exactly one directory" holds in both directions: an
     annotation left behind here after the TC moved to L4/L5 is as wrong as one
     filed early into `<testsDir>/api/**`.
-- Unknown references (`US/TC/CON-API` not declared) are errors.
+- Unknown references (`US/TC/CON-API/CON-DB` not declared) are errors.
 - A `TC-*` annotation outside the directory its `Level` routes to is a
   misplacement, whichever directory it lands in. **This applies to L3-L5 only.**
   L1 and L2 route nowhere — they carry no ATDD annotation obligation at all — so

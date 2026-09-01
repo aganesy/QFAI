@@ -320,10 +320,12 @@ obligations there. A first run therefore finds **zero** `Layer = E2E` /
 `Layer = API` rows, legitimately, and this stage cannot create them — it is
 not the ledger's writer under any circumstance.
 
-Zero is a count, not "nothing to do". The US and CON-API coverage obligations
-are this skill's own (Success Criteria) and are discharged by the tests and
-their annotations, not by ledger rows. Report the row count as zero with that
-reason and carry on with the obligations.
+Zero is a count, not "nothing to do". The US, CON-API and CON-DB coverage
+obligations are this skill's own (Success Criteria) and are discharged by the
+tests and their annotations, not by ledger rows — `CON-DB-*` is row-producing
+nowhere, so a spec with no ATDD-owned rows can still owe every one of its
+active DB contracts an `Integration` test. Report the row count as zero with
+that reason and carry on with the obligations.
 
 **Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds one row
 per coverage-target `TC-*`, and the ledger template says in as many words that
@@ -331,8 +333,8 @@ per coverage-target `TC-*`, and the ledger template says in as many words that
 the spec is handed back and forth for rows no skill may write. Writing them
 here is not the alternative either: that would make this stage a second writer
 of a single-writer artifact. What the completion gate actually requires is
-`QFAI-ATDD-111` / `QFAI-ATDD-113` clean, which the annotations discharge and
-which this stage does own
+`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean, which the
+annotations discharge and which this stage does own
 (`../../qfai-implement/SKILL.md`, spec completion conditions).
 
 ## A project without the `red` phase
