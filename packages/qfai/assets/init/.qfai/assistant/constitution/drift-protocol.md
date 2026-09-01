@@ -468,20 +468,17 @@ defect is gone with it. The drain is what pays for dropping the round.
   Reproducible by rerunning the owner skill; not committed.
 - **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`), durable
   decision records (`.qfai/evidence/decisions/*.json`), and the per-item
-  RED/GREEN evidence the completion gate resolves every `test-list.md`
-  `Evidence` anchor against: `.qfai/evidence/implement-<spec-id>.md` and
-  `.qfai/evidence/atdd-<spec-id>.md`. They carry user approval or an
-  observation that cannot be retaken — a RED is recorded _before_ the code that
-  makes it pass exists, so rerunning the owner skill afterwards does not
-  reproduce it — so they are committed. The managed `.gitignore` block written
-  by `npx qfai init` negates them after the ignore lines for exactly this
-  reason.
+  RED/GREEN evidence every `test-list.md` `Evidence` anchor resolves against:
+  `.qfai/evidence/implement-<spec-id>.md` and `.qfai/evidence/atdd-<spec-id>.md`.
+  They carry user approval, or an observation that cannot be retaken — a RED is
+  recorded _before_ the code that makes it pass exists — so they are committed,
+  and the managed `.gitignore` block negates them after the ignore lines for
+  exactly that reason.
 
-  **Committing them is a step, not a consequence.** A negated `.gitignore`
-  pattern only stops git from hiding a file; it does not stage one. Leave these
-  two untracked and the anchor still resolves on the machine that ran the gate
-  and nowhere else — which is the state the negation was added to end. Commit
-  them with the change whose obligations they discharge.
+  **Committing them is a step, not a consequence.** A negation only stops git
+  hiding a file; it does not stage one. Left untracked, the anchor resolves on
+  the machine that ran the gate and nowhere else — the state the negation was
+  added to end. Commit them with the change whose obligations they discharge.
 
 ## Non-negotiable constraints
 
