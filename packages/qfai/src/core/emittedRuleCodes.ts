@@ -345,6 +345,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-TRIAGE-006",
   "QFAI-TRIAGE-007",
   "QFAI-TRIAGE-008",
+  "QFAI-TRIAGE-009",
   "QFAI-UIE-001",
   "QFAI-UIE-002",
   "QFAI-UIE-003",

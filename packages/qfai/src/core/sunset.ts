@@ -157,6 +157,13 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
+   * declared grammar, or names a spec that is not on disk. The grammar is new,
+   * so every delta file written before it carries whatever spelling its author
+   * chose, and the cell is never rewritten once a row is approved.
+   */
+  triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed
