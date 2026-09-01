@@ -842,7 +842,7 @@ function tcNotCoveredWithoutLedger(
       // rule code emitting two categories would sort the same finding into a
       // different report section depending on which path raised it.
       "canonical",
-      `Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`,
+      `Seed \`${TDD_LIST_REL_PATH}\` with one row per independently observable boundary of a coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`,
     ),
   ];
 }
@@ -917,7 +917,7 @@ async function validateSpecTddList(
         // own merits, not a side effect of adding advice text.
         "canonical",
         owed > 0
-          ? `Unit/Component TC are gated here alone since \`QFAI-ATDD-112\` stopped demanding an annotation for them, so the absent ledger is reported as \`TDDLIST_TC_NOT_COVERED\` (error) below. Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`
+          ? `Unit/Component TC are gated here alone since \`QFAI-ATDD-112\` stopped demanding an annotation for them, so the absent ledger is reported as \`TDDLIST_TC_NOT_COVERED\` (error) below. Seed \`${TDD_LIST_REL_PATH}\` with one row per independently observable boundary of a coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`
           : `Seed \`${TDD_LIST_REL_PATH}\` when the spec gains a Unit or Component TC (\`/qfai-sdd\` Phase 2b).`,
       ),
     );
@@ -1206,6 +1206,26 @@ async function validateSpecTddList(
       ),
     );
   }
+
+  // Check 5d: the split row's identity.
+  //
+  // `spec-traceability-rules.md` makes the (`TC-*`, `Boundary`) pair the key a
+  // reseed matches on, precisely because nothing else distinguishes the rows a
+  // matrix-shaped TC was split into: they repeat one `TC-Refs`, carry a serial
+  // `TDD-ID`, and hold a `Selector` that `/qfai-implement` rewrites whenever a
+  // review-fix handback replaces the test. Until now the rule had no reader —
+  // a ledger whose sibling rows left `Boundary` empty, or spent one slug
+  // twice, passed `--fail-on error` and then had the next Phase 2b preserve
+  // `Status` and `Evidence` against whichever sibling it happened to land on.
+  // A single row owes nothing: one row for a TC is already identified by that
+  // TC, and demanding the column there would fail every non-matrix ledger.
+  //
+  // Both codes are new, so both ship behind a promotion window (P7): the pin
+  // decides the severity, not a literal beside the call. Resolved once here and
+  // reused by `TDDLIST_EVIDENCE_EMPTY` below, so one run cannot read two
+  // versions and report two different escalation states for the same ledger.
+  const toolVersion = await resolveToolVersion();
+  issues.push(...validateSplitBoundaryIdentity(ledgerRows(), relPath, specNumber, toolVersion));
 
   // ── Phase 2 checks ──
 
@@ -1590,7 +1610,7 @@ async function validateSpecTddList(
   // return `"unknown"`, which the comparator reads as inside the window, so an
   // unreadable version can never be what escalates this into a build failure.
   const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
-  const evidenceEmptySeverity = newRuleSeverity(await resolveToolVersion(), evidenceEmptyPromotion);
+  const evidenceEmptySeverity = newRuleSeverity(toolVersion, evidenceEmptyPromotion);
   const evidenceEmptyWindowNote =
     evidenceEmptySeverity === "warning"
       ? ` Reported as a warning until the ${evidenceEmptyPromotion} release, then an error`
@@ -1839,6 +1859,128 @@ function validateObligationColumn(
         `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
       ),
     );
+  }
+  return issues;
+}
+
+/** `Boundary` cells that mean "not filled in": absent column, empty, or `-`. */
+function boundarySlug(ref: LedgerRowRef): string {
+  const value = cell(ref, "Boundary");
+  return value === "-" ? "" : value.toLowerCase();
+}
+
+/**
+ * The `Boundary` invariant for rows that share a `TC-*`.
+ *
+ * Two severities, because the two failures reach a ledger by different routes.
+ *
+ * A **missing** slug is the legacy shape: a project seeded before the column
+ * existed holds sibling rows without it, and the migration that adds it is
+ * gated behind an approved Change Request (the split re-scopes rows, which
+ * `constitution/drift-protocol.md` puts on the upstream path). Reporting that
+ * at `error` would fail the gate for work the project is not yet permitted to
+ * do, so it is a `warning` that names the rows and the route.
+ *
+ * A **duplicate** slug cannot arrive that way. Only a Phase 2b that already
+ * writes `Boundary` can produce one, and it leaves two rows of one `TC-*`
+ * genuinely indistinguishable — the next reseed has no way to tell which row
+ * owns which observation. That is the harder finding of the two.
+ *
+ * Neither severity is written here. Both codes are new, so P7 puts each behind
+ * its own `RULE_PROMOTIONS` window and `newRuleSeverity` reads the pin: a
+ * `warning` that names the rows until the pinned release, an `error` from it
+ * onwards. The distinction the two paragraphs above draw survives as the
+ * *reason* each window exists, not as a literal at the call.
+ */
+function validateSplitBoundaryIdentity(
+  rows: Iterable<LedgerRowRef>,
+  relPath: string,
+  specNumber: string,
+  toolVersion: string,
+): Issue[] {
+  const missingPromotion = RULE_PROMOTIONS.tddListSplitBoundaryMissing.promoteAt;
+  const duplicatePromotion = RULE_PROMOTIONS.tddListSplitBoundaryDuplicate.promoteAt;
+  const missingSeverity = newRuleSeverity(toolVersion, missingPromotion);
+  const duplicateSeverity = newRuleSeverity(toolVersion, duplicatePromotion);
+  const windowNote = (severity: string, promoteAt: string): string =>
+    severity === "warning"
+      ? ` Reported as a warning until the ${promoteAt} release, then an error.`
+      : "";
+  const byTc = new Map<string, LedgerRowRef[]>();
+  for (const ref of rows) {
+    // Deduped WITHIN the row. The buckets below are sets of rows, and this is
+    // the only place a row can enter one twice: `TC-Refs` is a hand-written
+    // list, and `TC-0001, TC-0001` is a typo rather than a split. Pushing the
+    // ref once per token made a single row two siblings of itself — with a
+    // `Boundary` it duplicated its own slug (`QFAI-TDD-004`, an error once the
+    // window closes), and without one it was a sibling naming none
+    // (`QFAI-TDD-003`). Either way the ledger was correct and the finding was
+    // not.
+    const seenInRow = new Set<string>();
+    for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
+      const tc = token.toUpperCase();
+      if (!TC_ID_TOKEN.test(tc)) continue;
+      if (seenInRow.has(tc)) continue;
+      seenInRow.add(tc);
+      const bucket = byTc.get(tc);
+      if (bucket) {
+        bucket.push(ref);
+      } else {
+        byTc.set(tc, [ref]);
+      }
+    }
+  }
+
+  const issues: Issue[] = [];
+  for (const tc of [...byTc.keys()].sort()) {
+    const siblings = byTc.get(tc) ?? [];
+    // One row for a TC is identified by that TC. The identity cell is only
+    // owed once the TC was split.
+    if (siblings.length < 2) continue;
+
+    const unnamed = siblings.filter((ref) => boundarySlug(ref).length === 0);
+    if (unnamed.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TDD-003",
+          `${tc} is split across ${String(siblings.length)} rows in tdd/test-list.md for spec-${specNumber}, but ${String(unnamed.length)} of them name no Boundary (${unnamed.map((ref) => ref.label).join(", ")}). Sibling rows are told apart by the (TC, Boundary) pair and by nothing else.${windowNote(missingSeverity, missingPromotion)}`,
+          missingSeverity,
+          relPath,
+          "tddList.splitBoundaryIdentity",
+          [tc],
+          "canonical",
+          `Rerun \`/qfai-sdd <spec-id>\` so Phase 2b writes a Boundary slug on every row of ${tc}. A ledger seeded before the column existed needs an approved CR-* first (\`qfai-sdd/references/sdd-phase-checklists.md\`, Phase 2b), because re-splitting an aggregate row re-scopes it.`,
+        ),
+      );
+    }
+
+    const seen = new Map<string, string[]>();
+    for (const ref of siblings) {
+      const slug = boundarySlug(ref);
+      if (slug.length === 0) continue;
+      const labels = seen.get(slug);
+      if (labels) {
+        labels.push(ref.label);
+      } else {
+        seen.set(slug, [ref.label]);
+      }
+    }
+    for (const slug of [...seen.keys()].sort()) {
+      const labels = seen.get(slug) ?? [];
+      if (labels.length < 2) continue;
+      issues.push(
+        issue(
+          "QFAI-TDD-004",
+          `Boundary "${slug}" is claimed by ${String(labels.length)} rows of ${tc} in tdd/test-list.md for spec-${specNumber} (${labels.join(", ")}), so those rows carry no distinct identity.${windowNote(duplicateSeverity, duplicatePromotion)}`,
+          duplicateSeverity,
+          relPath,
+          "tddList.splitBoundaryUnique",
+          [tc, slug],
+          "canonical",
+          `Give each row of ${tc} the slug of the one observable boundary it owns. A slug is unique within its TC; repointing an existing row's Boundary at another boundary silently re-scopes a row whose Evidence was observed against the old one.`,
+        ),
+      );
+    }
   }
   return issues;
 }

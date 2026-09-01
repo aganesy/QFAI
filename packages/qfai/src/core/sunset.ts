@@ -80,6 +80,22 @@ export const RULE_PROMOTIONS = {
    */
   tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TDD-003` — sibling ledger rows of one `TC-*` that
+   * name no `Boundary`. Every ledger seeded before the column existed is in
+   * that shape, and the migration out of it re-scopes rows, so it waits on an
+   * approved `CR-*`. The window is the time to get that approval; a project
+   * that cannot finish inside a full minor has a stalled CR, not a surprise.
+   */
+  tddListSplitBoundaryMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDD-004` — two sibling rows of one `TC-*` that
+   * claim the same `Boundary` slug. Only a Phase 2b that already writes the
+   * column can produce it, so unlike the missing case it is not a legacy
+   * shape — but P7 gives even a self-inflicted new code its window rather than
+   * failing a gate on the release that first looked.
+   */
+  tddListSplitBoundaryDuplicate: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-ATDD-131` — a spec with ATDD-owned tests and no Coverage Depth
    * Matrix file. Specs annotated before the matrix became a Mandatory Output
    * own no such file, so the rule meets the whole backlog on the first run

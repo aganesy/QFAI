@@ -219,12 +219,24 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
 7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
-   — one row per coverage-target TC, `Status = todo`; copy
-   `templates/specs/spec/tdd/test-list.md` when absent. Without it
+   — one row per independently observable boundary of a coverage-target TC,
+   `Status = todo`; copy `templates/specs/spec/tdd/test-list.md` when absent.
+   A matrix-shaped TC is split into N rows **here**, before RED begins, each
+   row repeating that `TC-*` in `TC-Refs` and identifying its own boundary in a
+   `Boundary` cell — read the whole TC row and the `EX-Ref` / `AC-Refs` it
+   cites for boundaries, not the `Expected` cell alone, and match reseeds on
+   the (`TC-*`, `Boundary`) pair (a slug is unique only within its TC), never
+   on `Selector`, which `/qfai-implement` rewrites on a review-fix handback
+   (`references/sdd-phase-checklists.md`). Without it
    `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
-   not a regeneration, in both directions**: unchanged rows keep their state,
-   new TCs append at `todo`, and changed / removed TCs are reset or retired
-   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
+   not a regeneration, in both directions**, keyed per boundary rather than per
+   TC: unchanged rows keep their state, new boundaries append at `todo`, and
+   changed / removed TCs are reset or retired under the upstream-reset rule. A
+   legacy one-row aggregate for a matrix TC does **not** count as unchanged —
+   it is re-split, and the whole migration (appended rows included) waits on an
+   approved `CR-*` that enumerates the aggregate rows; an aggregate row that
+   maps to no single boundary is retired, never reset
+   (`references/sdd-phase-checklists.md`).
 8. Phase 2c: Obligation reconciliation (per spec). Re-read `.qfai/contracts/**`
    against the `BR` / `AC` Phase 2 produced: name the realizing contract for
    each, and resolve every persisted attribute it names to a column, field or
@@ -373,6 +385,6 @@ project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per independently observable boundary of a coverage-target TC — a matrix-shaped TC is split into N rows here, before RED, each repeating the same TC id in TC-Refs; Status = todo; count boundaries over the whole TC row and its EX/AC refs, not the Expected cell alone) and is a delta keyed on the (TC, Boundary) pair, never via Selector, which /qfai-implement rewrites on a review-fix handback: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence, but a legacy single-row aggregate for a matrix TC is re-split, not preserved — that migration lands whole or not at all under one approved CR-\* enumerating the aggregate rows, and an aggregate row mapping to no single boundary is retired rather than reset.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets on a visual-prototyping surface (skipped for cli-only); .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

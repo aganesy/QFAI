@@ -314,8 +314,9 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 
 ## A spec with no ATDD-owned rows
 
-`/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*`, which
-excludes `L4` / `L5`; `US-*` and `CON-API-*` are not row-producing
+`/qfai-sdd` Phase 2b seeds ledger rows per **coverage-target** `TC-*` — one
+per independently observable boundary, so a matrix-shaped TC arrives already
+split into N rows — which excludes `L4` / `L5`; `US-*` and `CON-API-*` are not row-producing
 obligations there. A first run therefore finds **zero** `Layer = E2E` /
 `Layer = API` rows, legitimately, and this stage cannot create them — it is
 not the ledger's writer under any circumstance.
@@ -325,8 +326,8 @@ are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
 reason and carry on with the obligations.
 
-**Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds one row
-per coverage-target `TC-*`, and the ledger template says in as many words that
+**Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds rows only
+for coverage-target `TC-*`, and the ledger template says in as many words that
 `US-*` and `CON-API-*` are not rows there — so the request returns nothing and
 the spec is handed back and forth for rows no skill may write. Writing them
 here is not the alternative either: that would make this stage a second writer
