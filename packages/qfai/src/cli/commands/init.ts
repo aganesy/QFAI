@@ -163,7 +163,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // `qfai init` では宛先が暗黙になり、誤ったターミナルタブからの実行が
   // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
   // 中断・失敗した実行でも対象がスクロールバックに残る。
-  info(`qfai init: dest=${destRoot}`);
+  info(`qfai init: dest=${formatReportPath(destRoot)}`);
 
   if (options.force) {
     info(
@@ -2341,7 +2341,10 @@ function report(
 
   // 宛先を必ず名指しする。相対パスだと素の実行で "." になり何も
   // 開示しないため、`doctor` の root= とは違い絶対パスを出す。
-  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${baseDir})`);
+  // Escaped like every path below it. `--dir` is operator-supplied and echoed
+  // verbatim here, so a destination carrying a newline or an ANSI sequence could
+  // forge report lines in the very report the escaping exists to make trustworthy.
+  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${formatReportPath(baseDir)})`);
   if (writtenPaths.length > 0) {
     info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
     info(dryRun ? "  would write paths:" : "  written paths:");

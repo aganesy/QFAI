@@ -225,6 +225,29 @@ describe("qfai init run report", { timeout: 60000 }, () => {
     }
   });
 
+  // The destination is operator-supplied through `--dir` and echoed in the
+  // report's own header. Escaping only the listings left the one line above
+  // them forgeable, in the report whose purpose is reviewing changes first.
+  it("escapes a control character in the destination it announces", async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    const hostile = "dest\n  would write paths:\n    - forged-entry.md\u001b[31mx";
+    const root = path.join(parent, hostile);
+    try {
+      await mkdir(root, { recursive: true });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(output).not.toContain(hostile);
+      expect(output).not.toContain("\u001b[31m");
+      expect(output).toContain("\\x0a");
+      expect(output).toContain("\\x1b");
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("leaves an ordinary path unquoted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
     try {
