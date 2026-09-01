@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   cp,
@@ -17,7 +17,12 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
+import {
+  replaceGovernedAsset,
+  retireVerifiedGovernedAsset,
+  runInit,
+  SHIPPED_WORKFLOW_NAMES,
+} from "../../src/cli/commands/init.js";
 import { defaultConfig } from "../../src/core/config.js";
 import {
   ASSISTANT_ASSETS_LOCK_BASENAME,
@@ -28,6 +33,7 @@ import {
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../src/core/assistantAssetProvenance.js";
+import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
 import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
 import { resolveToolVersion } from "../../src/core/version.js";
@@ -733,5 +739,195 @@ describe("assistant asset provenance", () => {
     const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain(`${ASSISTANT_STAGING_PREFIX}project-rule.md`);
+  });
+
+  // `randomUUID()` only ever emits RFC 4122 version 4, so the nil UUID is a
+  // name qfai cannot produce — and accepting it as scaffolding was a permanent
+  // normative file the record never saw.
+  it("rejects a staging name whose version and variant nibbles qfai never emits", async () => {
+    const root = await makeProject();
+    const constitutionDir = path.join(root, ".qfai", "assistant", "constitution");
+    const nilUuidName = `${ASSISTANT_STAGING_PREFIX}00000000-0000-0000-0000-000000000000.tmp`;
+    await writeFile(path.join(constitutionDir, nilUuidName), "# not scaffolding\n", "utf-8");
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    expect(unshipped).toHaveLength(1);
+    expect(unshipped[0]?.file).toContain(nilUuidName);
+  });
+
+  // `open` and the handle's `stat` both resolve through a link, so a governed
+  // filename pointing at an external file with the shipped bytes read as
+  // `shipped` — the rule qfai vouched for living outside the checkout entirely.
+  it.skipIf(process.platform === "win32")(
+    "does not accept a governed filename that is a symlink to shipped bytes",
+    async () => {
+      const root = await makeProject();
+      const relative = path.join("catalog", "test-layers.md");
+      const target = path.join(root, ".qfai", "assistant", relative);
+      const outside = path.join(root, "outside-test-layers.md");
+      await cp(path.join(shippedAssistantDir, "catalog", "test-layers.md"), outside);
+      await rm(target);
+      await symlink(outside, target);
+
+      // The bytes match the release exactly, so a follow-the-link implementation
+      // reports nothing at all.
+      expect(await hashAssistantAssetFile(target)).toBeNull();
+      const issues = await validateAssistantAssets(root, defaultConfig);
+      const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+      expect(missing).toHaveLength(1);
+      expect(missing[0]?.file).toContain("test-layers.md");
+    },
+  );
+
+  // `runUpgradeAssistantTree` leaves the legacy file behind on purpose, so a
+  // migrated project has both layouts — and deleting the canonical layer there
+  // satisfied QFAI-ASSETS-001 from the legacy copy while the per-file loop
+  // skipped every shipped rule for want of a layer to report it in.
+  it("reports a governed layer the record says qfai wrote and the project deleted", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await mkdir(path.join(assistantDir, "instructions"), { recursive: true });
+    await cp(
+      path.join(assistantDir, "constitution", "drift-protocol.md"),
+      path.join(assistantDir, "instructions", "drift-protocol.md"),
+    );
+    await rm(path.join(assistantDir, "constitution"), { recursive: true, force: true });
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
+    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+    // Once, against the layer — not once per shipped rule it used to hold.
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.rule).toBe("assistantAssets.missingVendoredLayer");
+    expect(missing[0]?.severity).toBe(await expectedProvenanceSeverity());
+  });
+
+  // A project that never had the layer is still not missing anything: the
+  // record is what separates "never received it" from "deleted it".
+  it("says nothing about an absent layer when the record never named one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await mkdir(path.join(assistantDir, "skills"), { recursive: true });
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
+  });
+
+  // A shipped file the install lost is not a rule the release withdrew. The
+  // walk could not tell them apart — the path simply failed to appear, and
+  // `--force` retires every recorded path the shipped set omits.
+  it("refuses a shipped set that is missing a file the release ships", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const install = path.join(root, "assets", "init", ".qfai", "assistant");
+    await mkdir(path.dirname(install), { recursive: true });
+    await cp(shippedAssistantDir, install, { recursive: true });
+    // One file gone from an otherwise intact layer: the exact shape a truncated
+    // extraction leaves, and the one the layer-root check cannot see.
+    await rm(path.join(install, "catalog", "product.md"));
+
+    await expect(buildShippedAssistantHashes(install)).rejects.toThrow(/product\.md/);
+  });
+
+  // The compiled manifest is the whole basis for the paragraph above, so it has
+  // to still describe the tree that ships.
+  it("keeps the compiled shipped manifest in step with the asset tree", () => {
+    const script = path.resolve(
+      import.meta.dirname,
+      "../../scripts/generate-governed-assistant-manifest.mjs",
+    );
+    const child = spawnSync("node", [script, "--check"], { encoding: "utf-8" });
+    expect(`${child.stdout ?? ""}${child.stderr ?? ""}`).toContain("in sync");
+    expect(child.status).toBe(0);
+  });
+
+  // The refresh decides from a hash read earlier; the atomic staging protects
+  // the OLD content from a failed copy and says nothing about a target rewritten
+  // in between, which the unconditional rename then discarded.
+  it("declines to refresh a governed path that changed after it was hashed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const source = path.join(root, "shipped.md");
+    const dest = path.join(root, "vendored.md");
+    await writeFile(source, "# the release\n", "utf-8");
+    await writeFile(dest, "# what the concurrent writer put here\n", "utf-8");
+
+    const outcome = await replaceGovernedAsset(source, dest, hashAssistantAssetText("# stale\n"));
+
+    expect(outcome).toBe("target-changed");
+    expect(await readFile(dest, "utf-8")).toBe("# what the concurrent writer put here\n");
+    expect(await readdir(root)).toEqual(
+      expect.not.arrayContaining([expect.stringContaining(ASSISTANT_STAGING_PREFIX)]),
+    );
+  });
+
+  // `rm` acts on a pathname, not on the inode the hash came from: a file that
+  // replaced the path between the two was deleted on somebody else's bytes.
+  it("never retires a governed path whose content changed after it was hashed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const dest = path.join(root, "withdrawn.md");
+    const replacement = "# a new project-owned file at the same path\n";
+    await writeFile(dest, replacement, "utf-8");
+
+    const outcome = await retireVerifiedGovernedAsset(
+      dest,
+      hashAssistantAssetText("# what qfai recorded writing\n"),
+    );
+
+    expect(outcome).toBe("changed");
+    expect(await readFile(dest, "utf-8")).toBe(replacement);
+    expect(await readdir(root)).toEqual(
+      expect.not.arrayContaining([expect.stringContaining(ASSISTANT_STAGING_PREFIX)]),
+    );
+  });
+
+  // …and still retires the file it did verify.
+  it("retires a governed path that still holds exactly what qfai recorded", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const dest = path.join(root, "withdrawn.md");
+    const body = "# what qfai recorded writing\n";
+    await writeFile(dest, body, "utf-8");
+
+    expect(await retireVerifiedGovernedAsset(dest, hashAssistantAssetText(body))).toBe("removed");
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  // The preview must not report a repair that has not happened.
+  it("previews the occupied-path repair as pending under --dry-run", async () => {
+    const root = await makeProject();
+    const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+    await rm(target);
+    await mkdir(target, { recursive: true });
+
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: true, yes: true }),
+    );
+
+    expect(output).toContain("--dry-run");
+    expect(output).not.toContain("出荷ファイルで置き換えました");
+    expect(output).toContain("出荷ファイルで置き換えます");
+  });
+
+  // Without the record in version control a fresh clone reads every untouched
+  // copy from an older release as a local fork that `--force` will not refresh.
+  it("keeps the provenance record out of a broad .qfai ignore rule", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const run = promisify(execFile);
+    await run("git", ["init", "-q", root], { cwd: root });
+    await writeFile(path.join(root, ".gitignore"), `.qfai/*\n${QFAI_GITIGNORE_BLOCK}`, "utf-8");
+    const lockRel = path.posix.join(".qfai", "assistant", ASSISTANT_ASSETS_LOCK_BASENAME);
+    await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+    await writeFile(path.join(root, lockRel), '{ "files": {} }\n', "utf-8");
+
+    // Without `-v`, `check-ignore` exits 1 for a path that is not ignored; with
+    // it, a matching *negation* also exits 0, which would pass either way.
+    await expect(run("git", ["check-ignore", lockRel], { cwd: root })).rejects.toMatchObject({
+      code: 1,
+    });
   });
 });

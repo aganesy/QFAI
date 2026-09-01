@@ -6,6 +6,7 @@ import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
+import { SHIPPED_GOVERNED_ASSISTANT_FILES } from "./governedAssistantManifest.js";
 import { escapeRegExp } from "./regex.js";
 
 /**
@@ -101,9 +102,17 @@ const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
  * never saw and `QFAI-ASSETS-005` never reported — an addition dressed as
  * qfai's own scaffolding. Only a name qfai could actually have produced is
  * treated as scaffolding.
+ *
+ * "Could actually have produced" includes the version and variant nibbles.
+ * `randomUUID()` emits RFC 4122 version 4 exclusively, so the third group
+ * always opens with `4` and the fourth with `8`, `9`, `a` or `b`. Accepting any
+ * hex there let a name qfai can never generate —
+ * `.qfai-staging-00000000-0000-0000-0000-000000000000.tmp`, the nil UUID — pass
+ * as scaffolding, which is a permanent normative file that `QFAI-ASSETS-005`
+ * would never see.
  */
 const ASSISTANT_STAGING_BASENAME_PATTERN = new RegExp(
-  `^${escapeRegExp(ASSISTANT_STAGING_PREFIX)}[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.tmp$`,
+  `^${escapeRegExp(ASSISTANT_STAGING_PREFIX)}[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.tmp$`,
   "i",
 );
 
@@ -256,8 +265,22 @@ export function hashAssistantAssetText(text: string): string {
  * file. A plain `readFile` on a governed path that a checkout left as a FIFO
  * blocks until a writer appears, which hung `qfai validate` and `qfai init`
  * with no diagnostic; a directory or a device node is not a governed asset
- * either. A symlink to a regular file is still followed — reading through one
- * is harmless, and the write paths are what must never do it.
+ * either.
+ *
+ * The final component is refused when it is a **symlink**, which is what makes
+ * `missing` mean what it says. `open` and the handle's `stat` both resolve
+ * through a link, so a governed filename pointing at a regular file outside the
+ * repository hashed to that file's bytes: if they happened to be the shipped
+ * bytes the validator reported `shipped`, `init` recorded provenance, and the
+ * link stayed — the rule qfai vouched for then lived outside the checkout and
+ * could change without the checkout differing at all. `O_NOFOLLOW` refuses it
+ * at the syscall where the platform defines the flag, and an `lstat` on the
+ * pathname is the portable backstop for the platforms that do not.
+ *
+ * `allowSymlink` exists for the **shipped** side only: `.qfai/assistant/**` in
+ * the project is a checkout this record makes claims about, while the installed
+ * package's own asset tree is whatever the package manager laid down, and a
+ * store that materialises a file as a link there is not a governance fault.
  *
  * The content is hashed in fixed-size chunks rather than buffered whole.
  * Refusing special files caps nothing about a regular one, so a checkout that
@@ -267,12 +290,23 @@ export function hashAssistantAssetText(text: string): string {
  * missing — so the read streams and the newline normalisation carries a
  * one-byte `\r` across the chunk boundary.
  */
-export async function hashAssistantAssetFile(filePath: string): Promise<string | null> {
+export async function hashAssistantAssetFile(
+  filePath: string,
+  options: { allowSymlink?: boolean } = {},
+): Promise<string | null> {
+  const allowSymlink = options.allowSymlink === true;
   let handle: FileHandle | undefined;
   try {
-    handle = await open(filePath, OPEN_READ_FLAGS);
+    handle = await open(filePath, allowSymlink ? OPEN_READ_FLAGS : OPEN_READ_NOFOLLOW_FLAGS);
     const pinned = await handle.stat();
     if (!pinned.isFile()) {
+      return null;
+    }
+    if (!allowSymlink && (await lstat(filePath)).isSymbolicLink()) {
+      // Only reachable where `O_NOFOLLOW` is not defined (Windows). The open
+      // already succeeded, so this is a second look at the pathname rather than
+      // at the handle — the narrow race it leaves is still strictly better than
+      // treating every link as a regular file.
       return null;
     }
     return await hashHandleWithNormalisedNewlines(handle);
@@ -352,6 +386,16 @@ const OPEN_READ_FLAGS =
     : constants.O_RDONLY;
 
 /**
+ * {@link OPEN_READ_FLAGS} plus a refusal to traverse a final-component symlink,
+ * where the platform defines one. Windows has no `O_NOFOLLOW`, so the caller's
+ * `lstat` backstop is what answers there.
+ */
+const OPEN_READ_NOFOLLOW_FLAGS =
+  typeof constants.O_NOFOLLOW === "number"
+    ? OPEN_READ_FLAGS | constants.O_NOFOLLOW
+    : OPEN_READ_FLAGS;
+
+/**
  * POSIX paths, relative to the assistant root, of every governed file under
  * `assistantRoot`. Overlays are excluded: they are project property.
  *
@@ -369,20 +413,15 @@ const OPEN_READ_FLAGS =
  * happened to match the release, and take as long as that tree was big. A layer
  * root that is not a real directory throws rather than reading — the caller
  * reports that the layers cannot be compared, which is the honest answer.
+ *
+ * This walks the **project's** tree only. What the release ships is
+ * {@link SHIPPED_GOVERNED_ASSISTANT_FILES}, frozen at build time, because a walk
+ * cannot tell a withdrawn rule from one an incomplete install dropped.
  */
-export async function collectGovernedAssistantFiles(
-  assistantRoot: string,
-  options: { requireLayers?: boolean } = {},
-): Promise<string[]> {
+export async function collectGovernedAssistantFiles(assistantRoot: string): Promise<string[]> {
   const found: string[] = [];
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
-    await collectGovernedFilesUnder(
-      path.join(assistantRoot, layer),
-      layer,
-      options.requireLayers === true,
-      found,
-      true,
-    );
+    await collectGovernedFilesUnder(path.join(assistantRoot, layer), layer, found, true);
   }
   return found;
 }
@@ -390,7 +429,6 @@ export async function collectGovernedAssistantFiles(
 async function collectGovernedFilesUnder(
   directory: string,
   prefix: string,
-  required: boolean,
   found: string[],
   isLayerRoot = false,
 ): Promise<void> {
@@ -405,7 +443,11 @@ async function collectGovernedFilesUnder(
   try {
     entries = await readdir(directory, { withFileTypes: true });
   } catch (error: unknown) {
-    if (isEnoent(error) && !required) {
+    if (isEnoent(error)) {
+      // A project may legitimately not have a layer: one that never ran `init`,
+      // or one still on the pre-recut layout. The validator decides what an
+      // absent layer means from the provenance record; the walk only reports
+      // what is there.
       return;
     }
     throw error;
@@ -413,9 +455,7 @@ async function collectGovernedFilesUnder(
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     const relative = `${prefix}/${entry.name}`;
     if (entry.isDirectory()) {
-      // Nested layers are never `requireLayers`: the directory was just listed,
-      // so an ENOENT below is a concurrent removal, not a broken install.
-      await collectGovernedFilesUnder(path.join(directory, entry.name), relative, false, found);
+      await collectGovernedFilesUnder(path.join(directory, entry.name), relative, found);
       continue;
     }
     if (isUngovernedManagementFile(entry.name) || isLocalAssistantOverlay(entry.name)) {
@@ -428,22 +468,35 @@ async function collectGovernedFilesUnder(
 /**
  * Governed-file hashes of the release currently installed.
  *
- * Fail-closed: a governed layer that cannot be read, or a shipped file whose
- * content cannot be hashed, throws instead of narrowing the result. An empty
- * or partial shipped set is not "this release ships less" — every entry the
- * lock holds and the set does not is treated by `qfai init --force` as a rule
- * the release withdrew, and deleted. A truncated install would have retired
- * the project's whole constitution on the next upgrade.
+ * The set of paths comes from {@link SHIPPED_GOVERNED_ASSISTANT_FILES}, which is
+ * frozen when the package is built and compiled into `dist/`, **not** from a
+ * walk of the installed tree. Discovering it by walking could not distinguish
+ * the two ways a path can be absent from `assets/`: a rule the release withdrew,
+ * and a rule the install lost. Both simply failed to appear, and every entry the
+ * lock holds that the shipped set omits is what `qfai init --force` retires —
+ * deletes — so one missing file in an incomplete extraction took the project's
+ * own healthy copy of that rule with it. Against the manifest the two are
+ * different answers: a named path with no readable file is an incomplete
+ * install and throws here, while a withdrawal is simply a path the manifest no
+ * longer names.
+ *
+ * Fail-closed throughout: a shipped file whose content cannot be hashed throws
+ * instead of narrowing the result, because an empty or partial shipped set is
+ * not "this release ships less".
+ *
+ * Symlinks are permitted on this side alone. The project's `.qfai/assistant/**`
+ * is a checkout whose governed paths must be real files; the installed package
+ * is whatever the package manager materialised, and a store that links a file
+ * into place there is not a governance fault.
  */
 export async function buildShippedAssistantHashes(
   assistantAssetsRoot: string,
 ): Promise<Record<string, string>> {
   const hashes: Record<string, string> = {};
-  for (const relative of await collectGovernedAssistantFiles(assistantAssetsRoot, {
-    requireLayers: true,
-  })) {
+  for (const relative of SHIPPED_GOVERNED_ASSISTANT_FILES) {
     const hash = await hashAssistantAssetFile(
       path.join(assistantAssetsRoot, ...relative.split("/")),
+      { allowSymlink: true },
     );
     if (hash === null) {
       throw new Error(

@@ -226,6 +226,28 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
     }
   }
 
+  // …unless the record says the project once had it. The exclusion above is
+  // about a project that never received a layer, and it read a *deleted* one
+  // the same way: with the layer gone, every shipped file under it was skipped
+  // before `coveredByExistenceProbe` could see it, and QFAI-ASSETS-001/002 were
+  // satisfied by the legacy fallback that `runUpgradeAssistantTree` leaves
+  // behind — so on exactly the layout the upgrade path produces, deleting a
+  // whole layer of normative rules passed `validate` in silence. A lock entry
+  // under that layer is the evidence that qfai did put files there, and the
+  // disappearance is reported once, against the layer, rather than once per
+  // shipped file it used to hold.
+  const recordedLayers = new Set<string>();
+  for (const key of Object.keys(lock?.files ?? {})) {
+    recordedLayers.add(key.split("/")[0] ?? "");
+  }
+  for (const layer of GOVERNED_ASSISTANT_LAYERS) {
+    if (!presentLayers.has(layer) && recordedLayers.has(layer)) {
+      issues.push(
+        missingGovernedLayerIssue(assistantDir, layer, assetProvenanceSeverity, windowNote),
+      );
+    }
+  }
+
   for (const relative of relatives) {
     const filePath = path.join(assistantDir, ...relative.split("/"));
     const status = classifyAssistantAsset(
@@ -258,6 +280,32 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
 }
 
 /**
+ * A governed layer the record says qfai populated, which is no longer a
+ * directory at all.
+ *
+ * Reported under `QFAI-ASSETS-006` — the same code a single deleted rule
+ * carries — because it is the same defect at layer granularity, and the same
+ * `npx qfai init` restores it.
+ */
+function missingGovernedLayerIssue(
+  assistantDir: string,
+  layer: string,
+  assetProvenanceSeverity: ProvenanceSeverity,
+  windowNote: string,
+): Issue {
+  return issue(
+    "QFAI-ASSETS-006",
+    `${ASSISTANT_DIR}/${layer}/ は .assets.lock.json に記録がある governed layer ですが、ディレクトリとして存在しません（層ごと欠落）。${windowNote}`,
+    assetProvenanceSeverity,
+    path.join(assistantDir, layer),
+    "assistantAssets.missingVendoredLayer",
+    undefined,
+    "canonical",
+    "`npx qfai init` を実行すると欠落した層の出荷ファイルを復元します。適用対象外にしたい規範がある場合は、削除ではなく Change Request を残してください。",
+  );
+}
+
+/**
  * Governed paths the existence probes above also check, mapped to the legacy
  * pre-recut path each one falls back to.
  */
@@ -276,13 +324,21 @@ const EXISTENCE_CHECKED_ELSEWHERE = new Map([
  * deleting the canonical rule there satisfied the probe from the legacy copy
  * while this exclusion silenced the provenance check. Removing a normative rule
  * was reportable in every layout but the one the upgrade path creates.
+ *
+ * The canonical path is checked for the same reason, and the two probes ask a
+ * weaker question than this one: `access` answers "something is reachable
+ * there", while provenance requires a readable **regular file**. A canonical
+ * path left as a symlink, a directory or a FIFO therefore satisfies the probe
+ * and is `missing` here, and deferring to a probe that will stay quiet is how
+ * the absence would go unreported by both.
  */
 async function coveredByExistenceProbe(assistantDir: string, relative: string): Promise<boolean> {
   const legacy = EXISTENCE_CHECKED_ELSEWHERE.get(relative);
   if (legacy === undefined) {
     return false;
   }
-  return !(await exists(path.join(assistantDir, legacy)));
+  const canonical = path.join(assistantDir, ...relative.split("/"));
+  return !(await exists(canonical)) && !(await exists(path.join(assistantDir, legacy)));
 }
 
 /**

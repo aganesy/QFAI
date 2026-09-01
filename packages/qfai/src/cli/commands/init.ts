@@ -653,8 +653,20 @@ async function syncGovernedAssistantAssets(
 
     const refreshable = options.force && previousHash !== undefined && currentHash === previousHash;
     if (refreshable) {
-      if (!options.dryRun) {
-        await replaceGovernedAsset(source, dest);
+      // `currentHash` was read above; the refresh is only legitimate while the
+      // file still holds it. Passing it down makes the replacement decline a
+      // target that changed under the run instead of discarding the new
+      // content.
+      const outcome = options.dryRun
+        ? "replaced"
+        : await replaceGovernedAsset(source, dest, currentHash);
+      if (outcome === "target-changed") {
+        skipped.push(dest);
+        recorded[relative] = previousHash;
+        manualMergeNotes.push(
+          `NOTE: ${dest} は更新中に別のプロセスによって書き換えられたため更新しませんでした（再度 \`npx qfai init --force\` を実行してください）。`,
+        );
+        continue;
       }
       copied.push(dest);
       recorded[relative] = shippedHash;
@@ -739,14 +751,41 @@ function escapedGovernedPathNote(dest: string): string {
  * `rename` also keeps the property the delete-first version was written for:
  * it replaces the directory entry itself, so a governed path left as a symlink
  * is replaced, never followed to overwrite whatever it points at.
+ *
+ * `expectedHash`, where the caller has one, is re-read immediately before the
+ * `rename`. The refresh decides what to do from a hash taken earlier, and the
+ * atomic staging only protects the *old* content from a failed copy — it does
+ * nothing about an editor, or a concurrent `init`, that rewrote the target in
+ * between, whose work the unconditional `rename` then discarded. Re-reading
+ * does not make the swap atomic — POSIX has no conditional `rename` — but it
+ * closes the window down to the two syscalls, and a target that moved is
+ * reported instead of overwritten.
  */
-async function replaceGovernedAsset(source: string, dest: string): Promise<void> {
+export type GovernedWriteOutcome = "replaced" | "target-changed";
+
+/**
+ * Exported for the regression test that pins the `target-changed` branch. The
+ * branch is only reachable through a race, so the test reaches it by handing in
+ * an `expectedHash` the target does not hold — the same state the race leaves.
+ */
+export async function replaceGovernedAsset(
+  source: string,
+  dest: string,
+  expectedHash?: string,
+): Promise<GovernedWriteOutcome> {
   const directory = path.dirname(dest);
   await mkdir(directory, { recursive: true });
   const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
   try {
     await copyFile(source, staging, constants.COPYFILE_EXCL);
+    if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
+      await rm(staging, { force: true }).catch(() => {
+        // Best effort: the answer below is what the caller acts on.
+      });
+      return "target-changed";
+    }
     await rename(staging, dest);
+    return "replaced";
   } catch (error: unknown) {
     await rm(staging, { force: true }).catch(() => {
       // Best effort: the write fault below is the one worth reporting.
@@ -1051,8 +1090,13 @@ async function restoreUnreadableGovernedAsset(
     }
     out.copied.push(dest);
     out.recorded[out.relative] = shippedHash;
+    // Tense follows the run: under `--dry-run` nothing was removed and nothing
+    // was written, and an operator who reads only the preview must not come
+    // away believing the occupied path has already been repaired.
     out.manualMergeNotes.push(
-      `NOTE: ${dest} は通常ファイル以外（ディレクトリ / 特殊ファイル / 壊れた symlink 等）に占有されていたため、出荷ファイルで置き換えました。`,
+      options.dryRun
+        ? `NOTE: ${dest} は通常ファイル以外（ディレクトリ / 特殊ファイル / 壊れた symlink 等）に占有されているため、出荷ファイルで置き換えます（--dry-run のため未実行）。`
+        : `NOTE: ${dest} は通常ファイル以外（ディレクトリ / 特殊ファイル / 壊れた symlink 等）に占有されていたため、出荷ファイルで置き換えました。`,
     );
     return;
   }
@@ -1184,10 +1228,90 @@ async function retireWithdrawnGovernedAssets(
       recorded[relative] = previousHash;
       continue;
     }
-    if (!options.dryRun) {
-      await rm(dest, { force: true });
+    if (options.dryRun) {
+      out.removed.push(dest);
+      continue;
     }
-    out.removed.push(dest);
+    const outcome = await retireVerifiedGovernedAsset(dest, previousHash);
+    if (outcome === "removed") {
+      out.removed.push(dest);
+      continue;
+    }
+    // The pathname stopped holding the content that was checked. Whatever is
+    // there now is not qfai's withdrawn copy, so it keeps its record and its
+    // place, exactly as an edited retired file does.
+    recorded[relative] = previousHash;
+    out.skipped.push(dest);
+    out.manualMergeNotes.push(
+      outcome === "changed"
+        ? `NOTE: ${dest} は削除の直前に別のプロセスによって置き換えられたため削除しませんでした。`
+        : `NOTE: ${dest} は削除の直前に別のプロセスによって置き換えられたため削除を取り消しましたが、元の内容を戻せませんでした（${quarantineLabel(outcome)} に退避してあります）。`,
+    );
+  }
+}
+
+/**
+ * Removes a withdrawn governed file, and only the exact file that was checked.
+ *
+ * `rm` acts on a pathname, not on the inode the hash was taken from. A process
+ * that replaced the path with a new project-owned file between the two lost
+ * that file to a deletion justified by somebody else's bytes. So the entry is
+ * moved aside first — `rename` within the directory carries whatever inode is
+ * at the path at that instant — and the hash is taken from the moved file,
+ * whose name nothing else knows. What is deleted is then necessarily what was
+ * inspected.
+ *
+ * When the moved file turns out not to be the withdrawn copy it is put back,
+ * and put back only if the pathname is still free: `link` fails with `EEXIST`
+ * rather than replacing whatever arrived there, so the restore cannot destroy
+ * the very file this precaution exists to protect. Where hard links are not
+ * available the restore falls back to `rename` guarded by a presence check.
+ */
+export type GovernedRetireOutcome = "removed" | "changed" | { orphaned: string };
+
+function quarantineLabel(outcome: GovernedRetireOutcome): string {
+  return typeof outcome === "object" ? outcome.orphaned : "";
+}
+
+/**
+ * Exported for the regression test that pins the `changed` branch, which — like
+ * the refresh above — is only reachable through a race. The test enters it by
+ * naming a hash the file does not hold; an implementation that deleted the
+ * pathname rather than the inode it checked destroys the file and fails.
+ */
+export async function retireVerifiedGovernedAsset(
+  dest: string,
+  expectedHash: string,
+): Promise<GovernedRetireOutcome> {
+  const directory = path.dirname(dest);
+  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await rename(dest, quarantine);
+  } catch (error: unknown) {
+    if (isEnoent(error)) {
+      // Already gone: the deletion this call was going to make has happened.
+      return "removed";
+    }
+    throw error;
+  }
+  if ((await hashAssistantAssetFile(quarantine)) === expectedHash) {
+    await rm(quarantine, { force: true });
+    return "removed";
+  }
+  try {
+    await link(quarantine, dest);
+    await rm(quarantine, { force: true });
+    return "changed";
+  } catch {
+    if (!(await pathExists(dest).catch(() => true))) {
+      try {
+        await rename(quarantine, dest);
+        return "changed";
+      } catch {
+        return { orphaned: quarantine };
+      }
+    }
+    return { orphaned: quarantine };
   }
 }
 
