@@ -66,7 +66,8 @@ const SEGMENT = String.raw`[^\s/\\\`\u0000-\u001f]+`;
  *
  * `packages/qfai/src/core/doctor.ts` and `package.json` are paths;
  * `resolvePlaywrightLauncher` is not. The extension must start with a letter,
- * so a version-shaped token such as `v1.12.0` is not read as a file either.
+ * so a dotted token whose last segment is numeric — a release number, say — is
+ * not read as a file either.
  *
  * A **bare directory name at the root** — `src` — stays unrecognised, and that
  * is a deliberate limit rather than an oversight: nothing separates it from an
