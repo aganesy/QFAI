@@ -42,7 +42,10 @@ as labelled assumptions and recorded in the config diff — see
 `.qfai/assistant/constitution/constitution.md` Article VI. The `hard-required`
 inputs in Default Autopilot Policy are the exception: they are never assumed,
 and a missing one blocks the run until it is provided — but only where this run
-consumes it; one this run never reads is not asked for at all.
+consumes it; one this run never reads is not asked for at all. A `testFileGlobs`
+proposal that matches no file is one of those `hard-required` inputs, not a
+clarification to assume: Step 5's zero-match stop therefore outlives an
+exhausted budget.
 
 ## FORMAT SSOT (Mandatory)
 
@@ -399,7 +402,10 @@ Keep all other config keys unchanged.
 
 Sample 5-15 actual test files that match the proposed globs.
 
-- If zero matches exist, stop and ask for clarification.
+- If zero matches exist, stop and ask for clarification. This stop is **not
+  subject to the Article VI budget** — it is a `hard-required` input this run
+  consumes, so it survives clarification-exhausted mode. Do not assume a glob
+  and do not write the key; report the unresolved glob as the blocker.
 - If some directories are ambiguous, list them as Open Questions.
 
 ## Checkpoints
@@ -478,6 +484,8 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - `companyName`
   - brand intent
   - `primarySpecId` (when absent from inputs)
+  - a `testFileGlobs` proposal that matches at least one real file (Step 5) —
+    a glob matching nothing makes every traceability finding a false negative
 
 A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
 

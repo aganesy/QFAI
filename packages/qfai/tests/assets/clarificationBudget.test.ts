@@ -203,5 +203,35 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "but only where this run\nconsumes it");
       expectPhrase(content, "`.qfai/assistant/constitution/constitution.md` Article VI");
     });
+
+    it(`${tree}: qfai-configure never assumes a glob that matches nothing`, async () => {
+      // Step 5 says "If zero matches exist, stop and ask for clarification",
+      // unconditionally. The budget paragraph said the remaining choices become
+      // labelled assumptions once five questions are spent, and zero-match was
+      // in no exemption — so a run that exhausted its budget and then hit a
+      // zero-match glob had to either break the cap or save a `testFileGlobs`
+      // matching no file, which makes every downstream traceability finding a
+      // false negative. Classified as `hard-required` so the existing Article VI
+      // exemption carries it, rather than inventing a third exemption class.
+      const content = await read(tree, CONFIGURE);
+      // The budget paragraph the contradiction lived in.
+      expectPhrase(
+        content,
+        "A `testFileGlobs`\nproposal that matches no file is one of those `hard-required` inputs, not a\nclarification to assume",
+      );
+      expectPhrase(content, "Step 5's zero-match stop therefore outlives an\nexhausted budget");
+      // Step 5 itself must say the stop outlives the budget, since that is the
+      // step a reader follows.
+      expectPhrase(content, "This stop is **not\nsubject to the Article VI budget**");
+      expectPhrase(content, "so it survives clarification-exhausted mode");
+      expectPhrase(content, "Do not assume a glob\nand do not write the key");
+      expectPhrase(content, "report the unresolved glob as the blocker");
+      // And the bucket that Article VI's exemption actually reads — without it
+      // the two statements above cite an exemption that does not list them.
+      expectPhrase(
+        content,
+        "- a `testFileGlobs` proposal that matches at least one real file (Step 5)",
+      );
+    });
   }
 });
