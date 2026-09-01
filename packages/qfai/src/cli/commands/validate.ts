@@ -543,6 +543,11 @@ function unevaluatedFamilies(
     // so `runSddValidators` drops the codes that reconcile the two. Read from
     // the same constant it filters on, so the notice cannot claim a gate the
     // run skipped.
+    //
+    // The drop is per spec — only where the ledger is genuinely absent — so on
+    // a scoped run over seeded specs these codes did in fact run. Listing them
+    // anyway is the conservative half of the error: the notice under-claims
+    // what was evaluated, which is the direction that cannot mislead.
     for (const family of TDD_LIST_SEED_RECONCILIATION_CODES) push(family);
   }
   if (evaluated.has("package-self-governance")) {

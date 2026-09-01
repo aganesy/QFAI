@@ -506,6 +506,13 @@ async function runSddValidators(
     // `TDDLIST_TC_NOT_COVERED` (error) on the very gate that has to pass
     // before Phase 2b can run. The unscoped stop gate is the post-Phase-2b
     // one, and it still evaluates the whole seed-shape set.
+    //
+    // The equivalence is one-way, though, and `beforeLedgerSeed` is read as a
+    // permission rather than an assertion for that reason: `--spec` is
+    // documented as a scope filter, so a `--spec` run is *also* how an author
+    // re-checks a single spec after Phase 2b. Treating the flag as the verdict
+    // let that run pass with rows missing. The validator drops the
+    // reconciliation codes only where the ledger really is absent.
     ...(includeTddListSeedShape
       ? await validateTddListSeedShape(root, config, {
           ...(specScope ? { specScope } : {}),

@@ -231,6 +231,53 @@ describe("the slice gate runs before the ledger is seeded", () => {
     // …and the unscoped stop gate, which follows Phase 2b, does evaluate it.
     expect(await partialProfileNotice("sdd")).not.toContain("TDDLIST_TC_NOT_COVERED");
   });
+
+  it("reconciles a spec whose ledger does exist, scope or no scope", async () => {
+    // `--spec` is documented as a scope filter, so a scoped run is also how an
+    // author re-checks one spec *after* Phase 2b. Reading the flag as "we are
+    // before Phase 2b" let that run pass with a coverage-target TC unrowed —
+    // the exact hole this profile split exists to close, reopened by the
+    // deadlock fix. The ledger's presence is the fact; the flag only permits
+    // the drop where that fact says the file is not there yet.
+    const other = "| TDD-0001 | TC-0002 | Unit | tests/unit/a.test.ts | a | todo | - | - |";
+    const codes = (await sliceGateIssues(ledger([other]))).map((entry) => entry.code);
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});
+
+describe("the seed shape covers every cell the seeding phase owns", () => {
+  /**
+   * All three are `warning`, so none of them blocked `--fail-on error` — but
+   * `--strict` / `--fail-on warning` is a documented way to run this gate, and
+   * under it a malformed seed passed on the writer's own gate and landed on
+   * `/qfai-implement`, which the drift protocol forbids to re-scope a row.
+   */
+  it("holds the seed to a TC-Refs token that names a declared TC", async () => {
+    // `TC-Refs` carries the row's obligation identity, which stays upstream:
+    // the reader may not re-point it at a TC that exists.
+    const row = "| TDD-0001 | TC-9999 | Unit | tests/unit/a.test.ts | a | todo | - | - |";
+    expect(await codesFor("sdd", ledger([row]))).toContain("TDDLIST_UNKNOWN_REF");
+  });
+
+  it("holds the seed to a Layer its TC's Level can be discharged by", async () => {
+    // `Level` (in `06_Test-Cases.md`) and `Layer` (in the row) are authored by
+    // the same phase, and reconciling them is a re-scope — an upstream change.
+    const row =
+      "| TDD-0001 | TC-0001 | Integration | tests/integration/a.test.ts | a | todo | - | - |";
+    expect(await codesFor("sdd", ledger([row]))).toContain("TDDLIST_COVERAGE_LAYER_MISMATCH");
+  });
+
+  it("reports the absent ledger Phase 2b's first checklist line creates", async () => {
+    expect(await codesFor("sdd", undefined)).toContain("TDDLIST_MISSING");
+  });
+
+  it("does not demand that ledger at the gate that precedes Phase 2b", async () => {
+    // The other half: `TDDLIST_MISSING` is the file's absence, which is the
+    // slice gate's normal state, so it defers with the reconciliation set.
+    expect((await sliceGateIssues(undefined)).map((entry) => entry.code)).not.toContain(
+      "TDDLIST_MISSING",
+    );
+  });
 });
 
 describe("the seed-shape walk honours --spec", () => {

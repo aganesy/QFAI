@@ -926,34 +926,47 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // change the reader is forbidden to make.
   "TDDLIST_INVALID_OBLIGATION_REF",
   "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  // The remaining three read cells the same phase authors, and were missing
+  // for no reason the ownership split supports:
+  //
+  // - `TDDLIST_MISSING` is the absence of the file Phase 2b's first checklist
+  //   line creates. Nothing downstream can create it.
+  // - `TDDLIST_UNKNOWN_REF` is a `TC-Refs` token naming no declared TC.
+  //   `TC-Refs` carries the row's obligation identity, which the traceability
+  //   rules keep upstream: the reader may not re-point it.
+  // - `TDDLIST_COVERAGE_LAYER_MISMATCH` compares a TC's `Level` against the
+  //   `Layer` of the rows citing it. Both sides are seed-authored — `Level` in
+  //   `06_Test-Cases.md`, `Layer` in the row — and reconciling them is a
+  //   re-scope, which is an upstream change.
+  //
+  // All three are `warning`, so they never blocked `--fail-on error`; they did
+  // let a malformed seed through `--strict` on the writer's own gate.
+  "TDDLIST_MISSING",
+  "TDDLIST_UNKNOWN_REF",
+  "TDDLIST_COVERAGE_LAYER_MISMATCH",
 ]);
 
 /**
- * The seed-shape codes that read `06_Test-Cases.md` **against** the ledger
- * instead of reading the ledger alone.
+ * The seed-shape codes that a spec with **no ledger yet** raises anyway.
  *
  * The two sides are written by different phases of the same run: the Slice
  * phase produces the test cases, and only the phase after it seeds a ledger
  * row per coverage-target TC. A gate placed between them therefore sees TCs
- * with no row *by construction*, so this is the one part of the seed shape
- * that only a post-seed gate can answer. Everything else in
+ * with no row, and no file to hold them, *by construction*. Everything else in
  * {@link TDD_LIST_SEED_SHAPE_CODES} is a property of the ledger text itself —
  * an absent ledger raises none of them.
  */
 export const TDD_LIST_SEED_RECONCILIATION_CODES: ReadonlySet<string> = new Set([
   "TDDLIST_TC_NOT_COVERED",
+  "TDDLIST_MISSING",
 ]);
-
-/** {@link TDD_LIST_SEED_SHAPE_CODES} minus the codes a pre-seed gate cannot answer. */
-const TDD_LIST_PRE_SEED_SHAPE_CODES: ReadonlySet<string> = new Set(
-  [...TDD_LIST_SEED_SHAPE_CODES].filter((code) => !TDD_LIST_SEED_RECONCILIATION_CODES.has(code)),
-);
 
 /** Options for {@link validateTddListSeedShape}. */
 export type TddListSeedShapeOptions = TddListValidateOptions & {
   /**
-   * Set on a gate that runs **before** the ledger has been seeded, which drops
-   * {@link TDD_LIST_SEED_RECONCILIATION_CODES}.
+   * Set on a gate the workflow can reach before the ledger has been seeded,
+   * which drops {@link TDD_LIST_SEED_RECONCILIATION_CODES} **for the specs
+   * that have no ledger yet**.
    *
    * Without it the SDD profile's own per-spec slice gate — which the skill's
    * Required Process places one step ahead of the phase that writes
@@ -961,6 +974,12 @@ export type TddListSeedShapeOptions = TddListValidateOptions & {
    * every newly sliced spec that declares a unit or component test case. That
    * gate has to pass before the seeding phase runs, so the workflow could
    * never reach the phase that would have cleared it.
+   *
+   * It is deliberately a permission, not a verdict. The caller sets it from
+   * the *position* it might be in, and the per-spec state decides: a spec whose
+   * ledger exists is reconciled whatever this says. Dropping the codes on the
+   * caller's word alone made `--spec` mean "before Phase 2b", so re-checking a
+   * single **seeded** spec passed with rows missing.
    */
   beforeLedgerSeed?: boolean;
 };
@@ -978,8 +997,9 @@ export type TddListSeedShapeOptions = TddListValidateOptions & {
  * execution state the SDD stage has not reached yet — so the writing stage is
  * held to the shape it wrote, and nothing more.
  *
- * `beforeLedgerSeed` narrows that further for a gate the workflow reaches
- * before the seed exists; see {@link TddListSeedShapeOptions}.
+ * `beforeLedgerSeed` narrows that further for a gate the workflow can reach
+ * before the seed exists, and only for the specs that are actually unseeded;
+ * see {@link TddListSeedShapeOptions}.
  */
 export async function validateTddListSeedShape(
   root: string,
@@ -987,10 +1007,19 @@ export async function validateTddListSeedShape(
   options: TddListSeedShapeOptions = {},
 ): Promise<Issue[]> {
   const issues = await validateTddList(root, config, options);
-  const reportable = options.beforeLedgerSeed
-    ? TDD_LIST_PRE_SEED_SHAPE_CODES
-    : TDD_LIST_SEED_SHAPE_CODES;
-  return issues.filter((entry) => reportable.has(entry.code));
+  // Which specs have no ledger yet, read off the run's own findings:
+  // `TDDLIST_MISSING` is raised on exactly that condition and carries the
+  // ledger path every other code in this validator reports against. Deciding
+  // it here rather than in the caller keeps "is this spec seeded?" a fact
+  // about the tree instead of an inference from the command line.
+  const unseeded = new Set(
+    issues.filter((entry) => entry.code === "TDDLIST_MISSING").map((entry) => entry.file),
+  );
+  return issues.filter((entry) => {
+    if (!TDD_LIST_SEED_SHAPE_CODES.has(entry.code)) return false;
+    if (!TDD_LIST_SEED_RECONCILIATION_CODES.has(entry.code)) return true;
+    return !(options.beforeLedgerSeed === true && unseeded.has(entry.file));
+  });
 }
 
 async function validateSpecTddList(
