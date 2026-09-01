@@ -157,6 +157,17 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-BRREF-001`, `QFAI-BRREF-002` and
+   * `QFAI-BRREF-003` — a ledger's declared review-group key is
+   * malformed, names a rule no Business Rules file declares, or is not the key
+   * the row's own `TC-Refs` derive. Every one of them reads a cell written
+   * against an older `04_Business-Rules.md`, or under the superseded
+   * AC-first derivation, so the rule necessarily lands on ledgers that were
+   * correct under the procedure of their day — including rows already at
+   * `done`, whose remedy is an edit to the cell rather than a transition.
+   */
+  tddListBrRefKey: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed

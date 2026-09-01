@@ -185,6 +185,149 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("### Group formation (states and transitions)");
     });
 
+    it(`${tree}: the group key is a ledger column, not a join the runner redoes`, async () => {
+      // Open/Fill/Close were predicates over "the BR/AC this row belongs to",
+      // and no ledger column carried it: `TC-Refs` reaches an AC through
+      // `06_Test-Cases.md` and a BR only by scanning `04_Business-Rules.md`
+      // backwards. A run could then never close a group (nothing reviewed) or
+      // close one per row (T2 cost at T1 ceremony).
+      const section = unwrap(await read(tree, REFERENCE));
+      const ledger = unwrap(await read(tree, LEDGER));
+      const skill = unwrap(await read(tree, SKILL));
+
+      expect(ledger).toContain("## Group key column (optional, required for T1 batching)");
+      expect(ledger).toContain("| BR-Ref |");
+      // The two hops are many-to-many, so the value needs a stated tie-break or
+      // two agents grouping the same rows disagree.
+      expect(ledger).toContain("**One `BR-*` per row.**");
+      expect(ledger).toContain("keep the **lowest-numbered** `BR-*`");
+      expect(ledger).toContain("`/qfai-sdd` Phase 2b");
+      // An unresolved key must degrade to a group of one, never to no close.
+      expect(ledger).toContain("it forms a group of one and is reviewed alone");
+
+      expect(section).toContain("the set of items that share one `BR-Ref` value");
+      expect(section).toContain(
+        "no `todo` **T1** row carrying the key remains **anywhere** in the ledger",
+      );
+      expect(section).not.toContain("the first T1 row of a BR/AC reaches `refactor`");
+      // Ledger order need not be key-contiguous. Closing on "the next `todo`
+      // row has a different key" reopens a second group on the same key later,
+      // which is one review per contiguous run, not one per `BR-Ref`.
+      expect(section).toContain("The keyed conditions scan the **whole** ledger");
+      expect(section).toContain("`BR-A, BR-B, BR-A`");
+      expect(skill).toContain("the rows sharing one `BR-Ref`, the ledger's group key");
+    });
+
+    it(`${tree}: an open group makes Phase Red's row selection keyed, not positional`, async () => {
+      // Fill advances "the ledger's remaining T1 rows carrying that same
+      // `BR-Ref`", but Phase Red selected the first `todo` row in ledger order.
+      // On `BR-A, BR-B, BR-A` those disagree: the positional pick is the `B`,
+      // which can neither join the open `A` group nor open one of its own,
+      // while the trailing `A` keeps the open group from closing.
+      const section = unwrap(await read(tree, REFERENCE));
+      const skill = unwrap(await read(tree, SKILL));
+
+      expect(section).toContain("**While a group is open, this selection outranks ledger order**");
+      expect(section).toContain("the first `todo` row carrying the **open key**");
+      expect(section).toContain(
+        "Selection returns to ledger order only once no `todo` T1 row carries the key",
+      );
+      expect(skill).toContain(
+        "**While a T1 review group is open that `todo` selection is keyed, not positional**",
+      );
+      expect(skill).toContain("take the first `todo` row carrying the open group's `BR-Ref`");
+      expect(skill).toContain("`references/volume-policy.md` > Group formation, Fill");
+    });
+
+    it(`${tree}: a named row of another key is deferred, not stranded at refactor`, async () => {
+      // "A named row wins" applied before the keyed selection: a named T1 row
+      // of key B, invoked while group A is open, can neither join A nor open
+      // its own group — and Open fires on a row *reaching* `refactor` while no
+      // group is open, an event that has passed by the time A closes. B sat at
+      // `refactor` permanently, with no rule that re-offers it a group.
+      const section = unwrap(await read(tree, REFERENCE));
+      const skill = unwrap(await read(tree, SKILL));
+
+      expect(skill).toContain("**An open T1 review group outranks even that**");
+      expect(skill).toContain(
+        "a named T1 row whose `BR-Ref` differs from the open group's key is **deferred**",
+      );
+      expect(section).toContain("**It outranks the named-row override too.**");
+      expect(section).toContain("is a selection rule, not a licence to strand one");
+      // Deferral, not rejection: the ids are still processed, and the reason it
+      // cannot deadlock is that no close condition needs them.
+      for (const doc of [skill, section]) {
+        expect(doc).toContain("an event, not a state");
+        expect(doc).toContain("then processed in the order given");
+      }
+      expect(skill).toContain("Deferring cannot deadlock");
+      expect(section).toContain("Deferral cannot deadlock");
+      // Over-correction pin: a named row that shares the open key, and a named
+      // T2/T3 row, are not deferred.
+      expect(skill).toContain("A named row carrying the open key joins the group");
+      expect(section).toContain("a named T2 / T3 row is reviewed alone and is never deferred");
+    });
+
+    it(`${tree}: the direct TC -> EX -> BR edge wins over the AC join`, async () => {
+      // The AC join alone misattributes a row: a TC pinned through its `EX` to
+      // one `BR` was filed under the lowest-numbered `BR` merely sharing its
+      // `AC`, so rows verifying different rules landed in one review unit.
+      const ledger = unwrap(await read(tree, LEDGER));
+      // The key is only reproducible if a wrong one is named: optional to the
+      // validator, checked when the ledger declares it.
+      expect(ledger).toContain("`QFAI-BRREF-002`");
+      // Resolving is not deriving: a key from some other route names a real
+      // rule and still batches the row under one its `TC-Refs` never reach.
+      expect(ledger).toContain("`QFAI-BRREF-003`");
+      expect(ledger).toContain("the validator recomputes it and names the expected value");
+      // And a rule named only in an auxiliary table is not a declaration.
+      expect(ledger).toContain(
+        "reads declarations from a table's `BR-ID` column and from `## BR-NNNN-NNNN` headings only",
+      );
+      expect(ledger).toContain("**`TC` -> `EX` -> `BR`.**");
+      expect(ledger).toContain("that `EX`'s `BR-Ref` in `05_Examples.md`");
+      expect(ledger).toContain("**Only for a TC with no `EX-Ref`:**");
+      // One `EX` may pin a cohesive rule bundle to several `BR-*`
+      // (`layerCoverage.test.ts`), so the hop is not single-valued and the
+      // tie-break has to run over the union, not only over several `TC-Refs`.
+      expect(ledger).toContain("may list **several** `BR-*` in that one cell");
+      expect(ledger).toContain("The tie-break applies to the whole union");
+    });
+
+    it(`${tree}: the close conditions are scoped to the key's T1 members`, async () => {
+      // Tier is derived per row, so one `BR-Ref` can hold T2/T3 rows. Reading
+      // them as members strands the group — Fill only ever advances the key's
+      // remaining T1 rows, so a `todo` T2 row keeps both conditions false.
+      const section = unwrap(await read(tree, REFERENCE));
+      expect(section).toContain("every **T1** row carrying the key has reached `refactor`");
+      expect(section).toContain("Both keyed conditions read **T1 members only**");
+      expect(section).toContain("neither join the group nor hold it open");
+      // `-` is "not resolved", not a value rows share — and neither is the
+      // empty cell the validator accepts as the same state. Reading `""` as an
+      // ordinary key batches rows no `BR` relates into one review unit.
+      expect(section).toContain("`-` is **not** a shared key");
+      expect(section).toContain("**empty cell reads exactly as `-`**");
+      expect(section).toContain(
+        "opens a group of one that closes the moment that row reaches `refactor`",
+      );
+      const ledger = unwrap(await read(tree, LEDGER));
+      expect(ledger).toContain("**An empty cell is the same state as `-`**");
+    });
+
+    it(`${tree}: the ledger-exhausted clause is a terminator, not a grouping rule`, async () => {
+      // It is the only close condition a keyless ledger can evaluate, so it was
+      // the fallback every run reached — and it makes the whole spec one group,
+      // which "a group must not mix tiers" forbids.
+      const section = unwrap(await read(tree, REFERENCE));
+      expect(section).toContain(
+        "The last close condition is a **terminator, not a grouping rule**",
+      );
+      expect(section).toContain("has batched the whole spec into one group");
+      expect(section).toContain("### When the ledger carries no `BR-Ref` column");
+      expect(section).toContain('Do **not** fall through to "the ledger has no `todo` rows left"');
+      expect(section).toContain("every T1 row is its own group and is reviewed alone");
+    });
+
     it(`${tree}: criticality forces T2 regardless of layer`, async () => {
       const section = unwrap(await read(tree, REFERENCE));
       expect(section).toContain("### Criticality outranks connectedness");

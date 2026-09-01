@@ -143,8 +143,20 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `BR-Ref`. `Blocked-By` names what a
   `blocked` row is waiting on and is required on those rows.
+- `BR-Ref` is **conditionally required**: optional to `npx qfai validate` — the required set above is
+  what it enforces, so ledgers seeded before the column keep passing — and required for
+  `/qfai-implement`'s T1 review batching, which can close no group without it. `/qfai-sdd`
+  Phase 2b seeds it. One value per row: a single `BR-*` declared in `04_Business-Rules.md`, or
+  `-` for "not resolved" — an empty cell reads the same — and that row is reviewed alone,
+  never batched with the other unresolved rows. When the column is present its cells are
+  checked for shape, referent **and derivation** — at `warning`, so a mistyped, dangling or
+  misattributed key is named rather than silently regrouping rows. Derivation is the third
+  check because the first two pass on any real rule of the spec: a key resolved by some other
+  route still files the row under a rule its own `TC-Refs` never reach, so the value is
+  recomputed from `TC` -> `EX` -> `BR` (with the `AC` fallback and the lowest-numbered
+  tie-break) and compared.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.

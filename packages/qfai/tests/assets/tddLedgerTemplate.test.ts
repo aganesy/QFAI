@@ -12,6 +12,8 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md";
+const EXAMPLES_TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/05_Examples.md";
+const RULES_TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/04_Business-Rules.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -35,6 +37,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(cells(header ?? "")).toEqual([
         "TDD-ID",
         "TC-Refs",
+        "BR-Ref",
         "Layer",
         "Test file",
         "Selector",
@@ -43,6 +46,94 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Evidence",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
+    });
+
+    it(`${tree}: the seeded ledger carries the T1 review-group key`, async () => {
+      // `/qfai-implement` opens, fills and closes a T1 review group by the row's
+      // `BR-Ref`. Phase 2b is the only phase with `03`, `04` and `06` all open,
+      // so a ledger seeded without the column leaves every group boundary
+      // underivable downstream.
+      // Compared with soft wraps collapsed: prettier owns where these sentences
+      // break, and the assertion is about the rule, not the column it broke at.
+      const template = (await read(tree, TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(template).toContain("The one `BR-*` this row serves");
+      expect(template).toContain("keep the **lowest-numbered** `BR-*`");
+      expect(template).toContain("Write `-` when no `BR` reaches the row.");
+      expect(template).toContain("`04_Business-Rules.md`");
+      // The direct edge first: the AC join alone files a TC pinned through its
+      // `EX` to one `BR` under a different rule that merely shares its `AC`.
+      expect(template).toContain("read each TC's `EX-Ref` in `06_Test-Cases.md`");
+      expect(template).toContain("Only a TC with no `EX-Ref` falls back to its `AC-Refs`");
+      // An `EX` may name several `BR-*` for a cohesive rule bundle
+      // (`layerCoverage.test.ts` allows it), so the tie-break has to cover the
+      // whole union — restricting it to "several `TC-Refs`" leaves a
+      // single-`TC` row with a multi-`BR` `EX` without a derivable key.
+      expect(template).toContain("taking every `BR-*` listed there");
+      expect(template).toContain("across several `TC-Refs` and across a multi-`BR` `EX` alike");
+      expect(template).toContain("An empty cell reads the same as `-`");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("- Fill `BR-Ref` —");
+      expect(checklists).toContain("the lowest-numbered `BR-*` of the whole union wins");
+      expect(checklists).toContain("one `EX` may name several `BR-*`");
+      expect(checklists).toContain("only a TC with no `EX-Ref` falls back");
+    });
+
+    it(`${tree}: the column's requiredness matches the schema SSOT`, async () => {
+      // The template called `BR-Ref` a Required column while
+      // `spec-traceability-rules.md` listed it in neither set and
+      // `TDD_LEDGER_REQUIRED_COLUMNS` kept the original eight — so a ledger
+      // seeded per the SSOT had no group key and still passed `qfai validate`.
+      const template = (await read(tree, TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(template).toContain("Every one except `BR-Ref` is required by `npx qfai validate`");
+      expect(template).toContain("**optional to the validator and required for T1 batching**");
+
+      const ssot = (
+        await read(tree, "assistant/skills/qfai-sdd/references/spec-traceability-rules.md")
+      ).replace(/\s*\n\s*/g, " ");
+      expect(ssot).toContain("`Blocked-By`, `BR-Ref`");
+      expect(ssot).toContain("`BR-Ref` is **conditionally required**");
+      expect(ssot).toContain(
+        "its cells are checked for shape, referent **and derivation** — at `warning`",
+      );
+      // "Declared" is a weaker claim than "this row's": a key resolved by some
+      // other route names a real rule and still batches the row under one its
+      // own `TC-Refs` never reach, so the SSOT has to say the value is
+      // recomputed and compared, not merely resolved.
+      expect(ssot).toContain("the value is recomputed from `TC` -> `EX` -> `BR`");
+      // Empty is the same "not resolved" state the validator accepts, so the
+      // SSOT must not leave `""` readable as a key rows share.
+      expect(ssot).toContain('`-` for "not resolved" — an empty cell reads the same');
+    });
+
+    it(`${tree}: the Examples template permits the multi-BR cell the key derivation assumes`, async () => {
+      // The key derivation takes "every `BR-*` listed there" and tie-breaks
+      // over the union, which only has an input if the template an SDD agent
+      // writes `05_Examples.md` from allows more than one. While it said
+      // "Every EX must reference one BR" that agent collapsed or split a
+      // cohesive bundle, and the union the ledger rule is written for could
+      // never occur.
+      const examples = (await read(tree, EXAMPLES_TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(examples).not.toContain("Every EX must reference one BR");
+      expect(examples).toContain("Every EX must reference **at least one** BR");
+      expect(examples).toContain(
+        "**A cohesive rule bundle may be written as several comma-separated `BR-*` in the one cell.**",
+      );
+      expect(examples).toContain("do not collapse such a bundle to a single `BR-*`");
+      // Order-independence is what makes the lowest-numbered tie-break the
+      // key rather than "whatever was written first".
+      expect(examples).toContain("The cell is read as a **set**");
+      expect(examples).toContain("the lowest-numbered `BR-*` of the union it reaches");
+
+      // Over-correction pin: one `BR-*` stays the default, here and in the
+      // granularity rule that argues from it.
+      expect(examples).toContain("**One `BR-*` is the default.**");
+      const rules = (await read(tree, RULES_TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(rules).toContain("pins `EX` to `BR` 1:1 by default");
+      expect(rules).toContain("only for a cohesive rule bundle");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

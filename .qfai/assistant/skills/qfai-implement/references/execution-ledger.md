@@ -42,6 +42,72 @@ evidence" asked for exactly what test-first withholds.
 - It is a claim the row is later measured against, not a lock. See
   `parallelization-policy.md#seam-reconciliation-after-a-parallel-run`.
 
+## Group key column (optional, required for T1 batching)
+
+| Column | Description                                                                            |
+| ------ | -------------------------------------------------------------------------------------- |
+| BR-Ref | The single `BR-*` this row serves — the review-group key `volume-policy.md` batches on |
+
+`volume-policy.md` opens, fills and closes a T1 review group with a predicate
+over "the BR/AC this row belongs to", and no other column carries that value.
+`TC-Refs` reaches an `AC` only through `06_Test-Cases.md`, and reaches a `BR`
+only by scanning `04_Business-Rules.md`'s `AC-Refs` **backwards**;
+`Owning module` is a module path, and two BRs can share one, so it is not a
+proxy for the key. Without `BR-Ref` a run either never closes a group — and an
+open group is a completion prohibition — or closes one per row, which is T2
+behaviour at T1 cost.
+
+- Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b), the one point where
+  `03`, `04`, `05` and `06` are all open. That is where `Owning module` is
+  resolved from the same join.
+- **One `BR-*` per row.** Resolve it per TC the row's `TC-Refs` name, taking the
+  direct edge first:
+  1. **`TC` -> `EX` -> `BR`.** Read the TC's `EX-Ref` in `06_Test-Cases.md`,
+     then that `EX`'s `BR-Ref` in `05_Examples.md`. `EX-Ref` is single-valued,
+     so this edge names the rules the row actually verifies. An `EX` covering a
+     cohesive rule bundle may list **several** `BR-*` in that one cell; take
+     all of them.
+  2. **Only for a TC with no `EX-Ref`:** take the ACs it names in
+     `06_Test-Cases.md` and every `BR` whose `AC-Refs` names one of them in
+     `04_Business-Rules.md`.
+
+  Collect the **union** of every `BR-*` reached this way and keep the
+  **lowest-numbered** `BR-*` of it. The tie-break applies to the whole union, never
+  only to the several-`TC-Refs` case: a single `EX` naming
+  `BR-0001-0002, BR-0001-0001` is already ambiguous, and without the tie-break
+  two agents reading the same valid spec derive different keys — or none. Two
+  agents applying it reach the same value, which is what makes the group
+  boundary reproducible. Going straight to the AC join misattributes: a TC
+  pinned through its `EX` to one `BR` would be filed under the lowest-numbered
+  `BR` merely sharing its `AC`, and rows verifying different rules would land
+  in one review unit.
+
+- `-` is legal and means "not resolved" — no `BR` reaches the row's TCs, or the
+  row has no `TC-Refs` at all (an `E2E` / `API` row). **An empty cell is the
+  same state as `-`**, in the validator and in `volume-policy.md` alike: it is
+  never read as a key rows share. A row carrying either is **not eligible for
+  batching**: it forms a group of one and is reviewed alone. That is the safe
+  direction; the unsafe one is a group that never closes.
+- It is a grouping key, not an obligation. Coverage counting reads `TC-*` tokens
+  only, so `BR-Ref` is inert to it.
+- The column is optional to `npx qfai validate` — the required set above is what it
+  enforces, so a ledger seeded before the column keeps passing — but a ledger
+  that **declares** it has its cells checked: `QFAI-BRREF-001` (not a
+  single `BR-NNNN` or `BR-NNNN-NNNN`, and not `-` — an empty cell reads as `-`),
+  `QFAI-BRREF-002` (no such rule in the spec's Business Rules file) and
+  `QFAI-BRREF-003` (a real rule, but not the one the procedure above derives
+  from this row's own `TC-Refs` — the validator recomputes it and names the
+  expected value). All three open at `warning` so that a ledger written against
+  an older rules file does not start failing CI on upgrade — but **that is a
+  migration window, not the permanent severity**. The window closes at a named
+  release, after which all three are `error` and `validate --fail-on error`
+  fails on them; each finding states the release in its own message while the
+  window is open, so read it there rather than assuming the warning is
+  indefinite. `QFAI-BRREF-002` reads declarations from a table's
+  `BR-ID` column and from `## BR-NNNN-NNNN` headings only, so a rule named in an
+  auxiliary table — a `| Superseded | Reason |` list of retired ids is the plain
+  case — does not make a key resolve.
+
 ## Obligation columns (optional, required by layer)
 
 A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one

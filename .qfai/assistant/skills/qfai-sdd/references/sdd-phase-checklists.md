@@ -44,6 +44,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 - Copy `templates/specs/spec/tdd/test-list.md` when `<spec-id>/tdd/test-list.md` does not exist.
 - Add one row per coverage-target TC from `06_Test-Cases.md`, `Status = todo`.
+- Fill `BR-Ref` — the TC's `EX-Ref`, then that `EX`'s `BR-Ref` in `05_Examples.md` (one `EX` may name several `BR-*`); only a TC with no `EX-Ref` falls back to its `AC-Refs` and the `BR` whose `AC-Refs` names one of them in `04_Business-Rules.md`; the lowest-numbered `BR-*` of the whole union wins, `-` when none does. It is `/qfai-implement`'s T1 review-group key and this is the only phase that can resolve it. Optional to `npx qfai validate`, so an unseeded ledger still passes — and still cannot be batched.
 - Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.
 - Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
 - Keep the ledger table the first markdown table in the file.
