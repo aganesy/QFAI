@@ -56,7 +56,9 @@ reason. No prose asset has an exemption.
   assumed — if it stays missing, stop instead of guessing. A `hard-required`
   input the requested path never reads is neither asked for nor a blocker.
   Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so
-  these questions survive both. See `constitution.md` Article VI.
+  these questions survive both. Under an explicit `--auto` the question is not
+  asked at all — that run stops and names the missing input instead of inventing
+  one. See `constitution.md` Article VI.
 
 ## Canonical qfai Launcher (Mandatory)
 

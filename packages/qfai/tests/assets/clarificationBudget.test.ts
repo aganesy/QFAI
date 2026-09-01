@@ -28,6 +28,11 @@ function expectPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).toContain(unwrap(phrase));
 }
 
+/** The wrap-tolerant negative: a phrase this document must no longer carry. */
+function expectNoPhrase(content: string, phrase: string): void {
+  expect(unwrap(content)).not.toContain(unwrap(phrase));
+}
+
 const CONSTITUTION = "assistant/constitution/constitution.md";
 const COMMUNICATION = "assistant/constitution/communication.md";
 const OPERATING = "assistant/constitution/shared-skill-operating-baseline.md";
@@ -215,11 +220,14 @@ describe("the clarification budget is countable", () => {
       // exemption carries it, rather than inventing a third exemption class.
       const content = await read(tree, CONFIGURE);
       // The budget paragraph the contradiction lived in.
+      // The budget paragraph names the zero-match glob as a stop, not a
+      // clarification. (The sentence also covers the tooling-ambiguity stop;
+      // that half is pinned by its own case below.)
+      expectPhrase(content, "Step 5's zero-match glob");
       expectPhrase(
         content,
-        "A `testFileGlobs`\nproposal that matches no file is one of those `hard-required` inputs, not a\nclarification to assume",
+        "are `hard-required` inputs, not clarifications to assume, so\nboth outlive an exhausted budget",
       );
-      expectPhrase(content, "Step 5's zero-match stop therefore outlives an\nexhausted budget");
       // Step 5 itself must say the stop outlives the budget, since that is the
       // step a reader follows.
       expectPhrase(content, "This stop is **not\nsubject to the Article VI budget**");
@@ -232,6 +240,64 @@ describe("the clarification budget is countable", () => {
         content,
         "- a `testFileGlobs` proposal that matches at least one real file (Step 5)",
       );
+    });
+
+    it(`${tree}: the default-policy bullet uses the counting unit it declares`, async () => {
+      // "at most 5 ... total" left the scope of the budget unstated while the
+      // section immediately below defines it per skill invocation, so the two
+      // statements of one rule could be read as two rules.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(
+        content,
+        "- Ask **at most 5** clarifying questions per skill invocation (unit below).",
+      );
+      expectPhrase(content, "**Five clarifying questions per skill invocation.**");
+      expectNoPhrase(content, "- Ask **at most 5** clarifying questions total.");
+    });
+
+    it(`${tree}: --auto silences the question, it does not authorize the guess`, async () => {
+      // Article X rule 4 is a no-question mode and orders the run to proceed on
+      // assumptions; the `hard-required` exemption orders it to ask. Under an
+      // explicit `--auto` an agent missing a consumed `companyName` therefore
+      // had to either break rule 4 or invent an undefaultable value. The ask is
+      // what `--auto` removes — the run stops and names the blocker instead.
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "**An explicit `--auto` skips the asking, not the rule.**");
+      expectPhrase(content, "it stops\nand names it as the blocker");
+      expectPhrase(
+        content,
+        "`--auto` waives the question, never the input: a\nvalue the skill declares undefaultable is not something a run may invent",
+      );
+      // Stated where `--auto` itself is declared, not only in Article VI.
+      expectPhrase(content, "The assumptions it proceeds with are the **defaultable** ones.");
+      expectPhrase(
+        content,
+        "`--auto`\n   silences the question, it does not authorize the guess (Article VI).",
+      );
+      const baseline = await read(tree, OPERATING);
+      expectPhrase(
+        baseline,
+        "Under an explicit `--auto` the question is not\nasked at all — that run stops and names the missing input instead of inventing\none.",
+      );
+    });
+
+    it(`${tree}: qfai-configure keeps its tooling-ambiguity stop outside the budget`, async () => {
+      // CRITICAL CONSTRAINTS says "MUST stop and escalate if tooling choices or
+      // runnable path remain ambiguous", unconditionally, while "configuration
+      // decisions" is a listed clarification example that the budget turns into
+      // an assumption after five. A run past its budget had to either break the
+      // cap or save a config naming a runner nobody chose.
+      const content = await read(tree, CONFIGURE);
+      expectPhrase(
+        content,
+        "The stops this\nskill declares — Step 5's zero-match glob, and an ambiguous tooling choice or\nrunnable path — are `hard-required` inputs, not clarifications to assume",
+      );
+      expectPhrase(
+        content,
+        "This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget",
+      );
+      expectPhrase(content, "escalate rather than picking a runner");
+      expectPhrase(content, "a resolved tooling choice / runnable path (CRITICAL CONSTRAINTS)");
     });
   }
 });

@@ -86,7 +86,7 @@ Non-discussion commands MUST minimize questions.
 
 Default policy:
 
-- Ask **at most 5** clarifying questions total.
+- Ask **at most 5** clarifying questions per skill invocation (unit below).
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
 
@@ -121,6 +121,11 @@ Default policy:
   gates without ever asking for `companyName`. When a **needed** input is still
   missing, stop and name what is blocked. Assumptions cover clarifications,
   never inputs the skill declares undefaultable **and** the run requires.
+  **An explicit `--auto` skips the asking, not the rule.** Article X rule 4 is a
+  no-question mode, so such a run does not ask for the missing input — it stops
+  and names it as the blocker. `--auto` waives the question, never the input: a
+  value the skill declares undefaultable is not something a run may invent
+  because it was told not to ask.
 
 ### Exhaustion (MUST)
 
@@ -215,6 +220,10 @@ Rules:
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
    This is not an exception to the MUST rule — it is a "no-question mode".
+   The assumptions it proceeds with are the **defaultable** ones. A
+   `hard-required` input the invocation actually consumes has no default, so a
+   run missing one MUST stop and name it rather than invent a value: `--auto`
+   silences the question, it does not authorize the guess (Article VI).
 5. **Exhausting the Article VI budget is not `--auto`**: it enters
    clarification-exhausted mode, which silences clarifying questions only.
    Rule 4 does not apply to it — mandatory approvals and the `hard-required`
