@@ -275,10 +275,10 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       const ledger = unwrap(await read(tree, LEDGER));
       // The key is only reproducible if a wrong one is named: optional to the
       // validator, checked when the ledger declares it.
-      expect(ledger).toContain("`TDDLIST_BR_REF_UNRESOLVED`");
+      expect(ledger).toContain("`QFAI-BRREF-002`");
       // Resolving is not deriving: a key from some other route names a real
       // rule and still batches the row under one its `TC-Refs` never reach.
-      expect(ledger).toContain("`TDDLIST_BR_REF_MISMATCH`");
+      expect(ledger).toContain("`QFAI-BRREF-003`");
       expect(ledger).toContain("the validator recomputes it and names the expected value");
       // And a rule named only in an auxiliary table is not a declaration.
       expect(ledger).toContain(

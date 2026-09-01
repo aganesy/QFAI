@@ -448,7 +448,10 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // `QFAI-BRREF-*` is `validateTddList` too: `TDDLIST_*` is a frozen legacy
+  // family, so a code this gate gained after the grammar landed is canonical
+  // and needs its own entry or the notice under-states what the profile skipped.
+  tdd: ["TDDLIST_*", "QFAI-BRREF-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -780,11 +783,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
-  TDDLIST_BR_REF_INVALID:
+  "QFAI-BRREF-001":
     "A declared `BR-Ref` cell holds one `BR-NNNN-NNNN`, or `-` when no BR reaches the row.",
-  TDDLIST_BR_REF_UNRESOLVED:
+  "QFAI-BRREF-002":
     "Every declared `BR-Ref` names a rule the spec's `04_Business-Rules.md` declares, so the T1 review group is keyed on a rule that exists.",
-  TDDLIST_BR_REF_MISMATCH:
+  "QFAI-BRREF-003":
     "A declared `BR-Ref` is the key the row's own `TC-Refs` derive: `TC` -> `EX-Ref` -> `05_Examples.md`'s `BR-Ref` (`AC-Refs` only for a TC with no `EX-Ref`), lowest of the union.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",

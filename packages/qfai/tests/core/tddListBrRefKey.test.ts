@@ -104,9 +104,7 @@ const derivationTestCases = (exRef: string): string => `# 06 Test Cases
 describe("the ledger's review-group key is checked when it is declared", () => {
   it("says nothing about a key that names a declared BR", async () => {
     const issues = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, { rules: RULES });
-    expect(issues.map((i) => i.code).filter((code) => code.startsWith("TDDLIST_BR_REF"))).toEqual(
-      [],
-    );
+    expect(issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-BRREF-"))).toEqual([]);
   });
 
   for (const unresolved of ["-", ""]) {
@@ -114,7 +112,7 @@ describe("the ledger's review-group key is checked when it is declared", () => {
       // The documented degradation: that row is its own group and is reviewed
       // alone. A group of one is a cost, not a defect.
       const issues = await run(`${WITH_KEY}\n${row(unresolved)}`, { rules: RULES });
-      expect(issues.map((i) => i.code).filter((code) => code.startsWith("TDDLIST_BR_REF"))).toEqual(
+      expect(issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-BRREF-"))).toEqual(
         [],
       );
     });
@@ -123,7 +121,7 @@ describe("the ledger's review-group key is checked when it is declared", () => {
   for (const malformed of ["BR-1", "BR-0001-0001, BR-0001-0002", "AC-0001-0001"]) {
     it(`reports "${malformed}" as a malformed key`, async () => {
       const issues = await run(`${WITH_KEY}\n${row(malformed)}`, { rules: RULES });
-      const finding = issues.find((i) => i.code === "TDDLIST_BR_REF_INVALID");
+      const finding = issues.find((i) => i.code === "QFAI-BRREF-001");
       expect(finding?.severity).toBe("warning");
       expect(finding?.message).toContain("row 1");
     });
@@ -131,7 +129,7 @@ describe("the ledger's review-group key is checked when it is declared", () => {
 
   it("reports a well-formed key that no business rule declares", async () => {
     const issues = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`, { rules: RULES });
-    const finding = issues.find((i) => i.code === "TDDLIST_BR_REF_UNRESOLVED");
+    const finding = issues.find((i) => i.code === "QFAI-BRREF-002");
     expect(finding?.severity).toBe("warning");
     expect(finding?.message).toContain("BR-0001-0009");
   });
@@ -151,11 +149,11 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
 `;
     for (const mentioned of ["BR-0001-0007", "BR-0001-0008", "BR-0001-0009"]) {
       const issues = await run(`${WITH_KEY}\n${row(mentioned)}`, { rules });
-      const finding = issues.find((i) => i.code === "TDDLIST_BR_REF_UNRESOLVED");
+      const finding = issues.find((i) => i.code === "QFAI-BRREF-002");
       expect(finding?.message, `${mentioned} resolved against a mention`).toContain(mentioned);
     }
     const declared = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, { rules });
-    expect(declared.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+    expect(declared.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
   });
 
   it("does not let a table without a `BR-ID` header declare a rule", async () => {
@@ -178,12 +176,10 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
 | BR-0001-0009 | Split into BR-0001-0001 |
 `;
     const retired = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`, { rules });
-    expect(retired.find((i) => i.code === "TDDLIST_BR_REF_UNRESOLVED")?.message).toContain(
-      "BR-0001-0009",
-    );
+    expect(retired.find((i) => i.code === "QFAI-BRREF-002")?.message).toContain("BR-0001-0009");
     // Over-correction pin: the real definition table still declares.
     const declared = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, { rules });
-    expect(declared.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+    expect(declared.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
   });
 
   it("accepts a rule declared by a `## BR-NNNN-NNNN` heading", async () => {
@@ -191,14 +187,14 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     // would report every key of such a pack as dangling.
     const rules = "# 04 Business Rules\n\n## BR-0001-0002\n\nA rule.\n";
     const issues = await run(`${WITH_KEY}\n${row("BR-0001-0002")}`, { rules });
-    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
   });
 
   it("does not call a key dangling when the spec has no 04_Business-Rules.md", async () => {
     // No rules file cannot contradict the key. Firing there would report every
     // row of a layout that legitimately has no `04`.
     const issues = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`);
-    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
   });
 
   it("reports a declared key that is not the one the row's TC-Refs derive", async () => {
@@ -213,13 +209,13 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       testCases: derivationTestCases("EX-0001-0005"),
     };
     const issues = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
-    const finding = issues.find((i) => i.code === "TDDLIST_BR_REF_MISMATCH");
+    const finding = issues.find((i) => i.code === "QFAI-BRREF-003");
     expect(finding?.severity).toBe("warning");
     expect(finding?.message).toContain("BR-0001-0005");
 
     // Over-correction pin: the derived key itself is silent.
     const correct = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options);
-    expect(correct.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    expect(correct.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
   });
 
   it("falls back to the AC join only for a TC with no EX-Ref", async () => {
@@ -231,9 +227,9 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       testCases: derivationTestCases("-"),
     };
     const lowest = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
-    expect(lowest.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    expect(lowest.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
     const other = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options);
-    expect(other.find((i) => i.code === "TDDLIST_BR_REF_MISMATCH")?.message).toContain(
+    expect(other.find((i) => i.code === "QFAI-BRREF-003")?.message).toContain(
       "Expected BR-0001-0004",
     );
   });
@@ -248,9 +244,9 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       testCases: derivationTestCases("EX-0001-0005"),
     };
     const lowest = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
-    expect(lowest.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    expect(lowest.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
     const other = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options);
-    expect(other.find((i) => i.code === "TDDLIST_BR_REF_MISMATCH")?.message).toContain(
+    expect(other.find((i) => i.code === "QFAI-BRREF-003")?.message).toContain(
       "Expected BR-0001-0004",
     );
   });
@@ -260,14 +256,14 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     // `05` / `06` name nothing, and a row whose cell is the documented "not
     // resolved" state, must both stay silent.
     const bare = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, { rules: DERIVATION_RULES });
-    expect(bare.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    expect(bare.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
     for (const unresolved of ["-", ""]) {
       const degraded = await run(`${WITH_KEY}\n${keyedRow(unresolved)}`, {
         rules: DERIVATION_RULES,
         examples: derivationExamples("BR-0001-0005"),
         testCases: derivationTestCases("EX-0001-0005"),
       });
-      expect(degraded.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+      expect(degraded.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
     }
   });
 
@@ -287,12 +283,12 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       ...(await run(`${WITH_KEY}\n${keyedRow("BR-9999")}`, options)),
       ...(await run(`${WITH_KEY}\n${keyedRow("BR-0404-0404")}`, options)),
       ...(await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options)),
-    ].filter((i) => i.code.startsWith("TDDLIST_BR_REF"));
+    ].filter((i) => i.code.startsWith("QFAI-BRREF-"));
 
     expect(
       [...new Set(found.map((i) => i.code))].sort(),
       "the fixtures no longer trip all three codes, so the pin below is unproven",
-    ).toEqual(["TDDLIST_BR_REF_INVALID", "TDDLIST_BR_REF_MISMATCH", "TDDLIST_BR_REF_UNRESOLVED"]);
+    ).toEqual(["QFAI-BRREF-001", "QFAI-BRREF-002", "QFAI-BRREF-003"]);
     for (const finding of found) {
       expect(finding.severity).toBe("warning");
       expect(
@@ -310,8 +306,6 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       { rules: RULES },
     );
     expect(issues.map((i) => i.code)).not.toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
-    expect(issues.map((i) => i.code).filter((code) => code.startsWith("TDDLIST_BR_REF"))).toEqual(
-      [],
-    );
+    expect(issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-BRREF-"))).toEqual([]);
   });
 });

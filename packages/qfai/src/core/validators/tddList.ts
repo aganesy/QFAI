@@ -497,7 +497,7 @@ function toPosixRel(value: string): string {
  * `## BR-NNNN-NNNN` heading. Scanning the whole file instead would collect a
  * `BR-*` that a `Rule` or `Notes` cell, or the prose around the table, merely
  * mentions: a retired or compared-against id would then resolve, and
- * `TDDLIST_BR_REF_UNRESOLVED` would stay silent while the T1 group is keyed on
+ * `QFAI-BRREF-002` would stay silent while the T1 group is keyed on
  * a rule the file no longer declares.
  *
  * **A table with no `BR-ID` header declares nothing**, rather than having its
@@ -1574,7 +1574,7 @@ async function validateSpecTddList(
       if (!BR_ID_FORMAT.test(token)) {
         issues.push(
           issue(
-            "TDDLIST_BR_REF_INVALID",
+            "QFAI-BRREF-001",
             `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN-NNNN, or \`-\` when no BR reaches the row${brRefWindowNote}`,
             brRefSeverity,
             relPath,
@@ -1589,7 +1589,7 @@ async function validateSpecTddList(
       if (declaredBrIds !== null && !declaredBrIds.has(token)) {
         issues.push(
           issue(
-            "TDDLIST_BR_REF_UNRESOLVED",
+            "QFAI-BRREF-002",
             `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${BR_DECLARATION_FILE}. The T1 review group would be keyed on a rule that does not exist${brRefWindowNote}`,
             brRefSeverity,
             relPath,
@@ -1613,7 +1613,7 @@ async function validateSpecTddList(
       if (expected !== null && expected !== token) {
         issues.push(
           issue(
-            "TDDLIST_BR_REF_MISMATCH",
+            "QFAI-BRREF-003",
             `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}${brRefWindowNote}`,
             brRefSeverity,
             relPath,
