@@ -464,13 +464,24 @@ defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 
-- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
-  run logs, reports. Reproducible by rerunning the owner skill; not committed.
-- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
-  durable decision records (`.qfai/evidence/decisions/*.json`). They carry
-  user approval and cannot be regenerated, so they are committed. The managed
-  `.gitignore` block written by `npx qfai init` negates them after the ignore
-  lines for exactly this reason.
+- **Regenerable** — run logs, reports, and the remaining stage evidence.
+  Reproducible by rerunning the owner skill; not committed.
+- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`), durable
+  decision records (`.qfai/evidence/decisions/*.json`), and the per-item
+  RED/GREEN evidence the completion gate resolves every `test-list.md`
+  `Evidence` anchor against: `.qfai/evidence/implement-<spec-id>.md` and
+  `.qfai/evidence/atdd-<spec-id>.md`. They carry user approval or an
+  observation that cannot be retaken — a RED is recorded _before_ the code that
+  makes it pass exists, so rerunning the owner skill afterwards does not
+  reproduce it — so they are committed. The managed `.gitignore` block written
+  by `npx qfai init` negates them after the ignore lines for exactly this
+  reason.
+
+  **Committing them is a step, not a consequence.** A negated `.gitignore`
+  pattern only stops git from hiding a file; it does not stage one. Leave these
+  two untracked and the anchor still resolves on the machine that ran the gate
+  and nowhere else — which is the state the negation was added to end. Commit
+  them with the change whose obligations they discharge.
 
 ## Non-negotiable constraints
 

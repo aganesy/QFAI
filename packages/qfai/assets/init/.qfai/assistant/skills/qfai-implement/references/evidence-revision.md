@@ -83,10 +83,12 @@ Revision: <git rev> | working-tree+<content hash>
      same hand can update it. Three successive homes were tried and each fell to
      the same move — beside the artifact, in a commit, in the newest commit that
      introduces the line — and a fourth would fall too. **Committing the seal is
-     not the answer either**, and not available: stage evidence is regenerable
-     and deliberately not committed (`.qfai/evidence/*` is ignored, with only
-     the governance records negated back in), so a rule requiring a committed
-     copy of `implement-<spec-id>.md` would have stopped every completion.
+     not the answer either.** `implement-<spec-id>.md` and `atdd-<spec-id>.md`
+     are now governance records and ARE committed (`.qfai/evidence/*` is
+     ignored, with the governance records negated back in), so the objection is
+     no longer availability — it is that a committed copy buys nothing here. The
+     same hand that rewrites the pair rewrites the seal in the same commit, so
+     the fourth home falls exactly as the other three did.
 
      A consistent rewrite is caught where consistent rewrites are caught: by
      review of the change itself, against a history the seals make legible.

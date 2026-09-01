@@ -2048,6 +2048,14 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!coverage-depth-*.md",
   "!decisions/",
   "!decisions/**",
+  // The per-item RED/GREEN records. Every root negation this block adds needs
+  // its leaf counterpart here or the migration does nothing for the projects it
+  // exists to serve: measured with `git check-ignore -v` on a tree carrying the
+  // legacy nested file, `.qfai/evidence/implement-<spec-id>.md` and
+  // `atdd-<spec-id>.md` were still reported as ignored by the nested `*`, so the
+  // fresh clone and CI that the root negation was added for saw neither file.
+  "!implement-*.md",
+  "!atdd-*.md",
 ];
 
 async function ensureLegacyEvidenceIgnoreNegations(
