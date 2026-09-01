@@ -114,13 +114,23 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column.
+   approver in the `Approved By` column. Under `--auto` the row leaves
+   `--auto` scope and no question may be asked — not through
+   AskUserQuestion and not in plain text, operator present or not — so stop
+   at step 7 instead. Never synthesize an `Approved By` value — the column
+   records who authorized the operation, so an invented approver is a false
+   audit record. See `../SKILL.md#--auto-and-approval-required-rows`.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /
      SUPERSEDE) and policy-only changes.
 7. **Stop.** Do not enter Phase 0 until every required-approval row has
    an approver recorded and every CREATE row cites a registered CAP.
+   Stopping here is a reportable outcome, not a failure to repair: leave
+   `Approved By` as `-`, write a `consultation-needed` work-log entry
+   naming each unapproved row with its Operation and target, and report the
+   `QFAI-TRIAGE-005` errors as the reason the run stopped. Under `--auto`,
+   also ask for a rerun without `--auto` so the approvals can be collected.
 
 ## Impact cascade (1 REQ → N rows)
 

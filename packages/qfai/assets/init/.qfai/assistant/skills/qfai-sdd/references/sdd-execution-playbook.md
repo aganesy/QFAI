@@ -76,4 +76,11 @@ Detailed procedure: `sdd-triage.md`.
 - Missing Contract Index alignment
 - Unresolvable preflight blockers
 - Triage rows requiring approval but lacking `Approved By`
+  - Repair: obtain the approval through AskUserQuestion, record the approver in
+    `Approved By`, and rerun the stage. Under `--auto` the row leaves `--auto`
+    scope and no question may be asked at all
+    (`../SKILL.md#--auto-and-approval-required-rows`): keep `Approved By` as
+    `-`, write a `consultation-needed` work-log entry naming every unapproved
+    row, and hand the run back for a rerun without `--auto` — never synthesize
+    an approver.
 - Validate errors that point to unresolved source-layer gaps
