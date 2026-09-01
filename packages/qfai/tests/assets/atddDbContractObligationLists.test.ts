@@ -40,6 +40,34 @@ const read = async (tree: string): Promise<string> => await readAt(tree, ATDD);
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
+/**
+ * The `developer_instructions` of one `agent-catalog.yml` entry, by tree and id.
+ * Two suites below read this block, and the YAML shape they walk is one shape —
+ * duplicating the walk meant a catalog restructure could be followed in one
+ * copy and missed in the other.
+ */
+const catalogInstructions = async (tree: string, id: string): Promise<string> => {
+  const parsed: unknown = parseYaml(await readAt(tree, CATALOG));
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${tree}/${CATALOG}: must parse to an object`);
+  }
+  const agents = (parsed as Record<string, unknown>)["agents"];
+  if (!Array.isArray(agents)) {
+    throw new Error(`${tree}/${CATALOG}: agents must be an array`);
+  }
+  for (const entry of agents) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const agent: Record<string, unknown> = entry as Record<string, unknown>;
+    if (agent["id"] !== id) continue;
+    const instructions = agent["developer_instructions"];
+    if (typeof instructions !== "string") {
+      throw new Error(`${tree}/${CATALOG}: ${id}.developer_instructions must be a string`);
+    }
+    return instructions;
+  }
+  throw new Error(`${tree}/${CATALOG}: no agent with id ${id}`);
+};
+
 describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates CON-API", (tree) => {
   it("the frontmatter description — the discovery surface — names CON-DB", async () => {
     // A skill candidate is selected from `description` before anything reads
@@ -161,29 +189,6 @@ describe.each(TREES)("%s — the layer catalog errors on an undeclared CON-DB to
  * body byte for byte, so these assertions propagate to it.
  */
 describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (tree) => {
-  /** The `developer_instructions` of one catalog entry, by id. */
-  const catalogInstructions = async (id: string): Promise<string> => {
-    const parsed: unknown = parseYaml(await readAt(tree, CATALOG));
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(`${tree}/${CATALOG}: must parse to an object`);
-    }
-    const agents = (parsed as Record<string, unknown>)["agents"];
-    if (!Array.isArray(agents)) {
-      throw new Error(`${tree}/${CATALOG}: agents must be an array`);
-    }
-    for (const entry of agents) {
-      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
-      const agent: Record<string, unknown> = entry as Record<string, unknown>;
-      if (agent["id"] !== id) continue;
-      const instructions = agent["developer_instructions"];
-      if (typeof instructions !== "string") {
-        throw new Error(`${tree}/${CATALOG}: ${id}.developer_instructions must be a string`);
-      }
-      return instructions;
-    }
-    throw new Error(`${tree}/${CATALOG}: no agent with id ${id}`);
-  };
-
   const assertContract = (doc: string): void => {
     expect(doc).toContain(
       "- Implement integration coverage for required `TC-*` behavior and declared `CON-DB-*` contracts.",
@@ -200,7 +205,7 @@ describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (
   });
 
   it("agent-catalog.yml carries the same contract for that agent", async () => {
-    assertContract(flat(await catalogInstructions("acceptance-test-engineer")));
+    assertContract(flat(await catalogInstructions(tree, "acceptance-test-engineer")));
   });
 });
 
@@ -220,28 +225,6 @@ describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (
  * contract literally had to guess `#CON-DB` or omit it.
  */
 describe.each(TREES)("%s — the CON-DB volume signal is countable and not inflated", (tree) => {
-  const catalogInstructions = async (id: string): Promise<string> => {
-    const parsed: unknown = parseYaml(await readAt(tree, CATALOG));
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(`${tree}/${CATALOG}: must parse to an object`);
-    }
-    const agents = (parsed as Record<string, unknown>)["agents"];
-    if (!Array.isArray(agents)) {
-      throw new Error(`${tree}/${CATALOG}: agents must be an array`);
-    }
-    for (const entry of agents) {
-      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
-      const agent: Record<string, unknown> = entry as Record<string, unknown>;
-      if (agent["id"] !== id) continue;
-      const instructions = agent["developer_instructions"];
-      if (typeof instructions !== "string") {
-        throw new Error(`${tree}/${CATALOG}: ${id}.developer_instructions must be a string`);
-      }
-      return instructions;
-    }
-    throw new Error(`${tree}/${CATALOG}: no agent with id ${id}`);
-  };
-
   it("counts the active CON-DB, not every declared one", async () => {
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
@@ -276,7 +259,7 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
       // two, and the volume estimate is `test-design-analyst`'s deliverable.
       const canonical = flat(await readAt(tree, `assistant/agents/${id}.md`));
       expect(canonical).toContain("- .qfai/contracts/db/\\*\\*");
-      expect(flat(await catalogInstructions(id))).toContain("- .qfai/contracts/db/\\*\\*");
+      expect(flat(await catalogInstructions(tree, id))).toContain("- .qfai/contracts/db/\\*\\*");
     },
   );
 });
