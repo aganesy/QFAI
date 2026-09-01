@@ -69,7 +69,7 @@ export type QfaiValidationConfig = {
     unknownContractIdSeverity: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
-     * 読み込み時に QFAI_CONFIG_DEPRECATED が出る (severity は
+     * 読み込み時に QFAI-CFG-001 が出る (severity は
      * `RULE_PROMOTIONS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
      * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
      */
@@ -965,7 +965,7 @@ function readTraceabilitySeverity(
  * itself instead of warning forever.
  *
  * A promotion rather than a sunset, even though the *shape* is what is being
- * retired: `QFAI_CONFIG_DEPRECATED` is a finding code that did not exist
+ * retired: `QFAI-CFG-001` is a finding code that did not exist
  * before, and P7 measures the window from the code, because the code is what
  * an upgrading repository meets.
  */
@@ -1280,7 +1280,7 @@ function configDeprecatedIssue(
   promotedSeverity: "warning" | "error",
 ): Issue {
   return {
-    code: "QFAI_CONFIG_DEPRECATED",
+    code: "QFAI-CFG-001",
     severity: promotedSeverity,
     category: "canonical",
     message,

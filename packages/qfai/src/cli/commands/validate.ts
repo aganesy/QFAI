@@ -753,7 +753,7 @@ const GITHUB_ANNOTATION_LIMIT = 100;
  * here or explicitly recorded as pending, instead of shipping without one.
  */
 export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
-  QFAI_CONFIG_DEPRECATED:
+  "QFAI-CFG-001":
     "qfai.config.yaml sets no key that has been retired. A retired key is still parsed so an existing config keeps loading, but nothing reads it, so leaving it in place misreports the gate the tool actually runs.",
   "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
   "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
@@ -1095,7 +1095,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // The finding already names the offending key and the release the window
   // closes at; this is the catalog half, which `qfai report` renders for
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
-  QFAI_CONFIG_DEPRECATED:
+  "QFAI-CFG-001":
     "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
   "QFAI-BPAP-001":
     "Restore read access to the file, or delete it if it is no longer part of the rule set.",

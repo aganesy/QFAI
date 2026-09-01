@@ -308,11 +308,11 @@ describe("retired validation.traceability keys", () => {
 
       const { config, issues } = await loadConfig(root);
 
-      const deprecated = issues.filter((issue) => issue.code === "QFAI_CONFIG_DEPRECATED");
+      const deprecated = issues.filter((issue) => issue.code === "QFAI-CFG-001");
       // Severity is the central promotion pin's, not a literal: warning
       // inside the window, error from
       // `RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt`. P7 keys the
-      // window on the finding code, and `QFAI_CONFIG_DEPRECATED` is new even
+      // window on the finding code, and `QFAI-CFG-001` is new even
       // though the config shape it names is old.
       const { promoteAt } = RULE_PROMOTIONS.retiredTraceabilityKeys;
       const expected = newRuleSeverity(await resolveToolVersion(), promoteAt);

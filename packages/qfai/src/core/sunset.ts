@@ -164,7 +164,7 @@ export const RULE_PROMOTIONS = {
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
-   * `QFAI_CONFIG_DEPRECATED` — a `validation.traceability` key that was
+   * `QFAI-CFG-001` — a `validation.traceability` key that was
    * declared, defaulted and parsed but that no validator ever read
    * (`brMustHaveSc`, `scNoTestSeverity`, `orphanContractsPolicy`).
    *
