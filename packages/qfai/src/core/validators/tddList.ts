@@ -2459,7 +2459,12 @@ export const STALE_STATUS_RULE_ID = "TDDLIST-005";
 export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
 
 /**
- * Waiver rule id for `TDDLIST_EVIDENCE_ANCHOR_MISSING`.
+ * Finding code for a `done` row that carries no evidence anchor.
+ *
+ * Canonical `QFAI-<AREA>-<NNN>`, so the code itself is the waiver key
+ * (`resolveRuleKeys` in `core/waivers.ts`), which also accepts the stripped
+ * `TDDLIST-007` spelling. The `rule` field carries the dotted rule path
+ * instead, matching this check's sibling `tddList.evidenceAnchorResolves`.
  *
  * Every completed-evidence check below hangs off an anchor, so a `done` row
  * whose `Evidence` cell is a bare command and result — command-shaped, so
@@ -2475,7 +2480,10 @@ export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
  * moved its ledger onto pointers raises it by treating warnings as failures;
  * one still migrating waives it per path.
  */
-export const EVIDENCE_ANCHOR_MISSING_RULE_ID = "TDDLIST-007";
+export const EVIDENCE_ANCHOR_MISSING_CODE = "QFAI-TDDLIST-007";
+
+/** Finding code for an evidence anchor that does not resolve. */
+export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
 
 /**
  * Read a ledger row's `Test file` cell, or `null` when it names nothing this
@@ -3457,14 +3465,14 @@ async function validateSpecTddList(
     if (status === "done" && anchors.length === 0 && !malformedClaim) {
       issues.push(
         issue(
-          "TDDLIST_EVIDENCE_ANCHOR_MISSING",
+          EVIDENCE_ANCHOR_MISSING_CODE,
           `Evidence for spec-${specNumber} ${rowLabel} carries no evidence anchor (Status=done): "${evidence}". A completed row's Evidence cell is a pointer into ${expectedFile}.${anchorMissingWindowNote}`,
           anchorMissingSeverity,
           relPath,
-          EVIDENCE_ANCHOR_MISSING_RULE_ID,
+          "tddList.evidenceAnchorPresent",
           undefined,
           "change",
-          `Evidence 列を \`evidence at \\\`${expectedFile}#${expectedFragment}\\\`\` の形にし、そのファイルに \`### ${tddId}\` セクションを追加してください。移行途中のレガシー行は \`.qfai/waivers.yml\` に rule: ${EVIDENCE_ANCHOR_MISSING_RULE_ID} の waiver を登録してください。`,
+          `Evidence 列を \`evidence at \\\`${expectedFile}#${expectedFragment}\\\`\` の形にし、そのファイルに \`### ${tddId}\` セクションを追加してください。移行途中のレガシー行は \`.qfai/waivers.yml\` に rule: ${EVIDENCE_ANCHOR_MISSING_CODE} の waiver を登録してください。`,
         ),
       );
     }
@@ -3540,7 +3548,7 @@ async function validateSpecTddList(
     if (anchorFailure.length > 0) {
       issues.push(
         issue(
-          "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED",
+          EVIDENCE_ANCHOR_UNRESOLVED_CODE,
           `Evidence anchor does not resolve for spec-${specNumber} ${rowLabel}, Status=${status}: ${anchorFailure}.${anchorUnresolvedWindowNote}`,
           anchorUnresolvedSeverity,
           relPath,

@@ -714,6 +714,52 @@ describe("applyWaivers", () => {
     }
   });
 
+  // The shipped `execution-ledger.md` tells a project still migrating its
+  // ledger onto pointers to waive the missing-anchor rule, and names both
+  // spellings. The canonical `QFAI-TDDLIST-007` replaced a pre-grammar
+  // `TDDLIST-007` rule id, so the stripped alias has to keep resolving — the
+  // waiver files written against the old spelling are the ones that instruction
+  // produced.
+  it.each([
+    ["QFAI-TDDLIST-007", "the code the CLI prints"],
+    ["TDDLIST-007", "the back-compat stripped alias"],
+  ])("waives the missing evidence anchor by %s (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-15",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "ledger still migrating onto pointers"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [
+        buildIssue({
+          code: "QFAI-TDDLIST-007",
+          rule: "tddList.evidenceAnchorPresent",
+          file: path.join(root, ".qfai", "specs", "spec-0001", "tdd", "test-list.md"),
+        }),
+      ]);
+
+      const finding = result.issues.find((item) => item.code === "QFAI-TDDLIST-007");
+      expect(finding?.suppressed).toBe(true);
+      expect(result.waivers.suppressed.total).toBe(1);
+      // The id is real, so the engine must not report it as naming no rule.
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // Prototyping's exploration mode downgrades its relaxable codes error →
   // warning before `applyWaivers` sees them, so `error` is not the only
   // severity these can reach the engine at. Classifying them from the raw

@@ -779,13 +779,13 @@ describe("TDDLIST_EVIDENCE_EMPTY promotion window", () => {
 // so both ship behind a window, and these are the tests that keep them there.
 describe.each([
   {
-    code: "TDDLIST_EVIDENCE_ANCHOR_MISSING" as const,
+    code: "QFAI-TDDLIST-007" as const,
     promotion: RULE_PROMOTIONS.tddListEvidenceAnchorMissing.promoteAt,
     // A completed row whose Evidence states an outcome in prose: no pointer.
     evidence: "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed",
   },
   {
-    code: "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED" as const,
+    code: "QFAI-TDDLIST-008" as const,
     promotion: RULE_PROMOTIONS.tddListEvidenceAnchorUnresolved.promoteAt,
     // A pointer that is not the canonical evidence anchor shape.
     evidence: "evidence at ./notes/run.md",
@@ -910,7 +910,7 @@ describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
   });
 });
 
-describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
+describe("QFAI-TDDLIST-008", () => {
   const IMPLEMENT_POINTER =
     "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
 
@@ -962,7 +962,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
   it("errors when the evidence file does not exist", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]));
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -971,7 +971,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0002\n",
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -984,7 +984,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": `# Evidence\n\n${hiddenHeading}\n`,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -994,7 +994,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1022,7 +1022,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
               ),
             },
           );
-          expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+          expect(codes).toContain("QFAI-TDDLIST-008");
         });
       });
     }
@@ -1037,7 +1037,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
             "Round 1: GREEN command: npx vitest run tests/skipped-cases.test.ts",
           ),
         });
-        expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
       });
     });
 
@@ -1051,7 +1051,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
             "Round 1: RED result: PASS tests/error-handler.test.ts (1 passed)",
           ),
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
 
@@ -1064,7 +1064,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
             "Round 1: GREEN result: PASS tests/error-handler.test.ts (1 passed)",
           ),
         });
-        expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
       });
     });
 
@@ -1078,7 +1078,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
             "Round 1: GREEN result: 1 failed/2 passed",
           ),
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   });
@@ -1095,7 +1095,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
         { secondResponseRole: "completion-reviewer" },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1119,7 +1119,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         ...defaultConfig,
         paths: { ...defaultConfig.paths, specsDir: options.specsDir },
       });
-      expect(issues.map((i) => i.code)).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1136,7 +1136,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1148,7 +1148,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1163,7 +1163,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1190,7 +1190,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1203,7 +1203,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1218,7 +1218,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1233,7 +1233,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1253,7 +1253,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1269,7 +1269,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1289,7 +1289,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1323,7 +1323,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         { ".qfai/evidence/implement-spec-0001.md": evidence },
         { revision: secondRoundRevision },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1355,7 +1355,7 @@ REVISE — needs new production behaviour
         { ".qfai/evidence/implement-spec-0001.md": evidence },
         { revision: secondRoundRevision },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1375,7 +1375,7 @@ REVISE — needs new production behaviour
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes.includes("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED")).toBe(expected);
+        expect(codes.includes("QFAI-TDDLIST-008")).toBe(expected);
       });
     });
   }
@@ -1401,7 +1401,7 @@ REVISE — needs new production behaviour
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1414,7 +1414,7 @@ REVISE — needs new production behaviour
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
         { requestOnlyPassRole: "completion-reviewer" },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1426,7 +1426,7 @@ REVISE — needs new production behaviour
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
         { omitReviewPacks: true },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1441,7 +1441,7 @@ REVISE — needs new production behaviour
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1457,7 +1457,7 @@ REVISE — needs new production behaviour
           { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
           options,
         );
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1477,7 +1477,7 @@ REVISE — needs new production behaviour
           ".qfai/evidence/atdd-spec-0001.md": evidence,
         },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1493,7 +1493,7 @@ REVISE — needs new production behaviour
           ".qfai/evidence/atdd-spec-0001.md": evidence,
         },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1521,7 +1521,7 @@ REVISE — needs new production behaviour
         ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
         { ".qfai/evidence/atdd-spec-0001.md": evidence },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1613,7 +1613,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
       const codes = await runOn(root, reverifyLedger(), {
         ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1632,7 +1632,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
       expect(
         issues.some(
           ({ code, message }) =>
-            code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED" &&
+            code === "QFAI-TDDLIST-008" &&
             message.includes("TDD-0001") &&
             message.includes("RED test hash matching its manifest"),
         ),
@@ -1652,7 +1652,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
       expect(
         issues.some(
           ({ code, message }) =>
-            code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED" &&
+            code === "QFAI-TDDLIST-008" &&
             message.includes("TDD-0001") &&
             message.includes("RED test hash matching its manifest"),
         ),
@@ -1667,7 +1667,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
           editingEntry({ proofResult: "PASS" }),
         ),
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1687,7 +1687,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
         { ".qfai/evidence/atdd-spec-0001.md": evidence },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1698,7 +1698,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
           editingEntry({ auditHash: "e".repeat(64) }),
         ),
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1721,7 +1721,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
           ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
         },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1757,7 +1757,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         },
         { stagePack: "present" },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1777,7 +1777,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         },
         { stagePack: "absent" },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1811,7 +1811,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
           },
           { stagePack: "present", stagePackDefect: defect },
         );
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1840,7 +1840,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
           },
           { stagePack: "present" },
         );
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1862,7 +1862,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         },
         { stagePack: "present" },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1887,7 +1887,7 @@ result, so the assertion cannot be tightened without drift.
         },
         { coverageDepthMatrix: MATRIX },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1905,7 +1905,7 @@ result, so the assertion cannot be tightened without drift.
         },
         { coverageDepthMatrix: MATRIX.replace("| ⚠️ |", "| ✅ |") },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1918,7 +1918,7 @@ result, so the assertion cannot be tightened without drift.
         [COVERAGE_DEPTH_PATH]: MATRIX.replaceAll("TC-0001", "TC-00011"),
         ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1937,7 +1937,7 @@ result, so the assertion cannot be tightened without drift.
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -1951,7 +1951,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -1988,7 +1988,7 @@ result, so the assertion cannot be tightened without drift.
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -2015,7 +2015,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2031,7 +2031,7 @@ result, so the assertion cannot be tightened without drift.
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -2044,7 +2044,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: IMPLEMENT_POINTER, tcRefs: "-" }]),
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2058,7 +2058,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2093,7 +2093,7 @@ result, so the assertion cannot be tightened without drift.
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -2108,7 +2108,7 @@ result, so the assertion cannot be tightened without drift.
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -2122,7 +2122,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2142,7 +2142,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2154,7 +2154,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: IMPLEMENT_POINTER, selector: "foo\\|bar" }]),
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2169,7 +2169,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: IMPLEMENT_POINTER, selector: "foo\\|bar" }]),
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2185,7 +2185,7 @@ result, so the assertion cannot be tightened without drift.
         const codes = await runOn(root, ledger([{ status: "done", evidence: pointer, layer }]), {
           ".qfai/evidence/atdd-spec-0001.md": evidence,
         });
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -2203,7 +2203,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2224,7 +2224,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2233,7 +2233,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2246,7 +2246,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
         { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2257,7 +2257,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: pointer }]), {
         ".qfai/evidence/atdd-spec-0001.md": "# ATDD Evidence\n\n### TDD-0001\n",
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2268,7 +2268,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: pointer }]), {
         ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0002\n",
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2278,7 +2278,7 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: pointer }]), {
         ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
       });
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2291,7 +2291,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
         { ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n" },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2304,7 +2304,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: pointer, layer: "E2E" }]),
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("E2E") },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2321,7 +2321,7 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: pointer, layer: "E2E" }]),
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2382,7 +2382,7 @@ result, so the assertion cannot be tightened without drift.
         },
       );
       const issues = await validateTddList(root, defaultConfig);
-      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      const found = issues.find((i) => i.code === "QFAI-TDDLIST-008");
       expect(found?.message).toContain("valid RED test manifest");
     });
   });
@@ -2414,7 +2414,7 @@ result, so the assertion cannot be tightened without drift.
           { ".qfai/evidence/atdd-spec-0001.md": evidence },
         );
         const issues = await validateTddList(root, defaultConfig);
-        const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        const found = issues.find((i) => i.code === "QFAI-TDDLIST-008");
         expect(found?.message).toContain("valid RED test manifest");
       });
     },
@@ -2429,7 +2429,7 @@ result, so the assertion cannot be tightened without drift.
           { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
           { hiddenVerdictRole: "completion-reviewer", hiddenVerdictWrapper: wrapper },
         );
-        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(codes).toContain("QFAI-TDDLIST-008");
       });
     });
   }
@@ -2442,7 +2442,7 @@ result, so the assertion cannot be tightened without drift.
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
         { hiddenVerdictRole: "completion-reviewer", hiddenVerdictWrapper: "duplicate" },
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2459,7 +2459,7 @@ result, so the assertion cannot be tightened without drift.
         { omitReviewPacks: true, revision: "abc123" },
       );
       const issues = await validateTddList(root, defaultConfig);
-      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      const found = issues.find((i) => i.code === "QFAI-TDDLIST-008");
       expect(found?.message).toContain("Revision naming a git rev or working-tree+<sha256>");
     });
   });
@@ -2474,7 +2474,7 @@ result, so the assertion cannot be tightened without drift.
         { ".qfai/evidence/implement-spec-0001.md": evidence },
         { revision: workingTree },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 
@@ -2509,23 +2509,25 @@ result, so the assertion cannot be tightened without drift.
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
       });
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      expect(codes).not.toContain("QFAI-TDDLIST-007");
     });
   });
 });
 
-describe("TDDLIST_EVIDENCE_ANCHOR_MISSING", () => {
+describe("QFAI-TDDLIST-007", () => {
   const OUTCOME_ONLY =
     "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed";
 
   it("warns on a done row whose Evidence carries no anchor", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: OUTCOME_ONLY }]));
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      expect(codes).toContain("QFAI-TDDLIST-007");
       const issues = await validateTddList(root, defaultConfig);
-      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      const found = issues.find((i) => i.code === "QFAI-TDDLIST-007");
       expect(found?.severity).toBe("warning");
-      expect(found?.rule).toBe("TDDLIST-007");
+      // The canonical code is the waiver key; `rule` carries the dotted rule
+      // path, as it does for this check's sibling.
+      expect(found?.rule).toBe("tddList.evidenceAnchorPresent");
     });
   });
 
@@ -2535,7 +2537,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_MISSING", () => {
     it(`stays silent at Status=${status}`, async () => {
       await withProject(async (root) => {
         const codes = await runOn(root, ledger([{ status, evidence: OUTCOME_ONLY }]));
-        expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+        expect(codes).not.toContain("QFAI-TDDLIST-007");
       });
     });
   }
@@ -2548,8 +2550,8 @@ describe("TDDLIST_EVIDENCE_ANCHOR_MISSING", () => {
         root,
         ledger([{ status: "done", evidence: "evidence at ./notes/run.md" }]),
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      expect(codes).toContain("QFAI-TDDLIST-008");
+      expect(codes).not.toContain("QFAI-TDDLIST-007");
     });
   });
 });

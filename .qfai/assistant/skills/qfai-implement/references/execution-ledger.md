@@ -137,12 +137,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                              | Fires when                                                                              | Severity            |
-| ------------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`             | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY`       | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
-| `TDDLIST_EVIDENCE_ANCHOR_MISSING`    | a `done` row's cell carries no anchor at all                                            | warning             |
-| `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error               |
+| Finding                        | Fires when                                                                              | Severity            |
+| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning             |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error               |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -172,11 +172,11 @@ retained, then point the cell at that entry. The cell stays a pointer — prose
 about a missing run is a payload, and the section above says why a payload in
 the cell corrupts the ledger.
 
-`TDDLIST_EVIDENCE_ANCHOR_MISSING` is a warning for the same reason, waivable
-under `TDDLIST-007`. Every completion check hangs off the anchor, so a `done`
-row whose cell is only an outcome — command-shaped, so the status-only rule
-passes over it — claimed completion with no entry, no verdict and no checkpoint
-behind it. A project that has moved its ledger onto pointers raises this by
+`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
+code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
+check hangs off the anchor, so a `done` row whose cell is only an outcome —
+command-shaped, so the status-only rule passes over it — claimed completion with
+no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
 failing on warnings; one still migrating waives it per path.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have

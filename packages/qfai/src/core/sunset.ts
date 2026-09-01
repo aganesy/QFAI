@@ -164,14 +164,14 @@ export const RULE_PROMOTIONS = {
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
-   * `TDDLIST_EVIDENCE_ANCHOR_MISSING` — a ledger row at `done` whose `Evidence`
+   * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the
    * evidence file its `Layer` owns. Nothing read the cell before, so every
    * ledger written under the old shape states its evidence exactly this way.
    */
   tddListEvidenceAnchorMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
-   * `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` — a pointer that does not resolve: the
+   * `QFAI-TDDLIST-008` — a pointer that does not resolve: the
    * wrong owner file for the row's `Layer`, another row's item, a heading that
    * is not there, or an entry behind it that is not complete. The rule is
    * right and the rows it lands on are already at `done`, a state with no

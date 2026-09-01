@@ -448,7 +448,10 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
+  // its canonical spelling. Both are listed because the legacy family is frozen
+  // and every code the gate gains from here on is canonical.
+  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -1081,9 +1084,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
-  TDDLIST_EVIDENCE_ANCHOR_MISSING:
+  "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
-  TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED:
+  "QFAI-TDDLIST-008":
     "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
 };
 
