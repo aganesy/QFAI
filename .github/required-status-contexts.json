@@ -204,7 +204,7 @@
         "scripts/pin-guard-bytes.mjs": "2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97",
         "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
-        "scripts/verify-pack.mjs": "c71efa04b7b19ad4170f547134eb863cbb217ebc9ada3ce9af4bafbe980886b3"
+        "scripts/verify-pack.mjs": "4cc5bf82515d6c6bb4f55dffeb852c59f2c96254b01d6b83f70758db37f178f6"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -353,9 +353,9 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "237fd4584e99c8fd",
+        "Verify the toolchain action before running it": "9e7618a801db3dc5",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "f661b303e3493978",
+        "Run build & pack verification": "6bc35e3463fbf28a",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "e7dc6e5136c17061",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",

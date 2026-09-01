@@ -611,6 +611,27 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });
 
+  it("does not read a placeholder out of a block scalar body", async () => {
+    // The same defect the `source_id` scan had, on the other payload-wide
+    // regex. A `description` that quotes the template line it replaced is
+    // ordinary prose in a valid multi-line value; scanning the whole payload
+    // read that quotation as the entry's own unfilled `title` and reported
+    // QFAI-RESEARCH-019 against a summary with nothing left to fill in.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      /^([ \t]+)description: Recorded by the research-first protocol run$/m,
+      [
+        "$1description: |-",
+        "$1  Replaced the scaffold line, which read:",
+        "$1  title: [Reference title]",
+      ].join("\n"),
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+
+    // Over-correction pin as well: the entry holding that body is complete, so
+    // narrowing the scan must not begin reporting it as unfinished instead.
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
   it("resolves the current pack under the discussionDir the caller passed", async () => {
     // `validateProject` may hand this validator a config that differs from the
     // `qfai.config.yaml` on disk. Re-reading that file to resolve the active

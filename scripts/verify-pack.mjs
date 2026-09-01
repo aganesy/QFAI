@@ -432,8 +432,12 @@ const seededDiscussionPackFiles = {
     "- Rationale: provide stable evidence for seeded discussion.",
     "",
     // The research-first protocol stores its output here, and the gate now
-    // requires the section on the current pack — a seeded pack without it
-    // would fail pack-time validate with QFAI-RESEARCH-014.
+    // requires the section on the current pack — a seeded pack without it is
+    // QFAI-RESEARCH-014. That code rides the `researchSummarySchemaFields`
+    // promotion window, so while the window is open it is a `warning` and the
+    // `--fail-on error` run below (line 631) reports it without failing; from
+    // the release the window names it is an `error` and the run stops. Seeded
+    // either way, so this fixture does not start failing on the promotion.
     "## Research Summary",
     "",
     "```yaml",

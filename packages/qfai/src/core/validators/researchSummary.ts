@@ -34,8 +34,6 @@ const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 /** ```yaml fence inside the stored section — the prose around it is not data. */
 const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
-/** Any `key: value` line, so the value can be judged after YAML reads it. */
-const FIELD_LINE_RE = /^[ \t]*(?:-[ \t]*)?([A-Za-z0-9_]+):[ \t]*(.*)$/gm;
 /** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
 const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 /**
@@ -214,7 +212,12 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       }
     }
 
-    const placeholderKeys = collectPlaceholderKeys(yaml);
+    const placeholderKeys = collectPlaceholderKeys([
+      ...sourceEntries,
+      ...bestPractices,
+      ...antiPatterns,
+      ...reflectionEntries,
+    ]);
     if (placeholderKeys.length > 0) {
       issues.push(
         issue(
@@ -673,14 +676,24 @@ function extractYamlPayload(section: string): string {
  * through — both legal YAML, both still the shipped template — and the
  * required-field checks then accepted them as filled in, so a pack that
  * changed only the date cleared the completion gate.
+ *
+ * Read per ENTRY through {@link readEntryFields}, not by scanning the payload.
+ * Every key here is an entry field in the Output Schema, and a payload-wide
+ * regex also matched inside a block scalar's body — so a `description: |-`
+ * quoting the template it replaced ("we dropped the `title: [Reference
+ * title]` line") reported that description's own entry as unfilled. This is
+ * the defect `collectUnresolvedSourceIds` already moved off a payload-wide
+ * scan for; the two now share one parser and cannot judge the same bytes
+ * differently.
  */
-function collectPlaceholderKeys(yaml: string): string[] {
+function collectPlaceholderKeys(entries: readonly string[]): string[] {
   const keys = new Set<string>();
-  for (const match of yaml.matchAll(FIELD_LINE_RE)) {
-    const key = match[1];
-    if (!key || !SCALAR_SCHEMA_FIELDS.has(key.toLowerCase())) continue;
-    if (isPlaceholderValue(match[2] ?? "")) {
-      keys.add(key);
+  for (const entry of entries) {
+    // `texts`, not `values`: `normalizeScalar` erases a placeholder to `""` on
+    // purpose, so the normalised side cannot tell "unfilled" from "absent".
+    for (const [key, text] of readEntryFieldTexts(entry).texts) {
+      if (!SCALAR_SCHEMA_FIELDS.has(key)) continue;
+      if (isPlaceholderValue(text)) keys.add(key);
     }
   }
   return [...keys];
@@ -821,11 +834,31 @@ function readScalarField(entry: string, field: string): string | null {
  * an unresolved one.
  */
 function readEntryFields(entry: string): Map<string, string> {
+  return readEntryFieldTexts(entry).values;
+}
+
+/**
+ * One entry parsed once, in both the forms its readers need.
+ *
+ * `values` is what a required-field check asks for: normalised, and empty
+ * wherever the slot holds nothing — a quoted placeholder included, so the
+ * quoted and bare spellings of the same unfilled slot read alike.
+ *
+ * `texts` is the value as written, which is the only form the placeholder
+ * check can use: `values` has already erased a placeholder to `""`, so reading
+ * it there would report nothing at all. Both come out of the same walk so the
+ * two can never disagree about which lines are this entry's fields.
+ */
+function readEntryFieldTexts(entry: string): {
+  values: Map<string, string>;
+  texts: Map<string, string>;
+} {
   const fields = new Map<string, string>();
+  const texts = new Map<string, string>();
   const lines = entry.split(/\r?\n/);
   const first = lines.find((line) => line.trim().length > 0);
   if (first === undefined) {
-    return fields;
+    return { values: fields, texts };
   }
   const fieldColumn = contentColumnOf(first);
 
@@ -843,14 +876,12 @@ function readEntryFields(entry: string): Map<string, string> {
     // A block scalar's value is the more-indented lines under its header, so
     // reading the header line alone returned `|-` — a non-empty string that
     // passed every required-field check while the field held nothing.
-    fields.set(
-      key,
-      BLOCK_SCALAR_HEADER_RE.test(inline)
-        ? readBlockScalar(lines, index, fieldColumn)
-        : normalizeScalar(inline),
-    );
+    const isBlock = BLOCK_SCALAR_HEADER_RE.test(inline);
+    const raw = isBlock ? readBlockScalar(lines, index, fieldColumn) : inline;
+    texts.set(key, raw);
+    fields.set(key, isBlock ? raw : normalizeScalar(inline));
   }
-  return fields;
+  return { values: fields, texts };
 }
 
 /** The column an entry line's content starts at, counting a `- ` list marker. */
@@ -921,7 +952,7 @@ function normalizeScalar(raw: string): string {
   return "";
 }
 
-/** `parse` the value on its own, or `undefined` when it is not valid YAML. */
+/** `parse` the value on its own, or the text unchanged when it is not valid YAML. */
 function parseScalarText(text: string): unknown {
   try {
     return parseYaml(text) as unknown;
