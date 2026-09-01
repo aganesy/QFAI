@@ -190,7 +190,7 @@ describe("init assets root mirror", () => {
       }
       expect(
         Object.keys(testStrategy).sort(),
-        `${label} testStrategy keys drifted from the keys the config loader reads`,
+        `${label} testStrategy keys drifted from the live, non-deprecated key set`,
       ).toEqual(liveKeys);
     }
   });
