@@ -26,6 +26,7 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const initQfaiDir = path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai");
@@ -187,5 +188,43 @@ describe("init assets root mirror", () => {
         `${label} testStrategy keys drifted from the keys the config loader reads`,
       ).toEqual(liveKeys);
     }
+  });
+
+  // The shipped comment used to say the `forbidTestTodoStubs` opt-out "needs an
+  // accompanying waiver DR-ID", which reads as a requirement something enforces.
+  // Nothing does: `validateTestTodoStubs` returns an empty array the moment the
+  // flag is false, and no field on `QfaiValidationConfig` carries a DR-ID to
+  // associate. A project could therefore follow the shipped instruction, write
+  // no waiver at all, and still see `qfai validate` succeed. Pin the two halves
+  // together — the behaviour AND the sentence describing it — so that whichever
+  // one moves next, the other is forced to move with it.
+  //
+  // Only the init asset is read. `qfai.config.yaml` is seeded, not mirrored
+  // (`scripts/sync-init-to-root.mjs`): the repo root copy is this repository's
+  // own live config and diverges on purpose, so its comments are not the text a
+  // fresh `qfai init` hands a new project. The instruction under review is the
+  // shipped one.
+  it("does not promise enforcement of the stub opt-out that no validator performs", async () => {
+    const optedOut = structuredClone(defaultConfig);
+    optedOut.validation.testStrategy.forbidTestTodoStubs = false;
+    optedOut.validation.traceability.testFileGlobs = ["tests/**/*.test.ts"];
+    expect(
+      await validateTestTodoStubs(repoRoot, optedOut),
+      "opting out silences the stub check entirely; if this ever reports, the shipped comment must say so",
+    ).toEqual([]);
+
+    const buffer = await readOrNull(initRootConfig);
+    expect(buffer, "init asset qfai.config.yaml is missing").not.toBeNull();
+    if (buffer === null) {
+      return;
+    }
+    const text = buffer.toString("utf-8");
+    expect(
+      text,
+      "shipped qfai.config.yaml still states the waiver as a requirement something checks",
+    ).not.toMatch(/needs an accompanying waiver DR-ID/);
+    expect(text, "shipped qfai.config.yaml must say the opt-out is not machine-checked").toMatch(
+      /not machine-checked/,
+    );
   });
 });

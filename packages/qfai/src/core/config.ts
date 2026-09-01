@@ -170,6 +170,16 @@ export type QfaiConfig = {
   baseBranch?: string;
 };
 
+/**
+ * Default for the two deprecated `testStrategy` compat knobs. Both are dead —
+ * no validator reads either — so the default is a fixed `false` rather than a
+ * behavioural choice. It lives here, once, so `defaultConfig` and the loader
+ * cannot drift apart, and so the loader can state the fallback instead of
+ * reading it back off a deprecated property (which is what previously forced a
+ * lint suppression at each of the two call sites).
+ */
+const DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT = false;
+
 export type ConfigPathKey = keyof QfaiPaths;
 
 export type ConfigLoadResult = {
@@ -204,8 +214,8 @@ export const defaultConfig: QfaiConfig = {
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
-      requireLayerTags: false,
-      requireSizeTags: false,
+      requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+      requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
     },
     traceability: {
       brMustHaveSc: true,
@@ -451,19 +461,20 @@ function normalizeValidation(
       ),
       // Deprecated compat shim: no validator reads either flag, but the type is
       // public, so keep parsing them until the next major instead of handing a
-      // `undefined` back to a caller that used to get its configured value.
+      // `undefined` back to a caller that used to get its configured value. The
+      // fallback is named rather than read off `base.testStrategy`, which is
+      // `defaultConfig.validation.testStrategy` and therefore the very same
+      // constant — reading it back would only re-enter the deprecated property.
       requireLayerTags: readBoolean(
         testStrategyRaw?.requireLayerTags,
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated requireLayerTags
-        base.testStrategy.requireLayerTags,
+        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
         "validation.testStrategy.requireLayerTags",
         configPath,
         issues,
       ),
       requireSizeTags: readBoolean(
         testStrategyRaw?.requireSizeTags,
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated requireSizeTags
-        base.testStrategy.requireSizeTags,
+        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
         "validation.testStrategy.requireSizeTags",
         configPath,
         issues,

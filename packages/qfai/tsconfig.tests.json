@@ -102,6 +102,7 @@
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",
+    "tests/core/prototyping/specResolution.test.ts",
     "tests/core/specSplitScopeAttribution.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.guttedPackage.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.retiredCount.test.ts",
@@ -109,6 +110,7 @@
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
+    "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/importLite.test.ts",
     "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts"
   ]
