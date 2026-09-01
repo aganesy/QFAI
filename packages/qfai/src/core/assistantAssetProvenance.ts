@@ -149,7 +149,17 @@ export function isGovernedAssistantLockKey(key: string): boolean {
   if (!layers.includes(layer)) {
     return false;
   }
-  return rest.every(isGovernedPathSegment);
+  if (!rest.every(isGovernedPathSegment)) {
+    return false;
+  }
+  // Inside the tree is not the same as owned by qfai. `collectGovernedAssistantFiles`
+  // excludes `*.local.md` overlays and housekeeping dotfiles because they are the
+  // project's, and a lock is project-supplied input — so a key naming one passed
+  // every structural check, sat in `previous` without ever being in `shipped`, and
+  // `qfai init --force` retired it: the sanctioned extension point, deleted as a
+  // withdrawn qfai asset. Ownership is decided at the same boundary as containment.
+  const basename = rest[rest.length - 1] ?? "";
+  return !isUngovernedManagementFile(basename) && !isLocalAssistantOverlay(basename);
 }
 
 function isGovernedPathSegment(segment: string): boolean {
@@ -530,17 +540,46 @@ export function assistantAssetsLockPath(assistantRoot: string): string {
 export async function readAssistantAssetsLock(
   assistantRoot: string,
 ): Promise<AssistantAssetsLock | null> {
+  const status = await readAssistantAssetsLockStatus(assistantRoot);
+  return status.kind === "lock" ? status.lock : null;
+}
+
+/**
+ * The same read, with "there is no record" told apart from "the record is there
+ * and unusable".
+ *
+ * `readAssistantAssetsLock` folds both to `null`, which is right for `init` —
+ * either way it has nothing to carry forward — and wrong for `validate`. A
+ * migrated project whose lock became malformed reads as never-initialised, and
+ * every absence the record would have made reportable goes quiet: the layer
+ * check has no recorded layers, and the two existence probes are satisfied by
+ * the legacy fallback. Deleting a whole governed layer was silent in exactly
+ * that state. The caller reports the unusable record instead.
+ */
+export type AssistantAssetsLockStatus =
+  | { readonly kind: "absent" }
+  | { readonly kind: "unreadable"; readonly reason: string }
+  | { readonly kind: "lock"; readonly lock: AssistantAssetsLock };
+
+export async function readAssistantAssetsLockStatus(
+  assistantRoot: string,
+): Promise<AssistantAssetsLockStatus> {
   let handle: FileHandle | undefined;
   let raw: string;
   try {
     handle = await open(assistantAssetsLockPath(assistantRoot), OPEN_READ_FLAGS);
     const pinned = await handle.stat();
-    if (!pinned.isFile() || pinned.size > MAX_ASSISTANT_ASSETS_LOCK_BYTES) {
-      return null;
+    if (!pinned.isFile()) {
+      return { kind: "unreadable", reason: "通常ファイルではありません" };
+    }
+    if (pinned.size > MAX_ASSISTANT_ASSETS_LOCK_BYTES) {
+      return { kind: "unreadable", reason: "上限サイズを超えています" };
     }
     raw = await handle.readFile("utf-8");
-  } catch {
-    return null;
+  } catch (error: unknown) {
+    return isEnoent(error)
+      ? { kind: "absent" }
+      : { kind: "unreadable", reason: error instanceof Error ? error.message : String(error) };
   } finally {
     try {
       await handle?.close();
@@ -548,11 +587,15 @@ export async function readAssistantAssetsLock(
       // The parse below owns the answer; a close fault must not replace it.
     }
   }
+  let parsed: AssistantAssetsLock | null;
   try {
-    return parseAssistantAssetsLock(JSON.parse(raw));
+    parsed = parseAssistantAssetsLock(JSON.parse(raw));
   } catch {
-    return null;
+    return { kind: "unreadable", reason: "JSON として読めません" };
   }
+  return parsed === null
+    ? { kind: "unreadable", reason: "provenance record の形をしていません" }
+    : { kind: "lock", lock: parsed };
 }
 
 /**

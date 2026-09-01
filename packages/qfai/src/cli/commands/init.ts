@@ -704,15 +704,14 @@ async function syncGovernedAssistantAssets(
 }
 
 /**
- * Answers, once per containing directory, whether a governed relative path sits
- * inside the project's own assistant tree.
+ * Answers whether a governed relative path sits inside the project's own
+ * assistant tree.
  *
  * `rename` and `rm` act on the entry they are given, which makes the *final*
  * component safe on its own — but not the directories above it. A checkout that
  * left `constitution/` (or the assistant root itself) as a symlink to somewhere
  * outside the repository pointed every governed write and every `--force`
- * retire into that directory instead. The answer is cached because both passes
- * walk the same handful of directories for every file in them.
+ * retire into that directory instead.
  *
  * The walk starts at the **project** root and the path handed to it carries the
  * assistant segments. Starting at the assistant root left `.qfai` and
@@ -720,19 +719,22 @@ async function syncGovernedAssistantAssets(
  * last component it is given — so a `.qfai` symlinked out of the repository
  * made `lstat(.qfai/assistant)` report the external directory as real, and the
  * guard waved through every write and retire inside it.
+ *
+ * **Nothing is cached.** The first version answered once per containing
+ * directory, which made the guard's answer as old as the run: a layer swapped
+ * for a link after the first file in it was cleared took every later hash,
+ * restore, retire and staging rename with it — and the restore of a missing
+ * file writes with no expected hash to stop it. Re-asking is four `lstat`s
+ * against a governed tree of a few dozen files, which is not a cost worth an
+ * answer that can be minutes stale. It does not make the check atomic with the
+ * write that follows it — no API here can — but the window is now the two
+ * syscalls either side of it rather than the length of the sync.
  */
-function makeGovernedContainmentGuard(destRoot: string): (relative: string) => Promise<boolean> {
-  const answers = new Map<string, Promise<boolean>>();
-  return (relative: string) => {
-    const container = relative.slice(0, relative.lastIndexOf("/") + 1);
-    const cached = answers.get(container);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const answer = hasRealGovernedAssistantParents(destRoot, `${ASSISTANT_DIR}/${relative}`);
-    answers.set(container, answer);
-    return answer;
-  };
+export function makeGovernedContainmentGuard(
+  destRoot: string,
+): (relative: string) => Promise<boolean> {
+  return (relative: string) =>
+    hasRealGovernedAssistantParents(destRoot, `${ASSISTANT_DIR}/${relative}`);
 }
 
 function escapedGovernedPathNote(dest: string): string {
@@ -1083,9 +1085,30 @@ async function restoreUnreadableGovernedAsset(
 
   if (options.force) {
     if (!options.dryRun) {
-      // The occupant may be a directory; `rm -r` is what a `rename` over it
-      // would otherwise fail on.
-      await rm(dest, { force: true, recursive: true });
+      // The occupant is moved aside and re-examined before anything is
+      // destroyed, for the reason the refresh and the retire were given the
+      // same treatment: `rm` acts on a pathname, and a process that put an
+      // ordinary project-owned file there between the probe above and this
+      // line lost it to a deletion justified by an entry nobody re-read. The
+      // rename carries whatever inode is at the path at that instant; the
+      // check then runs against the moved entry, whose name nothing else
+      // knows.
+      const outcome = await displaceUnreadableGovernedAsset(dest);
+      if (outcome !== "displaced") {
+        // It is a readable regular file now. That is not the occupied path
+        // this branch was entered for, and overwriting it here would discard
+        // content this run never inspected.
+        out.skipped.push(dest);
+        if (previousHash !== undefined) {
+          out.recorded[out.relative] = previousHash;
+        }
+        out.manualMergeNotes.push(
+          typeof outcome === "object"
+            ? `NOTE: ${dest} は修復の直前に通常ファイルへ置き換えられたため修復を取り消しましたが、元の内容を戻せませんでした（${outcome.orphaned} に退避してあります）。`
+            : `NOTE: ${dest} は修復の直前に通常ファイルへ置き換えられたため、そのままにしました（もう一度 \`npx qfai init --force\` を実行してください）。`,
+        );
+        return;
+      }
       await replaceGovernedAsset(source, dest);
     }
     out.copied.push(dest);
@@ -1267,6 +1290,58 @@ async function retireWithdrawnGovernedAssets(
  * the very file this precaution exists to protect. Where hard links are not
  * available the restore falls back to `rename` guarded by a presence check.
  */
+/**
+ * Moves a non-regular occupant off a governed path and destroys it, and only
+ * it.
+ *
+ * Same shape as {@link retireVerifiedGovernedAsset} and for the same reason:
+ * the decision to remove was taken from a probe, and `rm` acts on the pathname
+ * rather than on what the probe saw. The entry is renamed aside — atomic within
+ * the directory — and then inspected. A readable regular file is put back and
+ * the caller told to leave it alone; anything else is what this branch exists
+ * to clear, and is deleted where nothing else can reach it.
+ *
+ * `link` restores only into a free pathname (`EEXIST` otherwise), so the
+ * restore cannot overwrite whatever arrived in the meantime.
+ */
+export type GovernedDisplaceOutcome = "displaced" | "regular-file" | { orphaned: string };
+
+export async function displaceUnreadableGovernedAsset(
+  dest: string,
+): Promise<GovernedDisplaceOutcome> {
+  const directory = path.dirname(dest);
+  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await rename(dest, quarantine);
+  } catch (error: unknown) {
+    if (isEnoent(error)) {
+      // Already gone: nothing occupies the path, which is what this call was
+      // asked to arrange.
+      return "displaced";
+    }
+    throw error;
+  }
+  if ((await hashAssistantAssetFile(quarantine)) === null) {
+    await rm(quarantine, { force: true, recursive: true });
+    return "displaced";
+  }
+  try {
+    await link(quarantine, dest);
+    await rm(quarantine, { force: true });
+    return "regular-file";
+  } catch {
+    if (!(await pathExists(dest).catch(() => true))) {
+      try {
+        await rename(quarantine, dest);
+        return "regular-file";
+      } catch {
+        return { orphaned: quarantine };
+      }
+    }
+    return { orphaned: quarantine };
+  }
+}
+
 export type GovernedRetireOutcome = "removed" | "changed" | { orphaned: string };
 
 function quarantineLabel(outcome: GovernedRetireOutcome): string {

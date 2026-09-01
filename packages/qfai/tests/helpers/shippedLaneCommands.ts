@@ -1264,15 +1264,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
   [
-    // Re-pinned when the managed block gained `!.qfai/assistant/` and
-    // `!.qfai/assistant/.assets.lock.json`. Measured with
-    // `git check-ignore -v .qfai/assistant/.assets.lock.json` on a tree carrying a broad
-    // `.qfai/*`: without them the provenance record never reaches a fresh clone, and every
-    // untouched governed file from an older release then reads as a local fork. Those two
-    // negations are the whole delta — removing them reproduces the previous digest byte for
-    // byte, which is what makes this a review of two lines rather than a re-blessing of the file.
+    // Re-pinned when the managed block gained `!.qfai/assistant/`,
+    // `!.qfai/assistant/**` and `!.qfai/assistant/.assets.lock.json`. Measured on a tree
+    // carrying a broad `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
+    // (`git status --ignored`): without them the provenance record never reaches a fresh
+    // clone, and every untouched governed file from an older release then reads as a local
+    // fork; without the recursive one the record arrives and the rules it vouches for do
+    // not. Those three negations are the whole delta — removing them reproduces the previous
+    // digest `2cfeb083…` byte for byte, which is what makes this a review of three lines
+    // rather than a re-blessing of the file.
     ".gitignore",
-    "73df1b1ef526254070073207066bfb91508c4bcff37277c2593a60127db6b0b6",
+    "359edd7607df6d3df8bbb3edee78a8a87c3fc3f6bef3fb3a2740b3a9a935cd44",
   ],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],

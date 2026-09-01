@@ -18,6 +18,8 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  displaceUnreadableGovernedAsset,
+  makeGovernedContainmentGuard,
   replaceGovernedAsset,
   retireVerifiedGovernedAsset,
   runInit,
@@ -30,6 +32,7 @@ import {
   buildShippedAssistantHashes,
   hashAssistantAssetFile,
   hashAssistantAssetText,
+  isGovernedAssistantLockKey,
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../src/core/assistantAssetProvenance.js";
@@ -930,4 +933,150 @@ describe("assistant asset provenance", () => {
       code: 1,
     });
   });
+
+  // `.qfai/**` matches every descendant in its own right, so re-including the
+  // directory re-includes nothing inside it: the record reached a fresh clone
+  // through its leaf negation while the rules it vouches for did not.
+  it("keeps the governed tree out of a recursive .qfai ignore rule", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const run = promisify(execFile);
+    await run("git", ["init", "-q", root], { cwd: root });
+    await writeFile(path.join(root, ".gitignore"), `.qfai/**\n${QFAI_GITIGNORE_BLOCK}`, "utf-8");
+    const governedRel = path.posix.join(".qfai", "assistant", "catalog", "test-layers.md");
+    await mkdir(path.join(root, ".qfai", "assistant", "catalog"), { recursive: true });
+    await writeFile(path.join(root, governedRel), "# Test Layers\n", "utf-8");
+
+    await expect(run("git", ["check-ignore", governedRel], { cwd: root })).rejects.toMatchObject({
+      code: 1,
+    });
+  });
+
+  // `lstat` refuses to resolve only the path it is handed, so checking the layer
+  // alone left every component above it resolved: an external tree matching the
+  // release passed in silence, and a big one was walked in full.
+  it.skipIf(process.platform === "win32")(
+    "refuses to compare through a .qfai that leaves the project",
+    async () => {
+      const root = await makeProject();
+      const outside = path.join(root, "outside-qfai");
+      await rename(path.join(root, ".qfai"), outside);
+      await symlink(outside, path.join(root, ".qfai"));
+
+      const issues = await validateAssistantAssets(root, defaultConfig);
+      const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
+      expect(unverifiable).toHaveLength(1);
+      expect(unverifiable[0]?.severity).toBe(await expectedProvenanceSeverity());
+    },
+  );
+
+  // A record that is present and unusable read as "never initialised", which
+  // silenced every absence the record is what makes reportable.
+  it("reports an unusable provenance record instead of reading it as none", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await writeFile(
+      path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME),
+      "{ this is not json",
+      "utf-8",
+    );
+    // The state the silence needed: a migrated tree whose legacy fallback
+    // satisfies QFAI-ASSETS-001, with the canonical layer deleted.
+    await mkdir(path.join(assistantDir, "instructions"), { recursive: true });
+    await cp(
+      path.join(shippedAssistantDir, "constitution", "drift-protocol.md"),
+      path.join(assistantDir, "instructions", "drift-protocol.md"),
+    );
+    await rm(path.join(assistantDir, "constitution"), { recursive: true, force: true });
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-007");
+  });
+
+  // …and a project that genuinely has no record is still not reported for it.
+  it("says nothing about a project that never had a provenance record", async () => {
+    const root = await makeProject();
+    await rm(path.join(root, ".qfai", "assistant", ASSISTANT_ASSETS_LOCK_BASENAME));
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    expect(codesOf(issues).filter((code) => code.startsWith("QFAI-ASSETS-"))).toEqual([]);
+  });
+
+  // A lock key inside the tree is not the same as a path qfai owns. An overlay
+  // recorded in the lock is absent from every shipped set, so `--force` retired
+  // the one extension point the protocol sanctions.
+  it("never lets a lock claim ownership of a project overlay", async () => {
+    expect(isGovernedAssistantLockKey("catalog/test-layers.local.md")).toBe(false);
+    expect(isGovernedAssistantLockKey("constitution/.gitignore")).toBe(false);
+    // Over-correction pin: the paths qfai does own are still keys.
+    expect(isGovernedAssistantLockKey("catalog/test-layers.md")).toBe(true);
+    expect(isGovernedAssistantLockKey("constitution/custom/rule.md")).toBe(true);
+
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const overlay = path.join(assistantDir, "catalog", "test-layers.local.md");
+    const body = "# L1/L2, this project's own\n";
+    await writeFile(overlay, body, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await writeAssistantAssetsLock(assistantDir, {
+      files: {
+        ...(lock?.files ?? {}),
+        "catalog/test-layers.local.md": hashAssistantAssetText(body),
+      },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(overlay, "utf-8")).toBe(body);
+  });
+
+  // The third path that decided from a probe and then acted on the pathname.
+  it("does not clobber a governed path that became a regular file mid-repair", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const dest = path.join(root, "occupied.md");
+    const arrived = "# a project file that arrived after the probe\n";
+    await writeFile(dest, arrived, "utf-8");
+
+    expect(await displaceUnreadableGovernedAsset(dest)).toBe("regular-file");
+    expect(await readFile(dest, "utf-8")).toBe(arrived);
+    expect(await readdir(root)).toEqual(
+      expect.not.arrayContaining([expect.stringContaining(ASSISTANT_STAGING_PREFIX)]),
+    );
+  });
+
+  // …and still clears the occupant it was entered for.
+  it("displaces a governed path a directory occupies", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+    tempRoots.push(root);
+    const dest = path.join(root, "occupied.md");
+    await mkdir(path.join(dest, "nested"), { recursive: true });
+
+    expect(await displaceUnreadableGovernedAsset(dest)).toBe("displaced");
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  // The guard answered once per containing directory, so its answer was as old
+  // as the run: a layer swapped for a link after the first file in it cleared
+  // took every later write and retire in that layer with it.
+  it.skipIf(process.platform === "win32")(
+    "asks the containment guard again rather than reusing an answer",
+    async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-"));
+      tempRoots.push(root);
+      const assistantDir = path.join(root, ".qfai", "assistant");
+      await mkdir(path.join(assistantDir, "catalog"), { recursive: true });
+      const outside = path.join(root, "outside-catalog");
+      await mkdir(outside, { recursive: true });
+
+      const isContained = makeGovernedContainmentGuard(root);
+      expect(await isContained("catalog/first.md")).toBe(true);
+
+      await rm(path.join(assistantDir, "catalog"), { recursive: true, force: true });
+      await symlink(outside, path.join(assistantDir, "catalog"));
+
+      expect(await isContained("catalog/second.md")).toBe(false);
+    },
+  );
 });

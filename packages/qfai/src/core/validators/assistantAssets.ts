@@ -7,8 +7,9 @@ import {
   buildShippedAssistantHashes,
   classifyAssistantAsset,
   collectGovernedAssistantFiles,
+  hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
-  readAssistantAssetsLock,
+  readAssistantAssetsLockStatus,
 } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
@@ -75,7 +76,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
-  issues.push(...(await validateAssistantAssetProvenance(assistantDir)));
+  issues.push(...(await validateAssistantAssetProvenance(root, assistantDir)));
 
   const skillFiles = await collectSkillFiles([skillsDir]);
   for (const skillFile of skillFiles) {
@@ -136,11 +137,16 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * `qfai init --force`, a fork needs a human merge decision, and an unshipped
  * file belongs in a `*.local.md` overlay.
  *
- * A project with no recorded provenance is not penalised for that alone: only
- * files that also differ from the installed release are reported, and they are
- * reported at `warning`, never `error`.
+ * A project with no recorded provenance is not penalised for that alone: an
+ * absent record is not itself a finding, and only files that also differ from
+ * the installed release are reported. What severity they carry is not fixed
+ * here — the whole family follows the promotion window below, `warning` inside
+ * it and `error` from the release the finding names.
  */
-async function validateAssistantAssetProvenance(assistantDir: string): Promise<Issue[]> {
+async function validateAssistantAssetProvenance(
+  root: string,
+  assistantDir: string,
+): Promise<Issue[]> {
   // The whole family runs a promotion window (`RULE_PROMOTIONS`,
   // docs/design-principles P7): nothing compared the governed layers before, so
   // the first run that records provenance meets every edit a project ever made
@@ -187,7 +193,42 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
     ];
   }
 
-  const lock = await readAssistantAssetsLock(assistantDir);
+  // Every component from the project root down, not just the layer directory.
+  // `lstat` declines to resolve only the path it is given, so a `.qfai` — or a
+  // `.qfai/assistant` — that is a symlink out of the repository still reported a
+  // real `constitution/` on the far side: `validate` would walk and hash an
+  // external tree, pass in silence whenever it matched the release, and take as
+  // long as that tree was big. The same guard `init` applies before it writes.
+  if (!(await hasRealGovernedAssistantParents(root, `${ASSISTANT_DIR}/probe`))) {
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "vendored",
+        new Error(
+          `${ASSISTANT_DIR}/ に到達する経路に実ディレクトリでない要素があります（symlink / junction 等でプロジェクト外を指している可能性があります）。`,
+        ),
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
+  }
+
+  const lockStatus = await readAssistantAssetsLockStatus(assistantDir);
+  if (lockStatus.kind === "unreadable") {
+    // Not "no record". A record that is there and unusable leaves the project
+    // looking never-initialised, and every absence the record makes reportable
+    // — a deleted layer above all — goes quiet with it.
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "record",
+        new Error(`${ASSISTANT_ASSETS_LOCK_BASENAME}: ${lockStatus.reason}`),
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
+  }
+  const lock = lockStatus.kind === "lock" ? lockStatus.lock : null;
   const issues: Issue[] = [];
   let vendored: string[];
   try {
@@ -347,7 +388,7 @@ async function coveredByExistenceProbe(assistantDir: string, relative: string): 
  */
 function unverifiableProvenanceIssue(
   assistantDir: string,
-  side: "shipped" | "vendored",
+  side: "shipped" | "vendored" | "record",
   error: unknown,
   assetProvenanceSeverity: ProvenanceSeverity,
   windowNote: string,
@@ -356,7 +397,9 @@ function unverifiableProvenanceIssue(
   const subject =
     side === "shipped"
       ? "インストール済み qfai リリースの配布アセット"
-      : `プロジェクトの ${ASSISTANT_DIR}/ 配下の governed layer`;
+      : side === "record"
+        ? `プロジェクトの provenance record (${ASSISTANT_DIR}/${ASSISTANT_ASSETS_LOCK_BASENAME})`
+        : `プロジェクトの ${ASSISTANT_DIR}/ 配下の governed layer`;
   return issue(
     "QFAI-ASSETS-007",
     `${subject}を読み取れなかったため、${GOVERNED_ASSISTANT_LAYERS.map((layer) => `${layer}/`).join(
