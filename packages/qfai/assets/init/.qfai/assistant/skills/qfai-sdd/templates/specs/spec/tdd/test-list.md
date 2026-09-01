@@ -104,8 +104,8 @@ Optional columns, appended after the required eight:
 `TC-Refs` it is what a reseed matches on, so `/qfai-implement` never rewrites it
 even when a review-fix handback changes `Selector` or `Test file`. `validate`
 requires it once a `TC-*` holds more than one row: siblings with no slug raise
-`TDDLIST_SPLIT_BOUNDARY_MISSING` (`warning`) and two siblings sharing one slug
-raise `TDDLIST_SPLIT_BOUNDARY_DUPLICATE` (`error`).
+`QFAI-TDD-003` (`warning`) and two siblings sharing one slug
+raise `QFAI-TDD-004` (`error`).
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

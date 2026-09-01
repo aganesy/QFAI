@@ -80,7 +80,7 @@ export const RULE_PROMOTIONS = {
    */
   tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
   /**
-   * `TDDLIST_SPLIT_BOUNDARY_MISSING` — sibling ledger rows of one `TC-*` that
+   * `QFAI-TDD-003` — sibling ledger rows of one `TC-*` that
    * name no `Boundary`. Every ledger seeded before the column existed is in
    * that shape, and the migration out of it re-scopes rows, so it waits on an
    * approved `CR-*`. The window is the time to get that approval; a project
@@ -88,7 +88,7 @@ export const RULE_PROMOTIONS = {
    */
   tddListSplitBoundaryMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
-   * `TDDLIST_SPLIT_BOUNDARY_DUPLICATE` — two sibling rows of one `TC-*` that
+   * `QFAI-TDD-004` — two sibling rows of one `TC-*` that
    * claim the same `Boundary` slug. Only a Phase 2b that already writes the
    * column can produce it, so unlike the missing case it is not a legacy
    * shape — but P7 gives even a self-inflicted new code its window rather than

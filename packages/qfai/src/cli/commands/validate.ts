@@ -448,7 +448,11 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // `QFAI-TDD-*` alongside `TDDLIST_*`: `validateTddList` raises both. The
+  // legacy family is frozen (`docs/finding-codes.md`), so every code the gate
+  // gains from here is canonical, and a profile that skips this group has not
+  // evaluated either family.
+  tdd: ["TDDLIST_*", "QFAI-TDD-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;

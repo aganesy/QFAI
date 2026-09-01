@@ -1931,7 +1931,7 @@ function validateSplitBoundaryIdentity(
     if (unnamed.length > 0) {
       issues.push(
         issue(
-          "TDDLIST_SPLIT_BOUNDARY_MISSING",
+          "QFAI-TDD-003",
           `${tc} is split across ${String(siblings.length)} rows in tdd/test-list.md for spec-${specNumber}, but ${String(unnamed.length)} of them name no Boundary (${unnamed.map((ref) => ref.label).join(", ")}). Sibling rows are told apart by the (TC, Boundary) pair and by nothing else.${windowNote(missingSeverity, missingPromotion)}`,
           missingSeverity,
           relPath,
@@ -1959,7 +1959,7 @@ function validateSplitBoundaryIdentity(
       if (labels.length < 2) continue;
       issues.push(
         issue(
-          "TDDLIST_SPLIT_BOUNDARY_DUPLICATE",
+          "QFAI-TDD-004",
           `Boundary "${slug}" is claimed by ${String(labels.length)} rows of ${tc} in tdd/test-list.md for spec-${specNumber} (${labels.join(", ")}), so those rows carry no distinct identity.${windowNote(duplicateSeverity, duplicatePromotion)}`,
           duplicateSeverity,
           relPath,

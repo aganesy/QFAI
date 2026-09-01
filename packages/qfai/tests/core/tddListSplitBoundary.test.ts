@@ -96,9 +96,9 @@ async function withLedger(
 }
 
 const missing = (issues: Issue[]): Issue[] =>
-  issues.filter((entry) => entry.code === "TDDLIST_SPLIT_BOUNDARY_MISSING");
+  issues.filter((entry) => entry.code === "QFAI-TDD-003");
 const duplicate = (issues: Issue[]): Issue[] =>
-  issues.filter((entry) => entry.code === "TDDLIST_SPLIT_BOUNDARY_DUPLICATE");
+  issues.filter((entry) => entry.code === "QFAI-TDD-004");
 
 describe("the split row's Boundary identity", () => {
   it("asks nothing of a TC that owns a single row", async () => {

@@ -429,8 +429,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(rules).toContain("TDDLIST_SPLIT_BOUNDARY_MISSING");
-      expect(rules).toContain("TDDLIST_SPLIT_BOUNDARY_DUPLICATE");
+      expect(rules).toContain("QFAI-TDD-003");
+      expect(rules).toContain("QFAI-TDD-004");
       // The severities are not interchangeable: a legacy ledger cannot be
       // migrated before its CR is approved, so the missing slug must not fail
       // `--fail-on error`; a duplicate can only come from a Phase 2b that
@@ -439,8 +439,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(rules).toContain("(`error`, since only a Phase 2b that already writes the column");
 
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain("TDDLIST_SPLIT_BOUNDARY_MISSING");
-      expect(template).toContain("TDDLIST_SPLIT_BOUNDARY_DUPLICATE");
+      expect(template).toContain("QFAI-TDD-003");
+      expect(template).toContain("QFAI-TDD-004");
     });
 
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {
