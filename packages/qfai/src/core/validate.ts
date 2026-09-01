@@ -395,7 +395,7 @@ async function runProfileValidators(
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
-        return runPrototypingValidators(root, config, platformOption);
+        return runPrototypingProfileValidators(root, config, platformOption);
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
@@ -414,7 +414,7 @@ async function runSaasPackage(
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  const prototypingIssues = await runPrototypingValidators(root, config, platformOption);
+  const prototypingIssues = await runPrototypingProfileValidators(root, config, platformOption);
   return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
@@ -545,12 +545,24 @@ async function runSddValidators(
   ];
 }
 
+/**
+ * The prototyping issue set at its validators' declared severity.
+ *
+ * `full` / `verify` call this one. The exploration relaxation belongs to the
+ * prototyping profile, not to this validator group: its trigger is a file
+ * committed to the repository under test
+ * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
+ * the project leaves the prototyping stage, and the last explicit mode is
+ * inherited forward — so applying it here let an abandoned exploration loop
+ * downgrade four gates of the verification profile permanently. Callers that
+ * want the relaxation go through `runPrototypingProfileValidators`.
+ */
 async function runPrototypingValidators(
   root: string,
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw: Issue[] = [
+  return [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await detectMockHrefDrift(root)),
     // Second-wave reviewer-gate findings (prototyping
@@ -575,11 +587,24 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDelegationMap(root)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
-  // Prototyping-mode relaxation: under `mode: exploration` the
-  // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
-  // error → warning. Schema / path / license gates stay hard error.
-  // The mode is read from `prototyping.json#mode` written by iterate
-  // at cycle 0 (absent → legacy "convergence" interpretation).
+}
+
+/**
+ * The prototyping issue set as the `prototyping` (and `saas-package`) profile
+ * reports it.
+ *
+ * Prototyping-mode relaxation: under `mode: exploration` the
+ * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+ * error → warning. Schema / path / license gates stay hard error.
+ * The mode is read from `prototyping.json#mode` written by iterate
+ * at cycle 0 (absent → legacy "convergence" interpretation).
+ */
+async function runPrototypingProfileValidators(
+  root: string,
+  config: ConfigLoadResult["config"],
+  platformOption?: string,
+): Promise<Issue[]> {
+  const raw = await runPrototypingValidators(root, config, platformOption);
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 

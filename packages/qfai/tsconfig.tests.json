@@ -110,6 +110,7 @@
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
     "tests/validators/importLite.test.ts",
-    "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts"
+    "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts",
+    "tests/integration/prototypingExplorationRelaxationScope.test.ts"
   ]
 }
