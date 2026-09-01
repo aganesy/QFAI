@@ -24,6 +24,7 @@ import type { Issue } from "../../../src/core/types.js";
 import { resolveToolVersion } from "../../../src/core/version.js";
 
 const REACHABILITY_CODE = "QFAI-SKILLS-013";
+const READ_FAILURE_CODE = "QFAI-SKILLS-014";
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 /** Shipped surface plus its generated root mirror. */
@@ -33,6 +34,24 @@ async function reachabilityIssues(root: string): Promise<Issue[]> {
   const { config } = await loadConfig(root);
   const issues = await validateAssistantAssets(root, config);
   return issues.filter((entry) => entry.code === REACHABILITY_CODE);
+}
+
+/**
+ * Both findings the reference graph can produce about a shipped file.
+ *
+ * The shipped-tree case below is the regression net for the whole graph, and
+ * filtering it to `QFAI-SKILLS-013` alone left half of that net missing: a
+ * shipped document that became unreadable raises `QFAI-SKILLS-014`, and the
+ * assertion would still have seen an empty list and passed. An unreadable
+ * shipped reference is at least as bad as an uncited one — it is the state the
+ * graph cannot even judge.
+ */
+async function skillGraphIssues(root: string): Promise<Issue[]> {
+  const { config } = await loadConfig(root);
+  const issues = await validateAssistantAssets(root, config);
+  return issues.filter(
+    (entry) => entry.code === REACHABILITY_CODE || entry.code === READ_FAILURE_CODE,
+  );
 }
 
 async function writeSkillFixture(root: string): Promise<string> {
@@ -448,11 +467,15 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
     }
   });
 
-  it("keeps every shipped reference reachable from a SKILL.md", async () => {
+  it("keeps every shipped reference reachable from a SKILL.md, and readable", async () => {
     for (const root of SHIPPED_ROOTS) {
-      const issues = await reachabilityIssues(root);
+      const issues = await skillGraphIssues(root);
 
-      expect(issues.map((entry) => path.relative(root, entry.file ?? ""))).toEqual([]);
+      // Code and path together: an unreachable file and an unreadable one are
+      // different repairs, and a bare path list said which file but not which.
+      expect(
+        issues.map((entry) => `${entry.code} ${path.relative(root, entry.file ?? "")}`),
+      ).toEqual([]);
     }
   });
 });

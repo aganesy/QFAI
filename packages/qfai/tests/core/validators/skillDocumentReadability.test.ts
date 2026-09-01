@@ -22,16 +22,23 @@ import { resolveToolVersion } from "../../../src/core/version.js";
 
 const UNREADABLE_BASENAME = "unreadable.md";
 const READ_FAILURE_CODE = "QFAI-SKILLS-014";
+const UNREADABLE_SKILL_DIR = "unreadable-skill";
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<typeof FsPromises>("node:fs/promises");
   return {
     ...actual,
     default: actual,
-    readFile: (...args: Parameters<typeof actual.readFile>) =>
-      typeof args[0] === "string" && path.basename(args[0]) === "unreadable.md"
-        ? Promise.reject(new Error("EACCES: permission denied, open 'unreadable.md'"))
-        : actual.readFile(...args),
+    readFile: (...args: Parameters<typeof actual.readFile>) => {
+      // Literals, not the consts below: `vi.mock` is hoisted above them.
+      const target = typeof args[0] === "string" ? args[0] : "";
+      const denied =
+        path.basename(target) === "unreadable.md" ||
+        target.split(path.sep).includes("unreadable-skill");
+      return denied
+        ? Promise.reject(new Error(`EACCES: permission denied, open '${path.basename(target)}'`))
+        : actual.readFile(...args);
+    },
   };
 });
 
@@ -53,6 +60,15 @@ async function writeSkillFixture(root: string): Promise<string> {
   );
   await writeFile(path.join(referencesDir, UNREADABLE_BASENAME), "# Unreadable\n", "utf-8");
   return referencesDir;
+}
+
+/** A skill whose own `SKILL.md` cannot be read. */
+async function writeUnreadableSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", UNREADABLE_SKILL_DIR);
+  await mkdir(skillDir, { recursive: true });
+  const skillFile = path.join(skillDir, "SKILL.md");
+  await writeFile(skillFile, "# unreadable-skill\n\n[DRIFT-PROTOCOL:MANDATORY]\n", "utf-8");
+  return skillFile;
 }
 
 describe("skill document readability", { timeout: 30000 }, () => {
@@ -81,6 +97,34 @@ describe("skill document readability", { timeout: 30000 }, () => {
       expect(readFailures[0]?.message).toContain("EACCES");
       // The remediation is on the finding, not only in the report catalog.
       expect(readFailures[0]?.suggested_action ?? "").not.toBe("");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an unreadable SKILL.md instead of rejecting the whole validator", async () => {
+    // `SKILL.md` was read twice: once unguarded by the marker / Reviewer-Gate
+    // loop, and once by the reference graph. The unguarded read ran first, so
+    // an unreadable `SKILL.md` rejected `validateAssistantAssets` outright and
+    // `QFAI-SKILLS-014` never got the chance to report the one file it most
+    // needed to. The whole run died with it — every other finding included.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skillmd-readability-"));
+    try {
+      const skillFile = await writeUnreadableSkillFixture(root);
+      const { config } = await loadConfig(root);
+
+      // Resolving at all is half the assertion.
+      const issues = await validateAssistantAssets(root, config);
+      const readFailures = issues.filter((entry) => entry.code === READ_FAILURE_CODE);
+
+      // Exactly one: the file is read once now, so it is reported once.
+      expect(readFailures.map((entry) => entry.file)).toEqual([skillFile]);
+      expect(readFailures[0]?.message).toContain("EACCES");
+      // And the checks that need its bytes stay silent rather than guessing.
+      // `SKILL.md` carries the marker, but no reader could have seen it.
+      expect(issues.filter((entry) => entry.file === skillFile).map((entry) => entry.code)).toEqual(
+        [READ_FAILURE_CODE],
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

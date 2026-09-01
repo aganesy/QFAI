@@ -65,9 +65,28 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
+  // Every skill-tree document is read once, here, and both the per-`SKILL.md`
+  // checks below and the reference graph work from that one map.
+  //
+  // `SKILL.md` used to be read twice — once by an unguarded `readFile` in the
+  // loop below, and again by the graph. The unguarded one ran first, so an
+  // unreadable `SKILL.md` rejected this whole validator before
+  // `QFAI-SKILLS-014` — the rule added for exactly that failure — could report
+  // it: the entry point was the one file the rule could never speak about.
+  // Reading once also means the marker checks and the citation graph can never
+  // disagree about a file's bytes.
+  const toolVersion = await resolveToolVersion();
+  const { documents, unreadable } = await readSkillDocuments(skillsDir, toolVersion);
+  issues.push(...unreadable);
+
   const skillFiles = await collectSkillFiles([skillsDir]);
   for (const skillFile of skillFiles) {
-    const content = await readFile(skillFile, "utf-8");
+    const content = documents.get(skillFile);
+    if (content === undefined) {
+      // Unreadable, and already reported as `QFAI-SKILLS-014` above. The
+      // marker and Reviewer-Gate checks have no bytes to judge.
+      continue;
+    }
 
     if (!content.includes(DRIFT_PROTOCOL_MARKER)) {
       issues.push(
@@ -109,7 +128,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
   }
 
-  issues.push(...(await collectReferenceGraphIssues(root, skillsDir)));
+  issues.push(...collectReferenceGraphIssues(root, skillsDir, toolVersion, documents));
 
   return issues;
 }
@@ -128,14 +147,18 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * and a tree that grew a reference and lost its citation before anything
  * checked gets the window to reconnect it.
  */
-async function collectReferenceGraphIssues(root: string, skillsDir: string): Promise<Issue[]> {
+function collectReferenceGraphIssues(
+  root: string,
+  skillsDir: string,
+  toolVersion: string,
+  documents: Map<string, string>,
+): Issue[] {
   // Both codes below are new, so P7 gives each a promotion window instead of a
-  // severity literal beside its `issue(...)` call. `resolveToolVersion`
-  // resolves rather than rejects — its own read failures return `"unknown"`,
-  // which the comparator reads as inside the window — so a version that cannot
-  // be read is never what escalates either code into a build failure.
-  const toolVersion = await resolveToolVersion();
-  const { documents, unreadable } = await readSkillDocuments(skillsDir, toolVersion);
+  // severity literal beside its `issue(...)` call. The `toolVersion` the caller
+  // hands down comes from `resolveToolVersion`, which resolves rather than
+  // rejects — its own read failures return `"unknown"`, which the comparator
+  // reads as inside the window — so a version that cannot be read is never what
+  // escalates either code into a build failure.
   const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
   const promoteAt = RULE_PROMOTIONS.skillReferenceUnreachable.promoteAt;
   const severity = newRuleSeverity(toolVersion, promoteAt);
@@ -156,7 +179,7 @@ async function collectReferenceGraphIssues(root: string, skillsDir: string): Pro
         "このファイルを読ませたいステップの本文からファイルへの相対パスを引用してください（SKILL.md から到達可能な文書のいずれかに書く必要があります）。読ませる必要がなくなった文書であれば削除してください。",
       ),
     );
-  return [...unreadable, ...unreachable];
+  return unreachable;
 }
 
 type SkillDocuments = {
@@ -215,6 +238,13 @@ function collectReachableDocuments(
 ): Set<string> {
   const files = [...documents.keys()];
   const reachable = new Set(files.filter((file) => isSkillEntryPoint(context.skillsDir, file)));
+  // Which targets the token scan cannot spell is a property of the target's own
+  // path — it does not depend on who is citing it — so it is decided once for
+  // the whole walk instead of re-tested for every (citing file, target) pair.
+  // It is also the *small* set: only names carrying a space, a bracket or a
+  // `%` land here, so the second pass in `resolveCitations` now walks those
+  // few rather than every document.
+  const unscannableTargets = files.filter((file) => !isTokenScannable(context, file));
   const queue = [...reachable];
   while (queue.length > 0) {
     const current = queue.shift();
@@ -222,7 +252,13 @@ function collectReachableDocuments(
       break;
     }
     const content = documents.get(current) ?? "";
-    for (const cited of resolveCitations(context, current, content, documents)) {
+    for (const cited of resolveCitations(
+      context,
+      current,
+      content,
+      documents,
+      unscannableTargets,
+    )) {
       if (reachable.has(cited)) {
         continue;
       }
@@ -318,6 +354,7 @@ function resolveCitations(
   citingFile: string,
   content: string,
   documents: Map<string, string>,
+  unscannableTargets: readonly string[],
 ): string[] {
   const cited = new Set<string>();
   for (const match of content.matchAll(DOCUMENT_CITATION_PATTERN)) {
@@ -328,8 +365,8 @@ function resolveCitations(
       cited.add(target);
     }
   }
-  for (const target of documents.keys()) {
-    if (cited.has(target) || target === citingFile || isTokenScannable(context, target)) {
+  for (const target of unscannableTargets) {
+    if (cited.has(target) || target === citingFile) {
       continue;
     }
     if (citesByExplicitPath(context, citingFile, target, content)) {
