@@ -2362,8 +2362,13 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(provenance).toContain(
       "`RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS",
     );
+    // `Round 1:` on the revision, because `round-evidence.md` enumerates it as
+    // `Round N: Falsifiability revision` and says in as many words that writing
+    // it unprefixed leaves the completion gate unable to find the round it
+    // belongs to. This handoff is the row's round 1, which is why the failure
+    // mode beside it already carries the prefix.
     expect(provenance).toContain(
-      "**`Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair",
+      "**`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair",
     );
   });
 

@@ -89,12 +89,13 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       expect(reference).toContain("## Single-round items");
     });
 
-    it(`${relativePath}: the closed round list enumerates every per-round producer`, async () => {
+    it(`${relativePath}: the closed round list enumerates every field the Round N prefix is required on`, async () => {
       // The list declares itself whole, so a field absent from it is row-level
       // by construction — one slot for however many rounds the row has. These
-      // four have a producer that runs once per round, so a second round either
-      // overwrote round 1's record or reused it for a tree that no longer
-      // exists.
+      // fields have a producer that runs once per round, so a second round
+      // either overwrote round 1's record or reused it for a tree that no
+      // longer exists. Left uncounted on purpose: the set grows, and a comment
+      // that names a number goes stale the next time it does.
       const reference = await read(relativePath, "references/round-evidence.md");
       for (const field of [
         "`Round N: Falsifiability revision`",
