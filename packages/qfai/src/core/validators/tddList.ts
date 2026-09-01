@@ -154,13 +154,34 @@ const BLOCKED_BY_COLUMN = "Blocked-By";
  */
 const BR_REF_COLUMN = "BR-Ref";
 
-/** The spec-scoped `BR-*` id shape `04_Business-Rules.md` declares. */
-const BR_ID_FORMAT = /^BR-\d{4}-\d{4}$/;
+/**
+ * The `BR-*` id shape the business-rules file declares.
+ *
+ * The second segment is optional, which is the same predicate
+ * `layerCoverage.ts` (`ID_PATTERNS.br`) already reads these ids with. Requiring
+ * it made the shipped templates illegal by their own example: the
+ * `04_Business-Rules.md` template declares `BR-0001` and the `05_Examples.md`
+ * one points at `BR-0001`, so a ledger derived from a freshly initialized
+ * project got `QFAI-BRREF-001` on a correctly derived key — and the same
+ * pattern gates the declaration set and the derivation candidates, so the id
+ * was invisible to all three at once.
+ */
+const BR_ID_FORMAT = /^BR-\d{4}(?:-\d{4})?$/;
 
-/** The file a ledger's `BR-Ref` has to resolve into. */
-const BR_DECLARATION_FILE = "04_Business-Rules.md";
+/**
+ * The file a ledger's `BR-Ref` has to resolve into, as the operator sees it.
+ *
+ * Read off the entry's resolved path rather than fixed, because the name is
+ * layout-dependent — `04_Business-Rules.md` on `v1421`, `04_Business-rules.md`
+ * on `v1417`, `03_Business-rules.md` on legacy, `08_Business-rules.md` in a
+ * spec pack. A remediation that names a file the project does not have sends
+ * the reader to the wrong place.
+ */
+function brDeclarationFileName(specEntry: SpecEntry): string {
+  return path.basename(specEntry.businessRulesPath);
+}
 
-/** The column `04_Business-Rules.md` declares a rule's id in. */
+/** The column the business-rules file declares a rule's id in. */
 const BR_ID_COLUMN = "BR-ID";
 
 /**
@@ -511,12 +532,11 @@ function toPosixRel(value: string): string {
  * so its absence has to mean "not a definition table" — the `## BR-NNNN-NNNN`
  * heading layout stays supported for a pack that declares rules without one.
  */
-async function collectDeclaredBrIds(specDir: string): Promise<Set<string> | null> {
-  const file = path.join(specDir, BR_DECLARATION_FILE);
+async function collectDeclaredBrIds(file: string): Promise<Set<string> | null> {
   if (!(await exists(file))) return null;
   const declared = new Set<string>();
   const text = maskNonSpecRegions(await readSafe(file));
-  for (const match of text.matchAll(/^##\s+(BR-\d{4}-\d{4})\b/gim)) {
+  for (const match of text.matchAll(/^##\s+(BR-\d{4}(?:-\d{4})?)\b/gim)) {
     const id = match[1];
     if (id !== undefined) declared.add(id.toUpperCase());
   }
@@ -1555,7 +1575,14 @@ async function validateSpecTddList(
   // read three ways — an operator repairing a `BR-Ref` cell answers all of
   // them in the same edit.
   if (anyTableHasColumn(coverageTables, BR_REF_COLUMN)) {
-    const declaredBrIds = await collectDeclaredBrIds(specDir);
+    // The entry's resolved path, not `specDir` + a fixed name: `specLayout.ts`
+    // spells this file `04_Business-Rules.md` only for `v1421`, and
+    // `04_Business-rules.md` / `03_Business-rules.md` / `08_Business-rules.md`
+    // for the other layouts. A fixed name misses on a case-sensitive
+    // filesystem, `collectDeclaredBrIds` returns `null` for "no such file",
+    // and `QFAI-BRREF-002` then went silent for every one of those packs —
+    // reporting nothing being indistinguishable from finding nothing wrong.
+    const declaredBrIds = await collectDeclaredBrIds(specEntry.businessRulesPath);
     const layerRefs = await collectV1421LayerRefs(specEntry);
     const brRefPromotion = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
     const brRefSeverity = newRuleSeverity(await resolveToolVersion(), brRefPromotion);
@@ -1575,7 +1602,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "QFAI-BRREF-001",
-            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN-NNNN, or \`-\` when no BR reaches the row${brRefWindowNote}`,
+            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN or BR-NNNN-NNNN, or \`-\` (or an empty cell) when no BR reaches the row${brRefWindowNote}`,
             brRefSeverity,
             relPath,
             "tddList.brRefFormat",
@@ -1590,13 +1617,13 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "QFAI-BRREF-002",
-            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${BR_DECLARATION_FILE}. The T1 review group would be keyed on a rule that does not exist${brRefWindowNote}`,
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${brDeclarationFileName(specEntry)}. The T1 review group would be keyed on a rule that does not exist${brRefWindowNote}`,
             brRefSeverity,
             relPath,
             "tddList.brRefResolves",
             [token],
             "change",
-            `${BR_DECLARATION_FILE} に該当 BR を追加するか、${BR_REF_COLUMN} を実在する \`BR-*\`（または \`-\`）に直してください。`,
+            `${brDeclarationFileName(specEntry)} に該当 BR を追加するか、${BR_REF_COLUMN} を実在する \`BR-*\`（または \`-\` / 空欄）に直してください。`,
           ),
         );
         continue;

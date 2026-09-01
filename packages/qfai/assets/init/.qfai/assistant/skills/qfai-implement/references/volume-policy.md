@@ -86,6 +86,19 @@ the review-ready state — and waits there for its group. Members still move
   however many other unresolved rows the ledger holds. Reading `-` (or `""`) as
   one key would merge rows no `BR` relates and, with a second unresolved row
   still `todo`, leave both close conditions below false.
+- **Resume** before anything else. Open is an event, and an interrupted run
+  loses events: if the last member reached `refactor` and the process stopped
+  before the review, the ledger holds only `refactor` rows, no group is open,
+  and nothing fires Open again — Phase Red selects `review-fix` and `todo` rows
+  only, so those members would sit at `refactor` for good. So **at the start of
+  a run, if no group is open and any T1 row is at `refactor` with its group
+  unreviewed, reopen the group on the `BR-Ref` of the first such row in ledger
+  order** and continue from Fill. The ledger is the durable state; nothing else
+  has to be persisted, because `Status = refactor` on a T1 row already means
+  "in-flight member of a group that has not been reviewed". A `refactor` row
+  whose group was reviewed has moved to `done` with the rest, so it cannot be
+  picked up twice. `-` and empty-cell rows reopen as the group of one they
+  always were, and close immediately.
 - **Fill** it by continuing to process the ledger's remaining T1 rows carrying
   that same `BR-Ref`, one item at a time. **While a group is open, this
   selection outranks ledger order**: `SKILL.md` Phase Red step 1 takes the

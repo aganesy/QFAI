@@ -783,8 +783,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
+  // "or `-`" alone read as "an empty cell is malformed", which is the opposite
+  // of the rule: the validator, the ledger template and `volume-policy.md` all
+  // treat empty and `-` as the one "not resolved" state.
   "QFAI-BRREF-001":
-    "A declared `BR-Ref` cell holds one `BR-NNNN-NNNN`, or `-` when no BR reaches the row.",
+    "A declared `BR-Ref` cell holds one `BR-NNNN` or `BR-NNNN-NNNN`, or `-` — equivalently an empty cell — when no BR reaches the row.",
   "QFAI-BRREF-002":
     "Every declared `BR-Ref` names a rule the spec's `04_Business-Rules.md` declares, so the T1 review group is keyed on a rule that exists.",
   "QFAI-BRREF-003":

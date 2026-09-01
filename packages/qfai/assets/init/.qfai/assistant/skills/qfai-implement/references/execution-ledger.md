@@ -93,12 +93,17 @@ behaviour at T1 cost.
 - The column is optional to `npx qfai validate` — the required set above is what it
   enforces, so a ledger seeded before the column keeps passing — but a ledger
   that **declares** it has its cells checked: `QFAI-BRREF-001` (not a
-  single `BR-NNNN-NNNN`, and not `-`), `QFAI-BRREF-002` (no such
-  rule in `04_Business-Rules.md`) and `QFAI-BRREF-003` (a real rule,
-  but not the one the procedure above derives from this row's own `TC-Refs` —
-  the validator recomputes it and names the expected value). All three are
-  `warning`: a ledger written against an older rules file must not start failing
-  CI on upgrade. `QFAI-BRREF-002` reads declarations from a table's
+  single `BR-NNNN` or `BR-NNNN-NNNN`, and not `-` — an empty cell reads as `-`),
+  `QFAI-BRREF-002` (no such rule in the spec's Business Rules file) and
+  `QFAI-BRREF-003` (a real rule, but not the one the procedure above derives
+  from this row's own `TC-Refs` — the validator recomputes it and names the
+  expected value). All three open at `warning` so that a ledger written against
+  an older rules file does not start failing CI on upgrade — but **that is a
+  migration window, not the permanent severity**. The window closes at a named
+  release, after which all three are `error` and `validate --fail-on error`
+  fails on them; each finding states the release in its own message while the
+  window is open, so read it there rather than assuming the warning is
+  indefinite. `QFAI-BRREF-002` reads declarations from a table's
   `BR-ID` column and from `## BR-NNNN-NNNN` headings only, so a rule named in an
   auxiliary table — a `| Superseded | Reason |` list of retired ids is the plain
   case — does not make a key resolve.

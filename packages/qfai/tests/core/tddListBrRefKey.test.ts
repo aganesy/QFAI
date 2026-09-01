@@ -38,30 +38,58 @@ const RULES = `# 04 Business Rules
 | BR-0001-0001 | First | AC-0001-0001 | A rule |
 `;
 
+/**
+ * The two layered spellings of the same pack.
+ *
+ * `specLayout.ts` decides the style from case-exact filenames and resolves the
+ * business-rules file per style, so a fixture that can only be written one way
+ * cannot see a validator that hardcodes the other spelling.
+ */
+const LAYOUT_FILES = {
+  v1421: {
+    acceptance: "03_Acceptance-Criteria.md",
+    testCases: "06_Test-Cases.md",
+    rules: "04_Business-Rules.md",
+    examples: "05_Examples.md",
+  },
+  v1417: {
+    acceptance: "03_Acceptance-criteria.md",
+    testCases: "06_Test-cases.md",
+    rules: "04_Business-rules.md",
+    examples: "05_Examples-and-scenarios.md",
+  },
+} as const;
+
 async function run(
   ledger: string,
-  options: { rules?: string; examples?: string; testCases?: string } = {},
+  options: {
+    rules?: string;
+    examples?: string;
+    testCases?: string;
+    layout?: keyof typeof LAYOUT_FILES;
+  } = {},
 ): Promise<Array<{ code: string; severity: string; message: string }>> {
   const root = path.join(
     os.tmpdir(),
     `qfai-brref-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  const names = LAYOUT_FILES[options.layout ?? "v1421"];
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   try {
     for (const [name, body] of [
       ["01_Spec.md", "# Spec\n"],
       ["02_User-stories.md", "# US\n"],
-      ["03_Acceptance-Criteria.md", "# AC\n"],
-      ["06_Test-Cases.md", options.testCases ?? "# TC\n"],
+      [names.acceptance, "# AC\n"],
+      [names.testCases, options.testCases ?? "# TC\n"],
     ] as const) {
       await writeFile(path.join(specDir, name), body, "utf-8");
     }
     if (options.rules !== undefined) {
-      await writeFile(path.join(specDir, "04_Business-Rules.md"), options.rules, "utf-8");
+      await writeFile(path.join(specDir, names.rules), options.rules, "utf-8");
     }
     if (options.examples !== undefined) {
-      await writeFile(path.join(specDir, "05_Examples.md"), options.examples, "utf-8");
+      await writeFile(path.join(specDir, names.examples), options.examples, "utf-8");
     }
     await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
     const issues = await validateTddList(root, defaultConfig);
@@ -132,6 +160,55 @@ describe("the ledger's review-group key is checked when it is declared", () => {
     const finding = issues.find((i) => i.code === "QFAI-BRREF-002");
     expect(finding?.severity).toBe("warning");
     expect(finding?.message).toContain("BR-0001-0009");
+  });
+
+  it("accepts the short `BR-NNNN` spelling the shipped templates use", async () => {
+    // `templates/specs/spec/04_Business-Rules.md` declares `BR-0001` and
+    // `05_Examples.md` points at `BR-0001`, so requiring the compound form made
+    // a freshly initialized project illegal by its own example. The same
+    // pattern gates the declaration set, so the id was invisible to the
+    // resolution check as well — `layerCoverage.ts` has always read these ids
+    // with the second segment optional.
+    const shortForm = `# 04 Business Rules
+
+| BR-ID | Title | AC-Refs | Rule |
+| ----- | ----- | ------- | ---- |
+| BR-0001 | First | AC-0001 | A rule |
+`;
+    const issues = await run(`${WITH_KEY}\n${row("BR-0001")}`, { rules: shortForm });
+    expect(issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-BRREF-"))).toEqual([]);
+  });
+
+  it("still rejects a short spelling that names no declared rule", async () => {
+    // The over-correction pin: widening the shape must not widen what resolves.
+    const issues = await run(`${WITH_KEY}\n${row("BR-0009")}`, { rules: RULES });
+    expect(issues.find((i) => i.code === "QFAI-BRREF-002")?.message).toContain("BR-0009");
+  });
+
+  it("reads declarations from the layout's own business-rules filename", async () => {
+    // `specLayout.ts` spells the file `04_Business-Rules.md` only for `v1421`.
+    // Joining that fixed name onto the spec dir missed on every other layout,
+    // and a miss reads as "no declarations file", which silences the check
+    // entirely — a pack whose keys are all wrong looked identical to one whose
+    // keys are all right.
+    const issues = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`, {
+      rules: RULES,
+      layout: "v1417",
+    });
+    const finding = issues.find((i) => i.code === "QFAI-BRREF-002");
+    expect(finding?.message).toContain("BR-0001-0009");
+    // …and it names the file this project actually has, not the v1421 spelling.
+    expect(finding?.message).toContain("04_Business-rules.md");
+  });
+
+  it("resolves a declared key under that same layout", async () => {
+    // The over-correction pin for the line above: reading the right file must
+    // not turn every key into an unresolved one.
+    const issues = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, {
+      rules: RULES,
+      layout: "v1417",
+    });
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
   });
 
   it("collects declarations from the BR-ID column, not from prose or Notes", async () => {
@@ -280,7 +357,9 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
       testCases: derivationTestCases("EX-0001-0005"),
     };
     const found = [
-      ...(await run(`${WITH_KEY}\n${keyedRow("BR-9999")}`, options)),
+      // `BR-1` rather than a short-form id: `BR-NNNN` is a legal spelling,
+      // so only a genuinely malformed value still trips the format check.
+      ...(await run(`${WITH_KEY}\n${keyedRow("BR-1")}`, options)),
       ...(await run(`${WITH_KEY}\n${keyedRow("BR-0404-0404")}`, options)),
       ...(await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options)),
     ].filter((i) => i.code.startsWith("QFAI-BRREF-"));
