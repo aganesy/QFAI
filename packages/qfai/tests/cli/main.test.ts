@@ -332,9 +332,7 @@ describe("cli root discovery", { timeout: 15000 }, () => {
 
     expect(output).toContain("qfai <command> [options]");
   });
-
 });
-
 
 describe("cli usage text", () => {
   async function captureHelp(): Promise<string> {
