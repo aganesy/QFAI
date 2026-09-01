@@ -1202,7 +1202,7 @@ async function validateSpecTddList(
       if (stale.length === 0) continue;
       issues.push(
         issue(
-          "TDDLIST_TC_LEVEL_UNDECLARED",
+          "QFAI-TCLEVEL-001",
           `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level.${tcLevelUndeclaredWindowNote}`,
           tcLevelUndeclaredSeverity,
           relPath,

@@ -41,7 +41,10 @@ export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number]
 export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, readonly string[]> =
   {
     validateAtddCodeTraceability: ["QFAI-ATDD-*"],
-    validateTddList: ["TDDLIST_*"],
+    // Two families for one gate: `TDDLIST_*` is frozen legacy, so codes added
+    // to this validator after the grammar landed are canonical and would
+    // otherwise fall outside the notice.
+    validateTddList: ["TDDLIST_*", "QFAI-TCLEVEL-*"],
     validateTestTodoStubs: ["QFAI-TEST-*"],
     validateTraceabilityIntegrity: ["QFAI-TRACE-*"],
   };

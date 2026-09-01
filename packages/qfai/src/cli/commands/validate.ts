@@ -448,7 +448,10 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // `QFAI-TCLEVEL-*` is `validateTddList` too: `TDDLIST_*` is a frozen legacy
+  // family, so a code this gate gained after the grammar landed is canonical
+  // and needs its own entry or the notice under-states what the profile skipped.
+  tdd: ["TDDLIST_*", "QFAI-TCLEVEL-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -818,7 +821,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
-  TDDLIST_TC_LEVEL_UNDECLARED:
+  "QFAI-TCLEVEL-001":
     "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",

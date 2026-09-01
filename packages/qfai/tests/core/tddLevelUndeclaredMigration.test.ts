@@ -107,7 +107,7 @@ describe("a coverage row for a TC that declares no Level", () => {
   it("is reported when the Level cell is blank", async () => {
     const codes = await codesFor(tableWithLevel(""), [UNIT_ROW]);
 
-    expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).toContain("QFAI-TCLEVEL-001");
     // The TC is not a coverage target any more, so the row is surplus rather
     // than missing — both findings at once would be a contradiction.
     expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
@@ -116,13 +116,13 @@ describe("a coverage row for a TC that declares no Level", () => {
   it("is reported when 06_Test-Cases.md has no Level column", async () => {
     const codes = await codesFor(TABLE_WITHOUT_LEVEL_COLUMN, [UNIT_ROW]);
 
-    expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).toContain("QFAI-TCLEVEL-001");
   });
 
   it("is reported for a heading-form TC with no `- Level:` line", async () => {
     const codes = await codesFor(HEADING_WITHOUT_LEVEL, [UNIT_ROW]);
 
-    expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).toContain("QFAI-TCLEVEL-001");
   });
 
   it("is reported when the row's Layer states nothing", async () => {
@@ -132,7 +132,7 @@ describe("a coverage row for a TC that declares no Level", () => {
       "| TDD-0001 | TC-0001 |       | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).toContain("QFAI-TCLEVEL-001");
   });
 
   it("is reported when the row cites a decomposition sub-ID of the TC", async () => {
@@ -147,15 +147,13 @@ describe("a coverage row for a TC that declares no Level", () => {
     ]);
     const codes = findings.map((entry) => entry.code);
 
-    expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).toContain("QFAI-TCLEVEL-001");
     // The sub-ID resolves to a declared TC, so it is not an unknown reference.
     expect(codes).not.toContain("TDDLIST_UNKNOWN_REF");
     // The TC that declares no `Level` is the parent, and it is the one written
     // in `06_Test-Cases.md`; naming the sub-ID would point at a row that file
     // does not contain.
-    expect(findings.find((entry) => entry.code === "TDDLIST_TC_LEVEL_UNDECLARED")?.refs).toEqual([
-      "TC-0001",
-    ]);
+    expect(findings.find((entry) => entry.code === "QFAI-TCLEVEL-001")?.refs).toEqual(["TC-0001"]);
   });
 
   it("names the parent once when a row cites two of its sub-IDs", async () => {
@@ -163,7 +161,7 @@ describe("a coverage row for a TC that declares no Level", () => {
       "| TDD-0001 | TC-0001-0001, TC-0001-0002 | Unit | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    const reported = findings.filter((entry) => entry.code === "TDDLIST_TC_LEVEL_UNDECLARED");
+    const reported = findings.filter((entry) => entry.code === "QFAI-TCLEVEL-001");
     expect(reported).toHaveLength(1);
     expect(reported[0]?.refs).toEqual(["TC-0001"]);
   });
@@ -171,7 +169,7 @@ describe("a coverage row for a TC that declares no Level", () => {
   it("names the TC and points at the file that can clear it", async () => {
     const findings = await findingsFor(tableWithLevel(""), [UNIT_ROW]);
 
-    const finding = findings.find((entry) => entry.code === "TDDLIST_TC_LEVEL_UNDECLARED");
+    const finding = findings.find((entry) => entry.code === "QFAI-TCLEVEL-001");
     expect(finding?.severity).toBe("warning");
     expect(finding?.refs).toEqual(["TC-0001"]);
     // `warning`, not `error`: an upgraded project did not write these rows by
@@ -191,13 +189,13 @@ describe("what the migration check leaves alone", () => {
       "| TDD-0001 | TC-0001 | Integration | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing when the TC declares a coverage-target Level", async () => {
     const codes = await codesFor(tableWithLevel("L1"), [UNIT_ROW]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing when the TC declares a non-coverage Level", async () => {
@@ -205,7 +203,7 @@ describe("what the migration check leaves alone", () => {
     // entry rather than a leftover, and Check 5c / the crosswalk own it.
     const codes = await codesFor(tableWithLevel("L3"), [UNIT_ROW]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing about a row that cites no TC", async () => {
@@ -213,7 +211,7 @@ describe("what the migration check leaves alone", () => {
       "| TDD-0001 | -       | Unit  | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing about a sub-ID whose parent declares a Level", async () => {
@@ -224,7 +222,7 @@ describe("what the migration check leaves alone", () => {
       "| TDD-0001 | TC-0001-0001 | Unit  | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing about a sub-ID that declares its own Level", async () => {
@@ -234,7 +232,7 @@ describe("what the migration check leaves alone", () => {
       "| TDD-0001 | TC-0001-0001 | Unit  | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing about a malformed over-long reference", async () => {
@@ -246,7 +244,7 @@ describe("what the migration check leaves alone", () => {
       "| TDD-0001 | TC-0001-0001-0001 | Unit | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 
   it("says nothing about an Integration row citing a sub-ID", async () => {
@@ -254,6 +252,6 @@ describe("what the migration check leaves alone", () => {
       "| TDD-0001 | TC-0001-0001 | Integration | tests/a.test.ts | sel | todo | | - |",
     ]);
 
-    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(codes).not.toContain("QFAI-TCLEVEL-001");
   });
 });
