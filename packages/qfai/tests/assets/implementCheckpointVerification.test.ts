@@ -223,6 +223,16 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(cadence).toContain("is defined there, not here");
       expect(cadence).toContain("every **N-th** completed row, with `N = 10` by default");
 
+      // The off-boundary record takes the narrow command set VERBATIM and is
+      // sealed over it, so the resolution-step label cannot live inside that
+      // field: mixing it in changes the sealed bytes. It has a home already —
+      // `relevant-test-suite.md` requires the step in the item's evidence.
+      expect(reference).toContain("never inside `Checkpoint verification command`");
+      expect(reference).toContain("changes the sealed bytes");
+      expect(reference, "the label's location is left to the reader again").not.toContain(
+        "Label the entry with the\nresolution step used",
+      );
+
       // `qfai-atdd` hands branch-1 rows to this skill, and its own reference
       // restated the cadence as one full suite per row. Two skills, two
       // frequencies — the same contradiction one directory over.

@@ -86,6 +86,12 @@ describe('"relevant test suite" is defined and bounded', () => {
       );
       expect(section).toContain("It is not the definition of every full-suite run");
       expect(section).toContain("is defined there, not here");
+      // …and it must DELEGATE rather than restate. Naming the spec-level
+      // condition here would make this file the second definition of it —
+      // the exact shape that let the two drift apart, one tier up.
+      expect(section, "the spec-level condition is restated here again").not.toMatch(
+        /reaches `done` or a valid `exception`/,
+      );
       expect(section).toContain('Do not read the "only" below as licence to skip it');
 
       // And the document it defers to must still carry that boundary, with the

@@ -203,9 +203,12 @@ invent a full-suite command it never ran. Nothing is re-run there, so
 `Checkpoint verification command` takes the narrow relevant-suite command set of Phase: Refactor
 step 2 verbatim, `Checkpoint verification result` takes that run's outcome, and the seal is taken
 over the two together with the `Revision` exactly as at a boundary. Item 12 accepts that pair: it
-requires the **full** suite only for a row that sits on a boundary. Label the entry with the
-resolution step used (`relevant-test-suite.md`) so the reviewer can tell a narrow off-boundary
-record from a truncated boundary one.
+requires the **full** suite only for a row that sits on a boundary. What lets a reviewer tell a
+narrow off-boundary record from a truncated boundary one is the resolution step (1-3), and it
+already has a home: `relevant-test-suite.md` requires it in the item's evidence. Record it there,
+beside these fields — **never inside `Checkpoint verification command`**. That field is the command
+set verbatim and the seal is taken over it, so a label mixed into it changes the sealed bytes and
+stops the record matching the run it describes.
 
 **The spec-level boundary records a seal of its own, and the spec completion conditions recompute
 it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was
