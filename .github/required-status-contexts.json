@@ -97,15 +97,7 @@
       ],
       "dependencyMatrices": {
         "test": {
-          "slice": [
-            "core",
-            "validators",
-            "integration",
-            "e2e",
-            "cli",
-            "unit",
-            "scripts"
-          ]
+          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
         }
       },
       "dependencyMatricesNote": [
@@ -150,10 +142,7 @@
         "member of `verificationSet` now, and `detect` carries no condition, so it belongs to the",
         "unconditional set rather than to `gatedVerifications`."
       ],
-      "commandFiles": [
-        "GITHUB_ENV",
-        "GITHUB_PATH"
-      ],
+      "commandFiles": ["GITHUB_ENV", "GITHUB_PATH"],
       "commandFilesNote": [
         "The workflow command files, pinned here and READ from `.github/command-files.txt`.",
         "",
@@ -256,9 +245,7 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": [
-        "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
-      ],
+      "nestedActions": ["actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -282,9 +269,7 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": [
-          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
-        ]
+        "mayPrecede": ["actions/checkout@11d5960a326750d5838078e36cf38b85af677262"]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
