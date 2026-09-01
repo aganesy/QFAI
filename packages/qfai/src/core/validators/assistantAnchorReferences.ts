@@ -217,7 +217,12 @@ function codeSpans(text: string): Array<readonly [number, number]> {
  * prose to the first delimiter, and the shape test then sees all of it.
  */
 function fragmentAt(text: string, spans: readonly (readonly [number, number])[], start: number) {
-  const span = spans.find(([from, to]) => start >= from && start <= to);
+  // Half-open, matching what `codeSpans` returns. `start === to` means the `#`
+  // sits on the closing backtick run, so the fragment is empty either way — the
+  // prose branch stops on the same backtick, which `FRAGMENT_TERMINATOR_RE`
+  // lists — but writing the predicate as closed contradicted the span contract
+  // and left an off-by-one for the next reader to inherit.
+  const span = spans.find(([from, to]) => start >= from && start < to);
   if (span !== undefined) return text.slice(start, span[1]);
   let end = start;
   while (end < text.length && !FRAGMENT_TERMINATOR_RE.test(text.charAt(end))) end += 1;

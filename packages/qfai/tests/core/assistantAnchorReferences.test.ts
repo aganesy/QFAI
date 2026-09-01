@@ -157,6 +157,19 @@ describe("collectAnchorReferences", () => {
     expect(collectAnchorReferences("See guide.md#install.invalid (broken).")).toEqual([]);
   });
 
+  it("reads an empty fragment at either edge of a code span", () => {
+    // The boundary `codeSpans` documents as half-open. A `#` on the closing
+    // backtick run leaves nothing behind it, and the prose branch stops on that
+    // same backtick, so both readings of the interval agree here — pinned so a
+    // later change to the predicate cannot quietly start scanning past the span.
+    expect(collectAnchorReferences("see `guide.md#` for details")).toEqual([]);
+    expect(collectAnchorReferences("``guide.md#`` doubled")).toEqual([]);
+    // …while a fragment that does sit inside the span is still read whole.
+    expect(collectAnchorReferences("see `guide.md#install` for details")).toEqual([
+      { line: 1, targetPath: "guide.md", anchor: "install" },
+    ]);
+  });
+
   it("keeps a bare-prose citation that trailing sentence punctuation follows", () => {
     expect(collectAnchorReferences("Classify per constitution/drift.md#core-rule.")).toEqual([
       { line: 1, targetPath: "constitution/drift.md", anchor: "core-rule" },
