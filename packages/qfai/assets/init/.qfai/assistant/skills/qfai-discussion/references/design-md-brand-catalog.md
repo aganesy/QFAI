@@ -88,8 +88,8 @@ Picking an archetype fills a required field of the `DESIGN.md` **draft**. It doe
 exploration directions and does not finalize the design system — both stay out of scope for
 discussion (`discussion-completion-matrix.md`).
 
-1. Score each archetype against the brand intent captured in root `DESIGN.md` front-matter (`brand.voice`, `audience.emotion`, `audience.do_not_look_like`).
-2. Apply the archetype tie-breaker when two archetypes tie: highest visual-theme weight wins, then alphabetical name.
+1. Score each archetype against the brand intent captured in root `DESIGN.md` front-matter (`brand.voice`, `audience.emotion`, `audience.do_not_look_like`). The score is the fit between that intent and the archetype's `representative_brand` and `aesthetic_properties` above — the only archetype facts this catalog publishes.
+2. Break a tie with the inputs step 1 already read, in this order: (a) the archetype whose `aesthetic_properties` contradict fewer entries of `audience.do_not_look_like`, since that field is an explicit exclusion rather than a preference; (b) alphabetical archetype name. Both are decidable from what the intake captured, so the same discussion yields the same archetype for any agent. Do not weigh a "visual-theme weight": the catalog publishes no such number for an archetype, and a tie-break that needs one is not executable here.
 3. Record the selected archetype in root `DESIGN.md` front-matter as `brand.archetype`.
 4. The selected archetype's `aesthetic_properties` become the defaults for Color Palette, Typography, Spacing, and Animation sections.
 5. Phase B of step 9 then customizes those defaults into project-specific overrides, split by destination: `color_tendency` / `typography` / `spacing` become `visual.*` tokens, while the `interaction` default becomes `accessibility.motion` — `visual.*` has no motion or interaction key.

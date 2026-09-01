@@ -165,6 +165,21 @@ describe("brand catalog step anchor", { timeout: 15000 }, () => {
     expect(matrix).toMatch(/Exploration directions are carried unranked/);
   });
 
+  it("keeps the tie-break decidable from the inputs Phase A actually has", async () => {
+    // "highest visual-theme weight wins" named a number the catalog does not
+    // publish for any archetype, and nothing in step 9 or the intake produces
+    // one — `src/core/skill/archetypeTieBreaker.ts` takes it from a caller that
+    // does not exist. Two agents on the same discussion could therefore pick
+    // different archetypes and different draft tokens.
+    const catalog = await readFile(catalogPath, "utf-8");
+    expect(catalog).not.toMatch(/visual-theme weight wins/);
+    expect(catalog).toMatch(/contradict fewer entries of `audience\.do_not_look_like`/);
+    expect(catalog).toMatch(/alphabetical archetype name/);
+    // Over-correction pin: the scoring step still reads the three intake
+    // fields, so the tie-break is a tail rule and not a replacement for fit.
+    expect(catalog).toMatch(/`brand\.voice`, `audience\.emotion`, `audience\.do_not_look_like`/);
+  });
+
   it("the intake reference still carries the anchor the catalog links to", async () => {
     const intake = await readFile(
       path.join(discussionSkillDir, "references", "design-dna-intake.md"),
