@@ -73,6 +73,39 @@ describe("repository attribution matcher", () => {
       );
     });
 
+    it("when the item id carries a single number", () => {
+      // `spec-traceability-rules.md` defines item ids as `US-0001` / `AC-0001`
+      // / `BR-0001` / `TC-0001`. Requiring `NNNN-NNNN` matched only the wider
+      // spelling, so every attribution written in the shipped form walked past.
+      expect(matchRepositoryAttribution("this repository's TC-0001 covers the parser")).toBe(
+        "this repository's TC-0001",
+      );
+      expect(matchRepositoryAttribution("`AC-0001` belongs to this repository")).toBe(
+        "`AC-0001` belongs to this repository",
+      );
+      expect(matchRepositoryAttribution("this repository's US-0001 is the entry point")).toBe(
+        "this repository's US-0001",
+      );
+      expect(matchRepositoryAttribution("this repository's `BR-0001` is frozen")).toBe(
+        "this repository's `BR-0001`",
+      );
+      // …and the two-number spelling still matches, whole rather than clipped.
+      expect(matchRepositoryAttribution("this repository's TC-0001-0001 is current")).toBe(
+        "this repository's TC-0001-0001",
+      );
+    });
+
+    it("when a long qualifier separates the phrase from the id", () => {
+      // The gap was capped at 80 characters on top of the sentence and block
+      // boundaries that already bound it, so a single sentence could outrun the
+      // cap and carry the attribution out unmatched. This one is 131.
+      const long =
+        "this repository's currently active and authoritative acceptance-test " +
+        "specification that every implementation agent must follow without " +
+        "exception is spec-0006";
+      expect(matchRepositoryAttribution(long)).toBe(long);
+    });
+
     it("across a soft wrap, in either order", () => {
       expect(findRepositoryAttribution("this repository's active\nspec-0006 is the sample\n")).toBe(
         "this repository's active spec-0006",
@@ -116,11 +149,25 @@ describe("repository attribution matcher", () => {
         findRepositoryAttribution("Set up this repository\n\n| Spec | Note |\n| spec-0006 | x |\n"),
       ).toBe(null);
     });
+
+    it("when a heading is followed straight by prose", () => {
+      // The block check read only the *incoming* line, so a heading stayed open
+      // and absorbed the plain paragraph under it. A heading is complete at its
+      // newline, whatever follows.
+      expect(
+        findRepositoryAttribution("# Configure this repository\nUse spec-0006 as a sample\n"),
+      ).toBe(null);
+      expect(
+        findRepositoryAttribution("| this repository | note |\nspec-0006 is the sample\n"),
+      ).toBe(null);
+    });
   });
 
   it("keeps blocks apart while still joining soft wraps", () => {
     expect(normalizeSoftWraps("alpha\nbeta\n\n- gamma\ndelta")).toBe("alpha beta\n\n- gamma delta");
-    expect(normalizeSoftWraps("# heading\nprose")).toBe("# heading prose");
+    // A heading ends at its newline; a list item takes lazy continuation, so
+    // `- gamma\ndelta` above stays one item while this stays two blocks.
+    expect(normalizeSoftWraps("# heading\nprose")).toBe("# heading\nprose");
     expect(normalizeSoftWraps("> quoted\n1. first\n2. second")).toBe(
       "> quoted\n1. first\n2. second",
     );

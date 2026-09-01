@@ -27,8 +27,14 @@ import fg from "fast-glob";
  * `CON-API-*`, `CON-DB-*`, and `CON-UI-*`"). The `CON-NNNN-NNNN` shape this
  * list used to carry does not exist anywhere in the repository, so that branch
  * could never fire and every contract misattribution walked past the guard.
+ *
+ * The second number group is optional for the same reason. `US`, `AC`, `BR` and
+ * `TC` items are single-numbered — `skills/qfai-sdd/references/spec-traceability-rules.md`
+ * defines them as `US-0001` / `AC-0001` / `BR-0001` / `TC-0001` — so requiring
+ * `NNNN-NNNN` matched only the wider spelling and let `this repository's
+ * TC-0001` through. Both spellings are accepted, longer first.
  */
-const ARTIFACT_ID = String.raw`\`?(?:spec-\d{4}|(?:TC|AC|BR|US)-\d{4}-\d{4}|CON-(?:API|DB|UI)-\d{4})\`?`;
+const ARTIFACT_ID = String.raw`\`?(?:spec-\d{4}|(?:TC|AC|BR|US)-\d{4}(?:-\d{4})?|CON-(?:API|DB|UI)-\d{4})\`?`;
 
 /**
  * Abbreviations whose trailing period does not end a sentence.
@@ -56,12 +62,18 @@ const ABBREVIATIONS = ["e.g", "i.e", "etc", "vs", "cf"] as const;
 const SENTENCE_END = String.raw`(?<!${ABBREVIATIONS.map((abbreviation) => abbreviation.replace(/\./g, String.raw`\.`)).join("|")})\.(?=\s|$)`;
 
 /**
- * Up to 80 characters of the same sentence and the same markdown block.
+ * The rest of the same sentence and the same markdown block.
  *
  * `[^\n]` holds the block boundary because {@link normalizeSoftWraps} leaves a
- * newline only where one block ends and the next begins.
+ * newline only where one block ends and the next begins, and the {@link
+ * SENTENCE_END} lookahead holds the sentence boundary. Those two are the whole
+ * bound: the 80-character cap this used to carry was a third, arbitrary one
+ * that stopped inside sentences it had no reason to leave, so an attribution
+ * with a long qualifier — "this repository's currently active and
+ * authoritative … specification … is spec-0006", 131 characters of one
+ * sentence — matched neither direction.
  */
-const GAP = String.raw`(?:(?!${SENTENCE_END})[^\n]){0,80}`;
+const GAP = String.raw`(?:(?!${SENTENCE_END})[^\n])*`;
 
 /**
  * Both orders of the same claim.
@@ -79,6 +91,18 @@ const ATTRIBUTIONS: readonly RegExp[] = [
 const BLOCK_START = /^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\||```|~~~|<)/;
 
 /**
+ * Blocks that end at their own newline, so the next line cannot continue them.
+ *
+ * A subset of {@link BLOCK_START}, because the two questions are different. An
+ * ATX heading, a table row and a fence marker are complete at end of line; a
+ * list item or a block quote takes lazy continuation, so `- gamma\ndelta` is
+ * one item and must still be joined. Testing only the *current* line let
+ * `# Configure this repository` absorb a following `Use spec-0006 as a sample`
+ * and report a heading plus an unrelated sample id as one attribution.
+ */
+const SINGLE_LINE_BLOCK = /^\s*(?:#{1,6}\s|\||```|~~~)/;
+
+/**
  * Collapses soft wraps while preserving markdown block boundaries.
  *
  * The phrase and the id routinely straddle a soft line break, so the raw text
@@ -91,7 +115,9 @@ const BLOCK_START = /^\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\||```|~~~|<)/;
  * So: a line joins the previous one only when both are running prose. A blank
  * line, a heading, a list item, a table row, a quote or a fence starts a new
  * block, and the newline before it survives into the output as the boundary
- * {@link GAP} refuses to cross.
+ * {@link GAP} refuses to cross. The block already open is checked too — a
+ * heading ends at its newline whatever follows it (see
+ * {@link SINGLE_LINE_BLOCK}).
  */
 export function normalizeSoftWraps(content: string): string {
   const blocks: string[] = [];
@@ -99,7 +125,11 @@ export function normalizeSoftWraps(content: string): string {
     const trimmed = line.trim();
     const previous = blocks.at(-1);
     const continuesPrevious =
-      previous !== undefined && previous !== "" && trimmed !== "" && !BLOCK_START.test(line);
+      previous !== undefined &&
+      previous !== "" &&
+      trimmed !== "" &&
+      !BLOCK_START.test(line) &&
+      !SINGLE_LINE_BLOCK.test(previous);
     if (continuesPrevious) {
       blocks[blocks.length - 1] = `${previous} ${trimmed}`;
     } else {
