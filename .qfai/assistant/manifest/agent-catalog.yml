@@ -634,7 +634,7 @@ agents:
 
       - Implement E2E coverage for required user stories.
       - Implement API coverage for declared `CON-API-*` contracts.
-      - Implement integration coverage for required `TC-*` behavior and declared `CON-DB-*` contracts.
+      - Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).
       - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
 
       ## Inputs you must read
@@ -646,7 +646,7 @@ agents:
       - .qfai/specs/spec-\*/02_User-stories.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\*
-      - .qfai/contracts/db/\*\*
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default)
 
       ## Deliverables
 
@@ -744,7 +744,7 @@ agents:
       - .qfai/specs/spec-\*/04_Business-Rules.md
       - .qfai/specs/spec-\*/05_Examples.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
-      - .qfai/contracts/db/\*\*
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default)
 
       ## Deliverables
 
@@ -816,7 +816,7 @@ agents:
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
-      - .qfai/contracts/db/\*\*
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default)
       - QA evidence, coverage tooling outputs, and test plans
 
       ## Deliverables

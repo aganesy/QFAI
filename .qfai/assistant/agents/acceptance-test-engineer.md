@@ -14,7 +14,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 - Implement E2E coverage for required user stories.
 - Implement API coverage for declared `CON-API-*` contracts.
-- Implement integration coverage for required `TC-*` behavior and declared `CON-DB-*` contracts.
+- Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).
 - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
 
 ## Inputs you must read
@@ -26,7 +26,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
 - .qfai/contracts/api/\*\*
-- .qfai/contracts/db/\*\*
+- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default)
 
 ## Deliverables
 

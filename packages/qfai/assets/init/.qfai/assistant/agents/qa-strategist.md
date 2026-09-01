@@ -23,7 +23,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
-- .qfai/contracts/db/\*\*
+- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default)
 - QA evidence, coverage tooling outputs, and test plans
 
 ## Deliverables

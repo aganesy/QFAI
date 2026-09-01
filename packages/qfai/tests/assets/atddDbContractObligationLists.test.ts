@@ -31,11 +31,12 @@ const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
 const ATE = "assistant/agents/acceptance-test-engineer.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 const LAYERS = "assistant/catalog/test-layers.md";
+const RED_PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 
-const readAt = async (tree: string, rel: string): Promise<string> =>
-  await readFile(path.join(repoRoot, tree, rel), "utf-8");
+const readAt = (tree: string, rel: string): Promise<string> =>
+  readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-const read = async (tree: string): Promise<string> => await readAt(tree, ATDD);
+const read = (tree: string): Promise<string> => readAt(tree, ATDD);
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -191,13 +192,18 @@ describe.each(TREES)("%s — the layer catalog errors on an undeclared CON-DB to
 describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (tree) => {
   const assertContract = (doc: string): void => {
     expect(doc).toContain(
-      "- Implement integration coverage for required `TC-*` behavior and declared `CON-DB-*` contracts.",
+      "- Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).",
     );
-    expect(doc).toContain("- .qfai/contracts/db/\\*\\*");
+    // The read set names the configured root, not only its default spelling.
+    expect(doc).toContain(
+      "- .qfai/contracts/db/\\*\\* (under the configured `paths.contractsDir`, not always this default)",
+    );
     expect(doc).toContain("- Mapping from US / TC / CON-API / CON-DB to test assets");
     // The regression: a contract that ends at `CON-API` reads as complete.
     expect(doc).not.toContain("- Implement integration coverage for required `TC-*` behavior.");
     expect(doc).not.toContain("- Mapping from US / TC / CON-API to test assets");
+    // And the over-scope: `QFAI-ATDD-115` never asks for a deferred contract.
+    expect(doc).not.toContain("behavior and declared `CON-DB-*` contracts");
   };
 
   it("the canonical role assigns DB contracts, their directory and their mapping", async () => {
@@ -243,6 +249,23 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     expect(atdd).not.toContain("| #TC + #CON-DB | INT_s | test cases + DB contracts |");
   });
 
+  it("completes the zero-row enumeration in the reference an implementer reads", async () => {
+    // `references/red-provenance.md`'s "A spec with no ATDD-owned rows" section
+    // is the page an implementer opens when the ledger yields zero rows, and it
+    // listed the non-row obligations as US/CON-API and the completion gate as
+    // `QFAI-ATDD-111`/`-113`. `CON-DB-*` produces no ledger row anywhere, so
+    // that is exactly the spec where a DB contract is most likely to be
+    // dropped — and the drop only surfaces at the next validate.
+    const provenance = flat(await readAt(tree, RED_PROVENANCE));
+    expect(provenance).toContain("The US, CON-API and CON-DB coverage obligations");
+    expect(provenance).toContain(
+      "`CON-DB-*` is row-producing nowhere, so a spec with no ATDD-owned rows can still owe every one of its active DB contracts an `Integration` test",
+    );
+    expect(provenance).toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean");
+    expect(provenance).not.toContain("The US and CON-API coverage obligations");
+    expect(provenance).not.toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` clean");
+  });
+
   it("keeps the reason in the table a reader fills in", async () => {
     // The prose no longer has room for the rationale (the shipped SKILL.md is
     // at its 500-line ceiling), so the Notes column carries it.
@@ -257,9 +280,11 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     async (id) => {
       // `agent-routing.yml` coverage phase: mandatory_agents are exactly these
       // two, and the volume estimate is `test-design-analyst`'s deliverable.
+      const qualified =
+        "- .qfai/contracts/db/\\*\\* (under the configured `paths.contractsDir`, not always this default)";
       const canonical = flat(await readAt(tree, `assistant/agents/${id}.md`));
-      expect(canonical).toContain("- .qfai/contracts/db/\\*\\*");
-      expect(flat(await catalogInstructions(tree, id))).toContain("- .qfai/contracts/db/\\*\\*");
+      expect(canonical).toContain(qualified);
+      expect(flat(await catalogInstructions(tree, id))).toContain(qualified);
     },
   );
 });
