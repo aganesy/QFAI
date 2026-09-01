@@ -19,9 +19,19 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 1. Identify the latest discussion-pack.
 2. Stop if required files are missing.
 3. Stop if blocking OQ remain.
-4. Stop if `prototyping.yaml` is present in the latest UI-bearing pack and does not parse
-   against the schema in
+4. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
+   and does not parse against the schema in
    `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
+   Record the file and what failed to parse, and continue; `/qfai-prototyping` is where an
+   unusable recommendation actually bites, and it re-reads the file.
+
+   A malformed optional artifact is **not** a Stage 0 blocker, and making it one would put this
+   skill at odds with the runtime: `runSddPreflight` returns `status: "ready"` with zero blockers
+   for a `prototyping.yaml` carrying an invalid mode, a scalar block or a null block, and the
+   acceptance criterion it implements says side-artifact state alone does not block SDD. Two
+   entry points that disagree means whether SDD can proceed depends on which one you came in
+   through, and a project holding an old-format file could not run `/qfai-sdd` at all.
+
    Absence is legal and must not stop Stage 0: `/qfai-discussion` emits the file only when the
    pack is UI-bearing on a **visual-prototyping** surface — its `01_Context.md` classification
    names `web`, `mobile`, `desktop` or `mixed` as `primary_surface` or in `secondary_surfaces` —

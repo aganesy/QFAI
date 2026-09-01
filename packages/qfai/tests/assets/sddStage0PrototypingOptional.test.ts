@@ -47,14 +47,28 @@ describe("Stage 0 treats prototyping.yaml as optional for UI-bearing packs", () 
       expect(playbook).toContain("Absence is legal and must not stop Stage 0");
     });
 
-    it(`${tree}: Stage 0 still stops on a present-but-invalid prototyping.yaml`, async () => {
+    // The validity half of the old check keeps its value as a REPORT. As a stop
+    // it contradicted the runtime this skill fronts: `runSddPreflight` answers
+    // `ready` with zero blockers for a malformed `prototyping.yaml`, and the
+    // acceptance criterion behind it says side-artifact state alone does not
+    // block SDD. Left as a stop, whether `/qfai-sdd` could proceed depended on
+    // which entry point you used, and a project carrying an old-format file
+    // could not run it at all.
+    it(`${tree}: a present-but-invalid prototyping.yaml is reported, not a blocker`, async () => {
       const playbook = flat(await read(tree, PLAYBOOK));
 
-      // The validity half of the old check is the half that has value.
-      expect(playbook).toContain(
+      expect(playbook).not.toContain(
         "Stop if `prototyping.yaml` is present in the latest UI-bearing pack and does not parse against the schema in",
       );
+      expect(playbook).toContain(
+        "**Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack and does not parse against the schema in",
+      );
+      expect(playbook).toContain("A malformed optional artifact is **not** a Stage 0 blocker");
       expect(playbook).toContain(RULES_CITATION);
+      // The runtime half of this claim is pinned beside the preflight itself,
+      // in `tests/core/sddPreflight.test.ts`, where the same test that asserts
+      // `status: "ready"` also asserts this prose — the two have to move
+      // together or the entry points disagree again.
     });
 
     it(`${tree}: the cited schema path resolves in an initialized project`, async () => {
