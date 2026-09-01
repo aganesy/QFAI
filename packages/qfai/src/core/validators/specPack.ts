@@ -356,8 +356,13 @@ const EXISTING_SPEC_RANGE_RE = /spec-\d{4}\s*(?:[〜～~…–—ー]|\.\.\.?)\s
  * files) is an accepted target. The match is anchored to the whole value:
  * a cell that merely *contains* the literal (`not_policies`,
  * `_policies_typo`) resolves to nothing and must not pass as a policy row.
+ *
+ * No segment may be `.` or `..`. The path characters alone admitted both, so
+ * `_policies/../spec-0001` read as a policy target: it skipped the spec
+ * existence check while normalising to something outside `_policies`
+ * entirely, which is the one thing "policy-only row" is supposed to mean.
  */
-const EXISTING_SPEC_POLICY_RE = /^_policies(?:\/[0-9A-Za-z._-]+)*$/;
+const EXISTING_SPEC_POLICY_RE = /^_policies(?:\/(?!\.\.?(?:\/|$))[0-9A-Za-z._-]+)*$/;
 
 /** Separators that may join several targets inside one `Existing Spec` cell. */
 const EXISTING_SPEC_SEPARATOR_RE = /[+,、，]/;
@@ -384,19 +389,53 @@ type ExistingSpecTarget =
   | { readonly kind: "malformed"; readonly message: string; readonly refs: readonly string[] };
 
 /**
+ * Strips one matched pair of surrounding backticks, and nothing else.
+ *
+ * Deleting every backtick in the cell normalised values the grammar exists to
+ * reject: ``spec-00`01`` became `spec-0001` and passed as an existing ID.
+ * Code-span decoration is a matched outer pair; a backtick anywhere else is
+ * part of the value and has to stay there so the grammar can refuse it.
+ */
+function stripMatchedBackticks(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || !trimmed.startsWith("`") || !trimmed.endsWith("`")) {
+    return trimmed;
+  }
+  const inner = trimmed.slice(1, -1);
+  // One span, not two. `` `spec-0003`+`spec-0004` `` also opens and closes with
+  // a backtick, and stripping the outermost pair there would leave a stray
+  // backtick glued to each target; that cell is handled by stripping each
+  // part's own span after the split.
+  return inner.includes("`") ? trimmed : inner.trim();
+}
+
+/**
+ * A markdown backslash escape: a backslash followed by ASCII punctuation, the
+ * only sequence CommonMark reads as one. `renderTriageMarkdown` writes
+ * `\_policies`, so the escape has to be undone — but deleting every backslash
+ * undid more than that, turning `spec-00\01` into `spec-0001`. A backslash
+ * before anything else is an ordinary character and is left in place, where
+ * the grammar rejects it.
+ */
+const MARKDOWN_ESCAPE_RE = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g;
+
+function unescapeMarkdown(value: string): string {
+  return value.replace(MARKDOWN_ESCAPE_RE, "$1");
+}
+
+/**
  * Parse the whole cell into its targets. The value may arrive
  * markdown-escaped (`\_policies`, written by `renderTriageMarkdown`) or
- * backticked (`` `_policies` ``), so those decorations are stripped first;
- * what is left must split cleanly on the enumeration separators into parts
- * that are each either a well-formed spec ID or a `_policies` path, and the
- * two kinds may not be mixed in one cell.
+ * backticked (`` `_policies` ``, or one span per target), so those decorations
+ * are undone — precisely, never by deleting the characters wherever they
+ * occur; what is left must split cleanly on the enumeration separators into
+ * parts that are each either a well-formed spec ID or a `_policies` path, and
+ * the two kinds may not be mixed in one cell.
  */
 function parseExistingSpecCell(cell: string): ExistingSpecTarget {
-  const parts = cell
-    .replace(/[`\\]/g, "")
-    .trim()
+  const parts = stripMatchedBackticks(cell)
     .split(EXISTING_SPEC_SEPARATOR_RE)
-    .map((part) => part.trim());
+    .map((part) => unescapeMarkdown(stripMatchedBackticks(part)));
   if (parts.some((part) => part.length === 0)) {
     return {
       kind: "malformed",
@@ -426,6 +465,18 @@ function parseExistingSpecCell(cell: string): ExistingSpecTarget {
       kind: "malformed",
       message: `Existing Spec に spec と policy の対象が混在しています: ${cell}`,
       refs: [cell],
+    };
+  }
+  const repeated = [...new Set(parts.filter((part, at) => parts.indexOf(part) !== at))];
+  if (repeated.length > 0) {
+    // An enumeration that names the same target twice is not an enumeration of
+    // two targets. It also misleads the removal check below, which reads "every
+    // target gone" as "the operation has been carried out" — a duplicated ID
+    // makes one absent spec look like a complete set.
+    return {
+      kind: "malformed",
+      message: `Existing Spec が同じ対象を重複して列挙しています: ${repeated.join(", ")}`,
+      refs: repeated,
     };
   }
   return ids.length > 0 ? { kind: "specs", ids } : { kind: "policies" };

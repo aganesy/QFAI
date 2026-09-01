@@ -174,12 +174,15 @@ still a rejected cell:
 
 - **One spec** — `spec-NNNN`, e.g. `spec-0003`.
 - **Several specs** — join them with `+`, e.g. `spec-0003+spec-0004`.
-  This is what the classifier emits for a MERGE row.
+  This is what the classifier emits for a MERGE row. A target may not be
+  repeated: `spec-0003+spec-0003` names one spec in two slots, not two.
 - **Policy-only row** — `_policies`, or a path under it such as
   `_policies/05_Contracts.md`. Valid on `UPDATE` rows only: `DELETE` /
   `SPLIT` / `MERGE` / `SUPERSEDE` act on a whole spec directory, and a
   policy target gives them nothing to act on. A cell that merely contains
-  the word (`not_policies`) resolves to nothing either way.
+  the word (`not_policies`) resolves to nothing either way, and a path that
+  leaves the directory (`_policies/../spec-0003`) is not a policy target —
+  no segment may be `.` or `..`.
 - **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
   NOT name the spec it is about to create; the new spec ID belongs in
   `Subject`. (`(none)` is the legacy spelling of this literal and is still

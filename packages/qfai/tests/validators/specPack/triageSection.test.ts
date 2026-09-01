@@ -646,6 +646,77 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => 
       );
     }
   });
+
+  it("refuses a policy path that walks out of `_policies`", () => {
+    // The path charset admitted `.` and `..` as ordinary segments, so a cell
+    // that normalises to a spec — or to any neighbouring path — was accepted
+    // as a policy target and skipped the spec existence check entirely.
+    for (const cell of [
+      "\\_policies/../spec-0001",
+      "\\_policies/..",
+      "\\_policies/./05_Contracts.md",
+      "`_policies/sub/../../etc`",
+    ]) {
+      expect(
+        codesFor([["REQ-1", "policy work", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+    }
+    // Over-correction pin: an ordinary dotted filename is still a path.
+    expect(
+      codesFor(
+        [["REQ-1", "policy work", "`_policies/05_Contracts.md`", "UPDATE", "APPEND", "-", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
+  });
+
+  it("undoes markdown decoration only where markdown put it", () => {
+    // Deleting every backtick and backslash in the cell repaired the very
+    // values the grammar exists to reject: both of these normalised to the
+    // existing `spec-0001`.
+    for (const cell of ["spec-00\\01", "spec-00`01", "spec-`0001`", "\\spec-0001"]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+        "QFAI-TRIAGE-009",
+      ]);
+    }
+    // Over-correction pin: the decorations markdown really produces — one
+    // matched code span (around the whole cell or around each target) and the
+    // `\_` escape `renderTriageMarkdown` writes — still normalise away.
+    for (const cell of [
+      "`spec-0001`",
+      "`spec-0003`+`spec-0004`",
+      "`spec-0003+spec-0004`",
+      "\\_policies",
+    ]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual(
+        [],
+      );
+    }
+  });
+
+  it("rejects an enumeration that names the same target twice", () => {
+    // Two slots, one target. It also fools the removal check below, which
+    // reads "every target gone" as "the operation has been carried out": a
+    // duplicated ID makes one absent spec look like a complete set.
+    for (const cell of ["spec-0001+spec-0001", "`spec-0003`, spec-0003", "\\_policies+_policies"]) {
+      expect(
+        codesFor([["REQ-1", "collapse", cell, "MERGE", "-", "user@host", "why"]], KNOWN),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+    }
+    // Over-correction pin: a MERGE row may name one spec — the destination
+    // that absorbs the `Source` — which is the form this repository's own
+    // `.qfai/specs/spec-0012/09_delta.md` uses, and distinct targets enumerate
+    // as before.
+    expect(
+      codesFor([["REQ-1", "absorb", "spec-0003", "MERGE", "-", "user@host", "why"]], KNOWN),
+    ).toEqual([]);
+    expect(
+      codesFor(
+        [["REQ-1", "collapse", "spec-0003+spec-0004", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
+  });
 });
 
 function triageTable(rows: string[][]): string[] {
