@@ -2203,7 +2203,7 @@ include globs, not copied out of the failure message, and it reconciles: `main` 
 25 — the last three of those being the callsites named above (22 -> 25). Both suite totals above
 stay known-invalid for the current tree.
 
-e2e callsites at this tree: 941
+e2e callsites at this tree: 943
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

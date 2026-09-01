@@ -114,7 +114,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
-  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
+  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;
   - Drift Protocol is enforced;
@@ -163,8 +163,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - `tests/e2e/**` must cover all required `US-*`.
   - Every `TC-*` must be covered from the directory its declared `Level` routes
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
-    `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A `Level` this list cannot
-    read — blank, or an unrecognised spelling — routes to `tests/integration/**`.
+    `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to
+    `tests/integration/**` — a blank cell, a spelling that names no layer
+    (`smoke`), **and `system` / `acceptance`**, which the layer vocabulary does
+    read but which name no ATDD home of their own. Route by where the annotation
+    goes, not by whether you recognise the word: `system` / `acceptance` are the
+    two that fall through a list phrased the other way.
   - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
     scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
     `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do
@@ -211,7 +215,7 @@ they had `/qfai-implement` demand a fresh RED for a test already green here.
 
 - **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
-- **A fresh spec already carries its `Layer = Integration` rows and no `E2E` / `API` row, and this stage cannot create either.** `/qfai-sdd` Phase 2b seeds one `Integration` row per integration-level TC — `L3`, `integration`, or a `Level` the layer vocabulary cannot read (blank, or an unrecognised spelling), the same routing `QFAI-ATDD-112` uses — so on a spec whose TCs are all `L3` the rows are there at `todo` and enumerating them at P1b is this run's work: without their RED provenance `/qfai-implement` Phase Red step 3b finds no handoff and leaves each one at `todo`. Zero `E2E` / `API` rows is the legitimate count, not "nothing to do": `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
+- **A fresh spec already carries its `Layer = Integration` rows and no `E2E` / `API` row, and this stage cannot create either.** `/qfai-sdd` Phase 2b seeds one `Integration` row per integration-level TC — every `Level` whose annotation routes to `tests/integration/**`: `L3`, `integration`, a blank cell, a spelling that names no layer (`smoke`), and `system` / `acceptance`; the same routing `QFAI-ATDD-112` uses — so on a spec whose TCs are all `L3` the rows are there at `todo` and enumerating them at P1b is this run's work: without their RED provenance `/qfai-implement` Phase Red step 3b finds no handoff and leaves each one at `todo`. Zero `E2E` / `API` rows is the legitimate count, not "nothing to do": `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
 - **The stage order makes that a real question**: Work Orders build the surfaces a journey needs (P3, P4), so a journey written after them passes first run — an anomaly bound for `exception`, which then becomes the only reachable terminal state.
 
 ### RED provenance for an ATDD-owned row (MUST)
@@ -494,6 +498,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC declaring L3/L4/L5, or no Level, is covered from the directory that Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
+- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC whose Level routes to an ATDD home is covered from the directory that Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; everything else that is not Unit/Component — no declared Level, an unreadable spelling, and system / acceptance -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
 - Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.

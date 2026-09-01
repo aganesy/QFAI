@@ -377,10 +377,71 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
           "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md",
           "and `system` / `acceptance`",
         ],
+        // The CONSUMER side. The producer seeds an `Integration` row for these
+        // two, but this skill's own routing summary listed `L3` / `integration`
+        // / blank / unrecognised — and `system` / `acceptance` are none of
+        // those — so the stage that owes the test and the RED provenance did
+        // not know the row was its work, and Phase Red step 3b found no handoff.
+        ["assistant/skills/qfai-atdd/SKILL.md", "and `system` / `acceptance`"],
       ] as const) {
         expect(await read(tree, file), `${file} does not route system / acceptance`).toContain(
           needle,
         );
+      }
+    });
+
+    // The routing summary is not the only place the ATDD skill enumerates which
+    // TCs it owes work for: its reviewer gate and its Success Criteria each
+    // carry their own list, and both were phrased `L3`/`L4`/`L5`/blank. A stage
+    // whose gate does not count a row it seeded cannot report it as outstanding.
+    it(`${tree}: the ATDD gate and Success Criteria route by destination, not by spelling`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-atdd/SKILL.md");
+      expect(skill, "the reviewer gate still enumerates spellings").not.toContain(
+        "**that declares `L3`/`L4`/`L5` or no `Level`**",
+      );
+      expect(skill).toContain("**whose `Level` routes to an ATDD home**");
+      expect(skill, "Success Criteria still enumerates spellings").not.toContain(
+        "Each TC declaring L3/L4/L5, or no Level, is covered",
+      );
+      expect(skill).toContain("Each TC whose Level routes to an ATDD home is covered");
+      expect(skill).toContain("system / acceptance");
+      // And the coverage-obligation list must no longer treat "unreadable" as
+      // the whole of the integration group.
+      expect(skill).not.toContain(
+        "A `Level` this list cannot\n    read — blank, or an unrecognised spelling — routes to `tests/integration/**`.",
+      );
+    });
+
+    // Both `L1`/`L2` and `L3` are seeded, so a Level crossing between them
+    // retires nothing and only the changed-TC reset fires — and that reset
+    // writes `Status` and `DR-ID`, never `Layer`, `Test file`, `Selector` or the
+    // evidence home. The row then waits on a handoff nothing sends, or two
+    // skills author one TC's test.
+    it(`${tree}: a Level moving between the two seeded groups reclassifies the row`, async () => {
+      for (const [file, needles] of [
+        [
+          "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+          [
+            "crosses between the two seeded groups reclassifies the row",
+            "retires nothing (both layers are seeded here)",
+            "retire it and seed a fresh row in the new group",
+            "**stop and raise a `CR-*`**",
+            "`implement-<spec-id>.md` vs `atdd-<spec-id>.md`",
+          ],
+        ],
+        [
+          "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md",
+          [
+            "A move between the two seeded groups is a reclassification, not a reset.",
+            "retired and re-seeded in\nthe new group",
+            "stops for a `CR-*`",
+          ],
+        ],
+      ] as const) {
+        const content = await read(tree, file);
+        for (const needle of needles) {
+          expect(content, `${file} does not handle the group crossing`).toContain(needle);
+        }
       }
     });
 

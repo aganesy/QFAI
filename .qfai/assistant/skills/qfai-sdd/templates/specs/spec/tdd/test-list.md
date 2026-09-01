@@ -63,6 +63,16 @@ still declared at `L3` is a row Phase 2b seeds today: **do not retire it for
 not being a coverage target**. That reading would sweep away every existing
 `Layer = Integration` row, evidence and all.
 
+**A move between the two seeded groups is a reclassification, not a reset.**
+Both `L1`/`L2` and `L3` are seeded here, so a `Level` that crosses between them
+retires nothing and only the changed-TC reset fires — and that writes `Status`
+and `DR-ID`, never `Layer`, `Test file`, `Selector` or the evidence home. Left
+there, a now-`L1` TC keeps an ATDD-owned `Integration` row waiting on a handoff
+nothing will send, and a now-`L3` TC keeps a coverage-target row while both
+skills author a test for it. A row still at `todo` is retired and re-seeded in
+the new group; a row past `todo` **stops for a `CR-*`**, because its `Evidence`
+addresses the previous owner's file and this delta keeps prior `Evidence`.
+
 **Within a TC it is keyed on the boundary.** A matrix-shaped TC holds one row
 per independently observable boundary, so re-derive that set: a boundary the TC
 has gained is appended at `todo`, and the rest are reset. Reconciling per TC
