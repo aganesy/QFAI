@@ -164,11 +164,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - Every `TC-*` must be covered from the directory its declared `Level` routes
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. Every other `Level` routes to
-    `tests/integration/**` — a blank cell, a spelling that names no layer
-    (`smoke`), **and `system` / `acceptance`**, which the layer vocabulary does
-    read but which name no ATDD home of their own. Route by where the annotation
-    goes, not by whether you recognise the word: `system` / `acceptance` are the
-    two that fall through a list phrased the other way.
+    `tests/integration/**` — blank, a spelling that names no layer, and `system` / `acceptance`. Route by the annotation's destination, not by whether the word is familiar: those last two are in the layer vocabulary, so a list phrased the other way drops them (`references/red-provenance.md`).
   - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
     scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
     `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do
