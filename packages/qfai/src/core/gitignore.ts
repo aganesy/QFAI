@@ -111,8 +111,8 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // commit*, and every later invocation decides whether an entrypoint is
   // already proven by reading this file. Left ignored, both requirements hold
   // only inside the working directory that happened to run the phase: no other
-  // clone, CI run or author can see the pass or the debt it owes. Regenerable
-  // it is not — re-running the phase re-runs the smoke script, it does not
+  // clone, CI run or author can see the pass or the debt it owes. And it is not
+  // regenerable — re-running the phase re-runs the smoke script; it does not
   // recover which shortcuts were taken or which CR was raised for them.
   "!.qfai/evidence/skeleton.md",
   // The migration record naming the review packs that predate the strict
