@@ -141,8 +141,8 @@ assert a cycle has run:
 | ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
 | `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
 | `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
-| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning             |
-| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error               |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a

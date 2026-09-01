@@ -2257,16 +2257,23 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("When this stage has no row of its own, the record is stage-level");
     expect(shared).toContain("`## Shared-artifact re-verify` in the stage evidence file");
-    // And it names that file, not the Coverage Depth Matrix: the matrix is a
-    // separate committed artifact the stage evidence only links to, it holds no
-    // `## Final status`, and gate item 10 in `/qfai-implement` reads the stage
-    // evidence file — a block written into the matrix would never be consulted.
+    // And it names the file the validator actually reads. The write instruction
+    // and the read rule sat two sentences apart naming different files — the
+    // author was sent to `atdd-<spec-id>.md` while `STAGE_EVIDENCE_FILE_NAME` in
+    // `validators/tddList.ts` matches `coverage-depth-spec-NNNN.md` alone — so a
+    // stage record written exactly as instructed was never consulted and the
+    // consumer rows it exists to clear stayed unresolvable. Both halves are
+    // pinned together here so they cannot drift apart again.
     expect(shared).toContain(
-      "in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`, beside `## Final status`)",
+      "in the stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`, " +
+        "beside `## Final status`)",
     );
-    expect(shared).not.toContain(
-      "stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`",
+    expect(shared).toContain(
+      "A stage block is read only from `.qfai/evidence/coverage-depth-<spec-id>.md`",
     );
+    // `atdd-<spec-id>.md` is where an *editing row's* own entry lives; it is not
+    // the home of the stage block.
+    expect(shared).not.toContain("in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`");
     // And a consumer is told to read both places, or the block would be written
     // and never consulted.
     expect(shared).toContain("A consumer clearing a mismatch reads **both** places");

@@ -5,6 +5,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
 import { collectSpecEntries } from "../specLayout.js";
 import {
   maskNonSpecRegions,
@@ -438,6 +439,24 @@ function roundEvidenceFieldValue(section: string, round: number, field: string):
   );
 }
 
+/**
+ * The fields a round records once, and only once.
+ *
+ * Read per round by {@link roundEvidenceFieldValue}, which takes the last
+ * occurrence — so a second block bearing the same round number silently
+ * overrides some of these and leaves the rest reading from the first.
+ */
+const ROUND_SCOPED_EVIDENCE_FIELDS = [
+  "Revision",
+  "RED revision",
+  "RED test hash",
+  "RED test manifest",
+  "RED command",
+  "RED result",
+  "GREEN command",
+  "GREEN result",
+] as const;
+
 function evidenceRoundNumbers(section: string): number[] {
   const normalized = maskEvidenceRegions(section.replace(/\r\n/g, "\n"));
   const rounds = new Set<number>();
@@ -495,9 +514,29 @@ function evidenceResultOutcomeText(value: string): string {
   return value.replace(/\S*[/\\]\S*\.\w+/g, " ").replace(/\S+\.(?:test|spec)\.\w+/gi, " ");
 }
 
+/**
+ * A result that reports nothing having run.
+ *
+ * `exit 0` and the word `passed` are both true of a run that matched no test at
+ * all — a mistyped selector, a filter that no longer matches, a renamed file —
+ * so `0 tests passed` and `exit 0 (0 tests)` cleared the GREEN half of the
+ * completion gate without the row's behaviour ever being executed. The command
+ * shape and the selector's static resolution are both satisfied in that state,
+ * so nothing else downstream asks the question.
+ *
+ * `0 tests failed` is deliberately excluded by the lookahead: that spelling
+ * reports the absence of failures, not the absence of tests, and rejecting it
+ * would fail the honest summaries that phrase a pass that way. `\b` before the
+ * zero keeps `10 tests` and `100 passed` out of it.
+ */
+const EVIDENCE_RESULT_RAN_NOTHING =
+  /\b(?:0|zero)\s+(?:tests?|specs?|examples?)\b(?!\s*(?:failed|failing|failures?|errors?))|\b0\s+passed\b|\bno\s+tests?\s+(?:ran|run|found|matched|executed)\b|\bno\s+test\s+files?\s+found\b/i;
+
 function isPassingEvidenceResult(value: string): boolean {
   const outcome = evidenceResultOutcomeText(value);
   const withoutZeroFailures = outcome.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
+  // Asked before the success words, because they are present and true.
+  if (EVIDENCE_RESULT_RAN_NOTHING.test(outcome)) return false;
   if (/\b(?:not|never|did\s+not)\s+(?:pass(?:ed|ing)?|succeed(?:ed)?)\b/i.test(outcome)) {
     return false;
   }
@@ -708,12 +747,17 @@ function coverageDepthObligationSlice(content: string, obligationValue: string):
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const kept: string[] = [];
-  for (const id of obligationValue
-    .split(",")
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0)) {
+  // Tokenized and cased the way the ledger's own checks read the same cell —
+  // `splitTcRefs` (comma, semicolon or whitespace) and a canonical upper case.
+  // Splitting on commas alone turned the legal `TC-0001; TC-0002` into one
+  // token that names nothing, and comparing case-sensitively did the same to
+  // the legal `tc-0001`; either way the row's matrix lines and justification
+  // fell out of the audited slice entirely, so the reviewer's coverage-depth
+  // judgement could be rewritten after the PASS without staling any hash.
+  for (const id of splitTcRefs(obligationValue).map((token) => token.toUpperCase())) {
     const names = new RegExp(
       `(?<![0-9A-Za-z-])${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![0-9A-Za-z-])`,
+      "i",
     );
     let index = 0;
     while (index < visibleLines.length) {
@@ -726,7 +770,7 @@ function coverageDepthObligationSlice(content: string, obligationValue: string):
         const obligationCell = (splitMarkdownRow(visible)[0] ?? "")
           .replace(/^\*\*|\*\*$/g, "")
           .trim();
-        if (obligationCell === id) kept.push(originalLines[index] ?? "");
+        if (obligationCell.toUpperCase() === id) kept.push(originalLines[index] ?? "");
         index += 1;
         continue;
       }
@@ -916,7 +960,13 @@ async function artifactRecord(root: string, relativePath: string): Promise<strin
   } catch {
     return null;
   }
-  const mode = (metadata.mode & 0o777).toString(8).padStart(3, "0");
+  // Git's mode representation, not the raw permission bits. `mode & 0o777` made
+  // the record depend on the umask of the machine that wrote the file: the same
+  // tracked content reads `664` under one umask, `644` under another and `666`
+  // on Windows, so evidence recorded on one checkout could not recompute on any
+  // other and every handed-over row went unresolved for a difference Git does
+  // not even store. The executable bit is the one permission that travels.
+  const mode = kind === "symlink" ? "120000" : (metadata.mode & 0o111) === 0 ? "100644" : "100755";
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
@@ -1707,6 +1757,23 @@ function missingCompletedEvidenceFields(
   if (rounds.some((round, index) => round !== index + 1)) {
     missing.push("continuous evidence rounds starting at Round 1");
   }
+  // One round number, one set of values. `evidenceRoundNumbers` dedupes through
+  // a `Set` and every field reader takes the last occurrence for its round
+  // independently, so appending a second partial `Round 1` instead of opening
+  // `Round 2` composed one synthetic round out of two blocks — the restated
+  // fields from the new one, the omitted fields from the old — and cleared both
+  // the continuity check and the previous round's `REVISE` requirement without
+  // a round ever being opened.
+  for (const round of rounds) {
+    for (const field of ROUND_SCOPED_EVIDENCE_FIELDS) {
+      const occurrences = evidenceFieldOccurrences(section, field).filter(
+        (occurrence) => occurrence.round === round,
+      );
+      if (occurrences.length > 1) {
+        missing.push(`Round ${round}: exactly one ${field}`);
+      }
+    }
+  }
   if (hasPhaseAuthoredFieldAfterGate(entrySection)) {
     missing.push("all phase-authored fields before review and checkpoint fields");
   }
@@ -1959,7 +2026,10 @@ async function invalidCompletedEvidenceArtifacts(
       // committed verdict, revision, audit hash, path and seal, but not the pack
       // directory itself. Recompute the pack-specific checks whenever it is
       // present; its absence alone is not a portable completion failure.
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      // Narrowed rather than asserted: `catch` binds `unknown`, so a non-Error
+      // throw (a string, a rejected non-error) would read `.code` off it and
+      // fall through to the failure branch by accident.
+      if (isEnoent(error)) continue;
       invalid.push(`${prefix} review pack path readable when present`);
       continue;
     }

@@ -20,7 +20,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -106,36 +106,46 @@ const COVERAGE_DEPTH_PATH = ".qfai/evidence/coverage-depth-spec-0001.md";
 function coverageDepthRecord(matrix: string | undefined, obligation = "TC-0001"): string | null {
   if (matrix === undefined) return null;
   const lines = matrix.replace(/\r\n/g, "\n").split("\n");
-  const names = new RegExp(`(?<![0-9A-Za-z-])${obligation}(?![0-9A-Za-z-])`);
   const kept: string[] = [];
-  let index = 0;
-  while (index < lines.length) {
-    const line = lines[index] ?? "";
-    if (line.trim().length === 0) {
-      index += 1;
-      continue;
+  // The ledger's own tokenizer and casing: comma, semicolon or whitespace, then
+  // a canonical upper case. Splitting on commas alone and comparing exactly is
+  // what dropped `TC-0001; TC-0002` and `tc-0001` out of the audited slice.
+  for (const id of obligation
+    .trim()
+    .split(/[,;\s]+/)
+    .filter((token) => token.length > 0)
+    .map((token) => token.toUpperCase())) {
+    const names = new RegExp(`(?<![0-9A-Za-z-])${id}(?![0-9A-Za-z-])`, "i");
+    let index = 0;
+    while (index < lines.length) {
+      const line = lines[index] ?? "";
+      if (line.trim().length === 0) {
+        index += 1;
+        continue;
+      }
+      if (line.trimStart().startsWith("|")) {
+        if (
+          line
+            .replace(/^\s*\|/, "")
+            .split("|")[0]
+            ?.trim()
+            .toUpperCase() === id
+        )
+          kept.push(line);
+        index += 1;
+        continue;
+      }
+      let end = index;
+      while (
+        end < lines.length &&
+        (lines[end] ?? "").trim().length > 0 &&
+        !(lines[end] ?? "").trimStart().startsWith("|")
+      ) {
+        end += 1;
+      }
+      if (names.test(line)) kept.push(...lines.slice(index, end));
+      index = end;
     }
-    if (line.trimStart().startsWith("|")) {
-      if (
-        line
-          .replace(/^\s*\|/, "")
-          .split("|")[0]
-          ?.trim() === obligation
-      )
-        kept.push(line);
-      index += 1;
-      continue;
-    }
-    let end = index;
-    while (
-      end < lines.length &&
-      (lines[end] ?? "").trim().length > 0 &&
-      !(lines[end] ?? "").trimStart().startsWith("|")
-    ) {
-      end += 1;
-    }
-    if (names.test(line)) kept.push(...lines.slice(index, end));
-    index = end;
   }
   const slice = kept.join("\n");
   return slice.trim().length === 0
@@ -209,6 +219,12 @@ interface EvidenceOptions {
    * is what a matrix added or edited after the PASS looks like.
    */
   coverageDepthMatrix?: string;
+  /**
+   * The obligation the row and its evidence carry, when it is not the default
+   * `TC-0001`. The ledger accepts semicolon- and whitespace-separated tokens
+   * and any case, so the audited slice has to read the cell the same way.
+   */
+  obligationValue?: string;
   /**
    * The stage review pack a zero-row `coverage-depth-spec-NNNN.md` seals.
    * `"absent"` records a seal over a pack that is then removed: the fresh-clone
@@ -341,11 +357,13 @@ async function materializeEvidence(
   const testPath = path.join(root, TEST_FILE);
   const metadata = await lstat(testPath);
   const testBlob = digest(await readFile(testPath));
+  // Git's mode, mirroring `artifactRecord`: the raw permission bits made the
+  // record depend on the writing machine's umask.
   const redHash = digest(
-    `${TEST_FILE}\0file\0${(metadata.mode & 0o777).toString(8).padStart(3, "0")}\0${testBlob}`,
+    `${TEST_FILE}\0file\0${(metadata.mode & 0o111) === 0 ? "100644" : "100755"}\0${testBlob}`,
   );
   let content = rawContent.replaceAll("{{RED_TEST_HASH}}", redHash);
-  const matrixRecord = coverageDepthRecord(options.coverageDepthMatrix);
+  const matrixRecord = coverageDepthRecord(options.coverageDepthMatrix, options.obligationValue);
   const auditHash = phaseAuditHash(evidenceFile, content, "TDD-0001", matrixRecord);
   content = content.replaceAll(
     "{{EDITING_AUDIT_HASH}}",
@@ -914,13 +932,16 @@ describe("QFAI-TDDLIST-008", () => {
   const IMPLEMENT_POINTER =
     "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
 
-  function completeEntry(layer: "Unit" | "Integration" | "API" | "E2E"): string {
+  function completeEntry(
+    layer: "Unit" | "Integration" | "API" | "E2E",
+    obligationValue?: string,
+  ): string {
     const obligation =
       layer === "E2E"
         ? "US-ref: US-0001"
         : layer === "API"
           ? "CON-API-ref: CON-API-0001"
-          : "TC-ref: TC-0001";
+          : `TC-ref: ${obligationValue ?? "TC-0001"}`;
     return `# Evidence
 
 ### TDD-0001
@@ -1026,6 +1047,81 @@ describe("QFAI-TDDLIST-008", () => {
         });
       });
     }
+
+    // `exit 0` and `passed` are both true of a run that matched no test at all,
+    // so a mistyped selector cleared the GREEN half of the gate having executed
+    // nothing.
+    for (const empty of [
+      "0 tests passed",
+      "exit 0 (0 tests)",
+      "PASS — no tests ran",
+      "exit 0, no test files found",
+    ]) {
+      it(`rejects a GREEN result that ran nothing: "${empty}"`, async () => {
+        await withProject(async (root) => {
+          const codes = await runOn(
+            root,
+            ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+            {
+              ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+                "Round 1: GREEN result: 1 passed",
+                `Round 1: GREEN result: ${empty}`,
+              ),
+            },
+          );
+          expect(codes).toContain("QFAI-TDDLIST-008");
+        });
+      });
+    }
+
+    // Over-rejection pins for the zero-run check: a summary that reports zero
+    // *failures* still ran, and a two-digit count must not read as a leading 0.
+    for (const real of ["PASS 0 failed, 12 passed", "PASS 10 tests passed", "PASS 100 passed"]) {
+      it(`accepts a GREEN result that did run: "${real}"`, async () => {
+        await withProject(async (root) => {
+          const codes = await runOn(
+            root,
+            ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+            {
+              ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+                "Round 1: GREEN result: 1 passed",
+                `Round 1: GREEN result: ${real}`,
+              ),
+            },
+          );
+          expect(codes).not.toContain("QFAI-TDDLIST-008");
+        });
+      });
+    }
+
+    // Round numbers are deduped through a `Set` and every field reader takes the
+    // last occurrence for its round, so a second partial `Round 1` composed one
+    // synthetic round from two blocks — the restated GREEN from the new block,
+    // the omitted RED and revision from the old — and opened no round at all.
+    it("rejects a second block bearing a round number already used", async () => {
+      await withProject(async (root) => {
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          {
+            ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+              "- Round 1: GREEN result: 1 passed",
+              [
+                "- Round 1: GREEN result: 1 failed",
+                "- Round 1: GREEN command: npm test",
+                "- Round 1: GREEN result: 1 passed",
+              ].join("\n"),
+            ),
+          },
+        );
+        expect(
+          issues.some(
+            ({ code, message }) =>
+              code === "QFAI-TDDLIST-008" && message.includes("exactly one GREEN result"),
+          ),
+        ).toBe(true);
+      });
+    });
 
     // The other direction: a real command whose path merely contains a word the
     // negation list uses must still count as executed.
@@ -1660,6 +1756,53 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
     });
   });
 
+  // The record carried all nine permission bits, so the same tracked content
+  // hashed differently under a different umask — `664` where the recording
+  // machine had `644`, `666` on Windows — and every handed-over row went
+  // unresolved for a difference Git does not store.
+  const redHashInvalid = (issues: Array<{ code: string; message: string }>): boolean =>
+    issues.some(
+      ({ code, message }) =>
+        code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+    );
+
+  for (const [label, mode] of [
+    ["a group-writable umask", 0o664],
+    ["a read-only checkout", 0o444],
+    ["the Windows-shaped mode", 0o666],
+  ] as const) {
+    it(`recomputes the RED test hash under ${label}`, async () => {
+      await withProject(async (root) => {
+        await seedProject(root, reverifyLedger(), [], {
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
+        });
+        // Only the permission bits move: same bytes, same executable bit.
+        await chmod(path.join(root, TEST_FILE), mode);
+        const issues = (await validateTddList(root, defaultConfig)).map((i) => ({
+          code: i.code,
+          message: i.message,
+        }));
+        expect(redHashInvalid(issues)).toBe(false);
+      });
+    });
+  }
+
+  // …and the one bit Git does track still moves the hash, so making the record
+  // portable did not make it blind.
+  it("stales the RED test hash when the executable bit changes", async () => {
+    await withProject(async (root) => {
+      await seedProject(root, reverifyLedger(), [], {
+        ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
+      });
+      await chmod(path.join(root, TEST_FILE), 0o755);
+      const issues = (await validateTddList(root, defaultConfig)).map((i) => ({
+        code: i.code,
+        message: i.message,
+      }));
+      expect(redHashInvalid(issues)).toBe(true);
+    });
+  });
+
   it("rejects a shared-artifact re-verify whose proof does not fail", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, reverifyLedger(), {
@@ -1908,6 +2051,48 @@ result, so the assertion cannot be tightened without drift.
       expect(codes).toContain("QFAI-TDDLIST-008");
     });
   });
+
+  // The audited slice has to read the obligation cell the way the ledger's own
+  // checks read it: `splitTcRefs` splits on commas, semicolons AND whitespace,
+  // and compares upper-cased. Splitting on commas alone made `TC-0001; TC-0002`
+  // one token that names nothing, and an exact comparison did the same to
+  // `tc-0001` — either way the matrix fell out of the hash entirely and could be
+  // rewritten after the PASS with nothing going stale.
+  for (const [label, obligation] of [
+    ["separated by a semicolon", "TC-0001; TC-0002"],
+    ["separated by whitespace", "TC-0001 TC-0002"],
+    ["written in lower case", "tc-0001"],
+  ] as const) {
+    it(`still stales the audit hash when the matrix moves, with an obligation ${label}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER, tcRefs: obligation }]),
+          {
+            [COVERAGE_DEPTH_PATH]: MATRIX,
+            ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit", obligation),
+          },
+          { coverageDepthMatrix: MATRIX.replace("| ⚠️ |", "| ✅ |"), obligationValue: obligation },
+        );
+        expect(codes).toContain("QFAI-TDDLIST-008");
+      });
+    });
+
+    it(`accepts an unmoved matrix, with an obligation ${label}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER, tcRefs: obligation }]),
+          {
+            [COVERAGE_DEPTH_PATH]: MATRIX,
+            ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit", obligation),
+          },
+          { coverageDepthMatrix: MATRIX, obligationValue: obligation },
+        );
+        expect(codes).not.toContain("QFAI-TDDLIST-008");
+      });
+    });
+  }
 
   // Exactly matched: the matrix is one document per spec that a later
   // `/qfai-atdd` run recomputes, so an unrelated obligation's cell moving must
