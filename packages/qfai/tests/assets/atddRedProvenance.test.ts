@@ -2408,11 +2408,42 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       "Those turns share **one** pack: one `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in `summary.json`.",
     );
     expect(layout).toContain(
-      "Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the same `review-<timestamp>/` directory.",
+      "Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the same `review-<timestamp>/` directory **for that round**.",
     );
     expect(layout).not.toContain("One pack per review round for one `TDD-ID`");
     // A group round is not a single agent call.
     expect(layout).not.toContain("is **one** reviewer turn");
+  });
+
+  it("keeps the group's RED and GREEN gatekeeper observations in separate packs", async () => {
+    // "One turn per required reviewer" read as one turn for `qa-gatekeeper`
+    // over gate items 3 *and* 5, but RED and GREEN are two observations at two
+    // revisions: item 3 names `RED revision`, items 5/7/8 name `Revision`, and
+    // a pack declares a single top-level `revision` for the verdicts it holds
+    // (`src/core/validators/reviewArtifacts.ts`). One response file and one
+    // `reviewers[]` entry therefore could not hold both, so whichever landed
+    // second overwrote the other and gate item 3 or 5 lost its verdict.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "**`qa-gatekeeper` answers in two rounds over a T1 group, not one**, because RED and GREEN are two observations",
+    );
+    // The RED is taken before production code exists, so it cannot be folded in.
+    expect(layout).toContain("one combined turn is exactly the post-hoc submission");
+    // The decisive constraint: one pack, one revision.
+    expect(layout).toContain(
+      '`summary.json` declares a **single** `revision`, "the state these verdicts describe", while gate item 10 puts item 3 at `RED revision` and items 5, 7 and 8 at `Revision`.',
+    );
+    expect(layout).toContain(
+      "the group's RED confirmation is sealed in its own `review-<timestamp>/` before Green begins, carrying its own `R01_qa-gatekeeper.md` and its own `reviewers[]` entry",
+    );
+    // Each observation hashes its own subject, not one shared hash.
+    expect(layout).toContain("is taken over the **RED** subject");
+    // Both survive because the seals are recorded per round.
+    expect(layout).toContain(
+      "neither observation overwrites the other and gate items 3 and 5 each keep their own verdict",
+    );
   });
 
   it("gives the implementation reviewer the subject it hashes", async () => {

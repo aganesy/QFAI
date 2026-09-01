@@ -24,12 +24,25 @@ shipped inside the QFAI package and archived by `npx qfai doctor`:
   listed id (`shared-skill-delegation-baseline.md#reviewer-response-template`).
 - A T1 group review is **one round**, not one turn per member — and not one turn in total. Each
   required reviewer (`qa-gatekeeper`, `completion-reviewer`, `implementation-reviewer`) takes
-  **one** turn over the whole group, as `volume-policy.md#batched-review` requires, so that gate
-  items 3, 5, 7 and 8 all have their verdict. Those turns share **one** pack: one
+  **one** turn over the whole group **per round**, as `volume-policy.md#batched-review` requires,
+  so that gate items 3, 5, 7 and 8 all have their verdict. Those turns share **one** pack: one
   `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in
   `summary.json`. Do not write a pack per member: N packs assert N rounds, N-1 of which never
   happened, each holding a copy of the same verdict. Every member row's `Review pack seal` at gate
-  item 10 is therefore the same seal over the same `review-<timestamp>/` directory.
+  item 10 is therefore the same seal over the same `review-<timestamp>/` directory **for that
+  round**.
+- **`qa-gatekeeper` answers in two rounds over a T1 group, not one**, because RED and GREEN are
+  two observations: `volume-policy.md` batches them as "confirms RED/GREEN once per coherent
+  group", and the Handoff Contracts take the RED **while no production code exists** and the GREEN
+  after it — one combined turn is exactly the post-hoc submission that contract refuses. They
+  cannot share a pack either: `summary.json` declares a **single** `revision`, "the state these
+  verdicts describe", while gate item 10 puts item 3 at `RED revision` and items 5, 7 and 8 at
+  `Revision`. So the group's RED confirmation is sealed in its own `review-<timestamp>/` before
+  Green begins, carrying its own `R01_qa-gatekeeper.md` and its own `reviewers[]` entry, and its
+  `Audited evidence hash` per listed id is taken over the **RED** subject — a different subject
+  from the GREEN one (`shared-skill-delegation-baseline.md#reviewer-response-template`). Each
+  member row records both under the `Round N:` prefix `evidence-revision.md` already requires, so
+  neither observation overwrites the other and gate items 3 and 5 each keep their own verdict.
 - Say which stage wrote the pack: `producer: "implement"` in `summary.json`, and a
   `- Producer: implement` line in `review_request.md`. Both, because `summary.json` is written
   last — the request line is the only thing that answers the question while the pack is in
