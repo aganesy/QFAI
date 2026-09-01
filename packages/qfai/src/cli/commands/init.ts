@@ -2037,7 +2037,8 @@ function rebuildManagedBlock(existingBlock: string): string {
  * Earlier `qfai init` versions wrote a per-directory ignore file whose first
  * line is `*`. Git applies the deepest matching file, so that `*` wins over
  * every root-level negation: `change-request-*.md`, `decision-*.md`,
- * `decisions/**` and the Coverage Depth Matrix all stay ignored in a project
+ * `decisions/**`, the Coverage Depth Matrix and the `Phase: Skeleton` record
+ * (`skeleton.md`) all stay ignored in a project
  * that still has it, however correct the managed block is. The file is not
  * removed — a project may want the rest of its behaviour — but the governance
  * records are re-included inside it.
@@ -2046,6 +2047,7 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!change-request-*.md",
   "!decision-*.md",
   "!coverage-depth-*.md",
+  "!skeleton.md",
   "!decisions/",
   "!decisions/**",
 ];

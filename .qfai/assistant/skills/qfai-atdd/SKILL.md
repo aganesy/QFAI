@@ -380,9 +380,9 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 ## Stage Gates (Do not skip)
 
-- P0: Plan and obligations checklist prepared. A project whose routing has no
-  `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
+- P0: Plan and obligations checklist prepared. A project whose routing has no `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+- P1a: **`Phase: Skeleton` is discharged before any RED is taken.** When the program does not start yet, invoke `/qfai-implement` for that phase alone and record its run in `.qfai/evidence/skeleton.md` — here, not "before P5": P1c takes the first RED before P2-P4 build anything, and against a system that cannot start that RED is a collection error, which is a missing seam and not a RED (`references/red-provenance.md#a-project-whose-program-does-not-start-yet`).
 - P1b: **A branch is chosen for every row**, provisional until its handoff.
 - P1c: **A branch 1 row is discharged in that loop** — write the test, take the
   RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —

@@ -83,9 +83,24 @@ the placeholders; record the literal commands actually executed in evidence.
 ## Verification command set (per spec)
 
 The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
-under parallel slices the ledger order does not identify one either. So step 1 is dropped: the
-spec-level set is steps 2, 3 and 4 only. Everything step 1 would have proved is already covered by
-the full suite.
+under parallel slices the ledger order does not identify one either. So step 1 is dropped and one
+step the per-item set has no need of is added: the spec-level set is steps 2, 3 and 4, plus step 5
+below. Everything step 1 would have proved is already covered by the full suite.
+
+5. **The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is
+   `applicable`** — re-run from `.qfai/evidence/skeleton.md` and appended there with its own
+   exit status (`walking-skeleton.md#the-same-re-run-before-spec-completion`). Steps 2-4 are
+   all satisfiable by a tree that no longer starts: where the tests construct their subject
+   directly, the suite stays green after this invocation's own rows have broken the
+   composition root, the start-up configuration or the dependency wiring, and no other step
+   in this set runs the product. A non-zero exit is a FAIL like any other here — spec
+   completion is blocked and the entrypoint re-enters the Skeleton phase's 3-cycle budget.
+   A spec set with no runnable entrypoint records the `not applicable` verdict once and
+   contributes nothing to this step.
+
+Re-run step 5 at a **per-item** boundary too whenever the item touched an entrypoint, its wiring or
+its start-up configuration — one row's work then stands between the last passing run and the
+failure, which is what makes it attributable.
 
 ## Pass criteria
 

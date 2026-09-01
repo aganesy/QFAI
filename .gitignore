@@ -72,6 +72,7 @@ coverage/
 !.qfai/evidence/change-request-*.md
 !.qfai/evidence/decision-*.md
 !.qfai/evidence/coverage-depth-*.md
+!.qfai/evidence/skeleton.md
 !.qfai/review/
 !.qfai/review/.legacy-packs
 !.qfai/install-provenance.json
