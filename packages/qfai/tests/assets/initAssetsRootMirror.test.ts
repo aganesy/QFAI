@@ -152,7 +152,12 @@ describe("init assets root mirror", () => {
   // shim for TypeScript consumers of the public `QfaiValidationConfig` type
   // (same treatment as `paths.promptsDir`, which is likewise unshipped), so
   // they are excluded here rather than seeded back into a fresh project.
-  it("ships a testStrategy block whose keys the config loader resolves", async () => {
+  //
+  // The name is about the SHIPPED surface, not about what `loadConfig` returns:
+  // the loader resolves the two deprecated compat keys as well, and always has.
+  // What this case holds is narrower — the file an operator opens lists exactly
+  // the keys that can still change an outcome.
+  it("ships exactly the testStrategy keys that can change an outcome", async () => {
     const liveKeys = Object.keys(defaultConfig.validation.testStrategy)
       .filter((key) => !DEPRECATED_TEST_STRATEGY_KEYS.has(key))
       .sort();
