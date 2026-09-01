@@ -34,7 +34,15 @@ Concretely, before persisting any Triage row:
    `Spec` cell with the next unused `spec-NNNN` (never reuse a retired
    one), then cite the CAP in the Triage row's Rationale column.
    `QFAI-TRIAGE-006` will fail the validator otherwise, and a row left
-   with an empty `Spec` cell fails `QFAI-SPLIT-106` at the final gate.
+   with an empty `Spec` cell reports `QFAI-SPLIT-106`.
+
+   `QFAI-SPLIT-106` is inside its promotion window, so it is emitted at
+   `warning` and `validate --fail-on error` **still exits 0** while the
+   cell is empty. A blank cell also suppresses `QFAI-SPLIT-103` / `104` /
+   `105` for that row, so no other code stands in for it. Do not treat
+   the exit code as the check here: read the reported findings and
+   confirm no `QFAI-SPLIT-106` remains. The finding's own message names
+   the release it becomes an `error` in.
 
 The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
 append-first fallback: when the REQ's capability does not match exactly,

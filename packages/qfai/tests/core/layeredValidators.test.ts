@@ -493,6 +493,82 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  // The section resolver and the declared-mapping reader used to be two
+  // different heading matchers. `CAP_CATALOG_HEADING` accepts the qualifier the
+  // template permits; the mapping reader's own copy demanded an exact match and
+  // fell back to the whole document when it missed. Under that heading the two
+  // read different tables, so the earlier migration table supplied the mapping
+  // and the live table's blank cells drew nothing.
+  it("scopes the declared mapping to a CAP Catalog heading that carries a qualifier", async () => {
+    for (const heading of ["## CAP Catalog (required)", "## CAP Catalog （必須）"]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+          heading,
+          leadingMarkdown: [
+            "## Migration record",
+            "",
+            "| CAP ID | Spec | Note |",
+            "| --- | --- | --- |",
+            "| CAP-0001 | spec-0001 | migrated |",
+            "| CAP-0002 | spec-0002 | migrated |",
+            "",
+          ].join("\n"),
+        });
+        await seedSpec(root, "0001", "CAP-0001");
+        await seedSpec(root, "0002", "CAP-0002");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+        expect(mapping, `${heading} must not hand the mapping to the migration table`).toHaveLength(
+          1,
+        );
+        expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // `\b` sits between the last digit and the hyphen, so the old pattern read
+  // `spec-0001` out of `spec-0001-old`. That resolved to a directory that does
+  // exist, and every downstream check then agreed on a name no directory has.
+  it("does not read a spec id out of a longer directory name", async () => {
+    for (const cell of ["spec-0001-old", "[spec-0001-old](../spec-0001-old)"]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        await seedPolicies(root, ["CAP-0001"], [cell]);
+        await seedSpec(root, "0001", "CAP-0001");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+        expect(mapping, `${cell} declares no valid directory`).toHaveLength(1);
+        expect(mapping[0]?.refs).toEqual(["CAP-0001"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // Taking the first match let one row own two CAPs: the count, the declaration
+  // and the back-reference all agreed while the second CAP owned no directory,
+  // and the orphan check found its string elsewhere in the document.
+  it("reports a CAP ID cell that names more than one CAP", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001 / CAP-0002"], ["spec-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+      expect(mapping[0]?.message).toContain("1 行 1 CAP");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("still reads a catalog written without the CAP Catalog heading", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -702,8 +778,12 @@ interface SeedPoliciesOptions {
   readonly sectionPreamble?: string;
   /** Markdown appended after the catalog table. */
   readonly trailingMarkdown?: string;
-  /** Set to `false` for a legacy catalog written without the heading. */
-  readonly heading?: boolean;
+  /**
+   * `false` for a legacy catalog written without the heading, or a literal
+   * heading line to use in place of the plain `## CAP Catalog` — the template
+   * also permits a parenthesised qualifier.
+   */
+  readonly heading?: boolean | string;
   /** Markdown emitted before the heading, ahead of `preamble`. */
   readonly prose?: string;
   /** Further lines emitted before the heading. */
@@ -741,7 +821,10 @@ async function seedPolicies(
         : `| ${capId} | capability | metric | ${options.notes?.[capId] ?? "note"} |`,
     )
     .join("\n");
-  const heading = options.heading === false ? [] : ["## CAP Catalog", ""];
+  const heading =
+    options.heading === false
+      ? []
+      : [typeof options.heading === "string" ? options.heading : "## CAP Catalog", ""];
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
     [

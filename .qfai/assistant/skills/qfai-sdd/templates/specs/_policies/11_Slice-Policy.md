@@ -127,8 +127,10 @@ stop at step 2.
    `Spec` cell with the next unused `spec-NNNN` (never a retired one),
    then cite the CAP in the Triage row's Rationale column.
    `QFAI-TRIAGE-006` will reject any CREATE row that omits or references
-   an unregistered CAP, and a row left with an empty `Spec` cell fails
-   `QFAI-SPLIT-106` at the final gate.
+   an unregistered CAP, and a row left with an empty `Spec` cell reports
+   `QFAI-SPLIT-106` — at `warning` while that code is inside its
+   promotion window, so `validate --fail-on error` still exits 0. Check
+   the reported findings, not the exit code.
 7. If the REQ removes existing items from a spec → **UPDATE:REMOVE**.
 8. If the spec's subject is gone from the product → **DELETE**.
 9. If the responsibilities move to a new spec while the old ID must

@@ -123,5 +123,20 @@ describe("the CAP catalog declares the spec mapping the gap policy depends on", 
       expect(content).toContain("fill its `Spec` cell with the next unused `spec-NNNN`");
       expect(content).toContain("QFAI-SPLIT-106");
     });
+
+    // These procedures used to end "an empty `Spec` cell fails `QFAI-SPLIT-106`
+    // at the final gate". It does not: the code is inside its promotion window
+    // (`sunset.ts#RULE_PROMOTIONS.specSplitDeclaredMapping`), so it is emitted
+    // at `warning` and `validate --fail-on error` exits 0 — and a blank cell
+    // suppresses 103/104/105 for that row, so nothing else stands in for it. An
+    // agent trusting the old sentence would read the exit code, see success, and
+    // call an undeclared catalog complete. Say what actually stops it: read the
+    // findings.
+    it(`${relativePath}: the CREATE step does not call the warning a gate failure`, async () => {
+      const content = unwrap(await read(relativePath));
+      expect(content).not.toContain("empty `Spec` cell fails `QFAI-SPLIT-106` at the final gate");
+      expect(content).toMatch(/promotion window/);
+      expect(content).toMatch(/exits? 0/);
+    });
   }
 });
