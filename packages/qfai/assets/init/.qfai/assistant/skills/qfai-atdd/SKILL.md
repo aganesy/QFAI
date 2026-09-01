@@ -179,13 +179,13 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - **The E2E/API ledger rows this stage feeds are bound by `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
-- Evidence file is required under `.qfai/evidence/`. Stage evidence is
-  **regenerable** and is not committed. **Governance records are different**:
-  Change Requests (`.qfai/decisions/CR-*.md`), durable decision records
-  (`.qfai/evidence/decisions/*.json`) and the **Coverage Depth Matrix**
-  (`.qfai/evidence/coverage-depth-<spec-id>.md`) are not regenerable and stay
-  in version control — the managed `.gitignore` block negates them for that
-  reason.
+- Evidence file is required under `.qfai/evidence/`. Regenerable stage logs are
+  not committed. **Governance records stay in version control**: Change Requests
+  (`.qfai/decisions/CR-*.md`), durable decision records
+  (`.qfai/evidence/decisions/*.json`), the **Coverage Depth Matrix** and **this
+  stage's own `.qfai/evidence/atdd-<spec-id>.md`**, whose RED provenance is taken
+  before the passing code exists and so cannot be regenerated. A negation does
+  not stage a file — commit it (`constitution/drift-protocol.md#which-evidence-is-committed`).
 - **The matrix is a governance record, not a log**, so it is committed:
   `.qfai/evidence/coverage-depth-<spec-id>.md`, one justification per `❌`
   (`references/test-case-depth-checklist.md#where-the-matrix-lives`).

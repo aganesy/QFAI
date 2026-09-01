@@ -50,7 +50,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Sign-off
 
 - [ ] Deliverables are complete
-- [ ] Evidence is present (gitignored)
+- [ ] Evidence is present — regenerable logs left gitignored, governance records
+      committed (see Deliverables)
 - [ ] Stage gates are PASS
 - [ ] Reviewer sign-off recorded
 

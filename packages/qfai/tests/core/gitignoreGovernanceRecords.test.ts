@@ -190,14 +190,21 @@ describe("QFAI-REVIEW-001 does not punish tracking the audit trail", () => {
 
 /**
  * The negation only stops git from HIDING the file. It does not stage one, so
- * the shipped instructions decide whether these records reach a commit — and
- * they still said they must not. `orchestrator.md` labelled all of
- * `.qfai/evidence/` "gitignored; do not commit"; `drift-protocol.md` classified
- * `.qfai/evidence/<stage>-<spec-id>.md` as regenerable and not committed; and
- * `evidence-revision.md` argued from `implement-<spec-id>.md` being unavailable
- * to commit. An agent following any of them leaves the two records untracked and
- * the Evidence anchor resolves on one machine only — the failure this change
- * exists to end, reached through the instructions instead of through git.
+ * the shipped instructions decide whether these records reach a commit.
+ *
+ * **Before this change they said they must not.** `orchestrator.md` labelled all
+ * of `.qfai/evidence/` "gitignored; do not commit" and its Sign-off box repeated
+ * it; `drift-protocol.md` classified `.qfai/evidence/<stage>-<spec-id>.md` as
+ * regenerable and not committed; `evidence-revision.md` argued from
+ * `implement-<spec-id>.md` being unavailable to commit; and `qfai-atdd`, which
+ * owns `atdd-<spec-id>.md`, called its own stage evidence regenerable and left
+ * that file out of its governance-record list. An agent following any of them
+ * left the two records untracked and the Evidence anchor resolving on one
+ * machine only — the failure this change exists to end, reached through the
+ * instructions instead of through git.
+ *
+ * The cases below assert the repaired state: each names the wording that has to
+ * be gone and the wording that has to be there.
  */
 describe("the shipped instructions commit the records the managed block untracks", () => {
   const repoRoot = path.resolve(
@@ -231,6 +238,22 @@ describe("the shipped instructions commit the records the managed block untracks
       const orchestrator = await read(tree, "agents/orchestrator.md");
       expect(orchestrator).not.toContain("`.qfai/evidence/` (gitignored; do not commit)");
       expect(orchestrator).toContain("must** be committed");
+      // The Sign-off box is the last thing an orchestrator reads, and it
+      // repeated the blanket claim the Deliverables line had just dropped.
+      expect(orchestrator, "the Sign-off box still says evidence is gitignored").not.toContain(
+        "- [ ] Evidence is present (gitignored)",
+      );
+      expect(orchestrator).toContain("governance records committed");
+
+      // `/qfai-atdd` owns `atdd-<spec-id>.md`, so its own list decides whether
+      // that half of the split is committed. It called the file regenerable.
+      const atdd = await read(tree, "skills/qfai-atdd/SKILL.md");
+      expect(atdd, "the ATDD skill still calls its stage evidence uncommitted").not.toContain(
+        "Stage evidence is **regenerable** and is not committed",
+      );
+      expect(atdd).toContain("stage's own `.qfai/evidence/atdd-<spec-id>.md`**");
+      expect(atdd).toContain("A negation does");
+      expect(atdd).toContain("not stage a file");
 
       const revision = await read(tree, "skills/qfai-implement/references/evidence-revision.md");
       expect(revision).not.toContain(
