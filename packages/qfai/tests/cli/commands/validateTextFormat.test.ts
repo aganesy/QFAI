@@ -377,6 +377,41 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     expect(belowThreshold).not.toContain("  error_code: ");
   });
 
+  /**
+   * `--fail-on never` fails on nothing, and the guide used to describe the
+   * detail block as belonging to "issues at a severity that can fail this run"
+   * — which reads as "no detail blocks at all" in that mode. `emitText` keeps
+   * emitting them for every `error`, so a parser built on the old wording read
+   * `  error_code: …` and the four lines under it as more message text.
+   */
+  it("keeps the error detail block under --fail-on never, as documented", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain("`--fail-on never`");
+
+    const error = SYNTHETIC_ISSUES.find((issue) => issue.severity === "error");
+    expect(error).toBeDefined();
+    if (error === undefined) return;
+
+    const output = await captureStdout(() => {
+      emitText(resultOf([error]), "never");
+      return Promise.resolve();
+    });
+    const classified = classifyByGuideline(output.trimEnd().split("\n"), "never");
+    expect(classified).toContainEqual({ kind: "detail", line: `  error_code: ${error.code}` });
+    // …and the structural lines are still structural, not swallowed as message.
+    expect(classified.filter((entry) => entry.kind === "message-continuation")).toEqual([]);
+
+    // Over-correction pin: a warning still gets nothing in this mode.
+    const warning = SYNTHETIC_ISSUES.find((issue) => issue.code === "QFAI-TEST-002");
+    expect(warning).toBeDefined();
+    if (warning === undefined) return;
+    const warningOutput = await captureStdout(() => {
+      emitText(resultOf([warning]), "never");
+      return Promise.resolve();
+    });
+    expect(warningOutput).not.toContain("  error_code: ");
+  });
+
   it("closes the text output with the documented counts line", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("counts: info=<n> warning=<n> error=<n>");

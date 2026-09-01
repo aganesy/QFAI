@@ -27,7 +27,11 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 - `[error] QFAI-DT-002 Circular reference detected: semantic.color.primary (.qfai/contracts/design/design-tokens.yaml) refs=semantic.color.primary`
 - `[error] QFAI-MOCK-002 External URL reference in HTML Mock: https://cdn.example.com/style.css (.qfai/specs/spec-0001/01_Spec.md)`
 
-その実行を失敗させうる severity の issue には、上記の行に続けてインデント付きの詳細行が出力される。既定 (`--fail-on error`) では `error` のみ、`--fail-on warning` (`--strict` を含む) では `warning` にも付く:
+一部の issue には、上記の行に続けてインデント付きの詳細行が出力される。付くかどうかは severity と `--fail-on` の組で決まり、**その実行が失敗するかどうかとは独立している**:
+
+- `error` — `--fail-on` の値にかかわらず **常に** 付く。`--fail-on never` (`validation.failOn: never`) でも同じで、その実行はどの severity でも失敗しないが詳細ブロックは出力される
+- `warning` — `--fail-on warning` (`--strict` を含む) のときだけ付く
+- `info` — 付かない
 
 ```text
   error_code: <CODE>
