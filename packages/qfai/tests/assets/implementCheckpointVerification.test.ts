@@ -209,7 +209,18 @@ describe("qfai-implement checkpoint verification contract", () => {
       // The cited anchor has to resolve, and the cadence has to stay in the one
       // file that owns it.
       expect(headingSlugs(cadence)).toContain("checkpoint-boundaries");
-      expect(cadence).toContain("**This list is the single definition of the boundary cadence.**");
+      // Scoped to the per-item tier: that anchor owns which ROWS are boundaries.
+      // The spec-level boundary has no row and is defined in THIS file, so the
+      // anchor must not claim to be the single definition of every full-suite
+      // run — that claim is what made its "only at" read as licence to skip the
+      // per-spec run this file separately requires.
+      expect(cadence).toContain(
+        "**This list is the single definition of the PER-ITEM boundary cadence",
+      );
+      expect(cadence).not.toContain(
+        "**This list is the single definition of the boundary cadence.**",
+      );
+      expect(cadence).toContain("is defined there, not here");
       expect(cadence).toContain("every **N-th** completed row, with `N = 10` by default");
 
       // `qfai-atdd` hands branch-1 rows to this skill, and its own reference

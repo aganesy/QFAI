@@ -41,11 +41,21 @@ and is quadratic in ledger size. That cost is paid at boundaries instead.
 
 ### Checkpoint boundaries
 
-**This list is the single definition of the boundary cadence.**
-`checkpoint-verification.md` and `SKILL.md` cite this anchor and do not
-restate it — a second copy of the cadence is what let them contradict it.
+**This list is the single definition of the PER-ITEM boundary cadence — which
+rows are boundaries.** `checkpoint-verification.md` and `SKILL.md` cite this
+anchor and do not restate it — a second copy of the cadence is what let them
+contradict it.
 
-The full suite runs at, and only at:
+It is not the definition of every full-suite run. `checkpoint-verification.md`
+tiers the boundaries into **per item** and **per spec**, and the spec-level one —
+after the last row in `test-list.md` reaches `done` or a valid `exception`, before
+spec-level completion is declared — is defined there, not here. That boundary has
+no row, so a list of row predicates is the wrong place to state it: it carries its
+own command set (step 1 is dropped; there is no "item just completed") and its own
+seal, both specified in that file. Do not read the "only" below as licence to skip
+it, and do not restate its condition here.
+
+Within that per-item tier, the full suite runs at, and only at:
 
 - the **last incomplete row this run completes** — while finishing a row, if no
   other row is left at `todo` / `red` / `green` / `refactor` / `review-fix`,
