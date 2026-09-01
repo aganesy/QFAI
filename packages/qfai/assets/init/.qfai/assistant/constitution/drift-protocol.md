@@ -48,14 +48,12 @@ agent roster and reasoning backwards from it.
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
-  `Evidence` cells unconditionally, append/update by `/qfai-implement`, plus two
-  cells that are writable **only** while a stated condition holds:
-  - the `Test file` cell, only while the seeded value is empty or a dash
-    placeholder;
-  - the `Selector` cell, only while the seeded value does not resolve against
-    the row's named test file — the validator's own `selectorResolves`
-    predicate is false.
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and `Evidence` cells
+  unconditionally, append/update by `/qfai-implement`, plus two cells that are writable **only**
+  while a stated condition holds:
+  - the `Test file` cell, only while the seeded value is empty or a dash placeholder;
+  - the `Selector` cell, only while the seeded value does not resolve against the row's named test
+    file — the validator's own `selectorResolves` predicate is false.
 
   Both conditions are machine-checkable, so a reviewer verifies the precondition
   instead of taking the writing stage's word for it, and both are one-way: once
@@ -71,6 +69,15 @@ agent roster and reasoning backwards from it.
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
   anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
   Decision Record ID scheme in the spec's `07_Decisions.md`)
+- **another spec's certified code or test artifact**, while that spec's
+  obligation still holds and on the conditions `#core-rule`'s last bullet
+  states: the edit is recorded and re-reviewed per
+  `skills/qfai-implement/references/cross-spec-ownership.md`. The bullet, not
+  this line, carries the route; the entry is here because the codebase is not
+  partitioned and duplication removal is mandated, so treating every
+  shared-file edit as needing approval would stop the work this protocol asks
+  for. Approval is owed the moment the obligation stops holding: the edit is
+  then drift in the full sense and takes `#when-drift-is-detected`.
 
 Any exception beyond this list requires explicit user approval.
 
@@ -88,17 +95,14 @@ The bullet that used to sit here — "progress status updates only when the proj
 workflow explicitly allows downstream updates" — could not rescue that, for two
 reasons:
 
-- **The condition had no referent.** `progress status`, `project workflow` and
-  `downstream update` each occurred exactly once in the whole shipped tree: that
-  line itself. Nothing defined what the project workflow is, where such a
-  permission is recorded, or what the default is, so in a freshly initialized project the
-  condition could never be satisfied.
-- **It was too narrow even if it had.** It covered "progress status", while
-  `qfai-implement`'s completion gate item 10 additionally requires the `Evidence`
-  column, and the skill's own hard rules forbid the substitute
-  ("status-only evidence … MUST be rejected"). The content declared mandatory and
-  non-substitutable was precisely the content no rule authorised anyone to
-  persist.
+- **The condition had no referent.** `progress status`, `project workflow` and `downstream update`
+  each occurred exactly once in the whole shipped tree: that line itself. Nothing defined what the
+  project workflow is, where such a permission is recorded, or what the default is, so in a freshly
+  initialized project the condition could never be satisfied.
+- **It was too narrow even if it had.** It covered "progress status", while `qfai-implement`'s
+  completion gate item 10 additionally requires the `Evidence` column, and the skill's own hard
+  rules forbid the substitute ("status-only evidence … MUST be rejected"). The content declared
+  mandatory and non-substitutable was precisely the content no rule authorised anyone to persist.
 
 So an agent obeying the protocol could not satisfy gate item 10, and an agent
 satisfying it was in drift. The entry above names the file and the three cells
@@ -202,48 +206,42 @@ ratifies a comparison the author knew was fabricated.
 
 ## When drift is detected
 
-1. STOP downstream editing **of the affected upstream artifact and of every
-   downstream item that depends on it**. Unaffected items continue. A dependent
-   item is one whose `TC-Refs` / `US-Refs` / `CON-API-Refs` names an obligation
-   the CR would change, or whose implementation reads the artifact under
-   dispute; when the dependency is arguable, it is dependent. The halt is not
-   repository-wide: one defective contract does not stop specs that never
-   reference it. What it does stop is `done` — a dependent item may not be
-   completed against an obligation known to be under revision.
-2. Create a Change Request as a file at
-   `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`, from
-   `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID
-   pattern is `CR-\d{8}-\d{4}` and the file carries `ID`, `Status`
-   (`open` / `approved` / `rejected` / `superseded`), `Approved by`,
-   `Approved at` and `Approved option` so the approval is a record, not a
-   memory. Creating this file is the only write this step makes: `09_delta.md`
-   and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
-   written there by the owner skill in step 4, never before approval.
-   Contents:
+1. STOP downstream editing **of the affected upstream artifact and of every downstream item that
+   depends on it**. Unaffected items continue. A dependent item is one whose `TC-Refs` / `US-Refs`
+   / `CON-API-Refs` names an obligation the CR would change, or whose implementation reads the
+   artifact under dispute; when the dependency is arguable, it is dependent. The halt is not
+   repository-wide: one defective contract does not stop specs that never reference it. What it
+   does stop is `done` — a dependent item may not be completed against an obligation known to be
+   under revision.
+2. Create a Change Request as a file at `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`, from
+   `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID pattern is
+   `CR-\d{8}-\d{4}` and the file carries `ID`, `Status` (`open` / `approved` / `rejected` /
+   `superseded`), `Approved by`, `Approved at` and `Approved option` so the approval is a record,
+   not a memory. Creating this file is the only write this step makes: `09_delta.md` and
+   `07_Decisions.md` are upstream SSOT, so the reference to this CR is written there by the owner
+   skill in step 4, never before approval. Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
-   - context — for intent drift, what conflicts; for defect drift, what the
-     artifact declares and how it breaks that declaration
-   - reproduction (command + verbatim output, or the two contradicting
-     excerpts) — **required for defect drift**, omit for intent drift
+   - context — for intent drift, what conflicts; for defect drift, what the artifact declares and
+     how it breaks that declaration
+   - reproduction (command + verbatim output, or the two contradicting excerpts) — **required for
+     defect drift**, omit for intent drift
    - proposed change
-   - options (at least 3) and recommendation — **intent drift only**; for
-     defect drift record the single correct fix instead. Do not manufacture
-     alternatives for a change that has one correct answer
-   - blocked downstream items — the enumerated set the halt in step 1 covers
-     (spec IDs, `TDD-ID` ledger rows, contract paths). This is what makes the
-     halt checkable: a reviewer can ask whether an item that kept moving is on
-     the list, and an item not on the list is not blocked by this CR
+   - options (at least 3) and recommendation — **intent drift only**; for defect drift record the
+     single correct fix instead. Do not manufacture alternatives for a change that has one correct
+     answer
+   - blocked downstream items — the enumerated set the halt in step 1 covers (spec IDs, `TDD-ID`
+     ledger rows, contract paths). This is what makes the halt checkable: a reviewer can ask
+     whether an item that kept moving is on the list, and an item not on the list is not blocked by
+     this CR
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
-3. Wait for explicit user approval, then set `Status` and the approval fields.
-   A defect-drift CR has no option set, so `Approved option` stays `-`; what is
-   approved is the single correct fix under `## Proposed change`. The wait
-   itself is not waived — the operator is ratifying the classification as much
-   as the fix.
-4. Rerun the owner skill for the upstream artifact, **naming the invocation and
-   the mode** the CR approved. That rerun is what records the CR reference in
-   `09_delta.md` / `07_Decisions.md`.
+3. Wait for explicit user approval, then set `Status` and the approval fields. A defect-drift CR
+   has no option set, so `Approved option` stays `-`; what is approved is the single correct fix
+   under `## Proposed change`. The wait itself is not waived — the operator is ratifying the
+   classification as much as the fix.
+4. Rerun the owner skill for the upstream artifact, **naming the invocation and the mode** the CR
+   approved. That rerun is what records the CR reference in `09_delta.md` / `07_Decisions.md`.
 
    Invocation by artifact class:
 

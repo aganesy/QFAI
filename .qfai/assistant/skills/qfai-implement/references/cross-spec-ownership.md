@@ -127,9 +127,15 @@ such a file does not require permission — it requires a record and a re-review
    Weakening an assertion helper, a snapshot or an expected-value fixture leaves
    that row's selector passing while making it tautological, so a fresh GREEN
    re-approves a test that has lost its discriminating power. For each blocked
-   row that has one, also re-run its **original** mutation — the one its
-   `Oracle proof` plan or `Satisfied-by` names — against the changed artifact,
-   capture the failure, revert, and re-run for the restored GREEN; record both
+   row that has one, also re-run its **original** mutation against the changed
+   artifact, capture the failure, revert, and re-run for the restored GREEN.
+   Which record holds that mutation depends on the route the row took: an
+   ordinary row's is its `Oracle proof` plan, and a row completed through
+   `references/red-not-observable.md` has it in `Falsifiability command`, with
+   `Falsifiability result` as the failure to reproduce. Not `Satisfied-by`:
+   that cell names the sibling `TDD-NNNN`, production path and symbol, or
+   artifact-plus-property the row leant on — never the mutation — so it cannot
+   say which change to re-apply. Record both runs
    under `Obligation at risk` and hand them to the reviewer with the selector
    result. A mutation that no longer fails the test is the tautology this
    catches, and the row is not re-approved until it is repaired. Same rule, same

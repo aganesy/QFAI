@@ -223,7 +223,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "**A passing selector is not enough on a blocked row that carries a proof.**",
     );
     expect(reference).toContain(
-      "also re-run its **original** mutation — the one its `Oracle proof` plan or `Satisfied-by` names",
+      "also re-run its **original** mutation against the changed artifact",
     );
     expect(reference).toContain("capture the failure, revert, and re-run for the restored GREEN");
     // The identical rule already binds the stage-level side of this edit.
@@ -341,6 +341,36 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "**test or production artifacts another spec's completed implement run certifies**",
     );
     expect(drift).toContain("Changing one is not forbidden");
+  });
+
+  it("names the shared artifact class in the whitelist the core rule points at", async () => {
+    // The last upstream bullet says the edit is not forbidden, while the
+    // whitelist below it ended with "any exception beyond this list requires
+    // explicit user approval" and did not carry the class — so the same file
+    // both allowed the shared-file route and demanded approval for it.
+    const drift = await read(tree, DRIFT);
+    expect(drift).toContain("- **another spec's certified code or test artifact**");
+    expect(drift).toContain(
+      "the edit is recorded and re-reviewed per `skills/qfai-implement/references/cross-spec-ownership.md`",
+    );
+    // Conditional, not blanket: approval is still owed once the obligation goes.
+    expect(drift).toContain("Approval is owed the moment the obligation stops holding");
+    // Over-correction pin: the closing sentence still governs everything else.
+    expect(drift).toContain("Any exception beyond this list requires explicit user approval.");
+  });
+
+  it("points the proof rerun at the record that actually holds the mutation", async () => {
+    // `Satisfied-by` names the sibling row, the production path and symbol, or
+    // the artifact plus its property — never the mutation, which
+    // `red-not-observable.md` step 2 records as `Falsifiability command`. A row
+    // completed that way could not restore the change the rerun re-applies.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "a row completed through `references/red-not-observable.md` has it in `Falsifiability command`",
+    );
+    expect(reference).toContain("Not `Satisfied-by`:");
+    // Over-correction pin: the ordinary route still reads its Oracle proof.
+    expect(reference).toContain("an ordinary row's is its `Oracle proof` plan");
   });
 
   it("keeps the constitution's ownership columns in step with this rule", async () => {
