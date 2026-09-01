@@ -39,7 +39,14 @@ const REFERENCE = "references/ui-affecting.md";
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-/** Prose lines using the term — headings and table rows excluded. */
+/**
+ * Lines using the term, with headings dropped.
+ *
+ * Headings only: a heading names a section rather than stating the rule, so it
+ * owes no pointer at the definition. Table rows are kept deliberately — a row
+ * that uses the term is making the same claim a sentence would, and every
+ * current call site is prose or a row.
+ */
 const usageLines = (text: string): string[] =>
   text
     .split(/\r?\n/)
@@ -501,9 +508,15 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       // path membership: a file dirty before the row AND edited by it must stay
       // in the list, which subtracting path sets loses.
       expect(definition).toContain("**two snapshots of the row's own window**");
+      // `mktemp`, not `mktemp -u`. The `-u` form prints a name and creates
+      // nothing, so the path can be taken between the print and the write —
+      // and a documented command an agent runs verbatim is exactly where that
+      // matters. Pinned with its cleanup, so the example cannot drift back to
+      // leaving the scratch index behind either.
       expect(definition).toContain(
-        "GIT_INDEX_FILE=$(mktemp -u) sh -c 'git add -A && git write-tree'",
+        "idx=$(mktemp) && GIT_INDEX_FILE=$idx sh -c 'git add -A && git write-tree'; rm -f \"$idx\"",
       );
+      expect(definition).not.toContain("mktemp -u)");
       expect(definition).toContain("git diff --name-only <start-tree> <gate-tree>");
       expect(definition).toContain("already modified **and then edited again by the row**");
       expect(definition).toContain("Subtracting path lists gets that second case wrong");

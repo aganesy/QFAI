@@ -135,8 +135,11 @@ none. Instead, when the cell is `-`, clause 1 reads the paths the row's **own ch
   So the list is the difference between **two snapshots of the row's own window**. Each covers the
   whole working tree, untracked files included, and is written through a **scratch index**, so
   neither the real index nor the working tree is disturbed:
-  - **At the start of the row** — `GIT_INDEX_FILE=$(mktemp -u) sh -c 'git add -A && git write-tree'`.
-    Record the tree sha it prints beside the row's start revision.
+  - **At the start of the row** —
+    `idx=$(mktemp) && GIT_INDEX_FILE=$idx sh -c 'git add -A && git write-tree'; rm -f "$idx"`.
+    Record the tree sha it prints beside the row's start revision. `mktemp`, not `mktemp -u`:
+    the latter prints a name without creating anything, so another process can take that path
+    between the print and the write. `git` is content with an empty file as a starting index.
   - **At the completion gate** — the same command again, for the second sha.
   - **The row's change** is then `git diff --name-only <start-tree> <gate-tree>`.
 
