@@ -22,7 +22,7 @@ import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail } from "../lib/failOn.js";
-import { warnIfTruncated } from "../lib/warnings.js";
+import { buildTruncatedScanIssue, warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -180,6 +180,14 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
 
   warnIfTruncated(normalized.traceability.testFiles, "validate");
+  // The echo above is for a human reading stdout. The finding is what the exit
+  // gate, the annotation stream and the run-log can actually see, so a
+  // truncated scan can no longer pass `--fail-on warning` as a clean run.
+  const truncatedScanIssue = buildTruncatedScanIssue(normalized.traceability.testFiles, "validate");
+  if (truncatedScanIssue) {
+    normalized.issues.push(truncatedScanIssue);
+    normalized.counts = recountIssues(normalized.counts, truncatedScanIssue);
+  }
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   const willFail = shouldFail(normalized, failOn);
