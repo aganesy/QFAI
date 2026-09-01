@@ -1,10 +1,11 @@
 import path from "node:path";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
+  copyFile,
   lstat,
   mkdir,
   link,
@@ -20,11 +21,20 @@ import {
   writeFile,
 } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
+import {
+  ASSISTANT_ASSETS_LOCK_BASENAME,
+  ASSISTANT_STAGING_PREFIX,
+  aliasesShippedGovernedAsset,
+  buildShippedAssistantHashes,
+  hasRealGovernedAssistantParents,
+  hashAssistantAssetFile,
+  readAssistantAssetsLock,
+  writeAssistantAssetsLock,
+} from "../../core/assistantAssetProvenance.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
@@ -48,6 +58,7 @@ import {
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
+  ASSISTANT_DIR,
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
@@ -160,7 +171,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。assistant/constitution/** と assistant/catalog/** は .assets.lock.json の記録と一致するファイル（= qfai が書いた内容のまま）だけを最新リリースへ更新し（本リリースで出荷されなくなったファイルも、記録と一致する場合のみ削除します）、乖離しているファイルは手動マージとして報告します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
     );
   }
 
@@ -350,6 +361,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   // previous version of init left behind.
   const markerRewritten = await ensureAssistantMarker(assistantAssets, destRoot, options.dryRun);
   const rewrittenPaths = new Set(markerRewritten);
+  const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
+    force: options.force,
+    dryRun: options.dryRun,
+  });
 
   // The routing manifest is user configuration, so it is never overwritten —
   // but the skills just regenerated above may name phases an older project's
@@ -446,7 +461,12 @@ export async function runInit(options: InitOptions): Promise<void> {
     },
   );
 
-  const removed = [...removedLegacySkills, ...wrappersResult.removed, ...removedRetiredWorkflows];
+  const removed = [
+    ...removedLegacySkills,
+    ...wrappersResult.removed,
+    ...removedRetiredWorkflows,
+    ...governedResult.removed,
+  ];
 
   // 4-layer assistant-tree seed + project-root steering surface seed.
   // These run AFTER copyTemplateTree so they can detect when the
@@ -469,10 +489,21 @@ export async function runInit(options: InitOptions): Promise<void> {
     info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
+  // The generic `.qfai/` copy is create-only, so every governed file that
+  // already existed is in its `skipped` list before the governed sync runs.
+  // Whatever the governed sync then reports on is the authoritative outcome
+  // for that path — refreshed, left forked, retired — so the generic verdict
+  // is dropped rather than printed beside it, which showed one path twice and
+  // listed a file `--force` had just updated as "skipped".
+  const governedPaths = new Set([
+    ...governedResult.copied,
+    ...governedResult.skipped,
+    ...governedResult.removed,
+  ]);
   report(
     [
       ...rootResult.copied,
-      ...qfaiResult.copied,
+      ...withoutPaths(qfaiResult.copied, governedPaths),
       ...skillsResult.copied,
       ...markerRewritten,
       ...wrappersResult.copied,
@@ -481,6 +512,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
+      ...governedResult.copied,
     ],
     // The marker rewrite runs after a create-only copy that has already
     // recorded the same README as skipped. Reporting it in both columns tells
@@ -488,7 +520,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     // the same time as saying it was written, so the rewrite's paths win.
     [
       ...rootResult.skipped,
-      ...qfaiResult.skipped,
+      ...withoutPaths(qfaiResult.skipped, governedPaths),
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
@@ -496,6 +528,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
+      ...governedResult.skipped,
     ].filter((entry) => !rewrittenPaths.has(entry)),
     [...removed, ...upgradeResult.removed],
     options.dryRun,
@@ -511,6 +544,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(note);
   }
 
+  for (const note of governedResult.manualMergeNotes) {
+    info(note);
+  }
+
   // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
   // the report summary so the warning stays at the bottom of the
   // terminal output and is not buried by the skipped-paths list (PR
@@ -519,6 +556,243 @@ export async function runInit(options: InitOptions): Promise<void> {
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Governed assistant assets: provenance record + upgrade path
+// ---------------------------------------------------------------------------
+
+function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
+  return paths.filter((candidate) => !excluded.has(candidate));
+}
+
+type GovernedAssetsResult = {
+  copied: string[];
+  skipped: string[];
+  removed: string[];
+  manualMergeNotes: string[];
+};
+
+/**
+ * Records what qfai wrote under `constitution/` and `catalog/`, and — under
+ * `--force` — refreshes the files that are still exactly that.
+ *
+ * Those two layers were create-only in every mode, so a correction to qfai's
+ * own normative rules reached new projects and nobody else, and a project that
+ * edited one had no way to say so. The record makes both states nameable:
+ * `qfai validate` can now separate a stale copy from a local fork, and this
+ * function refreshes only the former. A fork is never overwritten — it is
+ * reported for a human merge, because the content it holds is the project's,
+ * not the template's.
+ *
+ * A file the release no longer ships is retired by the same rule, in
+ * `retireWithdrawnGovernedAssets`.
+ */
+async function syncGovernedAssistantAssets(
+  assistantAssets: string,
+  destRoot: string,
+  options: { force: boolean; dryRun: boolean },
+): Promise<GovernedAssetsResult> {
+  // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
+  // come from `assistantPaths.ts` in init and in validate alike, so a future
+  // move of `ASSISTANT_DIR` cannot leave the provenance record, the refresh and
+  // the retire pass operating on a tree the validators no longer read.
+  const destAssistant = path.join(destRoot, ...ASSISTANT_DIR.split("/"));
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+  const manualMergeNotes: string[] = [];
+
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(assistantAssets);
+  } catch {
+    // Fail closed. An unreadable or partially extracted install yields a
+    // shipped set that is short of files it really ships, and every governed
+    // file the lock names but the set omits is what `--force` retires — so a
+    // truncated package would have deleted the rules it could not read. The
+    // sync is abandoned whole: nothing refreshed, nothing removed, and the
+    // existing record left exactly as it was.
+    manualMergeNotes.push(
+      "NOTE: qfai の配布アセット（assistant/constitution/**, assistant/catalog/**）を読み取れなかったため、これらの層の同期と .assets.lock.json の更新をスキップしました（インストールが不完全な可能性があります）。",
+    );
+    return { copied, skipped, removed, manualMergeNotes };
+  }
+
+  const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
+  const recorded: Record<string, string> = {};
+  const isContained = makeGovernedContainmentGuard(destRoot);
+
+  for (const [relative, shippedHash] of Object.entries(shipped)) {
+    const source = path.join(assistantAssets, ...relative.split("/"));
+    const dest = path.join(destAssistant, ...relative.split("/"));
+    if (!(await isContained(relative))) {
+      skipped.push(dest);
+      manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
+    const currentHash = await hashAssistantAssetFile(dest);
+    const previousHash = previous[relative];
+
+    if (currentHash === shippedHash) {
+      recorded[relative] = shippedHash;
+      continue;
+    }
+
+    if (currentHash === null) {
+      await restoreUnreadableGovernedAsset(source, dest, shippedHash, previousHash, options, {
+        copied,
+        skipped,
+        recorded,
+        manualMergeNotes,
+        relative,
+      });
+      continue;
+    }
+
+    const refreshable = options.force && previousHash !== undefined && currentHash === previousHash;
+    if (refreshable) {
+      // `currentHash` was read above; the refresh is only legitimate while the
+      // file still holds it. Passing it down makes the replacement decline a
+      // target that changed under the run instead of discarding the new
+      // content.
+      const outcome = options.dryRun
+        ? "replaced"
+        : await replaceGovernedAsset(source, dest, currentHash);
+      if (outcome === "target-changed") {
+        skipped.push(dest);
+        recorded[relative] = previousHash;
+        manualMergeNotes.push(
+          `NOTE: ${dest} は更新中に別のプロセスによって書き換えられたため更新しませんでした（再度 \`npx qfai init --force\` を実行してください）。`,
+        );
+        continue;
+      }
+      copied.push(dest);
+      recorded[relative] = shippedHash;
+      continue;
+    }
+
+    skipped.push(dest);
+    recorded[relative] = previousHash ?? shippedHash;
+    if (options.force) {
+      manualMergeNotes.push(
+        `NOTE: ${dest} は出荷内容から乖離しているため更新しませんでした（手動マージが必要です）。`,
+      );
+    }
+  }
+
+  await retireWithdrawnGovernedAssets(
+    destAssistant,
+    shipped,
+    previous,
+    recorded,
+    options,
+    isContained,
+    { removed, skipped, manualMergeNotes },
+  );
+
+  // The record itself is a governed write: an assistant root that is a symlink
+  // out of the project would take the lock — and every later decision made from
+  // it — with it.
+  if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
+    await mkdir(destAssistant, { recursive: true });
+    await writeAssistantAssetsLock(destAssistant, { files: recorded });
+  }
+
+  return { copied, skipped, removed, manualMergeNotes };
+}
+
+/**
+ * Answers whether a governed relative path sits inside the project's own
+ * assistant tree.
+ *
+ * `rename` and `rm` act on the entry they are given, which makes the *final*
+ * component safe on its own — but not the directories above it. A checkout that
+ * left `constitution/` (or the assistant root itself) as a symlink to somewhere
+ * outside the repository pointed every governed write and every `--force`
+ * retire into that directory instead.
+ *
+ * The walk starts at the **project** root and the path handed to it carries the
+ * assistant segments. Starting at the assistant root left `.qfai` and
+ * `assistant` themselves unchecked, and `lstat` declines to resolve only the
+ * last component it is given — so a `.qfai` symlinked out of the repository
+ * made `lstat(.qfai/assistant)` report the external directory as real, and the
+ * guard waved through every write and retire inside it.
+ *
+ * **Nothing is cached.** The first version answered once per containing
+ * directory, which made the guard's answer as old as the run: a layer swapped
+ * for a link after the first file in it was cleared took every later hash,
+ * restore, retire and staging rename with it — and the restore of a missing
+ * file writes with no expected hash to stop it. Re-asking is four `lstat`s
+ * against a governed tree of a few dozen files, which is not a cost worth an
+ * answer that can be minutes stale. It does not make the check atomic with the
+ * write that follows it — no API here can — but the window is now the two
+ * syscalls either side of it rather than the length of the sync.
+ */
+export function makeGovernedContainmentGuard(
+  destRoot: string,
+): (relative: string) => Promise<boolean> {
+  return (relative: string) =>
+    hasRealGovernedAssistantParents(destRoot, `${ASSISTANT_DIR}/${relative}`);
+}
+
+function escapedGovernedPathNote(dest: string): string {
+  return `NOTE: ${dest} の親ディレクトリが実ディレクトリではない（symlink / junction 等でプロジェクト外を指している可能性があります）ため、この規範ファイルは同期・削除の対象外にしました。`;
+}
+
+/**
+ * Writes `source` onto the governed path `dest` atomically.
+ *
+ * The copy lands on a temporary beside the target first and is then `rename`d
+ * over it, so a failure — a full disk, a read fault, a process killed between
+ * the two steps — leaves the previous rule in place instead of a hole where a
+ * normative file used to be. Deleting first and copying second had exactly
+ * that window, and the file it removed was one qfai had already vouched for.
+ *
+ * `rename` also keeps the property the delete-first version was written for:
+ * it replaces the directory entry itself, so a governed path left as a symlink
+ * is replaced, never followed to overwrite whatever it points at.
+ *
+ * `expectedHash`, where the caller has one, is re-read immediately before the
+ * `rename`. The refresh decides what to do from a hash taken earlier, and the
+ * atomic staging only protects the *old* content from a failed copy — it does
+ * nothing about an editor, or a concurrent `init`, that rewrote the target in
+ * between, whose work the unconditional `rename` then discarded. Re-reading
+ * does not make the swap atomic — POSIX has no conditional `rename` — but it
+ * closes the window down to the two syscalls, and a target that moved is
+ * reported instead of overwritten.
+ */
+export type GovernedWriteOutcome = "replaced" | "target-changed";
+
+/**
+ * Exported for the regression test that pins the `target-changed` branch. The
+ * branch is only reachable through a race, so the test reaches it by handing in
+ * an `expectedHash` the target does not hold — the same state the race leaves.
+ */
+export async function replaceGovernedAsset(
+  source: string,
+  dest: string,
+  expectedHash?: string,
+): Promise<GovernedWriteOutcome> {
+  const directory = path.dirname(dest);
+  await mkdir(directory, { recursive: true });
+  const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await copyFile(source, staging, constants.COPYFILE_EXCL);
+    if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
+      await rm(staging, { force: true }).catch(() => {
+        // Best effort: the answer below is what the caller acts on.
+      });
+      return "target-changed";
+    }
+    await rename(staging, dest);
+    return "replaced";
+  } catch (error: unknown) {
+    await rm(staging, { force: true }).catch(() => {
+      // Best effort: the write fault below is the one worth reporting.
+    });
+    throw error;
   }
 }
 
@@ -768,6 +1042,95 @@ async function replaceViaSidecar(
 }
 
 /**
+ * Handles a governed path that holds no readable regular file.
+ *
+ * Recording the shipped hash here was a false claim: nothing had been written,
+ * so the next `validate` compared the project against a record of a file that
+ * was never there. Worse, when the path is *occupied* — by a directory, a
+ * FIFO, a dangling symlink — the create-only copy upstream skips it as
+ * existing and this branch wrote nothing either, so `QFAI-ASSETS-006` kept
+ * firing and no `init`, `--force` included, could clear it.
+ *
+ * Absent is restored. Occupied is only replaced under `--force`, which is the
+ * flag that already means "regenerate what qfai owns"; without it the occupant
+ * is reported and left alone, because removing something a project deliberately
+ * put there is not a decision `qfai init` gets to make silently.
+ */
+async function restoreUnreadableGovernedAsset(
+  source: string,
+  dest: string,
+  shippedHash: string,
+  previousHash: string | undefined,
+  options: { force: boolean; dryRun: boolean },
+  out: {
+    copied: string[];
+    skipped: string[];
+    recorded: Record<string, string>;
+    manualMergeNotes: string[];
+    relative: string;
+  },
+): Promise<void> {
+  // An `lstat` that fails for anything but ENOENT (a permission fault on the
+  // parent, say) reads as occupied: what could not be inspected must not be
+  // clobbered.
+  const occupied = await pathExists(dest).catch(() => true);
+  if (!occupied) {
+    if (!options.dryRun) {
+      await replaceGovernedAsset(source, dest);
+    }
+    out.copied.push(dest);
+    out.recorded[out.relative] = shippedHash;
+    return;
+  }
+
+  if (options.force) {
+    if (!options.dryRun) {
+      // The occupant is moved aside and re-examined before anything is
+      // destroyed, for the reason the refresh and the retire were given the
+      // same treatment: `rm` acts on a pathname, and a process that put an
+      // ordinary project-owned file there between the probe above and this
+      // line lost it to a deletion justified by an entry nobody re-read. The
+      // rename carries whatever inode is at the path at that instant; the
+      // check then runs against the moved entry, whose name nothing else
+      // knows.
+      const outcome = await displaceUnreadableGovernedAsset(dest);
+      if (outcome !== "displaced") {
+        // It is a readable regular file now. That is not the occupied path
+        // this branch was entered for, and overwriting it here would discard
+        // content this run never inspected.
+        out.skipped.push(dest);
+        if (previousHash !== undefined) {
+          out.recorded[out.relative] = previousHash;
+        }
+        out.manualMergeNotes.push(
+          typeof outcome === "object"
+            ? `NOTE: ${dest} は修復の直前に通常ファイルへ置き換えられたため修復を取り消しましたが、元の内容を戻せませんでした（${outcome.orphaned} に退避してあります）。`
+            : `NOTE: ${dest} は修復の直前に通常ファイルへ置き換えられたため、そのままにしました（もう一度 \`npx qfai init --force\` を実行してください）。`,
+        );
+        return;
+      }
+      await replaceGovernedAsset(source, dest);
+    }
+    out.copied.push(dest);
+    out.recorded[out.relative] = shippedHash;
+    // Tense follows the run: under `--dry-run` nothing was removed and nothing
+    // was written, and an operator who reads only the preview must not come
+    // away believing the occupied path has already been repaired.
+    out.manualMergeNotes.push(
+      options.dryRun
+        ? `NOTE: ${dest} は通常ファイル以外（ディレクトリ / 特殊ファイル / 壊れた symlink 等）に占有されているため、出荷ファイルで置き換えます（--dry-run のため未実行）。`
+        : `NOTE: ${dest} は通常ファイル以外（ディレクトリ / 特殊ファイル / 壊れた symlink 等）に占有されていたため、出荷ファイルで置き換えました。`,
+    );
+    return;
+  }
+
+  out.skipped.push(dest);
+  if (previousHash !== undefined) {
+    out.recorded[out.relative] = previousHash;
+  }
+}
+
+/**
  * Whether the pathname still holds exactly what {@link readExistingReadme} read.
  *
  * Identity first, then the bytes: the inode answers "is this still the same
@@ -822,6 +1185,208 @@ async function readExistingReadme(filePath: string): Promise<PinnedFileRead | nu
       return null;
     }
     throw err;
+  }
+}
+
+/**
+ * Removes the governed files a new release withdrew, under `--force`, when the
+ * project still holds exactly what qfai wrote there.
+ *
+ * A file that is deleted or renamed upstream used to survive every upgrade: the
+ * refresh loop walks the *current* shipped set, so the old path was never
+ * visited and only its lock entry disappeared. From the next `validate` on, an
+ * untouched retired rule read as `QFAI-ASSETS-005` — a file the project added —
+ * and no number of `qfai init --force` runs could clear it, while a rule qfai
+ * had repealed went on sitting in the tree being cited.
+ *
+ * A retired file whose content was edited is *not* removed: it stops being
+ * qfai's the moment the project changed it, and deleting it would throw away
+ * work. It keeps its recorded hash so a later `--force`, after the edit is
+ * reverted, can still recognise and retire it.
+ */
+async function retireWithdrawnGovernedAssets(
+  destAssistant: string,
+  shipped: Record<string, string>,
+  previous: Record<string, string>,
+  recorded: Record<string, string>,
+  options: { force: boolean; dryRun: boolean },
+  isContained: (relative: string) => Promise<boolean>,
+  out: { removed: string[]; skipped: string[]; manualMergeNotes: string[] },
+): Promise<void> {
+  for (const [relative, previousHash] of Object.entries(previous)) {
+    if (relative in shipped) {
+      continue;
+    }
+    if (aliasesShippedGovernedAsset(relative, shipped)) {
+      // A case variant of a path the release still ships. On a case-insensitive
+      // filesystem it names that very file, so retiring it would delete a rule
+      // qfai ships. The entry is dropped from the record instead of acted on.
+      continue;
+    }
+    const dest = path.join(destAssistant, ...relative.split("/"));
+    if (!(await isContained(relative))) {
+      out.skipped.push(dest);
+      out.manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
+    const currentHash = await hashAssistantAssetFile(dest);
+    if (currentHash === null) {
+      // Already gone (or never a readable regular file): nothing to retire,
+      // and nothing left worth recording.
+      continue;
+    }
+    if (currentHash !== previousHash) {
+      recorded[relative] = previousHash;
+      out.skipped.push(dest);
+      if (options.force) {
+        out.manualMergeNotes.push(
+          `NOTE: ${dest} は本リリースでは出荷されなくなりましたが、内容が編集されているため削除しませんでした（不要であれば手動で削除してください）。`,
+        );
+      }
+      continue;
+    }
+    if (!options.force) {
+      // Keep the record so a later `--force` can still identify the file as
+      // qfai's own withdrawn copy rather than a project addition.
+      recorded[relative] = previousHash;
+      continue;
+    }
+    if (options.dryRun) {
+      out.removed.push(dest);
+      continue;
+    }
+    const outcome = await retireVerifiedGovernedAsset(dest, previousHash);
+    if (outcome === "removed") {
+      out.removed.push(dest);
+      continue;
+    }
+    // The pathname stopped holding the content that was checked. Whatever is
+    // there now is not qfai's withdrawn copy, so it keeps its record and its
+    // place, exactly as an edited retired file does.
+    recorded[relative] = previousHash;
+    out.skipped.push(dest);
+    out.manualMergeNotes.push(
+      outcome === "changed"
+        ? `NOTE: ${dest} は削除の直前に別のプロセスによって置き換えられたため削除しませんでした。`
+        : `NOTE: ${dest} は削除の直前に別のプロセスによって置き換えられたため削除を取り消しましたが、元の内容を戻せませんでした（${quarantineLabel(outcome)} に退避してあります）。`,
+    );
+  }
+}
+
+/**
+ * Removes a withdrawn governed file, and only the exact file that was checked.
+ *
+ * `rm` acts on a pathname, not on the inode the hash was taken from. A process
+ * that replaced the path with a new project-owned file between the two lost
+ * that file to a deletion justified by somebody else's bytes. So the entry is
+ * moved aside first — `rename` within the directory carries whatever inode is
+ * at the path at that instant — and the hash is taken from the moved file,
+ * whose name nothing else knows. What is deleted is then necessarily what was
+ * inspected.
+ *
+ * When the moved file turns out not to be the withdrawn copy it is put back,
+ * and put back only if the pathname is still free: `link` fails with `EEXIST`
+ * rather than replacing whatever arrived there, so the restore cannot destroy
+ * the very file this precaution exists to protect. Where hard links are not
+ * available the restore falls back to `rename` guarded by a presence check.
+ */
+/**
+ * Moves a non-regular occupant off a governed path and destroys it, and only
+ * it.
+ *
+ * Same shape as {@link retireVerifiedGovernedAsset} and for the same reason:
+ * the decision to remove was taken from a probe, and `rm` acts on the pathname
+ * rather than on what the probe saw. The entry is renamed aside — atomic within
+ * the directory — and then inspected. A readable regular file is put back and
+ * the caller told to leave it alone; anything else is what this branch exists
+ * to clear, and is deleted where nothing else can reach it.
+ *
+ * `link` restores only into a free pathname (`EEXIST` otherwise), so the
+ * restore cannot overwrite whatever arrived in the meantime.
+ */
+export type GovernedDisplaceOutcome = "displaced" | "regular-file" | { orphaned: string };
+
+export async function displaceUnreadableGovernedAsset(
+  dest: string,
+): Promise<GovernedDisplaceOutcome> {
+  const directory = path.dirname(dest);
+  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await rename(dest, quarantine);
+  } catch (error: unknown) {
+    if (isEnoent(error)) {
+      // Already gone: nothing occupies the path, which is what this call was
+      // asked to arrange.
+      return "displaced";
+    }
+    throw error;
+  }
+  if ((await hashAssistantAssetFile(quarantine)) === null) {
+    await rm(quarantine, { force: true, recursive: true });
+    return "displaced";
+  }
+  try {
+    await link(quarantine, dest);
+    await rm(quarantine, { force: true });
+    return "regular-file";
+  } catch {
+    if (!(await pathExists(dest).catch(() => true))) {
+      try {
+        await rename(quarantine, dest);
+        return "regular-file";
+      } catch {
+        return { orphaned: quarantine };
+      }
+    }
+    return { orphaned: quarantine };
+  }
+}
+
+export type GovernedRetireOutcome = "removed" | "changed" | { orphaned: string };
+
+function quarantineLabel(outcome: GovernedRetireOutcome): string {
+  return typeof outcome === "object" ? outcome.orphaned : "";
+}
+
+/**
+ * Exported for the regression test that pins the `changed` branch, which — like
+ * the refresh above — is only reachable through a race. The test enters it by
+ * naming a hash the file does not hold; an implementation that deleted the
+ * pathname rather than the inode it checked destroys the file and fails.
+ */
+export async function retireVerifiedGovernedAsset(
+  dest: string,
+  expectedHash: string,
+): Promise<GovernedRetireOutcome> {
+  const directory = path.dirname(dest);
+  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await rename(dest, quarantine);
+  } catch (error: unknown) {
+    if (isEnoent(error)) {
+      // Already gone: the deletion this call was going to make has happened.
+      return "removed";
+    }
+    throw error;
+  }
+  if ((await hashAssistantAssetFile(quarantine)) === expectedHash) {
+    await rm(quarantine, { force: true });
+    return "removed";
+  }
+  try {
+    await link(quarantine, dest);
+    await rm(quarantine, { force: true });
+    return "changed";
+  } catch {
+    if (!(await pathExists(dest).catch(() => true))) {
+      try {
+        await rename(quarantine, dest);
+        return "changed";
+      } catch {
+        return { orphaned: quarantine };
+      }
+    }
+    return { orphaned: quarantine };
   }
 }
 

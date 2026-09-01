@@ -122,6 +122,31 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // workflow nor the record, so the next `qfai init` reads the declined name as
   // never-installed and writes it back — the one outcome the record exists to stop.
   "!.qfai/install-provenance.json",
+  // The vendored assistant tree and the provenance record inside it. Same
+  // measurement, same rule: `!.qfai/` re-includes only the DIRECTORY `.qfai`,
+  // so a broad `.qfai/*` an adopting project already had still wins for
+  // `.qfai/assistant` — and git never descends into an ignored directory, which
+  // takes `constitution/`, `catalog/` and `.assets.lock.json` with it.
+  // Verified with `git check-ignore -v .qfai/assistant/.assets.lock.json` on a
+  // tree carrying `.qfai/*` above the managed block: ignored by that rule
+  // before these two lines, un-ignored after.
+  //
+  // The record specifically has to reach a FRESH CLONE. It is what tells the
+  // next `qfai init` which governed files qfai itself wrote: without it an
+  // untouched copy from an older release reads as a local fork
+  // (`QFAI-ASSETS-004`) that `--force` then refuses to refresh, and a rule the
+  // release withdrew can never be retired. The vendored rules are committed —
+  // they are cited by line number — so the record that explains them has to be
+  // committed beside them.
+  "!.qfai/assistant/",
+  // The subtree, not only its root. A project whose broad rule is `.qfai/**`
+  // rather than `.qfai/*` has every descendant matched in its own right, so
+  // re-including the directory re-includes nothing inside it: measured with
+  // `git status --ignored` on such a tree, the lock came back `??` from its
+  // leaf negation below while both governed files stayed `!!`. A fresh clone
+  // would then carry the record and none of the rules it vouches for.
+  "!.qfai/assistant/**",
+  "!.qfai/assistant/.assets.lock.json",
 ] as const;
 
 /**
