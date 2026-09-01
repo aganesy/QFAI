@@ -101,7 +101,7 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // `CON-DB` work was estimated without counting any of it.
     const atdd = flat(await read(tree));
     // Which CON-DB are counted is pinned separately, below.
-    expect(atdd).toContain("Integration = required `TC-*` plus **active** `CON-DB-*`.");
+    expect(atdd).toContain("Integration = required `TC-*` plus **active** `CON-DB-*` —");
     expect(atdd).toContain("| Integration | #TC + #CON-DB active |");
     expect(atdd).toContain("`CON-DB` in Integration.");
   });
@@ -245,7 +245,7 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
   it("counts the active CON-DB, not every declared one", async () => {
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "Integration = required `TC-*` plus **active** `CON-DB-*`. Active means the contract does **not** declare `-- x-qfai-status: planned`",
+      "Integration = required `TC-*` plus **active** `CON-DB-*` — active meaning the contract does **not** declare `-- x-qfai-status: planned`",
     );
     expect(atdd).toContain("carries no `QFAI-ATDD-115` obligation in this slice");
     // The regression: "declared" swept the deferred contracts back in.
@@ -260,9 +260,13 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     expect(atdd).not.toContain("| #TC + #CON-DB | INT_s | test cases + DB contracts |");
   });
 
-  it("names the directory the count comes from", async () => {
+  it("keeps the reason in the table a reader fills in", async () => {
+    // The prose no longer has room for the rationale (the shipped SKILL.md is
+    // at its 500-line ceiling), so the Notes column carries it.
     const atdd = flat(await read(tree));
-    expect(atdd).toContain("Count the active ones from `.qfai/contracts/db/**`");
+    expect(atdd).toContain(
+      "| test cases + active DB contracts | deferred contracts owe no test here, so counting them oversizes the slice |",
+    );
   });
 
   it.each(["test-design-analyst", "qa-strategist"])(
