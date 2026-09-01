@@ -225,7 +225,7 @@ describe("blocked does not become a completion loophole", () => {
   });
 });
 
-describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", () => {
+describe("QFAI-TDD-001 — a stop must leave a steering record", () => {
   // `blocked` and `handoff` are the two conditions where the run stops and a
   // human or a later session picks it up — the case where a missing work-log
   // entry costs the most and the case where nobody is left in the loop to
@@ -247,7 +247,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
     // What is pinned unconditionally is that the registry decides the severity
     // and that the window ends at `error`.
     const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`);
-    const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_NO_WORKLOG");
+    const found = issues.find((i) => i.code === "QFAI-TDD-001");
     const promoteAt = RULE_PROMOTIONS.tddListBlockedWithoutWorklog.promoteAt;
     const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
 
@@ -261,7 +261,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
     // Adding the spec to `links` on a `scope: spec-NNNN` entry does not clear
     // the finding, so the advice must not offer it unconditionally.
     const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`);
-    const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_NO_WORKLOG");
+    const found = issues.find((i) => i.code === "QFAI-TDD-001");
     expect(found?.suggested).toContain("`scope: global` のエントリの `links`");
   });
 
@@ -273,7 +273,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
         scope: "spec-0001",
       }),
     });
-    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDD-001");
   });
 
   it("is satisfied by a global kind: handoff entry that links the spec", async () => {
@@ -286,7 +286,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
         links: ["spec-0001"],
       }),
     });
-    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDD-001");
   });
 
   it("is not satisfied by an entry of another kind", async () => {
@@ -298,7 +298,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
         scope: "spec-0001",
       }),
     });
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
   });
 
   it("is not satisfied by a blocker entry that names a different spec", async () => {
@@ -310,21 +310,21 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
         links: ["spec-0006"],
       }),
     });
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
   });
 
   it("reports one finding per spec, not one per blocked row", async () => {
     const issues = await run(
       `${NINE_COL}\n${BLOCKED_ROW}\n| TDD-0002 | TC-0002 | Unit | tests/b.test.ts | b | blocked | - | - | CR-20260729-0009 |\n`,
     );
-    expect(issues.filter((i) => i.code === "TDDLIST_BLOCKED_NO_WORKLOG")).toHaveLength(1);
+    expect(issues.filter((i) => i.code === "QFAI-TDD-001")).toHaveLength(1);
   });
 
   it("says nothing when no row is blocked", async () => {
     const issues = await run(
       `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | todo | - | - |  |\n`,
     );
-    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDD-001");
   });
 
   it("is not satisfied by an archived entry", async () => {
@@ -339,7 +339,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
         scope: "spec-0001",
       }),
     });
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
   });
 
   it("is not satisfied by a file that is not a schema-shaped entry", async () => {
@@ -348,7 +348,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
     // nothing else reporting it.
     const stub = ["---", "kind: blocker", "scope: spec-0001", "---", "", "stuck", ""].join("\n");
     const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, { "stub.md": stub });
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
   });
 
   it("is not satisfied by another spec's entry that merely links this spec", async () => {
@@ -363,7 +363,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
         links: ["spec-0001"],
       }),
     });
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
   });
 
   it("reports an unwalkable steering surface without aborting the ledger run", async () => {
@@ -372,10 +372,10 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
     const noRef = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - |  |`;
     const issues = await run(`${NINE_COL}\n${noRef}\n`, {}, { steeringIsRegularFile: true });
     const codes = issues.map((i) => i.code);
-    expect(codes).toContain("TDDLIST_WORKLOG_UNREADABLE");
+    expect(codes).toContain("QFAI-TDD-002");
     // The surface gave no answer, so the stop check abstains rather than
     // accusing every blocked spec of an omission it cannot see.
-    expect(codes).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(codes).not.toContain("QFAI-TDD-001");
     // And the rest of the ledger was still validated.
     expect(codes).toContain("TDDLIST_BLOCKED_MISSING_REF");
   });
@@ -396,7 +396,7 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
     const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
       "2026-08-22-stuck.md": withoutPromoteTo,
     });
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
   });
 
   it("holds the stop judgement when one entry file cannot be read", async () => {
@@ -408,9 +408,9 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
       "unreadable.md": entry({ id: "unreadable", kind: "blocker", scope: "spec-0001" }),
     });
     const codes = issues.map((i) => i.code);
-    expect(codes).toContain("TDDLIST_WORKLOG_UNREADABLE");
-    expect(codes).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
-    const found = issues.find((i) => i.code === "TDDLIST_WORKLOG_UNREADABLE");
+    expect(codes).toContain("QFAI-TDD-002");
+    expect(codes).not.toContain("QFAI-TDD-001");
+    const found = issues.find((i) => i.code === "QFAI-TDD-002");
     // The finding names the file, not just the surface, so the operator knows
     // which one to repair.
     expect(found?.message).toContain("unreadable.md");

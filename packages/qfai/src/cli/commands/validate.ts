@@ -448,7 +448,11 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // `QFAI-TDD-*` alongside `TDDLIST_*`: `validateTddList` raises both. The
+  // legacy family is frozen (`docs/finding-codes.md`), so every code the gate
+  // gains from here is canonical, and a profile that skips this group has not
+  // evaluated either family.
+  tdd: ["TDDLIST_*", "QFAI-TDD-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -1084,13 +1088,13 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // The other `TDDLIST_*` codes read the ledger alone and stay generic; this
   // one pairs the ledger with the steering surface, so the expected state has
   // to name both halves or the reader cannot tell which artifact is missing.
-  TDDLIST_BLOCKED_NO_WORKLOG:
+  "QFAI-TDD-001":
     "A spec whose `tdd/test-list.md` holds `Status=blocked` rows also has a `.qfai/steering/` work-log entry accounting for the stop, associated with the spec by `scope: spec-NNNN` or by a `scope: global` entry's `links`.",
   // The companion to the row above, and it earns a catalog entry for the same
   // reason: once its severity follows a promotion pin rather than a `warning`
   // literal, the code is error-capable and the reader of an `expected:` line
   // needs to be told the expectation is about the surface, not about any spec.
-  TDDLIST_WORKLOG_UNREADABLE:
+  "QFAI-TDD-002":
     "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",
 };
 

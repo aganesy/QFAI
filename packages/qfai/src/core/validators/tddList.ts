@@ -899,7 +899,7 @@ function blockedWithoutWorklog(
   const kinds = WORKLOG_STOP_KINDS.map((kind) => `\`kind: ${kind}\``).join(" or ");
   return [
     issue(
-      "TDDLIST_BLOCKED_NO_WORKLOG",
+      "QFAI-TDD-001",
       `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up${blockedNoWorklogWindowNote}`,
       blockedNoWorklogSeverity,
       relPath,
@@ -960,14 +960,14 @@ async function readSteeringIndex(root: string): Promise<BlockedWorklogGate & { i
 
   const unreadable = (location: string, detail: string, remedy: string): Issue =>
     issue(
-      "TDDLIST_WORKLOG_UNREADABLE",
+      "QFAI-TDD-002",
       `${detail}. Ledger validation continued, but no spec was checked for a work-log entry accounting for its blocked rows`,
       worklogUnreadableSeverity,
       location,
       "tddList.blockedWorklog.unreadable",
       undefined,
       "change",
-      `${remedy} 復旧するまで \`TDDLIST_BLOCKED_NO_WORKLOG\` の判定は行われません。${unreadableWindowNote}`,
+      `${remedy} 復旧するまで \`QFAI-TDD-001\` の判定は行われません。${unreadableWindowNote}`,
     );
 
   let entries: readonly WorklogEntry[];

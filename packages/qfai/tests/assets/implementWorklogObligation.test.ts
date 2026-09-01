@@ -7,7 +7,7 @@
  * stage that owed the entry is the stage that stopped and nobody is left to
  * notice the omission.
  *
- * `TDDLIST_BLOCKED_NO_WORKLOG` closes the half of it that is observable from
+ * `QFAI-TDD-001` closes the half of it that is observable from
  * the artifacts: a `Status=blocked` ledger row with no steering entry naming
  * the spec. These tests pin the skill's text to that detector, and pin the rest
  * of the trigger table as explicitly advisory rather than silently unchecked.
@@ -42,7 +42,7 @@ describe.each(TREES)("%s", (tree) => {
 
   it("names the detector that sees a stop with no entry", async () => {
     const skill = flat(await read(tree, SKILL));
-    expect(skill).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(skill).toContain("QFAI-TDD-001");
     expect(skill).toContain("`kind: blocker` / `kind: handoff`");
   });
 
@@ -59,7 +59,7 @@ describe.each(TREES)("%s", (tree) => {
   it("restates the obligation on the transition that stops the row", async () => {
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("Also write the `.qfai/steering/<id>.md` work-log entry for the stop");
-    expect(ledger).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(ledger).toContain("QFAI-TDD-001");
   });
 
   it("does not claim the finding is an error before its promotion", async () => {
@@ -73,9 +73,9 @@ describe.each(TREES)("%s", (tree) => {
     const ledger = flat(await read(tree, LEDGER));
 
     expect(skill).not.toContain(
-      "reports `TDDLIST_BLOCKED_NO_WORKLOG` as an `error`, so this stage's completion command fails",
+      "reports `QFAI-TDD-001` as an `error`, so this stage's completion command fails",
     );
-    expect(ledger).not.toContain("`TDDLIST_BLOCKED_NO_WORKLOG` errors while no");
+    expect(ledger).not.toContain("`QFAI-TDD-001` errors while no");
     expect(skill).toContain("a warning inside its migration window");
     expect(ledger).toContain("a warning inside its migration window");
   });

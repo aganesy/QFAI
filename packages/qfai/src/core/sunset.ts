@@ -157,7 +157,7 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
-   * `TDDLIST_BLOCKED_NO_WORKLOG` — a ledger that stopped with no steering
+   * `QFAI-TDD-001` — a ledger that stopped with no steering
    * entry accounting for the stop. Nothing asked for that entry before, so
    * every repository holding a parked row owes one the moment the rule ships,
    * and the rows are terminal: the account has to be written for stops that
@@ -165,7 +165,7 @@ export const RULE_PROMOTIONS = {
    */
   tddListBlockedWithoutWorklog: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
-   * `TDDLIST_WORKLOG_UNREADABLE` — the steering surface could not be read, so
+   * `QFAI-TDD-002` — the steering surface could not be read, so
    * the check above had no answer and abstained.
    *
    * It shares that window rather than staying a `warning` for good. Once the
