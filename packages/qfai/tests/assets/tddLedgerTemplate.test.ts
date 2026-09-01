@@ -41,8 +41,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Status",
         "DR-ID",
         "Evidence",
-        // Optional, but seeded by the row owner: `/qfai-implement` may fill a
-        // `blocked` row's blocker and may not add a column to do it.
+        // Optional, but seeded by Phase 2b, which owns the rows. That is what
+        // lets `/qfai-implement` — the owner of the cells, not the rows — write
+        // a `blocked` row's blocker without adding a column to do it.
         "Blocked-By",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));

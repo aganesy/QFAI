@@ -39,6 +39,13 @@ const DRIFT = "assistant/constitution/drift-protocol.md";
 /** The prose wraps differently per file, so compare on collapsed whitespace. */
 const flat = (value: string): string => value.replace(/\s+/g, " ");
 
+/**
+ * A shipped file's text, already flattened.
+ *
+ * Flattening here and not at the call sites is the point: a caller that reads
+ * through this helper cannot forget it, and a second `flat()` on the result is
+ * dead weight that suggests the helper does not already do it.
+ */
 const read = async (tree: string, rel: string): Promise<string> =>
   flat(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
 
@@ -500,7 +507,7 @@ describe.each(TREES)(
       // raised from `red` or later, a checkpoint regression from `done` — and
       // `todo -> blocked` is the only inbound edge, so "write it on each row"
       // asked for an illegal move on exactly the rows this PR routes here.
-      const drift = flat(await read(tree, DRIFT));
+      const drift = await read(tree, DRIFT);
       expect(drift).toContain("on **each row of the blocked set that is at `todo`**");
       expect(drift).toContain("**Only a `todo` row is parked, because only a `todo` row can be.**");
       // The two shapes it cannot park have answers rather than silence.
@@ -514,7 +521,7 @@ describe.each(TREES)(
       // Without this the row stays selectable across an approval that spans
       // sessions — and a `review-fix` row is re-selected ahead of every `todo`
       // row, so it would be picked up on every run until the CR resolves.
-      const reset = flat(await read(tree, RESET));
+      const reset = await read(tree, RESET);
       expect(reset).toContain("**Both the approved and the still-open ones**");
       expect(reset).toContain(
         "**A row named in an open in-scope CR's blocked set is not selected**, whatever its status",
@@ -526,7 +533,7 @@ describe.each(TREES)(
       // The preflight returned every row the approved CR enumerated, so a row
       // also held by a second, unresolved CR went back into selection and could
       // run and complete over that unresolved change.
-      const reset = flat(await read(tree, RESET));
+      const reset = await read(tree, RESET);
       expect(reset).toContain("Recompute the **union** of the blocked sets of every CR still open");
       expect(reset).toContain("**A row still in the union stays where it is.**");
       expect(reset).toContain("Remove only this CR's ID from `Blocked-By`");
@@ -538,7 +545,7 @@ describe.each(TREES)(
       // and for the approved actions the reset is enumerated under — and a row
       // first noticed during an ordinary reseed has neither. Phase Red never
       // re-selects a `done` row, so nothing downstream would ever raise one.
-      const checklists = flat(await read(tree, CHECKLISTS));
+      const checklists = await read(tree, CHECKLISTS);
       expect(checklists).toContain(
         "**A progressed matrix row this phase finds on its own has no driving `CR-*` yet, and needs one before it is touched.**",
       );
@@ -553,7 +560,7 @@ describe.each(TREES)(
       // so "the boundary its recorded RED observed" names a set. It is neither
       // the `blocked` case nor the `falsifiability` one: the observations are
       // real, there are simply several.
-      const checklists = flat(await read(tree, CHECKLISTS));
+      const checklists = await read(tree, CHECKLISTS);
       expect(checklists).toContain(
         "**A `Selector` holding several entries observed more than one**",
       );
