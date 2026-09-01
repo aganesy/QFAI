@@ -2,18 +2,16 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import {
   HANDOFF_REQUIRED_SECTIONS,
   PROJECT_STEERING_DIR,
-  PROJECT_STEERING_TEMPLATES_SUBDIR,
   WORKLOG_ENTRY_KINDS,
   WORKLOG_ENTRY_STATUSES,
 } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
+import { collectWorklogEntries, type WorklogEntry as ParsedEntry } from "../worklogEntries.js";
 import { exists, issue } from "./utils.js";
 
 // MUST match `worklog-entry.schema.md#kind enum` exactly (REQ-0004).
@@ -64,26 +62,6 @@ function isValidCalendarDate(s: string): boolean {
 const STALE_DAYS = 90;
 const MS_PER_DAY = 86_400_000;
 
-type Frontmatter = {
-  id?: unknown;
-  kind?: unknown;
-  status?: unknown;
-  created?: unknown;
-  updated?: unknown;
-  scope?: unknown;
-  blocking?: unknown;
-  links?: unknown;
-  "promote-to"?: unknown;
-  "promoted-to"?: unknown;
-};
-
-type ParsedEntry = {
-  filePath: string;
-  relativePath: string;
-  frontmatter: Frontmatter | null;
-  body: string;
-};
-
 export async function validateWorklogSurface(
   root: string,
   _config: QfaiConfig,
@@ -92,7 +70,7 @@ export async function validateWorklogSurface(
   const dir = path.join(root, PROJECT_STEERING_DIR);
   if (!(await exists(dir))) return [];
 
-  const entries = await collectEntries(dir, root);
+  const entries = await collectWorklogEntries(root);
   const issues: Issue[] = [];
 
   // Pre-build a Set of registered spec ids, discussion timestamps, and
@@ -110,20 +88,21 @@ export async function validateWorklogSurface(
 
   for (const entry of entries) {
     if (entry.frontmatter === null) {
-      // Parse failure → emit schema finding. If the body carries the
-      // <<unreadable: ...>> sentinel from collectEntries, surface the
-      // underlying read error message instead of the generic phrase.
-      const unreadableMatch = /^<<unreadable: ([\s\S]*?)>>$/.exec(entry.body);
-      const message = unreadableMatch
-        ? `${entry.relativePath}: entry could not be read — ${unreadableMatch[1]}`
-        : `${entry.relativePath}: YAML frontmatter is missing or unparseable.`;
+      // Parse failure → emit schema finding. When `collectWorklogEntries`
+      // could not read the file at all it carries the read error on
+      // `readError`; surface that instead of the generic phrase.
+      const readError = entry.readError;
+      const message =
+        readError !== null
+          ? `${entry.relativePath}: entry could not be read — ${readError}`
+          : `${entry.relativePath}: YAML frontmatter is missing or unparseable.`;
       issues.push(
         issue(
           "W-WORKLOG-SCHEMA",
           message,
           "warning",
           entry.relativePath,
-          unreadableMatch ? "worklogSurface.io.unreadable" : "worklogSurface.schema.parse",
+          readError !== null ? "worklogSurface.io.unreadable" : "worklogSurface.schema.parse",
         ),
       );
       continue;
@@ -541,87 +520,6 @@ function rowsReferenceEntryId(rows: string[], entryId: string): boolean {
   const escaped = entryId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`(^|[^A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-])`);
   return rows.some((row) => pattern.test(row));
-}
-
-async function collectEntries(dir: string, baseRoot: string): Promise<ParsedEntry[]> {
-  // baseRoot is the project root (NOT `dir`) so that nested entries still
-  // produce `.qfai/steering/<sub>/<file>.md` style paths, not the
-  // recursion-depth-dependent `steering/<sub>/<file>.md` which broke
-  // finding-location traceability for users / tooling.
-  const entries: ParsedEntry[] = [];
-  let dirEntries: Dirent[];
-  try {
-    dirEntries = await readdir(dir, { withFileTypes: true });
-  } catch (err: unknown) {
-    if (isEnoent(err)) return [];
-    throw err;
-  }
-
-  for (const dirEntry of dirEntries) {
-    if (dirEntry.isDirectory()) {
-      if (dirEntry.name === PROJECT_STEERING_TEMPLATES_SUBDIR) continue;
-      const sub = path.join(dir, dirEntry.name);
-      const subEntries = await collectEntries(sub, baseRoot);
-      entries.push(...subEntries);
-      continue;
-    }
-    if (!dirEntry.isFile()) continue;
-    if (!dirEntry.name.endsWith(".md")) continue;
-    if (dirEntry.name === "README.md") continue;
-
-    const full = path.join(dir, dirEntry.name);
-    // Resilient read: if a single entry file cannot be read (EACCES,
-    // EISDIR, unicode decode failure), surface a schema-parse finding
-    // for that file instead of throwing out of the entire validator
-    // chain. `.qfai/steering/` is user-authored markdown so one bad
-    // file should not abort the whole `qfai validate` run.
-    let body: string;
-    try {
-      body = await readFile(full, "utf-8");
-    } catch (err: unknown) {
-      const detail = err instanceof Error ? err.message : String(err);
-      entries.push({
-        filePath: full,
-        relativePath: path.relative(baseRoot, full).replace(/\\/g, "/"),
-        frontmatter: null,
-        body: `<<unreadable: ${detail}>>`,
-      });
-      continue;
-    }
-    const parsed = parseEntry(body);
-    entries.push({
-      filePath: full,
-      relativePath: path.relative(baseRoot, full).replace(/\\/g, "/"),
-      frontmatter: parsed.frontmatter,
-      body: parsed.body,
-    });
-  }
-
-  return entries;
-}
-
-function parseEntry(text: string): { frontmatter: Frontmatter | null; body: string } {
-  // Strip an optional UTF-8 BOM (Windows editors commonly write it)
-  // before parsing; without this a valid frontmatter file saved with
-  // BOM is reported as W-WORKLOG-SCHEMA (P2 from PR #209 review).
-  const stripped = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-  // Tolerate CRLF line endings (Windows-authored entries) by accepting
-  // \r?\n at every delimiter position. Without this, frontmatter saved
-  // with CRLF would be silently misparsed and reported as
-  // W-WORKLOG-SCHEMA even when valid (P2 from PR #209 review).
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(stripped);
-  if (!match) {
-    return { frontmatter: null, body: text };
-  }
-  try {
-    const data: unknown = parseYaml(match[1] ?? "");
-    if (data !== null && typeof data === "object") {
-      return { frontmatter: data as Frontmatter, body: match[2] ?? "" };
-    }
-    return { frontmatter: null, body: match[2] ?? "" };
-  } catch {
-    return { frontmatter: null, body: match[2] ?? "" };
-  }
 }
 
 async function collectSpecIds(root: string): Promise<Set<string>> {

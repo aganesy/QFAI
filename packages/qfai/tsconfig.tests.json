@@ -36,6 +36,7 @@
     "tests/assets/bareAnchorCitations.test.ts",
     "tests/assets/coverageDepthMatrix.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
+    "tests/assets/implementWorklogObligation.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",

@@ -203,8 +203,23 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 - `todo` -> `blocked` (the row cannot be started: an upstream defect, an
   unresolved Change Request, or an unfinished row in another spec). Name the
   blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
+  Also write the `.qfai/steering/<id>.md` work-log entry for the stop —
+  `Blocked-By` names WHAT the row waits on, the entry is what was tried and
+  what the next session picks up. `QFAI-TDD-001` reports while no
+  open (non-`archived`) `kind: blocker` / `kind: handoff` entry names this spec
+  — through its own `scope:`, or through `links:` on a `scope: global` entry.
+  It is a warning inside its migration window and an error from the release the
+  finding names, so a stop recorded before the check existed is not an upgrade
+  that fails on the spot.
 - `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
   backward transition**: the row never started, so nothing is being undone.
+  **Close the entry that accounted for the stop**: set its `status:` to
+  `archived` in the same edit that moves the row. `QFAI-TDD-001` is satisfied by
+  any open entry naming the spec, so an entry left open outlives the stop it
+  described — resume once and it stands in for every later stop of that spec,
+  and forgetting the next work-log entry is never reported. An entry that still
+  accounts for something else stays open; write the new stop its own entry
+  rather than reusing this one.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
