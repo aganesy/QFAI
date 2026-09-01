@@ -125,6 +125,11 @@ routing:
       - id: review
         iteration: per-ledger-item
         mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        # The condition is not free judgement and does not live here: an item
+        # routes to `product-surface-reviewer` exactly when it is UI-affecting
+        # per `skills/qfai-implement/references/ui-affecting.md`,
+        # which is also gate item 9's predicate. This key says which agent may
+        # join, never whether it may be skipped.
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
         # `implementation-reviewer` is blocking, not advisory: it is item 8 of the

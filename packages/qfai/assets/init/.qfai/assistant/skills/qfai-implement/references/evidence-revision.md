@@ -248,9 +248,18 @@ Mechanically, so it can be checked rather than judged:
 
 Consequences:
 
-- An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
+- An item's verdicts (gate items 3, 5, 7, 8 and 9) MUST all name the **same**
   revision. Verdicts from different revisions do not compose into a ruling about
   one state — the earlier ones ruled on code that no longer exists.
+- **Item 9 is in that set whatever it answered.** Scoping it to rows a clause
+  routed exempted the `n/a (not UI-affecting)` rows, which is the wrong half:
+  `n/a` is a claim about the tree — no declared UI path was touched — and a
+  checkpoint re-fix that adds one makes it false exactly as it makes a stale
+  `PASS` false. Read as authoritative, that exemption accepted an `n/a` taken
+  before the change existed while the final diff matched a UI path, and the
+  parity review was skipped on it. Both `PASS (clause N)` and
+  `n/a (not UI-affecting)` therefore carry the `Reviewed revision` the clause
+  was evaluated at, and both are checked against items 5, 7 and 8.
 - **The exception is item 3, on every row, above under _A transient
   observation names its own revision_.** A RED is observed before the code that
   makes it pass exists, so on an uncommitted tree Phase Green moves the content

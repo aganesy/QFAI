@@ -17,7 +17,7 @@ tools: [Read, Glob, Grep, Bash]
 - Audit visual design, token alignment, and service-level UX coherence.
 - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
-- For UI implementation, compare rendered output against `.qfai/contracts/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
+- For UI implementation, compare rendered output against `<contractsDir>/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
@@ -34,8 +34,11 @@ tools: [Read, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/09_delta.md
 - .github/instructions/code-review.instructions.md
 - .github/instructions/principles.instructions.md
-- UI contract files under `.qfai/contracts/ui/`
-- Prototype handoff contract under `.qfai/contracts/design/prototype-handoff.yaml` when available
+- UI contract files: every `.yaml` / `.yml` under `<contractsDir>/ui/**`, walked recursively, where `<contractsDir>` is `paths.contractsDir` from `qfai.config.yaml` (default `.qfai/contracts`) — the
+  same set that decides whether a row is routed here (`skills/qfai-implement/references/ui-affecting.md`), so a routed review always reads the contract its clause fired on
+- Prototype handoff contract at `<contractsDir>/design/prototype-handoff.yaml` when available — the same `<contractsDir>` as the line above, because `designContractReadiness` resolves the design
+  contracts from `paths.contractsDir` too. Pinned to `.qfai/contracts/design/` it read nothing on a project that repointed the directory, and either passed without the handoff it compares
+  against or stopped on a default path that does not exist there
 - Runtime screenshots / HTML evidence / relevant diffs
 
 ## Deliverables

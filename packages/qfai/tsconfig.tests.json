@@ -39,6 +39,7 @@
     "tests/assets/layerCiLaneMapping.test.ts",
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
+    "tests/assets/uiAffectingDefinition.test.ts",
     "tests/e2e/spec0003ShippedWorkflowSetE2E.test.ts",
     "tests/e2e/spec0006WorkflowsIntegrityE2E.test.ts",
     "tests/e2e/spec0008CredentialReuseGuidanceE2E.test.ts",
