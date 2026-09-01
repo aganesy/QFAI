@@ -143,7 +143,7 @@ first anomaly in any project either halted the stage or produced a rule-violatin
 The carve-out is exactly as narrow as that need:
 
 - **create only.** `.qfai/decisions/` is not upstream SSOT and no owner phase writes it, so
-  creating a file there patches nothing. Editing an already- approved record is not covered.
+  creating a file there patches nothing. Editing an already-approved record is not covered.
 - **the record only, never the reference.** The entry that cites the DR — `spec-*/07_Decisions.md` +
   `spec-*/09_delta.md` for a spec artifact, or `_policies/08_Decisions.md` +
   `_policies/10_delta.md` for a policy artifact — stays an owner-skill write, exactly as step 2
