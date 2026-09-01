@@ -245,17 +245,21 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 
 ## Volume Signals (mandatory, not gates)
 
-E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*` plus declared `CON-DB-*`.
+E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*` plus **active** `CON-DB-*`.
+Active means the contract does **not** declare `-- x-qfai-status: planned`: a deferred DB contract
+carries no `QFAI-ATDD-115` obligation in this slice, so counting it would size the estimate for
+tests this slice must not write. Count the active ones from `.qfai/contracts/db/**` — the same set
+the gate reads.
 When a signal is low or high, propose options and a recommendation; never fail
 on a signal value alone.
 
 ### Estimator output table (required)
 
-| Layer       |     Raw count | Signal | Evidence                  | Notes |
-| ----------- | ------------: | -----: | ------------------------- | ----- |
-| E2E         |           #US |  E2E_s | user stories              |       |
-| API         |          #CON |  API_s | API contracts             |       |
-| Integration | #TC + #CON-DB |  INT_s | test cases + DB contracts |       |
+| Layer       |            Raw count | Signal | Evidence                         | Notes |
+| ----------- | -------------------: | -----: | -------------------------------- | ----- |
+| E2E         |                  #US |  E2E_s | user stories                     |       |
+| API         |                 #CON |  API_s | API contracts                    |       |
+| Integration | #TC + #CON-DB active |  INT_s | test cases + active DB contracts |       |
 
 ## Scaffolding
 

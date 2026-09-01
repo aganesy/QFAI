@@ -100,8 +100,9 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // The Integration row was defined as `#TC`, so the layer that owes the
     // `CON-DB` work was estimated without counting any of it.
     const atdd = flat(await read(tree));
-    expect(atdd).toContain("Integration = required `TC-*` plus declared `CON-DB-*`.");
-    expect(atdd).toContain("| Integration | #TC + #CON-DB |");
+    // Which CON-DB are counted is pinned separately, below.
+    expect(atdd).toContain("Integration = required `TC-*` plus **active** `CON-DB-*`.");
+    expect(atdd).toContain("| Integration | #TC + #CON-DB active |");
     expect(atdd).toContain("`CON-DB` in Integration.");
   });
 
@@ -201,4 +202,77 @@ describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (
   it("agent-catalog.yml carries the same contract for that agent", async () => {
     assertContract(flat(await catalogInstructions("acceptance-test-engineer")));
   });
+});
+
+/**
+ * The Volume Signal added `CON-DB` to the Integration row as *declared*, but a
+ * contract carrying `-- x-qfai-status: planned` is deferred: it is excluded
+ * from `activeDbContractIds` (`src/core/atddTraceability.ts:227`) and so from
+ * `QFAI-ATDD-115`, which fires on `result.missing.conDb`
+ * (`src/core/validators/atddCodeTraceability.ts:474`). Counting the deferred
+ * ones sized the mandatory estimate for tests this slice must not write, and
+ * an over-sized signal recommends work the gate does not ask for.
+ *
+ * And the estimate has to be computable by whoever owns it: `agent-routing.yml`
+ * makes `test-design-analyst` and `qa-strategist` the mandatory pair of the
+ * `coverage` phase, and the former owns "Estimate test volume" outright —
+ * neither read set opened `.qfai/contracts/db/**`, so a delegate following its
+ * contract literally had to guess `#CON-DB` or omit it.
+ */
+describe.each(TREES)("%s — the CON-DB volume signal is countable and not inflated", (tree) => {
+  const catalogInstructions = async (id: string): Promise<string> => {
+    const parsed: unknown = parseYaml(await readAt(tree, CATALOG));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(`${tree}/${CATALOG}: must parse to an object`);
+    }
+    const agents = (parsed as Record<string, unknown>)["agents"];
+    if (!Array.isArray(agents)) {
+      throw new Error(`${tree}/${CATALOG}: agents must be an array`);
+    }
+    for (const entry of agents) {
+      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+      const agent: Record<string, unknown> = entry as Record<string, unknown>;
+      if (agent["id"] !== id) continue;
+      const instructions = agent["developer_instructions"];
+      if (typeof instructions !== "string") {
+        throw new Error(`${tree}/${CATALOG}: ${id}.developer_instructions must be a string`);
+      }
+      return instructions;
+    }
+    throw new Error(`${tree}/${CATALOG}: no agent with id ${id}`);
+  };
+
+  it("counts the active CON-DB, not every declared one", async () => {
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "Integration = required `TC-*` plus **active** `CON-DB-*`. Active means the contract does **not** declare `-- x-qfai-status: planned`",
+    );
+    expect(atdd).toContain("carries no `QFAI-ATDD-115` obligation in this slice");
+    // The regression: "declared" swept the deferred contracts back in.
+    expect(atdd).not.toContain("Integration = required `TC-*` plus declared `CON-DB-*`.");
+  });
+
+  it("says the same thing in the estimator table the stage must output", async () => {
+    // The prose and the required table are two statements of one count; a
+    // reader filling the table works from the table alone.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain("| Integration | #TC + #CON-DB active | INT_s | test cases + active DB");
+    expect(atdd).not.toContain("| #TC + #CON-DB | INT_s | test cases + DB contracts |");
+  });
+
+  it("names the directory the count comes from", async () => {
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain("Count the active ones from `.qfai/contracts/db/**`");
+  });
+
+  it.each(["test-design-analyst", "qa-strategist"])(
+    "%s can open the DB contracts its estimate counts",
+    async (id) => {
+      // `agent-routing.yml` coverage phase: mandatory_agents are exactly these
+      // two, and the volume estimate is `test-design-analyst`'s deliverable.
+      const canonical = flat(await readAt(tree, `assistant/agents/${id}.md`));
+      expect(canonical).toContain("- .qfai/contracts/db/\\*\\*");
+      expect(flat(await catalogInstructions(id))).toContain("- .qfai/contracts/db/\\*\\*");
+    },
+  );
 });

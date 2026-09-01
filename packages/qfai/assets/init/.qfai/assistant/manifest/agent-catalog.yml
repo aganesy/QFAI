@@ -744,6 +744,7 @@ agents:
       - .qfai/specs/spec-\*/04_Business-Rules.md
       - .qfai/specs/spec-\*/05_Examples.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
+      - .qfai/contracts/db/\*\*
 
       ## Deliverables
 
@@ -815,6 +816,7 @@ agents:
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
+      - .qfai/contracts/db/\*\*
       - QA evidence, coverage tooling outputs, and test plans
 
       ## Deliverables

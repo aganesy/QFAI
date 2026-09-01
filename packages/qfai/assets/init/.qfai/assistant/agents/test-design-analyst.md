@@ -52,6 +52,7 @@ At both stages: when business rules (BR-\*) exist, verify each BR has at least o
 - .qfai/specs/spec-\*/04_Business-Rules.md
 - .qfai/specs/spec-\*/05_Examples.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
+- .qfai/contracts/db/\*\*
 
 ## Deliverables
 
