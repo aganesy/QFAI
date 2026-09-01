@@ -25,7 +25,7 @@ shipped inside the QFAI package and archived by `npx qfai doctor`:
 - A T1 group review is **one round**, not one turn per member — and not one turn in total. Each
   required reviewer (`qa-gatekeeper`, `completion-reviewer`, `implementation-reviewer`) takes
   **one** turn over the whole group **per round**, as `volume-policy.md#batched-review` requires,
-  so that gate items 3, 5, 7 and 8 all have their verdict. Those turns share **one** pack: one
+  so that gate items 3, 5, 7 and 8 all have their verdicts. Those turns share **one** pack: one
   `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in
   `summary.json`. Do not write a pack per member: N packs assert N rounds, N-1 of which never
   happened, each holding a copy of the same verdict. Every member row's `Review pack seal` at gate
