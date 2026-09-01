@@ -210,6 +210,42 @@ describe("the split row's Boundary identity", () => {
       },
     );
   });
+
+  it("does not read a TC repeated inside one row as two sibling rows", async () => {
+    // `TC-Refs` is a hand-written list, so `TC-0001, TC-0001` happens — and it
+    // is a typo, not a split. Bucketing per token put the same row in the
+    // bucket twice, so a single row became two siblings of itself: with a
+    // `Boundary` it duplicated its own slug, and the ledger below has none, so
+    // it was a sibling naming no boundary. Both findings describe a ledger
+    // that does not exist.
+    await withLedger(
+      [
+        HEADERS,
+        SEP,
+        "| TDD-0001 | TC-0001, TC-0001 | Unit  | tests/a.test.ts | a | todo   | -     | -        | - |",
+      ],
+      (issues) => {
+        expect(missing(issues)).toEqual([]);
+        expect(duplicate(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("does not let a repeated TC hide a genuine sibling pair either", async () => {
+    // The dedupe is per row, not across rows: two real siblings still meet in
+    // the bucket, and one of them repeating the TC does not remove the other.
+    await withLedger(
+      [
+        HEADERS,
+        SEP,
+        "| TDD-0001 | TC-0001, TC-0001 | Unit  | tests/a.test.ts | a-miss | todo   | -     | -        | not-found |",
+        "| TDD-0002 | TC-0001          | Unit  | tests/a.test.ts | a-ok   | todo   | -     | -        | not-found |",
+      ],
+      (issues) => {
+        expect(duplicate(issues)).toHaveLength(1);
+      },
+    );
+  });
 });
 
 describe("the split-boundary promotion windows", () => {

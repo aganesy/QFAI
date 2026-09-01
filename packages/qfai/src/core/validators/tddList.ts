@@ -1908,9 +1908,20 @@ function validateSplitBoundaryIdentity(
       : "";
   const byTc = new Map<string, LedgerRowRef[]>();
   for (const ref of rows) {
+    // Deduped WITHIN the row. The buckets below are sets of rows, and this is
+    // the only place a row can enter one twice: `TC-Refs` is a hand-written
+    // list, and `TC-0001, TC-0001` is a typo rather than a split. Pushing the
+    // ref once per token made a single row two siblings of itself — with a
+    // `Boundary` it duplicated its own slug (`QFAI-TDD-004`, an error once the
+    // window closes), and without one it was a sibling naming none
+    // (`QFAI-TDD-003`). Either way the ledger was correct and the finding was
+    // not.
+    const seenInRow = new Set<string>();
     for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
       const tc = token.toUpperCase();
       if (!TC_ID_TOKEN.test(tc)) continue;
+      if (seenInRow.has(tc)) continue;
+      seenInRow.add(tc);
       const bucket = byTc.get(tc);
       if (bucket) {
         bucket.push(ref);

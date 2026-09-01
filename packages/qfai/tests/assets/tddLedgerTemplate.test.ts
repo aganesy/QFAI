@@ -381,6 +381,27 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(preconditions).toContain("Rerun `/qfai-sdd <spec-id>`");
     });
 
+    it(`${tree}: an aggregate row awaiting its CR is parked, not executed`, async () => {
+      // The ledger cannot change before the CR is approved, but "unchanged" is
+      // not a licence to run the row. One selector over several boundaries
+      // observes only the first failing assert, so executing it manufactures
+      // the incomplete RED provenance the re-split exists to remove — and
+      // nothing stops that row reaching `done` while the CR is still pending.
+      // `blocked` already names "an unresolved Change Request" as a reason.
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      // Wrap-tolerant: the sentence is the rule, its wrap column is not.
+      const flat = preconditions.replace(/\s*\n\s*/g, " ");
+      expect(flat).toContain("**do not execute the aggregate row**");
+      expect(flat).toContain(
+        "Move it `todo -> blocked` instead, naming the pending `CR-*` in `Blocked-By`",
+      );
+      // And the superseded instruction is gone, not merely contradicted.
+      expect(flat).not.toContain("is still the row to execute");
+    });
+
     it(`${tree}: an empty ledger is not routed into recovery`, async () => {
       const preconditions = await read(
         tree,
@@ -431,12 +452,21 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(rules).toContain("QFAI-TDD-003");
       expect(rules).toContain("QFAI-TDD-004");
-      // The severities are not interchangeable: a legacy ledger cannot be
-      // migrated before its CR is approved, so the missing slug must not fail
-      // `--fail-on error`; a duplicate can only come from a Phase 2b that
-      // already writes the column.
-      expect(rules).toContain("(`warning`, since a legacy ledger cannot be migrated");
-      expect(rules).toContain("(`error`, since only a Phase 2b that already writes the column");
+      // Neither severity is a fixed label. Both codes are raised through
+      // `newRuleSeverity(toolVersion, RULE_PROMOTIONS.<key>.promoteAt)`, so
+      // both are a `warning` until their window closes and an `error` after —
+      // and prose that named one of the two states told half its readers the
+      // wrong thing at any moment. The reasons the windows differ in length
+      // stay, because they are what makes the pair legible.
+      const flatRules = rules.replace(/\s*\n\s*/g, " ");
+      expect(flatRules).toContain("**Both ship behind a promotion window**");
+      expect(flatRules).toContain("neither severity is fixed");
+      expect(flatRules).toContain(
+        "A legacy ledger cannot be migrated before its `CR-*` is approved",
+      );
+      expect(flatRules).toContain(
+        "a duplicate slug can only be authored by a Phase 2b that already writes the column",
+      );
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("QFAI-TDD-003");

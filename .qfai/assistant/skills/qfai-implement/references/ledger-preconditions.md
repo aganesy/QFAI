@@ -18,7 +18,13 @@ Phase 2b re-split it — splitting a row in-cycle is an upstream edit this skill
 does not own, and the re-split lands whole or not at all under an approved
 `CR-*` enumerating the aggregate rows, per
 `references/change-request-reset.md`. Until that CR is approved the ledger is
-unchanged, so an aggregate row you meet is still the row to execute.
+unchanged — but **do not execute the aggregate row**. It is the shape the
+re-split exists to remove: one selector over several boundaries observes only
+the first failing assert, so running it produces exactly the incomplete RED
+provenance this rule rejects, and nothing stops that row reaching `done` while
+the CR is still pending. Move it `todo -> blocked` instead, naming the pending
+`CR-*` in `Blocked-By` (`references/execution-ledger.md`), and pick up the next
+row. The blocker clears when the CR is approved and Phase 2b re-splits the row.
 `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
 annotations, not ledger rows — they never appear as rows here.
 
