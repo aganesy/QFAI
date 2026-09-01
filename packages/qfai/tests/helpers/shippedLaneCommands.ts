@@ -1265,7 +1265,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ],
   [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  ["qfai.config.yaml", "b141c3e3cfa7761d9237e51d8e27336c4e1d51dce58453edb90ac3f2b9402d62"],
+  [
+    // Re-pinned when the `forbidTestTodoStubs` comment stopped calling the opt-out's waiver a
+    // requirement. `validateTestTodoStubs` returns `[]` the moment the flag is false and no field
+    // on `QfaiValidationConfig` carries a DR-ID, so the shipped file promised an enforcement that
+    // does not exist; it now says the waiver is a governance step the gate will not catch. Comment
+    // lines only — the key set this file ships is unchanged, which
+    // `initAssetsRootMirror.test.ts` asserts separately against the loader.
+    "qfai.config.yaml",
+    "d8ac45bb3c24c74bd140e29fe6ae44d79ec552e25675e1c09b3b9c583afeac80",
+  ],
 ]);
 
 /**
