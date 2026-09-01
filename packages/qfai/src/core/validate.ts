@@ -399,7 +399,12 @@ async function runProfileValidators(
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
     return [...unusedPlatform, ...surface.issues, ...anchorIssues];
   }
-  return [...unusedPlatform, ...surface.issues, ...anchorIssues, ...(await runProfileOwnValidators())];
+  return [
+    ...unusedPlatform,
+    ...surface.issues,
+    ...anchorIssues,
+    ...(await runProfileOwnValidators()),
+  ];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
