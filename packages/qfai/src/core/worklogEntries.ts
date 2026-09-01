@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 
 import { isEnoent } from "./fs/errno.js";
 import {
+  HANDOFF_REQUIRED_SECTIONS,
   PROJECT_STEERING_DIR,
   PROJECT_STEERING_TEMPLATES_SUBDIR,
   WORKLOG_ENTRY_STATUSES,
@@ -110,7 +111,7 @@ export function collectStoppedSpecIds(entries: readonly WorklogEntry[]): Set<str
     const fm = entry.frontmatter;
     if (fm === null) continue;
     if (typeof fm.kind !== "string" || !WORKLOG_STOP_KINDS.includes(fm.kind)) continue;
-    if (!hasStopRecordShape(fm)) continue;
+    if (!hasStopRecordShape(fm, fm.kind, entry.body)) continue;
     const scope = typeof fm.scope === "string" ? fm.scope.trim() : "";
     if (SPEC_ID.test(scope)) {
       specIds.add(scope);
@@ -147,15 +148,26 @@ export function unreadableWorklogEntries(
 }
 
 /**
- * Whether the frontmatter carries the required fields of
- * `worklog-entry.schema.md` in the required shapes.
+ * Whether the entry carries the required fields of `worklog-entry.schema.md`
+ * in the required shapes, and — on a `handoff` — the body the schema requires.
  *
  * Shape only — `worklogSurface` stays the authority on the values (calendar
  * validity of the dates, `id`-to-filename agreement, link resolution) and is
  * the validator that reports them. This asks the narrower question the stop
  * check needs an answer to: is this file a work-log entry at all?
+ *
+ * The body is checked on `handoff` for the same reason `promote-to` is checked
+ * above. `worklogSurface` reports a handoff missing any of
+ * {@link HANDOFF_REQUIRED_SECTIONS} as `R-HANDOFF-INCOMPLETE`, and that
+ * validator does not run under `--profile tdd`. Without this, a file whose
+ * frontmatter is perfect and whose body is empty suppressed the stop finding
+ * while raising nothing itself: the ledger said the run stopped, and the one
+ * artifact that was supposed to say what the next session picks up carried no
+ * state, no next action and no constraints. Section presence only — their
+ * contents are `worklogSurface`'s to judge.
  */
-function hasStopRecordShape(fm: WorklogFrontmatter): boolean {
+function hasStopRecordShape(fm: WorklogFrontmatter, kind: string, body: string): boolean {
+  if (kind === "handoff" && !HANDOFF_REQUIRED_SECTIONS.every((h) => body.includes(h))) return false;
   if (typeof fm.id !== "string" || fm.id.length === 0) return false;
   if (typeof fm.status !== "string" || !OPEN_WORKLOG_STATUSES.includes(fm.status)) return false;
   if (typeof fm.blocking !== "boolean") return false;

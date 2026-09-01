@@ -79,4 +79,18 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain("a warning inside its migration window");
     expect(ledger).toContain("a warning inside its migration window");
   });
+
+  it("closes the stop entry on the transition that resumes the row", async () => {
+    // The detector is satisfied by any OPEN entry naming the spec, so an entry
+    // left open after its blocker cleared outlives the stop it described: the
+    // next stop of that spec is accounted for by a record of a different one,
+    // and a forgotten work-log entry is never reported again. The obligation to
+    // write the entry was stated on `todo -> blocked`; the obligation to close
+    // it belongs on the edge back.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("**Close the entry that accounted for the stop**");
+    expect(ledger).toContain("set its `status:` to `archived` in the same edit that moves the row");
+    // And it does not over-reach into entries that still account for something.
+    expect(ledger).toContain("An entry that still accounts for something else stays open");
+  });
 });

@@ -21,6 +21,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { HANDOFF_REQUIRED_SECTIONS } from "../../src/core/paths/assistantPaths.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import { resolveToolVersion } from "../../src/core/version.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
@@ -125,9 +126,18 @@ function entry(fields: {
   scope?: string;
   links?: string[];
   promoteTo?: string | null;
+  /** Overrides the schema-shaped body — for the cases that assert a bad one. */
+  body?: string;
 }): string {
   const links = fields.links ?? [];
   const promoteTo = fields.promoteTo === undefined ? null : fields.promoteTo;
+  // A `handoff` owes the five sections of `worklog-entry.schema.md`, taken from
+  // the same constant the validators read so this helper cannot drift from
+  // them. Any other kind carries a plain body.
+  const defaultBody =
+    fields.kind === "handoff"
+      ? HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [heading, "", "Recorded.", ""]).join("\n")
+      : ["## Situation", "", "The upstream contract is defective.", ""].join("\n");
   return [
     "---",
     `id: ${fields.id}`,
@@ -141,10 +151,7 @@ function entry(fields: {
     links.length > 0 ? `links:\n${links.map((l) => `  - ${l}`).join("\n")}` : "links: []",
     "---",
     "",
-    "## Situation",
-    "",
-    "The upstream contract is defective.",
-    "",
+    fields.body ?? defaultBody,
   ].join("\n");
 }
 
@@ -414,5 +421,55 @@ describe("QFAI-TDD-001 — a stop must leave a steering record", () => {
     // The finding names the file, not just the surface, so the operator knows
     // which one to repair.
     expect(found?.message).toContain("unreadable.md");
+  });
+
+  it("is not satisfied by a handoff whose body has none of the required sections", async () => {
+    // `worklog-entry.schema.md` gives a handoff five sections, and
+    // `validateWorklogSurface` reports a body missing any of them as
+    // `R-HANDOFF-INCOMPLETE` — but that validator does not run under
+    // `--profile tdd`. Frontmatter alone let an empty handoff suppress the stop
+    // finding while raising nothing itself, so the ledger said the run stopped
+    // and the artifact that was meant to say what to pick up said nothing.
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
+      "2026-08-22-pause.md": entry({
+        id: "2026-08-22-pause",
+        kind: "handoff",
+        status: "handoff",
+        scope: "spec-0001",
+        body: "Picked up next session.\n",
+      }),
+    });
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
+  });
+
+  it("is not satisfied by a handoff that has all but one required section", async () => {
+    // Section presence is the check, so dropping one has to be enough — a
+    // check that only caught the empty body would pass a handoff whose "next
+    // single action" is the missing one.
+    const [dropped, ...kept] = HANDOFF_REQUIRED_SECTIONS;
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
+      "2026-08-22-pause.md": entry({
+        id: "2026-08-22-pause",
+        kind: "handoff",
+        status: "handoff",
+        scope: "spec-0001",
+        body: kept.flatMap((heading) => [heading, "", "Recorded.", ""]).join("\n"),
+      }),
+    });
+    expect(dropped).toBeDefined();
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDD-001");
+  });
+
+  it("asks nothing of the steering surface when no ledger row is blocked", async () => {
+    // `QFAI-TDD-002` says the stop check had no answer to give. A project with
+    // no `blocked` row never asked, so an unreadable surface withheld nothing —
+    // and reporting it anyway fails `validate --profile tdd --fail-on error`
+    // once the promotion window closes, on a project with no stop to account
+    // for.
+    const todoRow = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | todo | - | - | - |`;
+    const issues = await run(`${NINE_COL}\n${todoRow}\n`, {}, { steeringIsRegularFile: true });
+    const codes = issues.map((i) => i.code);
+    expect(codes).not.toContain("QFAI-TDD-002");
+    expect(codes).not.toContain("QFAI-TDD-001");
   });
 });

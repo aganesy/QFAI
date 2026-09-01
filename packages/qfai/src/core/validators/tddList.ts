@@ -876,6 +876,18 @@ type BlockedWorklogGate = {
   blockedNoWorklogSeverity: "warning" | "error";
   /** Names the release that ends the window; empty once the promotion has happened. */
   blockedNoWorklogWindowNote: string;
+  /**
+   * The unreadable-surface findings, held back until a stop actually needs an
+   * answer from the surface, and returned once.
+   *
+   * `QFAI-TDD-002` says the check for a work-log entry accounting for a stop
+   * had no answer to give. A run whose ledgers hold no `blocked` row never
+   * asked the question, so an unreadable `.qfai/steering/` withheld nothing —
+   * and raising it anyway failed `validate --profile tdd --fail-on error` once
+   * the promotion window closes, on a project with no stop to account for.
+   * Once, not per spec, because the surface is read once for the whole run.
+   */
+  drainUnreadable: () => Issue[];
 };
 
 /**
@@ -892,12 +904,22 @@ function blockedWithoutWorklog(
   relPath: string,
   gate: BlockedWorklogGate,
 ): Issue[] {
-  const { stoppedSpecIds, blockedNoWorklogSeverity, blockedNoWorklogWindowNote } = gate;
-  if (stoppedSpecIds === null) return [];
+  const { stoppedSpecIds, blockedNoWorklogSeverity, blockedNoWorklogWindowNote, drainUnreadable } =
+    gate;
+  // Before anything else: no stopped row here means this spec asked the
+  // steering surface nothing, so it neither owes a finding nor releases the
+  // held-back unreadable one.
+  if (blockedRowLabels.length === 0) return [];
+  // Past this line a stop exists, so the surface WAS asked. If it could not be
+  // read, that is the answer this spec gets, and it is reported now rather than
+  // unconditionally at the top of the run.
+  const unreadable = drainUnreadable();
+  if (stoppedSpecIds === null) return unreadable;
   const specId = `spec-${specNumber}`;
-  if (blockedRowLabels.length === 0 || stoppedSpecIds.has(specId)) return [];
+  if (stoppedSpecIds.has(specId)) return unreadable;
   const kinds = WORKLOG_STOP_KINDS.map((kind) => `\`kind: ${kind}\``).join(" or ");
   return [
+    ...unreadable,
     issue(
       "QFAI-TDD-001",
       `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up${blockedNoWorklogWindowNote}`,
@@ -942,7 +964,9 @@ function blockedWithoutWorklog(
  * — so an unreadable version can never be what escalates either into a build
  * failure.
  */
-async function readSteeringIndex(root: string): Promise<BlockedWorklogGate & { issues: Issue[] }> {
+async function readSteeringIndex(
+  root: string,
+): Promise<Omit<BlockedWorklogGate, "drainUnreadable"> & { issues: Issue[] }> {
   const toolVersion = await resolveToolVersion();
   const blockedNoWorklogPromotion = RULE_PROMOTIONS.tddListBlockedWithoutWorklog.promoteAt;
   const blockedNoWorklogSeverity = newRuleSeverity(toolVersion, blockedNoWorklogPromotion);
@@ -1016,8 +1040,22 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
 
   // Read once for the whole run: the steering surface is project-wide, and one
   // walk per spec would re-read every entry for every ledger.
-  const { issues: steeringIssues, ...gate } = await readSteeringIndex(root);
-  issues.push(...steeringIssues);
+  //
+  // Its findings are NOT pushed here. `QFAI-TDD-002` reports that the stop
+  // check had no answer, so it belongs to the first spec that has a stop to
+  // account for — pushed unconditionally it fired on a project whose ledgers
+  // hold no `blocked` row at all, which after the promotion window fails
+  // `--fail-on error` with nothing to check.
+  const { issues: steeringIssues, ...gateFields } = await readSteeringIndex(root);
+  let steeringIssuesDrained = false;
+  const gate: BlockedWorklogGate = {
+    ...gateFields,
+    drainUnreadable: () => {
+      if (steeringIssuesDrained) return [];
+      steeringIssuesDrained = true;
+      return steeringIssues;
+    },
+  };
 
   for (const entry of entries) {
     const specIssues = await validateSpecTddList(
@@ -1505,15 +1543,25 @@ async function validateSpecTddList(
   // is that account, and this pairs the two observable artifacts rather than
   // asking the agent to self-report.
   //
-  // `error`, matching `TDDLIST_BLOCKED_MISSING_REF` on the same row. The
-  // command this stage completes on is `validate --profile tdd --fail-on
-  // error`, so a `warning` here would state the obligation and enforce nothing
-  // — the exact shape of the gap this check exists to close. An earlier draft
-  // chose `warning` on the grounds that `.qfai/steering/` is gitignored by
-  // default and a CI checkout would not hold the entry; it is not. The managed
-  // block `qfai init` writes (`core/gitignore.ts`) covers `report`, `evidence`,
-  // `discussion`, `review` and `state.json`, and no steering path, so the
-  // surface is tracked and the omission is visible to ordinary CI.
+  // Severity is NOT a literal here: `readSteeringIndex` derives it from
+  // `newRuleSeverity(toolVersion, RULE_PROMOTIONS.tddListBlockedWithoutWorklog
+  // .promoteAt)`, so this is a `warning` until that release and an `error`
+  // after it, and the message carries the window note while it is the former.
+  // Reading this comment as "it is an error" understates when the gate starts
+  // biting — P7 gives a new code its window, and this one needs it: the rule
+  // lands on rows that were parked before anybody was asked to account for
+  // them, and those rows are terminal.
+  //
+  // Where it lands is `error`, matching `TDDLIST_BLOCKED_MISSING_REF` on the
+  // same row. The command this stage completes on is `validate --profile tdd
+  // --fail-on error`, so a permanent `warning` would state the obligation and
+  // enforce nothing — the exact shape of the gap this check exists to close. An
+  // earlier draft chose exactly that, on the grounds that `.qfai/steering/` is
+  // gitignored by default and a CI checkout would not hold the entry; it is
+  // not. The managed block `qfai init` writes (`core/gitignore.ts`) covers
+  // `report`, `evidence`, `discussion`, `review` and `state.json`, and no
+  // steering path, so the surface is tracked and the omission is visible to
+  // ordinary CI.
   issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, gate));
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
