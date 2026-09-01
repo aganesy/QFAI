@@ -182,7 +182,15 @@ export const KNOWN_COMMANDS = [
   "prototyping",
 ] as const;
 
-export function isKnownCommand(value: string): boolean {
+/** One of the names {@link KNOWN_COMMANDS} lists. */
+export type KnownCommand = (typeof KNOWN_COMMANDS)[number];
+
+/**
+ * A type predicate, not a plain `boolean`, so a caller that has narrowed a
+ * string with it can go on to switch over the union exhaustively instead of
+ * re-widening to `string` on the next line.
+ */
+export function isKnownCommand(value: string): value is KnownCommand {
   return (KNOWN_COMMANDS as readonly string[]).includes(value);
 }
 

@@ -13,24 +13,25 @@ import { captureStdout } from "../helpers/stdout.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Runs `qfai --help` and returns everything it wrote to stdout. */
+/**
+ * Runs `qfai --help` and returns everything it wrote to stdout.
+ *
+ * The capture itself is `helpers/stdout.ts`, not a second copy of it: that one
+ * also forwards the completion callback `stdout.write(chunk, cb)` passes, which
+ * a local stub silently drops. Only the `process.exitCode` save/restore is
+ * local, because `run` sets it and the helper has no business knowing that.
+ */
 async function captureHelp(): Promise<string> {
   const cwd = process.cwd();
   const previousExitCode = process.exitCode;
-  const written: string[] = [];
-  const originalWrite = process.stdout.write.bind(process.stdout);
   process.exitCode = undefined;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    written.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-    return true;
-  }) as typeof process.stdout.write;
   try {
-    await run(["--help"], cwd);
+    return await captureStdout(async () => {
+      await run(["--help"], cwd);
+    });
   } finally {
-    process.stdout.write = originalWrite;
     process.exitCode = previousExitCode;
   }
-  return written.join("");
 }
 
 /**
@@ -162,7 +163,13 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     // the switch answers to but this list omits is rejected as a typo. Neither
     // drift is visible from behaviour alone, since both still exit 2.
     const source = await readFile(path.resolve(__dirname, "../../src/cli/main.ts"), "utf-8");
-    const dispatched = [...source.matchAll(/^ {4}case "([\w-]+)":$/gm)].map((match) => match[1]);
+    // Leading whitespace is `[ \t]*`, not a fixed four spaces: the indent is a
+    // prettier setting and a nesting depth, neither of which this test is
+    // about, and a reformat that moved the switch would have made it assert
+    // nothing while still passing its own `length > 0` guard. `\s*` would be
+    // wrong in the other direction — under `m` it matches newlines, so a match
+    // could start on a line that holds no `case` at all.
+    const dispatched = [...source.matchAll(/^[ \t]*case "([\w-]+)":$/gm)].map((match) => match[1]);
     expect(dispatched.length).toBeGreaterThan(0);
     expect([...dispatched].sort()).toEqual([...KNOWN_COMMANDS].sort());
   });
