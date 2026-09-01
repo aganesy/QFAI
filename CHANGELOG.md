@@ -42,6 +42,39 @@
 
 ### Fixed
 
+- **publish に成功した `rename` を「まだ publish していない」ものとして retry していた
+  install-provenance lock の欠陥を塞いだ。** `acquireRecordLock` の待機ループは、成功した
+  `rename(staging, lockDir)` のあとに行う marker の stamp と identity 照合まで同じ `try` に
+  抱えており、その `catch` は「宛先が publish できなかった、もう一度」を意味する腕だった。
+  しかし成功した `rename` は `staging` を消費する — 以降の試行はすべて存在しない source を
+  rename する `ENOENT` であり、writer は残りの patience まるごとを確実に失敗する no-op に
+  費やしたうえで `another process is writing the record` を報告した。その時点でそれは偽で、
+  原因を取り違えている。さらに publish 済みの lock は heartbeat を止めたまま残るため、同じ
+  tree の他の writer は全員 `LOCK_STALE_MS` を待たされた。負荷をかけた実測 (fault 注入なし):
+  `lock was replaced` の throw が 1 回、それを move して restore した reclaimer が 1 回、
+  そのあと 178 回の `ENOENT` rename と entry 1 件の喪失。待機は `publishLock` に切り出して
+  rename だけを retry させ、publish 後の処理は 1 回だけ走る — 呼び出し側にはもう loop が
+  無い。GitHub Actions 上で無関係の PR を赤くしていた
+  `keeps every entry under heavy concurrency` の flake は、この欠陥そのものだった。
+- **一瞬 quarantine された lock を「奪われた」と読まないようにした。** reclaimer は lock を
+  stale と判定してから MOVE するが、その 2 つは別の syscall である — 直前の holder の marker
+  を abandoned と読み、その `rename` が「その直後に publish された lock」に着地しうる。
+  `clearAbandonedLock` は move した object に fresh な marker を見つけて restore するので
+  lock は同じ inode のまま戻ってくるが、その window の中で名前を 1 回だけ読んだ holder は
+  起きていない置き換えを報告していた。publish 直後の identity 読み取りは `LOCK_CONFIRM_MS`
+  (1s、ceiling の十分内側) を上限に再読する。受け入れるのは `dev`/`ino` が staging のものと
+  一致する object だけなので、1 回読みが通さないものは何も通さない。
+- **待機の忍耐を反復回数ではなく持続時間で表した。** `LOCK_ATTEMPTS` (200) と `LOCK_POLL_MS`
+  の積は公称 sleep でしか実際の待ち時間にならず、`LOCK_STALE_MS` を上回るという不変条件は
+  どちらかが動くたびに書き直され、過去に 2 回とも誤った。`LOCK_PATIENCE_MS` (15s) 1 つと
+  なったことで ceiling との比較は直接になり、poll が重くなったときの対処が patience を黙って
+  削ることにもならない。`LOCK_POLL_MS` は読んで字のとおり「どれだけの頻度で見るか」になった。
+- **失敗した acquisition が lock を置き去りにしないようにした。** identity 照合が通らなかった
+  ときは、standing な lock がこの holder の object であるときに限って `release` に返させる
+  (link になった名前は拒否し、marker は名前指定で 1 つだけ unlink する — どのガードも review
+  finding が買ったものなので、失敗しかけの acquisition が即興で書き直さない)。あわせて、
+  `staging` を open できなかった経路が関数末尾の `clearInterval` を飛び越して `unref` 済み
+  timer を残していた漏れも塞いだ — heartbeat の停止は 1 箇所に集約した。
 - **昇格 window を持たない 9 個の finding code を、ガードの母集団を狭めるのではなく登録して塞いだ。**
   56 本の PR をまとめて取り込んだ後、`RULE_PROMOTIONS` に登録の無い code が 9 個残っていた。
   最初の修正はガードの母集団を `errorCapable` な code に絞るものだったが、これは誤りだった —
