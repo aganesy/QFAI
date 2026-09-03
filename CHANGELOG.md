@@ -96,6 +96,38 @@
 
 ### Fixed
 
+- **#1078 の矛盾が「到達可能になった瞬間」を検出するガードを入れた**
+  (`CR-20260904-0002` の scope 拡張、別途承認)。canonical をどちらにするかの
+  判断は**依然として保留**で、そこは変えていない。変えたのは、保留が
+  コメント 1 つに支えられていた状態を、**落ちるガード**に置き換えた点である。
+  それまで矛盾を隔てていた 4 条件のうち、3 つはテスト済みだったが 1 つは
+  何も落ちなかった:
+  | 隔てているもの | 既存カバレッジ |
+  | --- | --- |
+  | `certify` が multi-spec + flat で exit 64 | あり (`frozenSpecsCovered: ["0012","0007"]`) |
+  | flat gate が `prototypingEvidence.review.missing` を出す | あり |
+  | `iterate` が `frozenSpecsCovered` を single-spec で凍結 | あり (`TC-0012-0388` が 2 つ目の UI-bearing spec を seed) |
+  | **per-spec entry point に production caller が無い** | **無し — 変わっても何も落ちない** |
+  最後の 1 行が穴だった。`iterationReviewPathPerSpec` /
+  `dispatchReviewerToPair` が wire-in された瞬間に矛盾は実プロジェクト上で
+  live になるが、それを告げるテストは存在しなかった。`OQ-0012-0013` は
+  それを trigger として**名指してはいた**が、名指すことは検出ではない。
+  `tests/unit/reviewLayoutContradiction.test.ts` が 2 行を追加する。どちらも
+  「矛盾が許容される」とは主張せず、失敗メッセージは
+  `OQ-0012-0013` と `CR-20260904-0002` を名指して**「元に戻せ」ではなく
+  「決定すべき時が来た」**と述べ、ガード自身を移すか削除するよう指示する。
+  既存の 3 行は重複させていない。
+  呼び出し箇所の検出は**パーサで `CallExpression` を歩く**方式にした。
+  初稿は #1089 の共有 reduction + regex だったが、計測すると 2 点が悪かった:
+  `src/` のどのモジュールも対象ヘルパを引数リスト付きの散文で書いていないので
+  **reduction は何の仕事もしていなかった**し、`NAME(` は**宣言そのもの**にも
+  一致するため宣言モジュールの除外が必要で、その除外が「宣言モジュール内に
+  追加された caller」を隠す — wire-in が始まりうる経路の 1 つである。
+  宣言は `CallExpression` ではなく、コメントは AST に入らないので、パーサには
+  どちらの除外も要らない。#1061 / #1089 と同じ教訓。
+  長期間眠るガードは predicate の破損が気付かれない類なので、変異テストで
+  発火を確認した: production module が per-spec helper を呼ぶと 1 行目が失敗、
+  gate が flat helper を呼ばなくなると 2 行目が失敗、復元すると両方成功。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。

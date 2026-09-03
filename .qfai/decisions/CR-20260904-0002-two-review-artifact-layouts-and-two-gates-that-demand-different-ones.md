@@ -9,6 +9,8 @@
 - Approved by: `yusuke_senaga`
 - Approved at: `2026-09-04T05:20:00Z`
 - Approved option: `record-only (defer the canonical-artifact decision)`
+- Scope extended at: `2026-09-04T07:10:00Z` (approved by `yusuke_senaga`) — see
+  **Scope extension: guard the reachability** below
 - Applied at: `2026-09-04T05:45:00Z`
 - Superseded by: `-`
 
@@ -102,3 +104,58 @@ Applied by hand under the approval above, `confirm-only`:
 - No other artifact is edited. In particular the single-spec freeze in
   `prototypingIterate.ts` stays exactly as it is: it is the mitigation, and
   `OQ-0012-0013` is the record that its comment is load-bearing.
+
+## Scope extension: guard the reachability
+
+Approved separately, 2026-09-04. The canonical-artifact decision stays
+deferred — nothing below changes it — but the deferral is now **guarded**
+rather than resting on a comment.
+
+Before this, three things held the contradiction apart and only two of them
+could fail:
+
+| held apart by                                                     | covered?                                                                     |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `certify` exits 64 for a multi-spec frozen set on the flat layout | yes — `frozenSpecsCovered: ["0012", "0007"]` in `prototypingCertify.test.ts` |
+| the flat gate reports `prototypingEvidence.review.missing`        | yes — `prototypingEvidence.test.ts`                                          |
+| `iterate` freezes `frozenSpecsCovered` single-spec                | yes — `TC-0012-0388` seeds a second UI-bearing spec and asserts one entry    |
+| **the per-spec entry points have no production caller**           | **no — nothing failed when that changed**                                    |
+
+The last row was the gap: a wire-in of `iterationReviewPathPerSpec` or
+`dispatchReviewerToPair` would make the contradiction live on real projects,
+and no test would say so. `OQ-0012-0013` named that as the trigger ending the
+deferral, but naming a trigger is not detecting it.
+
+`packages/qfai/tests/unit/reviewLayoutContradiction.test.ts` adds two rows:
+
+1. no production module calls either per-spec entry point;
+2. the reviewer-deliverable gate still calls `iterationReviewPath` (the flat
+   helper) and does not call `iterationReviewPathPerSpec` — so the gate cannot
+   move to the per-spec layout without the record being updated.
+
+Neither row asserts the contradiction is acceptable. Each failure message says
+the decision now has to be made, names this CR and `OQ-0012-0013`, and says the
+guard should be moved or deleted as that decision requires — rather than telling
+the reader to revert.
+
+Existing coverage is not duplicated: the three covered rows above already have
+behaviour tests, and this file asserts none of them.
+
+The rows find call sites with the TypeScript parser rather than by reducing the
+source and matching a regex. The first draft did the latter and two things were
+wrong with it: no module in `src/` names either helper with an argument list in
+prose, so the reduction was doing no work at all here; and matching `NAME(`
+also matched the DECLARATIONS, which forced an exemption for the declaring
+modules — an exemption that would then have hidden a caller added _inside_ one
+of them, a plausible way for a wire-in to begin. A declaration is not a
+`CallExpression` and comments never enter the AST, so the parser needs neither
+exemption. Same lesson as #1061 and #1089.
+
+Verified by mutation, since a guard meant to sit dormant is exactly the kind
+whose broken predicate goes unnoticed:
+
+| mutation                                                        | result          |
+| --------------------------------------------------------------- | --------------- |
+| a production module starts calling `iterationReviewPathPerSpec` | **row 1 fails** |
+| the gate stops calling `iterationReviewPath`                    | **row 2 fails** |
+| restored                                                        | **both pass**   |
