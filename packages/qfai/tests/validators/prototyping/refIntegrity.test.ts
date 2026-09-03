@@ -42,6 +42,21 @@ async function seedPrototypingJson(root: string, screenshot: string, html: strin
   );
 }
 
+/**
+ * A `prototyping.json` holding one iteration, written verbatim — so a case can
+ * omit `evidenceRefs` entirely, which the fixed-shape helper above cannot
+ * express.
+ */
+async function seedIterations(root: string, iterations: unknown[]): Promise<void> {
+  const dir = path.join(root, ".qfai", "evidence", "prototyping");
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    path.join(dir, "prototyping.json"),
+    JSON.stringify({ specsCovered: ["0001"], iterations }),
+    "utf-8",
+  );
+}
+
 describe("validatePrototypingArtifactRefIntegrity", () => {
   it("returns no issues when prototyping.json is missing", async () => {
     const root = await newTempDir();
@@ -151,5 +166,67 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     // field violations, that file is prototype-handoff.yaml — not
     // prototyping.json (which is the generic refIntegrity owner).
     expect(handoffIssue?.file).toBe(".qfai/contracts/design/prototype-handoff.yaml");
+  });
+
+  // The cycle-0 seed is written BEFORE capture runs, so any ref it carried
+  // named a file that did not exist yet. It cites nothing now, and this gate
+  // asks nothing of it.
+  it("asks no artifact of the cycle-0 seed, which cites none", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [{ index: 0, reviewerId: "iterate-seed" }]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
+
+  // The exemption is keyed on the seed's positive claim, not on the refs being
+  // absent — otherwise dropping the field would waive the gate for every
+  // iteration, which is the opposite of what it is for.
+  it("still requires both refs from an iteration that names no reviewer", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [{ index: 0 }]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((i) => i.message)).toEqual([
+      "iterations[0].evidenceRefs.screenshot must be a non-empty repository-relative artifact path.",
+      "iterations[0].evidenceRefs.html must be a non-empty repository-relative artifact path.",
+    ]);
+  });
+
+  it("still requires both refs from an iteration naming a real reviewer", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [{ index: 0, reviewerId: "product-surface-reviewer" }]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.filter((i) => i.severity === "error")).toHaveLength(2);
+  });
+
+  // The pre-fix seed shape, kept as a case rather than a memory: it pointed at
+  // `iter-00/index.{png,html}`, which nothing in the loop writes at any point —
+  // capture honours the plan's `iter-NN/{screen}.png` template. Those two
+  // QFAI-PROT-009 errors are what #1073 reported, and the exemption is what
+  // makes them unreachable from the seed.
+  it("would have reported the pre-fix seed refs, and does not now that they are gone", async () => {
+    const root = await newTempDir();
+    const preFix = {
+      index: 0,
+      reviewerId: "iterate-seed",
+      evidenceRefs: {
+        screenshot: ".qfai/evidence/prototyping/iter-00/index.png",
+        html: ".qfai/evidence/prototyping/iter-00/index.html",
+      },
+    };
+    // Same refs, no reviewerId: the gate still resolves them and still fails.
+    await seedIterations(root, [{ index: 0, evidenceRefs: preFix.evidenceRefs }]);
+    const withoutSeedId = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(
+      withoutSeedId.filter((i) => i.message.includes("references a missing artifact")),
+    ).toHaveLength(2);
+
+    // The seed carrying them is exempt, so the window between `iterate` and the
+    // first review is clean even for a record written before this change.
+    await seedIterations(root, [preFix]);
+    const asSeed = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(asSeed).toEqual([]);
   });
 });

@@ -42,6 +42,34 @@
 
 ### Fixed
 
+- **cycle-0 seed が「何も書かないファイル」を evidence として引用し、`iterate` と `review` の間で
+  自分の gate を落としていた欠陥を塞いだ。** `prototyping iterate --cycle 0` が書く seed iteration の
+  `evidenceRefs` は、宣言済み screen が無いとき `iter-NN/index.png` / `iter-NN/index.html` に
+  fallback していた。この 2 パスは loop のどこにも writer が存在しない — 同じ invocation が書く
+  `iterate-plan.json` 自身が `paths.screenshotTemplate` を `iter-NN/{screen}.png` と宣言しており、
+  capture はその template に従うので `index.png` はどの時点でも生成されない。結果として
+  `validatePrototypingArtifactRefIntegrity` が `QFAI-PROT-009` を 2 件出し、`iterate` 完了直後から
+  reviewer の結果が mirror されるまでの窓 (capture と reviewer pass 全体を含む) でプロジェクトは
+  自分の gate を通れなかった。しかも finding は「missing artifact」を名指すので「capture が
+  走っていない」と読め、自然な対処である capture 再実行は per-screen ファイルしか書かないため
+  救いにならない。screen が宣言されていても窓は消えない: seed は capture より **前** に書かれるので、
+  最初の screen のパスもその時点では存在しない。
+  seed は `evidenceRefs` を持たなくなり、`QFAI-PROT-009` は `reviewerId` が seed のものである
+  iteration を skip する。2 つは 1 つの変更である — 除外なしに field を落とすと、missing-artifact
+  error 2 件が empty-field error 2 件に置き換わるだけになる。除外は default ではなく positive claim
+  なので、`reviewerId` を省いた iteration も別の reviewer を名乗る iteration も従来どおり両方の ref を
+  要求される。`SeedMetadata.declaredScreens` はこの `evidenceRefs` を組むためだけに存在していたので、
+  reader を失った field として併せて削除した。
+- **上の欠陥を green のまま出荷させていたテストを、自分で作った postcondition を検証しないよう
+  直した。** `prototypingIterate.validateConformant.test.ts` の「no declared screens で
+  ref-integrity が error 0 件」を主張するケースは、その主張の直前に `iter-00/index.png` と
+  `iter-00/index.html` を **自分で書いていた**。根拠として添えられたコメントは
+  「seed は `--capture` 経由で暗黙にこれを行う。`--capture` なしなら operator の workflow が
+  最初の validate 前に書く」だが、両方とも事実ではない: capture が書くのは plan の
+  `screenshotTemplate` どおりの `iter-NN/<screen>.{png,html}` で `index.*` ではなく、`index.*` を
+  operator に書かせる記述も出荷物のどこにも無い。fixture が結論を製造していたため、実運用が
+  `QFAI-PROT-009` を 2 件出している間もこのテストは通り続けていた。現在は何も書かず、
+  `iterate --cycle 0` が実際に残すツリーだけを観測する。
 - **`iter-NN/review.json` を一度も読まずに「schema gate がある」と宣言していた
   reviewer-deliverable gate を実装した。** `qfai-prototyping/SKILL.md` は「review.json の
   shape だけが受理される。未知の layoutAntiPatterns code や enum 外の designMdViolations は
