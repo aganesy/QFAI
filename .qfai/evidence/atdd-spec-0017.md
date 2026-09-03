@@ -2193,28 +2193,30 @@ exactly what the mechanism below says the line's movement means.
 
 **And it moved again — this time in a MERGE, with no commit on either side that was ever wrong.** Both
 parents of `2a6da1ca9` measure 932 and record 932, so each branch was individually correct and neither
-could have found this by re-measuring its own tree. They were short of the merge in different ways:
+could have found this by re-measuring its own tree. They are short of the merge in different ways:
 
-| revision                   | measured | recorded | how it differs from the merge                                                                                                                                                          |
-| -------------------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `60b707fa0` (parent A)     | 932      | 932      | lacks `tests/assets/autoModeApprovalDegrade.test.ts` (5 callsites)                                                                                                                     |
-| `26a67fbe1` (parent B)     | 932      | 932      | has that file, but is one callsite behind on five others: `atddRedProvenance` 212→213, `coverageDepthMatrixHome` 9→10, `evidenceCellContainer` 9→10, `evidenceGitignoreClaim` 4→5, `implementCheckpointVerification` 8→9 |
-| `2a6da1ca9` (the merge)    | **937**  | 932      | takes A's five single-callsite additions AND B's whole new file                                                                                                                        |
+| revision                | measured | recorded | how it differs from the merge                                      |
+| ----------------------- | -------- | -------- | ------------------------------------------------------------------ |
+| `60b707fa0` (parent A)  | 932      | 932      | lacks `tests/assets/autoModeApprovalDegrade.test.ts` (5 callsites) |
+| `26a67fbe1` (parent B)  | 932      | 932      | has that file; is one callsite behind on five others (below)       |
+| `2a6da1ca9` (the merge) | **937**  | 932      | takes A's five single-callsite additions AND B's whole new file    |
 
-The record is byte-identical in both parents, so the merge carried it through unchanged and nothing
-re-measured after the integration. `test (e2e)`, `node-floor` and `ci-pass` have been red on `main`
-ever since: one stale integer, three required jobs, every open pull request red for a reason none of them
+The five B is behind on: `atddRedProvenance` 212→213, `coverageDepthMatrixHome` 9→10,
+`evidenceCellContainer` 9→10, `evidenceGitignoreClaim` 4→5, `implementCheckpointVerification` 8→9. The
+record is byte-identical in both parents, so the merge carried it through unchanged and nothing
+re-measured after the integration. `test (e2e)`, `node-floor` and `ci-pass` have been red on `main` ever
+since: one stale integer, three required jobs, every open pull request red for a reason none of them
 contains. `git diff 2a6da1ca9 64dfea7ec` under either glob is empty, so the merge is where the whole
 delta enters.
 
 **That is why the obligation belongs to the merge and not to the branch.** The rule below says a commit
-that changes a callsite under the two globs owes a re-measurement, and both branches honoured it. What
-neither could honour is a count that is a property of the UNION of two histories: `measure(A ∪ B)` is
-not recoverable from `measure(A)` and `measure(B)`, so the only revision at which this number can be
-made true is the merge commit itself. A branch-local discipline — even "re-measure last" — cannot reach
-it. This is the seventh instance of the defect and the first with no wrong commit in it, which is the
-strongest argument in this record for deriving the count rather than committing it: a literal that only
-a merge can invalidate has no author to hold responsible for it.
+that changes a callsite under the two globs owes a re-measurement, and both branches honoured it for
+their own trees. What neither could honour is a count that is a property of the UNION of two histories:
+`measure(A ∪ B)` is not recoverable from `measure(A)` and `measure(B)`, so the merge commit is the only
+revision at which this number can be made true. A branch-local discipline — including "re-measure last"
+— cannot reach it. This is the seventh instance of the defect and the first with no wrong commit in it,
+which is the strongest argument in this record for deriving the count rather than committing it: a
+literal that only a merge can invalidate has no author to hold responsible for it.
 
 Re-measured for this commit by a separate walk of the two include roots — not by calling into
 `stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
