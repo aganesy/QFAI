@@ -68,6 +68,27 @@
 
 ### Fixed
 
+- **500 行上限を守らせている `assets.test.ts` 自身が型検査対象外で、潜在的な `TS2345` を
+  抱えていた欠陥を塞いだ。** `tsconfig.tests.json#include` は glob ではなく列挙であり、
+  そのファイル自身の `$comment` が方針を「この変更が持つ責任範囲の境界」と述べているのに、
+  出荷アセットの行上限を強制している当のガードがその列挙から漏れていた。列挙外のテストは
+  何によっても型検査されない (vitest は型エラーを無視してトランスパイルする) ため、
+  `validate.issues.map((i) => i.file).filter(Boolean)` の結果が `(string | undefined)[]` の
+  まま `path.isAbsolute` に渡され続けていた。`.filter(Boolean)` は実行時に `undefined` を
+  落とすが型を絞らない。型述語 (`(file): file is string => file !== undefined`) で narrowing
+  した — bare `as` は同じことを検査せずに主張するだけなので使わない。
+  列挙への追加は無料ではなく、`eslint.config.js` が同じリストを `TYPED_TEST_FILES` として
+  読んで promise 系 4 ルールを有効化する。露出した `require-await` 6 件 (`await` を持たない
+  `async` の `it` コールバック) は `async` を外して解消した。
+- **同じ形の再発を構造的に塞いだ。** `testTypeCheckEnumeration.test.ts` に「出荷アセットの
+  予算を強制する suite は、それ自身が型検査対象でなければならない」という行を追加した。
+  budget helper を import している suite は予算を強制している suite であり、これはツリーから
+  決定できる — 490 ファイルの census (同ファイルの docstring が実測に基づいて却下している)
+  を持ち込まずに済む。この行は追加した時点で `assets.test.ts` 以外に **3 件**
+  (`implementCheckpointVerification.test.ts` / `sddSkillTriagePhase.test.ts` /
+  `assetLineBudget.test.ts`) を検出し、いずれも型エラー 0 件・lint エラー 0 件で列挙できた。
+- **`include` の test エントリをソート順にした。** #1065 の 4 番目の提案。append が
+  最終行に集中せず collating position に落ちるので、併走 PR 間の衝突面が縮む。
 - **`prototyping iterate` が `--dry-run` を無視して、preview を求めた実行そのもので cycle-0 の
   破壊的リセットを行っていた欠陥を塞いだ。** `--dry-run` は `変更を行わず表示のみ` と文書化され
   引数パーサでは解釈されていたが、`runPrototypingIterate` へ渡されていなかった (`init` と `doctor`
