@@ -96,6 +96,19 @@
 
 ### Fixed
 
+- **同じ欠陥を持つ `TDD-0012` / `TDD-0013` / `REQ-0020` も付け替えた**
+  (`CR-20260904-0001` の scope 拡張、別途承認)。3 件とも
+  `tests/core/prototypingEvidence.negative.test.ts` を引いており、
+  そのファイルの `QFAI-PROT-002` は **0 件**。ledger 側 2 行は `done` だった。
+  対象挙動は両方 `tests/validators/prototypingEvidence.test.ts` に既存なので
+  **テストは追加していない** — ポインタ 3 箇所の付け替えのみ。
+  なお `TDD-0012` の `Selector` は backtick で囲んだ。prettier が markdown
+  テーブル内の裸の `*` を `\*` にエスケープするため、そのままでは verbatim
+  一致が壊れ、`selectorResolves` の末尾トークン fallback（"declares" という
+  ありふれた語）でしか通らなくなる。これはこの CR が消そうとしている
+  「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
+  backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
+  確認済み。
 - **#1078 の矛盾を計測して `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
   `validate` の reviewer-deliverable gate は flat な `iter-NN/review.json` を読み、
   `certify` は multi-spec frozen set に対して per-spec

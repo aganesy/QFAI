@@ -9,6 +9,8 @@
 - Approved by: `yusuke_senaga`
 - Approved at: `2026-09-04T05:20:00Z`
 - Approved option: `1`
+- Scope extended at: `2026-09-04T06:05:00Z` (approved by `yusuke_senaga`) — see
+  **Scope extension** below
 - Applied at: `2026-09-04T05:30:00Z`
 - Superseded by: `-`
 
@@ -77,9 +79,11 @@ the file is the part that is not covered, and it is the part that matters.
 | ---------- | ------------ | ------------------------------------------------------------ |
 | `TDD-0011` | `ledger-row` | Its `Test file` / `Selector` cells are what this CR corrects |
 
-- Not blocked by this CR: every other `spec-0004` ledger row. No other row names
-  `TC-0004-0011`, and none names
-  `packages/qfai/tests/core/prototypingEvidence.negative.test.ts`.
+- Not blocked by this CR: every other `spec-0004` ledger row **except**
+  `TDD-0012` and `TDD-0013`. The original wording of this bullet claimed no
+  other row named
+  `packages/qfai/tests/core/prototypingEvidence.negative.test.ts`; that was
+  wrong, and both of those rows do. See **Scope extension**.
 - Not blocked: `packages/qfai/tests/validators/prototypingEvidence.test.ts` is
   not named on a `done` row of any **other** spec's ledger, so appending a case
   to it is not a cross-spec ownership event under
@@ -128,3 +132,32 @@ Applied by hand under the approval above, `confirm-only`:
   `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` are all
   correct as written, and the "v1.x-shaped" wording is left alone because
   `EX-0004-0010` already defines it.
+
+## Scope extension
+
+Approved separately, 2026-09-04, after `TDD-0011` was corrected and the
+neighbouring rows were checked: `TDD-0012`, `TDD-0013` and `REQ-0020` carry the
+identical defect. All three cite
+`packages/qfai/tests/core/prototypingEvidence.negative.test.ts`, which holds
+**zero** `QFAI-PROT-002` assertions; the two ledger rows sit at `done`.
+
+Both behaviours already exist in
+`packages/qfai/tests/validators/prototypingEvidence.test.ts`, so **no test is
+added** — this extension is three pointers:
+
+| item       | TC             | repointed to (existing test)                                             |
+| ---------- | -------------- | ------------------------------------------------------------------------ |
+| `TDD-0012` | `TC-0004-0012` | `emits QFAI-PROT-002 for a lap-* code no registry entry declares`        |
+| `TDD-0013` | `TC-0004-0013` | `emits QFAI-PROT-002 when designMdViolations contains a malformed entry` |
+| `REQ-0020` | —              | `16_Traceability-ledger.md`'s test column, same file swap                |
+
+`TDD-0012`'s `Selector` is wrapped in backticks. Prettier escapes a bare `*` in
+markdown table text to `\*`, which breaks verbatim containment — the row would
+then resolve only through `selectorResolves`' last-identifier fallback, on the
+word "declares", which is the kind of accidental pass this CR exists to remove.
+`normalizeSelector` strips surrounding backticks ("quotes off"), so the wrapped
+form resolves verbatim. Verified: all three selectors are contained verbatim in
+the file their row now names, under the strict predicate rather than the
+fallback.
+
+Both rows keep `Status: done` and take `DR-ID: CR-20260904-0001`.
