@@ -716,6 +716,30 @@ function canonicalMirrorValue(field: string, value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * Longest value rendered in full inside a mirror-mismatch message.
+ *
+ * `proseCritique` is a 200-500 word field, so printing both sides of a
+ * mismatch verbatim produced a finding message of a few thousand
+ * characters and buried the one fact the operator needs — which field
+ * diverged, and in which file. The elision keeps enough of each side to
+ * see WHERE they part company.
+ */
+const MIRROR_VALUE_RENDER_MAX = 120;
+
+function renderMirrorValue(value: unknown): string {
+  // `JSON.stringify` returns `undefined` for `undefined`, and every
+  // caller below is guarded by an `in` test against an object that came
+  // from `JSON.parse` — where an own property is never `undefined` — so
+  // the string return is the only reachable one. Handling the other
+  // half would be a branch no input can take, which eslint reports as
+  // an unnecessary conditional.
+  const json = JSON.stringify(value);
+  return json.length <= MIRROR_VALUE_RENDER_MAX
+    ? json
+    : `${json.slice(0, MIRROR_VALUE_RENDER_MAX)}… (${json.length} chars)`;
+}
+
 function mirrorAgreementIssues(
   index: number,
   rel: string,
@@ -727,7 +751,7 @@ function mirrorAgreementIssues(
     issues.push(
       issue(
         "QFAI-PROT-002",
-        `iterations[${index}].${field} does not mirror ${rel}: prototyping.json has ${JSON.stringify(mirrorValue)}, ${rel} has ${JSON.stringify(reviewValue)}. iterations[] is a transcription of the reviewer's file, so the reviewer's value is the one to keep.`,
+        `iterations[${index}].${field} does not mirror ${rel}: prototyping.json has ${renderMirrorValue(mirrorValue)}, ${rel} has ${renderMirrorValue(reviewValue)}. iterations[] is a transcription of the reviewer's file, so the reviewer's value is the one to keep.`,
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.review.mirrorMismatch",
@@ -745,10 +769,15 @@ function mirrorAgreementIssues(
     }
   }
 
+  // The nested leaves follow the same rule as the top-level fields above:
+  // a leaf missing on one side is that side's own shape defect, already
+  // reported by the pass that owns it, so it is skipped here rather than
+  // restated as a disagreement with `undefined`.
   const reviewScores = review.scores;
   const mirrorScores = mirror.scores;
   if (isRecord(reviewScores) && isRecord(mirrorScores)) {
     for (const axis of ORDINAL_AXIS_NAMES) {
+      if (!(axis in reviewScores) || !(axis in mirrorScores)) continue;
       if (reviewScores[axis] !== mirrorScores[axis]) {
         report(`scores.${axis}`, reviewScores[axis], mirrorScores[axis]);
       }
@@ -759,6 +788,7 @@ function mirrorAgreementIssues(
   const mirrorRefs = mirror.evidenceRefs;
   if (isRecord(reviewRefs) && isRecord(mirrorRefs)) {
     for (const kind of EVIDENCE_REF_KINDS) {
+      if (!(kind in reviewRefs) || !(kind in mirrorRefs)) continue;
       if (reviewRefs[kind] !== mirrorRefs[kind]) {
         report(`evidenceRefs.${kind}`, reviewRefs[kind], mirrorRefs[kind]);
       }

@@ -692,6 +692,54 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
 
+  // A 200-500 word field rendered in full on both sides made one finding a few
+  // thousand characters long and buried the fact the operator needs.
+  it("elides a long value instead of printing both sides of it in full", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...iter, proseCritique: `${iter.proseCritique} diverged-here` }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    const mismatch = issues.find((i) => i.rule === "prototypingEvidence.review.mirrorMismatch");
+    expect(mismatch).toBeDefined();
+    expect(mismatch?.message).toContain("proseCritique");
+    expect(mismatch?.message).toContain("chars)");
+    // Both sides are ~200 words; neither is reproduced whole.
+    expect(mismatch?.message.length).toBeLessThan(700);
+  });
+
+  // A leaf missing on one side is that side's own shape defect, reported by the
+  // pass that owns it. Restating it here as "disagrees with undefined" would
+  // report one gap twice.
+  it("does not report an absent score leaf as a disagreement", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    const { usability: _dropped, ...partialScores } = iter.scores;
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...iter, scores: partialScores }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    // The mirror's own shape check reports the missing axis...
+    expect(
+      issues.some(
+        (i) => i.rule === "prototypingEvidence.scores.usability" && i.message.includes("undefined"),
+      ),
+    ).toBe(true);
+    // ...and the mirror comparison stays silent about it.
+    expect(issues.some((i) => i.rule === "prototypingEvidence.review.mirrorMismatch")).toBe(false);
+  });
+
   it("returns no issues when review.json and the mirror agree", async () => {
     const root = await newTempDir();
     const first = validIter(0);

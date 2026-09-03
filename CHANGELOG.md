@@ -53,7 +53,8 @@
   返した。reviewer が走ったことを保証するはずの gate が、reviewer が走ったかどうかを
   判定できていなかった。`validatePrototypingEvidence` が 3 つの義務を QFAI-PROT-002 で
   報告する: (1) presence — review を記録した iteration には parse 可能な `review.json` が
-  ある、(2) schema — payload が `references/reviewer-prompt.md` の shape に一致し、
+  ある (不在と「あるが読めない」は別 finding — `EACCES` / `EISDIR` を「missing」と報告すると、
+  ディスク上にあるファイルの上書きへ操作者を誘導してしまう)、(2) schema — payload が `references/reviewer-prompt.md` の shape に一致し、
   `layoutAntiPatternsDetected[]` は任意の文字列ではなく registry 照合を受ける、
   (3) mirror — 転記された `iterations[N]` が reviewer のファイルと一致する。(3) はどちらの
   surface も単独では捕まえられなかったもので、field を落とす・並べ替える・言い換える転記は
