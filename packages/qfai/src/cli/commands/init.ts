@@ -1651,6 +1651,7 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
     "requirements-decomposition",
     "communication",
     "thinking",
+    "review-convergence",
     "shared-skill-delegation-baseline",
     "shared-skill-operating-baseline",
   ]);

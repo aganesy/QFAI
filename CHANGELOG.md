@@ -6,6 +6,32 @@
 
 ### Added
 
+- **Round 2b が正しく検出した重大欠陥を「修正して要件を維持する」経路が存在しなかった
+  deadlock に、1 回限りの corrective review という出口を定義した。** 既存規則の交点が行き止まりで
+  あることは構造的に到達可能である: named fix が **導入または露出** した欠陥を Round 2b が
+  報告すると 2 度目の escalation になり、そこで 2b cap が _apply a named fix_ を、severity floor が
+  _accept as Open Question_ を封じる — security / data-loss / released-contract correctness の
+  finding では残るのが _drop the item from scope_ だけになる。欠陥を直して要件を保つ選択には
+  検証経路が無く、artifact は永久に `REVISE` に留まる。Round 2b が仕事をしたことがこの状態を
+  作る。
+  そのユーザーが drop ではなく修正を選んだ場合に限り、**corrective review artifact を 1 つ**
+  開ける。third round でも budget reset でもなく、round より狭い remit を持つ別 artifact であり、
+  同じ 2 規則がこれを通して再合成できないよう境界を持つ: 元 artifact と Round 2b finding の
+  逐語、ユーザー決定、修正内容、および触れた全 artifact の before/after revision を digest として
+  記録する義務。remit は finding と named fix のみ、独立 review は 1 回のみ (`Round: corrective`
+  — 番号は後継を招くので使わない)、`PASS` は当該 finding を supersede して未通過の review gate に
+  戻すのみ、`REVISE` は terminal で追加 artifact も追加 review も無い。severity floor と
+  Open Question 禁止は弱まらない。
+- **2b cap の一文が事実と違っていたのを直した。** 「floor が両方を封じるなら」と書かれていたが、
+  floor が封じるのは _accept as Open Question_ の 1 つだけである。`drop` だけが残るのは floor
+  単独ではなく **cap と floor の交点** であり、そう述べ直した。
+- **review 終了規則を `constitution/review-convergence.md` に分離した。**
+  `shared-skill-delegation-baseline.md` は 500 行の shipped-asset 上限に対して 499 行であり、
+  1 行の追加すら `assets guardrails > keeps every shipped assistant asset inside the line ceiling`
+  を落とす。その guard 自身のメッセージが処方する remedy が "move a topic into references/" で
+  あり、`Round budget` と `Convergence` は「review がどう終わるか」という 1 つの topic で
+  delegation とは別なので、`drift-protocol.md` が既に確立している sibling constitution file の
+  慣習に従った。規則の内容は移動によって変わっていない (baseline 439 行 / 新ファイル 121 行)。
 - **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
   `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
   `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を
