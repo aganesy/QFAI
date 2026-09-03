@@ -42,6 +42,31 @@
 
 ### Fixed
 
+- **`iter-NN/review.json` を一度も読まずに「schema gate がある」と宣言していた
+  reviewer-deliverable gate を実装した。** `qfai-prototyping/SKILL.md` は「review.json の
+  shape だけが受理される。未知の layoutAntiPatterns code や enum 外の designMdViolations は
+  QFAI-PROT-002 で validate を落とす」と書いていたが、その gate は存在しなかった。
+  `validate --profile prototyping` が読んでいたのは `prototyping.json#iterations[]` —
+  reviewer のファイルを orchestrator が転記した **mirror** のほうだけで、reviewer 側は
+  丸ごと素通りだった。実測では、未知の `lap-999-not-a-real-code`、`pivotDirective: "stop"`、
+  `scores.usability: "catastrophic"`、そして `review.json` の削除まで、いずれも `error=0` を
+  返した。reviewer が走ったことを保証するはずの gate が、reviewer が走ったかどうかを
+  判定できていなかった。`validatePrototypingEvidence` が 3 つの義務を QFAI-PROT-002 で
+  報告する: (1) presence — review を記録した iteration には parse 可能な `review.json` が
+  ある (不在と「あるが読めない」は別 finding — `EACCES` / `EISDIR` を「missing」と報告すると、
+  ディスク上にあるファイルの上書きへ操作者を誘導してしまう)、(2) schema — payload が `references/reviewer-prompt.md` の shape に一致し、
+  `layoutAntiPatternsDetected[]` は任意の文字列ではなく registry 照合を受ける、
+  (3) mirror — 転記された `iterations[N]` が reviewer のファイルと一致する。(3) はどちらの
+  surface も単独では捕まえられなかったもので、field を落とす・並べ替える・言い換える転記は
+  「内部的には整合した 2 つのファイルが互いに食い違う」状態を作り、各ファイルは自分の検査を
+  通ってしまう。code は QFAI-PROT-002 のまま — SKILL.md が既に約束している code であり、
+  `ruleCodeUniqueness` が 1 code に owner module 1 つを要求するので、検査は sibling
+  validator ではなく `prototypingEvidence.ts` に置いた。cycle-0 seed
+  (`reviewerId: iterate-seed`) は 3 つすべてから除外される — reviewer がまだ走っていない
+  ことがその存在理由なので、義務を課せば `iterate` と最初の review の間の window で全
+  プロジェクトが落ちる。除外は default ではなく positive claim であり、`reviewerId` を
+  省いた iteration も別の reviewer を名乗る iteration も義務を負う。SKILL.md の該当行は、
+  定義がツリーのどこにも存在しない schema 名を挙げるのをやめて実挙動に合わせた。
 - **publish に成功した `rename` を「まだ publish していない」ものとして retry していた
   install-provenance lock の欠陥を塞いだ。** `acquireRecordLock` の待機ループは、成功した
   `rename(staging, lockDir)` のあとに行う marker の stamp と identity 照合まで同じ `try` に

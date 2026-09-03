@@ -71,6 +71,7 @@ import {
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
+  SEED_REVIEWER_ID,
   iterationDir,
   iterationReviewPath,
   iterationHtmlPath,
@@ -2083,7 +2084,7 @@ function buildSeedIterations(
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
       pivotDirective: "continue",
-      reviewerId: "iterate-seed",
+      reviewerId: SEED_REVIEWER_ID,
       evidenceRefs: {
         screenshot: screenshotRef,
         html: htmlRef,
