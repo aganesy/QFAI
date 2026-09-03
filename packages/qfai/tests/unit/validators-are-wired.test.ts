@@ -307,77 +307,147 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
 }
 
 /**
- * Remove comments in ONE left-to-right scan, optionally blanking literals.
+ * Reduce a module with the TypeScript parser: comments always, string and
+ * template literals when asked.
  *
- * Two `replace` passes cannot do this, because each delimiter occurs inside
- * the other's body. Whichever regex runs first reads the other's content as
- * its own opener. Measured in `src/core/validate.ts`: a line comment citing
- * the glob `references` + slash + star + `.md` carries a block-comment
- * opener, the block pass ran first, and its non-greedy match ran twenty-seven
- * lines to the next real closer — taking the
- * `validateStaleReferences(root, { config })` call between them with it. The
- * guard then reported that validator as a barrel entry with no call site: a
- * false accusation whose trigger was an unrelated JSDoc added below it, which
- * is why the same file passed until one appeared. Reversing the two passes
- * only moves the bug, since a block comment may likewise contain `//` — this
- * very docblock cannot spell its own closer for the same reason.
+ * Hand-rolled scanning cannot do this, and the reason is structural rather
+ * than a missing case: every delimiter this needs to find can also appear
+ * inside the body of some *other* construct, so a scan that does not track
+ * construct X reads X's contents as its own syntax. Three generations of this
+ * helper each tracked one construct more than the last and each was still
+ * wrong about the next one:
  *
- * String and template literals are tracked in the same pass and for the same
- * reason: a `//` or `/*` inside one is data, not an opener. That subsumes the
- * quote and `:` guards the two-pass version used to approximate it with. A
- * backslash still suppresses both openers, because `/\\/\\//` is a regular
- * expression and not a comment.
+ * - two `replace` passes: a line comment citing a glob carried a block-comment
+ *   opener, and the block pass ran twenty-seven lines to the next real closer,
+ *   taking a `validateStaleReferences(...)` call with it;
+ * - one scan tracking comments: a `//` inside a string still opened a comment;
+ * - one scan tracking strings and templates: a REGULAR EXPRESSION whose body
+ *   holds a BACKTICK still opened a phantom template literal.
+ *   `core/specPackParsers.ts` has exactly that: its CommonMark fence
+ *   matcher is a regex whose alternation starts with a run of backticks,
+ *   and from that backtick the phantom ran
+ *   forty-six lines into a JSDoc, swallowing that JSDoc's own opener. From
+ *   there the framing inverted: prose between the doc's backticks read as
+ *   executable code and the real code read as string data. Measured against
+ *   the parser, `main` disagreed on five (file, validator) pairs, in both
+ *   directions — one validator called wired on the strength of a JSDoc
+ *   mention, four with their own declarations erased. The guard stayed green
+ *   only because a validator counts as wired if ANY file references it.
  *
- * @param blankLiterals replace each string / template literal with `""`.
- *   `codeOnly` wants that — prose in a literal is not a call site — while the
- *   module-edge walk needs the specifier text it would erase.
+ * The parser knows all of them, including the one a fourth hand-rolled
+ * generation would have missed. It also draws the distinction no scan here
+ * ever did: a template's `${...}` substitution is executable code, so
+ * `count=${validateX(root)}` is a call site, while the literal text
+ * around it is not.
+ *
+ * @param blankLiterals replace each string literal and each template
+ *   head/middle/tail with `""`, keeping substitutions. `codeOnly` wants that —
+ *   prose in a literal is not a call site — while the module-edge walk needs
+ *   the specifier text it would erase.
  */
 function stripCommentsScan(source: string, blankLiterals: boolean): string {
-  let out = "";
-  let index = 0;
-  while (index < source.length) {
-    const char = source[index];
-    const next = source[index + 1];
-    const escaped = source[index - 1] === "\\";
+  const cache = blankLiterals ? LITERALS_BLANKED : COMMENTS_ONLY;
+  const hit = cache.get(source);
+  if (hit !== undefined) return hit;
+  const reduced = reduceSource(source, blankLiterals);
+  cache.set(source, reduced);
+  return reduced;
+}
 
-    if (!escaped && char === "/" && next === "*") {
-      const end = source.indexOf("*/", index + 2);
-      out += " ";
-      index = end === -1 ? source.length : end + 2;
-      continue;
-    }
-    if (!escaped && char === "/" && next === "/") {
-      const end = source.indexOf("\n", index);
-      // The newline stays: line-anchored patterns downstream depend on it.
-      index = end === -1 ? source.length : end;
-      continue;
-    }
-    if (char === '"' || char === "'" || char === "`") {
-      let scan = index + 1;
-      while (scan < source.length) {
-        const inner = source[scan];
-        if (inner === "\\") {
-          scan += 2;
-          continue;
-        }
-        if (inner === char) {
-          scan += 1;
-          break;
-        }
-        // An unterminated quote is an apostrophe in prose far more often than
-        // it is a literal, so a non-template one ends at the line break.
-        if (char !== "`" && inner === "\n") break;
-        scan += 1;
+/**
+ * `referencesName` runs once per (module, validator name) pair — some sixty
+ * names over some three hundred modules — so the parse is memoised by source
+ * text. Two maps rather than a composite key: the two reductions of one module
+ * are different strings and both get asked for.
+ */
+const LITERALS_BLANKED = new Map<string, string>();
+const COMMENTS_ONLY = new Map<string, string>();
+
+/** One span to blank, and what to leave behind. */
+interface BlankSpan {
+  start: number;
+  end: number;
+  /** `space` keeps offsets and newlines; `quotes` collapses to `""`. */
+  fill: "space" | "quotes";
+}
+
+/**
+ * Comment spans. Comments are trivia, so they hang off tokens rather than
+ * nodes; walking `getChildren` reaches punctuation too, which is where a
+ * comment inside an otherwise empty block lives — and a comment this walk
+ * misses is prose the guard would read as wiring.
+ */
+function collectCommentSpans(source: string, parsed: ts.SourceFile): BlankSpan[] {
+  const spans: BlankSpan[] = [];
+  const seen = new Set<number>();
+  const visit = (node: ts.Node): void => {
+    for (const ranges of [
+      ts.getLeadingCommentRanges(source, node.pos),
+      ts.getTrailingCommentRanges(source, node.pos),
+    ]) {
+      for (const range of ranges ?? []) {
+        if (seen.has(range.pos)) continue;
+        seen.add(range.pos);
+        spans.push({ start: range.pos, end: range.end, fill: "space" });
       }
-      out += blankLiterals ? '""' : source.slice(index, scan);
-      index = scan;
-      continue;
     }
+    for (const child of node.getChildren(parsed)) visit(child);
+  };
+  visit(parsed);
+  return spans;
+}
 
-    out += char;
-    index += 1;
+/**
+ * String and template literal spans — the literal PIECES only. A template's
+ * `node.templateSpans[i].expression` is code and stays, which is the
+ * distinction that makes a call inside a substitution a real call site.
+ */
+function collectLiteralSpans(parsed: ts.SourceFile): BlankSpan[] {
+  const spans: BlankSpan[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      spans.push({ start: node.getStart(parsed), end: node.getEnd(), fill: "quotes" });
+    } else if (ts.isTemplateExpression(node)) {
+      spans.push({ start: node.head.getStart(parsed), end: node.head.getEnd(), fill: "quotes" });
+      for (const templateSpan of node.templateSpans) {
+        spans.push({
+          start: templateSpan.literal.getStart(parsed),
+          end: templateSpan.literal.getEnd(),
+          fill: "quotes",
+        });
+      }
+    }
+    node.forEachChild(visit);
+  };
+  parsed.forEachChild(visit);
+  return spans;
+}
+
+function reduceSource(source: string, blankLiterals: boolean): string {
+  const parsed = ts.createSourceFile(
+    "scan.ts",
+    source,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const spans = [
+    ...collectCommentSpans(source, parsed),
+    ...(blankLiterals ? collectLiteralSpans(parsed) : []),
+  ].sort((a, b) => a.start - b.start);
+
+  let out = "";
+  let cursor = 0;
+  for (const span of spans) {
+    // A comment inside a substitution is already covered by the outer span it
+    // sits in; taking the inner one again would double-blank and shift text.
+    if (span.start < cursor) continue;
+    out += source.slice(cursor, span.start);
+    out +=
+      span.fill === "quotes" ? '""' : source.slice(span.start, span.end).replace(/[^\n]/g, " ");
+    cursor = span.end;
   }
-  return out;
+  return out + source.slice(cursor);
 }
 
 /**
@@ -597,6 +667,60 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(referencesName("/* validateFoo(root) */", "validateFoo")).toBe(false);
     expect(referencesName("// validateFoo(root)", "validateFoo")).toBe(false);
     expect(referencesName('const name = "validateFoo";', "validateFoo")).toBe(false);
+  });
+
+  it("does not let a delimiter inside a regex literal re-frame the file", () => {
+    // #1061. A regex body can hold a backtick, and the scan this replaced
+    // tracked strings and templates but not regexes. `core/specPackParsers.ts`
+    // matches CommonMark fences, so its regex carries a run of backticks; the
+    // phantom template that opened there ran forty-six lines into a JSDoc and
+    // swallowed that JSDoc's own opener, after which prose read as code and
+    // code read as data. Both assertions below flip without the fix.
+    const fenceMatcher = [
+      "const FENCE = /^ {0,3}(`{3,}|~{3,})/;",
+      "/**",
+      " * Prose naming `validateX`, which is not a call site.",
+      " */",
+      "issues.push(...(await validateFoo(root)));",
+    ].join("\n");
+    // The real call survives the regex above it,
+    expect(referencesName(fenceMatcher, "validateFoo")).toBe(true);
+    // and the JSDoc mention is still just prose.
+    expect(referencesName(fenceMatcher, "validateX")).toBe(false);
+  });
+
+  it("reads a template substitution as code and the text around it as prose", () => {
+    // The distinction no hand-rolled generation here drew: `${...}` is
+    // executable, so a call inside one is a call site, while the literal
+    // pieces are not. Erasing the whole template loses real wiring; keeping
+    // the whole template counts prose as wiring.
+    expect(referencesName("const s = `n=${validateFoo(root)}`;", "validateFoo")).toBe(true);
+    expect(referencesName("const s = `we dropped validateFoo here`;", "validateFoo")).toBe(false);
+    // Nesting is the same rule applied twice, and the scan this replaced
+    // mis-terminated at the first inner delimiter — which made the depth-2
+    // call survive for the wrong reason and let depth-2 prose leak as code.
+    expect(referencesName("const s = `a${`b${validateFoo(r)}c`}d`;", "validateFoo")).toBe(true);
+    expect(referencesName("const s = `a${`dropped validateFoo `}d`;", "validateFoo")).toBe(false);
+  });
+
+  it("agrees with the tree about the two files main was wrong about", async () => {
+    // Regression pins on the measured cases rather than on the mechanism, so
+    // they keep their meaning if the reduction is rewritten again.
+    //
+    // `validateTddList` appears in `core/specPackParsers.ts` exactly once, in a
+    // JSDoc. `main` reported it as a call site there: the phantom literal had
+    // consumed that JSDoc's opener, so its backtick-quoted terms read as code.
+    const parsers = await readFile(path.resolve(SRC_ROOT, "core/specPackParsers.ts"), "utf-8");
+    expect(referencesName(parsers, "validateTddList")).toBe(false);
+
+    // The mirror direction: a validator's own declaration must survive the
+    // reduction of its own module. `main` erased this one, having re-framed the
+    // file from a regex some lines above it.
+    const depth = await readFile(
+      path.resolve(SRC_ROOT, "core/validators/atddCoverageDepth.ts"),
+      "utf-8",
+    );
+    expect(referencesName(depth, "validateAtddCoverageDepth")).toBe(true);
   });
 
   it("keeps import edges the module-edge walk reads", () => {
