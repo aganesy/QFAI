@@ -2191,17 +2191,30 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-**And it moved again — this time from inside the branch that had just re-measured it.** `ae921ffd5`
-typed `932` above, and a later commit on that same branch added
-`packages/qfai/tests/assets/autoModeApprovalDegrade.test.ts` — 110 lines, five `it` callsites under the
-`tests/assets/**` include — with no re-measurement. Both landed together in `2a6da1ca9`, so the line was
-already five short of its own tree at the moment it was written, and `test (e2e)`, `node-floor` and
-`ci-pass` have been red on `main` ever since: one stale integer, three required jobs, every open PR
-red for a reason none of them contains. The diff between `2a6da1ca9` and `64dfea7ec` under either glob
-is empty, so the whole delta is that one file. This is the seventh instance of the defect and the first
-where the invalidating commit is a sibling of the repair rather than a foreign one — which is worth
-recording, because it means "re-measure when you touch the globs" is not enough on its own: the
-re-measurement has to be the LAST thing the branch does to them.
+**And it moved again — this time in a MERGE, with no commit on either side that was ever wrong.** Both
+parents of `2a6da1ca9` measure 932 and record 932, so each branch was individually correct and neither
+could have found this by re-measuring its own tree. They were short of the merge in different ways:
+
+| revision                   | measured | recorded | how it differs from the merge                                                                                                                                                          |
+| -------------------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `60b707fa0` (parent A)     | 932      | 932      | lacks `tests/assets/autoModeApprovalDegrade.test.ts` (5 callsites)                                                                                                                     |
+| `26a67fbe1` (parent B)     | 932      | 932      | has that file, but is one callsite behind on five others: `atddRedProvenance` 212→213, `coverageDepthMatrixHome` 9→10, `evidenceCellContainer` 9→10, `evidenceGitignoreClaim` 4→5, `implementCheckpointVerification` 8→9 |
+| `2a6da1ca9` (the merge)    | **937**  | 932      | takes A's five single-callsite additions AND B's whole new file                                                                                                                        |
+
+The record is byte-identical in both parents, so the merge carried it through unchanged and nothing
+re-measured after the integration. `test (e2e)`, `node-floor` and `ci-pass` have been red on `main`
+ever since: one stale integer, three required jobs, every open pull request red for a reason none of them
+contains. `git diff 2a6da1ca9 64dfea7ec` under either glob is empty, so the merge is where the whole
+delta enters.
+
+**That is why the obligation belongs to the merge and not to the branch.** The rule below says a commit
+that changes a callsite under the two globs owes a re-measurement, and both branches honoured it. What
+neither could honour is a count that is a property of the UNION of two histories: `measure(A ∪ B)` is
+not recoverable from `measure(A)` and `measure(B)`, so the only revision at which this number can be
+made true is the merge commit itself. A branch-local discipline — even "re-measure last" — cannot reach
+it. This is the seventh instance of the defect and the first with no wrong commit in it, which is the
+strongest argument in this record for deriving the count rather than committing it: a literal that only
+a merge can invalidate has no author to hold responsible for it.
 
 Re-measured for this commit by a separate walk of the two include roots — not by calling into
 `stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
@@ -2209,10 +2222,11 @@ readings agree: **937** (`tests/assets` 767, `tests/e2e` 170).
 
 e2e callsites at this tree: 937
 
-**That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
-each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
-by a test — deriving them would mean running the suite from inside it — but the thing that INVALIDATES
-them can be: a commit that changes an `it` / `test` callsite under the e2e project's two include globs.
+**That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
+each found these totals a round behind, and each repair re-typed the number. The seventh was not a
+round: it is the merge above, which is why the count of attempts moved without a reviewer finding
+it. Neither total can be derived by a test — deriving them would mean running the suite from inside
+it — but the thing that INVALIDATES them can be: a commit that changes an `it` / `test` callsite under the e2e project's two include globs.
 `stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
 that moves a callsite reddens until the line is corrected, and the totals beside it are known-invalid
 rather than presumed-valid in the window between.
