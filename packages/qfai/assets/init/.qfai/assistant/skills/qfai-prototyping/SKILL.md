@@ -242,5 +242,5 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - Iteration count cap is 10; --cycle is 0-indexed; reaching cycle 9 on a non-converged iteration set exits 65 directly (no cycle-mismatch path).
-- review.json schema-v3 is the only accepted shape; pre-v3 payloads, unknown layoutAntiPatterns codes, or wrong-enum designMdViolations entries fail validate with QFAI-PROT-002.
+- `iter-NN/review.json` is validated directly, against the shape in `references/reviewer-prompt.md`. A missing or unparseable file, an unknown `lap-*` code, a wrong-enum `designMdViolations` entry, an out-of-band `proseCritique`, or a `prototyping.json#iterations[N]` that disagrees with the reviewer's file all fail validate with QFAI-PROT-002. `iterations[]` is a transcription of `review.json`, so on a disagreement the reviewer's value is the one to keep. The cycle-0 seed (`reviewerId: iterate-seed`) is exempt: no reviewer has run yet.
 - DESIGN.md lock sha256 is re-checked every cycle against the live DESIGN.md; mismatch exits 2 and stops the loop.

@@ -89,6 +89,53 @@ const validIter = (index: number, allExceptional = false, lap: string[] = []) =>
   },
 });
 
+async function seedReviewJsonRaw(root: string, index: number, raw: string): Promise<void> {
+  const dir = path.join(
+    root,
+    ".qfai/evidence/prototyping",
+    `iter-${String(index).padStart(2, "0")}`,
+  );
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "review.json"), raw, "utf-8");
+}
+
+async function seedReviewJson(root: string, index: number, body: unknown): Promise<void> {
+  await seedReviewJsonRaw(root, index, JSON.stringify(body));
+}
+
+/**
+ * The `review.json` an iteration record is a faithful mirror of.
+ *
+ * Derived from the mirror rather than written out beside it so a case that
+ * means to change one field changes exactly that field: a hand-written pair
+ * drifts on the fields the case is not about, and every assertion below then
+ * passes for the wrong reason.
+ */
+function reviewFrom(
+  iter: {
+    index: number;
+    scores: Record<string, string>;
+    proseCritique: string;
+    layoutAntiPatternsDetected: readonly string[];
+    designMdViolations: readonly { kind: string; found: string }[];
+    pivotDirective: string;
+    evidenceRefs: { screenshot: string; html: string };
+  },
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    iterIndex: iter.index,
+    reviewerId: "product-surface-reviewer",
+    scores: iter.scores,
+    proseCritique: iter.proseCritique,
+    layoutAntiPatternsDetected: iter.layoutAntiPatternsDetected,
+    designMdViolations: iter.designMdViolations,
+    pivotDirective: iter.pivotDirective,
+    evidenceRefs: iter.evidenceRefs,
+    ...overrides,
+  };
+}
+
 describe("validatePrototypingEvidence", () => {
   it("emits no issues when prototyping.json is missing (silent)", async () => {
     const root = await newTempDir();
@@ -250,12 +297,14 @@ describe("validatePrototypingEvidence", () => {
     const root = await newTempDir();
     const japaneseCritique = "情報設計と導線は概ね良好である。".repeat(50);
     expect(japaneseCritique.split(/\s+/u).length).toBe(1);
+    const iter = { ...validIter(0), proseCritique: japaneseCritique };
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [{ ...validIter(0), proseCritique: japaneseCritique }],
+      iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
     });
+    await seedReviewJson(root, 0, reviewFrom(iter));
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
@@ -327,12 +376,313 @@ describe("validatePrototypingEvidence", () => {
 
   it("returns no issues for a valid record", async () => {
     const root = await newTempDir();
+    const first = validIter(0);
+    const second = validIter(1, true);
     await seedPrototypingJson(root, {
       specsCovered: ["0001"],
-      iterations: [validIter(0), validIter(1, true)],
+      iterations: [first, second],
       acceptedIterationIndex: 1,
       stopReason: "axes-exceptional",
     });
+    // A record whose reviewer artifacts are absent is no longer valid: the
+    // mirror is a transcription, and there is nothing on disk it transcribes.
+    await seedReviewJson(root, 0, reviewFrom(first));
+    await seedReviewJson(root, 1, reviewFrom(second));
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues).toEqual([]);
+  });
+});
+
+/**
+ * The reviewer-deliverable gate on `iter-NN/review.json`.
+ *
+ * Every case here mutates the reviewer's file and leaves the mirror in
+ * `prototyping.json` alone, or the reverse — which is the point. Before
+ * this gate existed, only the mirror was read, so each of these
+ * returned `error=0`: a deleted `review.json`, an invented `lap-*`
+ * code, an out-of-enum score, and a mirror that disagreed with the
+ * reviewer's own file.
+ */
+describe("validatePrototypingEvidence — iter-NN/review.json", () => {
+  it("emits QFAI-PROT-002 when a reviewed iteration has no review.json", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [validIter(0)],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) => i.code === "QFAI-PROT-002" && i.rule === "prototypingEvidence.review.missing",
+      ),
+    ).toBe(true);
+  });
+
+  it("emits QFAI-PROT-002 when review.json is unparseable", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [validIter(0)],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJsonRaw(root, 0, "{not json");
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) => i.code === "QFAI-PROT-002" && i.rule === "prototypingEvidence.review.parse",
+      ),
+    ).toBe(true);
+  });
+
+  // The seed exists precisely because no reviewer has run yet. Demanding a
+  // reviewer artifact from it would fail every project in the window between
+  // `iterate --cycle 0` and the first review.
+  it("exempts the cycle-0 seed iteration from the reviewer-deliverable gate", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...validIter(0), reviewerId: "iterate-seed" }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  // The exemption is a positive claim, not a default: an iteration naming any
+  // other reviewer owes the artifact.
+  it("does not extend the seed exemption to another reviewerId", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...validIter(0), reviewerId: "product-surface-reviewer" }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) => i.code === "QFAI-PROT-002" && i.rule === "prototypingEvidence.review.missing",
+      ),
+    ).toBe(true);
+  });
+
+  // The mirror accepts any string here, so this code is invisible on that
+  // surface no matter how it is written. Both sides carry the same value, so
+  // the only finding available is the registry check on the reviewer's file.
+  it("emits QFAI-PROT-002 for a lap-* code no registry entry declares", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0, false, ["lap-999-not-a-real-code"]);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT-002" &&
+          i.rule === "prototypingEvidence.review.layoutAntiPatternsDetected.unknownCode" &&
+          i.message.includes("lap-999-not-a-real-code"),
+      ),
+    ).toBe(true);
+    expect(issues.some((i) => i.rule === "prototypingEvidence.review.mirrorMismatch")).toBe(false);
+  });
+
+  it("accepts every lap-* code the registry declares", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0, false, ["lap-001-saas-dashboard", "lap-008-no-back-affordance"]);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  it("emits QFAI-PROT-002 for wrong-enum review.json fields", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, {
+        designMdViolations: [{ kind: "not-a-kind", found: "x" }],
+        pivotDirective: "stop",
+        scores: { ...iter.scores, usability: "catastrophic" },
+      }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    const rules = issues.filter((i) => i.code === "QFAI-PROT-002").map((i) => i.rule);
+    expect(rules).toContain("prototypingEvidence.review.designMdViolations");
+    expect(rules).toContain("prototypingEvidence.review.pivotDirective");
+    expect(rules).toContain("prototypingEvidence.review.scores.usability");
+  });
+
+  it("emits QFAI-PROT-002 when review.json iterIndex does not match its directory", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter, { iterIndex: 3 }));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) => i.code === "QFAI-PROT-002" && i.rule === "prototypingEvidence.review.iterIndex",
+      ),
+    ).toBe(true);
+  });
+
+  it("emits QFAI-PROT-002 when review.json omits reviewerId", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    const review = reviewFrom(iter);
+    delete review.reviewerId;
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, review);
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) => i.code === "QFAI-PROT-002" && i.rule === "prototypingEvidence.review.reviewerId",
+      ),
+    ).toBe(true);
+  });
+
+  // Both files are internally consistent here. Only comparing them finds the
+  // transcription error, which is why neither surface caught it alone.
+  it("emits QFAI-PROT-002 when the mirror disagrees with review.json on a score", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...iter, scores: { ...iter.scores, usability: "strong" } }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT-002" &&
+          i.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          i.message.includes("scores.usability"),
+      ),
+    ).toBe(true);
+  });
+
+  it("emits QFAI-PROT-002 when the mirror paraphrases proseCritique", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...iter, proseCritique: `${iter.proseCritique} and-one-more` }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT-002" &&
+          i.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          i.message.includes("proseCritique"),
+      ),
+    ).toBe(true);
+  });
+
+  // `layoutAntiPatternsDetected` is ordered evidence, so a reordered
+  // transcription no longer mirrors the file it cites.
+  it("emits QFAI-PROT-002 when the mirror reorders layoutAntiPatternsDetected", async () => {
+    const root = await newTempDir();
+    const codes = ["lap-001-saas-dashboard", "lap-008-no-back-affordance"];
+    const iter = validIter(0, false, codes);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...iter, layoutAntiPatternsDetected: [...codes].reverse() }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT-002" &&
+          i.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          i.message.includes("layoutAntiPatternsDetected"),
+      ),
+    ).toBe(true);
+  });
+
+  // Key order is not evidence. A transcription that writes the same record
+  // with its two declared keys the other way round mirrors it faithfully.
+  it("accepts a designMdViolations entry whose keys are written in the other order", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    const violations = [{ kind: "color", found: "#abcdef" }];
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...iter, designMdViolations: [{ found: "#abcdef", kind: "color" }] }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter, { designMdViolations: violations }));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  it("returns no issues when review.json and the mirror agree", async () => {
+    const root = await newTempDir();
+    const first = validIter(0);
+    const second = validIter(1, true);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [first, second],
+      acceptedIterationIndex: 1,
+      stopReason: "axes-exceptional",
+    });
+    await seedReviewJson(root, 0, reviewFrom(first));
+    await seedReviewJson(root, 1, reviewFrom(second));
+
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues).toEqual([]);
   });

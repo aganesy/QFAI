@@ -148,6 +148,18 @@ export function iterationReviewPath(index: number): string {
 }
 
 /**
+ * `reviewerId` stamped on the placeholder iteration that
+ * `prototyping iterate --cycle 0` seeds before any reviewer has run.
+ *
+ * The evidence validator reads it to exempt the seed from the
+ * reviewer-deliverable obligations: the seed is by construction not a
+ * review. Shared as a constant so the writer and the reader cannot
+ * drift — a renamed literal on one side would silently either demand a
+ * `review.json` from the seed or waive the demand for every iteration.
+ */
+export const SEED_REVIEWER_ID = "iterate-seed" as const;
+
+/**
  * Closed evidence-ref kind set for the per-iteration evidence refs.
  */
 export const EVIDENCE_REF_KINDS = ["screenshot", "html"] as const;
