@@ -11,7 +11,7 @@ Contracts are version-managed downstream execution truth and inputs:
 - `ui/`: UI contract YAML
 - `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as separate rubric / calibration contracts.
 
-Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files.
+Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`constitution/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 
 ## Rules
 

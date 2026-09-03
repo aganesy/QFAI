@@ -372,6 +372,34 @@
 
 ### Changed
 
+- **`/qfai-sdd` にとって discussion pack は上流 SSOT ではなく、非規範的な参照資料であると
+  分類し直した。** Stage 0 が「最新 pack が欠落・不完全・blocking OQ を持つなら停止」と
+  hard stop していたため、SDD が矛盾や考慮漏れや未解決の問いを見つけた場合、実際に振る舞いを
+  規定する artifact を書く前に、過渡的な discovery pack を修復して review cycle を回し直す
+  ことを求められていた。これは所有境界の逆転である — `.qfai/specs/**` が詳細な振る舞い /
+  設計の SSOT であり、pack は来歴と参照材料であるべきなのに、低忠実度の artifact が実際の
+  SSOT を上書きする圧力になっていた。
+  Stage 0 は source inventory / reference-quality の確認になった: pack は任意であり、
+  不完全でも矛盾していても blocking OQ を持っていても、それ単独ではこの stage を止めない。
+  自分の gate を通すために pack を編集・修復・再実行することは禁止で、そこから導かれる訂正は
+  SDD 所有の spec / policy / contract に入れ、来歴の食い違いは delta/evidence に記録する。
+  停止するのは「使える source が 1 つも無い」場合 (pack も import-lite input も明示的な
+  user requirement も無い) のみ。安全に推論できない product decision は従来どおり user に
+  確認し、その答えは pack に書き戻さず SDD artifact に記録する。
+  Inputs Priority も normative な優先順位ではなく reference / provenance 入力という語に改めた
+  — `Source: <pack>#<id>` の引用は従来どおり支持されるが、引用された文が拘束力を持つことは
+  意味しない。矛盾は pack を書き換えるのではなく、明示的な rationale (product な選択なら
+  user decision) とともに SDD artifact の中で解決する。
+  併せて `drift-protocol.md` の上流 artifact 一覧から discussion 出力を外し、
+  `contract-artifact-rules.md` の「Discussion UI/UX files are upstream discovery artifacts」を
+  非規範的な discovery / reference artifact に改め、`sdd-execution-playbook.md` の Stage 0 手順と
+  `sdd-triage.md` の Inputs も追従させた。
+  **この再分類は pack だけを対象とする**: 本物の上流 artifact は従来どおり上流優先で修復し、
+  dependent な spec 内容を書いている最中に見つけた contract 欠陥は contract-first で直す。
+  なお validator 側は既にこの形だった — `runSddValidators` は discussion pack validator を
+  1 つも実行していない (`validateDiscussionPackReadiness` は `discussion` profile 専用) ので、
+  sdd profile が pack の完全性を gate したことはコード上は無く、hard stop は出荷 prose だけに
+  存在していた。
 - **A validation issue can now carry the CI job its producer reported (`job`).** The
   reviewer-justification gate ingests the workflow-set lint lanes' findings, and those lanes
   report a site as `file` + `job` + `rule`. The gate previously overwrote `file` with the path

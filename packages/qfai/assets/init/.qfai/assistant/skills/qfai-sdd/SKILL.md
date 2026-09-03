@@ -48,7 +48,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 ## Stage 0: Preflight (Mandatory)
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
-Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
+Take a source inventory. A discussion pack is **optional, non-normative reference material** here — sources, requirement seeds, UX exploration and provenance IDs — not an upstream SSOT, so an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage. Do NOT edit, repair or re-run a pack to make this stage's gate pass: the correction belongs in the SDD-owned spec, policy or contract artifact, with the source discrepancy recorded in delta/evidence. Stop only when there is no usable source at all — no pack, no import-lite input, and no explicit user requirement. A product decision that cannot be inferred safely still goes to the user, and the answer is recorded in SDD artifacts rather than back-propagated into the pack.
 When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
@@ -130,7 +130,7 @@ Stage 1 collects each approval through AskUserQuestion as usual.
 
 ## Inputs Priority
 
-1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
+1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest) — **reference and provenance input, not normative**. Cite it as `Source: <pack>#<id>`; citing it does not make the cited text binding. Where it conflicts with a lower-priority input, resolve the conflict INTO the SDD artifact with explicit rationale (and a user decision when the choice is a product one) rather than by amending the pack. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
 2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
 3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
