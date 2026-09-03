@@ -96,6 +96,37 @@
 
 ### Fixed
 
+- **上記ガードを Codex レビューの指摘 3 件（すべて P2）で修正した。**
+  1. **別名 import で回避できた。** 初版は「識別子として直接呼ばれた名前」しか
+     見ていなかったので、`import { iterationReviewPathPerSpec as perSpec }` 経由、
+     namespace import 経由、変数に代入してからの呼び出しはすべて素通りした。
+     `src/` には**別名 named import が 51 件**あり、house style での wire-in が
+     ガードをすり抜ける状態だった。import / re-export 節から別名を解決し、
+     namespace 束縛も追跡し、**import 自体も検出対象**にした（束縛せずに使うことは
+     できないので、代入で名前を変えても import は消せない）。
+  2. **gate 関数ではなくファイル全体を見ていた。** `iterationReviewPath` の呼び出しが
+     ファイル内のどこかに残っていれば、`validateIterationReviewArtifacts` 自身が
+     per-spec に移っても緑のままだった。関数本体に限定し、関数が見つからない場合は
+     throw する（改名・削除が「何も呼んでいない」と読まれて空回りするのを防ぐ）。
+  3. **CR のタイムスタンプが JST の壁時計に `Z` を付けたものだった。**
+     `CR-20260904-0002` の `Scope extended at` は適用コミットの **8 時間 52 分後**に
+     なっており、「変更がその承認より先にコミットされた」監査証跡になっていた。
+     指摘は 1 箇所だったが同じ欠陥が**両 CR の 8 フィールド**にあり、
+     `CR-20260904-0001` は既に merged だったので併せて修正した。`+09:00` 表記にし、
+     各 CR に「どのフィールドがどの検証可能な事象に紐づくか」の表を追加した
+     （`Approved at` のみ対話ターンで artifact が無いため推定値であり、
+     その旨と上下の境界を明記）。
+     なお指摘 1 の修正で監視対象を `iterationPaths.ts` の全 export に広げたところ
+     **ガード自身が赤くなった**。`findStaleIterDirs` / `deleteStaleIterDirs` は
+     `iter-NN` の掃除用で既に `certify` に結線済みであり、どのレビュー レイアウトが
+     使われているかとは無関係だった。さらに `prototypingCertify.ts` は**自前の**
+     `findStaleIterDirs` を宣言しており、名前だけの照合は false positive を出す。
+     監視対象は計測に基づいて絞り、照合は束縛ベースにした。
+     宣言モジュール内部の合成は**免除せず pin した** — 免除すると、そこに新しい
+     export ラッパが増えて CLI から監視外の名前で到達できてしまう。
+     回避経路 8 種すべてで発火することを変異テストで確認済み
+     （plain / aliased / namespace / assigned-then-called / re-export /
+     internal-wrapper / gate-drops-flat / gate-adopts-per-spec、復元で 3 passed）。
 - **#1078 の矛盾が「到達可能になった瞬間」を検出するガードを入れた**
   (`CR-20260904-0002` の scope 拡張、別途承認)。canonical をどちらにするかの
   判断は**依然として保留**で、そこは変えていない。変えたのは、保留が

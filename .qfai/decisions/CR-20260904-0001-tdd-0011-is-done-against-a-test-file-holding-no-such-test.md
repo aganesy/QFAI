@@ -3,15 +3,16 @@
 - ID: `CR-20260904-0001`
 - Title: `TDD-0011 is done against a test file that holds no QFAI-PROT-002 test`
 - Raised by: `claude-code (issue #1079 implementation)`
-- Raised at: `2026-09-04T04:40:00Z`
+- Raised at: `2026-09-04T05:09:48+09:00`
 - Class: `traceability`
 - Status: `approved`
 - Approved by: `yusuke_senaga`
-- Approved at: `2026-09-04T05:20:00Z`
+- Approved at: `2026-09-04T05:20:00+09:00`
 - Approved option: `1`
-- Scope extended at: `2026-09-04T06:05:00Z` (approved by `yusuke_senaga`) — see
+- Scope extended at: `2026-09-04T05:41:13+09:00` (approved by `yusuke_senaga` before
+  that commit) — see
   **Scope extension** below
-- Applied at: `2026-09-04T05:30:00Z`
+- Applied at: `2026-09-04T05:32:10+09:00`
 - Superseded by: `-`
 
 ## Context
@@ -161,3 +162,25 @@ the file their row now names, under the strict predicate rather than the
 fallback.
 
 Both rows keep `Status: done` and take `DR-ID: CR-20260904-0001`.
+
+## Timestamps
+
+All times above are **JST (`+09:00`)**, which is this repository's local zone and
+the zone the CR ID's date is taken from. They were first written as a JST wall
+clock stamped with `Z`, which put the approval nine hours from where it happened
+— on this CR nine hours _early_, and on `CR-20260904-0002` late enough to record
+the extension as approved after the commit that applied it. Raised by Codex on
+PR #1092.
+
+Each value is anchored to something checkable rather than estimated:
+
+| field               | value                       | anchor                                |
+| ------------------- | --------------------------- | ------------------------------------- |
+| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079 |
+| `Applied at`        | `2026-09-04T05:32:10+09:00` | commit `f4479d25` author time         |
+| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time         |
+
+`Approved at` is the only estimate. The approval is a conversation turn and
+leaves no artifact, so it is bounded below by `Raised at` and above by
+`Applied at`, and the value sits inside that interval. It is not a logged
+instant and should not be read as one.

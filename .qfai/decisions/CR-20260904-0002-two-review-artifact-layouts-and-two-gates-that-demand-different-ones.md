@@ -3,15 +3,16 @@
 - ID: `CR-20260904-0002`
 - Title: `validate and certify demand mutually exclusive review-artifact layouts`
 - Raised by: `claude-code (issue #1078 investigation)`
-- Raised at: `2026-09-04T05:00:00Z`
+- Raised at: `2026-09-04T05:10:24+09:00`
 - Class: `intent`
 - Status: `approved`
 - Approved by: `yusuke_senaga`
-- Approved at: `2026-09-04T05:20:00Z`
+- Approved at: `2026-09-04T05:20:00+09:00`
 - Approved option: `record-only (defer the canonical-artifact decision)`
-- Scope extended at: `2026-09-04T07:10:00Z` (approved by `yusuke_senaga`) — see
+- Scope extended at: `2026-09-04T07:16:04+09:00` (approved by `yusuke_senaga` before
+  that commit) — see
   **Scope extension: guard the reachability** below
-- Applied at: `2026-09-04T05:45:00Z`
+- Applied at: `2026-09-04T05:34:35+09:00`
 - Superseded by: `-`
 
 ## Context
@@ -159,3 +160,25 @@ whose broken predicate goes unnoticed:
 | a production module starts calling `iterationReviewPathPerSpec` | **row 1 fails** |
 | the gate stops calling `iterationReviewPath`                    | **row 2 fails** |
 | restored                                                        | **both pass**   |
+
+## Timestamps
+
+All times above are **JST (`+09:00`)**, which is this repository's local zone and
+the zone the CR ID's date is taken from. They were first written as a JST wall
+clock stamped with `Z`. Codex caught the consequence on PR #1092: `Scope
+extended at: 2026-09-04T07:10:00Z` sat about 8h52m AFTER commit `1a6dfee7`
+(`2026-09-03T22:17:50Z`), so the record claimed the extension was approved after
+the change that applied it.
+
+Each value is anchored to something checkable rather than estimated:
+
+| field               | value                       | anchor                                |
+| ------------------- | --------------------------- | ------------------------------------- |
+| `Raised at`         | `2026-09-04T05:10:24+09:00` | the correction comment on issue #1078 |
+| `Applied at`        | `2026-09-04T05:34:35+09:00` | commit `cdeebe5e` author time         |
+| `Scope extended at` | `2026-09-04T07:16:04+09:00` | commit `1a6dfee7` author time         |
+
+`Approved at` is the only estimate. The approval is a conversation turn and
+leaves no artifact, so it is bounded below by `Raised at` and above by
+`Applied at`, and the value sits inside that interval. It is not a logged
+instant and should not be read as one.
