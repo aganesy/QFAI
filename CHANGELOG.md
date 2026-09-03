@@ -42,6 +42,77 @@
 
 ### Fixed
 
+- **直前に入れた reviewer-deliverable gate が、既定の運用経路では no-op だった欠陥を塞いだ。** seed 除外を
+  `reviewerId === "iterate-seed"` だけで判定していたが、これはどちらの向きにも load-bearing ではなかった。
+  (a) **解除されない** — `reviewerId` は `Iteration` 型に宣言が無く、書き手は `buildSeedIterations` だけで、
+  同じレコードを in-place で更新する transcription で上書きせよという指示は出荷物のどこにも無かった。
+  したがって review 済みの `iterations[0]` は seed の刻印を保持したまま、loop の寿命いっぱい除外され続ける
+  — cycle 0 で収束する loop では、それが certify が封印する当のイテレーションである。
+  (b) **どの index でも効いた** — gate が信用しないと宣言しているファイルに 1 語書けば、その行の義務
+  (presence / schema / mirror) がすべて消える。しかも `reviewerId` は mirror 比較対象に入っていなかったので、
+  bypass の原因となった不一致それ自体が報告不能だった。修正前の実測: iteration 3 件すべて 4 軸
+  `exceptional`、`stopReason: "axes-exceptional"`、`review.json` はディスク上に 1 件も無い状態で
+  `validate` は finding 0 件を返した。
+  判定は `isUntouchedCycleZeroSeed` に集約し、構造と内容の両方を要求する: iteration がちょうど 1 件で
+  index 0、`reviewerId` と `commitSha` が seed のもの、かつ `proseCritique` が placeholder と 1 バイト一致。
+  最後の条件が self-clearing にしている — review は critique を 200-500 語の本文に置き換えるので、
+  `reviewerId` を直し忘れても除外は自動的に外れる。`reviewerId` は mirror 比較対象にも加えた。
+- **cap 違反の `review.json` が、どの編集でも満たせない finding の対を出していた問題を直した。**
+  `layoutAntiPatternsDetected[]` が非空なら `informationArchitecture` を `acceptable` 以下に抑える規則は
+  mirror 側だけで検査されていたため、違反は「忠実な転記」を通してしか報告されなかった。結果として
+  cap 検査は `prototyping.json` の IA を下げろと要求し、mirror 検査は `review.json` に一致させろと要求する
+  — どちらの finding も欠陥が実在するファイルを名指さない。review 側でも cap を検査し、
+  そのファイルを修正して再転記せよと述べる。
+- **`lap-*` registry の空集合を「読めた」と扱っていた fail-soft を直した。**
+  `loadLayoutAntiPatterns` は throw しない劣化経路を 2 つ持つ — JSON が配列でなければ `[]` を返し、
+  shape 検査に落ちた entry を黙って捨てる。どちらも `undefined` ではなく空 / 部分集合を生むので、
+  registry 側が壊れているときに、適合した `review.json` の妥当な `lap-*` id すべてが
+  「registry が宣言していない code」として error になった — fail-soft の doc が名指しで防ぐと書いていた
+  反転そのもの。空集合は読めなかったのと区別できないので、同じ扱いにした。
+- **mismatch message が長い値の先頭 120 文字を残していたため、両側が同一に見えていた。**
+  `proseCritique` は 200-500 語で、転記時の言い換えが先頭 120 文字に入ることはほぼ無い。同長の置換
+  (片方だけ typo を直した等) では 2 つのレンダリングが文字列として完全に一致し、operator には
+  validator の不具合と区別できなかった。最初に食い違う位置を中心に窓を取り、切り出しは UTF-16 単位では
+  なく code point で行う (critique band は日本語 / 中国語を受けるので、surrogate pair の中間で切ると
+  lone surrogate が `Issue.message` と `validate.json` に混入する)。
+- **`designMdViolations` の canonical 化を、宣言済み 2 key への射影から key の再帰ソートに変えた。**
+  射影は 2 つのケースを隠していた: (1) 3 つ目の key を持つ entry と持たない entry が equal になり、
+  mirror 義務が捕まえると謳っている「転記が field を落とす」ケースがまさに不可視だった。
+  (2) 射影が `kind` の enum 適合を条件にしていたため、enum 外の `kind` では両側が raw stringify 経路に
+  落ちて、忠実な `{found, kind}` 転記が enum finding の上に mirror mismatch として報告された
+  — 1 つの欠陥に 3 件、うち 1 件は誤り。配列順は従来どおり比較対象 (順序は evidence である)。
+- **`review.json` の unknown top-level key を拒否するようにした。** reviewer には前 cycle の
+  `review.json` が入力として与えられるので、それを編集する際の key の綴り間違い
+  (`pivotDirectiv` を足して古い `pivotDirective` が残る) は、完全で enum 内、忠実に転記され、mirror とも
+  一致する payload を残す — そして loop は前 cycle の directive で動く。同じ理由で closed になっている
+  per-screen payload と揃えた。
+- **BOM 付き `review.json` を unparseable と報告していた。** PowerShell の `Set-Content -Encoding UTF8` /
+  `Out-File`、および "UTF-8 with signature" を既定とする Windows のエディタは先頭に U+FEFF を出す。
+  payload は妥当なので、reviewer の再実行を促すのは誤誘導だった。
+- **unreadable finding が絶対パスを漏らしていた。** `EACCES` / `EPERM` 等で Node のメッセージには
+  絶対パスが入るため、operator のホームディレクトリとユーザ名が `validate.json` / `validate.log` / CI ログに
+  乗り、finding がマシンとチェックアウト位置ごとに変わっていた。errno code だけを載せる
+  (ファイル名は repo-relative POSIX 形式の `rel` が既に名指している)。
+- **配列位置と `index` が食い違うレコードで、作られていないディレクトリを名指していた。** review path は
+  配列位置から導出されるので、`index` がずれたレコードでは存在しない `iter-NN/review.json` の不在を
+  報告し、reviewer の実ファイルは読まれないままだった。ずれ自体は QFAI-PROT-004 が報告するので、
+  その修正を待つ。
+- **軸リストの 3 つ目の複製をやめた。** `evaluatorReview.ts` が `ORDINAL_AXES` を export し `OrdinalAxis` を
+  そこから導出しており、`validators/uix/` の 2 モジュールがそれを SSOT と明記している。ローカルの複製は
+  「5 番目の軸が追加されたらこの validator だけ 4 軸を検査し続ける」という、この gate が塞ぐために
+  存在する形の穴だった。
+- **`validateReviewArtifacts` を `validateIterationReviewArtifacts` に改名した。**
+  `validators/reviewArtifacts.ts` が同名を export し barrel 経由で公開しているため、
+  `prototyping/iterationPaths.ts` が `iterationDir` → `iterationDirPerSpec` の改名で回避したのと同じ
+  「IDE の autoimport が別のシンボルを黙って選ぶ」経路に乗っていた。
+- **出荷される transcription 指示を実際の義務に合わせた。** `qfai-prototyping/SKILL.md` の cycle 表は
+  「`prototyping.json#iterations[]` を update」としか述べず、転記対象の列挙に `reviewerId` と
+  `evidenceRefs` が入っていなかった — 両方が hard gate の前提になっているのに、出荷物のどこにも
+  上書きせよと書かれていなかった。C0 行の "Append entry" も、`iterate --cycle 0` が既に seed を
+  書いている以上そのまま append すると index 0 が 2 件になり QFAI-PROT-004 に落ちる。
+  "Transcription" 節を追加して 7 field と 2 つの落とし穴を明示した。あわせて
+  `references/reviewer-prompt.md` の Inputs が screenshot を full path、HTML snapshot を短縮形で
+  並べていた不整合を直した — その 2 行をそのまま `evidenceRefs` に書くと mirror 不一致になる。
 - **`iter-NN/review.json` を一度も読まずに「schema gate がある」と宣言していた
   reviewer-deliverable gate を実装した。** `qfai-prototyping/SKILL.md` は「review.json の
   shape だけが受理される。未知の layoutAntiPatterns code や enum 外の designMdViolations は
