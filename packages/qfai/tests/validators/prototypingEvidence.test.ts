@@ -511,9 +511,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     });
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
-    expect(
-      issues.filter((i) => i.rule === "prototypingEvidence.review.missing"),
-    ).toHaveLength(3);
+    expect(issues.filter((i) => i.rule === "prototypingEvidence.review.missing")).toHaveLength(3);
   });
 
   // The seed is a single-iteration shape by construction: `writeSeedMetadata`
@@ -530,9 +528,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
     // Neither row qualifies now: the loop holds two iterations.
-    expect(
-      issues.filter((i) => i.rule === "prototypingEvidence.review.missing"),
-    ).toHaveLength(2);
+    expect(issues.filter((i) => i.rule === "prototypingEvidence.review.missing")).toHaveLength(2);
   });
 
   // The exemption is a positive claim, not a default: an iteration naming any
@@ -854,8 +850,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(
       issues.some(
         (i) =>
-          i.rule === "prototypingEvidence.review.unknownKey" &&
-          i.message.includes("pivotDirectiv"),
+          i.rule === "prototypingEvidence.review.unknownKey" && i.message.includes("pivotDirectiv"),
       ),
     ).toBe(true);
   });
@@ -872,7 +867,10 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
       acceptedIterationIndex: 0,
       stopReason: null,
     });
-    await seedReviewJsonRaw(root, 0, `﻿${JSON.stringify(reviewFrom(iter))}`);
+    // The escape rather than a literal U+FEFF: `no-irregular-whitespace`
+    // rejects the character in source, and the escape is what the fixture
+    // means anyway.
+    await seedReviewJsonRaw(root, 0, `\uFEFF${JSON.stringify(reviewFrom(iter))}`);
 
     const issues = await validatePrototypingEvidence(root, makeConfig());
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);

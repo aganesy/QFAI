@@ -209,10 +209,7 @@ export const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
  * critique with 200-500 words of its own, so the waiver lifts on the
  * first real review even when `reviewerId` is left stale.
  */
-export function isUntouchedCycleZeroSeed(
-  iterations: readonly unknown[],
-  index: number,
-): boolean {
+export function isUntouchedCycleZeroSeed(iterations: readonly unknown[], index: number): boolean {
   if (index !== 0 || iterations.length !== 1) return false;
   const seed = iterations[0];
   if (!isRecord(seed)) return false;

@@ -740,10 +740,7 @@ function reportReviewAntiPatternCap(
  * transcribed faithfully, agrees with its mirror, and reports nothing —
  * while the loop acts on the previous cycle's directive.
  */
-function reportUnknownReviewKeys(
-  review: Record<string, unknown>,
-  report: ReportReviewIssue,
-): void {
+function reportUnknownReviewKeys(review: Record<string, unknown>, report: ReportReviewIssue): void {
   for (const key of Object.keys(review).sort()) {
     if (!REVIEW_KNOWN_KEYS.has(key)) {
       report(
