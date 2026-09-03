@@ -371,6 +371,58 @@ interface BlankSpan {
   fill: "space" | "quotes";
 }
 
+/**
+ * Comment spans. Comments are trivia, so they hang off tokens rather than
+ * nodes; walking `getChildren` reaches punctuation too, which is where a
+ * comment inside an otherwise empty block lives — and a comment this walk
+ * misses is prose the guard would read as wiring.
+ */
+function collectCommentSpans(source: string, parsed: ts.SourceFile): BlankSpan[] {
+  const spans: BlankSpan[] = [];
+  const seen = new Set<number>();
+  const visit = (node: ts.Node): void => {
+    for (const ranges of [
+      ts.getLeadingCommentRanges(source, node.pos),
+      ts.getTrailingCommentRanges(source, node.pos),
+    ]) {
+      for (const range of ranges ?? []) {
+        if (seen.has(range.pos)) continue;
+        seen.add(range.pos);
+        spans.push({ start: range.pos, end: range.end, fill: "space" });
+      }
+    }
+    for (const child of node.getChildren(parsed)) visit(child);
+  };
+  visit(parsed);
+  return spans;
+}
+
+/**
+ * String and template literal spans — the literal PIECES only. A template's
+ * `node.templateSpans[i].expression` is code and stays, which is the
+ * distinction that makes a call inside a substitution a real call site.
+ */
+function collectLiteralSpans(parsed: ts.SourceFile): BlankSpan[] {
+  const spans: BlankSpan[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      spans.push({ start: node.getStart(parsed), end: node.getEnd(), fill: "quotes" });
+    } else if (ts.isTemplateExpression(node)) {
+      spans.push({ start: node.head.getStart(parsed), end: node.head.getEnd(), fill: "quotes" });
+      for (const templateSpan of node.templateSpans) {
+        spans.push({
+          start: templateSpan.literal.getStart(parsed),
+          end: templateSpan.literal.getEnd(),
+          fill: "quotes",
+        });
+      }
+    }
+    node.forEachChild(visit);
+  };
+  parsed.forEachChild(visit);
+  return spans;
+}
+
 function reduceSource(source: string, blankLiterals: boolean): string {
   const parsed = ts.createSourceFile(
     "scan.ts",
@@ -379,54 +431,11 @@ function reduceSource(source: string, blankLiterals: boolean): string {
     true,
     ts.ScriptKind.TS,
   );
-  const spans: BlankSpan[] = [];
+  const spans = [
+    ...collectCommentSpans(source, parsed),
+    ...(blankLiterals ? collectLiteralSpans(parsed) : []),
+  ].sort((a, b) => a.start - b.start);
 
-  // Comments are trivia, so they hang off tokens rather than nodes. Walking
-  // `getChildren` reaches punctuation too, which is where a comment inside an
-  // otherwise empty block lives — and a comment the walk misses is prose the
-  // guard would read as wiring.
-  const seenComment = new Set<number>();
-  const collectComments = (node: ts.Node): void => {
-    for (const ranges of [
-      ts.getLeadingCommentRanges(source, node.pos),
-      ts.getTrailingCommentRanges(source, node.pos),
-    ]) {
-      for (const range of ranges ?? []) {
-        if (seenComment.has(range.pos)) continue;
-        seenComment.add(range.pos);
-        spans.push({ start: range.pos, end: range.end, fill: "space" });
-      }
-    }
-    for (const child of node.getChildren(parsed)) collectComments(child);
-  };
-  collectComments(parsed);
-
-  if (blankLiterals) {
-    const collectLiterals = (node: ts.Node): void => {
-      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-        spans.push({ start: node.getStart(parsed), end: node.getEnd(), fill: "quotes" });
-      } else if (ts.isTemplateExpression(node)) {
-        // Only the literal pieces. `node.templateSpans[i].expression` is code
-        // and stays: a call inside a substitution is a real call site.
-        spans.push({
-          start: node.head.getStart(parsed),
-          end: node.head.getEnd(),
-          fill: "quotes",
-        });
-        for (const templateSpan of node.templateSpans) {
-          spans.push({
-            start: templateSpan.literal.getStart(parsed),
-            end: templateSpan.literal.getEnd(),
-            fill: "quotes",
-          });
-        }
-      }
-      node.forEachChild(collectLiterals);
-    };
-    parsed.forEachChild(collectLiterals);
-  }
-
-  spans.sort((a, b) => a.start - b.start);
   let out = "";
   let cursor = 0;
   for (const span of spans) {
