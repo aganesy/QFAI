@@ -96,6 +96,60 @@
 
 ### Fixed
 
+- **同じ欠陥を持つ `TDD-0012` / `TDD-0013` / `REQ-0020` も付け替えた**
+  (`CR-20260904-0001` の scope 拡張、別途承認)。3 件とも
+  `tests/core/prototypingEvidence.negative.test.ts` を引いており、
+  そのファイルの `QFAI-PROT-002` は **0 件**。ledger 側 2 行は `done` だった。
+  対象挙動は両方 `tests/validators/prototypingEvidence.test.ts` に既存なので
+  **テストは追加していない** — ポインタ 3 箇所の付け替えのみ。
+  なお `TDD-0012` の `Selector` は backtick で囲んだ。prettier が markdown
+  テーブル内の裸の `*` を `\*` にエスケープするため、そのままでは verbatim
+  一致が壊れ、`selectorResolves` の末尾トークン fallback（"declares" という
+  ありふれた語）でしか通らなくなる。これはこの CR が消そうとしている
+  「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
+  backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
+  確認済み。
+- **#1078 の矛盾を計測して `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
+  `validate` の reviewer-deliverable gate は flat な `iter-NN/review.json` を読み、
+  `certify` は multi-spec frozen set に対して per-spec
+  `iter-NN/spec-NNNN/<screen>.review.json` を要求して exit 64 する。
+  `certify` を満たすと `validate` が全 non-seed iteration で
+  `prototypingEvidence.review.missing` を出し、`QFAI-PROT-002` は hard-error
+  なので exploration mode でも緩まず、`certify` は
+  `validate.json#counts.error === 0` でないと封印しない — どちらに寄せても
+  certify 不能になる。
+  どちらを canonical とするかの判断は**保留**（ユーザ判断）。実需が出るまで
+  決定コストを先送りし、事実のみ確定させた:
+  `iterationReviewPathPerSpec` と `reviewerDispatch.ts` はいずれも production
+  caller ゼロ、`prototypingIterate.ts` の single-spec 凍結だけが両者を隔てており、
+  その凍結コメント自身がこの矛盾を理由に挙げている。
+  なお `scores` と `ordinalAxes` は **同一**（軸 4 つ・尺度 4 段が一致）で、
+  #1078 に「同じ情報ではない」と書いたのは誤りだったので issue 側を訂正した。
+  一方 `pivotDirective` / `evidenceRefs` / `reviewerId` は `ReviewerPayload` に
+  **存在しない**ため、per-spec 側に寄せる案は「対応表を書く」ではなく
+  「contract の closed schema を拡張する」ことになる。
+  コードと contract は一切変更していない。
+- **`TDD-0011` が `QFAI-PROT-002` のテストを 1 件も持たないファイルに対して `done`
+  だったのを正した** (#1079, `CR-20260904-0001`)。`Test file` セルは
+  `tests/core/prototypingEvidence.negative.test.ts` を指していたが、このファイルの
+  中身は別 spec の `TC-0012-0238..0248` で、`QFAI-PROT-002` のアサーションは **0 件**。
+  つまり CLAUDE.md が要求する REQ -> Spec -> Code -> Test の鎖が `TC-0004-0011` に
+  ついて閉じていないのに、ledger は閉じていると述べていた。
+  `tests/validators/prototypingEvidence.test.ts` に付け替え、`EX-0004-0010` の
+  payload をそのまま食わせて欠落 required keys を列挙させるテストを 1 件追加し、
+  `Selector` をそのテスト名にした。`Status: done` は変更していない — **真になる**ため。
+  変異テストで空回りでないことを確認済み: unknown-key 報告を止めると失敗、
+  `pivotDirective` 欠落の報告を止めると失敗、復元すると成功。
+- **#1079 の当初の前提 2 点は誤りだったので、issue 側に訂正を投稿した。**
+  (1) `schema v3` は「どこにも定義がない形状」ではなく、`03_Acceptance-Criteria.md:48`
+  と `04_Business-Rules.md:60` が 4 UX axes / ordinal 尺度 / 200..500 語 /
+  `pivotDirective` enum を列挙して定義している (ハイフン付き `schema-v3` だけを
+  grep してスペース版を見落とした — #1076 で犯したのと同じ種類の見落としを、
+  それを報告する issue で繰り返した)。
+  (2) `TC-0004-0011` の「v1.x-shaped」は版判定ではない。`EX-0004-0010` が入力を
+  「旧キーを持ち `pivotDirective` を欠く payload」と定義しており、版フィールドは
+  不要で `.agents/rules/distributed-surface.md` と矛盾しない。
+  したがって upstream (`03` / `04` / `05` / `06`) は正しいので一切変更していない。
 - **validator 結線ガードの reduction を TypeScript パーサに置き換えた。**
   `validators-are-wired.test.ts` の `codeOnly` / `stripComments` は、コメントと
   リテラルを手書きスキャンで除去していた。この故障は「ケースの抜け」ではなく構造的で、

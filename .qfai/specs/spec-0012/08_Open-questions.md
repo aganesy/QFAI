@@ -155,3 +155,27 @@
 - Mitigation while deferred: deterministic exit 66 + error message naming "network egress to {unsplash.com, pexels.com} required for stock-photo fill"; ops gate tracks consumer-project demand and v2 roadmap.
 - Next decision point: Ops gate post-v1 dogfooding.
 - Evidence: discussion-20260516144141078 `11_OQ-Register.md` (OQ-0003 row) and `13_Deferred.md` (OQ-0003 row).
+
+## OQ-0012-0013: `validate` and `certify` demand mutually exclusive review-artifact layouts
+
+- Gate: implement
+- Disposition: deferred (trigger = the first multi-spec frozen set, or the OQ-0012-0006 / 0007 wire-in landing)
+- Owner: solution-architect
+- Due: 2026-10-31
+- Severity: medium
+- Source: issue #1078, raised from the review round on PR #1077 (hardening the reviewer-deliverable gate added in #1076).
+- Question: The two gates require reviewer artifacts in mutually exclusive places for a multi-spec frozen set, and one of them has to be named canonical before either the OQ-0012-0006 layout wire-in or the OQ-0012-0007 dispatch wire-in can land. `validate --profile prototyping` reads the FLAT `.qfai/evidence/prototyping/iter-NN/review.json` (`validators/prototypingEvidence.ts` via `core/prototyping/iteration.ts#iterationReviewPath`) and validates the `EvaluatorReview` shape. `qfai prototyping certify` requires the PER-SPEC `iter-NN/spec-NNNN/<screen>.review.json` layout and exits 64 for a multi-spec frozen set without it (`cli/commands/prototypingCertify.ts`), and `.qfai/contracts/cli/qfai-prototyping-iterate.md` calls that file "the sole per-cycle Reviewer artifact" as REQUIRED, with the `ReviewerPayload` shape. A project satisfying `certify` therefore fails `validate` with `prototypingEvidence.review.missing` on every non-seed iteration, and `QFAI-PROT-002` is on `core/prototyping/mode.ts`'s hard-error list so exploration mode does not soften it, while `certify` refuses to seal unless `validate.json#counts.error === 0`. Uncertifiable either way.
+- Measured on `main` at `aa7bcd23` (2026-09-04), so the deferral rests on facts rather than on the issue's framing:
+  - `iterationReviewPathPerSpec` has **zero production callers**; `reviewerDispatch.ts` has **zero production callers**. The contradiction is unreachable today for that reason alone.
+  - `prototypingIterate.ts` freezes `frozenSpecsCovered` **single-spec on purpose**, and its inline comment names this contradiction as the reason: "certify already hard-fails any multi-spec frozen set on the flat-iter layout, so persisting the full UI-bearing union here would render every normal multi-spec run uncertifiable". That freeze is the only thing holding the two gates apart, and it is what makes multi-spec prototyping unreachable.
+  - Field correspondence between the two payloads: `scores` **is** `ordinalAxes` — the same four axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) on the same `{weak, acceptable, strong, exceptional}` scale — and `layoutAntiPatternsDetected` / `designMdViolations` are identical. `iterIndex` maps to `cycle`. (Issue #1078 originally claimed the axes were not the same information; that claim is corrected on the issue.)
+  - Not derivable: `proseCritique` is one 200..500-word string, `impressions` is `Record<FeelField, string>` over six bounded fields; composing one from the other fabricates a critique.
+  - **Absent from `ReviewerPayload` entirely**: `pivotDirective`, `evidenceRefs`, `reviewerId`. `pivotDirective` is the reviewer's verdict and `iterate` acts on it, so any option that keeps the flat gate's obligations while adopting the per-spec layout has to EXTEND the contract's closed schema, not map onto it.
+- Options:
+  - A) Per-spec canonical — the reviewer-deliverable gate reads the layout `certify`'s `hasPerSpecSubdir` does and validates `ReviewerPayload` (already parsed as a closed schema by `parseEvaluatorReview`); the flat `EvaluatorReview` sunsets. Requires adding `pivotDirective` to `ReviewerPayload` and deciding whether `impressions` replaces `proseCritique`. Cheapest of the three on the numbers above.
+  - B) Flat canonical — retire the per-spec layout and its contract obligation and rewrite `certify`'s multi-spec branch. Contradicts a DR the contract states is preserved.
+  - C) Both, explicitly — the gate accepts either. Needs the same contract extension as (A) for the three absent fields, so it is not the smaller step it appears to be.
+- Recommendation: Option A, decided in the same wave as OQ-0012-0006 / 0007 / 0008 rather than before them — all four turn on the same per-spec namespace and a partial cutover leaves the contradiction reachable.
+- Mitigation while deferred: the single-spec freeze in `prototypingIterate.ts` keeps the contradiction unreachable. Its comment already cites the reason; this OQ is the record that the comment is load-bearing, so a future change that lifts the freeze has something to fail against.
+- Next decision point: whichever lands first — a consumer project needing a multi-spec frozen set, or the OQ-0012-0006 / 0007 wire-in.
+- Evidence: issue #1078 and its correction comment; `prototypingCertify.ts` multi-spec branch; `prototypingIterate.ts` freeze comment; `validators/prototypingEvidence.ts` flat read path.

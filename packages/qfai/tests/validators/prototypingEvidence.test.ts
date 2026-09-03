@@ -855,6 +855,68 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     ).toBe(true);
   });
 
+  // TC-0004-0011 / EX-0004-0010. The `Test file` cell of `TDD-0011` used to
+  // name `tests/core/prototypingEvidence.negative.test.ts`, which holds no
+  // QFAI-PROT-002 assertion at all; the behaviour was covered here, but
+  // compositionally — the unknown-key check rejected the legacy keys and the
+  // schema checks rejected each missing one, with no input exercising the
+  // example as a single payload. Repointed under CR-20260904-0001.
+  //
+  // "v1.x-shaped" is not a version check: nothing inspects a version field,
+  // and `.agents/rules/distributed-surface.md` forbids introducing one. It
+  // means a payload carrying the pre-v3 keys and missing the v3 required ones,
+  // which is what the example spells out.
+  it("emits QFAI-PROT-002 listing the required keys a v1.x-shaped review.json omits", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    // EX-0004-0010's payload verbatim: the pre-v3 shape, and no pivotDirective.
+    await seedReviewJson(root, 0, {
+      mode: "full-harness",
+      fullHarness: { iterations: [] },
+      allReviewerAxesPerfect100: false,
+    });
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+
+    // Every issue this payload provokes is the one code the AC names. Written
+    // as the distinct set rather than a same-length comparison, which an empty
+    // `issues` would satisfy.
+    expect([...new Set(issues.map((i) => i.code))]).toEqual(["QFAI-PROT-002"]);
+
+    // The example requires the missing required keys to be *listed*. One rule
+    // per key, so a payload that omits four of them cannot be discharged by a
+    // single generic complaint.
+    const rules = new Set(issues.map((i) => i.rule));
+    for (const key of [
+      "scores",
+      "proseCritique",
+      "pivotDirective",
+      "layoutAntiPatternsDetected",
+      "designMdViolations",
+    ]) {
+      expect(rules, `no issue names the missing required key ${key}`).toContain(
+        `prototypingEvidence.review.${key}`,
+      );
+    }
+
+    // And the three keys that make it v1.x-shaped are each rejected by name,
+    // rather than being ignored as surplus.
+    for (const legacy of ["mode", "fullHarness", "allReviewerAxesPerfect100"]) {
+      expect(
+        issues.some(
+          (i) => i.rule === "prototypingEvidence.review.unknownKey" && i.message.includes(legacy),
+        ),
+        `the legacy key ${legacy} is not reported`,
+      ).toBe(true);
+    }
+  });
+
   // PowerShell's `Set-Content -Encoding UTF8` and Windows editors defaulting to
   // "UTF-8 with signature" emit a BOM. The payload is valid JSON; calling it
   // unparseable sends the operator to re-run a reviewer over a correct file.
