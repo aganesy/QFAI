@@ -37,12 +37,12 @@ import {
   isOrdinalScore,
   isPivotDirective,
   isStopReason,
-  iterationDir,
   iterationReviewPath,
 } from "../prototyping/iteration.js";
 
 import { validateProseCritiqueBand } from "../prototyping/evaluatorReview.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { loadLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 import { SAFE_SCREEN_ID_PATTERN } from "./uiEvidenceArtifacts.js";
 
@@ -478,16 +478,8 @@ async function validateReviewArtifacts(
     let raw: string;
     try {
       raw = await readFile(path.join(root, rel), "utf-8");
-    } catch {
-      issues.push(
-        issue(
-          "QFAI-PROT-002",
-          `iterations[${i}] records a review but ${rel} is missing. The reviewer writes that file and iterations[${i}] mirrors it; a mirror with no reviewer artifact behind it cannot be checked. Re-run the reviewer for ${iterationDir(i)}, or drop the iteration.`,
-          "error",
-          rel,
-          "prototypingEvidence.review.missing",
-        ),
-      );
+    } catch (cause) {
+      issues.push(readFailureIssue(i, rel, cause));
       continue;
     }
     let review: unknown;
@@ -521,6 +513,39 @@ async function validateReviewArtifacts(
     issues.push(...mirrorAgreementIssues(i, rel, review, mirror));
   }
   return issues;
+}
+
+/**
+ * The finding for a `review.json` that could not be read.
+ *
+ * Absence and unreadability are different operator actions, so they are
+ * different findings. A single "is missing" message sent every
+ * `EACCES` / `EISDIR` / `EIO` to "re-run the reviewer", which rewrites a
+ * file that is already on disk and loses whatever it held. `ENOTDIR`
+ * counts as absent alongside `ENOENT` because a non-directory component
+ * on the way to `iter-NN/` means the file is not there either — the
+ * same pairing `doctor/skillManifestProbe.ts` and
+ * `doctor/assetLineBudget.ts` already use.
+ */
+function readFailureIssue(index: number, rel: string, cause: unknown): Issue {
+  const absent = isEnoent(cause) || (hasErrnoCode(cause) && cause.code === "ENOTDIR");
+  if (absent) {
+    return issue(
+      "QFAI-PROT-002",
+      `${rel} is missing, but iterations[${index}] records a review transcribed from it. A mirror with no reviewer artifact behind it cannot be checked. Re-run the reviewer for that iteration, or drop iterations[${index}].`,
+      "error",
+      rel,
+      "prototypingEvidence.review.missing",
+    );
+  }
+  const reason = cause instanceof Error ? cause.message : String(cause);
+  return issue(
+    "QFAI-PROT-002",
+    `${rel} exists but could not be read (${reason}). The reviewer deliverable cannot be verified while its file is unreadable; fix the filesystem error and rerun rather than re-running the reviewer.`,
+    "error",
+    rel,
+    "prototypingEvidence.review.unreadable",
+  );
 }
 
 /**
@@ -558,7 +583,7 @@ function reviewSchemaIssues(
 
   if (review.iterIndex !== index) {
     report(
-      `iterIndex must be ${index} (got ${JSON.stringify(review.iterIndex)}); this is the review for ${iterationDir(index)}.`,
+      `iterIndex must be ${index} (got ${JSON.stringify(review.iterIndex)}); this file is the review for iterations[${index}].`,
       "prototypingEvidence.review.iterIndex",
     );
   }

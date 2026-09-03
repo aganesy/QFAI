@@ -421,6 +421,28 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     ).toBe(true);
   });
 
+  // A read failure is not proof of absence: sending every EACCES / EISDIR to
+  // "re-run the reviewer" rewrites a file that is on disk and loses what it held.
+  it("separates an unreadable review.json from a missing one", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [validIter(0)],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    // A directory where the file belongs: present, so not ENOENT, and
+    // unreadable, so `readFile` raises EISDIR.
+    await mkdir(path.join(root, ".qfai/evidence/prototyping/iter-00/review.json"), {
+      recursive: true,
+    });
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    const rules = issues.filter((i) => i.code === "QFAI-PROT-002").map((i) => i.rule);
+    expect(rules).toContain("prototypingEvidence.review.unreadable");
+    expect(rules).not.toContain("prototypingEvidence.review.missing");
+  });
+
   it("emits QFAI-PROT-002 when review.json is unparseable", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
