@@ -13,7 +13,12 @@ Upstream artifacts include, at minimum:
 - `10_Plan.md` and other owner-phase planning outputs
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
-- outputs of discussion/sdd/review stages
+- outputs of the sdd and review stages. A **discussion pack is NOT upstream
+  SSOT** — it is non-normative discovery material, and `.qfai/specs/**` is the
+  behaviour and design SSOT it feeds. A defect found in one downstream is fixed
+  in the SDD-owned artifact, the discrepancy recorded in delta/evidence. This
+  reclassifies ONLY the pack: genuine upstream is still repaired upstream-first.
+
 - **test or production artifacts another spec's completed implement run
   certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
   on a `done` row. Changing one is not forbidden (the codebase is not
@@ -71,7 +76,7 @@ Any exception beyond this list requires explicit user approval.
 `/qfai-implement` must write `tdd/test-list.md` after every phase transition,
 and the file lives inside `.qfai/specs/**`. The protocol never classified it in
 either direction, but `#core-rule`'s list is explicitly open-ended ("at minimum")
-and sweeps in "outputs of discussion/sdd/review stages" — and the ledger's schema
+and sweeps in "outputs of the sdd and review stages" — and the ledger's schema
 is documented in `skills/qfai-sdd/references/spec-traceability-rules.md`, an
 SDD-stage reference. On the natural reading the ledger _is_ an sdd-stage output,
 so "Downstream skills must not patch upstream SSOT directly" applied to it.

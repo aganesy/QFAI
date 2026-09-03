@@ -94,7 +94,9 @@ and that none were added or dropped — in the `Rationale` column of the
 
 ## Inputs
 
-1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
+1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md` — reference
+   input, not normative. Requirement seeds to triage, not obligations to obey;
+   an explicit user requirement or an import-lite source serves the same slot.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
 4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.
