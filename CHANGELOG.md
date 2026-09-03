@@ -96,6 +96,32 @@
 
 ### Fixed
 
+- **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
+  (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
+  `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
+  4 実装はいずれも**別々の間違い方**をしていた。故障は「ケースの抜け」ではなく
+  構造的で、**この種のスキャンが探す区切り文字はすべて別の構文の内側にも現れうる**
+  ため、構文 X を追跡しないスキャンは X の中身を自分の構文として読む:
+  - 2 パス `replace`: コメント区切りがコメント内にある場合に破綻
+  - コメントのみ追跡: 文字列内の `//` がコメントを開く
+  - 文字列と template を追跡: **正規表現内の backtick** が phantom template を開く
+    計測値（統合前 → 統合後）:
+    | ガード | 症状 | 変化 |
+    | --- | --- | --- |
+    | `unit/validators-are-wired` | (file, validator) 対の誤判定 | 5 → 0 (#1061 で既に修正) |
+    | `validators/ruleCodeUniqueness` | コメント散文がコードとして漏れる | 8/264 → **0/264** |
+    | `helpers/prototypingGateSurface` | 同上 | 8/264 → **0/264** |
+    | `core/prototyping/reviewerDispatch` | **コメントでないテキストの過剰削除** | 11,381 文字・識別子 91 個 → **0 文字・0 個** |
+    `reviewerDispatch` の故障方向が特に危険だった。走査対象は
+    `prototypingIterate.ts` 1 ファイルのみで、アサーションが
+    `not.toMatch(/captureScreenshots/)` という **否定**なので、過剰削除は
+    アサーションを通りやすくする。消えた識別子の 1 つは
+    `resolvedCaptureScreens` — まさに禁止対象の隣だった。つまりこのガードは
+    一度も赤くならずに黙って空回りしうる状態だった。
+    統合により消費側から 217 行を削除し、44 行を追加した。
+    `tests/unit/sourceReduction.test.ts` が共有側の契約を 12 ケースで固定する —
+    各世代を壊した入力そのものを行にしてあるので、5 世代目の手書き実装は
+    散文を読むのではなく、失敗するテストに突き当たる。
 - **同じ欠陥を持つ `TDD-0012` / `TDD-0013` / `REQ-0020` も付け替えた**
   (`CR-20260904-0001` の scope 拡張、別途承認)。3 件とも
   `tests/core/prototypingEvidence.negative.test.ts` を引いており、
