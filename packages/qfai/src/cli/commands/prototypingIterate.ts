@@ -71,6 +71,8 @@ import {
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
+  SEED_COMMIT_SHA,
+  SEED_PROSE_CRITIQUE_PLACEHOLDER,
   SEED_REVIEWER_ID,
   iterationDir,
   iterationReviewPath,
@@ -2018,12 +2020,6 @@ type SeedMetadata = {
  * The text is a single deterministic sentence repeated to land
  * inside the band.
  */
-const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
-  const sentence =
-    "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
-  return Array.from({ length: 10 }, () => sentence).join(" ");
-})();
-
 /**
  * Build the cycle-0 seed `iterations[]` array. Emits exactly one
  * iteration record whose shape passes `validatePrototypingEvidence`
@@ -2057,7 +2053,7 @@ function buildSeedIterations(mode?: "convergence" | "exploration"): unknown[] {
   return [
     {
       index: 0,
-      commitSha: "uncommitted",
+      commitSha: SEED_COMMIT_SHA,
       proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
       scores: {
         informationArchitecture: "weak",

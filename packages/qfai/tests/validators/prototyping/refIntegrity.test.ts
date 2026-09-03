@@ -6,6 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { validatePrototypingArtifactRefIntegrity } from "../../../src/core/validators/prototyping/refIntegrity.js";
+import {
+  SEED_COMMIT_SHA,
+  SEED_PROSE_CRITIQUE_PLACEHOLDER,
+  SEED_REVIEWER_ID,
+} from "../../../src/core/prototyping/iteration.js";
 
 const tempDirs: string[] = [];
 
@@ -47,6 +52,22 @@ async function seedPrototypingJson(root: string, screenshot: string, html: strin
  * omit `evidenceRefs` entirely, which the fixed-shape helper above cannot
  * express.
  */
+/**
+ * The record `prototyping iterate --cycle 0` actually writes.
+ *
+ * Spelled out from the exported constants rather than as
+ * `{ reviewerId: "iterate-seed" }`, because the waiver is not granted to a
+ * record that merely CLAIMS to be the seed — `isUntouchedCycleZeroSeed` also
+ * requires the seed's `commitSha` and its untouched placeholder critique, so
+ * the waiver lifts by itself on the first real review.
+ */
+const untouchedSeed = (): Record<string, unknown> => ({
+  index: 0,
+  commitSha: SEED_COMMIT_SHA,
+  reviewerId: SEED_REVIEWER_ID,
+  proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
+});
+
 async function seedIterations(root: string, iterations: unknown[]): Promise<void> {
   const dir = path.join(root, ".qfai", "evidence", "prototyping");
   await mkdir(dir, { recursive: true });
@@ -173,7 +194,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
   // asks nothing of it.
   it("asks no artifact of the cycle-0 seed, which cites none", async () => {
     const root = await newTempDir();
-    await seedIterations(root, [{ index: 0, reviewerId: "iterate-seed" }]);
+    await seedIterations(root, [untouchedSeed()]);
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
     expect(issues).toEqual([]);
@@ -193,6 +214,16 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     ]);
   });
 
+  it("still requires both refs from a reviewed record that kept the seed stamp", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [
+      { ...untouchedSeed(), commitSha: "a".repeat(40), proseCritique: "a real critique" },
+    ]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.filter((i) => i.severity === "error")).toHaveLength(2);
+  });
+
   it("still requires both refs from an iteration naming a real reviewer", async () => {
     const root = await newTempDir();
     await seedIterations(root, [{ index: 0, reviewerId: "product-surface-reviewer" }]);
@@ -209,8 +240,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
   it("would have reported the pre-fix seed refs, and does not now that they are gone", async () => {
     const root = await newTempDir();
     const preFix = {
-      index: 0,
-      reviewerId: "iterate-seed",
+      ...untouchedSeed(),
       evidenceRefs: {
         screenshot: ".qfai/evidence/prototyping/iter-00/index.png",
         html: ".qfai/evidence/prototyping/iter-00/index.html",
