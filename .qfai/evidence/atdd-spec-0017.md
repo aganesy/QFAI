@@ -2191,7 +2191,23 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 932
+**And it moved again — this time from inside the branch that had just re-measured it.** `ae921ffd5`
+typed `932` above, and a later commit on that same branch added
+`packages/qfai/tests/assets/autoModeApprovalDegrade.test.ts` — 110 lines, five `it` callsites under the
+`tests/assets/**` include — with no re-measurement. Both landed together in `2a6da1ca9`, so the line was
+already five short of its own tree at the moment it was written, and `test (e2e)`, `node-floor` and
+`ci-pass` have been red on `main` ever since: one stale integer, three required jobs, every open PR
+red for a reason none of them contains. The diff between `2a6da1ca9` and `64dfea7ec` under either glob
+is empty, so the whole delta is that one file. This is the seventh instance of the defect and the first
+where the invalidating commit is a sibling of the repair rather than a foreign one — which is worth
+recording, because it means "re-measure when you touch the globs" is not enough on its own: the
+re-measurement has to be the LAST thing the branch does to them.
+
+Re-measured for this commit by a separate walk of the two include roots — not by calling into
+`stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
+readings agree: **937** (`tests/assets` 767, `tests/e2e` 170).
+
+e2e callsites at this tree: 937
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
