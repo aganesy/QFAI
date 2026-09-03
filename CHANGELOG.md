@@ -42,6 +42,27 @@
 
 ### Fixed
 
+- **`prototyping iterate` が `--dry-run` を無視して、preview を求めた実行そのもので cycle-0 の
+  破壊的リセットを行っていた欠陥を塞いだ。** `--dry-run` は `変更を行わず表示のみ` と文書化され
+  引数パーサでは解釈されていたが、`runPrototypingIterate` へ渡されていなかった (`init` と `doctor`
+  にしか結線されていなかった)。実測では 27 ファイル / 1,475,551 バイトの iteration evidence が
+  `iter-00.backup-<ISO>` へ移動し、`iterate-plan.json` は `screens: []` で書き直され、
+  `mutation-log.jsonl` は 27 件すべてを `"action":"move"` の実書き込みとして記録した
+  — dry-run を示す印は 1 件も付かない。しかも直後の非 dry-run 実行はもう動かすものが残っておらず
+  1 件しか記録しなかった。
+  cycle-0 の破壊的再実行ゲートは `--force` なしでの上書きを既に拒否しており、その outcome を
+  「意図的な選択」にするために存在する。`--dry-run` はそのゲートが守ろうとしている結果を
+  そのまま素通りしていた。
+  preview は `handoffUpgrade` が #515 で採った形に合わせ、**あらゆる書き込みの直前** で止まる
+  — 最初の mutation は cycle-0 リセット内の mutation-log 書き込みなので、その手前。読み取り
+  専用のゲート (zero-UI-bearing precheck、DESIGN.md の読み取りと hash、lock ゲート、収束ループ
+  拒否、`--primary-spec-id` 正規化、cycle 範囲ゲート、そして破壊的再実行の拒否) はすべて
+  preview より前に走るので、**preview は実行が返すのと同じ exit code を返す**: 既存の `iter-00`
+  に対して `--force` なしの `--cycle 0 --dry-run` は実行と同じく 2 で拒否する。preview が
+  0 を返して素通りするなら、それは同じ欠陥を場所を変えて作り直すことになる。
+  preview が主張しないことも明示した: capture / license-verify / validate はこの地点より後に
+  あるので、preview が覆うのは「この command が行う書き込み」であって「実行の結末」ではない。
+  `--help` の `--dry-run` 行にも `prototyping iterate` を加えた。
 - **直前に入れた reviewer-deliverable gate が、既定の運用経路では no-op だった欠陥を塞いだ。** seed 除外を
   `reviewerId === "iterate-seed"` だけで判定していたが、これはどちらの向きにも load-bearing ではなかった。
   (a) **解除されない** — `reviewerId` は `Iteration` 型に宣言が無く、書き手は `buildSeedIterations` だけで、

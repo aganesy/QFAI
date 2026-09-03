@@ -211,6 +211,25 @@ export type RunPrototypingIterateOptions = {
    */
   force?: boolean;
   /**
+   * Preview: report what the run would do, and write nothing.
+   *
+   * `--dry-run` is parsed globally but reached only `init` and `doctor`,
+   * so this command performed the cycle-0 destructive reset under a flag
+   * documented as "display only, make no changes" — measured at 27 files
+   * and 1,475,551 bytes relocated, with `mutation-log.jsonl` recording
+   * every write as real and no dry-run marker on any entry. The
+   * destructive-rerun gate exists to make that outcome deliberate, and
+   * `--dry-run` walked straight past it.
+   *
+   * The preview is taken AFTER every read-only gate, so it reports the
+   * exit code those gates produce rather than exiting 0 past them:
+   * `--cycle 0 --dry-run` against a populated `iter-00` with no
+   * `--force` still refuses with 2, because that is what the real run
+   * does. It cannot predict a failure only the write path can reach — a
+   * capture error, a license-verify rejection — and says so.
+   */
+  dryRun?: boolean;
+  /**
    * Absolute or root-relative path to an add-only license-patch file.
    * When set, iterate applies the patch to the frozen license catalog
    * BEFORE the runtime license verify, then appends a
@@ -701,11 +720,14 @@ export async function runPrototypingIterate(
   //     of the cycle-0 reset path so the backup is byte-equivalent to
   //     the prior loop. The rename MUST precede `clearEvidenceIterDirs`
   //     so a destructive-rerun failure cannot lose the prior loop.
+  //     The refusal is read-only and keeps its precedence over the
+  //     `--dry-run` preview below: a preview that exits 0 where the run
+  //     it previews exits 2 is the same defect in a new place.
+  let cycleZeroReset: { evidenceRootAbs: string; iter00Abs: string } | null = null;
   if (options.cycle === 0) {
     const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
     const iter00Abs = path.join(evidenceRootAbs, "iter-00");
-    const iter00Exists = await dirExists(iter00Abs);
-    if (iter00Exists) {
+    if (await dirExists(iter00Abs)) {
       if (!options.force) {
         error(
           "qfai prototyping iterate --cycle 0: an existing iter-00 directory was found at " +
@@ -715,6 +737,31 @@ export async function runPrototypingIterate(
         );
         return 2;
       }
+      cycleZeroReset = { evidenceRootAbs, iter00Abs };
+    }
+  }
+
+  // 3c) `--dry-run` stops here, the last point before any write.
+  //     Everything above is a read: the zero-UI-bearing precheck, the
+  //     DESIGN.md read and hash, the lock gate, the converged-loop
+  //     refusal, `--primary-spec-id` normalisation, the cycle-range gate
+  //     and the destructive-rerun refusal. The first mutation is the
+  //     mutation-log write in the reset block below.
+  if (options.dryRun === true) {
+    reportIterateDryRun({
+      root: options.root,
+      cycle: options.cycle,
+      mode: resolvedMode,
+      specCount: specs.length,
+      ...(options.targetUrl !== undefined ? { targetUrl: options.targetUrl } : {}),
+      reset: cycleZeroReset,
+    });
+    return 0;
+  }
+
+  if (cycleZeroReset !== null) {
+    {
+      const { evidenceRootAbs, iter00Abs } = cycleZeroReset;
       const backupAbs = path.join(
         evidenceRootAbs,
         `iter-00.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
@@ -2074,6 +2121,48 @@ function buildSeedIterations(mode?: "convergence" | "exploration"): unknown[] {
       ...(mode !== undefined ? { mode } : {}),
     },
   ];
+}
+
+/**
+ * What a `--dry-run` invocation would have done.
+ *
+ * Every line is derived from a gate that has already run, so the preview
+ * cannot disagree with the run it previews about anything it reports.
+ * What it deliberately does NOT claim is completeness: capture,
+ * license-verify and the validate pass all live past this point and can
+ * still fail, so the last line says the preview covers the writes rather
+ * than the outcome.
+ */
+function reportIterateDryRun(input: {
+  root: string;
+  cycle: number;
+  mode: "convergence" | "exploration";
+  specCount: number;
+  targetUrl?: string;
+  reset: { evidenceRootAbs: string; iter00Abs: string } | null;
+}): void {
+  const lines = [
+    `qfai prototyping iterate --dry-run: would run cycle ${String(input.cycle)} in ${input.mode} mode ` +
+      `over ${String(input.specCount)} spec(s)` +
+      (input.targetUrl === undefined ? "." : ` against ${input.targetUrl}.`),
+  ];
+  if (input.reset !== null) {
+    const iterRel = path.relative(input.root, input.reset.iter00Abs).replace(/\\/g, "/");
+    lines.push(
+      `  would MOVE ${iterRel} to ${iterRel}.backup-<ISO> and log every file in it to ` +
+        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs.`,
+    );
+  } else if (input.cycle === 0) {
+    lines.push(
+      `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh.`,
+    );
+  }
+  lines.push(
+    `  would write ${PROTOTYPING_JSON_REL} (seed metadata) and ${iterationDir(input.cycle)}/iterate-plan.json.`,
+    "  wrote nothing. This preview covers the writes this command makes, not the outcome of the " +
+      "capture, license-verify and validate steps that follow them.",
+  );
+  for (const line of lines) info(line);
 }
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
