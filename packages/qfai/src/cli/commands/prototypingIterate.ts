@@ -778,7 +778,6 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
-      declaredScreens: (options.screens ?? []).map((s) => s.id),
       // cycle-0 SSOT for the spec set under review. Kept single-spec
       // (mirrors the legacy `specsCovered` field) until the per-spec
       // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
@@ -2004,13 +2003,6 @@ type SeedMetadata = {
   frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
   /**
-   * Declared screen ids (underscore casing). When non-empty the seed
-   * iteration's `evidenceRefs[]` bijects with this list. Empty /
-   * absent → no `evidenceRefs[]` entries on the seed iteration
-   * (legacy default-OFF capture path).
-   */
-  declaredScreens?: readonly string[];
-  /**
    * Resolved per-loop prototyping mode (convergence default,
    * exploration enables medium gate relaxation). Persisted as
    * `prototyping.json#mode` AND copied onto the seed iteration record
@@ -2036,36 +2028,28 @@ type SeedMetadata = {
  * accidentally classify the seed as `axes-exceptional`; the reviewer
  * overwrites scores on the first review pass.
  *
- * `evidenceRefs` shape is the canonical `{ screenshot, html }` object
- * form per the {@link Iteration} type, `buildEvaluatorReview`, and the
- * ref-integrity validator (which reads `iter.evidenceRefs.screenshot`
- * / `.html` directly). When multiple screens are declared, the seed
- * uses the FIRST screen's paths as the iteration-level representative
- * — the reviewer overwrites this with the actually-reviewed surface on
- * the first review pass. When no screens are declared, the seed uses
- * the default `iter-NN/index.{png,html}` placeholder so the validator
- * has a concrete path to check.
+ * **The seed cites no evidence, and that is the fix for the window it
+ * used to open.** It carried an `evidenceRefs` pair, which
+ * `validatePrototypingArtifactRefIntegrity` requires to point at files
+ * that exist. Nothing had written them yet: capture runs AFTER
+ * `iterate`, so between the two the project failed its own gate on two
+ * `QFAI-PROT-009` errors. With no declared screens the pair fell back
+ * to `iter-NN/index.{png,html}`, which is worse than early — those two
+ * paths have no writer anywhere in the loop. The plan this same
+ * invocation writes says so: `paths.screenshotTemplate` is
+ * `iter-NN/{screen}.png`, and capture honours it, so `index.png` is
+ * never produced at any point. The errors named missing artifacts,
+ * which reads as "capture did not run", and re-running capture could
+ * not help.
+ *
+ * A placeholder that is explicitly not a review should not be asked to
+ * cite evidence it has not seen, so the field is omitted and
+ * `QFAI-PROT-009` skips iterations carrying {@link SEED_REVIEWER_ID}.
+ * The two are one change: dropping the field without the validator
+ * exemption trades two missing-artifact errors for two empty-field
+ * errors.
  */
-function buildSeedIterations(
-  declaredScreens: readonly string[],
-  mode?: "convergence" | "exploration",
-): unknown[] {
-  // Co-locate {screenshot, html} from the first declared screen; fall
-  // back to a deterministic placeholder when no screens are present so
-  // the seed always has non-empty fields. (refIntegrity treats empty
-  // fields as `QFAI-PROT-009` errors.)
-  //
-  // Paths are FULL repo-relative (e.g. `.qfai/evidence/prototyping/
-  // iter-00/<screen>.png`), matching the SSOT shape used by
-  // `buildEvaluatorReview` evidenceRefs and by `validatePrototyping
-  // ArtifactRefIntegrity` (which calls `path.resolve(root, value)`).
-  const firstScreen = declaredScreens[0];
-  const screenshotRef =
-    firstScreen !== undefined
-      ? iterationScreenshotPath(0, firstScreen)
-      : `${iterationDir(0)}/index.png`;
-  const htmlRef =
-    firstScreen !== undefined ? iterationHtmlPath(0, firstScreen) : `${iterationDir(0)}/index.html`;
+function buildSeedIterations(mode?: "convergence" | "exploration"): unknown[] {
   return [
     {
       index: 0,
@@ -2081,10 +2065,6 @@ function buildSeedIterations(
       designMdViolations: [],
       pivotDirective: "continue",
       reviewerId: SEED_REVIEWER_ID,
-      evidenceRefs: {
-        screenshot: screenshotRef,
-        html: htmlRef,
-      },
       // Prototyping-mode discriminator: per-iteration mode slot.
       // Certify reads `prototyping.json#iterations[i].mode` to refuse
       // sealing a loop that produced any exploration-mode iteration.
@@ -2121,12 +2101,13 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // `designMd`, `runId`, `specsCovered`. Adding a new per-loop field
   // requires updating BOTH this list AND the comment.
   //
-  // Validate-conformance note: the iterations[] is seeded with a
-  // single stub entry whose evidenceRefs[] bijects with `declaredScreens`
-  // (if any) so `qfai validate --profile prototyping` is conformant
-  // immediately after iterate completes. The reviewer overwrites this
-  // entry on the first review pass.
-  body.iterations = buildSeedIterations(seed.declaredScreens ?? [], seed.mode);
+  // Validate-conformance note: iterations[] is seeded with a single
+  // stub entry that cites NO evidence, so `qfai validate --profile
+  // prototyping` is conformant immediately after iterate completes and
+  // stays conformant through capture and the reviewer pass. The
+  // reviewer overwrites this entry on the first review pass, and the
+  // artifact refs arrive with it.
+  body.iterations = buildSeedIterations(seed.mode);
   body.acceptedIterationIndex = 0;
   body.stopReason = null;
   // Prototyping-mode discriminator: the resolved per-loop mode is
