@@ -96,6 +96,39 @@
 
 ### Fixed
 
+- **validator 結線ガードの reduction を TypeScript パーサに置き換えた。**
+  `validators-are-wired.test.ts` の `codeOnly` / `stripComments` は、コメントと
+  リテラルを手書きスキャンで除去していた。この故障は「ケースの抜け」ではなく構造的で、
+  **このヘルパが探す区切り文字はすべて別の構文の内側にも現れうる**ため、構文 X を
+  追跡しないスキャンは X の中身を自分の構文として読む。世代ごとに 1 つ追跡対象を
+  増やしてきたが、毎回「次の 1 つ」で間違っていた:
+  - 2 パス `replace`: glob を引用した行コメントがブロックコメントの opener を運び、
+    ブロック側が 27 行先の本物の closer まで走って途中の
+    `validateStaleReferences(...)` 呼び出しを飲み込んだ (#1061 の見出し。単一パス化で
+    修正済み)
+  - コメントのみ追跡するスキャン: 文字列内の `//` がまだコメントを開いた
+  - 文字列と template を追跡するスキャン: **正規表現リテラル内の backtick** がまだ
+    phantom template を開いた。`core/specPackParsers.ts` は CommonMark の
+    コードフェンス照合器を持つので regex の中に backtick の連続が入っており、
+    そこから開いた phantom が **46 行先の JSDoc** まで走ってその JSDoc 自身の
+    opener を飲み込む。以降は解釈が反転し、doc の backtick 間の散文がコードとして、
+    実際のコードが文字列データとして読まれた。
+    パーサ真値と突き合わせると、`main` は **5 つの (file, validator) 対で誤答**しており、
+    しかも両方向に誤っていた — 1 つは JSDoc に名前が出ているだけで「結線済み」、
+    4 つは自分自身の宣言が消えていた。ガードが緑だったのは「どれか 1 ファイルで
+    参照されていれば結線済み」と集約されるためで、集約の偶然に守られていただけである。
+    `ts.createSourceFile` に置き換えた結果、この 5 件は 0 件になった。パーサは
+    「4 世代目の手書きスキャンが見落としたはずの構文」も知っている。加えて、
+    ここのどのスキャンも引けなかった区別を引く: template の `${...}` は実行される
+    コードなので `count=${validateX(root)}` は呼び出し箇所であり、その周囲の
+    literal 部分はそうではない。呼び出しは (module, validator) 対ごとに問われるため、
+    reduction はソーステキストで memo 化した (実行時間は 3.67s -> 3.61s で不変)。
+- **同種の reduction を持つ他 3 ガードは本 PR の対象外**。`ruleCodeUniqueness.test.ts`
+  は 264 ファイル中 8 件でコメント散文が漏れており (対象ガードは 5 件)、
+  `reviewerDispatch.test.ts` は 2 パス `replace` のまま (漏れではなく過剰削除側の故障)、
+  `helpers/prototypingGateSurface.ts` も regex を追跡していない。#1061 の本文が
+  `validators-are-wired.test.ts` に限定して書かれているため、計測値を添えて別 issue に
+  切り出した。
 - **条件式で emit された finding code が、code 抽出を行う 2 つのガードの双方から見えていなかった
   構造的な穴を塞いだ。** `sunsetLedger.test.ts` の `ISSUE_ARG_RE` と
   `ruleCodeUniqueness.test.ts` の `ISSUE_FIRST_ARG` はどちらも「リテラル or 識別子」しか
