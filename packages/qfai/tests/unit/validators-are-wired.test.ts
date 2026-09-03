@@ -31,6 +31,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
+
+import { withoutComments, withoutCommentsOrLiterals } from "../helpers/sourceReduction.js";
 import { describe, expect, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -307,150 +309,6 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
 }
 
 /**
- * Reduce a module with the TypeScript parser: comments always, string and
- * template literals when asked.
- *
- * Hand-rolled scanning cannot do this, and the reason is structural rather
- * than a missing case: every delimiter this needs to find can also appear
- * inside the body of some *other* construct, so a scan that does not track
- * construct X reads X's contents as its own syntax. Three generations of this
- * helper each tracked one construct more than the last and each was still
- * wrong about the next one:
- *
- * - two `replace` passes: a line comment citing a glob carried a block-comment
- *   opener, and the block pass ran twenty-seven lines to the next real closer,
- *   taking a `validateStaleReferences(...)` call with it;
- * - one scan tracking comments: a `//` inside a string still opened a comment;
- * - one scan tracking strings and templates: a REGULAR EXPRESSION whose body
- *   holds a BACKTICK still opened a phantom template literal.
- *   `core/specPackParsers.ts` has exactly that: its CommonMark fence
- *   matcher is a regex whose alternation starts with a run of backticks,
- *   and from that backtick the phantom ran
- *   forty-six lines into a JSDoc, swallowing that JSDoc's own opener. From
- *   there the framing inverted: prose between the doc's backticks read as
- *   executable code and the real code read as string data. Measured against
- *   the parser, `main` disagreed on five (file, validator) pairs, in both
- *   directions — one validator called wired on the strength of a JSDoc
- *   mention, four with their own declarations erased. The guard stayed green
- *   only because a validator counts as wired if ANY file references it.
- *
- * The parser knows all of them, including the one a fourth hand-rolled
- * generation would have missed. It also draws the distinction no scan here
- * ever did: a template's `${...}` substitution is executable code, so
- * `count=${validateX(root)}` is a call site, while the literal text
- * around it is not.
- *
- * @param blankLiterals replace each string literal and each template
- *   head/middle/tail with `""`, keeping substitutions. `codeOnly` wants that —
- *   prose in a literal is not a call site — while the module-edge walk needs
- *   the specifier text it would erase.
- */
-function stripCommentsScan(source: string, blankLiterals: boolean): string {
-  const cache = blankLiterals ? LITERALS_BLANKED : COMMENTS_ONLY;
-  const hit = cache.get(source);
-  if (hit !== undefined) return hit;
-  const reduced = reduceSource(source, blankLiterals);
-  cache.set(source, reduced);
-  return reduced;
-}
-
-/**
- * `referencesName` runs once per (module, validator name) pair — some sixty
- * names over some three hundred modules — so the parse is memoised by source
- * text. Two maps rather than a composite key: the two reductions of one module
- * are different strings and both get asked for.
- */
-const LITERALS_BLANKED = new Map<string, string>();
-const COMMENTS_ONLY = new Map<string, string>();
-
-/** One span to blank, and what to leave behind. */
-interface BlankSpan {
-  start: number;
-  end: number;
-  /** `space` keeps offsets and newlines; `quotes` collapses to `""`. */
-  fill: "space" | "quotes";
-}
-
-/**
- * Comment spans. Comments are trivia, so they hang off tokens rather than
- * nodes; walking `getChildren` reaches punctuation too, which is where a
- * comment inside an otherwise empty block lives — and a comment this walk
- * misses is prose the guard would read as wiring.
- */
-function collectCommentSpans(source: string, parsed: ts.SourceFile): BlankSpan[] {
-  const spans: BlankSpan[] = [];
-  const seen = new Set<number>();
-  const visit = (node: ts.Node): void => {
-    for (const ranges of [
-      ts.getLeadingCommentRanges(source, node.pos),
-      ts.getTrailingCommentRanges(source, node.pos),
-    ]) {
-      for (const range of ranges ?? []) {
-        if (seen.has(range.pos)) continue;
-        seen.add(range.pos);
-        spans.push({ start: range.pos, end: range.end, fill: "space" });
-      }
-    }
-    for (const child of node.getChildren(parsed)) visit(child);
-  };
-  visit(parsed);
-  return spans;
-}
-
-/**
- * String and template literal spans — the literal PIECES only. A template's
- * `node.templateSpans[i].expression` is code and stays, which is the
- * distinction that makes a call inside a substitution a real call site.
- */
-function collectLiteralSpans(parsed: ts.SourceFile): BlankSpan[] {
-  const spans: BlankSpan[] = [];
-  const visit = (node: ts.Node): void => {
-    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-      spans.push({ start: node.getStart(parsed), end: node.getEnd(), fill: "quotes" });
-    } else if (ts.isTemplateExpression(node)) {
-      spans.push({ start: node.head.getStart(parsed), end: node.head.getEnd(), fill: "quotes" });
-      for (const templateSpan of node.templateSpans) {
-        spans.push({
-          start: templateSpan.literal.getStart(parsed),
-          end: templateSpan.literal.getEnd(),
-          fill: "quotes",
-        });
-      }
-    }
-    node.forEachChild(visit);
-  };
-  parsed.forEachChild(visit);
-  return spans;
-}
-
-function reduceSource(source: string, blankLiterals: boolean): string {
-  const parsed = ts.createSourceFile(
-    "scan.ts",
-    source,
-    ts.ScriptTarget.ES2022,
-    true,
-    ts.ScriptKind.TS,
-  );
-  const spans = [
-    ...collectCommentSpans(source, parsed),
-    ...(blankLiterals ? collectLiteralSpans(parsed) : []),
-  ].sort((a, b) => a.start - b.start);
-
-  let out = "";
-  let cursor = 0;
-  for (const span of spans) {
-    // A comment inside a substitution is already covered by the outer span it
-    // sits in; taking the inner one again would double-blank and shift text.
-    if (span.start < cursor) continue;
-    out += source.slice(cursor, span.start);
-    out +=
-      span.fill === "quotes" ? '""' : source.slice(span.start, span.end).replace(/[^\n]/g, " ");
-    cursor = span.end;
-  }
-  return out + source.slice(cursor);
-}
-
-/**
  * Reduce a module to the text that can actually execute: block and line
  * comments, string / template literals, and `import … from "…"` /
  * `export { … } from "…"` declarations all go away.
@@ -462,7 +320,7 @@ function reduceSource(source: string, blankLiterals: boolean): string {
  * a call site either: it only moves the name one module further along.
  */
 function codeOnly(source: string): string {
-  return stripCommentsScan(source, true)
+  return withoutCommentsOrLiterals(source)
     .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
     .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
     .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ");
@@ -485,13 +343,13 @@ function referencesName(source: string, name: string): boolean {
 /**
  * Comments out; everything else — imports included — kept verbatim.
  *
- * The same scan as `codeOnly`, and for the same reason: this text feeds the
- * module-edge walk, so a phantom block comment here drops real import edges
- * and shrinks the reachable set, which reads downstream as validators nobody
- * calls.
+ * The same reduction as `codeOnly` with literals left alone, and for the same
+ * reason: this text feeds the module-edge walk, so a phantom block comment
+ * here drops real import edges and shrinks the reachable set, which reads
+ * downstream as validators nobody calls.
  */
 function stripComments(source: string): string {
-  return stripCommentsScan(source, false);
+  return withoutComments(source);
 }
 
 /** `import … from "./x.js"` / `export … from "./x.js"` targets. */

@@ -63,6 +63,7 @@
     "tests/helpers/recordProse.ts",
     "tests/helpers/shippedLaneCommands.ts",
     "tests/helpers/shippedWorkflowFixtures.ts",
+    "tests/helpers/sourceReduction.ts",
     "tests/helpers/tempTree.ts",
     "tests/helpers/workflowsIntegrityFixtures.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
@@ -115,6 +116,7 @@
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
+    "tests/unit/sourceReduction.test.ts",
     "tests/validators/importLite.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
     "tests/validators/validatorReachability.test.ts"

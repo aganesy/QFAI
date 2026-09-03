@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../helpers/sourceReduction.js";
 
 // Anchored to this file, not to `process.cwd()`: a runner launched from the
 // repo root resolves `src/core` to a path that does not exist, and the walk
@@ -333,47 +334,18 @@ async function collectScanFiles(): Promise<string[]> {
  * literals so a `//` inside a string is not mistaken for a comment, which is
  * the only ambiguity that matters here.
  */
+/**
+ * Comments blanked, literals kept — the shared reduction (#1089).
+ *
+ * The hand-rolled scan this replaced tracked strings and templates but not
+ * regular expressions, so a regex whose body held a backtick opened a phantom
+ * template and comment prose leaked into this text in 8 of the 264 modules
+ * under `src/core`. A module can then be credited with a finding code it only
+ * DOCUMENTS, and `DYNAMIC_CODE_SITES` gain or lose an entry for reasons
+ * unrelated to any code.
+ */
 function stripComments(source: string): string {
-  let out = "";
-  let i = 0;
-  while (i < source.length) {
-    const two = source.slice(i, i + 2);
-    if (two === "//") {
-      const end = source.indexOf("\n", i);
-      const stop = end === -1 ? source.length : end;
-      out += " ".repeat(stop - i);
-      i = stop;
-      continue;
-    }
-    if (two === "/*") {
-      const end = source.indexOf("*/", i + 2);
-      const stop = end === -1 ? source.length : end + 2;
-      out += source.slice(i, stop).replace(/[^\n]/g, " ");
-      i = stop;
-      continue;
-    }
-    const ch = source[i] ?? "";
-    if (ch === '"' || ch === "'" || ch === "`") {
-      let j = i + 1;
-      while (j < source.length) {
-        if (source[j] === "\\") {
-          j += 2;
-          continue;
-        }
-        if (source[j] === ch) {
-          j += 1;
-          break;
-        }
-        j += 1;
-      }
-      out += source.slice(i, j);
-      i = j;
-      continue;
-    }
-    out += ch;
-    i += 1;
-  }
-  return out;
+  return withoutComments(source);
 }
 
 async function scanIssueSources(): Promise<Scan> {
