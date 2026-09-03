@@ -96,6 +96,29 @@
 
 ### Fixed
 
+- **条件式で emit された finding code が、code 抽出を行う 2 つのガードの双方から見えていなかった
+  構造的な穴を塞いだ。** `sunsetLedger.test.ts` の `ISSUE_ARG_RE` と
+  `ruleCodeUniqueness.test.ts` の `ISSUE_FIRST_ARG` はどちらも「リテラル or 識別子」しか
+  受けない。`issue(cond ? "A" : "B", …)` は識別子側で `cond` に一致した直後にカンマを要求される
+  ため **一致自体が起きず**、その呼び出し地点は P7 promotion window の検査 (severity が
+  `newRuleSeverity` を通っているかどうか) も ownership の帰属も受けない。
+  `design-principles.md` の「新しい code は warning で出荷し、最低 1 minor 先の promotion
+  release に pin する」という規律が、この経路では強制されない。
+  両方の抽出器が条件式の **両分岐** を辿るようにした。どちらの分岐も利用者に届く code に
+  なりうるので、片方だけ帰属させるのは死角を半死角に替えるだけである。解決できない分岐は
+  プレーンな引数と同様にファイルを opaque 扱いにする。`severityExpressionsFor` は
+  `firstArgNames` 経由で、直接 / file-local alias / 条件式のいずれかで code を名指す
+  first argument を認識する。
+  **今日隠れているものは無く、それは設計ではなく偶然である**: `src/` にある条件式 emission は
+  `validators/reviewArtifacts.ts` の 2 箇所だけで、名指す `QFAI-REVIEW-007` /
+  `QFAI-REVIEW-009` は両方 baseline code であり、しかも同じファイル内の別の呼び出しで
+  リテラルとしても emit されている。issue の指摘どおり、問題は構造 — 条件式で出す新しい
+  hard error は、ハウススタイルに従ったまま登録も所有もされずに利用者に届く。
+  検証は `src/` ではなく合成 body に対して行う。実ツリーは上記 2 つの偶然で穴を隠すので、
+  `src/` を見るテストは今日通り、抽出器が退行しても通り続ける。旧パターンが何も見ないことも
+  同じケースで明示的に assert した。あわせて「条件式 emission に post-baseline code は
+  無い」という測定を 1 行のテストにして、なぜ今 registration が不要なのかを読者が
+  再導出しなくても済むようにした。
 - **README が `qfai init` の実挙動と逆のことを書いていた誤りを直し、alignment gate に実挙動と
   紐づく 2 本目の oracle を足した。** 両 README が `It does not generate GitHub Actions workflows.`
   と述べていたが、`qfai init` はまさに 2 本の workflow を書き出す

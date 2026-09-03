@@ -124,6 +124,30 @@ const ISSUE_ARG_RE = new RegExp(
 );
 
 /**
+ * A CONDITIONAL first argument: `issue(cond ? "A" : "B", …)`.
+ *
+ * The literal-or-identifier pattern above cannot see this. Its identifier
+ * alternative matches `cond` and then demands a comma, which is not there — so
+ * the call site produced no match at all, and both codes behind it went
+ * unattributed and unchecked. `validators/reviewArtifacts.ts` emits
+ * `QFAI-REVIEW-007` / `QFAI-REVIEW-009` exactly this way, twice.
+ *
+ * Nothing is currently hidden by it, and that is luck rather than design: both
+ * codes are baseline, and both also appear as literal first arguments
+ * elsewhere in the same file. #1062's point is the structure — a NEW hard
+ * error emitted through a ternary would be registered nowhere and owned by
+ * nothing, having followed the house style.
+ *
+ * Both branches are captured. Either can be the code that reaches users, so
+ * attributing one and dropping the other would trade a blind spot for a
+ * half-blind one.
+ */
+const ISSUE_TERNARY_ARG_RE = new RegExp(
+  `\\bissue\\(\\s*\\n?\\s*[A-Za-z_$][\\w$.]*\\s*\\?\\s*\\n?\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))\\s*:\\s*\\n?\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))\\s*,`,
+  "g",
+);
+
+/**
  * `const NAME = "CODE";` — with an optional type annotation, an optional
  * `as const`, and the `cond ? "A" : "B"` pair that `validators/designFidelity.ts`
  * uses to pick between two codes.
@@ -247,6 +271,30 @@ function topLevelArgs(body: string, open: number): string[] {
  * wired one — the direction that reports a gap instead of assuming one is not
  * there.
  */
+/**
+ * Whether an `issue(...)` first argument names `code` — directly, through a
+ * file-local alias, or through either branch of a conditional.
+ *
+ * The conditional case is #1062: the severity of a code emitted as
+ * `cond ? "A" : "B"` was never located, so the P7 ratchet could not tell
+ * whether that emission went through `newRuleSeverity` or hard-coded
+ * `"error"`. The branches are split on the top-level `?` and `:` only, so a
+ * nested conditional or a `:` inside a string does not confuse it — anything
+ * this cannot split falls through and the call site stays unattributed, which
+ * is the direction that reports a gap rather than inventing coverage.
+ */
+function firstArgNames(first: string, code: string, aliases: ReadonlySet<string>): boolean {
+  const names = (expr: string): boolean => expr === `"${code}"` || aliases.has(expr);
+  if (names(first)) return true;
+  const question = first.indexOf("?");
+  if (question === -1) return false;
+  const colon = first.indexOf(":", question + 1);
+  if (colon === -1) return false;
+  const thenBranch = first.slice(question + 1, colon).trim();
+  const elseBranch = first.slice(colon + 1).trim();
+  return names(thenBranch) || names(elseBranch);
+}
+
 function severityExpressionsFor(body: string, code: string): string[] {
   const found: string[] = [];
 
@@ -261,7 +309,7 @@ function severityExpressionsFor(body: string, code: string): string[] {
     const args = topLevelArgs(body, open);
     const first = args[0];
     if (first === undefined) continue;
-    if (first !== `"${code}"` && !aliases.has(first)) continue;
+    if (!firstArgNames(first, code, aliases)) continue;
     const severity = args[2];
     if (severity !== undefined) found.push(severity);
   }
@@ -353,18 +401,30 @@ async function collectIssueCodes(): Promise<Set<string>> {
     }
 
     let opaque = false;
-    for (const m of body.matchAll(ISSUE_ARG_RE)) {
-      const [, literal, identifier] = m;
+    const resolveArg = (literal: string | undefined, identifier: string | undefined): boolean => {
       if (literal) {
         codes.add(literal);
-        continue;
+        return true;
       }
       const bound = identifier ? (local.get(identifier) ?? exported.get(identifier)) : undefined;
       if (bound) {
         for (const code of bound) codes.add(code);
-        continue;
+        return true;
       }
-      opaque = true;
+      return false;
+    };
+
+    for (const m of body.matchAll(ISSUE_ARG_RE)) {
+      const [, literal, identifier] = m;
+      if (!resolveArg(literal, identifier)) opaque = true;
+    }
+    // Both branches of a conditional first argument, each resolved the same
+    // way. An unresolvable branch makes the file opaque exactly as an
+    // unresolvable plain argument does.
+    for (const m of body.matchAll(ISSUE_TERNARY_ARG_RE)) {
+      const [, thenLiteral, thenIdent, elseLiteral, elseIdent] = m;
+      if (!resolveArg(thenLiteral, thenIdent)) opaque = true;
+      if (!resolveArg(elseLiteral, elseIdent)) opaque = true;
     }
 
     if (opaque) {
@@ -684,6 +744,67 @@ describe("sunset ledger", () => {
     expect(
       missing,
       `named by a sunset constraint but emitted by nothing in src/: ${missing.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  // #1062. Both assertions run over a SYNTHETIC body rather than over `src/`,
+  // because the real tree hides the hole twice by luck: the only two
+  // conditional emissions (`validators/reviewArtifacts.ts`) name codes that
+  // are baseline, and that also appear as literal first arguments elsewhere in
+  // the same file. A test pointed at `src/` would pass today and keep passing
+  // if the extractor regressed.
+  it("sees both codes behind a conditional first argument", () => {
+    const body = [
+      "function f(flag: boolean) {",
+      "  return issue(",
+      '    flag ? "QFAI-FAKE-101" : "QFAI-FAKE-102",',
+      '    "message",',
+      '    "warning",',
+      "  );",
+      "}",
+    ].join("\n");
+
+    const seen = [...body.matchAll(ISSUE_TERNARY_ARG_RE)].flatMap((m) => [m[1], m[3]]);
+    expect(seen).toEqual(["QFAI-FAKE-101", "QFAI-FAKE-102"]);
+    // And the plain pattern still cannot: its identifier alternative matches
+    // `flag` and then demands a comma, which is why the site was invisible.
+    expect([...body.matchAll(ISSUE_ARG_RE)]).toEqual([]);
+  });
+
+  it("finds the severity of a code emitted through either branch", () => {
+    const body = [
+      "function f(flag: boolean) {",
+      "  return issue(",
+      '    flag ? "QFAI-FAKE-101" : "QFAI-FAKE-102",',
+      '    "message",',
+      "    newRuleSeverity(version, RULE_PROMOTIONS.fake),",
+      "  );",
+      "}",
+    ].join("\n");
+
+    // Both codes resolve to the same call site, so the ratchet can now tell
+    // that this emission goes through `newRuleSeverity` rather than a literal.
+    for (const code of ["QFAI-FAKE-101", "QFAI-FAKE-102"]) {
+      const severities = severityExpressionsFor(body, code);
+      expect(severities, `no severity located for ${code}`).toHaveLength(1);
+      expect(severities[0]).toContain("newRuleSeverity");
+    }
+    // A code the conditional does not name stays unattributed.
+    expect(severityExpressionsFor(body, "QFAI-FAKE-999")).toEqual([]);
+  });
+
+  // The measurement that says why nothing needs registering today, so a reader
+  // does not have to re-derive it to trust the change.
+  it("has no conditional emission that owes a promotion window", async () => {
+    const sources = await readConsumerSources();
+    const conditional = [...sources.matchAll(ISSUE_TERNARY_ARG_RE)].flatMap((m) => [m[1], m[3]]);
+    const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
+    const owing = [...new Set(conditional.filter((code) => code && !baseline.has(code)))].sort();
+
+    expect(
+      owing,
+      "a conditional emission names a post-baseline code, which now owes a RULE_PROMOTIONS " +
+        "entry — the extractor can see it, so the ratchet above will say so too",
     ).toEqual([]);
   });
 

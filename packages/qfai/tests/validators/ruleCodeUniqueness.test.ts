@@ -217,6 +217,28 @@ const ISSUE_FIRST_ARG =
   /(?<!function\s)(?<![.\w$])issue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*,/g;
 
 /**
+ * A CONDITIONAL first argument: `issue(cond ? "A" : "B", …)`.
+ *
+ * The literal-or-identifier pattern above cannot see this. Its identifier
+ * alternative matches `cond` and then demands a comma, which is not there — so
+ * the call site produced no match at all, and both codes behind it went
+ * unattributed and unchecked. `validators/reviewArtifacts.ts` emits
+ * `QFAI-REVIEW-007` / `QFAI-REVIEW-009` exactly this way, twice.
+ *
+ * Nothing is currently hidden by it, and that is luck rather than design: both
+ * codes are baseline, and both also appear as literal first arguments
+ * elsewhere in the same file. #1062's point is the structure — a NEW hard
+ * error emitted through a ternary would be registered nowhere and owned by
+ * nothing, having followed the house style.
+ *
+ * Both branches are captured. Either can be the code that reaches users, so
+ * attributing one and dropping the other would trade a blind spot for a
+ * half-blind one.
+ */
+const ISSUE_TERNARY_FIRST_ARG =
+  /(?<!function\s)(?<![.\w$])issue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*[A-Za-z_$][\w$.]*\s*\?\s*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*:\s*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*,/g;
+
+/**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
  * (or becomes) an `Issue`. Several validators build the object directly instead
  * of calling `issue()` — `skillsIntegrity.ts`, `uix/designSystemPresence.ts`,
@@ -379,9 +401,13 @@ async function scanIssueSources(): Promise<Scan> {
       continue;
     }
 
-    const tokens = [...source.matchAll(ISSUE_FIRST_ARG), ...source.matchAll(OBJECT_LITERAL_CODE)]
-      .map((match) => match[1])
-      .filter((token): token is string => token !== undefined);
+    const tokens = [
+      ...[...source.matchAll(ISSUE_FIRST_ARG)].map((match) => match[1]),
+      // Both branches, so a conditional emission attributes an owner to each
+      // code it can reach rather than to neither.
+      ...[...source.matchAll(ISSUE_TERNARY_FIRST_ARG)].flatMap((match) => [match[1], match[2]]),
+      ...[...source.matchAll(OBJECT_LITERAL_CODE)].map((match) => match[1]),
+    ].filter((token): token is string => token !== undefined);
 
     const unresolved = new Map<string, number>();
     for (const token of tokens) {
