@@ -96,39 +96,29 @@
 
 ### Fixed
 
-- **#1078 の矛盾が「到達可能になった瞬間」を、挙動テストで検出するようにした**
-  (`CR-20260904-0002` の scope 拡張、別途承認)。canonical をどちらにするかの判断は
-  **保留のまま**で、そこは変えていない。変えたのは、保留がコメント 1 つに支えられていた
-  状態を、**落ちるテスト**に置き換えた点である。
-  矛盾を隔てていた 4 条件のうち 3 つはテスト済みだったが、**「`iterate` が per-spec
-  レイアウトを生成しない」だけが何も落ちなかった**。`iterate` が
-  `iter-NN/spec-NNNN/` を書いた瞬間、実プロジェクトは certify が要求し validate が
-  拒否する成果物を持つことになる。
-  `prototypingIterate.test.ts` に `TC-0012-0388` と並べて 1 行追加した: UI-bearing spec を
-  2 つ用意して cycle 0 を実行し、`.qfai/evidence/prototyping/` を歩いて
-  **`iter-NN/spec-NNNN/` が 1 つも無い**ことを表明する — certify の `hasPerSpecSubdir` が
-  判定するのとまったく同じ形。`iter-NN` が 1 つ以上あることも表明するので、何も書かない
-  実行で空回りしない。
-  **構造ガードは書いては捨てた。** 3 稿は別名・`export *` barrel・動的 `import()` で順に
-  破られ、4 稿目（モジュール辺の pin）は別のもっと強い理由で捨てた —
-  **測っているものが違った**。`prototypingCertify.ts:702` は per-spec パスを
-  テンプレート文字列で組み立てており、宣言モジュールへの辺を **0 本**しか持たない。
-  つまり「辺が無い」は「per-spec レイアウトが到達不能」ではなく「この 2 つの helper
-  モジュールが未使用」を意味していた。反例は最初からツリーの中にあった。
-  残る 1 行「gate は今も flat を読む」も削除した。gate を per-spec に切り替えると
-  `prototypingEvidence.test.ts` が **50 件中 27 件**落ちるので、構造で言い直しても
-  検出できるものは増えず、誤検出の risk だけが残る。
-  変異検証: 指摘そのままの wire-in（テンプレート文字列で `iter-NN/spec-NNNN` を作り、
-  宣言モジュールには触れない）を注入すると **green -> red -> green**。
-  なお最初の変異は「効いていない」のに green を返した — 注入位置が、後で iteration
-  ディレクトリを書き直す処理より前だったため。instrument して確定させた
-  (`PROBE created …/iter-00/spec-0001` / `PROBE perSpec=[]`)。
-  **赤くならない変異は「適用されていない」か「観測されていない」かのどちらかで、
-  その区別は重要である。**
-  1 点だけ gap を明示する: `tests/cli/commands/prototypingIterate.test.ts` は
-  `tsconfig.tests.json#include` に無いので、この行は型検査されない。列挙は計測した上で
-  見送った — この判断と無関係な**既存の**型エラー (`body.iterations` が `unknown`、3 箇所)
-  が露出するため。
+- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
+  canonical をどちらにするかの判断は**保留**（ユーザ判断）。`validate` は flat な
+  `iter-NN/review.json` を読み、`certify` は multi-spec frozen set に対して per-spec
+  `iter-NN/spec-NNNN/<screen>.review.json` を要求して exit 64 するので、どちらに寄せても
+  certify 不能になる。到達不能性・フィールド対応・3 選択肢の実コスト・保留を終える
+  trigger を記録した。コードと contract は無変更。
+- **「trigger を守るガードを追加する」という scope 拡張は、計測の結果 "不要" が答えだった。**
+  矛盾には **multi-spec frozen set** が必要で（`certify` が hard-fail するのはその場合のみ）、
+  それを防いでいるのは `prototypingIterate.ts` の single-spec 凍結であり、
+  **その凍結は既存の `TC-0012-0388` が既に pin している**。凍結を解除する変異で確認:
+  `TC-0012-0388` は **RED**、一方こちらで用意した到達性テストは **GREEN** のままだった。
+  つまり追加ガードは重要な方向で既存テストより弱かった。
+  さらに Codex レビューで、そのテストは**安全な dual-write 移行で誤って落ちる**ことも
+  判明した（flat を残して per-spec も書けば両ゲートは矛盾しない。trigger は
+  「per-spec が存在すること」ではなく「flat が満たされなくなること」）。
+  構造ガードの 4 稿は別名 / `export *` barrel / 動的 `import()` で順に破られ、
+  4 稿目は別の理由で捨てた — `prototypingCertify.ts:702` が per-spec パスを
+  テンプレート文字列で組み立てて宣言モジュールへの辺を **0 本**しか持たないため、
+  「辺が無い」は「到達不能」ではなく「この 2 つの helper が未使用」を意味していた。
+  よってガードは追加せず、計測結果を CR に記録した。`TC-0012-0388` は spec-0012 の
+  test case なので、凍結解除は静かには行えない — テストが赤くなり、そのテストの改訂は
+  upstream SSOT 編集として独自の CR を要する。**単に落ちるのではなく、判断を強制する**
+  という点で、追加しようとしたガードより強い統制が既に存在していた。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。

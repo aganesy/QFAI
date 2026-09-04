@@ -106,96 +106,65 @@ Applied by hand under the approval above, `confirm-only`:
   `prototypingIterate.ts` stays exactly as it is: it is the mitigation, and
   `OQ-0012-0013` is the record that its comment is load-bearing.
 
-## Scope extension: guard the reachability
+## Scope extension: guard the reachability — measured, and not needed
 
-Approved separately, 2026-09-04. The canonical-artifact decision stays
-deferred — nothing here changes it — but the deferral is now **guarded** rather
-than resting on a comment.
+Approved separately, 2026-09-04, to stop the deferral resting on a comment. The
+work was done and the answer is that **no new guard is warranted**: the trigger
+is already detected by an existing test. This section records the measurement so
+the conclusion is checkable rather than asserted, and so nobody repeats it.
 
-Before this, four things held the contradiction apart and only three could fail:
+### The contradiction needs a multi-spec frozen set
 
-| held apart by                                                     | covered?                                                                     |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `certify` exits 64 for a multi-spec frozen set on the flat layout | yes — `frozenSpecsCovered: ["0012", "0007"]` in `prototypingCertify.test.ts` |
-| the flat gate reports `prototypingEvidence.review.missing`        | yes — `prototypingEvidence.test.ts`                                          |
-| `iterate` freezes `frozenSpecsCovered` single-spec                | yes — `TC-0012-0388`                                                         |
-| **`iterate` does not PRODUCE the per-spec layout**                | **no — nothing failed when that changed**                                    |
+`certify` hard-fails only a **multi-spec** frozen set on the flat layout; a
+single-spec one takes an info-skip. So while `frozenSpecsCovered` is frozen
+single-spec, no project can reach the state where `validate` and `certify`
+disagree. `prototypingIterate.ts` freezes it single-spec on purpose, and its
+comment cites this contradiction as the reason.
 
-The last row is the trigger `OQ-0012-0013` names, and naming a trigger is not
-detecting it. The moment `iterate` writes `iter-NN/spec-NNNN/`, a real project
-holds artifacts that `certify` requires and `validate` rejects, and `certify`
-will not seal while `validate` reports errors.
+### That freeze is already pinned
 
-### What ships
+`TC-0012-0388` seeds a second UI-bearing spec and asserts the frozen set stays
+one entry. Measured by lifting the freeze — making the frozen set
+multi-element — and running both candidates:
 
-One behavioural row, beside `TC-0012-0388` in
-`packages/qfai/tests/cli/commands/prototypingIterate.test.ts`: run cycle 0 with
-two UI-bearing specs available, then walk `.qfai/evidence/prototyping/` and
-assert **no `iter-NN/spec-NNNN/` directory exists** — the exact shape
-`certify`'s own `hasPerSpecSubdir` decides on. The row also asserts at least one
-`iter-NN` directory was produced, so a run that wrote nothing cannot pass it
-vacuously.
+|                   | `TC-0012-0388` | a purpose-built reachability test |
+| ----------------- | -------------- | --------------------------------- |
+| baseline          | green          | green                             |
+| **freeze lifted** | **red**        | **green**                         |
+| restored          | green          | green                             |
 
-Its failure message names this CR and `OQ-0012-0013` and says the decision now
-has to be made, rather than asking the reader to revert.
+The existing test catches it. The purpose-built one does not, because it watched
+for the per-spec layout being _produced_, which is downstream of the freeze
+rather than the freeze itself.
 
-### Why not a structural guard
+### And the proxies were wrong in their own right
 
-Three drafts before this one were structural, and each was defeated in review:
-by an alias, by an `export *` barrel, by a dynamic `import()`. The fourth
-draft — pinning module edges into `core/prototyping/iterationPaths.ts` and
-`reviewerDispatch.ts` — was abandoned for a stronger reason than another
-evasion: **it measured the wrong thing.**
+Four structural drafts were tried and each was defeated in review — by an
+import alias, by an `export *` barrel, by a dynamic `import()`, and finally by
+the observation that `cli/commands/prototypingCertify.ts:702` composes
+`iter-NN/spec-NNNN/<screen>.review.json` from a template string with **zero**
+edges into `core/prototyping/iterationPaths.ts`. That last one was not another
+evasion but a category error: "no module edge" meant "these two helper modules
+are unused", never "the per-spec layout is unreachable", and the counterexample
+was in the tree throughout.
 
-`cli/commands/prototypingCertify.ts:702` already composes
+The behavioural draft that replaced them asserted "no `iter-NN/spec-NNNN/`
+directory is produced". Review showed that is not the trigger either: a
+**dual-write** migration that keeps the flat `review.json` and adds per-spec
+artifacts satisfies both gates, so the assertion would have blocked a safe
+compatible migration. The trigger is the flat artifact ceasing to be satisfied,
+not a per-spec directory existing.
 
-```ts
-`${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
-```
+### Conclusion recorded instead of a guard
 
-from a template string, with **zero** edges into either declaring module. So
-"no module edge" never meant "the per-spec layout is unreachable"; it meant
-"these two helper modules are unused", and the counterexample was in the tree
-the whole time. A wire-in following that same existing pattern would have left
-every structural row green.
+The reachability is detected by `TC-0012-0388`, and `TC-0012-0388` is a
+`spec-0012` test case — so lifting the freeze cannot be done quietly: it reddens
+that test, and changing the test is an upstream SSOT edit requiring its own
+Change Request. The control the scope extension was meant to add already exists,
+and it is stronger than a test, because it forces the conversation rather than
+only failing.
 
-The behavioural row cannot be reached around, because it looks at the artifact
-rather than at the route taken to produce it.
-
-The structural file is deleted rather than kept alongside. Its remaining row —
-"the gate still reads the flat layout" — is redundant: switching the gate to a
-per-spec path reddens **27 of the 50** cases in `prototypingEvidence.test.ts`,
-which seed flat `review.json` files and assert what the gate reports. A
-structural restatement of that would add detection of nothing while carrying the
-false-positive risks review kept finding in it.
-
-### Verified by mutation
-
-The wire-in shape from the finding above, injected into `prototypingIterate.ts`:
-a template-string `iter-NN/spec-NNNN` directory, touching neither declaring
-module.
-
-| state                                    | result    |
-| ---------------------------------------- | --------- |
-| baseline                                 | **green** |
-| per-spec layout produced, no helper used | **red**   |
-| restored                                 | **green** |
-
-The first attempt at that mutation reported green for the wrong reason — it
-injected before a later step that rewrites the iteration directory, so the probe
-directory did not survive the run. Instrumenting settled it (`PROBE created
-…/iter-00/spec-0001`, `PROBE perSpec=[]`) and the injection moved past that
-step. A mutation that does not redden is either not applied or not observed, and
-the difference matters.
-
-### One gap, stated
-
-`tests/cli/commands/prototypingIterate.test.ts` is not in
-`tsconfig.tests.json#include`, so the new row is not type-checked. Enumerating
-it was measured and rejected for this change: it surfaces **pre-existing** type
-errors in that file (`body.iterations` is `unknown` at three call sites) that
-have nothing to do with this decision. The row is short and uses only fixture
-helpers already exercised by the 104 tests beside it.
+Nothing in `src/`, `.qfai/contracts/**` or the test suite changes for this CR.
 
 ## Timestamps
 
