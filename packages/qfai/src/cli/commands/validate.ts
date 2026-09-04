@@ -843,6 +843,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-PROT-011":
+    "Every spec named in `prototyping.json#frozenSurfaceUnion` still resolves as UI-bearing, so the open loop describes screens that exist; a retired surface is either restored or the loop is reset deliberately from cycle 0.",
   "QFAI-SCAN-002":
     "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
   "QFAI-TOOL-001":

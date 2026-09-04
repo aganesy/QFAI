@@ -6,6 +6,40 @@
 
 ### Added
 
+- **loop 中に退役した surface を検出するようにした (`QFAI-PROT-011`)。**
+  cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
+  以降の編集は lock drift として `iterate` が exit 2 で止める。drift ルールと
+  しては正しい — 誰も凍結範囲を黙って広げてはならない。しかしそれが唯一の
+  ルールで、**製品判断で screen を 1 つ退役させた**正当なケースも同じ扱いに
+  なっていた。しかも `iterate` の hard-stop は **UI-bearing spec が全て**
+  消えたときにしか発火しない (`prototypingIterate.ts:529-573`) ため、部分的な
+  縮小は precheck の「zero UI-bearing specs resolved」条件を満たさず、
+  `validate` は存在しない screen を記述した loop に対して `error=0` を出して
+  いた。operator が気付くのは次の `iterate` — 唯一の道が
+  `--cycle 0 --force` (= `iter-00` を退避し、支払い済みのレビューを全部捨てる)
+  になる、後戻りできない地点である。
+  新 validator は `frozenSurfaceUnion` と現在 UI-bearing に解決される spec を
+  比較する。silent にするのは 4 ケース: loop が無い / 読めない
+  `prototyping.json` (それは `certify` が拒否する) / `frozenSurfaceUnion` が
+  無い / **loop が閉じている** (閉じた loop は履歴であって現在の主張ではない)。
+  さらに「全 marker 消滅」も silent — `iterate` の hard-stop が既に凍結 union を
+  名指しして別の remedy を出しており、1 つの状態に 2 つの finding は自動修復を
+  2 経路に分岐させる。
+  severity は promotion window から取る (`sunsetLedger` のガードが、登録した
+  entry は `newRuleSeverity` で severity を決めることを要求する)。窓には実務上の
+  意味がある — in-loop の逃げ道 (`rescope` 操作) がまだ存在しないので、
+  `error` にすると「remedy が支払い済みレビューの破棄しかない」条件で gate を
+  落とすことになり、置き換えた沈黙より悪くなる。
+  あわせて `qfai-prototyping/SKILL.md` に `### Scope reduction has no in-loop
+path` を追加した。drift ルールは対称だが縮小は非対称であること、reset が何を
+  捨てるか、finding が「後戻りできない地点の前に」見えること、そして 2 つの
+  出口 (restore / 意図的な reset) を明記した。
+  issue が提案する `rescope` サブコマンド (1) と critique の supersede 注記 (2)
+  は本 PR には含めない — 新規 CLI サーフェスと audit schema を伴う製品判断で、
+  (2) は (1) の設計制約である。
+  変異検査: 3 つの保護 (何も報告しない / 閉じた loop を無視する /
+  全 marker 消滅を二重報告する) すべてが検出される。
+  (#1099)
 - **`QFAI-CONTRACT-040` を、DB 側が ENUM のとき `error` に上げた。**
   このルールは API 契約が要求する status/state 値を、同名フィールドを宣言する
   DB 契約が保持できないときに発火する。固定 `warning` だったが、qfai が指示する

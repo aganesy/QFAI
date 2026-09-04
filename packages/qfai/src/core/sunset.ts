@@ -74,6 +74,15 @@ export const SUNSETS = {
  */
 export const RULE_PROMOTIONS = {
   /**
+   * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
+   * as UI-bearing. The window is doing real work: the in-loop way out does not
+   * exist yet (a `rescope` operation is proposed in #1099), so until it does,
+   * the only remedy is the cycle-0 reset this finding exists to warn about in
+   * advance. Failing a gate for a condition whose remedy discards the review
+   * already paid for would make the warning worse than the silence it replaces.
+   */
+  frozenSurfaceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
    * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
    * full minor beyond it.
