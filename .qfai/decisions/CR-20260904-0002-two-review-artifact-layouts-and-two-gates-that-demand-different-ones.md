@@ -118,76 +118,84 @@ Before this, four things held the contradiction apart and only three could fail:
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `certify` exits 64 for a multi-spec frozen set on the flat layout | yes — `frozenSpecsCovered: ["0012", "0007"]` in `prototypingCertify.test.ts` |
 | the flat gate reports `prototypingEvidence.review.missing`        | yes — `prototypingEvidence.test.ts`                                          |
-| `iterate` freezes `frozenSpecsCovered` single-spec                | yes — `TC-0012-0388` seeds a second UI-bearing spec and asserts one entry    |
-| **the per-spec layout is not reachable from production code**     | **no — nothing failed when that changed**                                    |
+| `iterate` freezes `frozenSpecsCovered` single-spec                | yes — `TC-0012-0388`                                                         |
+| **`iterate` does not PRODUCE the per-spec layout**                | **no — nothing failed when that changed**                                    |
 
-The last row was the gap. `OQ-0012-0013` named that reachability as the trigger
-ending the deferral, but naming a trigger is not detecting it.
+The last row is the trigger `OQ-0012-0013` names, and naming a trigger is not
+detecting it. The moment `iterate` writes `iter-NN/spec-NNNN/`, a real project
+holds artifacts that `certify` requires and `validate` rejects, and `certify`
+will not seal while `validate` reports errors.
 
-`packages/qfai/tests/unit/reviewLayoutContradiction.test.ts` adds three rows:
+### What ships
 
-1. **no production module takes a runtime edge into
-   `core/prototyping/iterationPaths.ts` or `core/prototyping/reviewerDispatch.ts`**
-   — static import, re-export, namespace import, or a dynamic `import("…")` —
-   beyond the layout-neutral cleanup helpers `findStaleIterDirs` /
-   `deleteStaleIterDirs`. Measured on the tree at the time: **zero** such edges,
-   so the invariant is "still zero" rather than an allowlist of tolerated ones;
-2. **the exported surface of those two modules is pinned** — the supply side, so
-   a forwarding `export const x = iterationReviewPathPerSpec` is caught where it
-   is written rather than only where it is used;
-3. **`validateIterationReviewArtifacts` still reads the flat layout** and has not
-   taken up the per-spec surface — resolved through the import binding, so an
-   alias of the same helper is still the same helper.
+One behavioural row, beside `TC-0012-0388` in
+`packages/qfai/tests/cli/commands/prototypingIterate.test.ts`: run cycle 0 with
+two UI-bearing specs available, then walk `.qfai/evidence/prototyping/` and
+assert **no `iter-NN/spec-NNNN/` directory exists** — the exact shape
+`certify`'s own `hasPerSpecSubdir` decides on. The row also asserts at least one
+`iter-NN` directory was produced, so a run that wrote nothing cannot pass it
+vacuously.
 
-Neither the contradiction nor its deferral is asserted to be acceptable. Each
-failure message names the decision, this CR and `OQ-0012-0013`, and says the
-guard should be moved or deleted as that decision requires — rather than telling
-the reader to revert.
+Its failure message names this CR and `OQ-0012-0013` and says the decision now
+has to be made, rather than asking the reader to revert.
 
-Existing coverage is not duplicated: the three covered rows above already have
-behaviour tests, and this file asserts none of them.
+### Why not a structural guard
 
-### Why module edges rather than call shapes
+Three drafts before this one were structural, and each was defeated in review:
+by an alias, by an `export *` barrel, by a dynamic `import()`. The fourth
+draft — pinning module edges into `core/prototyping/iterationPaths.ts` and
+`reviewerDispatch.ts` — was abandoned for a stronger reason than another
+evasion: **it measured the wrong thing.**
 
-Two earlier drafts chased the shape of the use — `name(…)`, then that plus
-aliases and namespaces — and review found a further evasion each time: an
-`export *` barrel, and a forwarding export inside the declaring module that has
-no call at all. Chasing shapes loses, because there is always one more.
+`cli/commands/prototypingCertify.ts:702` already composes
 
-The module edge is the choke point: nothing in those modules can be used without
-an edge into them, whatever it is later renamed to, assigned into or
-re-published through, and a barrel chain is caught at its first link where the
-barrel itself takes the edge.
+```ts
+`${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}/${screen.screenId}.review.json`;
+```
 
-Two false-positive directions are excluded deliberately, because a guard that
-blocks a change which cannot make the contradiction live is as broken as one
-that misses a change that can:
+from a template string, with **zero** edges into either declaring module. So
+"no module edge" never meant "the per-spec layout is unreachable"; it meant
+"these two helper modules are unused", and the counterexample was in the tree
+the whole time. A wire-in following that same existing pattern would have left
+every structural row green.
 
-- **type-only imports** (`import type { X }` and `import { type X }`) bind
-  nothing at runtime;
-- **an alias of the flat helper** in the gate is the same helper, so row 3
-  resolves the callee through the import binding instead of comparing names.
+The behavioural row cannot be reached around, because it looks at the artifact
+rather than at the route taken to produce it.
+
+The structural file is deleted rather than kept alongside. Its remaining row —
+"the gate still reads the flat layout" — is redundant: switching the gate to a
+per-spec path reddens **27 of the 50** cases in `prototypingEvidence.test.ts`,
+which seed flat `review.json` files and assert what the gate reports. A
+structural restatement of that would add detection of nothing while carrying the
+false-positive risks review kept finding in it.
 
 ### Verified by mutation
 
-A guard meant to sit dormant is exactly the kind whose broken predicate goes
-unnoticed, so every row was run against the thing it guards actually happening,
-and against the shapes it must tolerate. All sixteen rows behaved as specified:
+The wire-in shape from the finding above, injected into `prototypingIterate.ts`:
+a template-string `iter-NN/spec-NNNN` directory, touching neither declaring
+module.
 
-| shape                                         | expected  | result |
-| --------------------------------------------- | --------- | ------ |
-| plain / aliased / namespace import            | red       | red    |
-| assigned-then-called                          | red       | red    |
-| named re-export                               | red       | red    |
-| `export *` barrel reached by `import * as`    | red       | red    |
-| forwarding export inside the declaring module | red       | red    |
-| new internal wrapper                          | red       | red    |
-| gate drops the flat helper                    | red       | red    |
-| gate adopts the per-spec helper               | red       | red    |
-| `import type` / `import { type … }`           | **green** | green  |
-| flat helper imported under an alias           | **green** | green  |
-| a cleanup helper wired in                     | **green** | green  |
-| baseline, and after restore                   | green     | green  |
+| state                                    | result    |
+| ---------------------------------------- | --------- |
+| baseline                                 | **green** |
+| per-spec layout produced, no helper used | **red**   |
+| restored                                 | **green** |
+
+The first attempt at that mutation reported green for the wrong reason — it
+injected before a later step that rewrites the iteration directory, so the probe
+directory did not survive the run. Instrumenting settled it (`PROBE created
+…/iter-00/spec-0001`, `PROBE perSpec=[]`) and the injection moved past that
+step. A mutation that does not redden is either not applied or not observed, and
+the difference matters.
+
+### One gap, stated
+
+`tests/cli/commands/prototypingIterate.test.ts` is not in
+`tsconfig.tests.json#include`, so the new row is not type-checked. Enumerating
+it was measured and rejected for this change: it surfaces **pre-existing** type
+errors in that file (`body.iterations` is `unknown` at three call sites) that
+have nothing to do with this decision. The row is short and uses only fixture
+helpers already exercised by the 104 tests beside it.
 
 ## Timestamps
 

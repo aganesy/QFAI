@@ -113,7 +113,6 @@
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
     "tests/unit/core/doctor/assetLineBudget.test.ts",
-    "tests/unit/reviewLayoutContradiction.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",

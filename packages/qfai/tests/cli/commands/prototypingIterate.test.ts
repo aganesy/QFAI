@@ -1712,6 +1712,74 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
     expect(body.frozenSpecsCovered).toEqual(["0001"]);
   });
 
+  // #1078 / OQ-0012-0013 / CR-20260904-0002. The trigger that ends the
+  // deferral, measured as BEHAVIOUR rather than structure.
+  //
+  // `validate`'s reviewer-deliverable gate reads the flat
+  // `iter-NN/review.json`; `certify` requires per-spec
+  // `iter-NN/spec-NNNN/<screen>.review.json` and exits 64 for a multi-spec
+  // frozen set without it. A project holding per-spec artifacts therefore
+  // fails `validate`, and `certify` will not seal while `validate` reports
+  // errors — so the moment `iterate` starts producing that layout, the
+  // contradiction is live on real projects.
+  //
+  // An earlier draft guarded this structurally, by asserting no production
+  // module imports `core/prototyping/iterationPaths.ts`. That is a different
+  // and weaker claim: `prototypingCertify.ts` already composes
+  // `iter-NN/spec-NNNN/<screen>.review.json` from a template string and
+  // imports none of those helpers, so the layout is reachable with the edge
+  // count at zero. The counterexample was in the tree the whole time.
+  //
+  // This looks at the evidence directory instead, which cannot be reached
+  // around: `certify`'s own `hasPerSpecSubdir` decides on exactly this shape.
+  it("cycle 0 writes no per-spec review layout, so the two gates cannot contradict", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // A second UI-bearing spec, so a multi-spec frozen set is available to be
+    // written if anything is inclined to write one.
+    const spec0002Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec0002Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0002Dir, "01_Spec.md"),
+      "# 01 Spec — second\n\n- Spec: spec-0002\nsurface_type: ui-bearing\n",
+      "utf-8",
+    );
+
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    const iterDirs = (await readdir(evidenceRoot, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && /^iter-\d{2,}$/.test(entry.name))
+      .map((entry) => entry.name);
+    // A run that produced no iteration directory at all would pass the loop
+    // below vacuously.
+    expect(iterDirs.length, "cycle 0 produced no iter-NN directory to inspect").toBeGreaterThan(0);
+
+    const perSpec: string[] = [];
+    for (const iterDir of iterDirs) {
+      const entries = await readdir(path.join(evidenceRoot, iterDir), { withFileTypes: true });
+      for (const entry of entries) {
+        // The exact shape `certify`'s hasPerSpecSubdir looks for.
+        if (entry.isDirectory() && /^spec-\d{4}$/.test(entry.name)) {
+          perSpec.push(`${iterDir}/${entry.name}`);
+        }
+      }
+    }
+
+    expect(
+      perSpec.sort(),
+      "iterate produced the per-spec review layout, so `validate` (which reads the flat " +
+        "iter-NN/review.json) and `certify` (which requires iter-NN/spec-NNNN/<screen>.review.json " +
+        "for a multi-spec frozen set) now contradict each other on a live project: satisfying one " +
+        "fails the other, and certify will not seal while validate reports errors. This is NOT a " +
+        "regression to revert — it is the trigger OQ-0012-0013 names. Decide which artifact is " +
+        "canonical, record it against CR-20260904-0002, and then move or delete this test as that " +
+        "decision requires.",
+    ).toEqual([]);
+  });
+
   // QFAI:SPEC-0012:TC-0012-0389
   it("TC-0012-0389 (TDD-0382): cycle 0 writes frozenLicenseCatalog into prototyping.json", async () => {
     const root = await newTempDir();

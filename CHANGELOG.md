@@ -96,111 +96,39 @@
 
 ### Fixed
 
-- **Codex 3 巡目の指摘 2 件（P2 x2）も実在の欠陥だった。**
-  1. **動的 import を辺として検出していなかった。** `await import("…/iterationPaths.js")` は
-     トップレベル宣言ではないので、宣言だけを走査していた辺検出が完全に見逃していた。
-     しかもこれは最も exotic な回避ではなく、**この codebase で最も自然な wire-in の形**
-     だった — 動的 import は 9 モジュールで使われており、
-     `cli/commands/prototypingIterate.ts`（per-spec wire-in が入るまさにその場所）は
-     同ディレクトリの `core/prototyping/*` を既に 6 回この形で読み込んでいる。
-     `ImportKeyword` の `CallExpression` も辺として検出するようにした。namespace import と
-     同じくモジュール全体を渡すので、名前による絞り込みは行わない。
-  2. **gate 内のローカル別名代入で誤検出していた。**
-     `const flatPath = iterationReviewPath; … flatPath(i)` という挙動不変の整理で
-     `readsFlat` が偽になり、canonical 判断を要求して CI をブロックしていた。
-     ローカル代入を不動点で解決するようにし、per-spec 側の否定判定にも同じ解決を適用した。
-     変異行列は **19 行すべて期待どおり（想定外 0 件）**: 発火すべき 12 経路
-     （plain / aliased / namespace / assigned-then-called / re-export / star-barrel /
-     forwarded-export / internal-wrapper / **dynamic-import** /
-     **dynamic-import-destructured** / gate-drops-flat / gate-adopts-per-spec）で赤、
-     発火してはいけない 5 形状（type-only / inline type-only / flat helper 別名 /
-     **gate 内ローカル別名** / cleanup helper 結線）で緑。
-- **同ガードを Codex 2 巡目の指摘 5 件（P2 x4 / P3 x1）で作り直した。**
-  1 巡目で「呼び出しの形」を別名・namespace まで追えるようにしたが、2 巡目で
-  さらに 2 つの回避が見つかった: `export * from` の barrel 経由と、宣言モジュール内の
-  `export const forwarded = watched`（呼び出しが 1 つも無い）。**形を追う限り必ず次の形が
-  ある**ため、方式を変えた。
-  **モジュール辺を choke point にした。** 宣言モジュールの中身は、直接であれ barrel 経由で
-  あれ、import / re-export の辺なしには使えない。barrel 連鎖も「barrel 自身が辺を取る」
-  最初の環で捕まる。計測では `src/` からの実行時辺は **0 件**だったので、許容リストでは
-  なく「0 件のまま」を不変条件にした。加えて宣言モジュールの **export 面を pin** し、
-  供給側（forwarding export / 新規ラッパ）を利用側より 1 段早く捕まえる。
-  **誤検出 2 件も除去した** — `import type` / `import { type X }` は実行時 binding を
-  作らないので到達不能であり、gate 側の flat helper も import binding 経由で解決するので
-  別名リネームでは落ちない。**矛盾を live にしえない変更をブロックするガードは、
-  live にする変更を見逃すガードと同じく壊れている**。
-  記録も同期した: `CR-20260904-0002` の scope extension と `OQ-0012-0013` の mitigation は
-  初稿の「2 rows / 2 関数への直接 call」を述べたままだったので、最終の 3 行構成・監視対象・
-  変異結果に合わせた（canonical 判断時に参照される監査記録が実際の trigger と食い違う、
-  という P3 指摘）。
-  変異行列は**両方向 16 行すべて期待どおり**: 発火すべき 10 経路（plain / aliased /
-  namespace / assigned-then-called / re-export / star-barrel / forwarded-export /
-  internal-wrapper / gate-drops-flat / gate-adopts-per-spec）で赤、発火してはいけない
-  4 形状（type-only / inline type-only / flat helper 別名 / cleanup helper 結線）で緑、
-  baseline と復元後も緑。
-- **上記ガードを Codex レビューの指摘 3 件（すべて P2）で修正した。**
-  1. **別名 import で回避できた。** 初版は「識別子として直接呼ばれた名前」しか
-     見ていなかったので、`import { iterationReviewPathPerSpec as perSpec }` 経由、
-     namespace import 経由、変数に代入してからの呼び出しはすべて素通りした。
-     `src/` には**別名 named import が 51 件**あり、house style での wire-in が
-     ガードをすり抜ける状態だった。import / re-export 節から別名を解決し、
-     namespace 束縛も追跡し、**import 自体も検出対象**にした（束縛せずに使うことは
-     できないので、代入で名前を変えても import は消せない）。
-  2. **gate 関数ではなくファイル全体を見ていた。** `iterationReviewPath` の呼び出しが
-     ファイル内のどこかに残っていれば、`validateIterationReviewArtifacts` 自身が
-     per-spec に移っても緑のままだった。関数本体に限定し、関数が見つからない場合は
-     throw する（改名・削除が「何も呼んでいない」と読まれて空回りするのを防ぐ）。
-  3. **CR のタイムスタンプが JST の壁時計に `Z` を付けたものだった。**
-     `CR-20260904-0002` の `Scope extended at` は適用コミットの **8 時間 52 分後**に
-     なっており、「変更がその承認より先にコミットされた」監査証跡になっていた。
-     指摘は 1 箇所だったが同じ欠陥が**両 CR の 8 フィールド**にあり、
-     `CR-20260904-0001` は既に merged だったので併せて修正した。`+09:00` 表記にし、
-     各 CR に「どのフィールドがどの検証可能な事象に紐づくか」の表を追加した
-     （`Approved at` のみ対話ターンで artifact が無いため推定値であり、
-     その旨と上下の境界を明記）。
-     なお指摘 1 の修正で監視対象を `iterationPaths.ts` の全 export に広げたところ
-     **ガード自身が赤くなった**。`findStaleIterDirs` / `deleteStaleIterDirs` は
-     `iter-NN` の掃除用で既に `certify` に結線済みであり、どのレビュー レイアウトが
-     使われているかとは無関係だった。さらに `prototypingCertify.ts` は**自前の**
-     `findStaleIterDirs` を宣言しており、名前だけの照合は false positive を出す。
-     監視対象は計測に基づいて絞り、照合は束縛ベースにした。
-     宣言モジュール内部の合成は**免除せず pin した** — 免除すると、そこに新しい
-     export ラッパが増えて CLI から監視外の名前で到達できてしまう。
-     回避経路 8 種すべてで発火することを変異テストで確認済み
-     （plain / aliased / namespace / assigned-then-called / re-export /
-     internal-wrapper / gate-drops-flat / gate-adopts-per-spec、復元で 3 passed）。
-- **#1078 の矛盾が「到達可能になった瞬間」を検出するガードを入れた**
-  (`CR-20260904-0002` の scope 拡張、別途承認)。canonical をどちらにするかの
-  判断は**依然として保留**で、そこは変えていない。変えたのは、保留が
-  コメント 1 つに支えられていた状態を、**落ちるガード**に置き換えた点である。
-  それまで矛盾を隔てていた 4 条件のうち、3 つはテスト済みだったが 1 つは
-  何も落ちなかった:
-  | 隔てているもの | 既存カバレッジ |
-  | --- | --- |
-  | `certify` が multi-spec + flat で exit 64 | あり (`frozenSpecsCovered: ["0012","0007"]`) |
-  | flat gate が `prototypingEvidence.review.missing` を出す | あり |
-  | `iterate` が `frozenSpecsCovered` を single-spec で凍結 | あり (`TC-0012-0388` が 2 つ目の UI-bearing spec を seed) |
-  | **per-spec entry point に production caller が無い** | **無し — 変わっても何も落ちない** |
-  最後の 1 行が穴だった。`iterationReviewPathPerSpec` /
-  `dispatchReviewerToPair` が wire-in された瞬間に矛盾は実プロジェクト上で
-  live になるが、それを告げるテストは存在しなかった。`OQ-0012-0013` は
-  それを trigger として**名指してはいた**が、名指すことは検出ではない。
-  `tests/unit/reviewLayoutContradiction.test.ts` が 2 行を追加する。どちらも
-  「矛盾が許容される」とは主張せず、失敗メッセージは
-  `OQ-0012-0013` と `CR-20260904-0002` を名指して**「元に戻せ」ではなく
-  「決定すべき時が来た」**と述べ、ガード自身を移すか削除するよう指示する。
-  既存の 3 行は重複させていない。
-  呼び出し箇所の検出は**パーサで `CallExpression` を歩く**方式にした。
-  初稿は #1089 の共有 reduction + regex だったが、計測すると 2 点が悪かった:
-  `src/` のどのモジュールも対象ヘルパを引数リスト付きの散文で書いていないので
-  **reduction は何の仕事もしていなかった**し、`NAME(` は**宣言そのもの**にも
-  一致するため宣言モジュールの除外が必要で、その除外が「宣言モジュール内に
-  追加された caller」を隠す — wire-in が始まりうる経路の 1 つである。
-  宣言は `CallExpression` ではなく、コメントは AST に入らないので、パーサには
-  どちらの除外も要らない。#1061 / #1089 と同じ教訓。
-  長期間眠るガードは predicate の破損が気付かれない類なので、変異テストで
-  発火を確認した: production module が per-spec helper を呼ぶと 1 行目が失敗、
-  gate が flat helper を呼ばなくなると 2 行目が失敗、復元すると両方成功。
+- **#1078 の矛盾が「到達可能になった瞬間」を、挙動テストで検出するようにした**
+  (`CR-20260904-0002` の scope 拡張、別途承認)。canonical をどちらにするかの判断は
+  **保留のまま**で、そこは変えていない。変えたのは、保留がコメント 1 つに支えられていた
+  状態を、**落ちるテスト**に置き換えた点である。
+  矛盾を隔てていた 4 条件のうち 3 つはテスト済みだったが、**「`iterate` が per-spec
+  レイアウトを生成しない」だけが何も落ちなかった**。`iterate` が
+  `iter-NN/spec-NNNN/` を書いた瞬間、実プロジェクトは certify が要求し validate が
+  拒否する成果物を持つことになる。
+  `prototypingIterate.test.ts` に `TC-0012-0388` と並べて 1 行追加した: UI-bearing spec を
+  2 つ用意して cycle 0 を実行し、`.qfai/evidence/prototyping/` を歩いて
+  **`iter-NN/spec-NNNN/` が 1 つも無い**ことを表明する — certify の `hasPerSpecSubdir` が
+  判定するのとまったく同じ形。`iter-NN` が 1 つ以上あることも表明するので、何も書かない
+  実行で空回りしない。
+  **構造ガードは書いては捨てた。** 3 稿は別名・`export *` barrel・動的 `import()` で順に
+  破られ、4 稿目（モジュール辺の pin）は別のもっと強い理由で捨てた —
+  **測っているものが違った**。`prototypingCertify.ts:702` は per-spec パスを
+  テンプレート文字列で組み立てており、宣言モジュールへの辺を **0 本**しか持たない。
+  つまり「辺が無い」は「per-spec レイアウトが到達不能」ではなく「この 2 つの helper
+  モジュールが未使用」を意味していた。反例は最初からツリーの中にあった。
+  残る 1 行「gate は今も flat を読む」も削除した。gate を per-spec に切り替えると
+  `prototypingEvidence.test.ts` が **50 件中 27 件**落ちるので、構造で言い直しても
+  検出できるものは増えず、誤検出の risk だけが残る。
+  変異検証: 指摘そのままの wire-in（テンプレート文字列で `iter-NN/spec-NNNN` を作り、
+  宣言モジュールには触れない）を注入すると **green -> red -> green**。
+  なお最初の変異は「効いていない」のに green を返した — 注入位置が、後で iteration
+  ディレクトリを書き直す処理より前だったため。instrument して確定させた
+  (`PROBE created …/iter-00/spec-0001` / `PROBE perSpec=[]`)。
+  **赤くならない変異は「適用されていない」か「観測されていない」かのどちらかで、
+  その区別は重要である。**
+  1 点だけ gap を明示する: `tests/cli/commands/prototypingIterate.test.ts` は
+  `tsconfig.tests.json#include` に無いので、この行は型検査されない。列挙は計測した上で
+  見送った — この判断と無関係な**既存の**型エラー (`body.iterations` が `unknown`、3 箇所)
+  が露出するため。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
