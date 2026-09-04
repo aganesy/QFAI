@@ -45,6 +45,7 @@
     "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
+    "tests/cli/initRepairsUnfollowableLinks.test.ts",
     "tests/core/bpApDb.test.ts",
     "tests/core/findingCodeBaseline.ts",
     "tests/core/findingCodeGrammar.test.ts",

@@ -40,6 +40,30 @@
   残り 10 箇所の `stat` サイトは issue の分割どおり後続に残した (各々が個別の
   判断を要し、この変更でミスがクラッシュではなく degrade になる)。
   (#1104)
+- **temporary-files ルールの適用範囲を明文化した。** ルールは
+  「一時ファイルはリポジトリルート `tmp/` に置く」と述べ、Rule 5 は例外なしに
+  「`tmp/` の外に見つかったら defect として移動または削除する」と書いていた。
+  一方でテストスイートは 643 箇所 (252 ファイル) で
+  `mkdtemp(path.join(os.tmpdir(), …))` を使っている。つまり 2 つの読みが同時に
+  成立していて、それ自体が問題だった — レビューは新規テスト 1 件を個別に
+  指摘するが、著者は「同じファイルの他のケースと同じヘルパーを呼んでいる」と
+  正直に答えられてしまう。
+  適用範囲を「**ワーキングツリーに書かれるファイル**」に限定した。scratch
+  スクリプト・中間成果物・ダウンロードした fixture・メモは対象。テストが
+  `os.tmpdir()` 配下に `mkdtemp` で作るサンドボックスは非対象。これは Rule 1 の
+  禁止事項からの帰結であって例外ではない — Rule 1 が挙げるのはリポジトリ
+  ルート・`src/`・`.qfai/specs/` などの production/artifact ディレクトリで、
+  リポジトリ外の `mkdtemp` root はそのいずれにもファイルを置けず、作った
+  テストが自分で削除する (Rule 4 が求めていること)。
+  代替案 (`tmp/` 配下に共通ヘルパーを作り 643 箇所を移行) は却下した。
+  テスト I/O がリポジトリ内に入り、file-watcher とツリーを歩く guard すべての
+  視界に入る。
+  同じ scope を憲法 Article XI (配布 asset) と `CLAUDE.md` にも反映した。
+  あわせて `## Reference` の参照先を修正した:
+  `.qfai/assistant/instructions/constitution.md` は存在せず、Article XI の実体は
+  `.qfai/assistant/constitution/constitution.md` — ルールから典拠を辿った読者は
+  何も見つけられなかった。
+  (#1094)
 - **どの qfai が走ったのかを毎回出力し、プロジェクト外から解決された場合は finding にする。**
   出荷 skill はすべて bare `npx qfai …` を指示しているが、`npx` は bare name を
   **親ディレクトリ方向** に `node_modules/.bin` を探して解決する。Claude Code の
@@ -187,6 +211,49 @@
 
 ### Fixed
 
+- **Windows の git worktree で `qfai validate` が判定を一切出さずに落ちる問題を直した** (#1095)。
+  `git worktree add` は `.claude/skills/*` のリンクを **file symlink**（ターゲットは
+  ディレクトリ）として作る — リンクを書く時点でターゲットが新 worktree に存在せず、
+  reftype のヒントが無いため。Windows はこれを追跡できず `fs.stat` が `EPERM` を投げる。
+  `readlink` は正しいターゲットを返し `lstat` は symlink と答えるので、
+  lstat ベースの検査はツリーを健全と報告する一方、同じパスの `stat` が落ちる。
+  `integrationSurface.ts` はまさにその wrapper を `stat` しており、catch は
+  `ELOOP` / `ENOTDIR` を「検査対象自身の構造的破損」として finding にしつつ
+  それ以外を伝播していた。結果 `EPERM` はそのまま最上位まで抜け、`cli/index.ts` が
+  `err.message` だけを出して exit 1 — **finding code なし・`counts:` 行なし・
+  `validate.json` なし**。判定の無いゲートである。
+  EPERM は既存 2 つと同じクラスで、その 2 つの catch コメントには「伝播させた結果
+  run が終わった / スタックトレースで終了した」という同型の履歴が残っている。
+  module が既に `cycle` / `not-a-directory` を通している 4 箇所（`PathState`、
+  `canonicalState`、`statOrNull`、`describeDamage`）に `unfollowable` として通し、
+  新しい機構は作っていない。wrapper 側は
+  `resolves through a symlink the OS will not follow -> <target>` を伴う
+  `QFAI-LINK-001` になる。
+  `core/fs/errno.ts` に `isEperm` を追加した（同ファイルの docblock が
+  「`EACCES` / `EBUSY` / `EPERM` … はこの module を拡張せよ」と指示している）。
+  テストは同ファイル既存の手法（`stat` spy に合成 errno を reject させる）に従うので
+  Windows 以外でも検証できる。修正を外すと赤くなることを確認済み。
+  **負のコントロール**も追加した: この rule が検査しないパスからの EPERM
+  （skills ディレクトリ自体の `readdir`）は引き続き伝播する — 「失敗している
+  filesystem が健全な surface として読まれてはならない」という module の規約を守るため。
+  Codex レビューで 2 件の実在欠陥が出たので併せて直した。
+  1 件目は深刻で、**この finding が印字する修復手順が finding を解消しない**という指摘。
+  `suggested_action` は「`qfai init` を再実行、`--force` は不要」と案内するが、
+  `ensureSymlink` は「entry が symlink かつ `readlink` が一致」なら `--force` 無しで
+  `skipped` を返す — まさにこの wrong-reparse-type がその条件を満たす。
+  Windows worktree の利用者は案内どおりにしてもゲートが赤のままになる。
+  `qfai init` 側を自己修復させた（同じ形の過去事例が flattened link で既に修正済みで、
+  そのコメントが「`skipped` を返したことで修復できず、`--force` が必要なことを誰も
+  操作者に伝えなかった」と記録している）。
+  2 件目は EPERM 変換が広すぎた点。`statOrNull` は通常の canonical `SKILL.md` も検査するため、
+  そのファイルや祖先の権限・filesystem 起因 EPERM まで「OS が追跡できない symlink」に
+  誤変換していた。`lstat` で symlink を確認してから変換するようにし、`lstat` catch 側の
+  変換は削除した（wrong-type symlink では `lstat` は成功するので不要であり、
+  誤診の範囲だけを広げていた）。
+  なお追加テストが**私の修正の別の欠陥**を捕まえた: 修復に `recreateFlattenedLink` を
+  再利用したのは誤りで、あれは「内容がリンク先文字列の通常ファイル」用に hard link と
+  4096 bytes 上限で退避する実装のため symlink には使えない（`link()` が EPERM）。
+  `rm` → `symlink` の既存経路に合流させた。
 - **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
   canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
   いずれも無変更で、変更は記録のみ。
