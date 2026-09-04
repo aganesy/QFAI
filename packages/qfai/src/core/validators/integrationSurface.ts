@@ -8,6 +8,7 @@ import { getInitAssetsDir } from "../../shared/assets.js";
 import { ASSISTANT_README_SEGMENTS, hasInitMarkerSignature } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
+import { isEperm } from "../fs/errno.js";
 
 /**
  * Skill wrapper directories `qfai init` fills with symlinks, and the agent
@@ -326,7 +327,8 @@ type PathState =
   | { kind: "present"; stats: Stats }
   | { kind: "dangling" }
   | { kind: "cycle" }
-  | { kind: "not-a-directory" };
+  | { kind: "not-a-directory" }
+  | { kind: "unfollowable" };
 
 async function canonicalState(filePath: string): Promise<PathState> {
   let entry: Stats;
@@ -341,12 +343,19 @@ async function canonicalState(filePath: string): Promise<PathState> {
     // and it was the same failure: re-thrown, it ended `qfai validate` with a
     // stack trace instead of a finding naming a path to repair.
     if (code === "ENOTDIR") return { kind: "not-a-directory" };
+    // `EPERM` from Windows: a component of this path is a FILE symlink whose
+    // target is a directory, which the OS will not follow. Same class again —
+    // the link is intact, the path is unusable, and propagating it ended the
+    // run instead of naming the wrapper to repair. `git worktree add` creates
+    // every `.claude/skills/*` link that way (#1095).
+    if (isEperm(error)) return { kind: "unfollowable" };
     throw error;
   }
   if (!entry.isSymbolicLink()) return { kind: "present", stats: entry };
   const resolved = await statOrNull(filePath);
   if (resolved === "cycle") return { kind: "cycle" };
   if (resolved === "not-a-directory") return { kind: "not-a-directory" };
+  if (resolved === "unfollowable") return { kind: "unfollowable" };
   return resolved === null ? { kind: "dangling" } : { kind: "present", stats: resolved };
 }
 
@@ -368,6 +377,8 @@ async function canonicalKindProblem(wrapper: Wrapper, stats: Stats): Promise<str
   if (doc === "cycle") return "canonical SKILL.md is a symlink cycle";
   if (doc === "not-a-directory")
     return "a path component above canonical SKILL.md is not a directory";
+  if (doc === "unfollowable")
+    return "canonical SKILL.md resolves through a symlink the OS will not follow";
   return doc.isFile() ? null : `canonical SKILL.md is a ${describeKind(doc)}`;
 }
 
@@ -710,6 +721,8 @@ function describeDamage(state: PathState, subject: string): string {
       return `${subject} is a dangling symlink`;
     case "not-a-directory":
       return `a path component above ${subject} is not a directory`;
+    case "unfollowable":
+      return `${subject} resolves through a symlink the OS will not follow`;
     default:
       return `${subject} is unusable`;
   }
@@ -843,7 +856,9 @@ async function realpathOrNull(filePath: string): Promise<string | null> {
 }
 
 /** `stat`, or `null` when the path is absent. Any other error propagates. */
-async function statOrNull(filePath: string): Promise<Stats | null | "cycle" | "not-a-directory"> {
+async function statOrNull(
+  filePath: string,
+): Promise<Stats | null | "cycle" | "not-a-directory" | "unfollowable"> {
   try {
     return await stat(filePath);
   } catch (error) {
@@ -857,6 +872,10 @@ async function statOrNull(filePath: string): Promise<Stats | null | "cycle" | "n
     // Re-thrown here it exited `qfai validate` with a stack trace for a
     // `SKILL.md` that points at itself.
     if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return "cycle";
+    // A Windows file symlink pointing at a directory: intact, and unfollowable.
+    // The wrapper naming it is as broken as one whose target is missing, and
+    // propagating it took `qfai validate` down with no counts (#1095).
+    if (isEperm(error)) return "unfollowable";
     throw error;
   }
 }
@@ -1248,8 +1267,16 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // `ENOTDIR` joins it: `.qfai/assistant/skills` replaced by a regular file
       // raises it for every wrapper naming a document under that path, and the
       // wrapper is as broken as one whose target is missing.
+      // `EPERM` joins them, and is the one a Windows `git worktree` produces
+      // unconditionally: every `.claude/skills/*` link materialises as a FILE
+      // symlink to a directory there, which the OS refuses to follow. Re-thrown,
+      // it ended `qfai validate` with a bare `EPERM: operation not permitted`
+      // and no counts, no finding code and no `validate.json` — a gate with no
+      // verdict (#1095).
       const code = (error as NodeJS.ErrnoException | null)?.code;
-      if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR") throw error;
+      if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR" && !isEperm(error)) {
+        throw error;
+      }
       // The link failing to resolve does not mean the canonical path is
       // otherwise sound. Point `.qfai/assistant/skills` at an existing empty
       // directory and every wrapper under it is `ENOENT` — plain "dangling",
@@ -1268,7 +1295,9 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
               ? `resolves through a symlink cycle -> ${toPosix(wrapper.target)}`
               : code === "ENOTDIR"
                 ? `a path component of the canonical is not a directory -> ${toPosix(wrapper.target)}`
-                : `dangling -> ${toPosix(wrapper.target)}`,
+                : code === "EPERM"
+                  ? `resolves through a symlink the OS will not follow -> ${toPosix(wrapper.target)}`
+                  : `dangling -> ${toPosix(wrapper.target)}`,
         // `ENOTDIR` alone, and named at the component that is not a directory
         // rather than at the leaf. That errno says a component above the leaf
         // is a regular file, which is the one shape a later `readdir` cannot
@@ -1384,7 +1413,9 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
                 ? "resolves, but its SKILL.md is a symlink cycle"
                 : doc === "not-a-directory"
                   ? "resolves, but a path component above its SKILL.md is not a directory"
-                  : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
+                  : doc === "unfollowable"
+                    ? "resolves, but its SKILL.md is behind a symlink the OS will not follow"
+                    : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
           // `validateSkillDocReferences` and `validateAutopilotPolicy` read this
           // pathname directly, so a cycle gives them `ELOOP`, a directory
           // `EISDIR`, and a FIFO blocks — each taking this finding down with the

@@ -96,6 +96,31 @@
 
 ### Fixed
 
+- **Windows の git worktree で `qfai validate` が判定を一切出さずに落ちる問題を直した** (#1095)。
+  `git worktree add` は `.claude/skills/*` のリンクを **file symlink**（ターゲットは
+  ディレクトリ）として作る — リンクを書く時点でターゲットが新 worktree に存在せず、
+  reftype のヒントが無いため。Windows はこれを追跡できず `fs.stat` が `EPERM` を投げる。
+  `readlink` は正しいターゲットを返し `lstat` は symlink と答えるので、
+  lstat ベースの検査はツリーを健全と報告する一方、同じパスの `stat` が落ちる。
+  `integrationSurface.ts` はまさにその wrapper を `stat` しており、catch は
+  `ELOOP` / `ENOTDIR` を「検査対象自身の構造的破損」として finding にしつつ
+  それ以外を伝播していた。結果 `EPERM` はそのまま最上位まで抜け、`cli/index.ts` が
+  `err.message` だけを出して exit 1 — **finding code なし・`counts:` 行なし・
+  `validate.json` なし**。判定の無いゲートである。
+  EPERM は既存 2 つと同じクラスで、その 2 つの catch コメントには「伝播させた結果
+  run が終わった / スタックトレースで終了した」という同型の履歴が残っている。
+  module が既に `cycle` / `not-a-directory` を通している 4 箇所（`PathState`、
+  `canonicalState`、`statOrNull`、`describeDamage`）に `unfollowable` として通し、
+  新しい機構は作っていない。wrapper 側は
+  `resolves through a symlink the OS will not follow -> <target>` を伴う
+  `QFAI-LINK-001` になる。
+  `core/fs/errno.ts` に `isEperm` を追加した（同ファイルの docblock が
+  「`EACCES` / `EBUSY` / `EPERM` … はこの module を拡張せよ」と指示している）。
+  テストは同ファイル既存の手法（`stat` spy に合成 errno を reject させる）に従うので
+  Windows 以外でも検証できる。修正を外すと赤くなることを確認済み。
+  **負のコントロール**も追加した: この rule が検査しないパスからの EPERM
+  （skills ディレクトリ自体の `readdir`）は引き続き伝播する — 「失敗している
+  filesystem が健全な surface として読まれてはならない」という module の規約を守るため。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
