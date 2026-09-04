@@ -159,6 +159,9 @@ export async function validateProject(
   const toolVersion = await resolveToolVersion();
   return {
     toolVersion,
+    // Stamped where the result is assembled, so every writer of a
+    // `ValidationResult` carries it without having to remember to.
+    generatedAt: new Date().toISOString(),
     profile,
     issues,
     counts: countIssues(issues),
