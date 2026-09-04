@@ -30,6 +30,62 @@
   `.qfai/assistant/constitution/constitution.md` — ルールから典拠を辿った読者は
   何も見つけられなかった。
   (#1094)
+- **どの qfai が走ったのかを毎回出力し、プロジェクト外から解決された場合は finding にする。**
+  出荷 skill はすべて bare `npx qfai …` を指示しているが、`npx` は bare name を
+  **親ディレクトリ方向** に `node_modules/.bin` を探して解決する。Claude Code の
+  worktree はメインチェックアウトの 3 階層下にあるため、自前の依存を持たない
+  worktree では囲んでいるチェックアウトのバイナリ (別ブランチ・別 lockfile) が
+  走り、実行結果には何も現れなかった。版番は `validate.json` の内部にしか無く、
+  README はそれを internal と呼んでいるので、gate も貼り付けた evidence も 2 つの
+  実行を区別できなかった。`run-log:` の隣に `qfai: <version> (<package dir>)` を
+  出力し、走っている package が **プロジェクト root の外にある installed copy** の
+  場合は `QFAI-TOOL-001` を出す (`--fail-on` から assert できる)。`RULE_PROMOTIONS`
+  で 1.12.0 まで `warning` に固定。
+  issue の提案からは 2 点を訂正した。`process.argv[1]` ではなく package
+  ディレクトリを比較対象にする — 実インストールでは前者は npm が `.bin` に書く
+  shim で、転送先の package とは別パスであり、報告された版番の持ち主でもない。
+  また issue は「worktree のケースだけを捉える」としているが、そうではない:
+  意図的なグローバルインストールと monorepo root への hoist はどちらも正当に
+  root 外へ落ちる。どちらも defect と呼ばずメッセージと docblock に明記した。
+  `outside` は `node_modules` セグメントを併せて要求する。`npx` が親探索で到達
+  できるのはそこだけ (別チェックアウトのコピー / hoist されたコピー /
+  グローバル prefix / 親に無いとき `npx` が黙って作る `_npx` キャッシュ) で、
+  この条件が無いと直接実行したソースチェックアウトでも発火し、実際に
+  `surfaceShortCircuitScope` と `skillsIntegrity` が落ちた — スイートの temp root は
+  構造上すべてソースツリーの外にある。
+  `classifyToolLocation` を純粋関数として切り出して export した。
+  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
+  動かせず、ルールが検出すべき状態に到達できない。最初に書いた 5 行はすべて
+  `outside === false` の assert で、**一度も発火しないルールでも全行通る**。
+  この継ぎ目で到達する 4 行を追加し、両方向を変異検査した (強制 off で
+  positive 4 行が、強制 on で 7 行が落ちる)。
+  provenance 行は **検証開始前** に、かつ **両 format** で出力する。`run-log:` の
+  隣に置くと `--format github` では一切出力されず、出荷 SDD skill と evidence
+  テンプレート (`skills/qfai-sdd/SKILL.md`、`templates/evidence/sdd-spec.md`) は
+  その形式を指定しているため、製品が実際に走る経路で答えが欠けていた。また
+  `validateProject` の後に出力すると、最も必要な実行 — 外部解決された古い qfai が
+  新しいプロジェクト構造で例外を投げる場合 — で stack trace だけが残った。
+  package directory の解決は固定深度 (`../../package.json`) から **上方探索** に
+  変えた。tsup は公開 API を `dist/index.mjs`、CLI を `dist/cli/index.mjs` に
+  別々に bundle するので、前者から 2 階層上は package の **1 つ上**
+  (`/project/node_modules/package.json`) で、報告される版番もディレクトリも
+  別物になる。`resolveToolVersion` に元からあった欠陥で、`src/core/` からも
+  `dist/cli/` からも偶然正しくなるため気付かれていなかった。探索は `name` が
+  `qfai` の manifest で止まるので、`node_modules/` の 1 つ上にある利用側
+  プロジェクトの manifest を取り違えない。
+  severity は `warning` + 昇格窓ではなく **`info` 固定** にした。同じ path 判定は
+  意図的なグローバルインストールと monorepo root への hoist を捉え、どちらも
+  正常運用なので、`error` へ昇格すると何も誤っていないプロジェクトで
+  `--fail-on error` が必ず失敗し、しかも `applyWaivers` は error finding に対する
+  waiver を `QFAI-WAIVER-002` で拒否するため逃げ道が無い。恒久的な `warning` は
+  表現できない (ratchet は post-baseline code に parseable な `promoteAt` を要求
+  するので、登録＝昇格の予約になる)。`INFO_ONLY_SINCE_BASELINE` が
+  まさにこの形のための category で、既存メンバー `QFAI-REVIEW-010` の説明
+  「ツリーが誤っていると主張しない、閉じるべき gate でもない」がそのまま当てはまる。
+  昇格には依存宣言から意図を判別する仕組みが必要で、その要件は #1108 に記録した。
+  `qfai --version` (#786) と skill 側の worktree ガイダンスも別 issue に残した。
+  前者は独立した既知 defect、後者はどの解決形を規定するかという判断を伴う。
+  (#1096)
 
 - **ツリーから導出される事実をリテラルで pin しているガードに、再導出ツールを同梱した。**
   `stageEvidenceCounts.test.ts` は e2e callsite 数をツリーから計算し、隣にコミットされた
@@ -121,6 +177,30 @@
 
 ### Fixed
 
+- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
+  canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
+  いずれも無変更で、変更は記録のみ。
+  記録した到達条件は 10 巡のレビューを経て確定した。`validate` は記録済み非 seed
+  iteration すべてに flat `iter-NN/review.json` を要求する。`certify` が layout 分岐に
+  到達するのは `validate.json` を読み `frozenSpecsCovered` を検証した後だが、
+  **well-formed な single-spec frozen set はそこを通過して layout 分岐に達する** —
+  したがって single-spec 凍結は緩和策にならない。よって矛盾は
+  **「`validate` が監査する記録済み非 seed iteration が per-spec 成果物を持ち、flat を
+  持たない」**瞬間に live になる。
+  当初の枠組み 2 点は誤りだったので明記する: (1) 矛盾は **multi-spec frozen set を
+  必要としない**（したがって single-spec 凍結と `TC-0012-0388` は緩和策にならない）。
+  (2) 2 つのレイアウトは**常に排他ではない** — flat を残して per-spec も書く dual-write は
+  両ゲートを満たすので、wire-in は canonical を決めずに dual-write で land できる。
+  排他なのは per-spec **のみ**の状態だけである。
+- **「trigger を守るガードを追加する」という scope 拡張は本 PR では出荷せず、
+  要件仕様として #1093 に分離した。**
+  **守る対象の実装が存在しない状態では、正しいガードは書けない。**
+  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の `OQ-0012-0007`。
+  9 巡で 7 稿を試し、いずれも反証された — どれも「まだ書かれていないコードの形」への
+  推測だったため。反証された 7 稿と、正しいガードが満たすべき要件を #1093 に記録した。
+  なお `iterationReviewPathPerSpec` / `dispatchReviewerToPair` の caller が 0 であることは
+  **到達不能の根拠にならない** — `prototypingCertify.ts` は per-spec パスをテンプレート
+  文字列で組み立て、どちらの helper も import していない。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
@@ -160,26 +240,6 @@
   「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
   backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
   確認済み。
-- **#1078 の矛盾を計測して `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
-  `validate` の reviewer-deliverable gate は flat な `iter-NN/review.json` を読み、
-  `certify` は multi-spec frozen set に対して per-spec
-  `iter-NN/spec-NNNN/<screen>.review.json` を要求して exit 64 する。
-  `certify` を満たすと `validate` が全 non-seed iteration で
-  `prototypingEvidence.review.missing` を出し、`QFAI-PROT-002` は hard-error
-  なので exploration mode でも緩まず、`certify` は
-  `validate.json#counts.error === 0` でないと封印しない — どちらに寄せても
-  certify 不能になる。
-  どちらを canonical とするかの判断は**保留**（ユーザ判断）。実需が出るまで
-  決定コストを先送りし、事実のみ確定させた:
-  `iterationReviewPathPerSpec` と `reviewerDispatch.ts` はいずれも production
-  caller ゼロ、`prototypingIterate.ts` の single-spec 凍結だけが両者を隔てており、
-  その凍結コメント自身がこの矛盾を理由に挙げている。
-  なお `scores` と `ordinalAxes` は **同一**（軸 4 つ・尺度 4 段が一致）で、
-  #1078 に「同じ情報ではない」と書いたのは誤りだったので issue 側を訂正した。
-  一方 `pivotDirective` / `evidenceRefs` / `reviewerId` は `ReviewerPayload` に
-  **存在しない**ため、per-spec 側に寄せる案は「対応表を書く」ではなく
-  「contract の closed schema を拡張する」ことになる。
-  コードと contract は一切変更していない。
 - **`TDD-0011` が `QFAI-PROT-002` のテストを 1 件も持たないファイルに対して `done`
   だったのを正した** (#1079, `CR-20260904-0001`)。`Test file` セルは
   `tests/core/prototypingEvidence.negative.test.ts` を指していたが、このファイルの
