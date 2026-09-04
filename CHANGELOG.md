@@ -96,6 +96,25 @@
 
 ### Fixed
 
+- **Codex 3 巡目の指摘 2 件（P2 x2）も実在の欠陥だった。**
+  1. **動的 import を辺として検出していなかった。** `await import("…/iterationPaths.js")` は
+     トップレベル宣言ではないので、宣言だけを走査していた辺検出が完全に見逃していた。
+     しかもこれは最も exotic な回避ではなく、**この codebase で最も自然な wire-in の形**
+     だった — 動的 import は 9 モジュールで使われており、
+     `cli/commands/prototypingIterate.ts`（per-spec wire-in が入るまさにその場所）は
+     同ディレクトリの `core/prototyping/*` を既に 6 回この形で読み込んでいる。
+     `ImportKeyword` の `CallExpression` も辺として検出するようにした。namespace import と
+     同じくモジュール全体を渡すので、名前による絞り込みは行わない。
+  2. **gate 内のローカル別名代入で誤検出していた。**
+     `const flatPath = iterationReviewPath; … flatPath(i)` という挙動不変の整理で
+     `readsFlat` が偽になり、canonical 判断を要求して CI をブロックしていた。
+     ローカル代入を不動点で解決するようにし、per-spec 側の否定判定にも同じ解決を適用した。
+     変異行列は **19 行すべて期待どおり（想定外 0 件）**: 発火すべき 12 経路
+     （plain / aliased / namespace / assigned-then-called / re-export / star-barrel /
+     forwarded-export / internal-wrapper / **dynamic-import** /
+     **dynamic-import-destructured** / gate-drops-flat / gate-adopts-per-spec）で赤、
+     発火してはいけない 5 形状（type-only / inline type-only / flat helper 別名 /
+     **gate 内ローカル別名** / cleanup helper 結線）で緑。
 - **同ガードを Codex 2 巡目の指摘 5 件（P2 x4 / P3 x1）で作り直した。**
   1 巡目で「呼び出しの形」を別名・namespace まで追えるようにしたが、2 巡目で
   さらに 2 つの回避が見つかった: `export * from` の barrel 経由と、宣言モジュール内の

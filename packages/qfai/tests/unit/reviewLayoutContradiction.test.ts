@@ -188,6 +188,32 @@ function declaringModuleEdges(source: string, fileName: string): string[] {
       }
     }
   }
+
+  // A dynamic `import("…")` is a runtime edge too, and it is not a statement —
+  // it is a call anywhere in the body, so the loop above cannot see it. This is
+  // the likeliest wire-in shape rather than the most exotic: dynamic import is
+  // used in nine modules here, and `cli/commands/prototypingIterate.ts` — where
+  // a per-spec wire-in would live — already loads six sibling
+  // `core/prototyping/*` modules exactly this way. Like a namespace import, it
+  // hands over the whole module, so no name filter applies.
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments.length > 0
+    ) {
+      const [specifier] = node.arguments;
+      if (specifier !== undefined && ts.isStringLiteral(specifier)) {
+        const base = path.basename(specifier.text).replace(/\.js$/, "");
+        if (DECLARING_BASENAMES.has(base)) {
+          edges.push(`dynamically imports ${specifier.text}`);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(parsed, visit);
+
   return [...new Set(edges)].sort();
 }
 
@@ -241,6 +267,47 @@ function localNamesFor(source: string, fileName: string, original: string): Set<
     }
   }
   return locals;
+}
+
+/**
+ * `seeds` plus every local name assigned from one of them, transitively.
+ *
+ * `const flatPath = iterationReviewPath; … flatPath(i)` is a behaviour-preserving
+ * tidy-up. Without this the gate row would see only `flatPath`, conclude the
+ * flat helper is no longer read, and block a change that did not touch the
+ * decision this guard is about — the same false-positive class as comparing
+ * callee text instead of resolving the import binding.
+ */
+function withLocalAliases(source: string, fileName: string, seeds: Set<string>): Set<string> {
+  const parsed = parse(source, fileName);
+  /** local name -> the identifier it was assigned from. */
+  const assignedFrom = new Map<string, string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined &&
+      ts.isIdentifier(node.initializer)
+    ) {
+      assignedFrom.set(node.name.text, node.initializer.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(parsed, visit);
+
+  const resolved = new Set(seeds);
+  // Fixed point, so a chain of renames resolves rather than only one hop.
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const [local, from] of assignedFrom) {
+      if (resolved.has(from) && !resolved.has(local)) {
+        resolved.add(local);
+        grew = true;
+      }
+    }
+  }
+  return resolved;
 }
 
 /** Names called as `name(…)` or `x.name(…)` inside ONE named function's body. */
@@ -332,7 +399,9 @@ describe("the per-spec review layout stays unreachable while its canonical statu
     // still the same helper.
     const flatLocals = localNamesFor(source, GATE_MODULE, FLAT_HELPER);
     flatLocals.add(FLAT_HELPER);
-    const readsFlat = [...flatLocals].some((local) => calls.has(local));
+    const readsFlat = [...withLocalAliases(source, GATE_MODULE, flatLocals)].some((local) =>
+      calls.has(local),
+    );
 
     expect(
       readsFlat,
@@ -349,7 +418,9 @@ describe("the per-spec review layout stays unreachable while its canonical statu
       for (const local of localNamesFor(source, GATE_MODULE, name)) perSpecLocals.add(local);
     }
     expect(
-      [...perSpecLocals].filter((local) => calls.has(local)).sort(),
+      [...withLocalAliases(source, GATE_MODULE, perSpecLocals)]
+        .filter((local) => calls.has(local))
+        .sort(),
       `${GATE_FUNCTION} now calls the per-spec layout helpers, which is exactly the decision ` +
         "OQ-0012-0013 defers. Record it against CR-20260904-0002.",
     ).toEqual([]);

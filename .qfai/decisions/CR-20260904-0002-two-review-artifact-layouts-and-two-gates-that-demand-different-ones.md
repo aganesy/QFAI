@@ -126,8 +126,9 @@ ending the deferral, but naming a trigger is not detecting it.
 
 `packages/qfai/tests/unit/reviewLayoutContradiction.test.ts` adds three rows:
 
-1. **no production module takes a runtime import or re-export edge into
-   `core/prototyping/iterationPaths.ts` or `core/prototyping/reviewerDispatch.ts`**,
+1. **no production module takes a runtime edge into
+   `core/prototyping/iterationPaths.ts` or `core/prototyping/reviewerDispatch.ts`**
+   — static import, re-export, namespace import, or a dynamic `import("…")` —
    beyond the layout-neutral cleanup helpers `findStaleIterDirs` /
    `deleteStaleIterDirs`. Measured on the tree at the time: **zero** such edges,
    so the invariant is "still zero" rather than an allowlist of tolerated ones;
