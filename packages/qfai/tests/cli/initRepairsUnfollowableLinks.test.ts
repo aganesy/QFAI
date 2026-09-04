@@ -20,7 +20,7 @@
  * that file's sibling gives: `vi.mock` is hoisted to module scope, so a mock
  * added there would apply to every case in it.
  */
-import { lstat, mkdtemp, readdir, readlink, rm, stat } from "node:fs/promises";
+import { lstat, mkdtemp, readdir, readFile, readlink, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -29,7 +29,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { statSpy, symlinkSpy } = vi.hoisted(() => ({ statSpy: vi.fn(), symlinkSpy: vi.fn() }));
+const { statSpy, symlinkSpy, renameSpy, rmSpy } = vi.hoisted(() => ({
+  statSpy: vi.fn(),
+  symlinkSpy: vi.fn(),
+  renameSpy: vi.fn(),
+  rmSpy: vi.fn(),
+}));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
@@ -37,6 +42,8 @@ vi.mock("node:fs/promises", async () => {
     ...actual,
     stat: (...args: unknown[]) => statSpy(actual, ...args),
     symlink: (...args: unknown[]) => symlinkSpy(actual, ...args),
+    rename: (...args: unknown[]) => renameSpy(actual, ...args),
+    rm: (...args: unknown[]) => rmSpy(actual, ...args),
   };
 });
 
@@ -93,6 +100,14 @@ beforeEach(() => {
   symlinkSpy.mockImplementation(
     (actual: FsPromises, target: string, linkPath: string, type?: string) =>
       actual.symlink(target, linkPath, type),
+  );
+  renameSpy.mockReset();
+  renameSpy.mockImplementation((actual: FsPromises, from: string, to: string) =>
+    actual.rename(from, to),
+  );
+  rmSpy.mockReset();
+  rmSpy.mockImplementation((actual: FsPromises, target: string, options?: object) =>
+    actual.rm(target, options),
   );
 });
 
@@ -173,9 +188,153 @@ describe("qfai init repairs a link the OS will not follow", () => {
         runInit({ dir: root, force: false, dryRun: false, yes: true }),
       ).rejects.toMatchObject({ code: "EPERM" });
 
-      // The wrapper is still there, and still names the same target.
+      // The invariant is that the original is never destroyed — not that the
+      // pathname is repopulated. `symlink` is the ONLY non-overwriting way to
+      // put a symlink back (`rename` overwrites, `link` raises EPERM on one),
+      // so a `symlink` that fails for a standing reason — Developer Mode off,
+      // an ACL — fails the restore for the same reason. The answer then is the
+      // one the finding asks for: keep the original and say where it is.
+      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
+        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
+      );
+      expect(holds).toHaveLength(1);
+      const held = path.join(path.dirname(linkPath), String(holds[0]), path.basename(linkPath));
+      expect((await lstat(held)).isSymbolicLink()).toBe(true);
+      expect(path.normalize(await readlink(held))).toBe(path.normalize(targetBefore));
+    });
+  });
+
+  it("restores the link when only the first symlink attempt fails", async () => {
+    // The transient case, and the reason the restore is attempted at all: one
+    // failed `symlink` (an antivirus hold, a brief lock) must not cost the
+    // wrapper. The second call — the restore — succeeds, so the pathname is
+    // repopulated and no hold is left behind.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const linkPath = path.join(root, LINK);
+      const targetBefore = await readlink(linkPath);
+      rejectStatOn(linkPath);
+      let attempts = 0;
+      symlinkSpy.mockImplementation(
+        (actual: FsPromises, target: string, created: string, type?: string) => {
+          if (path.resolve(created) === path.resolve(linkPath)) {
+            attempts += 1;
+            if (attempts === 1) return Promise.reject(errno("EPERM"));
+          }
+          return actual.symlink(target, created, type);
+        },
+      );
+
+      await expect(
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      ).rejects.toMatchObject({ code: "EPERM" });
+
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
+      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
+        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
+      );
+      expect(holds).toEqual([]);
+    });
+  });
+
+  it("puts back a regular file that replaced the link before the move", async () => {
+    // The window the after-move verification exists for. `isFollowable` looks
+    // at one inode; `rename` moves whatever is at the pathname a moment later.
+    // Without the check, a regular file another process wrote in between was
+    // moved aside and then deleted by the cleanup — a user's file lost on an
+    // init with no `--force`.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const linkPath = path.join(root, LINK);
+      const CONTENT = "written by another process\n";
+
+      // The probe refuses, and — as its side effect — the entry becomes a
+      // regular file. That is the interleaving, expressed at the one point the
+      // code under test actually looks at the path.
+      statSpy.mockImplementation(async (actual: FsPromises, probed: string) => {
+        if (path.resolve(String(probed)) !== path.resolve(linkPath)) {
+          return actual.stat(probed);
+        }
+        await rm(linkPath, { recursive: true, force: true });
+        await writeFile(linkPath, CONTENT);
+        throw errno("EPERM");
+      });
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // The file is back where it was, with its bytes, and nothing is held.
       const after = await lstat(linkPath);
-      expect(after.isSymbolicLink()).toBe(true);
+      expect(after.isFile()).toBe(true);
+      expect(await readFile(linkPath, "utf-8")).toBe(CONTENT);
+      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
+        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
+      );
+      expect(holds).toEqual([]);
+    });
+  });
+
+  it("does not overwrite an entry created while the original was held", async () => {
+    // G2's interleaving. Putting a non-symlink back needs `rename`, which
+    // overwrites — so it must run only while the pathname is free. Here another
+    // process claims the pathname in the instant after the entry leaves it, and
+    // its file must survive: the original stays held and the conflict is
+    // reported rather than resolved by destroying somebody's file.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const linkPath = path.join(root, LINK);
+      const MINE = "written by another process\n";
+      const THEIRS = "created by a third process\n";
+
+      statSpy.mockImplementation(async (actual: FsPromises, probed: string) => {
+        if (path.resolve(String(probed)) !== path.resolve(linkPath)) {
+          return actual.stat(probed);
+        }
+        await rmSpy.getMockImplementation()?.(actual, linkPath, { recursive: true, force: true });
+        await writeFile(linkPath, MINE);
+        throw errno("EPERM");
+      });
+      renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+        await actual.rename(from, to);
+        // The pathname is empty for exactly this instant, and somebody takes it.
+        if (path.resolve(from) === path.resolve(linkPath)) {
+          await writeFile(linkPath, THEIRS);
+        }
+      });
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Theirs is untouched, and mine is still on disk in the hold.
+      expect(await readFile(linkPath, "utf-8")).toBe(THEIRS);
+      const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
+        name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
+      );
+      expect(holds).toHaveLength(1);
+      const held = path.join(path.dirname(linkPath), String(holds[0]), path.basename(linkPath));
+      expect(await readFile(held, "utf-8")).toBe(MINE);
+    });
+  });
+
+  it("reports a repair that succeeded even when the hold cannot be removed", async () => {
+    // G3. The link is in place by the time the hold is cleaned up, so an ACL,
+    // an antivirus hold or a transient I/O error there is not the repair
+    // failing — and reporting it as one told the operator a repair had failed
+    // that had in fact succeeded.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const linkPath = path.join(root, LINK);
+      const targetBefore = await readlink(linkPath);
+      rejectStatOn(linkPath);
+      rmSpy.mockImplementation((actual: FsPromises, target: string, options?: object) =>
+        String(target).includes(".qfai-repair-")
+          ? Promise.reject(errno("EPERM"))
+          : actual.rm(target, options),
+      );
+
+      // Resolves rather than rejects: the wrapper is repaired.
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
       expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
     });
   });
