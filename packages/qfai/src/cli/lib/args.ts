@@ -46,7 +46,11 @@ export type ParsedArgs = {
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
+    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
+    /** `rescope --remove <surface-id>`, repeatable. */
+    rescopeRemove: string[];
+    /** `rescope --reason <delta-id>`: the decision that retired the surface. */
+    rescopeReason?: string;
     prototypingTargetUrl?: string;
     /** Subcommand for `qfai discussion <list|use>`. */
     discussionAction?: "list" | "use";
@@ -166,6 +170,7 @@ type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
 
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
+    rescopeRemove: [],
     root: cwd,
     rootExplicit: false,
     dir: cwd,
@@ -250,7 +255,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         candidate === "preflight" ||
         candidate === "iterate" ||
         candidate === "certify" ||
-        candidate === "show-spec"
+        candidate === "show-spec" ||
+        candidate === "rescope"
       ) {
         options.prototypingAction = candidate;
       } else {
@@ -593,6 +599,34 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "validate") {
           options.platform = next;
+        } else {
+          markInvalid();
+        }
+        break;
+      }
+      case "--remove": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        // Repeatable: one decision can retire more than one surface, and each
+        // retirement earns its own audit entry.
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeRemove.push(next);
+        } else {
+          markInvalid();
+        }
+        break;
+      }
+      case "--reason": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeReason = next;
         } else {
           markInvalid();
         }

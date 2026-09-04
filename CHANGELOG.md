@@ -6,6 +6,55 @@
 
 ### Added
 
+- **`qfai prototyping rescope` — loop を捨てずに退役した surface を外す。**
+  cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
+  以降のあらゆる編集は lock drift (exit 2) である。drift ルールとしては正しい。
+  だがそれが**唯一のルール**だったため、正当なケース — loop が開いている間に
+  製品判断が screen を退役させた — も同じ扱いになり、用意されている経路は
+  `iterate --cycle 0 --force` だけだった。これは `iter-00` を退避させ、
+  それまでに支払ったすべての cycle のレビューを捨てる。
+
+  ```bash
+  npx qfai prototyping rescope --remove 0011 --reason DELTA-022
+  ```
+
+  `frozenSurfaceUnion` から surface を外し、captured な
+  `iterate-plan.json#screens` から取り除き、
+  `{surface, reason, cycle, at}` を `prototyping.json#rescopeLog` に記録し、
+  **loop は現在の cycle のまま**にする。`--remove` は repeatable、
+  `--reason` は必須、`--dry-run` は書かずに報告する。
+
+  これが drift ルールの穴にならない理由が 3 つある:
+  1. **すでに到達不能なものしか外せない。** 除去可能集合は
+     `frozenScope.missing` — `QFAI-PROT-011` が報告するのと同じ集合 — なので、
+     spec がまだ UI marker を宣言している surface は**拒否**される。
+     `--add` は存在せず、拡大は表現できない。finding と操作は
+     `core/prototyping/frozenScope.ts` という**単一の reader** を読むので、
+     この一致は文書ではなく構造で保たれる。
+  2. **`--reason` を要求する。** 記録済みの delta / decision id が、
+     「適用された判断」と「exit-2 ルールが止めるべき黙った変更」を分ける唯一の
+     signal であり、audit entry が保存するのもそれである。id らしくない値は
+     **拒否ではなく警告**にした — id の解決には delta / decision が置かれうる
+     全ての場所（`.qfai/decisions/`、spec の `09_delta.md`、
+     `_policies/10_delta.md`、および利用側プロジェクト独自の場所）が必要で、
+     取りこぼす resolver は**正当な**縮小を拒否してしまう。これはこの操作が
+     存在する理由そのものを塞ぐため、弱いフィールドより悪い。実際の制御は
+     audit entry であり、警告は「後で log を読む reviewer」ではなく
+     「その場の操作者」に伝えるためにある。
+  3. **critique を書き換えない。** reviewer が cycle N に見たものは歴史的事実で
+     ある。該当する `iter-NN/review.json` には `retiredSurfaces` 注釈を追加し、
+     `proseCritique` は一字も変えない。読者が「古い記述」と「誤った記述」を
+     区別できるのはそのためである。
+
+  sealed loop (`stopReason` あり) も拒否する — 完了した loop の scope は歴史で
+  あり、縮めることはその loop が何を覆ったかの書き換えになる。
+
+  `QFAI-PROT-011` の message / remedy と `qfai-prototyping/SKILL.md` の
+  「Scope reduction has no in-loop path」節も追従した。後者は #1099 の part 4
+  （「(1) が無いうちはそう書け」）で書かれたもので、役目は果たしたが、
+  操作が存在する今はファイル中で最も有害なテキストだった — 読者を破壊的経路へ
+  名指しで送るからである。 (#1099)
+
 - **依存宣言と食い違う qfai の解決を `QFAI-TOOL-002` として分離した。**
   `QFAI-TOOL-001` は path 比較だけで判定しており、4 つの解決を区別できなかった:
   worktree ハザード / `_npx` キャッシュ / 意図的なグローバルインストール /

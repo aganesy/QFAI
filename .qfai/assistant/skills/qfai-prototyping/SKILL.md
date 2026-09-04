@@ -143,28 +143,48 @@ hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0; also
 covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 
-### Scope reduction has no in-loop path
+### Scope reduction: `prototyping rescope`
 
 The drift rule above is symmetric, and scope **reduction** is not. When a
-product decision retires a screen while the loop is open, there is no
-subcommand, flag or protocol for "this surface is retired; carry the loop
-forward without it". The only route is a full reset:
+product decision retires a screen while the loop is open, the frozen union
+still names it — and editing that union by hand is the exit-2 drift the rule
+exists to catch. `rescope` is the operation that applies such a decision
+without discarding the loop:
 
 ```bash
-npx qfai prototyping iterate --cycle 0 --target-url <url> --force
+npx qfai prototyping rescope --remove 0011 --reason DELTA-022
 ```
 
-which moves `iter-00` to `iter-00.backup-<ISO>` and discards every cycle of
-review already paid for.
+It drops the surface from `frozenSurfaceUnion`, prunes it from any captured
+`iterate-plan.json#screens`, records `{surface, reason, cycle, at}` in
+`prototyping.json#rescopeLog`, and **leaves the loop at its current cycle**.
+`--remove` is repeatable; `--reason` is required and should cite the recorded
+delta or decision that retired the surface. `--dry-run` reports without
+writing.
 
-Plan for it. `npx qfai validate --profile prototyping` reports `QFAI-PROT-011` as
-soon as `frozenSurfaceUnion` names a spec that no longer resolves as
-UI-bearing, so the state is visible before the next `iterate` — which is the
-point of no return. Two ways out at that point:
+**Order matters.** Retire the surface upstream first — the spec, its UI
+contract and its route — then run `rescope`. It refuses a surface that still
+resolves as UI-bearing, because dropping one that still exists is exactly the
+drift the frozen union detects. It also refuses a sealed loop (`stopReason`
+set): a completed loop's scope is history.
 
-- **restore** the retired spec's UI-bearing marker, keeping the loop and every
-  recorded iteration; or
-- **reset** deliberately from cycle 0, accepting the backup.
+**It never rewrites a critique.** What a reviewer saw at cycle N is a
+historical fact, so affected `iter-NN/review.json` files get a
+`retiredSurfaces` annotation and their `proseCritique` is left exactly as
+written. A reader can then tell a stale claim from a wrong one.
+
+`npx qfai validate --profile prototyping` reports `QFAI-PROT-011` as soon as
+`frozenSurfaceUnion` names a spec that no longer resolves, so the state is
+visible before the next `iterate` rather than at it. Three ways out:
+
+- **rescope** — the decision was real; apply it and keep every recorded
+  iteration;
+- **restore** the retired spec's UI-bearing marker — the decision was not meant
+  to remove this surface; or
+- **reset** deliberately from cycle 0
+  (`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`), which
+  moves `iter-00` to `iter-00.backup-<ISO>` and discards every cycle of review
+  already paid for. Still available, still destructive.
 
 `iterate` itself only hard-stops when **every** UI-bearing spec has
 disappeared. A partial reduction passes that check, which is why the finding
