@@ -81,6 +81,42 @@ const RETIRED_SINCE_BASELINE: string[] = [
  * `warning`, an `error`, or a computed severity falls out of the exemption and
  * owes a promotion entry like any other new code.
  */
+/**
+ * Codes that are an `error` from the release that introduced them.
+ *
+ * P7's fourth answer, and the narrowest. The other three are: behind a window
+ * ({@link RULE_PROMOTIONS}), off the ladder at `info`
+ * ({@link INFO_ONLY_SINCE_BASELINE}), or predating the policy
+ * ({@link FINDING_CODES_BEFORE_PROMOTION_POLICY}). None of them can express
+ * "an `error` immediately, and that is not a regression" — and the guards are
+ * right to reject the attempts: a registered entry must take its severity from
+ * `newRuleSeverity`, and a pin at or before the introducing release is the
+ * regression P7 was written after (#1111).
+ *
+ * **The criterion is one thing, and it is checkable at review time: the
+ * condition the code reports ALREADY fails the run today.** Then the window has
+ * no backlog to absorb — no project is passing in that state — and shipping at
+ * `warning` would be a regression rather than a courtesy, because a `warning`
+ * under the default `--fail-on error` exits 0 where the previous behaviour did
+ * not.
+ *
+ * Every entry states its reason. A guard can check the reason is present, that
+ * the code is `"error"` at every site, that something still emits it, and that
+ * the frozen baseline does not already cover it. **No guard can check that the
+ * reason is true** — a reviewer tests it by asking what the tree did before the
+ * code existed. That is why this list is meant to stay short.
+ */
+const ERROR_FROM_INTRODUCTION: readonly { code: string; reason: string }[] = [
+  {
+    code: "QFAI-SCAN-002",
+    reason:
+      "The run could not finish, so the result is not a verdict. Before this code existed the " +
+      "condition ended the process with a bare stderr line and a non-zero exit, so there is no " +
+      "backlog for a window to absorb — and at `warning` the default `--fail-on error` would " +
+      "exit 0, turning a crash into a pass.",
+  },
+];
+
 const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // `.qfai/review/` holds a directory whose name is not a pack timestamp. The
   // finding tells the operator that directory is not inspected; it does not
@@ -188,7 +224,7 @@ const CODE_LITERAL_RE = new RegExp(`"(${CODE})"`, "g");
  * direction that fails loudly rather than silently, the same trade the opaque
  * files above are read under.
  */
-const OBJECT_CODE_RE = new RegExp(`\\bcode:\\s*"(${CODE})"`, "g");
+const OBJECT_CODE_RE = new RegExp(`\\bcode:\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))`, "g");
 
 /** `RegExp`-safe form of a finding code: `.` is legal in {@link CODE}. */
 function escapeForRegExp(value: string): string {
@@ -321,14 +357,21 @@ function severityExpressionsFor(body: string, code: string): string[] {
     if (severity !== undefined) found.push(severity);
   }
 
-  const escaped = escapeForRegExp(code);
-  for (const re of [
-    new RegExp(`\\bcode:\\s*"${escaped}"\\s*,\\s*severity:\\s*([^,\\n]+)`, "g"),
-    new RegExp(`\\bseverity:\\s*([^,\\n]+),\\s*code:\\s*"${escaped}"`, "g"),
-  ]) {
-    for (const m of body.matchAll(re)) {
-      const severity = m[1];
-      if (severity) found.push(severity.trim().replace(/,$/, ""));
+  // The literal AND every module-level alias of it. `aliases` is already
+  // computed above for the `issue(...)` half; this half read only the literal,
+  // so a finding written as `{ code: SOME_CODE, severity: "error" }` — which is
+  // how `cli/lib/warnings.ts` builds both scan findings — reported no severity
+  // at all, and a code exempted on the strength of its severity could not be
+  // checked (#1110, #1111).
+  for (const escaped of [code, ...aliases].map(escapeForRegExp)) {
+    for (const re of [
+      new RegExp(`\\bcode:\\s*(?:"${escaped}"|${escaped})\\s*,\\s*severity:\\s*([^,\\n]+)`, "g"),
+      new RegExp(`\\bseverity:\\s*([^,\\n]+),\\s*code:\\s*(?:"${escaped}"|${escaped})`, "g"),
+    ]) {
+      for (const m of body.matchAll(re)) {
+        const severity = m[1];
+        if (severity) found.push(severity.trim().replace(/,$/, ""));
+      }
     }
   }
   return found;
@@ -377,7 +420,11 @@ const GA_SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
  * baseline lines once; skipping the file is the hole this ratchet exists to
  * close, and it is the direction that fails loudly rather than silently.
  *
- * Findings written as object literals join the set too ({@link OBJECT_CODE_RE}):
+ * Findings written as object literals join the set too ({@link OBJECT_CODE_RE}),
+ * through a quoted code OR a module-level constant. `cli/lib/warnings.ts` writes
+ * `code: TRUNCATED_SCAN_CODE`, and requiring the literal meant a post-P7 code
+ * declared that way was never asked for an answer — the same resolution the
+ * `issue(...)` half already does through `resolveArg` (#1110):
  * `issue(...)` is a convenience, not the only door out, and the door it is not
  * covering is the one three shipped files already use.
  */
@@ -442,8 +489,9 @@ async function collectIssueCodes(): Promise<Set<string>> {
     }
 
     for (const m of body.matchAll(OBJECT_CODE_RE)) {
-      const code = m[1];
-      if (code) codes.add(code);
+      // `resolveArg` is the same resolution the `issue(...)` half performs: the
+      // literal when there is one, else the file-local or exported `const`.
+      resolveArg(m[1], m[2]);
     }
   }
   return codes;
@@ -515,6 +563,53 @@ async function readShippedVersion(): Promise<string> {
  * an exemption measured by a second reader could disagree with the rule it is
  * exempting a code from.
  */
+/**
+ * {@link ERROR_FROM_INTRODUCTION}, checked against the tree before any code is
+ * excused by it.
+ *
+ * The same four checks the info-only helper below makes, with `"error"` where it
+ * expects `"info"`, plus one this list needs and that one does not: the reason
+ * must be non-empty. An entry with no reason is an exemption nobody can review.
+ */
+async function verifiedErrorFromIntroductionCodes(
+  baseline: ReadonlySet<string>,
+): Promise<Set<string>> {
+  const files = (await collectSources(SRC)).filter(
+    (f) => !f.endsWith(path.join("core", "sunset.ts")),
+  );
+  const bodies = await Promise.all(files.map((f) => readFile(f, "utf-8")));
+
+  const exempt = new Set<string>();
+  for (const { code, reason } of ERROR_FROM_INTRODUCTION) {
+    expect(
+      reason.trim().length,
+      `${code} is listed as error-from-introduction with no reason — the criterion is that the ` +
+        "condition already fails the run today, and an entry that does not say so cannot be " +
+        "reviewed",
+    ).toBeGreaterThan(0);
+
+    expect(
+      baseline.has(code),
+      `${code} predates the promotion policy, so the baseline already covers it — ` +
+        "this list is for codes introduced after P7",
+    ).toBe(false);
+
+    const severities = [...new Set(bodies.flatMap((body) => severityExpressionsFor(body, code)))];
+    expect(
+      severities,
+      `${code} is listed as error-from-introduction but nothing in src/ emits it — retire the line`,
+    ).not.toEqual([]);
+    expect(
+      severities.sort(),
+      `${code} is listed as error-from-introduction but is emitted with ` +
+        `${severities.join(", ")} — the exemption is for a finding that is \`error\` at every ` +
+        "site; anything softer belongs behind a promotion window",
+    ).toEqual(['"error"']);
+    exempt.add(code);
+  }
+  return exempt;
+}
+
 async function verifiedInfoOnlyCodes(baseline: ReadonlySet<string>): Promise<Set<string>> {
   const files = (await collectSources(SRC)).filter(
     (f) => !f.endsWith(path.join("core", "sunset.ts")),
@@ -667,8 +762,15 @@ describe("sunset ledger", () => {
     const promotions = await readRulePromotionEntries();
     const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
     const infoOnly = await verifiedInfoOnlyCodes(baseline);
+    const errorFromIntroduction = await verifiedErrorFromIntroductionCodes(baseline);
     const unregistered = [...codes]
-      .filter((code) => !baseline.has(code) && !promotions.includes(code) && !infoOnly.has(code))
+      .filter(
+        (code) =>
+          !baseline.has(code) &&
+          !promotions.includes(code) &&
+          !infoOnly.has(code) &&
+          !errorFromIntroduction.has(code),
+      )
       .sort();
 
     expect(
