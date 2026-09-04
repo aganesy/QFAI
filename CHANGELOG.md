@@ -6,6 +6,39 @@
 
 ### Added
 
+- **どの qfai が走ったのかを毎回出力し、プロジェクト外から解決された場合は finding にする。**
+  出荷 skill はすべて bare `npx qfai …` を指示しているが、`npx` は bare name を
+  **親ディレクトリ方向** に `node_modules/.bin` を探して解決する。Claude Code の
+  worktree はメインチェックアウトの 3 階層下にあるため、自前の依存を持たない
+  worktree では囲んでいるチェックアウトのバイナリ (別ブランチ・別 lockfile) が
+  走り、実行結果には何も現れなかった。版番は `validate.json` の内部にしか無く、
+  README はそれを internal と呼んでいるので、gate も貼り付けた evidence も 2 つの
+  実行を区別できなかった。`run-log:` の隣に `qfai: <version> (<package dir>)` を
+  出力し、走っている package が **プロジェクト root の外にある installed copy** の
+  場合は `QFAI-TOOL-001` を出す (`--fail-on` から assert できる)。`RULE_PROMOTIONS`
+  で 1.12.0 まで `warning` に固定。
+  issue の提案からは 2 点を訂正した。`process.argv[1]` ではなく package
+  ディレクトリを比較対象にする — 実インストールでは前者は npm が `.bin` に書く
+  shim で、転送先の package とは別パスであり、報告された版番の持ち主でもない。
+  また issue は「worktree のケースだけを捉える」としているが、そうではない:
+  意図的なグローバルインストールと monorepo root への hoist はどちらも正当に
+  root 外へ落ちる。どちらも defect と呼ばずメッセージと docblock に明記した。
+  `outside` は `node_modules` セグメントを併せて要求する。`npx` が親探索で到達
+  できるのはそこだけ (別チェックアウトのコピー / hoist されたコピー /
+  グローバル prefix / 親に無いとき `npx` が黙って作る `_npx` キャッシュ) で、
+  この条件が無いと直接実行したソースチェックアウトでも発火し、実際に
+  `surfaceShortCircuitScope` と `skillsIntegrity` が落ちた — スイートの temp root は
+  構造上すべてソースツリーの外にある。
+  `classifyToolLocation` を純粋関数として切り出して export した。
+  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
+  動かせず、ルールが検出すべき状態に到達できない。最初に書いた 5 行はすべて
+  `outside === false` の assert で、**一度も発火しないルールでも全行通る**。
+  この継ぎ目で到達する 4 行を追加し、両方向を変異検査した (強制 off で
+  positive 4 行が、強制 on で 7 行が落ちる)。
+  `qfai --version` (#786) と skill 側の worktree ガイダンスは別 issue に残した。
+  前者は独立した既知 defect、後者はどの解決形を規定するかという判断を伴う。
+  (#1096)
+
 - **ツリーから導出される事実をリテラルで pin しているガードに、再導出ツールを同梱した。**
   `stageEvidenceCounts.test.ts` は e2e callsite 数をツリーから計算し、隣にコミットされた
   リテラルと突き合わせる。導出は出荷されていなかったので、このガードで赤くなった寄稿者は
