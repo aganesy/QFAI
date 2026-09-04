@@ -11,7 +11,8 @@
 - Approved option: `record-only (defer the canonical-artifact decision)`
 - Scope extended at: `2026-09-04T07:10:00+09:00` (approved by `yusuke_senaga`) — see
   **Scope extension: the guard is deferred to #1093** below
-- Applied at: `2026-09-04` — the record as merged on PR #1092; see **Timestamps**
+- Applied at: `2026-09-04T11:50:00+09:00` — when the `confirm-only` rerun's output was
+  written to `.qfai/specs/spec-0012/09_delta.md`; see **Timestamps**
 - Superseded by: `-`
 
 ## Context
@@ -19,14 +20,14 @@
 `validate --profile prototyping` and `qfai prototyping certify` read different
 reviewer artifacts:
 
-| gate                                 | reads                                                            | payload                                                                                                       |
-| ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `validate` reviewer-deliverable gate | flat `iter-NN/review.json`                                       | `EvaluatorReview` (`iterIndex`, `reviewerId`, `scores`, `proseCritique`, `pivotDirective`, `evidenceRefs`, …) |
-| `certify`                            | `iter-NN/spec-NNNN/<screen>.review.json` once that layout exists | `ReviewerPayload` (`specId`, `screenId`, `cycle`, `ordinalAxes`, `impressions`, …)                            |
+| gate                                 | reads                                                                                                                                                                | payload                                                                                                       |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `validate` reviewer-deliverable gate | flat `iter-NN/review.json`                                                                                                                                           | `EvaluatorReview` (`iterIndex`, `reviewerId`, `scores`, `proseCritique`, `pivotDirective`, `evidenceRefs`, …) |
+| `certify`                            | `iter-NN/spec-NNNN/<screen>.review.json` once that layout exists — it checks each expected file **exists** (`fileExists`, `:702-705`) and does not parse the payload | the contract declares `ReviewerPayload` (`specId`, `screenId`, `cycle`, `ordinalAxes`, `impressions`, …)      |
 
 They are not mutually exclusive in every configuration: an iteration carrying
 **both** satisfies both gates. What neither gate tolerates is per-spec artifacts
-**without** the flat one — `certify` validates the per-spec files, `validate`
+**without** the flat one — `validate`
 reports `prototypingEvidence.review.missing`, `QFAI-PROT-002` is on
 `core/prototyping/mode.ts`'s hard-error list so exploration mode does not soften
 it, and `certify` refuses to seal unless `validate.json#counts.error === 0`.
@@ -46,8 +47,8 @@ earlier revision of this CR had it backwards.
 
 What that ordering means in practice: a per-spec-only iteration makes `validate`
 report `prototypingEvidence.review.missing`, and `certify` then refuses at its
-`validate.json#counts.error` check, before its own per-spec gate is consulted at
-all. The per-spec artifacts `certify`'s gate wants are present and cannot help.
+all. The per-spec files that gate looks for are present — it only checks their
+existence — and cannot help.
 The project can pass neither command:
 
 > per-spec present AND flat absent, on a recorded non-seed iteration
@@ -86,7 +87,8 @@ counterpart, which makes "accept both" a contract change rather than a mapping.
 
 ## Impact scope
 
-- Specs: `spec-0012` — `08_Open-questions.md` only
+- Specs: `spec-0012` — `08_Open-questions.md` (the open question) and `09_delta.md`
+  (the `confirm-only` rerun's CR reference)
 - Tests, code, contracts, schema: none
 
 ## Decision needed from user
@@ -127,6 +129,8 @@ Applied by hand under the approval above, `confirm-only`:
 - `.qfai/specs/spec-0012/08_Open-questions.md` — `OQ-0012-0013` appended,
   disposition `deferred`, recording the contradiction, the reachability
   condition above, the three options with their costs, and the trigger.
+- `.qfai/specs/spec-0012/09_delta.md` — the `2026-09-04` entry recording this CR,
+  its mode and its invocation, which is the `confirm-only` rerun's output.
 - No other artifact is edited. The single-spec freeze in `prototypingIterate.ts`
   stays as it is — but it is **not** a mitigation for this contradiction, and
   `OQ-0012-0013` says so.
@@ -149,9 +153,11 @@ scope extension that recorded an approval after the commit applying it.
 | `Raised at`         | `2026-09-04T05:10:24+09:00` | the correction comment on issue #1078                                       |
 | `Approved at`       | `2026-09-04T05:20:00+09:00` | the conversation turn — the one estimate, bounded by the two rows around it |
 | `Scope extended at` | `2026-09-04T07:10:00+09:00` | the conversation turn approving it                                          |
-| `Applied at`        | `2026-09-04`                | the record as merged on PR #1092                                            |
+| `Applied at`        | `2026-09-04T11:50:00+09:00` | the `confirm-only` rerun's CR reference written to `09_delta.md`            |
 
-`Applied at` names the merged record rather than a commit hash, deliberately. The
+`Applied at` is when the owner-skill rerun completed and the upstream artifacts were
+updated, which is what `skills/qfai-sdd/templates/change-request.md` defines it as —
+not a commit hash. The
 scope extension's outcome reversed three times on PR #1092 — a guard was added,
 replaced, then removed with its requirement moved to #1093 — and each reversal made a
 previously-correct hash describe this CR as resolved before its result existed. A date

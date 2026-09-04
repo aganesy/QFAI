@@ -159,26 +159,6 @@
   「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
   backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
   確認済み。
-- **#1078 の矛盾を計測して `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
-  `validate` の reviewer-deliverable gate は flat な `iter-NN/review.json` を読み、
-  `certify` は multi-spec frozen set に対して per-spec
-  `iter-NN/spec-NNNN/<screen>.review.json` を要求して exit 64 する。
-  `certify` を満たすと `validate` が全 non-seed iteration で
-  `prototypingEvidence.review.missing` を出し、`QFAI-PROT-002` は hard-error
-  なので exploration mode でも緩まず、`certify` は
-  `validate.json#counts.error === 0` でないと封印しない — どちらに寄せても
-  certify 不能になる。
-  どちらを canonical とするかの判断は**保留**（ユーザ判断）。実需が出るまで
-  決定コストを先送りし、事実のみ確定させた:
-  `iterationReviewPathPerSpec` と `reviewerDispatch.ts` はいずれも production
-  caller ゼロ。なお当初は `prototypingIterate.ts` の single-spec 凍結が両者を隔てていると考えたが、これは**誤り**だった（`certify` は frozen set より先に per-spec を分岐するため、single-spec でも矛盾は成立する）。凍結が到達不能にするのは multi-spec prototyping であって、矛盾そのものではない。凍結コメントは
-  その凍結コメント自身がこの矛盾を理由に挙げている。
-  なお `scores` と `ordinalAxes` は **同一**（軸 4 つ・尺度 4 段が一致）で、
-  #1078 に「同じ情報ではない」と書いたのは誤りだったので issue 側を訂正した。
-  一方 `pivotDirective` / `evidenceRefs` / `reviewerId` は `ReviewerPayload` に
-  **存在しない**ため、per-spec 側に寄せる案は「対応表を書く」ではなく
-  「contract の closed schema を拡張する」ことになる。
-  コードと contract は一切変更していない。
 - **`TDD-0011` が `QFAI-PROT-002` のテストを 1 件も持たないファイルに対して `done`
   だったのを正した** (#1079, `CR-20260904-0001`)。`Test file` セルは
   `tests/core/prototypingEvidence.negative.test.ts` を指していたが、このファイルの

@@ -12,7 +12,8 @@
 - Scope extended at: `2026-09-04T05:41:13+09:00` (approved by `yusuke_senaga` before
   that commit) — see
   **Scope extension** below
-- Applied at: `2026-09-04T05:32:10+09:00`
+- Applied at: `2026-09-04T05:41:13+09:00` (after the scope extension below; the first
+  correction landed at `2026-09-04T05:32:10+09:00`)
 - Superseded by: `-`
 
 ## Context
