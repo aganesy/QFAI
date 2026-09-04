@@ -170,7 +170,7 @@
   どちらを canonical とするかの判断は**保留**（ユーザ判断）。実需が出るまで
   決定コストを先送りし、事実のみ確定させた:
   `iterationReviewPathPerSpec` と `reviewerDispatch.ts` はいずれも production
-  caller ゼロ、`prototypingIterate.ts` の single-spec 凍結だけが両者を隔てており、
+  caller ゼロ。なお当初は `prototypingIterate.ts` の single-spec 凍結が両者を隔てていると考えたが、これは**誤り**だった（`certify` は frozen set より先に per-spec を分岐するため、single-spec でも矛盾は成立する）。凍結が到達不能にするのは multi-spec prototyping であって、矛盾そのものではない。凍結コメントは
   その凍結コメント自身がこの矛盾を理由に挙げている。
   なお `scores` と `ordinalAxes` は **同一**（軸 4 つ・尺度 4 段が一致）で、
   #1078 に「同じ情報ではない」と書いたのは誤りだったので issue 側を訂正した。

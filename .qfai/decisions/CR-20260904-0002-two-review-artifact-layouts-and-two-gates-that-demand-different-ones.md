@@ -9,10 +9,11 @@
 - Approved by: `yusuke_senaga`
 - Approved at: `2026-09-04T05:20:00+09:00`
 - Approved option: `record-only (defer the canonical-artifact decision)`
-- Scope extended at: `2026-09-04T07:16:04+09:00` (approved by `yusuke_senaga` before
-  that commit) — see
+- Scope extended at: `2026-09-04T07:10:00+09:00` (approved by `yusuke_senaga`; first
+  attempt applied in `1a6dfee7`, final outcome in `f69ea5f`) — see
   **Scope extension: guard the reachability** below
-- Applied at: `2026-09-04T05:34:35+09:00`
+- Applied at: `2026-09-04T11:35:00+09:00` (commit `f69ea5f`, the final outcome;
+  first applied `2026-09-04T05:34:35+09:00` in `cdeebe5e` — see **Timestamps**)
 - Superseded by: `-`
 
 ## Context
@@ -46,8 +47,12 @@ On `main` at `aa7bcd23`:
   purpose, and its comment names this contradiction as the reason: _"certify
   already hard-fails any multi-spec frozen set on the flat-iter layout, so
   persisting the full UI-bearing union here would render every normal
-  multi-spec run uncertifiable."_ That freeze is the only thing holding the two
-  gates apart — and what makes multi-spec prototyping unreachable.
+  multi-spec run uncertifiable."_ That freeze was BELIEVED to be what held the
+  two gates apart. **It is not** — see the scope extension below: `certify`
+  branches on `hasPerSpecSubdir` before it reads the frozen set, so a
+  per-spec-only writer contradicts `validate` for a single-spec frozen set as
+  well. The freeze makes multi-spec prototyping unreachable; it does not make
+  the contradiction unreachable.
 - `scores` **is** `ordinalAxes`: the same four axes on the same four-value
   ordinal scale. `layoutAntiPatternsDetected` and `designMdViolations` are
   identical. Issue #1078 claimed otherwise and is corrected on the issue.
@@ -163,10 +168,35 @@ the wire-in rather than ahead of it.
 - Code, contracts, schema: none
 
 Also noted and not chased: the `TC-0012-0388` ledger row cites `DR-0012-0028`,
-which is not present under `.qfai/specs/spec-0012/`, so the divergence between
-that TC and its implementing test is not covered by a recorded deviation either.
+which **does** exist — `07_Decisions.md:115`, "MAX_ITERATIONS = 10 (cycles
+0..9)" — but decides the iteration budget and says nothing about the frozen-set
+expectation. So the divergence between that TC and its implementing test is not
+covered by a recorded deviation, and the citation should not be read as
+covering it.
+
+(An earlier revision of this CR claimed the DR was absent. That was wrong: the
+search behind it looked in `_policies/08_Decisions.md`, a path this spec does
+not have, and its fallback did not run — a search that never happened, read as
+evidence of absence. Raised by review on PR #1092.)
 
 ## Timestamps
+
+### Applied-at, after the fact
+
+`Applied at` names the commit carrying the **final** outcome, `f69ea5f`, not the
+first attempt. The distinction matters here because the scope extension's
+outcome reversed twice: `1a6dfee7` added a guard, later drafts replaced it, and
+`f69ea5f` removed it and moved the requirement to #1093. A reader taking
+`cdeebe5e` (the first CR commit) as the applied time would conclude this CR was
+resolved before its result existed.
+
+| commit     | what it applied                                               |
+| ---------- | ------------------------------------------------------------- |
+| `cdeebe5e` | the original record — the contradiction and the deferral      |
+| `1a6dfee7` | the scope extension's first guard, since deleted              |
+| `f69ea5f`  | the final outcome: no guard here, requirements moved to #1093 |
+
+Raised by review on PR #1092, after the timezone correction below.
 
 All times above are **JST (`+09:00`)**, which is this repository's local zone and
 the zone the CR ID's date is taken from. They were first written as a JST wall
