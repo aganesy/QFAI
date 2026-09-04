@@ -157,7 +157,7 @@ npx qfai prototyping iterate --cycle 0 --target-url <url> --force
 which moves `iter-00` to `iter-00.backup-<ISO>` and discards every cycle of
 review already paid for.
 
-Plan for it. `qfai validate --profile prototyping` reports `QFAI-PROT-011` as
+Plan for it. `npx qfai validate --profile prototyping` reports `QFAI-PROT-011` as
 soon as `frozenSurfaceUnion` names a spec that no longer resolves as
 UI-bearing, so the state is visible before the next `iterate` — which is the
 point of no return. Two ways out at that point:
