@@ -784,3 +784,19 @@ export const RULE_ID_ALIASES: readonly string[] = [
   "WAIVER-004",
   "WAIVER-005",
 ];
+
+/**
+ * Codes emitted from `src/cli/`, after `applyWaivers` has run.
+ *
+ * They are deliberately NOT in {@link EMITTED_RULE_CODES}: a waiver naming one
+ * can never match a finding, and registering them would let an unmatchable
+ * waiver be reported as `active`. But they DO exist, and calling them unknown
+ * rules sent an operator looking for a typo — so `applyWaivers` uses this list
+ * to say the true thing instead: the rule exists and no waiver can suppress it,
+ * because it is appended after waiver processing.
+ */
+export const POST_WAIVER_RULE_CODES: readonly string[] = [
+  "QFAI-PROFILE-001",
+  "QFAI-SCAN-001",
+  "QFAI-SCAN-002",
+];
