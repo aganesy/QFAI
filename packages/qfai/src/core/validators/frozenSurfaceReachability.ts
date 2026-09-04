@@ -86,8 +86,8 @@ export async function validateFrozenSurfaceReachability(
         "this is a scope reduction rather than the all-markers-removed drift " +
         "`iterate` hard-stops on. A scope reduction has an in-loop route: " +
         "`qfai prototyping rescope --remove <id> --reason <delta-id>` drops the surface from " +
-        "the frozen union, records why, and leaves the loop at its current cycle. " +
-        `${windowNote}`,
+        "the frozen union, records why, and leaves the loop at its current cycle." +
+        windowNote,
       severity,
       PROTOTYPING_JSON_REL,
       "prototyping.frozenSurfaceUnreachable",
