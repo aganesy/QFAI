@@ -569,6 +569,38 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   片側プラットフォーム盲点そのもの**なので、win32 形式の key を使う回帰行を
   追加し、両プラットフォームで落ちるようにした。 (#1130)
 
+- **網羅を主張する profile が drift gate を走らせておらず、しかもそれを
+  「未評価」として報告することもできなかった。** `QFAI-DRIFT-001` は
+  downstream フェーズが upstream SSOT を直接書き換えたことを検出する唯一の
+  gate で、`drift-protocol.md#non-negotiable-constraints` はその禁止について
+  **「これは検出される」**と書いている。実際に emit するのは `--profile tdd`
+  だけである。それでも `PROFILE_GATE_GROUPS.full = ALL_GATE_GROUPS` であり、
+  さらに `QFAI-DRIFT-*` は `GATE_GROUP_FAMILIES` の**どのエントリにも無い**ため
+  `unevaluatedFamilies()` が名指すこともできなかった。`QFAI-PROFILE-001` 自身の
+  助言（「完了宣言の前に `qfai validate --fail-on error` (full profile) を
+  実行せよ」）に従った作業者は、一度も見ていない実行から PASS を受け取り、
+  そのことを一切知らされない。
+
+  issue が挙げる 2 案のうち後者を採った。opt-out の理由は精査に耐える —
+  `/qfai-sdd` はこれらのファイルの**所有者**で、CR なしに編集するのが設計で
+  あり、その作者も完了前に full profile を実行するよう言われている。`full` に
+  emit させれば、正当な authoring 編集をすべて flag することになり、opt-out が
+  避けている失敗そのものになる。
+
+  そこで `full` は網羅の主張をやめた。`drift` を gate group として追加し、
+  `tdd` だけがそれを評価する profile であることを map に書き、notice が
+  それを名指すようにした。これは defect (2) と同じ欠落エントリなので、
+  1 つの変更で両方が閉じる。
+
+  notice の文言は狭い profile では従来どおり（`tdd` / `sdd` / `discussion` /
+  `atdd` / `saas-package` は実際に partial なので原文が正しい）。`full` /
+  `verify` には専用の文を与えた — 「partial profile」と呼ぶと逆方向に
+  言い過ぎで、読者は残りを探しに行く。また full 実行に対して「full profile を
+  実行せよ」と助言するのは循環なので、その文は落とした。drift には
+  「`npx qfai validate --profile tdd` だけが評価する — どの wide profile も
+  wire しないので `--fail-on error` だけでは決して検査されない」という
+  独自の 1 文を付けた。 (#1122)
+
 - **`QFAI-DRIFT-001` の免除が承認済み CR 全文への substring 一致だったため、
   禁止文が許可として働いていた。** `readApprovedCrText` は `Status: approved`
   の CR **本文全体**を連結し、変更されたパスがその中に現れるかだけを見ていた。
