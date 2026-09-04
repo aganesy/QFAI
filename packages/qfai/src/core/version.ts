@@ -10,7 +10,7 @@ export async function resolveToolVersion(): Promise<string> {
   }
 
   try {
-    const packagePath = resolvePackageJsonPath();
+    const packagePath = await resolvePackageJsonPath();
     const raw = await readFile(packagePath, "utf-8");
     const parsed = JSON.parse(raw) as { version?: unknown };
     const version = typeof parsed.version === "string" ? parsed.version : "";
@@ -32,9 +32,9 @@ export async function resolveToolVersion(): Promise<string> {
  * `.bin` is a different path from the package it forwards to, and the package
  * is the thing whose version was reported.
  */
-export function resolveToolPackageDir(): string | null {
+export async function resolveToolPackageDir(): Promise<string | null> {
   try {
-    return path.dirname(resolvePackageJsonPath());
+    return path.dirname(await resolvePackageJsonPath());
   } catch {
     return null;
   }
@@ -68,7 +68,7 @@ export function resolveToolPackageDir(): string | null {
 export async function locateToolAgainstProject(
   root: string,
 ): Promise<{ packageDir: string; outside: boolean } | null> {
-  const packageDir = resolveToolPackageDir();
+  const packageDir = await resolveToolPackageDir();
   if (packageDir === null) return null;
   const [realRoot, realPackageDir] = await Promise.all([
     toRealPath(path.resolve(root)),
@@ -117,8 +117,71 @@ async function toRealPath(target: string): Promise<string> {
   }
 }
 
-function resolvePackageJsonPath(): string {
+/**
+ * This module's own directory, however it was bundled.
+ */
+function moduleDir(): string {
   const base = import.meta.url;
-  const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
-  return path.resolve(path.dirname(basePath), "../../package.json");
+  return path.dirname(base.startsWith("file:") ? fileURLToPath(base) : base);
 }
+
+/**
+ * The package's own `package.json`, found by walking up rather than counting.
+ *
+ * A fixed `../../package.json` was right for exactly one layout. tsup bundles
+ * the public API to `dist/index.mjs` and the CLI to `dist/cli/index.mjs`, so
+ * two levels up from the former is the directory ABOVE the package —
+ * `/project/node_modules/package.json` for a normal install, whose version and
+ * whose directory are both somebody else's. Source runs from `src/core/` and
+ * the CLI bundle from `dist/cli/` each happened to land right, which is why
+ * nothing caught it.
+ *
+ * The walk stops at the first `package.json` naming this package, so a
+ * consumer's own manifest one level further out cannot be mistaken for it.
+ */
+async function resolvePackageJsonPath(): Promise<string> {
+  const found = await findPackageJsonUpward(moduleDir(), PACKAGE_NAME);
+  if (found === null) {
+    throw new Error(`could not locate ${PACKAGE_NAME}'s package.json above ${moduleDir()}`);
+  }
+  return found;
+}
+
+/**
+ * The nearest `package.json` at or above `startDir` whose `name` is `name`.
+ *
+ * Exported for the reason the fixed depth failed: a test that starts where this
+ * module really lives cannot see a misresolution that only happens in a bundle
+ * layout. Taking the start directory as an argument makes both layouts
+ * reachable.
+ *
+ * Matching on the name is what stops the walk at OUR manifest. A consumer's own
+ * `package.json` sits one level above `node_modules/`, and a depth-counting
+ * resolver returned exactly that.
+ */
+export async function findPackageJsonUpward(
+  startDir: string,
+  name: string,
+): Promise<string | null> {
+  let dir = path.resolve(startDir);
+  for (let depth = 0; depth < 16; depth += 1) {
+    const candidate = path.join(dir, "package.json");
+    try {
+      const parsed = JSON.parse(await readFile(candidate, "utf-8")) as { name?: unknown };
+      if (parsed.name === name) {
+        return candidate;
+      }
+    } catch {
+      // Absent, unreadable, or not JSON: keep walking. A manifest that names
+      // something else is not ours either, and falls through the same way — so
+      // a broken file in the path cannot end the search early.
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/** The name the walk matches on, and the only thing that identifies us. */
+const PACKAGE_NAME = "qfai";

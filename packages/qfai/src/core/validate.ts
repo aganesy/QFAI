@@ -335,20 +335,23 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * internal, so no gate and no pasted evidence block could tell the two apart
  * (#1096).
  *
- * Reported as an observation, not a verdict: the same path test catches a
- * deliberate global install and a hoisted monorepo dependency, which are both
- * fine. The message therefore names both paths and both benign readings, and
- * the rule sits at `warning` through its promotion window.
+ * `info`, at every site, and deliberately off P7's promotion ladder. The same
+ * path test catches a deliberate global install and a dependency hoisted to a
+ * monorepo root, and both of those are correct operation — so a window ending
+ * in `error` would make `--fail-on error` fail for a project doing nothing
+ * wrong, with no way out: `applyWaivers` rejects a waiver against an `error`
+ * finding (`QFAI-WAIVER-002`). This is the shape
+ * `INFO_ONLY_SINCE_BASELINE` exists for, in the words its first member is
+ * described with — it does not claim the tree is wrong, and it is not a gate
+ * waiting to close. Promoting it needs the project's own dependency
+ * declaration to tell an intended resolution from an ambient one, which is
+ * more than a path comparison, and what that would take is recorded in #1108.
  */
 async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   const located = await locateToolAgainstProject(root);
   if (located === null || !located.outside) {
     return [];
   }
-  const promoteAt = RULE_PROMOTIONS.toolResolvedOutsideProject.promoteAt;
-  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
-  const windowNote =
-    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
   return [
     issue(
       "QFAI-TOOL-001",
@@ -356,8 +359,8 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
         `(${root}) の外から解決されています。グローバルインストールや monorepo root への ` +
         `hoist であれば想定どおりです。意図していない場合、npx が bare name を親ディレクトリ` +
         `方向に探索した結果、別のチェックアウト (別ブランチ・別 lockfile) の qfai が ` +
-        `実行されています。${windowNote}`,
-      severity,
+        `実行されています。`,
+      "info",
       undefined,
       "toolProvenance.resolvedOutsideProject",
       [located.packageDir],

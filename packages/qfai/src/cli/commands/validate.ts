@@ -121,6 +121,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // Test callers override; production reads the same package.json#version
   // the rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
+  await emitProvenance(effectiveToolVersion);
   const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
   const legacyWriteEnabled = legacySeverity === "warning";
   // Detect whether the operator's project config still aims the writer
@@ -214,7 +215,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   if (format === "text") {
     emitText(normalized, failOn);
     emitTextRunLog(runLogPath);
-    emitTextProvenance(effectiveToolVersion);
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(
@@ -611,7 +611,7 @@ function emitTextRunLog(runLogPath: string): void {
 }
 
 /**
- * The version and the directory it came from, beside `run-log:`.
+ * The version and the directory it came from — first line of every run.
  *
  * A validate run printed findings, `counts:` and `run-log:` and nothing about
  * its own provenance, while `toolVersion` lived only inside `validate.json` —
@@ -619,9 +619,19 @@ function emitTextRunLog(runLogPath: string): void {
  * `npx qfai` that resolved three directories up, against another branch's
  * lockfile, was indistinguishable in the transcript from one that resolved
  * locally (#1096).
+ *
+ * **Before the work, and in every format.** Printed beside `run-log:` it was
+ * absent from `--format github`, which is the format the shipped SDD loop
+ * prescribes (`skills/qfai-sdd/SKILL.md`, `templates/evidence/sdd-spec.md`), so
+ * the answer was missing from the path the product actually runs. And printed
+ * after `validateProject` returned, it was missing from the run that needs it
+ * most: an old externally-resolved qfai throwing on a newer project structure
+ * left a stack trace and nothing about which binary produced it.
+ *
+ * stdout is safe in both formats — neither puts machine-readable JSON there.
  */
-function emitTextProvenance(toolVersion: string): void {
-  const packageDir = resolveToolPackageDir();
+async function emitProvenance(toolVersion: string): Promise<void> {
+  const packageDir = await resolveToolPackageDir();
   const where = packageDir === null ? "resolution unknown" : packageDir;
   process.stdout.write(`qfai: ${toolVersion} (${where})\n`);
 }

@@ -10,12 +10,13 @@
  * gate gets a code.
  */
 import { describe, expect, it } from "vitest";
-import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import {
   classifyToolLocation,
+  findPackageJsonUpward,
   locateToolAgainstProject,
   resolveToolPackageDir,
 } from "../../src/core/version.js";
@@ -34,12 +35,78 @@ describe("resolveToolPackageDir", () => {
     // The operand the issue proposed was `process.argv[1]`, which under a real
     // install is npm's shim in `.bin` — a different path from the package it
     // forwards to, and not the thing whose version was reported.
-    const packageDir = resolveToolPackageDir();
+    const packageDir = await resolveToolPackageDir();
     expect(packageDir).not.toBeNull();
     expect(path.basename(String(packageDir))).toBe("qfai");
     const { readFile } = await import("node:fs/promises");
     const manifest = await readFile(path.join(String(packageDir), "package.json"), "utf-8");
     expect(JSON.parse(manifest)).toMatchObject({ name: "qfai" });
+  });
+});
+
+describe("findPackageJsonUpward", () => {
+  it("finds the manifest from the CLI bundle's directory", async () => {
+    // `dist/cli/index.mjs` — two levels below the package root, which the
+    // fixed `../../package.json` happened to get right.
+    await withTempDir(async (root) => {
+      const pkg = path.join(root, "node_modules", "qfai");
+      await mkdir(path.join(pkg, "dist", "cli"), { recursive: true });
+      await writeFile(path.join(pkg, "package.json"), JSON.stringify({ name: "qfai" }));
+
+      const found = await findPackageJsonUpward(path.join(pkg, "dist", "cli"), "qfai");
+      expect(found).toBe(path.join(pkg, "package.json"));
+    });
+  });
+
+  it("finds the manifest from the public bundle's directory", async () => {
+    // `dist/index.mjs` — ONE level below the package root. This is the case the
+    // fixed depth got wrong: two levels up from `dist/` is
+    // `<project>/node_modules`, whose `package.json` is somebody else's or
+    // absent, so the reported version and directory were not this package's.
+    await withTempDir(async (root) => {
+      const pkg = path.join(root, "node_modules", "qfai");
+      await mkdir(path.join(pkg, "dist"), { recursive: true });
+      await writeFile(path.join(pkg, "package.json"), JSON.stringify({ name: "qfai" }));
+
+      const found = await findPackageJsonUpward(path.join(pkg, "dist"), "qfai");
+      expect(found).toBe(path.join(pkg, "package.json"));
+    });
+  });
+
+  it("does not stop at the consuming project's own manifest", async () => {
+    // The project one level above `node_modules/` has a `package.json` too, and
+    // it is what a depth-counting resolver returned.
+    await withTempDir(async (root) => {
+      await writeFile(path.join(root, "package.json"), JSON.stringify({ name: "the-project" }));
+      const pkg = path.join(root, "node_modules", "qfai");
+      await mkdir(path.join(pkg, "dist"), { recursive: true });
+      await writeFile(path.join(pkg, "package.json"), JSON.stringify({ name: "qfai" }));
+
+      const found = await findPackageJsonUpward(path.join(pkg, "dist"), "qfai");
+      expect(found).toBe(path.join(pkg, "package.json"));
+    });
+  });
+
+  it("walks past a package.json that is not readable as JSON", async () => {
+    // A broken manifest in the path must not end the search: the answer is
+    // still above it, and stopping would report "resolution unknown" for a
+    // package that is perfectly findable.
+    await withTempDir(async (root) => {
+      const pkg = path.join(root, "qfai");
+      await mkdir(path.join(pkg, "dist"), { recursive: true });
+      await writeFile(path.join(pkg, "dist", "package.json"), "{ not json");
+      await writeFile(path.join(pkg, "package.json"), JSON.stringify({ name: "qfai" }));
+
+      const found = await findPackageJsonUpward(path.join(pkg, "dist"), "qfai");
+      expect(found).toBe(path.join(pkg, "package.json"));
+    });
+  });
+
+  it("returns null when no manifest above the start names the package", async () => {
+    await withTempDir(async (root) => {
+      await writeFile(path.join(root, "package.json"), JSON.stringify({ name: "someone-else" }));
+      expect(await findPackageJsonUpward(root, "qfai")).toBeNull();
+    });
   });
 });
 
@@ -133,7 +200,7 @@ describe("locateToolAgainstProject", () => {
     // against a lexical root reported every project reached through a symlinked
     // path — a macOS `/tmp`, a mapped drive, an `npm link` — as external.
     await withTempDir(async (real) => {
-      const packageDir = String(resolveToolPackageDir());
+      const packageDir = String(await resolveToolPackageDir());
       const link = path.join(real, "link-to-source");
       await symlink(packageDir, link, "junction");
       const viaLink = await locateToolAgainstProject(link);
@@ -144,7 +211,7 @@ describe("locateToolAgainstProject", () => {
   it("returns a package directory a caller can print", async () => {
     await withTempDir(async (root) => {
       const located = await locateToolAgainstProject(root);
-      expect(located?.packageDir).toBe(resolveToolPackageDir());
+      expect(located?.packageDir).toBe(await resolveToolPackageDir());
     });
   });
 });

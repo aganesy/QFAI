@@ -35,7 +35,31 @@
   `outside === false` の assert で、**一度も発火しないルールでも全行通る**。
   この継ぎ目で到達する 4 行を追加し、両方向を変異検査した (強制 off で
   positive 4 行が、強制 on で 7 行が落ちる)。
-  `qfai --version` (#786) と skill 側の worktree ガイダンスは別 issue に残した。
+  provenance 行は **検証開始前** に、かつ **両 format** で出力する。`run-log:` の
+  隣に置くと `--format github` では一切出力されず、出荷 SDD skill と evidence
+  テンプレート (`skills/qfai-sdd/SKILL.md`、`templates/evidence/sdd-spec.md`) は
+  その形式を指定しているため、製品が実際に走る経路で答えが欠けていた。また
+  `validateProject` の後に出力すると、最も必要な実行 — 外部解決された古い qfai が
+  新しいプロジェクト構造で例外を投げる場合 — で stack trace だけが残った。
+  package directory の解決は固定深度 (`../../package.json`) から **上方探索** に
+  変えた。tsup は公開 API を `dist/index.mjs`、CLI を `dist/cli/index.mjs` に
+  別々に bundle するので、前者から 2 階層上は package の **1 つ上**
+  (`/project/node_modules/package.json`) で、報告される版番もディレクトリも
+  別物になる。`resolveToolVersion` に元からあった欠陥で、`src/core/` からも
+  `dist/cli/` からも偶然正しくなるため気付かれていなかった。探索は `name` が
+  `qfai` の manifest で止まるので、`node_modules/` の 1 つ上にある利用側
+  プロジェクトの manifest を取り違えない。
+  severity は `warning` + 昇格窓ではなく **`info` 固定** にした。同じ path 判定は
+  意図的なグローバルインストールと monorepo root への hoist を捉え、どちらも
+  正常運用なので、`error` へ昇格すると何も誤っていないプロジェクトで
+  `--fail-on error` が必ず失敗し、しかも `applyWaivers` は error finding に対する
+  waiver を `QFAI-WAIVER-002` で拒否するため逃げ道が無い。恒久的な `warning` は
+  表現できない (ratchet は post-baseline code に parseable な `promoteAt` を要求
+  するので、登録＝昇格の予約になる)。`INFO_ONLY_SINCE_BASELINE` が
+  まさにこの形のための category で、既存メンバー `QFAI-REVIEW-010` の説明
+  「ツリーが誤っていると主張しない、閉じるべき gate でもない」がそのまま当てはまる。
+  昇格には依存宣言から意図を判別する仕組みが必要で、その要件は #1108 に記録した。
+  `qfai --version` (#786) と skill 側の worktree ガイダンスも別 issue に残した。
   前者は独立した既知 defect、後者はどの解決形を規定するかという判断を伴う。
   (#1096)
 
