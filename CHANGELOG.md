@@ -6,6 +6,34 @@
 
 ### Added
 
+- **`validate.json` を public サーフェスとして文書化し、4 つの矛盾を 1 つの話に
+  そろえた。** それまでこのファイルは同時に 4 つのことだった:
+  **読むことを MUST とされ** (`qfai-verify/SKILL.md:152`、
+  `shared-skill-operating-baseline.md:130`)、**`@api` と宣言され**
+  (`change-classification.md:54`)、**internal で安定契約でないと宣言され**
+  (`README.md:328`)、そして**キーが 1 つも文書化されていなかった**。
+  結果は予測どおりで、findings 配列を探したエージェントは `findings` に手を
+  伸ばし、配列名が `issues` のファイルから `undefined` を得た。
+  public として解決した — skill がエージェントに読ませている以上、README が
+  何と書いていても実質的にサーフェスである。
+  `qfai-verify/references/validate-json-schema.md` を新設し、top level
+  (`toolVersion` / `generatedAt` / `profile` / `issues` / `counts` /
+  `traceability` / `waivers`) と `issues[]` の全キーを、必須と任意を区別して
+  記載した。**何が安定で何が安定でないか**も明記した: キー名・`counts` の形・
+  3 つの severity 値・配列名が `issues` であることは `@api` 経路の対象で、
+  `message` の文面・`issues` の順序・どの任意キーが埋まるかは対象外。
+  `message` で match する consumer は壊れるので `code` で match する。
+  README の internal 宣言は `report.json` / `doctor.json` / `run-*` を残し、
+  `validate.json` を外してスキーマ文書を指すようにした (両 README を整合)。
+  2 つの命令元にはエージェントが探しに行くキーを明記した — waiver の `rule:`
+  は `issues[].code`、判定は `counts`、そして**配列は `findings` ではなく
+  `issues`** であること。
+  提案 (3) の `findings` alias と (4) の `qfai report --format json` 安定
+  クエリ面は入れていない。前者はまさに public にしようとしているサーフェスの
+  スキーマ変更で、後者は新規 CLI 契約である。「どちらなのか」に答えが出た
+  今、両方とも issue 側の判断に残す。
+  (#1102)
+
 - **`R-CERTIFY-VERIFY-CIRCULAR` を `validate` では `info` にし、強制は
   `certify` に残した (`CR-20260904-0004`)。** `error` のままでは
   `/qfai-verify` の Completion Contract が Work Order H 外で満たせなかった。

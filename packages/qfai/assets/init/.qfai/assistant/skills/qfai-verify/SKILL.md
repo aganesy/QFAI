@@ -149,7 +149,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - You MUST run the mandatory checks listed below and record outcomes.
 - **This** gate is full-scan, in CI and everywhere else: `npx qfai validate --profile verify --fail-on error`, or the default `npx qfai validate --fail-on error`. A partial profile does not satisfy it, and no waiver or environment makes it satisfy it. That is a statement about the verification gate, not a ban on narrow profiles in CI: `qfai-discussion`, `qfai-prototyping` and `qfai-atdd` each define a narrow profile as their own stage gate, those runs are legitimate under `CI=true`, and `QFAI-VALIDATE-017` (`warning`) marks them as not-full-scan rather than blocking them. The prototyping carve-out below is a local, pre-`certify` run.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
-- A waiver's `rule:` is the finding's `code`, copied verbatim from `.qfai/report/validate.json` — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form is a back-compat alias only.
+- A waiver's `rule:` is the finding's `code` — `issues[].code` in `.qfai/report/validate.json` (the array is `issues`, not `findings`; keys are documented in `references/validate-json-schema.md`) — copied verbatim — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form is a back-compat alias only.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
 

@@ -325,7 +325,14 @@ validation:
 
 Notes.
 
-- `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
+- `validate.json` is a **public** surface: its keys are documented in
+  `.qfai/assistant/skills/qfai-verify/references/validate-json-schema.md` and a change to
+  them takes the `@api` path (`.qfai/assistant/constitution/change-classification.md`). The
+  skills instruct agents to read it, so it is a contract whether or not this file says so —
+  it used to say the opposite, which left a consumer following the skills depending on
+  something the README disclaimed. `message` text and the order of `issues` are still not
+  stable; match on `issues[].code`
+- `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
 - `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
