@@ -18,7 +18,7 @@ import {
   collectScTestReferences,
 } from "./traceability.js";
 import type { Issue, ValidationCounts, ValidationProfile, ValidationResult } from "./types.js";
-import { resolveToolVersion } from "./version.js";
+import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
@@ -323,6 +323,51 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * failures return `"unknown"`, read as inside the window), so an unreadable
  * version cannot be what escalates this into a build failure.
  */
+/**
+ * A finding when the running qfai was resolved from outside the project root.
+ *
+ * `npx qfai` resolves a bare name by walking PARENT directories for
+ * `node_modules/.bin`, and every shipped skill prescribes exactly that form. A
+ * Claude Code worktree sits three levels below the main checkout, so a worktree
+ * without its own dependencies silently ran the enclosing checkout's binary —
+ * another branch, another lockfile — and the run said nothing about it. The
+ * version was reachable only inside `validate.json`, which the README calls
+ * internal, so no gate and no pasted evidence block could tell the two apart
+ * (#1096).
+ *
+ * Reported as an observation, not a verdict: the same path test catches a
+ * deliberate global install and a hoisted monorepo dependency, which are both
+ * fine. The message therefore names both paths and both benign readings, and
+ * the rule sits at `warning` through its promotion window.
+ */
+async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
+  const located = await locateToolAgainstProject(root);
+  if (located === null || !located.outside) {
+    return [];
+  }
+  const promoteAt = RULE_PROMOTIONS.toolResolvedOutsideProject.promoteAt;
+  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+  const windowNote =
+    severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+  return [
+    issue(
+      "QFAI-TOOL-001",
+      `実行中の qfai (${located.packageDir}) は検証対象のプロジェクト root ` +
+        `(${root}) の外から解決されています。グローバルインストールや monorepo root への ` +
+        `hoist であれば想定どおりです。意図していない場合、npx が bare name を親ディレクトリ` +
+        `方向に探索した結果、別のチェックアウト (別ブランチ・別 lockfile) の qfai が ` +
+        `実行されています。${windowNote}`,
+      severity,
+      undefined,
+      "toolProvenance.resolvedOutsideProject",
+      [located.packageDir],
+      "canonical",
+      "意図した解決であれば無視して構いません。そうでなければ、この作業ツリーで " +
+        "`npm ci` / `pnpm install` を実行してから再実行してください。",
+    ),
+  ];
+}
+
 async function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
@@ -363,6 +408,11 @@ async function runProfileValidators(
   // A CLI-boundary observation, independent of the tree below: it survives the
   // short-circuit so the operator still learns the flag went nowhere.
   const unusedPlatform = await buildUnusedPlatformIssues(profile, platformOption);
+  // Same standing as `unusedPlatform`: a property of the run rather than of the
+  // tree, so it survives the short-circuit below. It is also the finding most
+  // worth keeping when the tree turns out to be damaged — a validate run
+  // against another checkout's qfai explains a whole class of confusing damage.
+  const toolProvenance = await buildToolProvenanceIssues(root);
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -384,9 +434,14 @@ async function runProfileValidators(
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...unusedPlatform, ...surface.issues];
+    return [...toolProvenance, ...unusedPlatform, ...surface.issues];
   }
-  return [...unusedPlatform, ...surface.issues, ...(await runProfileOwnValidators())];
+  return [
+    ...toolProvenance,
+    ...unusedPlatform,
+    ...surface.issues,
+    ...(await runProfileOwnValidators()),
+  ];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {

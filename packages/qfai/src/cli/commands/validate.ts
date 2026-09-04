@@ -20,7 +20,7 @@ import {
 } from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
-import { resolveToolVersion } from "../../core/version.js";
+import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail } from "../lib/failOn.js";
 import { buildTruncatedScanIssue, warnIfTruncated } from "../lib/warnings.js";
 
@@ -214,6 +214,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   if (format === "text") {
     emitText(normalized, failOn);
     emitTextRunLog(runLogPath);
+    emitTextProvenance(effectiveToolVersion);
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(
@@ -609,6 +610,22 @@ function emitTextRunLog(runLogPath: string): void {
   process.stdout.write(`run-log: ${runLogPath}\n`);
 }
 
+/**
+ * The version and the directory it came from, beside `run-log:`.
+ *
+ * A validate run printed findings, `counts:` and `run-log:` and nothing about
+ * its own provenance, while `toolVersion` lived only inside `validate.json` —
+ * which the README calls internal and not a stable external contract. So an
+ * `npx qfai` that resolved three directories up, against another branch's
+ * lockfile, was indistinguishable in the transcript from one that resolved
+ * locally (#1096).
+ */
+function emitTextProvenance(toolVersion: string): void {
+  const packageDir = resolveToolPackageDir();
+  const where = packageDir === null ? "resolution unknown" : packageDir;
+  process.stdout.write(`qfai: ${toolVersion} (${where})\n`);
+}
+
 function emitGitHubOutput(
   result: ValidationResult,
   root: string,
@@ -781,6 +798,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-TOOL-001":
+    "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
     "Every `--platform` given is read by the profile it is given to; the discussion / sdd / atdd / tdd profiles never reach platform detection, so a value passed there changes nothing about the run.",
   "QFAI-TRIAGE-007":

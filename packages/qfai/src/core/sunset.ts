@@ -74,6 +74,15 @@ export const SUNSETS = {
  */
 export const RULE_PROMOTIONS = {
   /**
+   * `QFAI-TOOL-001` — the running qfai was resolved from outside the project
+   * root. The window is doing real work here rather than absorbing a backlog:
+   * the path test also catches a deliberate global install and a hoisted
+   * monorepo dependency, and narrowing it needs the project's dependency
+   * declaration. Two minors at `warning` is the room to find out which of
+   * those operators actually hit.
+   */
+  toolResolvedOutsideProject: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
    * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
    * full minor beyond it.
