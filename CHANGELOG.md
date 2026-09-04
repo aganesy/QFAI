@@ -36,6 +36,36 @@
   「許可キーをメッセージに載せる」提案は既に満たされていた
   (`rejectUnknownKeys` が全 scope 共通で `Allowed: <list>.` を出す)。
   (#1098)
+- **spec-0004 の `review.json` スキーマを出荷バリデータに合わせた
+  (`CR-20260904-0003`)。** 3 箇所で乖離しており、いずれも実装を canonical と
+  する判断（ユーザ）。
+  `AC-0004-0012` は `lap-*` の 8 ID を navigation / interaction の欠陥
+  (orphan-page, deadend-flow, input-trap ...) として列挙していたが、
+  `loadKnownLapIds` が解決する `assets/validators/layoutAntiPatterns.json` は
+  **layout archetype** (saas-dashboard, bento-grid ... 6 件 `layout`、2 件
+  `semantic`) を列挙している。8 件中 7 件に対応が無く、criterion が挙げた ID は
+  `lap-008-no-back-affordance` を除きすべて出荷 gate に reject され、gate が
+  受け付ける ID は同じ 1 件を除きすべて criterion 違反だった。**同じ種類の
+  ものですらない**ため「コードを spec に合わせる」は取れない — 動作している
+  detector 8 件を散文のために消すことになる。criterion をレジストリ参照に変え、
+  撤回した 8 ID を criterion 内に記録した。
+  `AC-0004-0013` の `designMdViolations` は
+  `{category, expected, found, location}` で「余分な field でも reject」と
+  していたが、`prototypingEvidence.ts:79-87` は `{kind, found}` だけを検査し
+  残りは無視する。enum (color/font/radius/shadow) は元から一致していた。
+  `04_Business-Rules.md` / `05_Examples.md` の `prose` は
+  `proseCritique` へ。実装には 17 箇所あり `REVIEW_KNOWN_KEYS` にも入っている
+  ため、spec どおりに書いた payload は **2 回** reject されていた（未知キーと
+  必須キー欠落）。
+  DERIVED 側とテストは無変更 — `06_Test-Cases.md` は criterion を ID で参照し、
+  テストは既に実装の形を assert している（それを canonical にした）。
+  **未決の 2 件**は `08_Open-questions.md` に `OQ-0168` / `OQ-0169` として
+  記録した: navigation 系欠陥の族を別途検出すべきか（撤回した 7 ID には現在
+  detector が無く、意図的に retire されたわけでもない）、reviewer に
+  `expected` / `location` を要求すべきか（gate は両方を落とすので、違反は
+  位置情報なしで報告される）。canonical の選択は「今 gate が何を要求するか」を
+  決めるだけで、「gate が何を要求すべきか」は決めない。
+  (#1105)
 
 - **validate が完走できなかったときに判定を出すようにした (`QFAI-SCAN-002`)。**
   `runValidate` は `validateProject` を try 無しで await していたため、どの
