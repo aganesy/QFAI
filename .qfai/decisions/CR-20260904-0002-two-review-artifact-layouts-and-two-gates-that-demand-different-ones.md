@@ -106,65 +106,73 @@ Applied by hand under the approval above, `confirm-only`:
   `prototypingIterate.ts` stays exactly as it is: it is the mitigation, and
   `OQ-0012-0013` is the record that its comment is load-bearing.
 
-## Scope extension: guard the reachability — measured, and not needed
+## Scope extension: guard the reachability
 
-Approved separately, 2026-09-04, to stop the deferral resting on a comment. The
-work was done and the answer is that **no new guard is warranted**: the trigger
-is already detected by an existing test. This section records the measurement so
-the conclusion is checkable rather than asserted, and so nobody repeats it.
+Approved separately, 2026-09-04, to stop the deferral resting on a comment. It
+took six review rounds to find the condition that is actually correct, and the
+wrong answers are recorded here because each was plausible.
 
-### The contradiction needs a multi-spec frozen set
+### The condition
 
-`certify` hard-fails only a **multi-spec** frozen set on the flat layout; a
-single-spec one takes an info-skip. So while `frozenSpecsCovered` is frozen
-single-spec, no project can reach the state where `validate` and `certify`
-disagree. `prototypingIterate.ts` freezes it single-spec on purpose, and its
-comment cites this contradiction as the reason.
+`validate`'s reviewer-deliverable gate requires the flat `iter-NN/review.json`.
+`certify` branches on `hasPerSpecSubdir` **first**: once a per-spec layout
+exists it validates `iter-NN/spec-NNNN/<screen>.review.json` alone — for a
+single-spec frozen set as much as a multi-spec one. So the gates contradict as
+soon as an iteration carries per-spec artifacts **without** the flat one:
 
-### That freeze is already pinned
+> per-spec present AND flat absent -> the contradiction is live
 
-`TC-0012-0388` seeds a second UI-bearing spec and asserts the frozen set stays
-one entry. Measured by lifting the freeze — making the frozen set
-multi-element — and running both candidates:
+A **dual-write** migration — flat kept, per-spec added — satisfies both gates
+and must not be blocked.
 
-|                   | `TC-0012-0388` | a purpose-built reachability test |
-| ----------------- | -------------- | --------------------------------- |
-| baseline          | green          | green                             |
-| **freeze lifted** | **red**        | **green**                         |
-| restored          | green          | green                             |
+`packages/qfai/tests/cli/commands/prototypingIterate.test.ts` asserts that
+implication over every `iter-NN` directory after a cycle-0 and a cycle-1 run.
 
-The existing test catches it. The purpose-built one does not, because it watched
-for the per-spec layout being _produced_, which is downstream of the freeze
-rather than the freeze itself.
+### Verified in all three directions
 
-### And the proxies were wrong in their own right
+An implication needs all three legs checked, and two earlier drafts of this PR
+shipped a guard that failed one of them:
 
-Four structural drafts were tried and each was defeated in review — by an
-import alias, by an `export *` barrel, by a dynamic `import()`, and finally by
-the observation that `cli/commands/prototypingCertify.ts:702` composes
-`iter-NN/spec-NNNN/<screen>.review.json` from a template string with **zero**
-edges into `core/prototyping/iterationPaths.ts`. That last one was not another
-evasion but a category error: "no module edge" meant "these two helper modules
-are unused", never "the per-spec layout is unreachable", and the counterexample
-was in the tree throughout.
+| produced state                  | expected  | result    |
+| ------------------------------- | --------- | --------- |
+| flat only (status quo)          | green     | green     |
+| **per-spec, no flat**           | **red**   | **red**   |
+| **dual-write: per-spec + flat** | **green** | **green** |
+| restored                        | green     | green     |
 
-The behavioural draft that replaced them asserted "no `iter-NN/spec-NNNN/`
-directory is produced". Review showed that is not the trigger either: a
-**dual-write** migration that keeps the flat `review.json` and adds per-spec
-artifacts satisfies both gates, so the assertion would have blocked a safe
-compatible migration. The trigger is the flat artifact ceasing to be satisfied,
-not a per-spec directory existing.
+### The five wrong answers, and what refuted each
 
-### Conclusion recorded instead of a guard
+| draft                                            | refuted by                                                                                                                                                                                                                                                               |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| calls to two entry points                        | an **import alias** — `src/` carries 51 aliased named imports                                                                                                                                                                                                            |
+| + aliases, namespaces                            | an **`export *` barrel** — `src/` carries 30 star re-exports                                                                                                                                                                                                             |
+| + barrels, forwarding exports                    | a **dynamic `import()`** — used in 9 modules, and `prototypingIterate.ts` already loads six sibling `core/prototyping/*` modules that way                                                                                                                                |
+| module edges into the declaring modules          | a **category error**: `prototypingCertify.ts:702` composes `iter-NN/spec-NNNN/<screen>.review.json` from a template string with **zero** edges into `iterationPaths.ts`. "No module edge" meant "these two helper modules are unused", never "the layout is unreachable" |
+| behavioural: "no per-spec directory is produced" | **dual-write.** That assertion blocks the safe compatible migration; the trigger is the flat artifact ceasing to be satisfied, not a per-spec directory existing                                                                                                         |
+| "no guard needed — `TC-0012-0388` covers it"     | **two mistakes at once**, below                                                                                                                                                                                                                                          |
 
-The reachability is detected by `TC-0012-0388`, and `TC-0012-0388` is a
-`spec-0012` test case — so lifting the freeze cannot be done quietly: it reddens
-that test, and changing the test is an upstream SSOT edit requiring its own
-Change Request. The control the scope extension was meant to add already exists,
-and it is stronger than a test, because it forces the conversation rather than
-only failing.
+### Why "TC-0012-0388 covers it" was wrong
 
-Nothing in `src/`, `.qfai/contracts/**` or the test suite changes for this CR.
+It was tempting: lifting the single-spec freeze reddens `TC-0012-0388`, while
+the purpose-built test stayed green. Both premises behind the conclusion were
+false.
+
+1. **The contradiction does not need a multi-spec frozen set.** `certify`
+   branches on the per-spec layout before it looks at the frozen set, so a
+   single-spec per-spec-only writer contradicts `validate` immediately — with
+   `TC-0012-0388` green throughout.
+2. **Amending `TC-0012-0388` would not require a Change Request.** Its upstream
+   TC (`06_Test-Cases.md:623-629`) asks for **both** spec IDs of the 2-spec
+   fixture in `frozenSpecsCovered`, and `tdd/test-list.md:69` says "full
+   UI-bearing set", while the implementing test asserts one ID. The test
+   contradicts its own TC, so lifting the freeze to match the TC restores
+   conformance rather than departing from it. The "it forces the decision"
+   argument rested on that.
+
+Noted in passing and not chased here: that ledger row cites `DR-0012-0028`,
+which is not present under `.qfai/specs/spec-0012/`.
+
+Nothing in `src/` or `.qfai/contracts/**` changes for this CR.
 
 ## Timestamps
 

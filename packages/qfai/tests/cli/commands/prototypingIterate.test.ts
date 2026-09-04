@@ -1712,6 +1712,83 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
     expect(body.frozenSpecsCovered).toEqual(["0001"]);
   });
 
+  // #1078 / OQ-0012-0013 / CR-20260904-0002. The trigger that ends the
+  // deferral, as the exact condition rather than a proxy for it.
+  //
+  // `validate`'s reviewer-deliverable gate requires the flat
+  // `iter-NN/review.json`. `certify` branches on `hasPerSpecSubdir` first: when
+  // a per-spec layout exists it validates `iter-NN/spec-NNNN/<screen>.review.json`
+  // alone — for a single-spec frozen set as much as a multi-spec one. So the
+  // two gates contradict as soon as an iteration carries per-spec artifacts
+  // WITHOUT the flat one, and a project in that state can satisfy neither.
+  //
+  // Stated as an implication, which is what makes it correct in both
+  // directions:
+  //
+  //   per-spec present  AND  flat absent  ->  the contradiction is live
+  //
+  // A DUAL-WRITE migration — flat kept, per-spec added — satisfies both gates
+  // and is deliberately allowed. An earlier draft asserted "no per-spec
+  // directory exists" and would have blocked exactly that safe path.
+  //
+  // Earlier drafts also tried to catch this structurally, by pinning module
+  // edges into `core/prototyping/iterationPaths.ts`. That measured the wrong
+  // thing: `prototypingCertify.ts` already composes per-spec paths from a
+  // template string and imports none of those helpers, so the layout is
+  // reachable with the edge count at zero.
+  //
+  // And it is not covered by `TC-0012-0388`: that pins `frozenSpecsCovered`,
+  // which this condition does not depend on.
+  it("writes no iteration carrying per-spec review artifacts without the flat one", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const spec0002Dir = path.join(root, ".qfai/specs/spec-0002");
+    await mkdir(spec0002Dir, { recursive: true });
+    await writeFile(
+      path.join(spec0002Dir, "01_Spec.md"),
+      "# 01 Spec — second\n\n- Spec: spec-0002\nsurface_type: ui-bearing\n",
+      "utf-8",
+    );
+
+    // Cycle 0 seeds the loop; cycle 1 is where a reviewer-dispatch wire-in
+    // would run, so both are exercised rather than only the first.
+    expect(
+      await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
+    ).toBe(0);
+    await runPrototypingIterate({ root, cycle: 1, targetUrl: "http://localhost:5173" });
+
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    const iterDirs = (await readdir(evidenceRoot, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && /^iter-\d{2,}$/.test(entry.name))
+      .map((entry) => entry.name)
+      .sort();
+    // A run that produced nothing would satisfy the loop below vacuously.
+    expect(iterDirs.length, "no iter-NN directory was produced to inspect").toBeGreaterThan(0);
+
+    const perSpecWithoutFlat: string[] = [];
+    for (const iterDir of iterDirs) {
+      const entries = await readdir(path.join(evidenceRoot, iterDir), { withFileTypes: true });
+      // The exact shape `certify`'s `hasPerSpecSubdir` decides on.
+      const hasPerSpec = entries.some(
+        (entry) => entry.isDirectory() && /^spec-\d{4}$/.test(entry.name),
+      );
+      const hasFlat = entries.some((entry) => entry.isFile() && entry.name === "review.json");
+      if (hasPerSpec && !hasFlat) perSpecWithoutFlat.push(iterDir);
+    }
+
+    expect(
+      perSpecWithoutFlat,
+      "an iteration carries per-spec review artifacts with no flat review.json beside them, so " +
+        "`certify` (which validates the per-spec layout once it exists) and `validate` (which " +
+        "still requires the flat iter-NN/review.json) now contradict each other: the project can " +
+        "satisfy neither, and certify will not seal while validate reports errors. Note this does " +
+        "NOT fire on a dual-write migration, which keeps the flat artifact and satisfies both. " +
+        "This is NOT a regression to revert — it is the trigger OQ-0012-0013 names. Decide which " +
+        "artifact is canonical, record it against CR-20260904-0002, and then move or delete this " +
+        "test as that decision requires.",
+    ).toEqual([]);
+  });
+
   // QFAI:SPEC-0012:TC-0012-0389
   it("TC-0012-0389 (TDD-0382): cycle 0 writes frozenLicenseCatalog into prototyping.json", async () => {
     const root = await newTempDir();

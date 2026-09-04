@@ -96,29 +96,33 @@
 
 ### Fixed
 
-- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
-  canonical をどちらにするかの判断は**保留**（ユーザ判断）。`validate` は flat な
-  `iter-NN/review.json` を読み、`certify` は multi-spec frozen set に対して per-spec
-  `iter-NN/spec-NNNN/<screen>.review.json` を要求して exit 64 するので、どちらに寄せても
-  certify 不能になる。到達不能性・フィールド対応・3 選択肢の実コスト・保留を終える
-  trigger を記録した。コードと contract は無変更。
-- **「trigger を守るガードを追加する」という scope 拡張は、計測の結果 "不要" が答えだった。**
-  矛盾には **multi-spec frozen set** が必要で（`certify` が hard-fail するのはその場合のみ）、
-  それを防いでいるのは `prototypingIterate.ts` の single-spec 凍結であり、
-  **その凍結は既存の `TC-0012-0388` が既に pin している**。凍結を解除する変異で確認:
-  `TC-0012-0388` は **RED**、一方こちらで用意した到達性テストは **GREEN** のままだった。
-  つまり追加ガードは重要な方向で既存テストより弱かった。
-  さらに Codex レビューで、そのテストは**安全な dual-write 移行で誤って落ちる**ことも
-  判明した（flat を残して per-spec も書けば両ゲートは矛盾しない。trigger は
-  「per-spec が存在すること」ではなく「flat が満たされなくなること」）。
-  構造ガードの 4 稿は別名 / `export *` barrel / 動的 `import()` で順に破られ、
-  4 稿目は別の理由で捨てた — `prototypingCertify.ts:702` が per-spec パスを
-  テンプレート文字列で組み立てて宣言モジュールへの辺を **0 本**しか持たないため、
+- **#1078 の矛盾を `OQ-0012-0013` に記録し、trigger を挙動テストで守るようにした**
+  (`CR-20260904-0002`)。canonical をどちらにするかの判断は**保留**（ユーザ判断）で、
+  コードと contract は無変更。
+  守るべき条件は 6 巡のレビューを経てようやく正しい形に辿り着いた:
+  `certify` は `hasPerSpecSubdir` を**先に**分岐するので、per-spec レイアウトが存在した
+  時点で per-spec ファイルだけを検証する — **single-spec frozen set でも同じ**。
+  一方 `validate` は flat `iter-NN/review.json` を要求し続ける。したがって矛盾は
+  「ある iteration が per-spec 成果物を持ち、flat を持たない」瞬間に成立する:
+  **per-spec present AND flat absent -> 矛盾が live**。
+  `prototypingIterate.test.ts` が cycle 0 と cycle 1 の実行後、全 `iter-NN` に対して
+  この含意を表明する。**dual-write（flat を残して per-spec も書く安全な移行）は
+  意図的に許容**する。3 方向すべてを変異検証済み: per-spec-only は赤、
+  dual-write は緑、flat-only は緑。
+- **上記に至るまでに 5 つの誤答を出した。記録として残す。**
+  構造ガードの 3 稿は **別名 import**（`src/` に 51 件）/ **`export *` barrel**（30 件）/
+  **動的 `import()`**（9 モジュール、しかも `prototypingIterate.ts` は兄弟モジュールを
+  既に 6 回この形で読んでいる）で順に破られた。
+  4 稿目（モジュール辺の pin）はカテゴリエラーだった — `prototypingCertify.ts:702` が
+  per-spec パスをテンプレート文字列で組み立てて辺を **0 本**しか持たないので、
   「辺が無い」は「到達不能」ではなく「この 2 つの helper が未使用」を意味していた。
-  よってガードは追加せず、計測結果を CR に記録した。`TC-0012-0388` は spec-0012 の
-  test case なので、凍結解除は静かには行えない — テストが赤くなり、そのテストの改訂は
-  upstream SSOT 編集として独自の CR を要する。**単に落ちるのではなく、判断を強制する**
-  という点で、追加しようとしたガードより強い統制が既に存在していた。
+  5 稿目（「per-spec ディレクトリを生成しない」）は **dual-write を誤って拒否**した。
+  6 番目の誤答は「ガードは不要、`TC-0012-0388` が既にカバーしている」という結論で、
+  前提が 2 つとも誤りだった: (1) 矛盾は multi-spec frozen set を必要としない
+  （`certify` は frozen set より前に per-spec を分岐するため）、
+  (2) `TC-0012-0388` の改訂は CR を要しない — 上流 TC
+  (`06_Test-Cases.md:623-629`) は 2-spec fixture の **両 ID** を要求しており、
+  実装テストは 1 件しか期待していないので、凍結解除は上流への準拠回復にあたる。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
