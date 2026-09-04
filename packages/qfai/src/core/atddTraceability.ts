@@ -24,8 +24,33 @@ import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
-const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}(?:-\d{4})?)\b/g;
-const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)\b/g;
+// The short form carries `(?!-)`; the long form does not.
+//
+// Written as `(?:-\d{4})?`, the optional half let a test that validates its own
+// annotations — `/^QFAI:SPEC-0001:TC-0001-\d{4}$/`, the shape a self-checking
+// deferral ledger reaches for — match as the FOUR-DIGIT-SHORT prefix of itself:
+// the optional half cannot consume `-\d`, the short form succeeds, and `\b` is
+// satisfied because `-` is not a word character. The scanner then reported a TC
+// id four digits short, unregistered BY CONSTRUCTION because the truncation
+// invented it (#1123).
+//
+// This paragraph deliberately spells no complete short-form id. Naming one
+// would make the comment itself an annotation — the other half of what #1123
+// reports, an explanation of the hazard re-triggering it. The illustration
+// above is safe for the reason the fix turns on: it continues with `-`.
+//
+// Both lengths stay legal: `TC-0001` and `TC-0001-0002` are accepted by
+// `TC_ID_RE`, `TC_REF_SHAPE` and `TC_ID_TOKEN` alike, so requiring eight digits
+// would reject real annotations. What is not legal is a short form the text
+// then continues with `-`, because a real one is followed by whitespace, a
+// quote, `)` or end of line.
+//
+// The guard sits on the short alternative only, so a complete-but-malformed
+// annotation (`TC-0001-0002-foo`) still matches and is still reported as an
+// unknown reference. Trading a false report for a silent miss is the worse
+// direction in a validator.
+const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
+const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 /**
  * `CON-DB-*` annotation, the DB peer of the API form above.
