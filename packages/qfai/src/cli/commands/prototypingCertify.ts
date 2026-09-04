@@ -373,10 +373,17 @@ export async function runPrototypingCertify(
   // pass to surface the same condition.
   const verifyScope = extractString(verifyRead.json, "scope");
   if (verifyScope !== undefined && verifyScope !== "prototyping") {
+    // This is the enforcement for the circular-read class. The validator
+    // finding is `info` because a `scope: "full"` verdict on disk is not damage
+    // — a full-profile run records it truthfully, and making it an `error`
+    // repo-wide left `/qfai-verify` with no honest value to write outside Work
+    // Order H (#1097). Consuming such a verdict here is the actual defect, and
+    // this refuses it.
     error(
       `qfai prototyping certify: ${verifyRead.rel} scope is "${verifyScope}" but the ` +
         'prototyping certify gate accepts only scope="prototyping". ' +
-        "Re-run `/qfai-verify` with the prototyping scope before certification " +
+        "Close the prototyping loop, then re-run `/qfai-verify` for Work Order H so the file " +
+        'records scope="prototyping" before certification ' +
         "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",
     );
     return 2;
