@@ -343,12 +343,12 @@ async function canonicalState(filePath: string): Promise<PathState> {
     // and it was the same failure: re-thrown, it ended `qfai validate` with a
     // stack trace instead of a finding naming a path to repair.
     if (code === "ENOTDIR") return { kind: "not-a-directory" };
-    // `EPERM` from Windows: a component of this path is a FILE symlink whose
-    // target is a directory, which the OS will not follow. Same class again —
-    // the link is intact, the path is unusable, and propagating it ended the
-    // run instead of naming the wrapper to repair. `git worktree add` creates
-    // every `.claude/skills/*` link that way (#1095).
-    if (isEperm(error)) return { kind: "unfollowable" };
+    // No `EPERM` case here on purpose. The condition #1095 is about is a
+    // symlink with the wrong Windows reparse type, and `lstat` **succeeds** on
+    // one of those — it is `stat` that refuses. An `EPERM` reaching this catch
+    // is therefore something else (a permission or filesystem failure on a path
+    // component), and this module's rule is that those propagate rather than
+    // being reported as damage to the thing it inspects.
     throw error;
   }
   if (!entry.isSymbolicLink()) return { kind: "present", stats: entry };
@@ -875,7 +875,17 @@ async function statOrNull(
     // A Windows file symlink pointing at a directory: intact, and unfollowable.
     // The wrapper naming it is as broken as one whose target is missing, and
     // propagating it took `qfai validate` down with no counts (#1095).
-    if (isEperm(error)) return "unfollowable";
+    //
+    // Confirmed against `lstat` first, because this function also inspects a
+    // plain canonical `SKILL.md`. Converting every `EPERM` would turn a
+    // permission or filesystem failure on that file — or on a component above
+    // it — into "a symlink the OS will not follow", which is both the wrong
+    // diagnosis and the wrong repair, and would lose the propagation this
+    // module keeps deliberately.
+    if (isEperm(error)) {
+      const link = await lstatOrNull(filePath);
+      if (link?.isSymbolicLink() === true) return "unfollowable";
+    }
     throw error;
   }
 }
@@ -1274,7 +1284,13 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // and no counts, no finding code and no `validate.json` — a gate with no
       // verdict (#1095).
       const code = (error as NodeJS.ErrnoException | null)?.code;
-      if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR" && !isEperm(error)) {
+      // `EPERM` only when `lstat` confirms this really is a symlink: the
+      // wrapper scan can reach a path that is not one, and an unrelated
+      // permission failure must keep propagating rather than be reported as an
+      // unfollowable link.
+      const unfollowable =
+        isEperm(error) && (await lstatOrNull(wrapper.absolute))?.isSymbolicLink() === true;
+      if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR" && !unfollowable) {
         throw error;
       }
       // The link failing to resolve does not mean the canonical path is
@@ -1295,7 +1311,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
               ? `resolves through a symlink cycle -> ${toPosix(wrapper.target)}`
               : code === "ENOTDIR"
                 ? `a path component of the canonical is not a directory -> ${toPosix(wrapper.target)}`
-                : code === "EPERM"
+                : unfollowable
                   ? `resolves through a symlink the OS will not follow -> ${toPosix(wrapper.target)}`
                   : `dangling -> ${toPosix(wrapper.target)}`,
         // `ENOTDIR` alone, and named at the component that is not a directory

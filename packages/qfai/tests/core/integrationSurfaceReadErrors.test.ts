@@ -220,11 +220,42 @@ describe("a structurally broken target is a finding, not a crash", () => {
       const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
       await mkdir(path.dirname(wrapper), { recursive: true });
       await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
-      statSpy.mockImplementation(() => Promise.reject(errno("EPERM")));
+      // Rejected by PATH, not blanket: a worktree makes the wrapper links
+      // wrong-type and leaves every other path readable. A blanket rejection
+      // also hits the canonical `SKILL.md`, a regular file, where EPERM means
+      // a permission failure and must keep propagating.
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        path.resolve(String(target)) === path.resolve(wrapper)
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
 
       const issues = await validateIntegrationSurface(root);
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
       expect(issues[0]?.message).toContain("will not follow");
+    });
+  });
+
+  it("propagates EPERM on a path that is not a symlink", async () => {
+    // The other half of the rule, and the reason the conversion is confirmed
+    // against `lstat` rather than taken from the errno alone. `statOrNull` also
+    // inspects the canonical `SKILL.md`, a regular file: a permission or
+    // filesystem EPERM there is not "a symlink the OS will not follow", and
+    // reporting it as one would give a wrong diagnosis, a wrong repair, and
+    // would lose the propagation this module keeps deliberately.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        path.resolve(String(target)) === path.resolve(doc)
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      await expect(validateIntegrationSurface(root)).rejects.toMatchObject({ code: "EPERM" });
     });
   });
 

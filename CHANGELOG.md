@@ -121,6 +121,24 @@
   **負のコントロール**も追加した: この rule が検査しないパスからの EPERM
   （skills ディレクトリ自体の `readdir`）は引き続き伝播する — 「失敗している
   filesystem が健全な surface として読まれてはならない」という module の規約を守るため。
+  Codex レビューで 2 件の実在欠陥が出たので併せて直した。
+  1 件目は深刻で、**この finding が印字する修復手順が finding を解消しない**という指摘。
+  `suggested_action` は「`qfai init` を再実行、`--force` は不要」と案内するが、
+  `ensureSymlink` は「entry が symlink かつ `readlink` が一致」なら `--force` 無しで
+  `skipped` を返す — まさにこの wrong-reparse-type がその条件を満たす。
+  Windows worktree の利用者は案内どおりにしてもゲートが赤のままになる。
+  `qfai init` 側を自己修復させた（同じ形の過去事例が flattened link で既に修正済みで、
+  そのコメントが「`skipped` を返したことで修復できず、`--force` が必要なことを誰も
+  操作者に伝えなかった」と記録している）。
+  2 件目は EPERM 変換が広すぎた点。`statOrNull` は通常の canonical `SKILL.md` も検査するため、
+  そのファイルや祖先の権限・filesystem 起因 EPERM まで「OS が追跡できない symlink」に
+  誤変換していた。`lstat` で symlink を確認してから変換するようにし、`lstat` catch 側の
+  変換は削除した（wrong-type symlink では `lstat` は成功するので不要であり、
+  誤診の範囲だけを広げていた）。
+  なお追加テストが**私の修正の別の欠陥**を捕まえた: 修復に `recreateFlattenedLink` を
+  再利用したのは誤りで、あれは「内容がリンク先文字列の通常ファイル」用に hard link と
+  4096 bytes 上限で退避する実装のため symlink には使えない（`link()` が EPERM）。
+  `rm` → `symlink` の既存経路に合流させた。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。

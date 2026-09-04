@@ -28,7 +28,7 @@ import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
-import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
@@ -3182,6 +3182,22 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
 
 const UNREADABLE_OPEN_CODES = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENXIO"]);
 
+/**
+ * Whether `stat` can follow `linkPath`, i.e. whether the OS will resolve it.
+ *
+ * `EPERM` is the Windows answer for a FILE symlink whose target is a directory
+ * (#1095). Every other failure is left to the caller's existing handling: this
+ * asks one question and does not decide what an unreadable path means.
+ */
+async function isFollowable(linkPath: string): Promise<boolean> {
+  try {
+    await stat(linkPath);
+    return true;
+  } catch (error) {
+    return !isEperm(error);
+  }
+}
+
 async function ensureSymlink(
   linkPath: string,
   target: string,
@@ -3196,7 +3212,32 @@ async function ensureSymlink(
       const isValid = path.normalize(currentTarget) === path.normalize(target);
 
       if (isValid && !options.force) {
-        return "skipped";
+        // The target string being right is not the same as the link working.
+        // On Windows a `git worktree add` writes these as FILE symlinks
+        // pointing at directories — at the moment git writes one its target
+        // does not yet exist in the new worktree and it has no reftype hint —
+        // and the OS will not follow that. `readlink` returns the correct
+        // target, so this branch declared the entry sound and changed nothing,
+        // while `qfai validate` reported it as damage. The remedy that finding
+        // prints is "re-run `qfai init`", which landed here and skipped: a
+        // finding an operator cannot clear by following it (#1095).
+        //
+        // Same conclusion as the flattened-link case below, for the same
+        // reason: `qfai init` is the one command that can repair this, so
+        // requiring `--force` — which nothing tells the operator — is not a
+        // remedy. Auto-repair is scoped to a link that is already ours and
+        // already names the right target; only its reparse type is wrong.
+        //
+        // Falls through to the remove-and-recreate below rather than to
+        // `recreateFlattenedLink`: that helper is for a regular FILE whose
+        // content is the target string, and it moves the entry aside under a
+        // rollback built on `link()` and a 4096-byte content check. Neither
+        // applies to a symlink — `link()` on one raises EPERM — so reusing it
+        // turned this repair into a different failure. A symlink needs only
+        // `rm` and `symlink`, which is what `--force` already does.
+        if (await isFollowable(linkPath)) {
+          return "skipped";
+        }
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
