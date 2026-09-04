@@ -77,6 +77,7 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
     only in `Notes` are untraced.
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
+
 ### Citing an ID another spec owns
 
 Layered specs share entities, so "this spec's rule defers to the owner's rule"
@@ -88,20 +89,20 @@ one.
   from the Contracts table of the spec that reads the entity.
 - A foreign-namespace layer ID is an `error` from two rules at once —
   `QFAI-SPACK-101` (namespace) and `TRACE_DOWNSTREAM_REF` (reference direction).
-  Writing *"per BR-0017-0004"* in `04_Business-Rules.md` trips both.
+  Writing _"per BR-0017-0004"_ in `04_Business-Rules.md` trips both.
 
 **Which files the namespace check covers**, measured against
 `validateLayeredNamespace`:
 
-| file | checked | IDs |
-| --- | --- | --- |
-| `02_User-stories.md` | yes | `US` |
-| `03_Acceptance-Criteria.md` | yes | `AC` |
-| `04_Business-Rules.md` | yes | `BR` |
-| `05_Examples.md` | yes | `EX` / `SC` |
-| `06_Test-Cases.md` | yes | `TC` / `CASE` |
-| `09_delta.md` | **no** | a delta records what happened, including another spec's IDs |
-| `10_Plan.md` | **no** | not covered today — see #1101 for whether that is a decision or a gap |
+| file                        | checked | IDs                                                                   |
+| --------------------------- | ------- | --------------------------------------------------------------------- |
+| `02_User-stories.md`        | yes     | `US`                                                                  |
+| `03_Acceptance-Criteria.md` | yes     | `AC`                                                                  |
+| `04_Business-Rules.md`      | yes     | `BR`                                                                  |
+| `05_Examples.md`            | yes     | `EX` / `SC`                                                           |
+| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                         |
+| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs           |
+| `10_Plan.md`                | **no**  | not covered today — see #1101 for whether that is a decision or a gap |
 
 ## ID and Parent Rules (continued)
 
