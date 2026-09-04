@@ -29,6 +29,36 @@
   first-class にするかどうかの判断を伴う。
   (#1101)
 
+- **`QFAI-CONTRACT-040` を、DB 側が ENUM のとき `error` に上げた。**
+  このルールは API 契約が要求する status/state 値を、同名フィールドを宣言する
+  DB 契約が保持できないときに発火する。固定 `warning` だったが、qfai が指示する
+  gate はすべて `--fail-on error` なので何もブロックせず、実プロジェクトでは
+  95 件規模の warning バケットに埋もれ、**制約違反を先に見つけるのは Postgres**
+  だった。
+  issue は「(1) `error` に上げる / (2) どうしても `warning` なら ENUM のときだけ
+  昇格させる」を提案していた。収集器を読んだ結果 **(2) が代替案ではなく本筋**
+  だと判断した。DB 側の domain 収集は 3 形を読む:
+  `CHECK_IN_PATTERN` / `CREATE_TYPE_ENUM_PATTERN` / `INLINE_ENUM_PATTERN`。
+  後 2 者は Postgres ENUM で、domain 外の値は insert 時に拒絶される — つまり
+  両契約を満たす実装は存在せず、これは issue が言うとおり定義上 error である。
+  一方 `CHECK (col IN (...))` は列の物理形ではなく DB が**現在**主張している
+  境界で、drop / 再定義 / `NOT VALID` で外せる。無条件に上げると issue 自身が
+  「soft なケースは soft に保つ」と書いた区別を失う。
+  `DbDomain` はどの形由来かを保持していなかったので `enumBacked` を追加した。
+  1 つのフィールドが両形で束縛されている場合は enum が勝つ — 実装が満たさねば
+  ならないのは最も厳しい制約であり、ENUM 列に冗長な CHECK が付いていても
+  違反は不可能なままである。
+  `collectSqlEnumDomains` の export シグネチャは変えず、形は
+  `collectSqlDomainBounds` という 2 つ目の export で返す。値だけが必要な呼び出し
+  側は無変更。
+  提案 (3) も実装した。remedy は「DB 契約に値を追加するか、API 側の terminal
+  semantics を訂正してください」と**両方向を対称に**提示していて、これは
+  事例で実際に判断を要した点そのものだった。`dbFileList` は既に手元にあるので、
+  ENUM 由来なら「その DB 契約が正」と名指しし、CHECK 由来なら両方向が取れる旨と
+  「所有 spec の Contracts 表で判断する」ことを述べる。message には制約形も
+  載せた — severity がそこで決まるので、`error` と `warning` を見比べた読者が
+  SQL を開かずに理由を知れるようにするため。
+  (#1100)
 - **`R-CERTIFY-VERIFY-CIRCULAR` を `validate` では `info` にし、強制は
   `certify` に残した (`CR-20260904-0004`)。** `error` のままでは
   `/qfai-verify` の Completion Contract が Work Order H 外で満たせなかった。
