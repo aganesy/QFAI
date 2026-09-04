@@ -50,6 +50,7 @@
     "tests/core/findingCodeBaseline.ts",
     "tests/core/findingCodeGrammar.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
+    "tests/core/frozenSurfaceReachability.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",

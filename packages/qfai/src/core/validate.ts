@@ -70,6 +70,7 @@ import {
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
+  validateFrozenSurfaceReachability,
   validatePrototypingDesignContractReadiness,
   validateRootDesignMdParse,
   validateSddDesignContractReadiness,
@@ -641,6 +642,11 @@ async function runPrototypingValidators(
     ...(await validateDesignMdPatchZone(root, config)),
     ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
+    // A screen retired mid-loop leaves `frozenSurfaceUnion` naming a spec that
+    // no longer resolves, and nothing said so: `iterate`'s drift hard-stop only
+    // fires when EVERY UI signal is gone, so the partial case reported
+    // `error=0` over a loop describing a screen that does not exist (#1099).
+    ...(await validateFrozenSurfaceReachability(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
