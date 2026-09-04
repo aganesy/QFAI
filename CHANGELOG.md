@@ -6,6 +6,36 @@
 
 ### Added
 
+- **`discussion` profile が root DESIGN.md の parse を見られるようにした。**
+  `qfai-discussion` は parsable な root DESIGN.md を MUST とし、gate として
+  `--profile discussion` を指定している。しかしその profile が走らせる 5 つの
+  validator (mermaid / pack readiness / visuals / research summary /
+  review artifacts) はどれも DESIGN.md を読まず、`QFAI-DCON-033` は sdd か
+  prototyping の readiness gate からしか実行に載らなかった。つまり
+  **ファイルを author する stage が、そのファイルが parse するかだけ検査されて
+  いなかった** — malformed なファイルは author 時の gate を通り、レビュー 1 巡
+  あとに別の skill の下で表面化していた。
+  parse と lock を分離した。`validateRootDesignMdParse` は parse 半分だけで、
+  lock 比較は入れていない — それは `/qfai-sdd` Phase 0 が解消するもので、
+  discussion 実行を「その stage では直せない理由」で落とすことになる。
+  「ファイルが malformed」と「ファイルが凍結 hash と一致しない」は
+  owner の異なる別の失敗である。
+  `QFAI-DCON-033` の生成は 1 つの builder に集約した。emitter が 2 つになるので、
+  message / rule / remedy が食い違えば自動修復が 1 つの defect に 2 経路を取る。
+  あわせて `design-md-spec.md` に `## accessibility allowed keys` を追加し、
+  `contrast_ratio_min` と `motion` のみで list が **closed** であること、
+  なぜ ignore ではなく reject なのか (dropped directive が lock に hash され、
+  iterate / certify が読む parsed tokens には現れない)、新しい accessibility
+  義務はどこに書くのか (`# Brand Philosophy` 本文 / screen contract の
+  `observable_outcome`) を明記した。
+  issue の提案のうち「失敗を比例的にする」(未知 leaf 1 つで document 全体を
+  落とさない) は **実装しなかった**。`designMd.ts:405-425` が記録している
+  理由が反対に働く — document を parse させて key ごとの finding にすると、
+  lock は parsed tokens が持たない key を凍結し、document と lock は一致するのに
+  どちらも author されたものと一致しない。判断が必要なので issue に報告した。
+  「許可キーをメッセージに載せる」提案は既に満たされていた
+  (`rejectUnknownKeys` が全 scope 共通で `Allowed: <list>.` を出す)。
+  (#1098)
 - **`certify` が封印する evidence と保存済み `validate.json` を関係づけるようにした。**
   それまで `certify` はその file について 3 点しか検査していなかった — 存在、
   `profile` が `prototyping`、`counts.error` が 0

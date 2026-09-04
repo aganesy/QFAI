@@ -44,6 +44,7 @@ export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatt
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
   validatePrototypingDesignContractReadiness,
+  validateRootDesignMdParse,
   validateSddDesignContractReadiness,
 } from "./designContractReadiness.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
