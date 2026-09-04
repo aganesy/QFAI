@@ -6,6 +6,32 @@
 
 ### Added
 
+- **waiver 処理後に追加される finding を「未知の rule」と呼ばないようにした。**
+  `isPostWaiverSource` は `src/cli/` を `EMITTED_RULE_CODES` から意図的に除外
+  している。これは正しい — `applyWaivers` は `core/validate.ts` の中で走るので、
+  `src/cli/` が追加する finding は waiver で抑制できず、登録すると
+  「一致し得ない waiver が active と報告される」ことになる。
+  しかし帰結が operator には**偽の文**として届いていた。`QFAI-WAIVER-004` は
+  「未知の rule '<id>' が指定されています」と言うが、真実は「rule は存在するが、
+  waiver 処理の後に追加されるのでどの waiver とも一致しない」である。
+  `waivers.ts:471-475` は隣接する区別 (「何も emit していない」対「この実行では
+  黙っていた」) を既に書いているが、3 番目の状態 —
+  **emit されているが構造上 waivable でない** — に名前が無かった。
+  「未知の rule」と言われた operator は存在しない typo を探しに行く。remedy も
+  異なる: typo は訂正するもので、これは削除するものである。
+  生成器が 4 つ目の export `POST_WAIVER_RULE_CODES` を出すようにした。除外した
+  code を**登録せずに名指しする**ためのリストで、`EMITTED_RULE_CODES` は不変
+  (waiver が一致するかという問いに対しては、これらは依然 known ではない)。
+  実装中に生成器側の同じ盲点も 1 つ直した: `constants` / `factories` の map は
+  登録対象ソースのみから構築されていたため、post-waiver ファイルが
+  `code: TRUNCATED_SCAN_CODE` のように module-level `const` 経由で code を
+  名指す場合を解決できず、最初は literal で書かれた 1 件しか収集できなかった。
+  両ソース集合から構築するようにして `QFAI-SCAN-001` / `QFAI-SCAN-002` が
+  収集されるようになった。
+  変異検査: post-waiver 分岐を無効化すると 1 行落ちる。negative control
+  (「本当に未知の rule は依然 未知 と言う」) も追加した。
+  (#1110)
+
 - **P7 に「初日から error」を表現する 4 番目の答を追加した
   (`ERROR_FROM_INTRODUCTION`)。** それまで post-baseline な code に対する答は
   3 つしかなかった: 昇格窓 (`RULE_PROMOTIONS`) / ラダー外の `info`
