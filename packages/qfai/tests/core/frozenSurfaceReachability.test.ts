@@ -110,7 +110,18 @@ describe("the frozen surface still resolves", () => {
     // reduction from the all-markers-removed drift and decides the remedy.
     expect(issues[0]?.message).toContain("0002");
     expect(issues[0]?.message).toContain("stopReason=null");
-    expect(issues[0]?.suggested_action).toContain("--cycle 0");
+    // Two routes now, and which one comes first is the point: the row used to
+    // assert `--cycle 0` because the destructive reset was the only way out.
+    const remedy = issues[0]?.suggested_action ?? "";
+    expect(remedy).toContain("rescope --remove");
+    expect(remedy).toContain("--reason");
+    // The fallback is still named, and still named as destructive — dropping
+    // that would hide the cost of the route an operator may still need.
+    expect(remedy).toContain("destructive");
+    expect(remedy).toContain("iter-00.backup");
+    // And the refusal, where the operator reads it: `rescope` will not drop a
+    // surface that still resolves, so it cannot be used by mistake.
+    expect(remedy).toContain("refuses a surface that still");
   });
 
   it("stays silent when every frozen spec still resolves", async () => {

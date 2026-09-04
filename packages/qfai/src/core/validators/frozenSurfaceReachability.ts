@@ -19,24 +19,27 @@
  * branch cannot see: some of the frozen scope is unreachable and the rest is
  * fine, so the precheck's "zero UI-bearing specs resolved" condition is false.
  *
- * A `warning`, not an `error`. The state is real and worth reporting, but the
- * in-loop way out does not exist yet (#1099 proposes a `rescope` operation), so
- * an `error` would fail a gate for a condition whose only remedy is the reset
- * this finding exists to warn about in advance. It says what the loop still
- * believes and what is actually resolvable, which is what the operator needs to
- * decide between reset and restore.
+ * A `warning` behind a promotion window. The route out is
+ * `prototyping rescope --remove <id> --reason <delta-id>` (#1099), which is
+ * non-destructive and leaves the loop at its cycle — so unlike the first
+ * revision of this finding, the window is justified on its own terms rather
+ * than as an apology for having no remedy to offer. What it needs the window
+ * for is the ordinary reason: a project already carrying the state has never
+ * been told, and gets a minor to run the operation before the gate closes.
+ *
+ * The finding and the operation read ONE reader,
+ * `core/prototyping/frozenScope.ts`. `rescope` removes only what this finding
+ * reports, which is what keeps the operation from becoming a way to widen the
+ * frozen scope or to drop a surface whose spec still declares a UI marker —
+ * the drift the exit-2 rule exists to stop.
  */
-import path from "node:path";
-import { readFile } from "node:fs/promises";
-
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
-import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
+import { readFrozenScopeState } from "../prototyping/frozenScope.js";
 import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
-
-const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 
 /** The finding code, exported so a consumer can name it without a literal. */
 export const FROZEN_SURFACE_UNREACHABLE_CODE = "QFAI-PROT-011";
@@ -52,22 +55,11 @@ export async function validateFrozenSurfaceReachability(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const record = await readPrototypingJson(root);
-  if (record === null) return [];
+  const state = await readFrozenScopeState(root, config);
+  if (state === null) return [];
+  if (!state.open) return [];
 
-  const frozen = readStringArray(record.frozenSurfaceUnion);
-  if (frozen.length === 0) return [];
-
-  // A closed loop is history, not a live claim. `stopReason` is what
-  // `reviewerGate.ts` reads to decide the same question, so the two agree.
-  if (typeof record.stopReason === "string" && record.stopReason.length > 0) return [];
-
-  const resolvable = new Set(await resolveAllUiBearingSpecs(root, config));
-  // `frozenSurfaceUnion` stores bare spec numbers (`"0001"`) where the resolver
-  // returns them the same way, so the comparison needs no normalisation — but
-  // it is asserted rather than assumed, because a mismatch in shape would make
-  // every entry look unreachable and turn this finding into noise on every run.
-  const missing = frozen.filter((id) => !resolvable.has(id)).sort();
+  const { frozen, resolvable, missing } = state;
   if (missing.length === 0) return [];
   if (missing.length === frozen.length && resolvable.size === 0) {
     // Every UI signal is gone. `iterate` hard-stops on exactly this with a
@@ -92,53 +84,21 @@ export async function validateFrozenSurfaceReachability(
         `resolve as UI-bearing: ${missing.join(", ")}. The loop is still open ` +
         `(stopReason=null) and ${resolvable.size} of the frozen scope remains reachable, so ` +
         "this is a scope reduction rather than the all-markers-removed drift " +
-        "`iterate` hard-stops on. Retiring a surface mid-loop has no in-loop path today: " +
-        "`iterate --cycle 0 --force` refreezes the scope but moves `iter-00` aside and " +
-        "discards the review already paid for. Restore the removed spec's UI marker to keep " +
-        `the loop, or reset deliberately.${windowNote}`,
+        "`iterate` hard-stops on. A scope reduction has an in-loop route: " +
+        "`qfai prototyping rescope --remove <id> --reason <delta-id>` drops the surface from " +
+        "the frozen union, records why, and leaves the loop at its current cycle. " +
+        `${windowNote}`,
       severity,
       PROTOTYPING_JSON_REL,
       "prototyping.frozenSurfaceUnreachable",
-      missing,
+      [...missing],
       "canonical",
-      "Either restore the retired spec's UI-bearing marker so the frozen scope resolves again, " +
-        "or re-run `qfai prototyping iterate --cycle 0 --target-url <url> --force` and accept " +
-        "that the recorded iterations move to `iter-00.backup-<ISO>`.",
+      "Run `npx qfai prototyping rescope --remove <id> --reason <delta-id>` for each id above, " +
+        "citing the decision that retired it. If the surface was NOT meant to be retired, " +
+        "restore its UI-bearing marker instead — `rescope` refuses a surface that still " +
+        "resolves, so it cannot be used to drop one by mistake. The cycle-0 `--force` reset " +
+        "remains available and remains destructive: it moves the recorded iterations to " +
+        "`iter-00.backup-<ISO>`.",
     ),
   ];
-}
-
-type PrototypingRecord = {
-  frozenSurfaceUnion?: unknown;
-  stopReason?: unknown;
-};
-
-/** The record, or `null` when there is no readable loop state. */
-async function readPrototypingJson(root: string): Promise<PrototypingRecord | null> {
-  let raw: string;
-  try {
-    raw = await readFile(path.join(root, PROTOTYPING_JSON_REL), "utf-8");
-  } catch {
-    // Absent is the normal state for a project with no prototyping loop, and an
-    // unreadable one is `prototyping certify`'s to refuse — this validator has
-    // no frozen scope to check either way.
-    return null;
-  }
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as PrototypingRecord) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** The string entries of `value`, or `[]` when it is not an array of strings. */
-function readStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const out: string[] = [];
-  for (const entry of value) {
-    if (typeof entry !== "string" || entry.length === 0) return [];
-    out.push(entry);
-  }
-  return out;
 }

@@ -7,6 +7,7 @@ import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
+import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import type { ParsedArgs } from "./lib/args.js";
@@ -239,7 +240,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       {
         if (!options.prototypingAction) {
           error(
-            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
+            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec|rescope",
           );
           info(usage());
           process.exitCode = options.invalidExitCode;
@@ -253,6 +254,16 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
             check: Boolean(options.prototypingCheckOnly),
             ...(options.prototypingScope !== undefined ? { scope: options.prototypingScope } : {}),
             ...(options.prototypingUpgradeScopeFull ? { upgradeScopeFull: true } : {}),
+          });
+          return;
+        }
+        if (options.prototypingAction === "rescope") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runPrototypingRescope({
+            root: resolvedRoot,
+            remove: options.rescopeRemove,
+            reason: options.rescopeReason ?? "",
+            dryRun: options.dryRun,
           });
           return;
         }
@@ -343,6 +354,9 @@ Commands:
                                         [--scope <saas-package|full>] scope 限定 certificate を発行
                                         [--upgrade-scope full] scope 限定 certificate を full DONE に昇格
   prototyping show-spec                 解決された primary prototyping spec を出力
+  prototyping rescope --remove <id> --reason <delta-id>
+                                        frozenSurfaceUnion から退役した surface を外す
+                                        (loop は現 cycle のまま。まだ解決する surface は拒否)
 
 Options:
   --root <path>   対象ディレクトリ
@@ -359,9 +373,11 @@ Options:
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
-  --dry-run       init / doctor / handoff upgrade / prototyping iterate: 変更を行わず表示のみ
+  --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: 変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
+  --remove <surface-id>        prototyping rescope: 外す surface id (repeatable)
+  --reason <delta-id>          prototyping rescope: 退役を決めた delta / decision id (必須)
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
   --active                     discussion list: active session pointer を表示
   --strict                     validate: warning 以上で exit 1
