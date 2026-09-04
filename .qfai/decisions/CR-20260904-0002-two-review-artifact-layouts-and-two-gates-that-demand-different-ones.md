@@ -11,7 +11,7 @@
 - Approved option: `record-only (defer the canonical-artifact decision)`
 - Scope extended at: `2026-09-04T07:10:00+09:00` (approved by `yusuke_senaga`) — see
   **Scope extension: the guard is deferred to #1093** below
-- Applied at: `2026-09-04T11:35:00+09:00` (commit `f69ea5f` — see **Timestamps**)
+- Applied at: `2026-09-04` — the record as merged on PR #1092; see **Timestamps**
 - Superseded by: `-`
 
 ## Context
@@ -38,20 +38,29 @@ as upstream SSOT.
 
 ## Reachability, measured
 
-`certify` branches on `hasPerSpecSubdir` **before** it reads the frozen set, so
-once an iteration carries per-spec artifacts it validates those alone — for a
-single-spec frozen set as much as a multi-spec one. `validate` keeps requiring
-the flat `iter-NN/review.json`. So the contradiction is live for an iteration
-that `validate` audits — recorded, non-seed — which carries per-spec artifacts
-and no flat one:
+`validate` requires the flat `iter-NN/review.json` for every recorded non-seed
+iteration. `certify` reaches its layout branch (`prototypingCertify.ts:633`)
+only after loading `validate.json` (`:286-319`) and reading and validating
+`frozenSpecsCovered` (`:586-622`) — so an ordering claim matters here and an
+earlier revision of this CR had it backwards.
+
+What that ordering means in practice: a per-spec-only iteration makes `validate`
+report `prototypingEvidence.review.missing`, and `certify` then refuses at its
+`validate.json#counts.error` check, before its own per-spec gate is consulted at
+all. The per-spec artifacts `certify`'s gate wants are present and cannot help.
+The project can pass neither command:
 
 > per-spec present AND flat absent, on a recorded non-seed iteration
 
 Two consequences worth stating, because earlier revisions of this CR got both
 wrong:
 
-- **it does not need a multi-spec frozen set**, so the single-spec freeze in
-  `prototypingIterate.ts` and `TC-0012-0388` do not prevent it;
+- **it does not need a multi-spec frozen set.** The frozen set is read first,
+  but a well-formed single-spec one passes that check and reaches the layout
+  branch, which then takes the per-spec path. So the single-spec freeze in
+  `prototypingIterate.ts` and `TC-0012-0388` do not prevent this. (A _malformed_
+  frozen set exits 2 earlier and never reaches it — a different failure, not a
+  mitigation.);
 - **dual-write is not the contradiction.** Keeping the flat artifact and adding
   per-spec ones satisfies both gates, so the two layouts are not mutually
   exclusive in every configuration — only per-spec-_only_ is. The wire-in can
@@ -82,7 +91,8 @@ counterpart, which makes "accept both" a contract change rather than a mapping.
 
 ## Decision needed from user
 
-Which review artifact is canonical — per-spec, flat, or both?
+Which review artifact is canonical — per-spec, flat, both — or is the choice
+deferred and only the contradiction recorded?
 
 **Answered: defer.** Record the contradiction and leave code and contracts as
 they are, paying the decision cost when a wire-in needs it.
@@ -91,7 +101,10 @@ they are, paying the decision cost when a wire-in needs it.
 
 1. `/qfai-sdd 0012` rerun scope: **`confirm-only`**. One open-question entry is
    appended by hand under the approval above; no acceptance criterion, business
-   rule, example or test case changes.
+   rule, example or test case changes. Per
+   `constitution/drift-protocol.md` step 4, that rerun's output is the CR
+   reference recorded in the spec's delta log — see
+   `.qfai/specs/spec-0012/09_delta.md`, entry `2026-09-04`.
 2. Downstream ledger sweep: none.
 
 ## Scope extension: the guard is deferred to #1093
@@ -136,9 +149,10 @@ scope extension that recorded an approval after the commit applying it.
 | `Raised at`         | `2026-09-04T05:10:24+09:00` | the correction comment on issue #1078                                       |
 | `Approved at`       | `2026-09-04T05:20:00+09:00` | the conversation turn — the one estimate, bounded by the two rows around it |
 | `Scope extended at` | `2026-09-04T07:10:00+09:00` | the conversation turn approving it                                          |
-| `Applied at`        | `2026-09-04T11:35:00+09:00` | commit `f69ea5f`, which carries the **final** outcome                       |
+| `Applied at`        | `2026-09-04`                | the record as merged on PR #1092                                            |
 
-`Applied at` names the final outcome deliberately. The scope extension's result
-reversed twice — `1a6dfee7` added a guard, later commits replaced it, `f69ea5f`
-removed it and moved the requirement to #1093 — so an earlier commit would
-describe this CR as resolved before its result existed.
+`Applied at` names the merged record rather than a commit hash, deliberately. The
+scope extension's outcome reversed three times on PR #1092 — a guard was added,
+replaced, then removed with its requirement moved to #1093 — and each reversal made a
+previously-correct hash describe this CR as resolved before its result existed. A date
+plus the PR is stable under that; a hash is not.

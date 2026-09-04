@@ -156,7 +156,7 @@
 - Next decision point: Ops gate post-v1 dogfooding.
 - Evidence: discussion-20260516144141078 `11_OQ-Register.md` (OQ-0003 row) and `13_Deferred.md` (OQ-0003 row).
 
-## OQ-0012-0013: a per-spec-only review layout satisfies `certify` and fails `validate`
+## OQ-0012-0013: a per-spec-only review layout fails `validate`, and `certify` will not seal past it
 
 - Gate: implement
 - Disposition: deferred (trigger = a RECORDED non-seed iteration carrying per-spec review artifacts without the flat `review.json`; a dual-write iteration carrying both satisfies each gate and is NOT the trigger, and unrecorded working directories are outside what either gate inspects)
@@ -164,8 +164,8 @@
 - Due: 2026-10-31
 - Severity: medium
 - Source: issue #1078, raised from the review round on PR #1077 (hardening the reviewer-deliverable gate added in #1076).
-- Question: `validate` requires the flat `iter-NN/review.json` while `certify` validates `iter-NN/spec-NNNN/<screen>.review.json` once that layout exists, so an iteration holding per-spec artifacts WITHOUT the flat one satisfies neither. One layout has to be named canonical, or the wire-in has to dual-write.
-  - Reachability: `certify` branches on `hasPerSpecSubdir` BEFORE it reads the frozen set, so this is live for a single-spec frozen set as much as a multi-spec one. The original framing limited it to multi-spec; that was wrong, and the single-spec freeze in `prototypingIterate.ts` is therefore NOT a mitigation for it.
+- Question: `validate` requires the flat `iter-NN/review.json` for every recorded non-seed iteration, while `.qfai/contracts/cli/qfai-prototyping-iterate.md` calls `iter-NN/spec-NNNN/<screen>.review.json` "the sole per-cycle Reviewer artifact" and `certify` has a gate for it. An iteration holding per-spec artifacts WITHOUT the flat one therefore fails `validate`, and `certify` refuses to seal while `validate` reports errors. One layout has to be named canonical, or the wire-in has to dual-write.
+  - Reachability: `certify` reaches its layout branch only after loading `validate.json` and validating `frozenSpecsCovered`, but a well-formed SINGLE-spec frozen set passes both and reaches it. So this is live for a single-spec set as much as a multi-spec one, and the single-spec freeze in `prototypingIterate.ts` is NOT a mitigation. The original framing limited it to multi-spec; that was wrong.
   - `validate --profile prototyping` reads the FLAT `.qfai/evidence/prototyping/iter-NN/review.json` (`validators/prototypingEvidence.ts` via `core/prototyping/iteration.ts#iterationReviewPath`) and validates the `EvaluatorReview` shape.
   - `qfai prototyping certify` requires the PER-SPEC `iter-NN/spec-NNNN/<screen>.review.json` layout (`cli/commands/prototypingCertify.ts`), and `.qfai/contracts/cli/qfai-prototyping-iterate.md` calls that file "the sole per-cycle Reviewer artifact" as REQUIRED, with the `ReviewerPayload` shape.
   - A project satisfying one therefore fails the other, `QFAI-PROT-002` is on `core/prototyping/mode.ts`'s hard-error list so exploration mode does not soften it, and `certify` refuses to seal unless `validate.json#counts.error === 0`. Uncertifiable either way.
@@ -180,6 +180,6 @@
   - B) Flat canonical — retire the per-spec layout and its contract obligation and rewrite `certify`'s multi-spec branch. Contradicts a DR the contract states is preserved.
   - C) Both, explicitly — the gate accepts either. Needs the same contract extension as (A) for the three absent fields, so it is not the smaller step it appears to be.
 - Recommendation: Option A, decided in the same wave as OQ-0012-0006 / 0007 / 0008 rather than before them — all four turn on the same per-spec namespace and a partial cutover leaves the contradiction reachable.
-- Mitigation while deferred: none automated. The single-spec freeze in `prototypingIterate.ts` and `TC-0012-0388` do NOT cover this: `certify` branches on `hasPerSpecSubdir` before it looks at the frozen set, so a per-spec-only writer contradicts `validate` immediately even for a single-spec set, with `TC-0012-0388` green. `CR-20260904-0002` records seven refuted guard drafts and the requirements a correct one must satisfy; it is deferred to a follow-up issue because it needs a fixture exercising the `(spec, screen)` dispatch path, which does not exist until the wire-in lands.
-- Next decision point: the OQ-0012-0006 / 0007 wire-in, which is also when the guard described in `CR-20260904-0002` becomes writable.
+- Mitigation while deferred: none automated. The single-spec freeze in `prototypingIterate.ts` and `TC-0012-0388` do NOT cover this — see Reachability above. **#1093** carries the seven refuted guard drafts and the requirements a correct guard must satisfy, including the negative cases (dual-write, unrecorded working directories, cleanup-helper wire-ins); `CR-20260904-0002` records the decision and points there. The guard needs a fixture exercising the `(spec, screen)` dispatch path, which does not exist until the wire-in lands.
+- Next decision point: the OQ-0012-0006 / 0007 wire-in, which is also when the guard specified in **#1093** becomes writable.
 - Evidence: issue #1078 and its correction comment; `prototypingCertify.ts` multi-spec branch; `prototypingIterate.ts` freeze comment; `validators/prototypingEvidence.ts` flat read path.

@@ -1,5 +1,16 @@
 # 09 delta
 
+## 2026-09-04
+
+- `CR-20260904-0002` (`confirm-only`, `/qfai-sdd 0012`): recorded
+  `OQ-0012-0013` — `validate` requires the flat `iter-NN/review.json` for every
+  recorded non-seed iteration, while `certify` has a gate for
+  `iter-NN/spec-NNNN/<screen>.review.json`, so an iteration holding per-spec
+  artifacts without the flat one fails `validate` and `certify` will not seal
+  past it. Which artifact is canonical is **deferred**; no acceptance criterion,
+  business rule, example or test case changed. The guard for the trigger is
+  specified in issue #1093 and is not shipped.
+
 ## 2026-04-22
 
 - Adopted: reviewer-score centered full-harness evidence schema

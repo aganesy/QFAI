@@ -99,10 +99,11 @@
 - **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
   canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
   いずれも無変更で、変更は記録のみ。
-  記録した到達条件は 9 巡のレビューを経て確定した。`certify` は `hasPerSpecSubdir` を
-  **frozen set より先に**分岐するので、per-spec レイアウトが存在した時点で per-spec
-  ファイルを検証する — **single-spec frozen set でも同じ**。一方 `validate` は flat
-  `iter-NN/review.json` を要求し続ける。よって矛盾は
+  記録した到達条件は 10 巡のレビューを経て確定した。`validate` は記録済み非 seed
+  iteration すべてに flat `iter-NN/review.json` を要求する。`certify` が layout 分岐に
+  到達するのは `validate.json` を読み `frozenSpecsCovered` を検証した後だが、
+  **well-formed な single-spec frozen set はそこを通過して layout 分岐に達する** —
+  したがって single-spec 凍結は緩和策にならない。よって矛盾は
   **「`validate` が監査する記録済み非 seed iteration が per-spec 成果物を持ち、flat を
   持たない」**瞬間に live になる。
   当初の枠組み 2 点は誤りだったので明記する: (1) 矛盾は **multi-spec frozen set を
