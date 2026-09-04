@@ -581,6 +581,47 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
+- **Windows ツリーでは必ず赤く CI では緑になる 2 行を、理由を明記した skip に
+  した。** どちらも POSIX 固有のファイルシステム性質に依存していた。赤い行が
+  2 つあること自体より悪いのは、開発者が作業するプラットフォームで恒常的に
+  赤いスイートは「失敗はノイズ」と読むよう訓練してしまう点である — 実際そう
+  なった（本セッションはこれらと #1130 を数時間「既知の先行失敗」に分類して
+  いた。それは**本物の回帰が見えなくなる**状態である）。
+  1. `tddListDecisionRecord` の `DR-0270-<slug>.md` は Windows では
+     **作成できない**（`<` と `>` はファイル名に使えない）ので、
+     `writeFile` が assertion に到達する前に `ENOENT` を返す。二次的な事実が
+     修正の形を決める: 対象のハザード（未置換の `<slug>` が記録ファイル名に
+     残ること）自体も同じ理由で Windows では**起こり得ない**。`tddList.ts` は
+     その綴り (`DR-<id>-<slug>.md`) をテンプレートとして文書化しているので、
+     広げるべきギャップは無い — ルールがそのプラットフォームで到達不能
+     なのであり、skip は事実を述べている。兄弟フィクスチャ
+     (`DR-0270-.md` / `DR-0270--.md`) は作成可能で全環境で走る。
+  2. `tddListEvidence` の `chmod(file, 0o755)` 後に RED hash が stale に
+     なることを期待する行。Windows の `fs.chmod` は read-only 属性しか
+     切り替えず実行ビットは存在しないので、hash の入力が変わらない。
+  3. `initRoutingMergeRaces` の 2 行。当初「並行性の問題でこのクラスでは
+     ない」と切り分けたが、測ったら同じクラスだった:
+     `restoreOwnership` は `if (process.platform === "win32") return true`
+     で即座に戻る（`init.ts` 自身が「Windows に意味のある `fchown` は無い」と
+     書いている）ので `handle.chown` が呼ばれず、テストが仕込む `EPERM` は
+     起こり得ない。decline が発火せず merge が進む。
+     **うち 1 行はこのクラスで最悪の形**だった —
+     `leaves no staging file behind when it declines` は Windows で
+     **PASS しながら何も検証していなかった**（decline が起きても起きなくても
+     `.tmp` は残らない）。何も証明しない green には、気付くべき失敗が無い。
+
+  機構はリポジトリに既にあった —
+  `it.skipIf(process.platform === "win32")` は `integrationSurface` /
+  `atddCoverageDepth` / `businessFlow` で十数箇所使われている。2 行はそれに
+  倣い、理由がファイル内に書かれるようにした（「どの失敗を無視するか」の
+  記憶ではなく）。
+
+  skip が壊れた行を隠していないことも確認した: 各 skip を強制的に off に
+  すると、失敗理由は**プラットフォーム由来のもの**
+  (`ENOENT` / `expected false to be true` / manifest 内容の不一致) だけである。
+  3 番目の強制実行は、この確認自体の価値も示した —
+  `leaves no staging file behind` は強制実行でも PASS する。 (#1133)
+
 - **finding code の family カバレッジ証明が Windows では一度も走っていなかった
   （CI は green のまま）。** `codesInFile` は解析済みソースをパスで引く:
   `scan.sources.find((c) => c.fileName === file)`。`ts.createSourceFile` は
