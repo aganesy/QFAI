@@ -9,9 +9,18 @@
   cited the same file. All four now name
   `packages/qfai/tests/validators/prototypingEvidence.test.ts`, and one test was
   added there for `EX-0004-0010`'s payload so `TDD-0011`'s selector resolves.
-  Nothing upstream of `tdd/test-list.md` changed, and "v1.x-shaped" in
-  `TC-0004-0011` is not a version check — `EX-0004-0010` defines it as a payload
-  missing the required keys.
+  **Upstream artifacts changed:** `16_Traceability-ledger.md`'s `REQ-0020` row,
+  above. Only `tdd/test-list.md`'s `Test file` column is writable without the
+  drift path; `drift-protocol.md:63-65` puts every other file under
+  `.qfai/specs/**` — this ledger included — under upstream SSOT, so repointing
+  that row is an upstream change and is covered by `CR-20260904-0001`'s approval
+  and by this `confirm-only` rerun. An earlier revision of this entry said
+  "Nothing upstream of `tdd/test-list.md` changed" while recording the ledger
+  edit two sentences above; that was self-contradictory and is withdrawn.
+
+  No DERIVED artifact changed: `03`, `04`, `05` and `06` are untouched, and
+  "v1.x-shaped" in `TC-0004-0011` is not a version check — `EX-0004-0010`
+  defines it as a payload missing the required keys.
 
   **Scope of the confirm-only:** this rerun confirms only that the corrected
   ledger rows describe the tests that exist. It does **not** certify the rest of

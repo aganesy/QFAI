@@ -112,8 +112,10 @@ the discrepancy in `09_delta.md` and leave the row?
 
 ## Approved actions (owner skill rerun plan)
 
-1. `/qfai-sdd 0004` rerun scope: **`confirm-only`**. Nothing upstream of
-   `tdd/test-list.md` changes, so there is no derivation to re-run. The mode
+1. `/qfai-sdd 0004` rerun scope: **`confirm-only`**. One upstream artifact
+   changes — `16_Traceability-ledger.md`'s `REQ-0020` row, which
+   `drift-protocol.md:63-65` places under upstream SSOT — and no DERIVED
+   artifact does, so there is no derivation to re-run. The mode
    confirms that the corrected rows describe tests that exist; it does **not**
    certify the rest of the pack, and three schema divergences found while
    recording this CR are tracked in #1105 rather than resolved here. Per `constitution/drift-protocol.md`
@@ -207,10 +209,20 @@ instant and should not be read as one.
 `Applied at` is when the owner-skill rerun completed and the upstream artifacts
 carried the approved change — `skills/qfai-sdd/templates/change-request.md:20`.
 
-Commits after that point corrected **defects in the applied text**: wording that
-misstated `certify`'s branch order, a table disagreeing with its header, a
-sentence broken by a line-index edit. Those are repairs to the application, not
-new applications, and they do not move `Applied at`. What would move it is a
+Commits after that point corrected **defects in the applied text**: listing this
+CR's delta log in its own impact scope (`ed7fbfbf`, `14:00:16`), withdrawing an
+over-broad claim about the rest of the pack (`1dbf31b8`, `14:19:16`), and this
+correction itself (`3b520550`, `15:21:50`). Those are repairs to the
+application, not new applications, and they do not move `Applied at`.
+
+An earlier revision of this paragraph named the branch-order fix (`86140ff0`,
+`12:21:44`), the duplicate-changelog fix (`2a467621`, `12:35:19`) and the
+repaired sentence (`4551e0de`, `13:18:57`). All three PRECEDE `13:51:07`, so
+they cannot be examples of corrections made after it — they were written while
+`Applied at` still read `12:35`, and moving the value invalidated the paragraph
+that depended on it. Listed here because the failure was not re-reading what a
+corrected field was load-bearing for, which is the same failure the section
+itself is about. What would move it is a
 further approved change to an upstream artifact — there has been none.
 
 A **wrong anchor** is the one other thing that moves it, and is not the same as
