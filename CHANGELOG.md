@@ -96,33 +96,29 @@
 
 ### Fixed
 
-- **#1078 の矛盾を `OQ-0012-0013` に記録し、trigger を挙動テストで守るようにした**
-  (`CR-20260904-0002`)。canonical をどちらにするかの判断は**保留**（ユーザ判断）で、
-  コードと contract は無変更。
-  守るべき条件は 6 巡のレビューを経てようやく正しい形に辿り着いた:
-  `certify` は `hasPerSpecSubdir` を**先に**分岐するので、per-spec レイアウトが存在した
-  時点で per-spec ファイルだけを検証する — **single-spec frozen set でも同じ**。
-  一方 `validate` は flat `iter-NN/review.json` を要求し続ける。したがって矛盾は
-  「ある iteration が per-spec 成果物を持ち、flat を持たない」瞬間に成立する:
-  **per-spec present AND flat absent -> 矛盾が live**。
-  `prototypingIterate.test.ts` が cycle 0 と cycle 1 の実行後、全 `iter-NN` に対して
-  この含意を表明する。**dual-write（flat を残して per-spec も書く安全な移行）は
-  意図的に許容**する。3 方向すべてを変異検証済み: per-spec-only は赤、
-  dual-write は緑、flat-only は緑。
-- **上記に至るまでに 5 つの誤答を出した。記録として残す。**
-  構造ガードの 3 稿は **別名 import**（`src/` に 51 件）/ **`export *` barrel**（30 件）/
-  **動的 `import()`**（9 モジュール、しかも `prototypingIterate.ts` は兄弟モジュールを
-  既に 6 回この形で読んでいる）で順に破られた。
-  4 稿目（モジュール辺の pin）はカテゴリエラーだった — `prototypingCertify.ts:702` が
-  per-spec パスをテンプレート文字列で組み立てて辺を **0 本**しか持たないので、
-  「辺が無い」は「到達不能」ではなく「この 2 つの helper が未使用」を意味していた。
-  5 稿目（「per-spec ディレクトリを生成しない」）は **dual-write を誤って拒否**した。
-  6 番目の誤答は「ガードは不要、`TC-0012-0388` が既にカバーしている」という結論で、
-  前提が 2 つとも誤りだった: (1) 矛盾は multi-spec frozen set を必要としない
-  （`certify` は frozen set より前に per-spec を分岐するため）、
-  (2) `TC-0012-0388` の改訂は CR を要しない — 上流 TC
-  (`06_Test-Cases.md:623-629`) は 2-spec fixture の **両 ID** を要求しており、
-  実装テストは 1 件しか期待していないので、凍結解除は上流への準拠回復にあたる。
+- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
+  canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
+  いずれも無変更で、変更は記録のみ。
+  記録した到達条件は 7 巡のレビューを経て確定した: `certify` は `hasPerSpecSubdir` を
+  **frozen set より先に**分岐するので、per-spec レイアウトが存在した時点で per-spec
+  ファイルだけを検証する — **single-spec frozen set でも同じ**。一方 `validate` は flat
+  `iter-NN/review.json` を要求し続ける。よって矛盾は「ある iteration が per-spec 成果物を
+  持ち、flat を持たない」瞬間に live になり、**`frozenSpecsCovered` には依存しない**。
+- **「trigger を守るガードを追加する」という scope 拡張は本 PR では出荷せず、
+  要件仕様として別 issue に分離した。** 理由は再挑戦より重い:
+  **守る対象の実装が存在しない状態では、正しいガードは書けない。**
+  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の
+  `OQ-0012-0007` である。7 巡で 7 稿を試し、いずれも反証された — 稿の不注意ではなく、
+  どれも「まだ書かれていないコードの形」への推測だったため。
+  最終巡は両方向から同時にそれを示した: fixture は `.qfai/contracts/ui/*.yaml` の screen を
+  1 つも宣言せず `playwrightRunner` も注入しないので、実際の `(spec, screen)` dispatch
+  経路は **0 回**実行され緑のままになる。かつディスク上の全 `iter-NN` を走査するので、
+  iteration を記録する前に作業用 `iter-01/spec-0001/` を作る通常の移行で、
+  **どちらの gate も矛盾していないのに赤くなる**。過敏かつ鈍感で、どちらを直すにも
+  未記述経路のハーネスが要る。
+  反証された **7 稿**とその反証（別名 import / `export *` barrel / 動的 `import()` /
+  カテゴリエラー / dual-write 誤拒否 / 「ガード不要」の 2 つの誤前提）を CR に列挙し、
+  正しいガードが満たすべき要件も明記した。実装と同時に作る。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。

@@ -65,14 +65,15 @@ On `main` at `aa7bcd23`:
 | `OQ-0012-0008` | `open-question` | `parseEvaluatorReview` runtime wire-in reads whichever wins                  |
 
 - Not blocked: no ledger row, test or contract changes. This CR records a
-  deferral; `src/` and `.qfai/contracts/**` are untouched.
+  deferral and, per the scope extension above, ships no guard; `src/`,
+  `.qfai/contracts/**` and the test suite are untouched.
 - Overlapping open CRs: `none`
 
 ## Impact scope
 
 - Specs: `spec-0012` (`08_Open-questions.md` only)
 - Plans: `-`
-- Tests: `-`
+- Tests: `-` (the scope extension's guard is deferred to a follow-up issue)
 - Contracts: `-` (a change would be needed under options A and C; neither is
   chosen here)
 - Schema: `-`
@@ -106,73 +107,64 @@ Applied by hand under the approval above, `confirm-only`:
   `prototypingIterate.ts` stays exactly as it is: it is the mitigation, and
   `OQ-0012-0013` is the record that its comment is load-bearing.
 
-## Scope extension: guard the reachability
+## Scope extension: guard the reachability — moved out, with a specification
 
 Approved separately, 2026-09-04, to stop the deferral resting on a comment. It
-took six review rounds to find the condition that is actually correct, and the
-wrong answers are recorded here because each was plausible.
+is **not delivered here**, and the reason is worth more than another attempt:
 
-### The condition
+**A correct guard for this trigger cannot be written before the implementation
+it guards.** Seven drafts were tried across seven review rounds and each was
+refuted — not by carelessness in the draft, but because every one is a guess
+about the shape of code that does not exist yet. `dispatchReviewerToPair` has
+zero production callers; the wire-in is `OQ-0012-0007`, unimplemented.
 
-`validate`'s reviewer-deliverable gate requires the flat `iter-NN/review.json`.
-`certify` branches on `hasPerSpecSubdir` **first**: once a per-spec layout
-exists it validates `iter-NN/spec-NNNN/<screen>.review.json` alone — for a
-single-spec frozen set as much as a multi-spec one. So the gates contradict as
-soon as an iteration carries per-spec artifacts **without** the flat one:
+The last round made that concrete from both sides at once: the guard's fixture
+declares no `.qfai/contracts/ui/*.yaml` screens and injects no
+`playwrightRunner`, so the real `(spec, screen)` dispatch path would execute
+**zero times** against it and the guard would stay green; and the guard scanned
+every `iter-NN` on disk, while `validate` only requires the flat review for
+**recorded non-seed** iterations and `certify` only inspects the
+`acceptedIterationIndex` directory — so an ordinary migration that creates a
+working `iter-01/spec-0001/` before recording the iteration would have reddened
+it with neither gate contradicting.
 
-> per-spec present AND flat absent -> the contradiction is live
+Under- and over-sensitive at once, and correcting either needs a harness for the
+unwritten path.
 
-A **dual-write** migration — flat kept, per-spec added — satisfies both gates
-and must not be blocked.
+### The seven refuted drafts, as a specification
 
-`packages/qfai/tests/cli/commands/prototypingIterate.test.ts` asserts that
-implication over every `iter-NN` directory after a cycle-0 and a cycle-1 run.
+Each is recorded because together they are the requirement list a correct guard
+has to satisfy:
 
-### Verified in all three directions
+| draft                                                    | refuted by                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| calls to two entry points                                | an **import alias** — `src/` carries 51 aliased named imports                                                                                                                                                                                                                                                                                                                                        |
+| + aliases, namespaces                                    | an **`export *` barrel** — `src/` carries 30 star re-exports                                                                                                                                                                                                                                                                                                                                         |
+| + barrels, forwarding exports                            | a **dynamic `import()`** — used in 9 modules; `prototypingIterate.ts` already loads six sibling `core/prototyping/*` modules that way                                                                                                                                                                                                                                                                |
+| module edges into the declaring modules                  | a **category error**: `prototypingCertify.ts:702` composes `iter-NN/spec-NNNN/<screen>.review.json` from a template string with **zero** edges into `iterationPaths.ts`, so "no edge" meant "these two helpers are unused", never "the layout is unreachable"                                                                                                                                        |
+| "no per-spec directory is produced"                      | **dual-write** — flat kept, per-spec added, both gates satisfied. The assertion would have blocked the safe migration                                                                                                                                                                                                                                                                                |
+| "no guard needed, `TC-0012-0388` covers it"              | **two false premises**: `certify` branches on `hasPerSpecSubdir` _before_ the frozen set, so a single-spec per-spec-only writer contradicts `validate` immediately; and `TC-0012-0388` contradicts its own TC (`06_Test-Cases.md:623-629` asks for **both** spec IDs of the 2-spec fixture, the test asserts one), so lifting the freeze restores conformance rather than requiring a Change Request |
+| "per-spec present AND flat absent", over every `iter-NN` | **scope**: neither gate looks at unrecorded iterations, and the fixture never reaches the dispatch path                                                                                                                                                                                                                                                                                              |
 
-An implication needs all three legs checked, and two earlier drafts of this PR
-shipped a guard that failed one of them:
+### What a correct guard must satisfy
 
-| produced state                  | expected  | result    |
-| ------------------------------- | --------- | --------- |
-| flat only (status quo)          | green     | green     |
-| **per-spec, no flat**           | **red**   | **red**   |
-| **dual-write: per-spec + flat** | **green** | **green** |
-| restored                        | green     | green     |
+- fire when an iteration that `validate` audits carries per-spec artifacts and no flat `review.json`;
+- **not** fire on dual-write, on unrecorded working directories, or on a cleanup-helper wire-in;
+- exercise the real `(spec, screen)` dispatch path — declared screens, an injected runner — rather than a fixture that path never touches;
+- be independent of `frozenSpecsCovered`, and of the route used to write the artifacts.
 
-### The five wrong answers, and what refuted each
+Tracked as a follow-up issue against `OQ-0012-0006` / `0007`, to be built with
+the wire-in rather than ahead of it.
 
-| draft                                            | refuted by                                                                                                                                                                                                                                                               |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| calls to two entry points                        | an **import alias** — `src/` carries 51 aliased named imports                                                                                                                                                                                                            |
-| + aliases, namespaces                            | an **`export *` barrel** — `src/` carries 30 star re-exports                                                                                                                                                                                                             |
-| + barrels, forwarding exports                    | a **dynamic `import()`** — used in 9 modules, and `prototypingIterate.ts` already loads six sibling `core/prototyping/*` modules that way                                                                                                                                |
-| module edges into the declaring modules          | a **category error**: `prototypingCertify.ts:702` composes `iter-NN/spec-NNNN/<screen>.review.json` from a template string with **zero** edges into `iterationPaths.ts`. "No module edge" meant "these two helper modules are unused", never "the layout is unreachable" |
-| behavioural: "no per-spec directory is produced" | **dual-write.** That assertion blocks the safe compatible migration; the trigger is the flat artifact ceasing to be satisfied, not a per-spec directory existing                                                                                                         |
-| "no guard needed — `TC-0012-0388` covers it"     | **two mistakes at once**, below                                                                                                                                                                                                                                          |
+### Impact of this CR, as merged
 
-### Why "TC-0012-0388 covers it" was wrong
+- Specs: `spec-0012` — `08_Open-questions.md` only
+- Tests: none
+- Code, contracts, schema: none
 
-It was tempting: lifting the single-spec freeze reddens `TC-0012-0388`, while
-the purpose-built test stayed green. Both premises behind the conclusion were
-false.
-
-1. **The contradiction does not need a multi-spec frozen set.** `certify`
-   branches on the per-spec layout before it looks at the frozen set, so a
-   single-spec per-spec-only writer contradicts `validate` immediately — with
-   `TC-0012-0388` green throughout.
-2. **Amending `TC-0012-0388` would not require a Change Request.** Its upstream
-   TC (`06_Test-Cases.md:623-629`) asks for **both** spec IDs of the 2-spec
-   fixture in `frozenSpecsCovered`, and `tdd/test-list.md:69` says "full
-   UI-bearing set", while the implementing test asserts one ID. The test
-   contradicts its own TC, so lifting the freeze to match the TC restores
-   conformance rather than departing from it. The "it forces the decision"
-   argument rested on that.
-
-Noted in passing and not chased here: that ledger row cites `DR-0012-0028`,
-which is not present under `.qfai/specs/spec-0012/`.
-
-Nothing in `src/` or `.qfai/contracts/**` changes for this CR.
+Also noted and not chased: the `TC-0012-0388` ledger row cites `DR-0012-0028`,
+which is not present under `.qfai/specs/spec-0012/`, so the divergence between
+that TC and its implementing test is not covered by a recorded deviation either.
 
 ## Timestamps
 
