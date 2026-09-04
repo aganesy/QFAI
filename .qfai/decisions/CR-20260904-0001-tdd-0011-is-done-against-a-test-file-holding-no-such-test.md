@@ -113,8 +113,10 @@ the discrepancy in `09_delta.md` and leave the row?
 ## Approved actions (owner skill rerun plan)
 
 1. `/qfai-sdd 0004` rerun scope: **`confirm-only`**. Nothing upstream of
-   `tdd/test-list.md` changes — `03`, `04`, `05` and `06` are all correct — so
-   there is no derivation to re-run. Per `constitution/drift-protocol.md`
+   `tdd/test-list.md` changes, so there is no derivation to re-run. The mode
+   confirms that the corrected rows describe tests that exist; it does **not**
+   certify the rest of the pack, and three schema divergences found while
+   recording this CR are tracked in #1105 rather than resolved here. Per `constitution/drift-protocol.md`
    step 4, that rerun's output is the CR reference recorded in the spec's delta
    log — see `.qfai/specs/spec-0004/09_delta.md`, entry `2026-09-04`. The mode is the one
    `constitution/drift-protocol.md#when-drift-is-detected` step 4 provides for a
@@ -136,9 +138,14 @@ Applied by hand under the approval above, `confirm-only`:
   naming each missing required key.
 - `.qfai/specs/spec-0004/09_delta.md` — the `2026-09-04` entry recording this CR,
   its mode and its invocation, which is the `confirm-only` rerun's output.
-- No DERIVED upstream artifact is edited: `03_Acceptance-Criteria.md`,
-  `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` are all
-  correct as written, and the "v1.x-shaped" wording is left alone because
+- No DERIVED upstream artifact is edited. `03_Acceptance-Criteria.md`,
+  `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` are correct
+  **on the point this CR is about** — the obligation exists, is implemented, and
+  the defect was which file the ledger cited. They are **not** correct
+  throughout: #1105 records three divergences between this pack's `review.json`
+  schema and the shipped validator, found while recording this CR. An earlier
+  revision of this CR called `03`-`06` "all correct as written", which was wrong
+  and is withdrawn. The "v1.x-shaped" wording is left alone because
   `EX-0004-0010` already defines it.
 
 ## Scope extension

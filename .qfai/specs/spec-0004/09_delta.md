@@ -9,9 +9,20 @@
   cited the same file. All four now name
   `packages/qfai/tests/validators/prototypingEvidence.test.ts`, and one test was
   added there for `EX-0004-0010`'s payload so `TDD-0011`'s selector resolves.
-  Nothing upstream of `tdd/test-list.md` changed: `03`, `04`, `05` and `06` are
-  correct as written, and "v1.x-shaped" in `TC-0004-0011` is not a version check
-  — `EX-0004-0010` defines it as a payload missing the required keys.
+  Nothing upstream of `tdd/test-list.md` changed, and "v1.x-shaped" in
+  `TC-0004-0011` is not a version check — `EX-0004-0010` defines it as a payload
+  missing the required keys.
+
+  **Scope of the confirm-only:** this rerun confirms only that the corrected
+  ledger rows describe the tests that exist. It does **not** certify the rest of
+  the pack. Three divergences between this spec's `review.json` schema and the
+  shipped validator were found while recording it and are tracked in **#1105**:
+  `04:60` / `05:68` name the prose key `prose` where the validator requires
+  `proseCritique`; `03:58` defines `designMdViolations` as
+  `{category, expected, found, location}` where `prototypingEvidence.ts:79-87`
+  checks `{kind, found}`; and seven of `AC-0004-0012`'s eight `lap-*` names
+  differ from `assets/validators/layoutAntiPatterns.json`. Choosing a canonical
+  side for each needs its own Change Request.
 
 ## 2026-04-22
 
