@@ -1818,7 +1818,17 @@ function validateLayeredNamespace(
       "specPack.layered.namespace",
       mismatched,
       "canonical",
-      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。`,
+      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。` +
+        // The old remedy asked the author to do the one thing they cannot: the
+        // mismatched ID belongs to ANOTHER spec, so 「make it match this one」 is
+        // not a repair. The supported form was undiscoverable except by tripping
+        // the validator repeatedly (#1101).
+        "別 spec が所有する ID を参照したい場合は、その spec の contract id " +
+        "(`CON-DB-*` / `CON-API-*` / `CON-UI-*`) を引用してください — `BR-*` / `US-*` などの " +
+        "レイヤー ID を直接参照することはこの検査が禁止します。所有 spec は対象 spec の " +
+        "Contracts 表で特定できます。この検査の対象は 02_User-stories.md / " +
+        "03_Acceptance-Criteria.md / 04_Business-Rules.md / 05_Examples.md / " +
+        "06_Test-Cases.md の 5 ファイルで、09_delta.md は対象外です。",
     ),
   ];
 }
