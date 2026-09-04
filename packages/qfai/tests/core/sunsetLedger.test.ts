@@ -86,6 +86,13 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.
   "QFAI-REVIEW-010",
+  // Which qfai ran, when it was resolved from outside the project root. The
+  // same path test covers a deliberate global install and a dependency hoisted
+  // to a monorepo root, both of which are correct operation, so the finding
+  // reports a fact rather than a defect and there is nothing for a promotion to
+  // close. Telling an intended resolution from an ambient one needs the
+  // project's dependency declaration, not a path comparison — see #1108.
+  "QFAI-TOOL-001",
 ];
 
 // tests/core/<this file> -> packages/qfai
