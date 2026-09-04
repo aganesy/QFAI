@@ -143,6 +143,33 @@ hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0; also
 covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 
+### Scope reduction has no in-loop path
+
+The drift rule above is symmetric, and scope **reduction** is not. When a
+product decision retires a screen while the loop is open, there is no
+subcommand, flag or protocol for "this surface is retired; carry the loop
+forward without it". The only route is a full reset:
+
+```bash
+npx qfai prototyping iterate --cycle 0 --target-url <url> --force
+```
+
+which moves `iter-00` to `iter-00.backup-<ISO>` and discards every cycle of
+review already paid for.
+
+Plan for it. `qfai validate --profile prototyping` reports `QFAI-PROT-011` as
+soon as `frozenSurfaceUnion` names a spec that no longer resolves as
+UI-bearing, so the state is visible before the next `iterate` — which is the
+point of no return. Two ways out at that point:
+
+- **restore** the retired spec's UI-bearing marker, keeping the loop and every
+  recorded iteration; or
+- **reset** deliberately from cycle 0, accepting the backup.
+
+`iterate` itself only hard-stops when **every** UI-bearing spec has
+disappeared. A partial reduction passes that check, which is why the finding
+exists.
+
 ### License-verify hard-stop (exit 66)
 
 `npx qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
