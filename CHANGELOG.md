@@ -6,6 +6,29 @@
 
 ### Added
 
+- **他 spec が所有する ID を参照する正しい形を、finding と参照文書に書いた。**
+  2 つのルールが「他 spec 所有の ID を名指すこと」を `error` にしている
+  (`QFAI-SPACK-101` = namespace、`TRACE_DOWNSTREAM_REF` = 参照方向)。個別には
+  妥当だが、両者が揃うと**よくある状況に表現形が無くなる**。レイヤード spec は
+  entity を共有するので「この spec のルールは所有者のルールに従う」は実在する
+  関係で、素直に「per BR-0017-0004」と書くと `error=0` が `error=2` になる。
+  通る形は所有 spec の **contract id** (`CON-DB-*` / `CON-API-*` /
+  `CON-UI-*`) を引用することだが、それを述べる箇所がどこにも無かった。
+  `QFAI-SPACK-101` の remedy は「ID をこの spec に合わせて修正してください」で、
+  これは**著者にできない唯一のこと**である — その ID は他 spec のものだから。
+  `TRACE_DOWNSTREAM_REF` には remedy が無かった。両方に正しい形を書いた。
+  あわせて `spec-traceability-rules.md` に
+  `### Citing an ID another spec owns` を追加し、namespace 検査が
+  **どのファイルを対象にするか**を実測値で表にした:
+  `02` / `03` / `04` / `05` / `06` は対象、`09_delta.md` は対象外
+  (delta は起きたことを記録するので他 spec の ID を載せられる)、
+  `10_Plan.md` は**現在対象外**。後者は issue が「? 」として保留していた問いで、
+  意図的な決定か抜けかは #1101 に残した。
+  提案 (3) の `[owner:BR-…]` という認可された引用形は実装していない — 2 つの
+  validator・traceability graph・参照文書にまたがる新しい ID 文法で、その関係を
+  first-class にするかどうかの判断を伴う。
+  (#1101)
+
 - **loop 中に退役した surface を検出するようにした (`QFAI-PROT-011`)。**
   cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
   以降の編集は lock drift として `iterate` が exit 2 で止める。drift ルールと
