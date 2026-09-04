@@ -15,7 +15,9 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  classifyAgainstDeclaration,
   classifyToolLocation,
+  findDeclaringDir,
   findPackageJsonUpward,
   locateToolAgainstProject,
   resolveToolPackageDir,
@@ -167,6 +169,126 @@ describe("classifyToolLocation", () => {
   it("does not read a directory merely containing the word as an install", () => {
     const lookalike = at("elsewhere", "node_modules_migration", "qfai");
     expect(classifyToolLocation(at("proj"), lookalike)).toBe(false);
+  });
+});
+
+describe("classifyAgainstDeclaration", () => {
+  // `at` for the same reason the sibling suite uses it: both operands must be
+  // shaped alike on win32, where a bare "/repo" is rooted on the current drive.
+  const at = (...segments: string[]): string => path.resolve(path.join(...segments));
+
+  it("reports the worktree hazard: declared here, running from the enclosing checkout", () => {
+    // The case #1096 was filed for, and the one resolution nobody chose. The
+    // worktree declares qfai; `npx` walked parents and found the enclosing
+    // checkout's copy, so another lockfile decided what gated this project.
+    const declaring = at("repo", ".claude", "worktrees", "w");
+    expect(classifyAgainstDeclaration(declaring, at("repo", "node_modules", "qfai"))).toBe(true);
+  });
+
+  it("reports the _npx cache copy", () => {
+    const cached = at("home", "u", ".npm", "_npx", "0a1b2c3d", "node_modules", "qfai");
+    expect(classifyAgainstDeclaration(at("proj"), cached)).toBe(true);
+  });
+
+  it("reports a global install against a project that declares the dependency", () => {
+    // Benign only when nothing declares it. Here the project DID declare it and
+    // the global copy answered instead, so the gating version is not the one
+    // this project pinned.
+    expect(classifyAgainstDeclaration(at("proj"), at("usr", "lib", "node_modules", "qfai"))).toBe(
+      true,
+    );
+  });
+
+  it("stays quiet for the copy the declaration installs", () => {
+    expect(classifyAgainstDeclaration(at("proj"), at("proj", "node_modules", "qfai"))).toBe(false);
+  });
+
+  it("stays quiet for pnpm's virtual store under the declaring directory", () => {
+    const real = at("proj", "node_modules", ".pnpm", "qfai@1.10.1", "node_modules", "qfai");
+    expect(classifyAgainstDeclaration(at("proj"), real)).toBe(false);
+  });
+
+  it("stays quiet for a hoist to the workspace root that declares it", () => {
+    // The monorepo case. `findDeclaringDir` walks up from the package to the
+    // root that declares, and the hoisted copy is under it — so the declaration
+    // is being honoured, not bypassed.
+    expect(classifyAgainstDeclaration(at("repo"), at("repo", "node_modules", "qfai"))).toBe(false);
+  });
+});
+
+describe("findDeclaringDir", () => {
+  it("finds a declaration in the project's own manifest", async () => {
+    await withTempDir(async (root) => {
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "p", dependencies: { qfai: "^1.10.0" } }),
+        "utf-8",
+      );
+      expect(await findDeclaringDir(root)).toBe(root);
+    });
+  });
+
+  it("walks up to the workspace root that declares it", async () => {
+    // A workspace package can be silent while its root declares, so a manifest
+    // without the dependency is not a stopping point.
+    await withTempDir(async (root) => {
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "root", devDependencies: { qfai: "^1.10.0" } }),
+        "utf-8",
+      );
+      const pkg = path.join(root, "packages", "web");
+      await mkdir(pkg, { recursive: true });
+      await writeFile(path.join(pkg, "package.json"), JSON.stringify({ name: "web" }), "utf-8");
+
+      expect(await findDeclaringDir(pkg)).toBe(root);
+    });
+  });
+
+  it("counts every dependency field", async () => {
+    // A tool in `devDependencies` is as declared as one in `dependencies` — the
+    // project said which copy it wants either way.
+    for (const field of [
+      "dependencies",
+      "devDependencies",
+      "optionalDependencies",
+      "peerDependencies",
+    ] as const) {
+      await withTempDir(async (root) => {
+        await writeFile(
+          path.join(root, "package.json"),
+          JSON.stringify({ name: "p", [field]: { qfai: "^1.10.0" } }),
+          "utf-8",
+        );
+        expect(await findDeclaringDir(root)).toBe(root);
+      });
+    }
+  });
+
+  it("returns null when nothing up the chain declares it", async () => {
+    await withTempDir(async (root) => {
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "p", dependencies: { other: "^1.0.0" } }),
+        "utf-8",
+      );
+      expect(await findDeclaringDir(root)).toBeNull();
+    });
+  });
+
+  it("walks past a manifest that is not readable as JSON", async () => {
+    await withTempDir(async (root) => {
+      const pkg = path.join(root, "packages", "web");
+      await mkdir(pkg, { recursive: true });
+      await writeFile(path.join(pkg, "package.json"), "{ not json", "utf-8");
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "root", dependencies: { qfai: "^1.10.0" } }),
+        "utf-8",
+      );
+
+      expect(await findDeclaringDir(pkg)).toBe(root);
+    });
   });
 });
 

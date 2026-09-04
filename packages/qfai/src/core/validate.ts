@@ -357,14 +357,44 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   if (located === null || !located.outside) {
     return [];
   }
+  // The one resolution nobody chose: a declaration exists and a different copy
+  // answered it. `QFAI-TOOL-001` cannot carry this — it is `info` because the
+  // path test alone admits a deliberate global install and a monorepo hoist,
+  // and those are correct operation. Splitting the code rather than promoting
+  // it is what keeps both statements true (#1108).
+  if (located.declaredElsewhere) {
+    const promoteAt = RULE_PROMOTIONS.toolResolvedAgainstDeclaration.promoteAt;
+    const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+    const windowNote =
+      severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+    return [
+      issue(
+        "QFAI-TOOL-002",
+        `このプロジェクトは qfai を依存として宣言していますが、実行されているのは ` +
+          `${located.packageDir} の別の copy です。宣言が指すディレクトリの外から解決されて` +
+          `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
+          `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
+          `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
+          `走っています。${windowNote}`,
+        severity,
+        undefined,
+        "toolProvenance.resolvedAgainstDeclaration",
+        [located.packageDir],
+        "canonical",
+        "この作業ツリーで `npm ci` / `pnpm install` を実行してから再実行してください。" +
+          "グローバルインストールを意図している場合は、そのプロジェクトから qfai の依存宣言を" +
+          "外してください — 宣言と実行の食い違いが、この finding が報告している状態です。",
+      ),
+    ];
+  }
   return [
     issue(
       "QFAI-TOOL-001",
       `実行中の qfai (${located.packageDir}) は検証対象のプロジェクト root ` +
-        `(${root}) の外から解決されています。グローバルインストールや monorepo root への ` +
-        `hoist であれば想定どおりです。意図していない場合、npx が bare name を親ディレクトリ` +
-        `方向に探索した結果、別のチェックアウト (別ブランチ・別 lockfile) の qfai が ` +
-        `実行されています。`,
+        `(${root}) の外から解決されています。このプロジェクトは qfai を依存として` +
+        `宣言していないため、グローバルインストールか npx による取得が唯一の実行経路で、` +
+        `いずれも意図した選択です。宣言と実行が食い違う場合は別に QFAI-TOOL-002 で` +
+        `報告されます。`,
       "info",
       undefined,
       "toolProvenance.resolvedOutsideProject",

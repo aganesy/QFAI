@@ -67,14 +67,109 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  */
 export async function locateToolAgainstProject(
   root: string,
-): Promise<{ packageDir: string; outside: boolean } | null> {
+): Promise<{ packageDir: string; outside: boolean; declaredElsewhere: boolean } | null> {
   const packageDir = await resolveToolPackageDir();
   if (packageDir === null) return null;
   const [realRoot, realPackageDir] = await Promise.all([
     toRealPath(path.resolve(root)),
     toRealPath(packageDir),
   ]);
-  return { packageDir, outside: classifyToolLocation(realRoot, realPackageDir) };
+  const outside = classifyToolLocation(realRoot, realPackageDir);
+  return {
+    packageDir,
+    outside,
+    // Only asked when the answer can matter. A copy resolved from inside the
+    // project is the declared one by construction, and reading a manifest to
+    // confirm that would be work on every clean run.
+    declaredElsewhere: outside ? await resolvesAgainstDeclaration(realRoot, realPackageDir) : false,
+  };
+}
+
+/**
+ * Whether a `qfai` dependency is declared and the running copy is not it.
+ *
+ * This is the intent signal `outside` cannot carry. A path comparison says the
+ * copy came from outside the project; it cannot say whether that was chosen.
+ * Four resolutions land outside and only two are hazards (#1108):
+ *
+ * - **a declaration exists and the copy is not under it** — the worktree case,
+ *   and the `_npx` cache case. Another checkout's lockfile decided what ran,
+ *   against a project that had said what it wanted. This returns `true`.
+ * - **no declaration anywhere up the chain** — a global install or an `npx`
+ *   fetch is then the only way it could be running, so the operator chose it.
+ * - **the copy is under the directory that declares it** — hoisting to a
+ *   monorepo root, or pnpm's virtual store. The declaration is being honoured.
+ *
+ * The declaring directory is the answer to "what would that declaration
+ * install", which is why containment against it is the test rather than a
+ * version comparison: the version a lockfile pins is not readable from the
+ * running process, and the directory is.
+ */
+async function resolvesAgainstDeclaration(root: string, packageDir: string): Promise<boolean> {
+  const declaringDir = await findDeclaringDir(root);
+  return declaringDir !== null && classifyAgainstDeclaration(declaringDir, packageDir);
+}
+
+/**
+ * Whether `packageDir` lies outside the directory that declared the dependency.
+ *
+ * Pure, and exported for the same reason {@link classifyToolLocation} is: the
+ * package directory a test can observe is where this file really lives, so the
+ * state this predicate exists to detect is unreachable unless the operands can
+ * be handed in.
+ *
+ * Containment rather than a version comparison, because the version a lockfile
+ * pins is not readable from the running process and the directory is. A copy
+ * under the declaring directory is the declared one — npm's `node_modules/qfai`,
+ * or pnpm's `node_modules/.pnpm/...` that Node resolves through.
+ */
+export function classifyAgainstDeclaration(declaringDir: string, packageDir: string): boolean {
+  const relative = path.relative(declaringDir, packageDir);
+  return relative.startsWith("..") || path.isAbsolute(relative);
+}
+
+/**
+ * The nearest directory at or above `root` whose `package.json` declares
+ * `qfai`, or `null` when none does.
+ *
+ * Every dependency field counts. A tool named in `devDependencies` is as
+ * declared as one in `dependencies` — the project said which copy it wants
+ * either way — and `optionalDependencies` / `peerDependencies` are a weaker
+ * statement but still a statement.
+ */
+export async function findDeclaringDir(root: string): Promise<string | null> {
+  let dir = path.resolve(root);
+  for (let depth = 0; depth < 16; depth += 1) {
+    try {
+      const raw = await readFile(path.join(dir, "package.json"), "utf-8");
+      if (declaresQfai(JSON.parse(raw))) return dir;
+    } catch {
+      // Absent, unreadable, or not JSON: keep walking. A manifest that does not
+      // declare the tool is not a stopping point either — a workspace package
+      // can be silent while its root declares.
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/** Whether `manifest` names {@link PACKAGE_NAME} in any dependency field. */
+function declaresQfai(manifest: unknown): boolean {
+  if (typeof manifest !== "object" || manifest === null) return false;
+  const fields = [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ] as const;
+  const record: Record<string, unknown> = manifest as Record<string, unknown>;
+  for (const field of fields) {
+    const deps = record[field];
+    if (typeof deps === "object" && deps !== null && PACKAGE_NAME in deps) return true;
+  }
+  return false;
 }
 
 /**
