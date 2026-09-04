@@ -1,4 +1,4 @@
-import type { Issue, ValidationResult } from "../../core/types.js";
+import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
 
 import { warn } from "./logger.js";
 
@@ -71,5 +71,102 @@ export function withTruncatedScanIssue(
     ...result,
     issues: [...result.issues, issue],
     counts: { ...result.counts, warning: result.counts.warning + 1 },
+  };
+}
+
+export const INCOMPLETE_RUN_CODE = "QFAI-SCAN-002";
+
+/**
+ * The verdict for a run that could not finish.
+ *
+ * `runValidate` awaited `validateProject` with no `try`, so an fs error from
+ * any validator reached `cli/index.ts` as a single stderr line: no `counts:`,
+ * no `run-log:`, no `validate.json`. Every shipped skill pipes validate through
+ * `| tail`, so that line was all an agent saw where a gate verdict belonged.
+ *
+ * Same argument as {@link buildTruncatedScanIssue} above, one step further. An
+ * incomplete scan is a claim about part of the repository; an incomplete RUN is
+ * no claim at all, and it has to be reachable from `--fail-on`, the annotation
+ * stream and the run-log rather than from stderr.
+ *
+ * **`error`, with no promotion window, deliberately.** P7 ships a new code
+ * behind a window, and `sunsetLedger.test.ts` enforces that a registered entry
+ * DECIDES the severity through `newRuleSeverity` — so registering this one
+ * would make it a `warning` until the promotion. A `warning` exits 0 under the
+ * default `--fail-on error`, which would turn a crash into a pass: strictly
+ * worse than the bare stderr line this replaces, which at least exited 1. The
+ * window also has no backlog to absorb, because the condition crashes the run
+ * today and no project is passing in this state. Same shape as
+ * {@link TRUNCATED_SCAN_CODE} above, which likewise fixes its own severity.
+ * That P7 cannot express "an error from day one" is a gap in the policy rather
+ * than a property of this finding: filed as #1111. The reason nothing currently
+ * asks the question is that the registry's extractor cannot see either scan
+ * code — #1110 — so this severity should become a decision rather than an
+ * omission when that is fixed.
+ *
+ * The errno and the path go in the message because that is what makes the cause
+ * actionable — a Windows `git worktree` writes `.claude/skills/*` as FILE
+ * symlinks to directories and `stat` answers `EPERM` for every one of them, and
+ * "operation not permitted" alone named neither the syscall nor the entry.
+ */
+export function buildIncompleteRunIssue(error: unknown, context: string): Issue {
+  const errno = error as NodeJS.ErrnoException | null;
+  const code = typeof errno?.code === "string" ? errno.code : "unknown";
+  const at = typeof errno?.path === "string" ? ` (${errno.path})` : "";
+  const detail = error instanceof Error ? error.message : String(error);
+  return {
+    code: INCOMPLETE_RUN_CODE,
+    severity: "error",
+    category: "canonical",
+    message:
+      `${context}: 検証を完走できませんでした — ${code}${at}。` +
+      `この実行結果は「問題なし」ではなく「未判定」です: ${detail}`,
+    rule: "validate.runIncomplete",
+    ...(typeof errno?.path === "string" ? { file: errno.path } : {}),
+    suggested_action:
+      "報告されたパスを確認してください。Windows の git worktree では " +
+      ".claude/skills/* が directory を指す FILE symlink になり stat が EPERM を返します — " +
+      "その場合は作業ツリーで `qfai init` を再実行してください。",
+  };
+}
+
+/**
+ * A result shell for a run that produced none.
+ *
+ * Every count is zero except the one finding, and coverage is zeroed rather
+ * than omitted, so `validate.json` is well-formed for its readers and cannot be
+ * mistaken for a clean run: the `error` count is non-zero and the finding says
+ * why.
+ *
+ * The counts are DERIVED from the issue's severity, not written beside it. An
+ * earlier revision hardcoded `error: 1`, and a mutation that turned the finding
+ * into a `warning` left the counts saying `error: 1` with no error-severity
+ * issue in the list — a `validate.json` its readers would find inconsistent,
+ * and a run that failed for a reason the output no longer showed.
+ */
+export function incompleteRunResult(
+  toolVersion: string,
+  issue: Issue,
+  profile?: ValidationProfile,
+): ValidationResult {
+  return {
+    toolVersion,
+    ...(profile ? { profile } : {}),
+    issues: [issue],
+    counts: {
+      info: issue.severity === "info" ? 1 : 0,
+      warning: issue.severity === "warning" ? 1 : 0,
+      error: issue.severity === "error" ? 1 : 0,
+    },
+    traceability: {
+      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+      testFiles: {
+        globs: [],
+        excludeGlobs: [],
+        matchedFileCount: 0,
+        truncated: false,
+        limit: 0,
+      },
+    },
   };
 }

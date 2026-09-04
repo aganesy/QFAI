@@ -43,6 +43,7 @@
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/cli/doctorContractSurface.test.ts",
+    "tests/cli/validateRunIncomplete.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
     "tests/core/bpApDb.test.ts",
