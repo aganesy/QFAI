@@ -109,57 +109,84 @@ Applied by hand under the approval above, `confirm-only`:
 ## Scope extension: guard the reachability
 
 Approved separately, 2026-09-04. The canonical-artifact decision stays
-deferred — nothing below changes it — but the deferral is now **guarded**
-rather than resting on a comment.
+deferred — nothing here changes it — but the deferral is now **guarded** rather
+than resting on a comment.
 
-Before this, three things held the contradiction apart and only two of them
-could fail:
+Before this, four things held the contradiction apart and only three could fail:
 
 | held apart by                                                     | covered?                                                                     |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `certify` exits 64 for a multi-spec frozen set on the flat layout | yes — `frozenSpecsCovered: ["0012", "0007"]` in `prototypingCertify.test.ts` |
 | the flat gate reports `prototypingEvidence.review.missing`        | yes — `prototypingEvidence.test.ts`                                          |
 | `iterate` freezes `frozenSpecsCovered` single-spec                | yes — `TC-0012-0388` seeds a second UI-bearing spec and asserts one entry    |
-| **the per-spec entry points have no production caller**           | **no — nothing failed when that changed**                                    |
+| **the per-spec layout is not reachable from production code**     | **no — nothing failed when that changed**                                    |
 
-The last row was the gap: a wire-in of `iterationReviewPathPerSpec` or
-`dispatchReviewerToPair` would make the contradiction live on real projects,
-and no test would say so. `OQ-0012-0013` named that as the trigger ending the
-deferral, but naming a trigger is not detecting it.
+The last row was the gap. `OQ-0012-0013` named that reachability as the trigger
+ending the deferral, but naming a trigger is not detecting it.
 
-`packages/qfai/tests/unit/reviewLayoutContradiction.test.ts` adds two rows:
+`packages/qfai/tests/unit/reviewLayoutContradiction.test.ts` adds three rows:
 
-1. no production module calls either per-spec entry point;
-2. the reviewer-deliverable gate still calls `iterationReviewPath` (the flat
-   helper) and does not call `iterationReviewPathPerSpec` — so the gate cannot
-   move to the per-spec layout without the record being updated.
+1. **no production module takes a runtime import or re-export edge into
+   `core/prototyping/iterationPaths.ts` or `core/prototyping/reviewerDispatch.ts`**,
+   beyond the layout-neutral cleanup helpers `findStaleIterDirs` /
+   `deleteStaleIterDirs`. Measured on the tree at the time: **zero** such edges,
+   so the invariant is "still zero" rather than an allowlist of tolerated ones;
+2. **the exported surface of those two modules is pinned** — the supply side, so
+   a forwarding `export const x = iterationReviewPathPerSpec` is caught where it
+   is written rather than only where it is used;
+3. **`validateIterationReviewArtifacts` still reads the flat layout** and has not
+   taken up the per-spec surface — resolved through the import binding, so an
+   alias of the same helper is still the same helper.
 
-Neither row asserts the contradiction is acceptable. Each failure message says
-the decision now has to be made, names this CR and `OQ-0012-0013`, and says the
+Neither the contradiction nor its deferral is asserted to be acceptable. Each
+failure message names the decision, this CR and `OQ-0012-0013`, and says the
 guard should be moved or deleted as that decision requires — rather than telling
 the reader to revert.
 
 Existing coverage is not duplicated: the three covered rows above already have
 behaviour tests, and this file asserts none of them.
 
-The rows find call sites with the TypeScript parser rather than by reducing the
-source and matching a regex. The first draft did the latter and two things were
-wrong with it: no module in `src/` names either helper with an argument list in
-prose, so the reduction was doing no work at all here; and matching `NAME(`
-also matched the DECLARATIONS, which forced an exemption for the declaring
-modules — an exemption that would then have hidden a caller added _inside_ one
-of them, a plausible way for a wire-in to begin. A declaration is not a
-`CallExpression` and comments never enter the AST, so the parser needs neither
-exemption. Same lesson as #1061 and #1089.
+### Why module edges rather than call shapes
 
-Verified by mutation, since a guard meant to sit dormant is exactly the kind
-whose broken predicate goes unnoticed:
+Two earlier drafts chased the shape of the use — `name(…)`, then that plus
+aliases and namespaces — and review found a further evasion each time: an
+`export *` barrel, and a forwarding export inside the declaring module that has
+no call at all. Chasing shapes loses, because there is always one more.
 
-| mutation                                                        | result          |
-| --------------------------------------------------------------- | --------------- |
-| a production module starts calling `iterationReviewPathPerSpec` | **row 1 fails** |
-| the gate stops calling `iterationReviewPath`                    | **row 2 fails** |
-| restored                                                        | **both pass**   |
+The module edge is the choke point: nothing in those modules can be used without
+an edge into them, whatever it is later renamed to, assigned into or
+re-published through, and a barrel chain is caught at its first link where the
+barrel itself takes the edge.
+
+Two false-positive directions are excluded deliberately, because a guard that
+blocks a change which cannot make the contradiction live is as broken as one
+that misses a change that can:
+
+- **type-only imports** (`import type { X }` and `import { type X }`) bind
+  nothing at runtime;
+- **an alias of the flat helper** in the gate is the same helper, so row 3
+  resolves the callee through the import binding instead of comparing names.
+
+### Verified by mutation
+
+A guard meant to sit dormant is exactly the kind whose broken predicate goes
+unnoticed, so every row was run against the thing it guards actually happening,
+and against the shapes it must tolerate. All sixteen rows behaved as specified:
+
+| shape                                         | expected  | result |
+| --------------------------------------------- | --------- | ------ |
+| plain / aliased / namespace import            | red       | red    |
+| assigned-then-called                          | red       | red    |
+| named re-export                               | red       | red    |
+| `export *` barrel reached by `import * as`    | red       | red    |
+| forwarding export inside the declaring module | red       | red    |
+| new internal wrapper                          | red       | red    |
+| gate drops the flat helper                    | red       | red    |
+| gate adopts the per-spec helper               | red       | red    |
+| `import type` / `import { type … }`           | **green** | green  |
+| flat helper imported under an alias           | **green** | green  |
+| a cleanup helper wired in                     | **green** | green  |
+| baseline, and after restore                   | green     | green  |
 
 ## Timestamps
 

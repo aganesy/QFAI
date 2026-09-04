@@ -96,6 +96,29 @@
 
 ### Fixed
 
+- **同ガードを Codex 2 巡目の指摘 5 件（P2 x4 / P3 x1）で作り直した。**
+  1 巡目で「呼び出しの形」を別名・namespace まで追えるようにしたが、2 巡目で
+  さらに 2 つの回避が見つかった: `export * from` の barrel 経由と、宣言モジュール内の
+  `export const forwarded = watched`（呼び出しが 1 つも無い）。**形を追う限り必ず次の形が
+  ある**ため、方式を変えた。
+  **モジュール辺を choke point にした。** 宣言モジュールの中身は、直接であれ barrel 経由で
+  あれ、import / re-export の辺なしには使えない。barrel 連鎖も「barrel 自身が辺を取る」
+  最初の環で捕まる。計測では `src/` からの実行時辺は **0 件**だったので、許容リストでは
+  なく「0 件のまま」を不変条件にした。加えて宣言モジュールの **export 面を pin** し、
+  供給側（forwarding export / 新規ラッパ）を利用側より 1 段早く捕まえる。
+  **誤検出 2 件も除去した** — `import type` / `import { type X }` は実行時 binding を
+  作らないので到達不能であり、gate 側の flat helper も import binding 経由で解決するので
+  別名リネームでは落ちない。**矛盾を live にしえない変更をブロックするガードは、
+  live にする変更を見逃すガードと同じく壊れている**。
+  記録も同期した: `CR-20260904-0002` の scope extension と `OQ-0012-0013` の mitigation は
+  初稿の「2 rows / 2 関数への直接 call」を述べたままだったので、最終の 3 行構成・監視対象・
+  変異結果に合わせた（canonical 判断時に参照される監査記録が実際の trigger と食い違う、
+  という P3 指摘）。
+  変異行列は**両方向 16 行すべて期待どおり**: 発火すべき 10 経路（plain / aliased /
+  namespace / assigned-then-called / re-export / star-barrel / forwarded-export /
+  internal-wrapper / gate-drops-flat / gate-adopts-per-spec）で赤、発火してはいけない
+  4 形状（type-only / inline type-only / flat helper 別名 / cleanup helper 結線）で緑、
+  baseline と復元後も緑。
 - **上記ガードを Codex レビューの指摘 3 件（すべて P2）で修正した。**
   1. **別名 import で回避できた。** 初版は「識別子として直接呼ばれた名前」しか
      見ていなかったので、`import { iterationReviewPathPerSpec as perSpec }` 経由、
