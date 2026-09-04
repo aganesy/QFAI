@@ -24,7 +24,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as CoreValidateModule from "../../src/core/validate.js";
 
-const { validateProjectSpy } = vi.hoisted(() => ({ validateProjectSpy: vi.fn() }));
+const { validateProjectSpy, runReportSpy } = vi.hoisted(() => ({
+  validateProjectSpy: vi.fn(),
+  runReportSpy: vi.fn(),
+}));
 
 vi.mock("../../src/core/validate.js", async () => {
   const actual = await vi.importActual<CoreValidate>("../../src/core/validate.js");
@@ -34,7 +37,11 @@ vi.mock("../../src/core/validate.js", async () => {
   };
 });
 
+vi.mock("../../src/cli/commands/report.js", () => ({ runReport: runReportSpy }));
+
 const { runValidate } = await import("../../src/cli/commands/validate.js");
+const { run } = await import("../../src/cli/main.js");
+const { describeIncompleteRun } = await import("../../src/cli/lib/warnings.js");
 
 type CoreValidate = typeof CoreValidateModule;
 
@@ -73,6 +80,109 @@ async function project(): Promise<string> {
   await runInit({ dir, force: false, dryRun: false, yes: true });
   return dir;
 }
+
+/** A libuv error as Node raises one: `code`, `syscall`, `errno` and `path`. */
+const libuvError = (code: string, syscall: string, at: string): Error => {
+  const err: NodeJS.ErrnoException = new Error(`${code}: operation failed, ${syscall} '${at}'`);
+  err.code = code;
+  err.syscall = syscall;
+  err.path = at;
+  return err;
+};
+
+describe("describeIncompleteRun", () => {
+  it("attributes a filesystem fault to the command that hit it", () => {
+    // The line `cli/index.ts` used to print named the errno and the path and
+    // nothing else. An agent reading one piped line could not tell which
+    // command refused, nor that the run was undetermined rather than clean.
+    const described = describeIncompleteRun(
+      libuvError("EPERM", "stat", "C:\\repo\\.claude\\skills\\qfai-sdd"),
+      "certify",
+    );
+
+    expect(described).not.toBeNull();
+    expect(described?.message).toContain("certify");
+    expect(described?.message).toContain("EPERM");
+    expect(described?.message).toContain("stat");
+    expect(described?.message).toContain(".claude\\skills\\qfai-sdd");
+    expect(described?.message).toContain("未判定");
+  });
+
+  it("keeps the original as `cause`", () => {
+    // The rewrite replaces what an operator reads, not what a caller or a
+    // stack trace can still reach.
+    const original = libuvError("ELOOP", "stat", "/p/self");
+    expect(describeIncompleteRun(original, "iterate")?.cause).toBe(original);
+  });
+
+  it("still names the errno when the error carries no path", () => {
+    const err: NodeJS.ErrnoException = new Error("EMFILE: too many open files");
+    err.code = "EMFILE";
+    err.syscall = "open";
+
+    const described = describeIncompleteRun(err, "init");
+    expect(described?.message).toContain("EMFILE");
+    expect(described?.message).toContain("init");
+  });
+
+  it("leaves a deliberate refusal alone", () => {
+    // The command said something specific about this project's state. Prefixing
+    // it with a filesystem story would be a regression, not a fix.
+    const refusal = new Error("certify: iteration 3 has no verify.json — refusing to certify");
+    expect(describeIncompleteRun(refusal, "certify")).toBeNull();
+  });
+
+  it("leaves an error already wrapped with its path alone", () => {
+    // `cli/lib/fs.ts` wraps its `stat` failure in a message naming the entry.
+    // That error has neither `code` nor `syscall`, and it has already said what
+    // this function would add.
+    const wrapped = new Error("テンプレートの種別を判定できません: /t/x — EPERM", {
+      cause: libuvError("EPERM", "stat", "/t/x"),
+    });
+    expect(describeIncompleteRun(wrapped, "init")).toBeNull();
+  });
+
+  it("leaves an error carrying only a `code` alone", () => {
+    // Half the discriminator. A hand-thrown error given a `code` for a caller
+    // to switch on is not a filesystem fault, and a version of this function
+    // that tested `code` alone would rewrite it.
+    const tagged: NodeJS.ErrnoException = new Error("guardrails: gate closed");
+    tagged.code = "QFAI_GATE_CLOSED";
+    expect(describeIncompleteRun(tagged, "guardrails")).toBeNull();
+  });
+
+  it("leaves an error carrying only a `syscall` alone", () => {
+    // The other half, for the same reason in reverse.
+    const tagged: NodeJS.ErrnoException = new Error("something about stat");
+    tagged.syscall = "stat";
+    expect(describeIncompleteRun(tagged, "report")).toBeNull();
+  });
+});
+
+describe("the boundary is wired into every command", () => {
+  // `validate` answers a fault with `QFAI-SCAN-002` because #1112 wrapped
+  // `validateProject`. The rest have no verdict artifact, so the rows above
+  // only matter if `run` actually consults them — which is what this checks,
+  // through a command that is not `validate`.
+  it("attributes a fault raised inside `report` to `report`", async () => {
+    runReportSpy.mockRejectedValueOnce(libuvError("EPERM", "stat", "/p/.qfai"));
+
+    await expect(run(["report", "--dir", process.cwd()], process.cwd())).rejects.toThrow(/report/);
+  });
+
+  it("says the run is undetermined, not that it is clean", async () => {
+    runReportSpy.mockRejectedValueOnce(libuvError("EPERM", "stat", "/p/.qfai"));
+
+    await expect(run(["report", "--dir", process.cwd()], process.cwd())).rejects.toThrow(/未判定/);
+  });
+
+  it("passes a command's own refusal through unchanged", async () => {
+    const refusal = new Error("report: .qfai/specs is empty — nothing to report");
+    runReportSpy.mockRejectedValueOnce(refusal);
+
+    await expect(run(["report", "--dir", process.cwd()], process.cwd())).rejects.toBe(refusal);
+  });
+});
 
 describe("validate reports a run it could not finish", () => {
   it("emits QFAI-SCAN-002 instead of letting the error escape", async () => {

@@ -9,7 +9,9 @@ import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
+import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
+import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
@@ -37,6 +39,28 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     return;
   }
 
+  // Every command except `validate` sends a filesystem fault straight to
+  // `cli/index.ts`, which writes `err.message` and exits 1 — a line naming the
+  // errno and the path but not the command, and not saying that the run is
+  // undetermined rather than clean (#1104). `validate` answers with
+  // `QFAI-SCAN-002` instead because #1112 wrapped `validateProject`; the others
+  // have no verdict artifact, so the refusal itself has to carry it.
+  //
+  // Rethrown, never swallowed: the exit code and the `cause` chain are what a
+  // caller and a stack trace still need. `describeIncompleteRun` returns `null`
+  // for anything that is not an unwrapped libuv error, so a deliberate refusal
+  // passes through with the message its author wrote.
+  try {
+    await dispatch(command, options);
+  } catch (thrown: unknown) {
+    // Bound as `thrown`, not `error`: this module imports a logger named
+    // `error`, and shadowing it inside the one block that must not log is a
+    // trap for the next edit.
+    throw describeIncompleteRun(thrown, command) ?? thrown;
+  }
+}
+
+async function dispatch(command: string, options: ParsedArgs["options"]): Promise<void> {
   switch (command) {
     case "init":
       await runInit({

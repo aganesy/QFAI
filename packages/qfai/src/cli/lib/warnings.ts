@@ -74,6 +74,58 @@ export function withTruncatedScanIssue(
   };
 }
 
+/**
+ * An unwrapped libuv error's errno detail, or `null` when the error is not one.
+ *
+ * The discriminator is `code` AND `syscall` both being present. That is what
+ * separates a filesystem fault from a deliberate refusal: libuv sets both on
+ * every error it raises, and an `Error` thrown by this codebase to say "this
+ * project is not in a state I can certify" has neither. An error already
+ * wrapped with a message naming its path — `cli/lib/fs.ts` does this — also has
+ * neither, and passes through unchanged, which is right: it has already said
+ * what {@link describeIncompleteRun} would add.
+ */
+function libuvDetail(error: unknown): { code: string; syscall: string; path?: string } | null {
+  const errno = error as NodeJS.ErrnoException | null;
+  if (typeof errno?.code !== "string" || typeof errno.syscall !== "string") {
+    return null;
+  }
+  return {
+    code: errno.code,
+    syscall: errno.syscall,
+    ...(typeof errno.path === "string" ? { path: errno.path } : {}),
+  };
+}
+
+/**
+ * The same attribution {@link buildIncompleteRunIssue} gives `validate`, for a
+ * command that has no verdict artifact to degrade into.
+ *
+ * `validate` can answer a filesystem fault with a finding because #1112 wrapped
+ * `validateProject`; `init`, `certify`, `iterate` and the rest have no
+ * `validate.json` to write, so their answer has to be the refusal itself. What
+ * they were producing was the raw libuv message — `EPERM: operation not
+ * permitted, stat '...'` — which names the errno and the path but not the
+ * command, and does not say that the run is UNDETERMINED rather than clean.
+ * That single unattributed line is the complaint #1104 opens with.
+ *
+ * Returns `null` for anything that is not an unwrapped libuv error, so the
+ * caller rethrows a deliberate refusal untouched.
+ */
+export function describeIncompleteRun(error: unknown, context: string): Error | null {
+  const detail = libuvDetail(error);
+  if (detail === null) return null;
+  const at = detail.path === undefined ? "" : ` (${detail.path})`;
+  return new Error(
+    `${context}: ${detail.syscall} が ${detail.code} で失敗したため完走できませんでした` +
+      `${at}。この実行結果は「問題なし」ではなく「未判定」です。\n` +
+      "報告されたパスを確認してください。Windows の git worktree では " +
+      ".claude/skills/* が directory を指す FILE symlink になり stat が EPERM を返します — " +
+      "その場合は作業ツリーで `npx qfai init` を再実行してください。",
+    { cause: error },
+  );
+}
+
 export const INCOMPLETE_RUN_CODE = "QFAI-SCAN-002";
 
 /**
