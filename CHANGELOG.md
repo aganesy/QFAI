@@ -6,6 +6,31 @@
 
 ### Added
 
+- **`certify` が封印する evidence と保存済み `validate.json` を関係づけるようにした。**
+  それまで `certify` はその file について 3 点しか検査していなかった — 存在、
+  `profile` が `prototyping`、`counts.error` が 0
+  (`prototypingCertify.ts:286-319`) — そして結果とツリーを結ぶものが何も無かった。
+  そのため flat な `review.json` があった時点で記録された成功のまま、flat を
+  削除して per-spec を書いた状態を封印でき、現在の `validate` が reject する
+  ツリーに証明書が出ていた。
+  さらに証明書は `validateRun.ranAt` に **certify 実行時刻** を書いていた
+  (`:937` の `new Date()`)。「fresh な run に対して封印されたか」を監査しようと
+  した人が読んでいたのは、その問いが答えられなくなった瞬間に作られた
+  timestamp だった。
+  `ValidationResult` に `generatedAt` を追加し、`certify` は (a) evidence の
+  いずれかが run より新しければ refuse し、対象ファイルを名指しする、
+  (b) 証明書に run 自身の時刻を記録する。
+  `generatedAt` が **無い** 場合は「古い writer」であって検査失敗ではないので、
+  refuse せず note を出して続行する。issue が求めているのは「evidence が新しい
+  ときに refuse」であり、時刻を持たない結果を拒否すると、その条件を表現できない
+  すべての既存 `validate.json` を弾くことになる。このバージョンで `validate` を
+  走らせれば必ず刻まれるので、窓は stale な 1 ファイル分で、次の run が閉じる。
+  mtime の限界 (同一秒の書き込みは「新しくない」と見える / 改竄耐性が無い) は
+  兄弟の check (`:1216-1294`) が既に記録しているものをそのまま引き継いだ。
+  証明書と run を content digest で結ぶ形 (case B) が強い版で、別判断を要する。
+  変異検査: 鮮度 gate を無効化すると 1 行、`ranAt` を certify 時刻に戻すと
+  1 行が落ちる。
+  (#1107)
 - **spec-0004 の `review.json` スキーマを出荷バリデータに合わせた
   (`CR-20260904-0003`)。** 3 箇所で乖離しており、いずれも実装を canonical と
   する判断（ユーザ）。
