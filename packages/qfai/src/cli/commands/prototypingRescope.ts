@@ -75,6 +75,23 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
     return 2;
   }
 
+  // Warned, not refused. Resolving the id would need every place a delta or
+  // decision can live — `.qfai/decisions/`, a spec's `09_delta.md`,
+  // `_policies/10_delta.md`, and whatever a consuming project uses — and a
+  // resolver that misses one refuses a LEGITIMATE reduction, which is worse
+  // than a weak field: it blocks the operation this exists to provide. A shape
+  // check has the same failure against a project whose id convention is its
+  // own. The audit entry is the real control; this just means the operator
+  // hears about a thin reason now rather than a reviewer reading the log later.
+  if (!looksLikeDecisionId(options.reason)) {
+    warn(
+      `qfai prototyping rescope: --reason "${options.reason}" does not read as a recorded ` +
+        "delta or decision id (e.g. DELTA-022, CR-20260904-0001). Proceeding — it is written " +
+        "to rescopeLog as given — but an entry nobody can trace back is the audit trail this " +
+        "operation exists to leave.",
+    );
+  }
+
   const configResult = await loadConfig(options.root);
   const state = await readFrozenScopeState(options.root, configResult.config);
   if (state === null) {
@@ -135,6 +152,24 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
   reportPlan(options, entries, planTouched, reviewsTouched);
   info(`  frozenSurfaceUnion: ${state.frozen.length} -> ${remaining.length}`);
   return 0;
+}
+
+/**
+ * Whether `reason` reads as an id rather than as prose.
+ *
+ * Deliberately loose and deliberately non-blocking: it looks for an
+ * uppercase-prefixed token with a digit somewhere, which every id convention
+ * in reach happens to satisfy (`DELTA-022`, `CR-20260904-0001`, and the
+ * decision-record form). A project spelling its ids differently gets a warning
+ * it can ignore, which is the failure mode a shape CHECK would not have had —
+ * it would have refused them.
+ *
+ * The third example is described rather than spelled: `.agents/rules/
+ * distributed-surface.md` forbids an internal design-rationale ID in `src/`
+ * JSDoc, because tsup keeps JSDoc in `dist/*.d.ts` and it would ship.
+ */
+function looksLikeDecisionId(reason: string): boolean {
+  return /[A-Z][A-Z0-9]*[-_]?\d/.test(reason.trim());
 }
 
 /**

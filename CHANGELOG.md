@@ -33,7 +33,14 @@
      この一致は文書ではなく構造で保たれる。
   2. **`--reason` を要求する。** 記録済みの delta / decision id が、
      「適用された判断」と「exit-2 ルールが止めるべき黙った変更」を分ける唯一の
-     signal であり、audit entry が保存するのもそれである。
+     signal であり、audit entry が保存するのもそれである。id らしくない値は
+     **拒否ではなく警告**にした — id の解決には delta / decision が置かれうる
+     全ての場所（`.qfai/decisions/`、spec の `09_delta.md`、
+     `_policies/10_delta.md`、および利用側プロジェクト独自の場所）が必要で、
+     取りこぼす resolver は**正当な**縮小を拒否してしまう。これはこの操作が
+     存在する理由そのものを塞ぐため、弱いフィールドより悪い。実際の制御は
+     audit entry であり、警告は「後で log を読む reviewer」ではなく
+     「その場の操作者」に伝えるためにある。
   3. **critique を書き換えない。** reviewer が cycle N に見たものは歴史的事実で
      ある。該当する `iter-NN/review.json` には `retiredSurfaces` 注釈を追加し、
      `proseCritique` は一字も変えない。読者が「古い記述」と「誤った記述」を

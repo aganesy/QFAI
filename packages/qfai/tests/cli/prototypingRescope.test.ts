@@ -259,6 +259,65 @@ describe("prototyping rescope applies", () => {
   });
 });
 
+describe("a --reason that does not read as an id", () => {
+  // Warned, never refused. Resolving the id would need every place a delta or
+  // decision can live, and a resolver that misses one refuses a LEGITIMATE
+  // reduction — worse than a weak field, because it blocks the operation this
+  // exists to provide. So both rows assert exit 0 and differ only in whether
+  // the operator was told.
+  // `lib/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
+  // stream so a piped run sees the whole narrative in order. Spying on stderr
+  // captured nothing, which is how this row found out.
+  const captureWarnings = (): string[] => {
+    const lines: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    return lines;
+  };
+
+  it("warns, and still applies", async () => {
+    const root = await reducedScope();
+    const lines = captureWarnings();
+
+    expect(await run(root, { reason: "because the customer said so" })).toBe(0);
+
+    expect(lines.join("")).toContain("does not read as a recorded");
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001"]);
+  });
+
+  it("writes the reason to the log exactly as given", async () => {
+    // The audit entry is the real control, so a thin reason is preserved
+    // verbatim rather than normalised into something that looks better than it
+    // is.
+    const root = await reducedScope();
+    captureWarnings();
+    await run(root, { reason: "because the customer said so" });
+
+    const log = (await readProto(root)).rescopeLog as { reason: string }[];
+    expect(log[0]?.reason).toBe("because the customer said so");
+  });
+
+  it("stays quiet for an id", async () => {
+    const root = await reducedScope();
+    const lines = captureWarnings();
+
+    expect(await run(root, { reason: "DELTA-022" })).toBe(0);
+    expect(lines.join("")).not.toContain("does not read as a recorded");
+  });
+
+  it("stays quiet for the other id shapes this repository uses", async () => {
+    for (const reason of ["CR-20260904-0001", "DR-0012-0028", "CHG-003"]) {
+      const root = await reducedScope();
+      const lines = captureWarnings();
+      expect(await run(root, { reason })).toBe(0);
+      expect(lines.join("")).not.toContain("does not read as a recorded");
+      vi.restoreAllMocks();
+    }
+  });
+});
+
 describe("prototyping rescope and the recorded review", () => {
   async function seedReview(root: string, prose: string): Promise<string> {
     const dir = path.join(evidenceDir(root), "iter-00");
