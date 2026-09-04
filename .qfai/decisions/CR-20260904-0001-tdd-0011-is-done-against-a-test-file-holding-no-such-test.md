@@ -94,7 +94,9 @@ the file is the part that is not covered, and it is the part that matters.
 
 ## Impact scope
 
-- Specs: `spec-0004` (`tdd/test-list.md` only)
+- Specs: `spec-0004` — `tdd/test-list.md` (the repointed rows),
+  `16_Traceability-ledger.md` (`REQ-0020`) and `09_delta.md` (the `confirm-only`
+  rerun's CR reference)
 - Plans: `-`
 - Tests: `packages/qfai/tests/validators/prototypingEvidence.test.ts` (one case
   added), `packages/qfai/tests/core/prototypingEvidence.negative.test.ts`
@@ -132,7 +134,9 @@ Applied by hand under the approval above, `confirm-only`:
 - `packages/qfai/tests/validators/prototypingEvidence.test.ts` — one case added
   that feeds `EX-0004-0010`'s payload verbatim and asserts `QFAI-PROT-002`
   naming each missing required key.
-- No upstream artifact is edited: `03_Acceptance-Criteria.md`,
+- `.qfai/specs/spec-0004/09_delta.md` — the `2026-09-04` entry recording this CR,
+  its mode and its invocation, which is the `confirm-only` rerun's output.
+- No DERIVED upstream artifact is edited: `03_Acceptance-Criteria.md`,
   `04_Business-Rules.md`, `05_Examples.md` and `06_Test-Cases.md` are all
   correct as written, and the "v1.x-shaped" wording is left alone because
   `EX-0004-0010` already defines it.
