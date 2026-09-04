@@ -13,36 +13,36 @@ named a single key — so an agent looking for the findings array guessed
 
 ## Top level
 
-| key | type | notes |
-| --- | --- | --- |
-| `toolVersion` | `string` | the qfai that produced the run |
-| `generatedAt` | `string?` | ISO-8601. Absent from a file written before the field existed |
-| `profile` | `string?` | the `--profile` the run used; absent for the default |
-| `issues` | `Issue[]` | **the findings array. It is `issues`, not `findings`** |
-| `counts` | `{ info, warning, error }` | all three always present, all numbers |
-| `traceability` | `{ sc, testFiles }` | coverage of the run |
-| `waivers` | object? | present only when `.qfai/waivers.yml` was read |
+| key            | type                       | notes                                                         |
+| -------------- | -------------------------- | ------------------------------------------------------------- |
+| `toolVersion`  | `string`                   | the qfai that produced the run                                |
+| `generatedAt`  | `string?`                  | ISO-8601. Absent from a file written before the field existed |
+| `profile`      | `string?`                  | the `--profile` the run used; absent for the default          |
+| `issues`       | `Issue[]`                  | **the findings array. It is `issues`, not `findings`**        |
+| `counts`       | `{ info, warning, error }` | all three always present, all numbers                         |
+| `traceability` | `{ sc, testFiles }`        | coverage of the run                                           |
+| `waivers`      | object?                    | present only when `.qfai/waivers.yml` was read                |
 
 `counts` is what `--fail-on` compares, so it is the field to read for a pass/fail
 decision. It is derived from `issues` and cannot disagree with it.
 
 ## `issues[]`
 
-| key | type | notes |
-| --- | --- | --- |
-| `code` | `string` | the finding code — **this is what a waiver's `rule:` must equal** |
-| `severity` | `"info" \| "warning" \| "error"` | |
-| `category` | `string` | `canonical` for a contract violation, `change` for an advisory |
-| `message` | `string` | human-readable, not stable across versions |
-| `suggested_action` | `string?` | the remedy, when the rule has one |
-| `file` | `string?` | repo-relative path, POSIX separators |
-| `relatedFiles` | `string[]?` | the other files a finding implicates when `file` is a representative |
-| `refs` | `string[]?` | the IDs or values the finding is about |
-| `rule` | `string?` | the internal rule id, for grouping |
-| `suppressed` | `boolean?` | true when a waiver suppressed it; it stays in the array |
-| `job` | `string?` | the CI job, for findings ingested from a lane |
-| `loc` | object? | line / column, where the producer reported one |
-| `dl_id` | `string?` | the decision-log id, for change advisories |
+| key                | type                             | notes                                                                |
+| ------------------ | -------------------------------- | -------------------------------------------------------------------- |
+| `code`             | `string`                         | the finding code — **this is what a waiver's `rule:` must equal**    |
+| `severity`         | `"info" \| "warning" \| "error"` |                                                                      |
+| `category`         | `string`                         | `canonical` for a contract violation, `change` for an advisory       |
+| `message`          | `string`                         | human-readable, not stable across versions                           |
+| `suggested_action` | `string?`                        | the remedy, when the rule has one                                    |
+| `file`             | `string?`                        | repo-relative path, POSIX separators                                 |
+| `relatedFiles`     | `string[]?`                      | the other files a finding implicates when `file` is a representative |
+| `refs`             | `string[]?`                      | the IDs or values the finding is about                               |
+| `rule`             | `string?`                        | the internal rule id, for grouping                                   |
+| `suppressed`       | `boolean?`                       | true when a waiver suppressed it; it stays in the array              |
+| `job`              | `string?`                        | the CI job, for findings ingested from a lane                        |
+| `loc`              | object?                          | line / column, where the producer reported one                       |
+| `dl_id`            | `string?`                        | the decision-log id, for change advisories                           |
 
 Only `code`, `severity`, `category` and `message` are always present. Everything
 else is optional and a consumer must treat it as such — a finding with no
