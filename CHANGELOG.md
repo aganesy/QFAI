@@ -37,6 +37,40 @@
   決めるだけで、「gate が何を要求すべきか」は決めない。
   (#1105)
 
+- **validate が完走できなかったときに判定を出すようにした (`QFAI-SCAN-002`)。**
+  `runValidate` は `validateProject` を try 無しで await していたため、どの
+  validator の fs エラーでも `cli/index.ts` に届いて stderr 1 行になり、
+  `counts:` も `run-log:` も `validate.json` も出なかった。出荷 skill はすべて
+  validate を `| tail` に通すので、エージェントには gate の判定があるべき場所に
+  その 1 行だけが見えていた。Windows の `git worktree` は
+  `.claude/skills/*` を directory を指す FILE symlink にし、`stat` が毎回
+  `EPERM` を返すので、この経路には実運用で到達する。
+  先例は `QFAI-SCAN-001` で、`cli/lib/warnings.ts` が理由まで書いている —
+  不完全な scan は finding でなければならない、「stdout への echo だけでは
+  `--fail-on` / `--strict`、GitHub annotation stream、run-log のいずれからも
+  到達できない」から。クラッシュした実行は同じ条件のより厳しい版である。
+  finding は errno とパスを載せ、`validate.json` には finding と 0 埋めの
+  coverage を書く。counts は **finding の severity から導出** する
+  (固定値で書くと severity と乖離し、`counts.error: 1` なのに error severity の
+  issue が無い `validate.json` になる — 変異検査で実際にその状態を作った)。
+  severity は `error` 固定で promotion window を置かない。`sunsetLedger` の
+  ガードは「登録した entry は `newRuleSeverity` で severity を決めること」を
+  要求するので、登録すると 1.12.0 まで `warning` になる。`warning` は既定の
+  `--fail-on error` で exit 0 なので、**クラッシュを pass に変える** — 置き換える
+  前の stderr 1 行すら exit 1 だったので、それより悪い。窓が吸収すべき backlog も
+  無い (今日この条件は必ずクラッシュするので、この状態で通っているプロジェクトは
+  存在しない)。P7 が「初日から error」を表現できないことは政策側のギャップとして
+  #1111 に、そもそも `QFAI-SCAN-001/-002` が `EMITTED_RULE_CODES` から見えず
+  waiver が「存在しない rule」と報告される問題は #1110 に起票した。
+  あわせて `cli/lib/fs.ts` の無防備な `stat` を、判定できなかったパスを名指しする
+  エラーに変えた。2 行上の `exists()` は `lstat` を使い、OS が follow しない
+  reparse type の symlink でも **成功する** ので、entry は存在すると判定された
+  直後に `stat` が無防備に throw していた。飲み込まない — 同モジュールのコメントは
+  `catch(() => false)` と `catch(() => [])` がいずれも「失敗している filesystem を
+  自信ありげな clean report に変える」として **削除された** ことを記録している。
+  残り 10 箇所の `stat` サイトは issue の分割どおり後続に残した (各々が個別の
+  判断を要し、この変更でミスがクラッシュではなく degrade になる)。
+  (#1104)
 - **temporary-files ルールの適用範囲を明文化した。** ルールは
   「一時ファイルはリポジトリルート `tmp/` に置く」と述べ、Rule 5 は例外なしに
   「`tmp/` の外に見つかったら defect として移動または削除する」と書いていた。

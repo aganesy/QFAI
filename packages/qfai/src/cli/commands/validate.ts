@@ -22,7 +22,12 @@ import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail } from "../lib/failOn.js";
-import { buildTruncatedScanIssue, warnIfTruncated } from "../lib/warnings.js";
+import {
+  buildIncompleteRunIssue,
+  buildTruncatedScanIssue,
+  incompleteRunResult,
+  warnIfTruncated,
+} from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -105,11 +110,30 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for one. Replacing the run made every stage gate that names a narrow
   // profile unreachable in CI.
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  const validated = await validateProject(root, configResult, {
-    ...(options.profile ? { profile: options.profile } : {}),
-    ...(options.platform ? { platform: options.platform } : {}),
-    ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
-  });
+  // Wrapped, because an unhandled rejection here left the operator with one
+  // stderr line and no verdict — no `counts:`, no `run-log:`, no
+  // `validate.json` — and every shipped skill pipes validate through `| tail`,
+  // so that line was all an agent saw (#1104). Enumerating the `stat` sites
+  // that can raise reduces the ways in; this is what answers when the next one
+  // appears.
+  //
+  // `unknown`, deliberately not narrowed to a filesystem error: the point is a
+  // verdict for anything unexpected, and a narrowed catch would put the next
+  // unclassified failure back on the path this exists to close.
+  let validated: ValidationResult;
+  try {
+    validated = await validateProject(root, configResult, {
+      ...(options.profile ? { profile: options.profile } : {}),
+      ...(options.platform ? { platform: options.platform } : {}),
+      ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
+    });
+  } catch (error: unknown) {
+    validated = incompleteRunResult(
+      options.toolVersionOverride ?? (await resolveToolVersion()),
+      buildIncompleteRunIssue(error, "validate"),
+      options.profile,
+    );
+  }
   const rawResult = ciProfileIssue
     ? {
         ...validated,
@@ -191,6 +215,17 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  // No special case for an incomplete run. `QFAI-SCAN-002` is an `error`, so
+  // `counts.error` is non-zero and `shouldFail` already fails the run under
+  // every `--fail-on` but `never` — which is the one exception a caller asked
+  // for explicitly, and there the finding is still in the output and in
+  // `validate.json`.
+  //
+  // An earlier revision added `runIncomplete || …` here as a second guard. It
+  // was unreachable: removing it changed no row, because the severity is what
+  // decides. The invariant it was protecting — that this finding stays an
+  // `error` — is pinned in `validateRunIncomplete.test.ts` instead, which is
+  // where it can actually fail.
   const willFail = shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
@@ -808,6 +843,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-SCAN-002":
+    "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
   "QFAI-TOOL-001":
     "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
