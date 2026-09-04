@@ -856,6 +856,36 @@ async function realpathOrNull(filePath: string): Promise<string | null> {
 }
 
 /** `stat`, or `null` when the path is absent. Any other error propagates. */
+/**
+ * Whether `linkPath` is a symlink whose target is a **directory**.
+ *
+ * The Windows condition #1095 is about is a FILE symlink pointing at a
+ * directory, which the OS refuses to resolve. "Is a symlink" is not that test:
+ * this module also walks `.claude/agents/*.md` and `.github/agents/*.agent.md`,
+ * whose canonical is a `.md` file and whose git-written file symlink is already
+ * the right kind. An `EPERM` there is an ACL or filesystem failure, and
+ * reporting it as a wrong reparse type is a wrong diagnosis with a remedy that
+ * cannot work — `qfai init` relays the same `type: "file"` and recreates an
+ * identical link, so the next run reports the same finding.
+ *
+ * The target is resolved from `readlink` and stat-ed DIRECTLY, not through the
+ * link that just refused. That also excludes an ACL failure on a skill
+ * wrapper's own target, which a `kind === "skill"` test would have admitted.
+ */
+async function isDirectorySymlink(linkPath: string): Promise<boolean> {
+  const link = await lstatOrNull(linkPath);
+  if (link?.isSymbolicLink() !== true) return false;
+  try {
+    const target = await readlink(linkPath);
+    const resolved = path.resolve(path.dirname(linkPath), target);
+    return (await stat(resolved)).isDirectory();
+  } catch {
+    // Unreadable link, or a target that cannot be stat-ed either. Neither is
+    // the intact-but-unfollowable state, so the caller keeps propagating.
+    return false;
+  }
+}
+
 async function statOrNull(
   filePath: string,
 ): Promise<Stats | null | "cycle" | "not-a-directory" | "unfollowable"> {
@@ -876,16 +906,12 @@ async function statOrNull(
     // The wrapper naming it is as broken as one whose target is missing, and
     // propagating it took `qfai validate` down with no counts (#1095).
     //
-    // Confirmed against `lstat` first, because this function also inspects a
-    // plain canonical `SKILL.md`. Converting every `EPERM` would turn a
-    // permission or filesystem failure on that file — or on a component above
-    // it — into "a symlink the OS will not follow", which is both the wrong
-    // diagnosis and the wrong repair, and would lose the propagation this
-    // module keeps deliberately.
-    if (isEperm(error)) {
-      const link = await lstatOrNull(filePath);
-      if (link?.isSymbolicLink() === true) return "unfollowable";
-    }
+    // Confirmed to be a DIRECTORY symlink first. This function also inspects a
+    // plain canonical `SKILL.md` and an agent wrapper's `.md`, so converting
+    // every `EPERM` would turn a permission or filesystem failure into "a
+    // symlink the OS will not follow" — the wrong diagnosis, and a remedy that
+    // recreates an identical link and leaves the finding standing.
+    if (isEperm(error) && (await isDirectorySymlink(filePath))) return "unfollowable";
     throw error;
   }
 }
@@ -1284,12 +1310,13 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // and no counts, no finding code and no `validate.json` — a gate with no
       // verdict (#1095).
       const code = (error as NodeJS.ErrnoException | null)?.code;
-      // `EPERM` only when `lstat` confirms this really is a symlink: the
-      // wrapper scan can reach a path that is not one, and an unrelated
-      // permission failure must keep propagating rather than be reported as an
-      // unfollowable link.
-      const unfollowable =
-        isEperm(error) && (await lstatOrNull(wrapper.absolute))?.isSymbolicLink() === true;
+      // `EPERM` only for a symlink whose TARGET IS A DIRECTORY. The scan also
+      // walks `.claude/agents/*.md` and `.github/agents/*.agent.md`, whose
+      // canonical is a file and whose git-written file symlink is already the
+      // right kind — an `EPERM` on one of those is an ACL or filesystem
+      // failure, and `qfai init` relays the same `type: "file"` so recreating
+      // it cannot clear the finding. `isSymbolicLink()` alone admitted them.
+      const unfollowable = isEperm(error) && (await isDirectorySymlink(wrapper.absolute));
       if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR" && !unfollowable) {
         throw error;
       }

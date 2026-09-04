@@ -3198,6 +3198,65 @@ async function isFollowable(linkPath: string): Promise<boolean> {
   }
 }
 
+/**
+ * Recreates an intact-but-unfollowable symlink, restoring it if that fails.
+ *
+ * The link is moved aside rather than deleted, for the reason
+ * {@link recreateFlattenedLink} gives: `EPERM` on Windows without Developer
+ * Mode leaves the wrapper absent, and an absent wrapper is the one state
+ * `QFAI-LINK-001` deliberately treats as benign — a project that predates a
+ * newly shipped skill looks the same. A wrong reparse type at least announces
+ * itself. Losing the entry would make the damage invisible to the gate whose
+ * remedy sent the operator here.
+ *
+ * `rename` rather than `link`: it moves the symlink itself, where `link()` on a
+ * symlink raises `EPERM` — which is what made reusing the flattened helper a
+ * different failure.
+ */
+async function recreateUnfollowableLink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+): Promise<"created" | "skipped"> {
+  const sidecar = await reserveSidecar(linkPath);
+  await rename(linkPath, sidecar);
+  try {
+    await symlink(target, linkPath, type);
+  } catch (error) {
+    // Put back exactly what was there. A failure to restore is worse than the
+    // original error and must not be swallowed by it, so it is what surfaces.
+    await rename(sidecar, linkPath);
+    throw error;
+  }
+  await rm(sidecar, { recursive: true, force: true });
+  return "created";
+}
+
+/**
+ * A path next to `linkPath` that nothing occupies, for a `rename` to claim.
+ *
+ * {@link claimSidecar} cannot serve here: it creates the file exclusively, and
+ * `rename` on Windows fails when its destination exists. The name still has to
+ * be unique against every other repair — including an earlier one in this same
+ * process that failed and left its sidecar behind — so it walks a counter and
+ * stops at the first name `lstat` reports as absent.
+ */
+async function reserveSidecar(linkPath: string): Promise<string> {
+  const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
+    // `safeLstat`, not `stat`: an earlier failed repair can leave a sidecar
+    // that is itself an unfollowable symlink, and `stat` would report that
+    // occupied name as absent and hand it back to `rename` as free.
+    if ((await safeLstat(candidate)) === undefined) {
+      return candidate;
+    }
+  }
+  throw new Error(
+    `qfai init: 修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です`,
+  );
+}
+
 async function ensureSymlink(
   linkPath: string,
   target: string,
@@ -3228,16 +3287,30 @@ async function ensureSymlink(
         // remedy. Auto-repair is scoped to a link that is already ours and
         // already names the right target; only its reparse type is wrong.
         //
-        // Falls through to the remove-and-recreate below rather than to
-        // `recreateFlattenedLink`: that helper is for a regular FILE whose
-        // content is the target string, and it moves the entry aside under a
-        // rollback built on `link()` and a 4096-byte content check. Neither
-        // applies to a symlink — `link()` on one raises EPERM — so reusing it
-        // turned this repair into a different failure. A symlink needs only
-        // `rm` and `symlink`, which is what `--force` already does.
-        if (await isFollowable(linkPath)) {
+        // Scoped to `type === "dir"`. An agent wrapper is a `type: "file"`
+        // link at a `.md` document, and git writes those with the right kind
+        // already — an `EPERM` on one is an ACL or filesystem failure, and
+        // recreating an identical link cannot clear it, so the next validate
+        // reports the same finding. Probing followability there would trade a
+        // visible wrapper for a churned one and no repair.
+        //
+        // `recreateFlattenedLink` is not the helper for this: it is for a
+        // regular FILE whose content is the target string, and its rollback is
+        // built on `link()` and a 4096-byte content check. Neither applies to a
+        // symlink — `link()` on one raises EPERM. But the rollback ITSELF does
+        // apply, and is done below: without it a failed recreate leaves the
+        // wrapper absent, which is the one state `QFAI-LINK-001` deliberately
+        // treats as benign, so the damage becomes invisible to the very gate
+        // that sent the operator here. `--force` has always had that gap, and
+        // an explicit operator action is not an argument for taking it
+        // automatically on every init.
+        if (type === "file" || (await isFollowable(linkPath))) {
           return "skipped";
         }
+        if (options.dryRun) {
+          return "created";
+        }
+        return await recreateUnfollowableLink(linkPath, target, type);
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
