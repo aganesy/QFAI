@@ -557,6 +557,16 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   2. `tddListEvidence` の `chmod(file, 0o755)` 後に RED hash が stale に
      なることを期待する行。Windows の `fs.chmod` は read-only 属性しか
      切り替えず実行ビットは存在しないので、hash の入力が変わらない。
+  3. `initRoutingMergeRaces` の 2 行。当初「並行性の問題でこのクラスでは
+     ない」と切り分けたが、測ったら同じクラスだった:
+     `restoreOwnership` は `if (process.platform === "win32") return true`
+     で即座に戻る（`init.ts` 自身が「Windows に意味のある `fchown` は無い」と
+     書いている）ので `handle.chown` が呼ばれず、テストが仕込む `EPERM` は
+     起こり得ない。decline が発火せず merge が進む。
+     **うち 1 行はこのクラスで最悪の形**だった —
+     `leaves no staging file behind when it declines` は Windows で
+     **PASS しながら何も検証していなかった**（decline が起きても起きなくても
+     `.tmp` は残らない）。何も証明しない green には、気付くべき失敗が無い。
 
   機構はリポジトリに既にあった —
   `it.skipIf(process.platform === "win32")` は `integrationSurface` /
@@ -566,7 +576,9 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
   skip が壊れた行を隠していないことも確認した: 各 skip を強制的に off に
   すると、失敗理由は**プラットフォーム由来のもの**
-  (`ENOENT` / `expected false to be true`) だけである。 (#1133)
+  (`ENOENT` / `expected false to be true` / manifest 内容の不一致) だけである。
+  3 番目の強制実行は、この確認自体の価値も示した —
+  `leaves no staging file behind` は強制実行でも PASS する。 (#1133)
 
 - **finding code の family カバレッジ証明が Windows では一度も走っていなかった
   （CI は green のまま）。** `codesInFile` は解析済みソースをパスで引く:
