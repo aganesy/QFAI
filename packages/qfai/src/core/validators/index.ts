@@ -43,6 +43,10 @@ export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
+  FROZEN_SURFACE_UNREACHABLE_CODE,
+  validateFrozenSurfaceReachability,
+} from "./frozenSurfaceReachability.js";
+export {
   validatePrototypingDesignContractReadiness,
   validateRootDesignMdParse,
   validateSddDesignContractReadiness,
