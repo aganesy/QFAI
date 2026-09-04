@@ -6,6 +6,42 @@
 
 ### Added
 
+- **P7 に「初日から error」を表現する 4 番目の答を追加した
+  (`ERROR_FROM_INTRODUCTION`)。** それまで post-baseline な code に対する答は
+  3 つしかなかった: 昇格窓 (`RULE_PROMOTIONS`) / ラダー外の `info`
+  (`INFO_ONLY_SINCE_BASELINE`) / 政策より前 (frozen baseline)。どれも
+  **「即座に error で、それは退行ではない」**を言えない。ガードは正しくそれを
+  弾く — 登録した entry は `newRuleSeverity` で severity を決めねばならず、
+  導入リリース以前の pin は「P7 が書かれた原因そのものの退行」として拒否される。
+  `QFAI-SCAN-002` はその 4 番目を必要とする。「実行が完走しなかった」という
+  意味で、この code が無かった時点でその条件は stderr 1 行と非 0 exit で
+  プロセスを終わらせていた。窓を付けると 2 minor のあいだ結果が反転する —
+  finding は `warning` になり、既定の `--fail-on error` では exit 0 なので、
+  **クラッシュをより良く報告する変更がクラッシュを pass に変える**。窓の
+  存在理由も無い: 新たに落ちるプロジェクトの backlog を吸収するためのものだが、
+  この状態で通っているプロジェクトは存在しない (クラッシュするので)。
+  判定基準は 1 つで、レビュー時に検証可能: **その条件は今日すでに実行を
+  落としている**。各 entry は理由を必須とし、ガードは (a) 理由が空でない、
+  (b) 全 site で `"error"`、(c) 何かが実際に emit している、(d) frozen
+  baseline が既にカバーしていない、の 4 点を検査する。**理由が真かはガードでは
+  検査できない** — 読者は「この code が無かった時ツリーはどうなったか」を問うて
+  検証する。だからリストは短く保つ。
+  あわせて ratchet の object-literal 抽出を広げた。`OBJECT_CODE_RE` は
+  `code: "リテラル"` を要求しており、`cli/lib/warnings.ts` は
+  `code: TRUNCATED_SCAN_CODE` と書くので、この形の post-P7 code は
+  **一度も答を問われていなかった**。解決機構は 3 行上に既にあり
+  (`issue(...)` 側の `resolveArg`)、それを使うだけだった。同じ盲点は
+  `severityExpressionsFor` の object-literal 半分にもあり、そちらも定数
+  エイリアスを解決するようにした — さもないと「全 site で error」を検査する
+  新ガード自身が、検査したい severity を見られない。
+  広げた結果 `QFAI-SCAN-001` が初めて ratchet に見えるようになった。導入時期を
+  調べると P7 と同日に別ブランチで併行開発され、main へは先に到達している
+  (`97abcbfe8` 2026-08-30T23:45:11Z vs `56c59f7fa` 2026-08-31T00:43:00Z)。
+  固定 `warning` で `--fail-on error` を落とさないので、baseline リストの
+  docblock が認めている例外 (「抽出器を広げると P7 以前の code が現れる」) に
+  該当する。receipt をコメントに残して追加した。
+  P7 の節にも 3 つの免除とそれぞれの判定基準を記述した。
+  (#1111, #1110)
 - **`validate.json` を public サーフェスとして文書化し、4 つの矛盾を 1 つの話に
   そろえた。** それまでこのファイルは同時に 4 つのことだった:
   **読むことを MUST とされ** (`qfai-verify/SKILL.md:152`、
