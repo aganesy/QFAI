@@ -28,7 +28,7 @@ import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
-import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
@@ -3182,6 +3182,229 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
 
 const UNREADABLE_OPEN_CODES = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENXIO"]);
 
+/**
+ * Whether `stat` can follow `linkPath`, i.e. whether the OS will resolve it.
+ *
+ * `EPERM` is the Windows answer for a FILE symlink whose target is a directory
+ * (#1095). Every other failure is left to the caller's existing handling: this
+ * asks one question and does not decide what an unreadable path means.
+ */
+async function isFollowable(linkPath: string): Promise<boolean> {
+  try {
+    await stat(linkPath);
+    return true;
+  } catch (error) {
+    return !isEperm(error);
+  }
+}
+
+/**
+ * Recreates an intact-but-unfollowable symlink, restoring it if that fails.
+ *
+ * The link is moved aside rather than deleted, for the reason
+ * {@link recreateFlattenedLink} gives: `EPERM` on Windows without Developer
+ * Mode leaves the wrapper absent, and an absent wrapper is the one state
+ * `QFAI-LINK-001` deliberately treats as benign — a project that predates a
+ * newly shipped skill looks the same. A wrong reparse type at least announces
+ * itself. Losing the entry would make the damage invisible to the gate whose
+ * remedy sent the operator here.
+ *
+ * The same three hazards the flattened path documents apply here, and are
+ * answered by the means that work on a symlink:
+ *
+ * - **What moved is verified, not what the caller saw.** `isFollowable`
+ *   inspected an inode that may no longer be at the pathname by the time
+ *   `rename` runs. A regular file another process wrote in that window would
+ *   have been moved aside and then deleted by the cleanup — losing a user's
+ *   file on an init with no `--force`.
+ * - **The restore claims the path atomically.** `rename` overwrites, so it
+ *   would destroy an entry created while this repair was in flight; `link`
+ *   refuses `EEXIST` but raises `EPERM` on a symlink. `symlink` does both —
+ *   refuses an occupied path, and reproduces the only content a symlink has,
+ *   its target.
+ * - **Cleanup is not the repair.** Once the new link stands, a failure to
+ *   remove the hold is a note.
+ */
+async function recreateUnfollowableLink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+): Promise<"created" | "skipped"> {
+  const hold = await claimHoldDir(linkPath);
+  const sidecar = path.join(hold, path.basename(linkPath));
+  try {
+    await rename(linkPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing moved, so the claim is a stray empty directory. Left behind it
+    // would push every later repair up the numbered candidates toward the
+    // ceiling and eventually refuse them all.
+    await rm(hold, { recursive: true, force: true }).catch(() => undefined);
+    throw renameErr;
+  }
+  if (!(await movedLinkNamesTarget(sidecar, target))) {
+    // Not the entry this repair was authorised to replace. It goes back by the
+    // same atomic claim the rollback uses, and the repair declines rather than
+    // recreating something over a path somebody else owns.
+    await restoreHeldLink({ hold, sidecar, linkPath, type });
+    return "skipped";
+  }
+  try {
+    await symlink(target, linkPath, type);
+  } catch (error: unknown) {
+    await restoreHeldLink({ hold, sidecar, linkPath, type, cause: error });
+    throw error;
+  }
+  await discardHold(hold, linkPath);
+  return "created";
+}
+
+/**
+ * Puts the held link back, or reports where it is when it cannot.
+ *
+ * `symlink` is the atomic claim: it refuses an occupied path, so a file another
+ * process created at `linkPath` survives instead of being overwritten by a
+ * `rename`. It reproduces the link's target, which is the whole of a symlink's
+ * content — the reparse type is the defect being repaired and is not worth
+ * restoring even when it could be.
+ *
+ * A restore that fails does not throw over its caller's error. It keeps the
+ * hold and says where the original is, because the pathname is empty at that
+ * moment and an operator who is not told would read the wrapper as simply gone.
+ */
+async function restoreHeldLink(args: {
+  hold: string;
+  sidecar: string;
+  linkPath: string;
+  type: "dir" | "file";
+  cause?: unknown;
+}): Promise<void> {
+  const { hold, sidecar, linkPath, type } = args;
+  const failure = await putBackHeldEntry(sidecar, linkPath, type);
+  if (failure === null) {
+    await discardHold(hold, linkPath);
+    return;
+  }
+  const occupied = (failure as NodeJS.ErrnoException | null)?.code === "EEXIST";
+  info(
+    [
+      occupied
+        ? `  note: ${linkPath} は別プロセスが作成した entry に占有されているため復元しませんでした。`
+        : `  note: ${linkPath} の復元に失敗しました: ${describeError(failure)}`,
+      `  note: 元の entry は次の場所に退避してあります: ${sidecar}`,
+    ].join("\n"),
+  );
+}
+
+/**
+ * Puts the held entry back at `linkPath`, or returns why it could not.
+ *
+ * The primitive depends on what is actually held, and both choices are forced:
+ *
+ * - a **symlink** goes back with `symlink`, the only non-overwriting way to
+ *   create one (`rename` overwrites; `link` raises `EPERM` on a symlink). An
+ *   `EEXIST` from it is the proof that another process took the pathname, which
+ *   is what makes the failed-recreate rollback safe.
+ * - **anything else** — a regular file another process wrote in the window
+ *   between the followability probe and the move — goes back with `rename`,
+ *   which is what moved it and the only thing that reproduces it. Reading the
+ *   target with `readlink` first and giving up when that failed left a user's
+ *   file inside a `.qfai-repair-*` directory instead of at its own path.
+ *
+ * `rename` overwrites, so it runs only while the pathname is still free. That
+ * check and the move are two operations and a race remains possible between
+ * them — but the alternative is either abandoning the entry or destroying
+ * whatever arrived, and an occupied path is reported rather than resolved.
+ */
+async function putBackHeldEntry(
+  sidecar: string,
+  linkPath: string,
+  type: "dir" | "file",
+): Promise<unknown> {
+  const held = await safeLstat(sidecar);
+  if (held?.isSymbolicLink() === true) {
+    const target = await readlink(sidecar).catch(() => null);
+    if (target === null) {
+      return new Error(`退避した symlink の target を読み取れません: ${sidecar}`);
+    }
+    return await symlink(target, linkPath, type).then(
+      () => null,
+      (err: unknown) => err,
+    );
+  }
+  if ((await safeLstat(linkPath)) !== undefined) {
+    const occupied: NodeJS.ErrnoException = new Error(
+      `${linkPath} は別の entry に占有されています`,
+    );
+    occupied.code = "EEXIST";
+    return occupied;
+  }
+  return await rename(sidecar, linkPath).then(
+    () => null,
+    (err: unknown) => err,
+  );
+}
+
+/**
+ * Removes the hold once the pathname is settled — a note on failure, never an
+ * error.
+ *
+ * The link is already in place by the time this runs, so an ACL, an antivirus
+ * hold or a transient I/O fault here is not the repair failing. Reporting it as
+ * one told the operator a repair had failed that had in fact succeeded.
+ */
+async function discardHold(hold: string, linkPath: string): Promise<void> {
+  try {
+    await rm(hold, { recursive: true, force: true });
+  } catch (cleanupErr: unknown) {
+    info(
+      `  note: 修復は成功しましたが退避先を削除できませんでした (${hold}): ` +
+        `${describeError(cleanupErr)} — ${linkPath} は修復済みです`,
+    );
+  }
+}
+
+/**
+ * Whether the entry now at `sidecar` is a symlink naming `target`.
+ *
+ * Asked after the move, on the inode this process actually holds. Before it,
+ * the answer describes whatever was at the pathname a moment ago.
+ */
+async function movedLinkNamesTarget(sidecar: string, target: string): Promise<boolean> {
+  const moved = await safeLstat(sidecar);
+  if (moved?.isSymbolicLink() !== true) return false;
+  const held = await readlink(sidecar).catch(() => null);
+  return held !== null && path.normalize(held) === path.normalize(target);
+}
+
+/**
+ * A directory beside `linkPath` that this call exclusively owns.
+ *
+ * {@link claimSidecar} cannot serve: it claims a FILE with `wx`, and `rename`
+ * onto an existing destination fails on Windows. Checking a name is free and
+ * then renaming onto it is the check-then-use shape the flattened path warns
+ * about. `mkdir` without `recursive` refuses `EEXIST` atomically, so the
+ * directory is the claim and the name inside it is unoccupied by construction.
+ *
+ * A PID alone is not unique: a second `runInit` in the same process, or a later
+ * one after PID reuse, would otherwise land on a hold an earlier failed repair
+ * left behind — and the success path removes it.
+ */
+async function claimHoldDir(linkPath: string): Promise<string> {
+  const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
+    try {
+      await mkdir(candidate);
+      return candidate;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
+    }
+  }
+  throw new Error(
+    `qfai init: 修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です`,
+  );
+}
+
 async function ensureSymlink(
   linkPath: string,
   target: string,
@@ -3196,7 +3419,46 @@ async function ensureSymlink(
       const isValid = path.normalize(currentTarget) === path.normalize(target);
 
       if (isValid && !options.force) {
-        return "skipped";
+        // The target string being right is not the same as the link working.
+        // On Windows a `git worktree add` writes these as FILE symlinks
+        // pointing at directories — at the moment git writes one its target
+        // does not yet exist in the new worktree and it has no reftype hint —
+        // and the OS will not follow that. `readlink` returns the correct
+        // target, so this branch declared the entry sound and changed nothing,
+        // while `qfai validate` reported it as damage. The remedy that finding
+        // prints is "re-run `qfai init`", which landed here and skipped: a
+        // finding an operator cannot clear by following it (#1095).
+        //
+        // Same conclusion as the flattened-link case below, for the same
+        // reason: `qfai init` is the one command that can repair this, so
+        // requiring `--force` — which nothing tells the operator — is not a
+        // remedy. Auto-repair is scoped to a link that is already ours and
+        // already names the right target; only its reparse type is wrong.
+        //
+        // Scoped to `type === "dir"`. An agent wrapper is a `type: "file"`
+        // link at a `.md` document, and git writes those with the right kind
+        // already — an `EPERM` on one is an ACL or filesystem failure, and
+        // recreating an identical link cannot clear it, so the next validate
+        // reports the same finding. Probing followability there would trade a
+        // visible wrapper for a churned one and no repair.
+        //
+        // `recreateFlattenedLink` is not the helper for this: it is for a
+        // regular FILE whose content is the target string, and its rollback is
+        // built on `link()` and a 4096-byte content check. Neither applies to a
+        // symlink — `link()` on one raises EPERM. But the rollback ITSELF does
+        // apply, and is done below: without it a failed recreate leaves the
+        // wrapper absent, which is the one state `QFAI-LINK-001` deliberately
+        // treats as benign, so the damage becomes invisible to the very gate
+        // that sent the operator here. `--force` has always had that gap, and
+        // an explicit operator action is not an argument for taking it
+        // automatically on every init.
+        if (type === "file" || (await isFollowable(linkPath))) {
+          return "skipped";
+        }
+        if (options.dryRun) {
+          return "created";
+        }
+        return await recreateUnfollowableLink(linkPath, target, type);
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
