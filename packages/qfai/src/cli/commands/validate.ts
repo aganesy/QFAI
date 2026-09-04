@@ -496,6 +496,19 @@ export const GATE_GROUP_FAMILIES = {
   // its canonical spelling. Both are listed because the legacy family is frozen
   // and every code the gate gains from here on is canonical.
   tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // The downstream-ownership gate, and the only group `full` does NOT run.
+  //
+  // `/qfai-sdd` owns the protected files and edits them without a Change
+  // Request by design, and that author is told to run the full profile before
+  // completion like everyone else — so emitting the finding there would flag
+  // every legitimate authoring edit. `--profile tdd` is the completion gate the
+  // drift protocol names, i.e. the downstream stage the rule binds, and it is
+  // where the guard runs.
+  //
+  // Absent from this map entirely, the family could not even be REPORTED as
+  // unevaluated, so a `full` PASS looked drift-checked to an operator following
+  // `QFAI-PROFILE-001`'s own advice (#1122).
+  drift: ["QFAI-DRIFT-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -503,13 +516,24 @@ type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
 /**
+ * What `full` and `verify` actually run: every group except `drift`.
+ *
+ * Derived by exclusion rather than enumerated, so a group added to
+ * `GATE_GROUP_FAMILIES` still reaches `full` without a second edit — which is
+ * the property `ALL_GATE_GROUPS` was there for. The one exclusion is named,
+ * and `runFullValidators` passing `includeUpstreamGuard = false` is the fact it
+ * mirrors (#1122).
+ */
+const FULL_GATE_GROUPS = ALL_GATE_GROUPS.filter((group) => group !== "drift");
+
+/**
  * Groups each profile actually runs, mirroring
  * `core/validate.ts#runProfileValidators`. Exhaustive over `ValidationProfile`
  * so a new profile cannot be added without deciding what it evaluates.
  */
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
-  full: ALL_GATE_GROUPS,
-  verify: ALL_GATE_GROUPS,
+  full: FULL_GATE_GROUPS,
+  verify: FULL_GATE_GROUPS,
   // Both stages mandate the review pack in their RCP footer and both now run
   // `validateReviewArtifacts`, so `QFAI-REVIEW-*` must not be listed as a
   // family the run did not evaluate. `runSddValidators` additionally calls
@@ -520,7 +544,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
+  // `drift`: `runTddValidators` passes `includeUpstreamGuard = true` here and
+  // `runFullValidators` passes `false`, so this is the only profile that
+  // evaluates `QFAI-DRIFT-*`.
+  tdd: ["tdd", "atdd-traceability", "drift"],
   "saas-package": ["prototyping"],
 };
 
@@ -555,9 +582,14 @@ function unevaluatedFamilies(
     for (const family of GATE_GROUP_FAMILIES[group]) push(family);
   }
   if (families.length === 0) {
-    // A profile that runs every group is not partial, and this notice is the
-    // partial-profile notice. Reporting a precondition-gated group there would
-    // put "full is a partial profile" into the artifact.
+    // Nothing unevaluated: no notice. This used to be the `full` case and the
+    // comment here reasoned that reporting anything for `full` would put
+    // "full is a partial profile" into the artifact — but `full` does not run
+    // the `drift` group, so with respect to that gate the statement is true and
+    // the silence was the false claim (#1122). What the branch still guards is
+    // a profile with genuinely nothing left out: reporting a
+    // precondition-gated group there would be the artifact contradicting
+    // itself.
     return families;
   }
   if (evaluated.has("package-self-governance")) {
@@ -587,6 +619,8 @@ function buildPartialProfileNotice(
   profile: string | undefined,
   unevaluatedSelfGovernance: readonly string[],
 ): Issue | null {
+  // `core/validate.ts` resolves `options.profile ?? "full"` before this runs,
+  // so the only caller always supplies one; this is the parser-rejection path.
   if (!profile) {
     return null;
   }
@@ -596,14 +630,31 @@ function buildPartialProfileNotice(
   if (unevaluated.length === 0) {
     return null;
   }
+  // Drift gets its own sentence because it is the one family NO wide profile
+  // reaches: `full` and `verify` both call `runFullValidators`, which passes
+  // `includeUpstreamGuard = false`. Sending the reader to `--fail-on error`
+  // for it would repeat the advice that produced the false PASS (#1122).
+  const driftNote = unevaluated.includes("QFAI-DRIFT-*")
+    ? " `QFAI-DRIFT-*` (a downstream phase patching upstream SSOT) is evaluated ONLY by " +
+      "`npx qfai validate --profile tdd`, the completion gate the drift protocol names — " +
+      "no wide profile wires it, so `--fail-on error` alone never checks it."
+    : "";
+  // `full` and `verify` run every group but `drift`. Calling them partial
+  // overstates it the other way — a reader would go looking for the rest — and
+  // telling a full run to go run the full profile is a loop. Every other
+  // profile keeps the wording it had, because it was already accurate.
+  const wide = profile === "full" || profile === "verify";
+  const body = wide
+    ? `profile="${profile}" runs every gate group except drift. NOT evaluated in ` +
+      `this run: ${unevaluated.join(", ")}.`
+    : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this ` +
+      `run: ${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
+      "`npx qfai validate --fail-on error` (full profile) before declaring completion.";
   return {
     code: "QFAI-PROFILE-001",
     severity: "info",
     category: "canonical",
-    message:
-      `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
-      `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
-      "`qfai validate --fail-on error` (full profile) before declaring completion.",
+    message: `${body}${driftNote}`,
     rule: "validate.partialProfileCoverage",
   };
 }
