@@ -1789,19 +1789,25 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
 
   // …and the one bit Git does track still moves the hash, so making the record
   // portable did not make it blind.
-  it("stales the RED test hash when the executable bit changes", async () => {
-    await withProject(async (root) => {
-      await seedProject(root, reverifyLedger(), [], {
-        ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
+  // POSIX only: Windows has no executable bit, and `fs.chmod` there only
+  // toggles the read-only attribute — so the hash input never changes and the
+  // row could only ever report `expected false to be true` (#1133).
+  it.skipIf(process.platform === "win32")(
+    "stales the RED test hash when the executable bit changes",
+    async () => {
+      await withProject(async (root) => {
+        await seedProject(root, reverifyLedger(), [], {
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
+        });
+        await chmod(path.join(root, TEST_FILE), 0o755);
+        const issues = (await validateTddList(root, defaultConfig)).map((i) => ({
+          code: i.code,
+          message: i.message,
+        }));
+        expect(redHashInvalid(issues)).toBe(true);
       });
-      await chmod(path.join(root, TEST_FILE), 0o755);
-      const issues = (await validateTddList(root, defaultConfig)).map((i) => ({
-        code: i.code,
-        message: i.message,
-      }));
-      expect(redHashInvalid(issues)).toBe(true);
-    });
-  });
+    },
+  );
 
   it("rejects a shared-artifact re-verify whose proof does not fail", async () => {
     await withProject(async (root) => {
