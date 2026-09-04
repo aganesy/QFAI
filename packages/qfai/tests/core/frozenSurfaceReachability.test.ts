@@ -86,7 +86,9 @@ async function seedLoop(
   );
 }
 
-async function run(root: string): Promise<Awaited<ReturnType<typeof validateFrozenSurfaceReachability>>> {
+async function run(
+  root: string,
+): Promise<Awaited<ReturnType<typeof validateFrozenSurfaceReachability>>> {
   const config = await loadConfig(root);
   return validateFrozenSurfaceReachability(root, config.config);
 }
