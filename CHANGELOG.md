@@ -539,6 +539,36 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
+- **finding code の family カバレッジ証明が Windows では一度も走っていなかった
+  （CI は green のまま）。** `codesInFile` は解析済みソースをパスで引く:
+  `scan.sources.find((c) => c.fileName === file)`。`ts.createSourceFile` は
+  渡された名前を**スラッシュに正規化**し、`file` は `path.resolve` の結果である。
+  POSIX では同一文字列なので一致するが、win32 では
+
+  ```text
+  C:/Users/.../src/core/validators/testTodoStubs.ts     (fileName)
+  C:\Users\...\src\core\validators\testTodoStubs.ts     (file)
+  ```
+
+  となり、lookup は常に外して行は `not scanned:` で throw していた。
+
+  この行が実装している保証は「gate が emit するコードはすべて**family**
+  エントリで覆われる（bare code ではなく）」であり、gate が 2 つ目のコードを
+  得たときに `QFAI-PROFILE-001` の notice から黙って抜け落ちるのを防ぐもの。
+  `validateTestTodoStubs` は `runTddValidators` の中、つまり
+  `qfai-implement` が gate にする profile で走るので、覆われていることを
+  確認できていなかったのはそこのコードである。
+
+  さらに悪いのは、Windows ツリーでは常に赤く CI では緑になるため、
+  開発者がこの行をノイズとして読むよう訓練される点である（実際そうなった —
+  本セッションは数時間これを「既知の先行失敗」に分類していた）。
+
+  比較の両辺を同じ key 関数に通した。正規化は `path.sep` ではなく `\` を
+  無条件に畳む — `path.sep` を使うと POSIX ではこの関数が恒等写像になり、
+  Linux 上では正規化を外しても全行が緑のままになる。**この欠陥を生かした
+  片側プラットフォーム盲点そのもの**なので、win32 形式の key を使う回帰行を
+  追加し、両プラットフォームで落ちるようにした。 (#1130)
+
 - **`QFAI-DRIFT-001` の免除が承認済み CR 全文への substring 一致だったため、
   禁止文が許可として働いていた。** `readApprovedCrText` は `Status: approved`
   の CR **本文全体**を連結し、変更されたパスがその中に現れるかだけを見ていた。
