@@ -11,7 +11,7 @@
 - Approved option: `record-only (defer the canonical-artifact decision)`
 - Scope extended at: `2026-09-04T07:10:00+09:00` (approved by `yusuke_senaga`) — see
   **Scope extension: the guard is deferred to #1093** below
-- Applied at: `2026-09-04T11:50:00+09:00` — when the `confirm-only` rerun's output was
+- Applied at: `2026-09-04T12:21:44+09:00` — when the `confirm-only` rerun's output was
   written to `.qfai/specs/spec-0012/09_delta.md`; see **Timestamps**
 - Superseded by: `-`
 
@@ -46,10 +46,11 @@ only after loading `validate.json` (`:286-319`) and reading and validating
 earlier revision of this CR had it backwards.
 
 What that ordering means in practice: a per-spec-only iteration makes `validate`
-report `prototypingEvidence.review.missing`, and `certify` then refuses at its
-all. The per-spec files that gate looks for are present — it only checks their
-existence — and cannot help.
-The project can pass neither command:
+report `prototypingEvidence.review.missing`, so `certify` stops at its
+`validate.json#counts.error` check (`:286-319`) and never reaches the per-spec
+presence gate at `:633` at all. The per-spec files that gate would look for are
+present, and it only checks that they exist — so they cannot help either way.
+The project passes neither command:
 
 > per-spec present AND flat absent, on a recorded non-seed iteration
 
@@ -148,12 +149,12 @@ clock and the CR ID's date are in. They were first written as a JST wall clock
 stamped `Z`, which names an instant nine hours later than the real one; on the
 scope extension that recorded an approval after the commit applying it.
 
-| field               | value                       | anchor                                                                      |
-| ------------------- | --------------------------- | --------------------------------------------------------------------------- |
-| `Raised at`         | `2026-09-04T05:10:24+09:00` | the correction comment on issue #1078                                       |
-| `Approved at`       | `2026-09-04T05:20:00+09:00` | the conversation turn — the one estimate, bounded by the two rows around it |
-| `Scope extended at` | `2026-09-04T07:10:00+09:00` | the conversation turn approving it                                          |
-| `Applied at`        | `2026-09-04T11:50:00+09:00` | the `confirm-only` rerun's CR reference written to `09_delta.md`            |
+| field               | value                       | anchor                                                                                 |
+| ------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
+| `Raised at`         | `2026-09-04T05:10:24+09:00` | the correction comment on issue #1078                                                  |
+| `Approved at`       | `2026-09-04T05:20:00+09:00` | the conversation turn — the one estimate, bounded by the two rows around it            |
+| `Scope extended at` | `2026-09-04T07:10:00+09:00` | the conversation turn approving it                                                     |
+| `Applied at`        | `2026-09-04T12:21:44+09:00` | the commit that first carried the `confirm-only` rerun's CR reference in `09_delta.md` |
 
 `Applied at` is when the owner-skill rerun completed and the upstream artifacts were
 updated, which is what `skills/qfai-sdd/templates/change-request.md` defines it as —

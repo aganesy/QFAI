@@ -178,11 +178,11 @@ wrong direction.
 
 Each value is anchored to something checkable rather than estimated:
 
-| field               | value                       | anchor                                |
-| ------------------- | --------------------------- | ------------------------------------- |
-| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079 |
-| `Applied at`        | `2026-09-04T05:32:10+09:00` | commit `f4479d25` author time         |
-| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time         |
+| field               | value                       | anchor                                                                                                                       |
+| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079                                                                                        |
+| `Applied at`        | `2026-09-04T05:41:13+09:00` | commit `a6848f11` — set after the scope extension, per the template; the first correction landed at `05:32:10` in `f4479d25` |
+| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time                                                                                                |
 
 `Approved at` is the only estimate. The approval is a conversation turn and
 leaves no artifact, so it is bounded below by `Raised at` and above by
