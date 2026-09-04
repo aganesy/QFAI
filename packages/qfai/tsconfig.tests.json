@@ -52,6 +52,7 @@
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",
     "tests/core/specSplitScopeAttribution.test.ts",
+    "tests/core/toolProvenance.test.ts",
     "tests/e2e/spec0003ShippedWorkflowSetE2E.test.ts",
     "tests/e2e/spec0006WorkflowsIntegrityE2E.test.ts",
     "tests/e2e/spec0008CredentialReuseGuidanceE2E.test.ts",
