@@ -6,6 +6,39 @@
 
 ### Added
 
+- **`R-CERTIFY-VERIFY-CIRCULAR` を `validate` では `info` にし、強制は
+  `certify` に残した (`CR-20260904-0004`)。** `error` のままでは
+  `/qfai-verify` の Completion Contract が Work Order H 外で満たせなかった。
+  skill は `verify.json` を MUST とし、その `scope` は「実際に実行した stage を
+  名指しし、実行していない stage は決して書かない」(`SKILL.md:148` / `:173` /
+  `:72-73`)。したがって通常の full プロファイル実行は `scope: "full"` を書く
+  しかなく、prototyping loop が開いている間、このルールがまさにそれで発火した。
+  実測: `error=0` → ファイル作成 → `error=1` → 削除 → `error=0`。waiver は
+  `warning` / `info` に限られる (`:151`) ので逃げ道が 1 つも無かった。
+  `SKILL.md:65` の carve-out は Work Order H に明示的に限定されており、
+  実プロジェクトでは loop が数週間開いたまま他の stage が走るため、この状態は
+  例外ではなく通常である。
+  強制点は変えていない — `prototypingCertify.ts:374-383` が既に非 prototyping
+  scope を exit 2 で拒否しており、そのコメント自身が、この finding は
+  「keeps the certify command self-contained instead of relying on a downstream
+  validate pass to surface the same condition」と述べている。
+  `scope: "full"` の verdict がディスク上にあること自体は damage ではない —
+  それを `certify` が **consume** することが damage で、`certify` は拒否する。
+  finding のメッセージには逃げ道を追加した (loop を閉じ、Work Order H として
+  `/qfai-verify` を再実行して `scope: "prototyping"` を記録する)。従来は
+  ルールと contract 条項だけを述べ、代わりに何を書けばよいかは述べていなかった。
+  severity は `REQ-0015-0013` / `US-0015-0007` / `AC-0015-0013` /
+  `EX-0015-0009` に規定された upstream SSOT なので Change Request を伴う。
+  4 箇所すべてに新 severity と **その理由** を記録した — 「CIRCULAR」という名前の
+  ルールに `info` を見た読者が、強制が無くなったと誤解しないため。
+  issue の案 (2) (`prototypingLoop: "open"` の追加) と (3) (SKILL.md に例外を
+  明記) はコストではなく中身で却下した: (2) は `prototyping.json` が既に持つ
+  情報を schema field に二重化し、どちらが正かを両 reader で合わせる必要が
+  生じる。(3) は skill が artifact を MUST としつつ「書かない条件」も述べる形に
+  なり、実際の error を捕らえるのは依然 `certify` なので、発火しない gate の
+  ための文書になる。
+  (#1097)
+
 - **`discussion` profile が root DESIGN.md の parse を見られるようにした。**
   `qfai-discussion` は parsable な root DESIGN.md を MUST とし、gate として
   `--profile discussion` を指定している。しかしその profile が走らせる 5 つの
