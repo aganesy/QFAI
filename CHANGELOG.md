@@ -6,6 +6,39 @@
 
 ### Added
 
+- **依存宣言と食い違う qfai の解決を `QFAI-TOOL-002` として分離した。**
+  `QFAI-TOOL-001` は path 比較だけで判定しており、4 つの解決を区別できなかった:
+  worktree ハザード / `_npx` キャッシュ / 意図的なグローバルインストール /
+  monorepo root への hoist。前 2 つはハザード、後 2 つは正常運用なので、
+  1 つの code では両方について真であることを言えない。
+  区別に必要なのは **intent の signal** で、それはプロジェクト自身の依存宣言
+  である。`findDeclaringDir` が root から上方に、`qfai` を任意の dependency
+  field で宣言する最も近い `package.json` を探す。そのディレクトリが
+  「その宣言が入れる copy はどこか」の答なので、内側なら宣言どおり
+  (npm の `node_modules/qfai`、pnpm が解決する `.pnpm/...` を含む)、外側なら
+  **宣言があるのに別の copy が走っている** = ハザードである。
+  判定:
+  宣言あり + 宣言の外の copy → `QFAI-TOOL-002` (`warning`、昇格窓付き) /
+  宣言なし → `QFAI-TOOL-001` (`info`、グローバルか npx 取得しか実行経路が
+  無いので operator の選択) / workspace root への hoist →
+  `QFAI-TOOL-001` (`info`、宣言は honour されている)。
+  つまり**昇格ではなく code の分割**で、これは issue 自身が
+  「that row can be promoted while the rest stays `info`, which means splitting
+  the code rather than promoting it」と述べている形である。
+  `QFAI-TOOL-002` には昇格窓を置いた。ここでは P7 の既定が正しい —
+  この条件は**今日不可視**なので、抱えているプロジェクトは一度も知らされて
+  いない。gate が落ち始める前に気付いて直すための 1 minor が必要である。
+  版番の比較ではなく**包含**で判定する。lockfile が pin した版は実行中の
+  プロセスから読めないが、ディレクトリは読める。
+  `classifyAgainstDeclaration` と `findDeclaringDir` を export した。
+  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
+  動かせず、判定すべき状態に到達できない。最初に書いた行はすべて
+  `declaredElsewhere === false` の assert で、**一度も発火しないルールでも
+  全行通る**状態だった (このリポジトリで 3 度目の one-sided suite)。
+  書き直して 6 positive / 11 negative にし、4 変異 (判定が発火しない / 常に
+  発火する / walk が最初の manifest で止まる / `dependencies` のみを数える)
+  すべてが検出されることを確認した。
+  (#1108)
 - **waiver 処理後に追加される finding を「未知の rule」と呼ばないようにした。**
   `isPostWaiverSource` は `src/cli/` を `EMITTED_RULE_CODES` から意図的に除外
   している。これは正しい — `applyWaivers` は `core/validate.ts` の中で走るので、

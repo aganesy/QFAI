@@ -74,6 +74,18 @@ export const SUNSETS = {
  */
 export const RULE_PROMOTIONS = {
   /**
+   * `QFAI-TOOL-002` — the project declares a `qfai` dependency and a different
+   * copy is running. Unlike its `info` sibling this is not anybody's choice:
+   * the project said what it wanted and something else answered.
+   *
+   * A window, and P7's default is right here — the condition is INVISIBLE
+   * today, so a project carrying it has never been told. It needs a minor to
+   * notice and fix before the gate starts failing on it. That is the opposite
+   * of a code whose condition already crashes the run, where a window would
+   * turn a hard failure into a pass for two minors.
+   */
+  toolResolvedAgainstDeclaration: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
    * as UI-bearing. The window is doing real work: the in-loop way out does not
    * exist yet (a `rescope` operation is proposed in #1099), so until it does,
