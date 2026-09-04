@@ -57,6 +57,19 @@ async function commitEdits(root: string, edits: Record<string, string>): Promise
 
 const config = { ...defaultConfig, baseBranch: "base" };
 
+/** An approved CR carrying `sections` — the header is the part every row shares. */
+function approvedCr(sections: string[]): string {
+  return [
+    "# Change Request",
+    "",
+    "- ID: `CR-20260801-0001`",
+    "- Status: `approved`",
+    "",
+    ...sections,
+    "",
+  ].join("\n");
+}
+
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -122,23 +135,182 @@ describe("validateUpstreamSsotGuard", () => {
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
   });
 
-  it("is silenced by an approved Change Request naming the path", async () => {
+  it("is silenced by an approved Change Request declaring the path in `## Impact scope`", async () => {
+    // The section is the CR's declaration of what it covers, and a declaration
+    // is what an exemption rests on. This row was written against
+    // `## Proposed change`, which is prose: the exemption used to be a
+    // substring match over the whole body, so any section did (#1121).
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
-      ".qfai/decisions/CR-20260801-0001-fix-contract.md": [
-        "# Change Request",
+      ".qfai/decisions/CR-20260801-0001-fix-contract.md": approvedCr([
+        "## Impact scope",
         "",
-        "- ID: `CR-20260801-0001`",
-        "- Status: `approved`",
-        "",
-        "## Proposed change",
-        "",
-        "Rename the shadowing local in `.qfai/contracts/db/CON-DB-0007.sql`.",
-      ].join("\n"),
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql`",
+      ]),
     });
 
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("accepts the bare filename, the other spelling an author reaches for", async () => {
+    // The template's own `## Impact scope` asks for `Contracts: <CON-*>` and
+    // `Schema: <paths>`, so "name it by file" is what the section invites. The
+    // issue's author wrote a CR this way, approved it, and the four errors did
+    // not move.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-fix-contract.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Contracts: `CON-DB-0007.sql`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("does NOT accept a contract ID, which names a declaration and not a file", async () => {
+    // The deliberate limit. Resolving `CON-DB-0007` to a path would make the
+    // exemption depend on parsing every contract; the remediation says which
+    // spellings work instead.
+    const root = await newRepo({ ".qfai/contracts/db/db-0007-leases.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/db-0007-leases.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-fix-contract.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Contracts: `CON-DB-0007`",
+      ]),
+    });
+
+    const issues = await validateUpstreamSsotGuard(root, config);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.suggested_action).toContain("## Impact scope");
+  });
+
+  it("is NOT silenced by a prohibition, which used to read as a permission", async () => {
+    // The sharpest form of the defect: a CR that FORBIDS the edit granted it
+    // the moment `Status` reached `approved`, because the guard asked only
+    // whether the path appeared somewhere in the body (#1121).
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-other.md": approvedCr([
+        "## Context",
+        "",
+        "DO NOT edit `.qfai/contracts/db/CON-DB-0007.sql` — the index belongs to",
+        "another contract's owner.",
+        "",
+        "## Impact scope",
+        "",
+        "- Contracts: `none`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("is NOT silenced by the `## Reproduction` block a defect CR must carry", async () => {
+    // `#when-drift-is-detected` step 2 makes a reproduction REQUIRED for a
+    // defect-class CR, and a reproduction quotes the path it is about. So the
+    // blob match had every defect CR authorising the edit it was reporting.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-defect.md": approvedCr([
+        "## Reproduction",
+        "",
+        "```console",
+        "$ npx qfai validate --profile tdd",
+        "… .qfai/contracts/db/CON-DB-0007.sql",
+        "```",
+        "",
+        "## Impact scope",
+        "",
+        "- Specs: `spec-0004`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("does not let one approved CR exempt a path another one owns", async () => {
+    // The blob was repository-wide, so an approved CR about `spec-0004` that
+    // quoted an unrelated contract silenced that contract's finding too.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-unrelated.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Specs: `spec-0004`",
+        "- Contracts: `.qfai/contracts/api/api-0001-rules.yaml`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("stops the section at the next heading", async () => {
+    // Without a boundary the "section" would run to end of file and the change
+    // would be no change at all.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-after.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Specs: `spec-0004`",
+        "",
+        "## Resolution",
+        "",
+        "Reran the owner skill over `.qfai/contracts/db/CON-DB-0007.sql`.",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("does not let a neighbouring artifact's name authorise the file", async () => {
+    // `includes` was true for `<path>2` and `<path>.bak`, so a scope naming a
+    // sibling authorised the file it was named after.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-neighbour.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql.bak`, `CON-DB-00071.sql`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("is NOT silenced by an open Change Request that DECLARES the path", async () => {
+    // The only shape that can tell the approval check from its absence. The
+    // row below puts the path in prose, so after the match moved to
+    // `## Impact scope` it declared nothing either way and passed whether or
+    // not `CR_APPROVED_RE` ran at all — found by mutating the check away.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0002-pending.md": [
+        "# Change Request",
+        "",
+        "- ID: `CR-20260801-0002`",
+        "- Status: `open`",
+        "",
+        "## Impact scope",
+        "",
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql`",
+        "",
+      ].join("\n"),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
   });
 
   it("is NOT silenced by an open Change Request", async () => {
@@ -161,7 +333,11 @@ describe("validateUpstreamSsotGuard", () => {
     expect(issues).toHaveLength(1);
   });
 
-  it("is not silenced by an approved CR that names a different path", async () => {
+  it("is not silenced by an approved CR whose scope declares a different path", async () => {
+    // The per-path half of the scoping: one CR, two edits, one declared. The
+    // CR used to name the exempt path in a bare prose line, which authorised
+    // nothing once the match moved to the declared section — so the row
+    // reported both files and stopped measuring the contrast it exists for.
     const root = await newRepo({
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n",
       ".qfai/contracts/db/CON-DB-0008.sql": "SELECT 1;\n",
@@ -169,12 +345,11 @@ describe("validateUpstreamSsotGuard", () => {
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
       ".qfai/contracts/db/CON-DB-0008.sql": "SELECT 2;\n",
-      ".qfai/decisions/CR-20260801-0001-fix-contract.md": [
-        "- ID: `CR-20260801-0001`",
-        "- Status: `approved`",
+      ".qfai/decisions/CR-20260801-0001-fix-contract.md": approvedCr([
+        "## Impact scope",
         "",
-        "Approved for `.qfai/contracts/db/CON-DB-0007.sql` only.",
-      ].join("\n"),
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql`",
+      ]),
     });
 
     const issues = await validateUpstreamSsotGuard(root, config);

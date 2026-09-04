@@ -488,8 +488,8 @@ defect is gone with it. The drain is what pays for dropping the round.
   — diffs the branch against `baseBranch` and emits `QFAI-DRIFT-001` (`error`)
   for every changed file under `paths.contractsDir`, under `_policies/`, or
   matching a protected spec-pack filename. A Change Request at `Status:
-approved` that **names the changed path** silences it; an `open` CR does not,
-  because an open CR authorises nothing. The check does not run in the `sdd`
+approved` whose **`## Impact scope` names the changed path** silences it — not
+  a path named elsewhere in it, not a contract ID, and never an `open` CR. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set**
