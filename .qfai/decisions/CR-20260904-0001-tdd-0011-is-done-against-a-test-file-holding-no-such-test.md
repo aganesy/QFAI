@@ -12,7 +12,7 @@
 - Scope extended at: `2026-09-04T05:41:13+09:00` (approved by `yusuke_senaga` before
   that commit) — see
   **Scope extension** below
-- Applied at: `2026-09-04T12:35:00+09:00` — the `confirm-only` rerun's output written
+- Applied at: `2026-09-04T13:51:07+09:00` — the `confirm-only` rerun's output written
   to `.qfai/specs/spec-0004/09_delta.md`; see **Timestamps**
 - Superseded by: `-`
 
@@ -191,11 +191,11 @@ wrong direction.
 
 Each value is anchored to something checkable rather than estimated:
 
-| field               | value                       | anchor                                                                                                                                          |
-| ------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079                                                                                                           |
-| `Applied at`        | `2026-09-04T12:35:00+09:00` | the `confirm-only` rerun's CR reference written to `spec-0004/09_delta.md`; the ledger corrections landed earlier, at `05:32:10` and `05:41:13` |
-| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time                                                                                                                   |
+| field               | value                       | anchor                                                                                                                                                                      |
+| ------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079                                                                                                                                       |
+| `Applied at`        | `2026-09-04T13:51:07+09:00` | commit `522e9c6c`, where the `confirm-only` rerun's CR reference first reached `spec-0004/09_delta.md`; the ledger corrections landed earlier, at `05:32:10` and `05:41:13` |
+| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time                                                                                                                                               |
 
 `Approved at` is the only estimate. The approval is a conversation turn and
 leaves no artifact, so it is bounded below by `Raised at` and above by
@@ -213,5 +213,24 @@ sentence broken by a line-index edit. Those are repairs to the application, not
 new applications, and they do not move `Applied at`. What would move it is a
 further approved change to an upstream artifact — there has been none.
 
+A **wrong anchor** is the one other thing that moves it, and is not the same as
+chasing a commit. The value was `12:35:00`, anchored to commit `2a467621`
+(`12:35:19+09:00`) — but that commit does not touch
+`.qfai/specs/spec-0004/09_delta.md` at all. The CR reference, which is the
+rerun's output under drift-protocol step 4, first reached that file in
+`522e9c6c` at `13:51:07+09:00`:
+
+```sh
+git show --name-only --format='' 2a467621 | grep -c 'spec-0004/09_delta.md'   # 0
+git log --format='%h %ad' --date=iso-strict \
+  -S 'CR-20260904-0001' -- .qfai/specs/spec-0004/09_delta.md                  # 522e9c6c2 2026-09-04T13:51:07+09:00
+```
+
+So the old value was not the completion instant under the rule above either: it
+named a commit that never carried the artifact, and released the downstream gate
+about 76 minutes before the rerun's output existed. Corrected to `522e9c6c`.
+
 Recorded because the field was re-pointed four times during review, each time
-chasing the newest commit, which is the wrong rule.
+chasing the newest commit, which is the wrong rule. The correction above is the
+other case — a value whose anchor did not hold what it claimed — and the two
+must not be confused: the first is drift, the second is a defect in the record.

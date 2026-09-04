@@ -54,6 +54,29 @@ The project passes neither command:
 
 > per-spec present AND flat absent, on a recorded non-seed iteration
 
+**On the premise that `validate` re-ran after the layout changed.** `certify`
+gates on the **stored** `validate.json` and checks three things about it — that
+it exists, that its `profile` is `prototyping`, and that its `counts.error` is
+0 (`:286-319`). It establishes no correspondence with the evidence it is about
+to seal: no `generatedAt`, no digest, no mtime relation. The only freshness
+relation in the file is the upgrade-promotion mtime check at `:1216-1294`, which
+compares a gates signal against the certificate rather than the validate result
+against the tree, and `:1244-1249` documents the missing link as a known
+limitation.
+
+So the sequence "flat present -> `validate` succeeds -> flat removed, per-spec
+written -> `certify`" does **not** stop at the `counts.error` gate. The stale
+success passes it, `hasPerSpecSubdir` is true, the per-spec files satisfy the
+per-spec gate, and `:933-952` seals — `certify` never reads the flat
+`iter-NN/review.json` at all (`:663` names it only as the legacy fallback). That
+path is a defect in its own right, independent of the layout contradiction this
+CR is about, and is filed as **#1107**.
+
+It is stated here because the guard deferred to #1093 must not be designed
+against a safety that only holds for a fresh `validate`. "Neither command
+passes" is a claim about what the two commands _demand_, not a claim that the
+sequence is unreachable.
+
 Two consequences worth stating, because earlier revisions of this CR got both
 wrong:
 
