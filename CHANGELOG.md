@@ -96,6 +96,30 @@
 
 ### Fixed
 
+- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
+  canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
+  いずれも無変更で、変更は記録のみ。
+  記録した到達条件は 10 巡のレビューを経て確定した。`validate` は記録済み非 seed
+  iteration すべてに flat `iter-NN/review.json` を要求する。`certify` が layout 分岐に
+  到達するのは `validate.json` を読み `frozenSpecsCovered` を検証した後だが、
+  **well-formed な single-spec frozen set はそこを通過して layout 分岐に達する** —
+  したがって single-spec 凍結は緩和策にならない。よって矛盾は
+  **「`validate` が監査する記録済み非 seed iteration が per-spec 成果物を持ち、flat を
+  持たない」**瞬間に live になる。
+  当初の枠組み 2 点は誤りだったので明記する: (1) 矛盾は **multi-spec frozen set を
+  必要としない**（したがって single-spec 凍結と `TC-0012-0388` は緩和策にならない）。
+  (2) 2 つのレイアウトは**常に排他ではない** — flat を残して per-spec も書く dual-write は
+  両ゲートを満たすので、wire-in は canonical を決めずに dual-write で land できる。
+  排他なのは per-spec **のみ**の状態だけである。
+- **「trigger を守るガードを追加する」という scope 拡張は本 PR では出荷せず、
+  要件仕様として #1093 に分離した。**
+  **守る対象の実装が存在しない状態では、正しいガードは書けない。**
+  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の `OQ-0012-0007`。
+  9 巡で 7 稿を試し、いずれも反証された — どれも「まだ書かれていないコードの形」への
+  推測だったため。反証された 7 稿と、正しいガードが満たすべき要件を #1093 に記録した。
+  なお `iterationReviewPathPerSpec` / `dispatchReviewerToPair` の caller が 0 であることは
+  **到達不能の根拠にならない** — `prototypingCertify.ts` は per-spec パスをテンプレート
+  文字列で組み立て、どちらの helper も import していない。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
@@ -135,26 +159,6 @@
   「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
   backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
   確認済み。
-- **#1078 の矛盾を計測して `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
-  `validate` の reviewer-deliverable gate は flat な `iter-NN/review.json` を読み、
-  `certify` は multi-spec frozen set に対して per-spec
-  `iter-NN/spec-NNNN/<screen>.review.json` を要求して exit 64 する。
-  `certify` を満たすと `validate` が全 non-seed iteration で
-  `prototypingEvidence.review.missing` を出し、`QFAI-PROT-002` は hard-error
-  なので exploration mode でも緩まず、`certify` は
-  `validate.json#counts.error === 0` でないと封印しない — どちらに寄せても
-  certify 不能になる。
-  どちらを canonical とするかの判断は**保留**（ユーザ判断）。実需が出るまで
-  決定コストを先送りし、事実のみ確定させた:
-  `iterationReviewPathPerSpec` と `reviewerDispatch.ts` はいずれも production
-  caller ゼロ、`prototypingIterate.ts` の single-spec 凍結だけが両者を隔てており、
-  その凍結コメント自身がこの矛盾を理由に挙げている。
-  なお `scores` と `ordinalAxes` は **同一**（軸 4 つ・尺度 4 段が一致）で、
-  #1078 に「同じ情報ではない」と書いたのは誤りだったので issue 側を訂正した。
-  一方 `pivotDirective` / `evidenceRefs` / `reviewerId` は `ReviewerPayload` に
-  **存在しない**ため、per-spec 側に寄せる案は「対応表を書く」ではなく
-  「contract の closed schema を拡張する」ことになる。
-  コードと contract は一切変更していない。
 - **`TDD-0011` が `QFAI-PROT-002` のテストを 1 件も持たないファイルに対して `done`
   だったのを正した** (#1079, `CR-20260904-0001`)。`Test file` セルは
   `tests/core/prototypingEvidence.negative.test.ts` を指していたが、このファイルの
