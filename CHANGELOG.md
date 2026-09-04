@@ -99,26 +99,26 @@
 - **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
   canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
   いずれも無変更で、変更は記録のみ。
-  記録した到達条件は 7 巡のレビューを経て確定した: `certify` は `hasPerSpecSubdir` を
+  記録した到達条件は 9 巡のレビューを経て確定した。`certify` は `hasPerSpecSubdir` を
   **frozen set より先に**分岐するので、per-spec レイアウトが存在した時点で per-spec
-  ファイルだけを検証する — **single-spec frozen set でも同じ**。一方 `validate` は flat
-  `iter-NN/review.json` を要求し続ける。よって矛盾は「ある iteration が per-spec 成果物を
-  持ち、flat を持たない」瞬間に live になり、**`frozenSpecsCovered` には依存しない**。
+  ファイルを検証する — **single-spec frozen set でも同じ**。一方 `validate` は flat
+  `iter-NN/review.json` を要求し続ける。よって矛盾は
+  **「`validate` が監査する記録済み非 seed iteration が per-spec 成果物を持ち、flat を
+  持たない」**瞬間に live になる。
+  当初の枠組み 2 点は誤りだったので明記する: (1) 矛盾は **multi-spec frozen set を
+  必要としない**（したがって single-spec 凍結と `TC-0012-0388` は緩和策にならない）。
+  (2) 2 つのレイアウトは**常に排他ではない** — flat を残して per-spec も書く dual-write は
+  両ゲートを満たすので、wire-in は canonical を決めずに dual-write で land できる。
+  排他なのは per-spec **のみ**の状態だけである。
 - **「trigger を守るガードを追加する」という scope 拡張は本 PR では出荷せず、
-  要件仕様として別 issue に分離した。** 理由は再挑戦より重い:
+  要件仕様として #1093 に分離した。**
   **守る対象の実装が存在しない状態では、正しいガードは書けない。**
-  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の
-  `OQ-0012-0007` である。7 巡で 7 稿を試し、いずれも反証された — 稿の不注意ではなく、
-  どれも「まだ書かれていないコードの形」への推測だったため。
-  最終巡は両方向から同時にそれを示した: fixture は `.qfai/contracts/ui/*.yaml` の screen を
-  1 つも宣言せず `playwrightRunner` も注入しないので、実際の `(spec, screen)` dispatch
-  経路は **0 回**実行され緑のままになる。かつディスク上の全 `iter-NN` を走査するので、
-  iteration を記録する前に作業用 `iter-01/spec-0001/` を作る通常の移行で、
-  **どちらの gate も矛盾していないのに赤くなる**。過敏かつ鈍感で、どちらを直すにも
-  未記述経路のハーネスが要る。
-  反証された **7 稿**とその反証（別名 import / `export *` barrel / 動的 `import()` /
-  カテゴリエラー / dual-write 誤拒否 / 「ガード不要」の 2 つの誤前提）を CR に列挙し、
-  正しいガードが満たすべき要件も明記した。実装と同時に作る。
+  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の `OQ-0012-0007`。
+  9 巡で 7 稿を試し、いずれも反証された — どれも「まだ書かれていないコードの形」への
+  推測だったため。反証された 7 稿と、正しいガードが満たすべき要件を #1093 に記録した。
+  なお `iterationReviewPathPerSpec` / `dispatchReviewerToPair` の caller が 0 であることは
+  **到達不能の根拠にならない** — `prototypingCertify.ts` は per-spec パスをテンプレート
+  文字列で組み立て、どちらの helper も import していない。
 - **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
   (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
   `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。

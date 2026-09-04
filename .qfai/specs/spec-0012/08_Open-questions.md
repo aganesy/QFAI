@@ -156,21 +156,21 @@
 - Next decision point: Ops gate post-v1 dogfooding.
 - Evidence: discussion-20260516144141078 `11_OQ-Register.md` (OQ-0003 row) and `13_Deferred.md` (OQ-0003 row).
 
-## OQ-0012-0013: `validate` and `certify` demand mutually exclusive review-artifact layouts
+## OQ-0012-0013: a per-spec-only review layout satisfies `certify` and fails `validate`
 
 - Gate: implement
-- Disposition: deferred (trigger = an iteration carrying per-spec review artifacts without the flat `review.json`, which the OQ-0012-0006 / 0007 wire-in would introduce; NOT limited to a multi-spec frozen set)
+- Disposition: deferred (trigger = a RECORDED non-seed iteration carrying per-spec review artifacts without the flat `review.json`; a dual-write iteration carrying both satisfies each gate and is NOT the trigger, and unrecorded working directories are outside what either gate inspects)
 - Owner: solution-architect
 - Due: 2026-10-31
 - Severity: medium
 - Source: issue #1078, raised from the review round on PR #1077 (hardening the reviewer-deliverable gate added in #1076).
-- Question: The two gates require reviewer artifacts in mutually exclusive places, and one has to be named canonical before either the OQ-0012-0006 layout wire-in or the OQ-0012-0007 dispatch wire-in can land.
-  - Reachability: `certify` branches on `hasPerSpecSubdir` BEFORE it looks at the frozen set, so the contradiction is live as soon as an iteration carries per-spec artifacts without the flat `review.json` — for a single-spec frozen set as much as a multi-spec one. This corrects the original framing, which limited it to multi-spec.
+- Question: `validate` requires the flat `iter-NN/review.json` while `certify` validates `iter-NN/spec-NNNN/<screen>.review.json` once that layout exists, so an iteration holding per-spec artifacts WITHOUT the flat one satisfies neither. One layout has to be named canonical, or the wire-in has to dual-write.
+  - Reachability: `certify` branches on `hasPerSpecSubdir` BEFORE it reads the frozen set, so this is live for a single-spec frozen set as much as a multi-spec one. The original framing limited it to multi-spec; that was wrong, and the single-spec freeze in `prototypingIterate.ts` is therefore NOT a mitigation for it.
   - `validate --profile prototyping` reads the FLAT `.qfai/evidence/prototyping/iter-NN/review.json` (`validators/prototypingEvidence.ts` via `core/prototyping/iteration.ts#iterationReviewPath`) and validates the `EvaluatorReview` shape.
   - `qfai prototyping certify` requires the PER-SPEC `iter-NN/spec-NNNN/<screen>.review.json` layout (`cli/commands/prototypingCertify.ts`), and `.qfai/contracts/cli/qfai-prototyping-iterate.md` calls that file "the sole per-cycle Reviewer artifact" as REQUIRED, with the `ReviewerPayload` shape.
   - A project satisfying one therefore fails the other, `QFAI-PROT-002` is on `core/prototyping/mode.ts`'s hard-error list so exploration mode does not soften it, and `certify` refuses to seal unless `validate.json#counts.error === 0`. Uncertifiable either way.
 - Measured on `main` at `aa7bcd23` (2026-09-04), so the deferral rests on facts rather than on the issue's framing:
-  - `iterationReviewPathPerSpec` has **zero production callers**; `reviewerDispatch.ts` has **zero production callers**. The contradiction is unreachable today for that reason alone.
+  - `iterationReviewPathPerSpec` and `dispatchReviewerToPair` have zero production callers today. This is NOT evidence the layout is unreachable: `cli/commands/prototypingCertify.ts` composes per-spec paths from a template string and imports neither helper, so the layout is reachable with the caller count at zero.
   - `prototypingIterate.ts` freezes `frozenSpecsCovered` **single-spec on purpose**, and its inline comment names this contradiction as the reason: "certify already hard-fails any multi-spec frozen set on the flat-iter layout, so persisting the full UI-bearing union here would render every normal multi-spec run uncertifiable". That freeze was BELIEVED to be what held the two gates apart; round six of the review on PR #1092 disproved it — `certify` branches on `hasPerSpecSubdir` before it reads the frozen set, so a per-spec-only writer contradicts `validate` for a single-spec set too. Do not read the freeze as a safety margin. It does make multi-spec prototyping unreachable.
   - Field correspondence between the two payloads: `scores` **is** `ordinalAxes` — the same four axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) on the same `{weak, acceptable, strong, exceptional}` scale — and `layoutAntiPatternsDetected` / `designMdViolations` are identical. `iterIndex` maps to `cycle`. (Issue #1078 originally claimed the axes were not the same information; that claim is corrected on the issue.)
   - Not derivable: `proseCritique` is one 200..500-word string, `impressions` is `Record<FeelField, string>` over six bounded fields; composing one from the other fabricates a critique.

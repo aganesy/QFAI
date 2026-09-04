@@ -167,10 +167,13 @@ Both rows keep `Status: done` and take `DR-ID: CR-20260904-0001`.
 
 All times above are **JST (`+09:00`)**, which is this repository's local zone and
 the zone the CR ID's date is taken from. They were first written as a JST wall
-clock stamped with `Z`, which put the approval nine hours from where it happened
-— on this CR nine hours _early_, and on `CR-20260904-0002` late enough to record
-the extension as approved after the commit that applied it. Raised by Codex on
-PR #1092.
+clock stamped with `Z`, which puts every value **nine hours later** than the
+instant it names: `2026-09-04T05:20:00+09:00` is `2026-09-03T20:20:00Z`, so
+writing `2026-09-04T05:20:00Z` describes an event nine hours after the real one.
+On `CR-20260904-0002` that was late enough to record a scope extension as
+approved _after_ the commit that applied it. Raised by Codex on PR #1092, which
+also caught an earlier revision of this paragraph describing the shift in the
+wrong direction.
 
 Each value is anchored to something checkable rather than estimated:
 
