@@ -39,6 +39,61 @@
   ための文書になる。
   (#1097)
 
+- **`discussion` profile が root DESIGN.md の parse を見られるようにした。**
+  `qfai-discussion` は parsable な root DESIGN.md を MUST とし、gate として
+  `--profile discussion` を指定している。しかしその profile が走らせる 5 つの
+  validator (mermaid / pack readiness / visuals / research summary /
+  review artifacts) はどれも DESIGN.md を読まず、`QFAI-DCON-033` は sdd か
+  prototyping の readiness gate からしか実行に載らなかった。つまり
+  **ファイルを author する stage が、そのファイルが parse するかだけ検査されて
+  いなかった** — malformed なファイルは author 時の gate を通り、レビュー 1 巡
+  あとに別の skill の下で表面化していた。
+  parse と lock を分離した。`validateRootDesignMdParse` は parse 半分だけで、
+  lock 比較は入れていない — それは `/qfai-sdd` Phase 0 が解消するもので、
+  discussion 実行を「その stage では直せない理由」で落とすことになる。
+  「ファイルが malformed」と「ファイルが凍結 hash と一致しない」は
+  owner の異なる別の失敗である。
+  `QFAI-DCON-033` の生成は 1 つの builder に集約した。emitter が 2 つになるので、
+  message / rule / remedy が食い違えば自動修復が 1 つの defect に 2 経路を取る。
+  あわせて `design-md-spec.md` に `## accessibility allowed keys` を追加し、
+  `contrast_ratio_min` と `motion` のみで list が **closed** であること、
+  なぜ ignore ではなく reject なのか (dropped directive が lock に hash され、
+  iterate / certify が読む parsed tokens には現れない)、新しい accessibility
+  義務はどこに書くのか (`# Brand Philosophy` 本文 / screen contract の
+  `observable_outcome`) を明記した。
+  issue の提案のうち「失敗を比例的にする」(未知 leaf 1 つで document 全体を
+  落とさない) は **実装しなかった**。`designMd.ts:405-425` が記録している
+  理由が反対に働く — document を parse させて key ごとの finding にすると、
+  lock は parsed tokens が持たない key を凍結し、document と lock は一致するのに
+  どちらも author されたものと一致しない。判断が必要なので issue に報告した。
+  「許可キーをメッセージに載せる」提案は既に満たされていた
+  (`rejectUnknownKeys` が全 scope 共通で `Allowed: <list>.` を出す)。
+  (#1098)
+- **`certify` が封印する evidence と保存済み `validate.json` を関係づけるようにした。**
+  それまで `certify` はその file について 3 点しか検査していなかった — 存在、
+  `profile` が `prototyping`、`counts.error` が 0
+  (`prototypingCertify.ts:286-319`) — そして結果とツリーを結ぶものが何も無かった。
+  そのため flat な `review.json` があった時点で記録された成功のまま、flat を
+  削除して per-spec を書いた状態を封印でき、現在の `validate` が reject する
+  ツリーに証明書が出ていた。
+  さらに証明書は `validateRun.ranAt` に **certify 実行時刻** を書いていた
+  (`:937` の `new Date()`)。「fresh な run に対して封印されたか」を監査しようと
+  した人が読んでいたのは、その問いが答えられなくなった瞬間に作られた
+  timestamp だった。
+  `ValidationResult` に `generatedAt` を追加し、`certify` は (a) evidence の
+  いずれかが run より新しければ refuse し、対象ファイルを名指しする、
+  (b) 証明書に run 自身の時刻を記録する。
+  `generatedAt` が **無い** 場合は「古い writer」であって検査失敗ではないので、
+  refuse せず note を出して続行する。issue が求めているのは「evidence が新しい
+  ときに refuse」であり、時刻を持たない結果を拒否すると、その条件を表現できない
+  すべての既存 `validate.json` を弾くことになる。このバージョンで `validate` を
+  走らせれば必ず刻まれるので、窓は stale な 1 ファイル分で、次の run が閉じる。
+  mtime の限界 (同一秒の書き込みは「新しくない」と見える / 改竄耐性が無い) は
+  兄弟の check (`:1216-1294`) が既に記録しているものをそのまま引き継いだ。
+  証明書と run を content digest で結ぶ形 (case B) が強い版で、別判断を要する。
+  変異検査: 鮮度 gate を無効化すると 1 行、`ranAt` を certify 時刻に戻すと
+  1 行が落ちる。
+  (#1107)
 - **spec-0004 の `review.json` スキーマを出荷バリデータに合わせた
   (`CR-20260904-0003`)。** 3 箇所で乖離しており、いずれも実装を canonical と
   する判断（ユーザ）。
