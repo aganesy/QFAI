@@ -539,6 +539,30 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
+- **`validate` 以外のコマンドが、ファイルシステム障害でどのコマンドが落ちたかも
+  分からない 1 行を残していた。** #1112 で `validateProject` を包んだので
+  `validate` は `QFAI-SCAN-002` という判定に降格する。他のコマンドは libuv の
+  エラーをそのまま `cli/index.ts` に届け、そこは `err.message` を書いて exit 1
+  する — errno とパスは名乗るが**コマンド名を名乗らず**、その実行が
+  「問題なし」ではなく「未判定」であることも言わない。これが #1104 が
+  最初に挙げている苦情そのものである。`run` に境界を 1 つ置き、`validate` が
+  既に持っている帰属を全コマンドに与えた。書き換えるのは `code` と `syscall`
+  の**両方**を持つ未加工の libuv エラーだけ — 意図的な拒否はどちらも持たない
+  ので、著者が書いたメッセージのまま通る。再 throw であり、握り潰さない。
+  (#1104)
+
+  残る `stat` サイトの掃き出しは**行わない**。分類を現在のツリーから再導出した
+  結果、issue の「残り 10 箇所」は 3 つの理由で数え過ぎだった:
+  `lstat` はこのクラスに**該当しない** (#1095 の条件は `lstat` が成功し `stat`
+  が拒否すること)、`handle.stat()` は解決済み handle への fstat、そして
+  path 追従 `stat` 48 箇所のうち 40 箇所は囲みの `catch` が全部飲むので errno
+  は逃げない。逃げるのは 8 箇所で、うち `integrationSurface.ts` の 2 箇所は
+  #1103 で `EPERM` を finding に narrow 済み、`cli/lib/fs.ts` は #1112 で
+  パスを名乗るメッセージに包み済み、`prototypingIterate.ts` の `dirExists` は
+  **伝播が安全性そのもの** (破壊的な `--force` 再実行の gate なので `EPERM` を
+  「無い」と読んだら再実行が通る)、`prototypingCertify.ts` は gate なので
+  拒否が正しい出力である。
+
 - **Windows の git worktree で `qfai validate` が判定を一切出さずに落ちる問題を直した** (#1095)。
   `git worktree add` は `.claude/skills/*` のリンクを **file symlink**（ターゲットは
   ディレクトリ）として作る — リンクを書く時点でターゲットが新 worktree に存在せず、
