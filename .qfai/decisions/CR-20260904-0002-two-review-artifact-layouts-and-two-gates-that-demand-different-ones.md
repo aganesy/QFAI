@@ -163,3 +163,17 @@ scope extension's outcome reversed three times on PR #1092 — a guard was added
 replaced, then removed with its requirement moved to #1093 — and each reversal made a
 previously-correct hash describe this CR as resolved before its result existed. A date
 plus the PR is stable under that; a hash is not.
+
+### What moves `Applied at`, and what does not
+
+`Applied at` is when the owner-skill rerun completed and the upstream artifacts
+carried the approved change — `skills/qfai-sdd/templates/change-request.md:20`.
+
+Commits after that point corrected **defects in the applied text**: wording that
+misstated `certify`'s branch order, a table disagreeing with its header, a
+sentence broken by a line-index edit. Those are repairs to the application, not
+new applications, and they do not move `Applied at`. What would move it is a
+further approved change to an upstream artifact — there has been none.
+
+Recorded because the field was re-pointed four times during review, each time
+chasing the newest commit, which is the wrong rule.

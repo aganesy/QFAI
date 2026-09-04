@@ -1,5 +1,18 @@
 # 09 delta
 
+## 2026-09-04
+
+- `CR-20260904-0001` (`confirm-only`, `/qfai-sdd 0004`): `TDD-0011`, `TDD-0012`
+  and `TDD-0013` were `done` against
+  `packages/qfai/tests/core/prototypingEvidence.negative.test.ts`, which holds
+  no `QFAI-PROT-002` assertion; `16_Traceability-ledger.md`'s `REQ-0020` row
+  cited the same file. All four now name
+  `packages/qfai/tests/validators/prototypingEvidence.test.ts`, and one test was
+  added there for `EX-0004-0010`'s payload so `TDD-0011`'s selector resolves.
+  Nothing upstream of `tdd/test-list.md` changed: `03`, `04`, `05` and `06` are
+  correct as written, and "v1.x-shaped" in `TC-0004-0011` is not a version check
+  — `EX-0004-0010` defines it as a payload missing the required keys.
+
 ## 2026-04-22
 
 - Clarified: validate's prototyping responsibility is current skill/evidence/schema gating.

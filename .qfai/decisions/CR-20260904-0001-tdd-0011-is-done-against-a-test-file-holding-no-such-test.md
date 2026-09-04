@@ -12,8 +12,8 @@
 - Scope extended at: `2026-09-04T05:41:13+09:00` (approved by `yusuke_senaga` before
   that commit) — see
   **Scope extension** below
-- Applied at: `2026-09-04T05:41:13+09:00` (after the scope extension below; the first
-  correction landed at `2026-09-04T05:32:10+09:00`)
+- Applied at: `2026-09-04T12:35:00+09:00` — the `confirm-only` rerun's output written
+  to `.qfai/specs/spec-0004/09_delta.md`; see **Timestamps**
 - Superseded by: `-`
 
 ## Context
@@ -112,7 +112,9 @@ the discrepancy in `09_delta.md` and leave the row?
 
 1. `/qfai-sdd 0004` rerun scope: **`confirm-only`**. Nothing upstream of
    `tdd/test-list.md` changes — `03`, `04`, `05` and `06` are all correct — so
-   there is no derivation to re-run. The mode is the one
+   there is no derivation to re-run. Per `constitution/drift-protocol.md`
+   step 4, that rerun's output is the CR reference recorded in the spec's delta
+   log — see `.qfai/specs/spec-0004/09_delta.md`, entry `2026-09-04`. The mode is the one
    `constitution/drift-protocol.md#when-drift-is-detected` step 4 provides for a
    change already applied by hand under approval.
 2. Downstream ledger sweep: no reset. `TDD-0011` keeps `Status: done`, which
@@ -178,13 +180,27 @@ wrong direction.
 
 Each value is anchored to something checkable rather than estimated:
 
-| field               | value                       | anchor                                                                                                                       |
-| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079                                                                                        |
-| `Applied at`        | `2026-09-04T05:41:13+09:00` | commit `a6848f11` — set after the scope extension, per the template; the first correction landed at `05:32:10` in `f4479d25` |
-| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time                                                                                                |
+| field               | value                       | anchor                                                                                                                                          |
+| ------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Raised at`         | `2026-09-04T05:09:48+09:00` | the correction comment on issue #1079                                                                                                           |
+| `Applied at`        | `2026-09-04T12:35:00+09:00` | the `confirm-only` rerun's CR reference written to `spec-0004/09_delta.md`; the ledger corrections landed earlier, at `05:32:10` and `05:41:13` |
+| `Scope extended at` | `2026-09-04T05:41:13+09:00` | commit `a6848f11` author time                                                                                                                   |
 
 `Approved at` is the only estimate. The approval is a conversation turn and
 leaves no artifact, so it is bounded below by `Raised at` and above by
 `Applied at`, and the value sits inside that interval. It is not a logged
 instant and should not be read as one.
+
+### What moves `Applied at`, and what does not
+
+`Applied at` is when the owner-skill rerun completed and the upstream artifacts
+carried the approved change — `skills/qfai-sdd/templates/change-request.md:20`.
+
+Commits after that point corrected **defects in the applied text**: wording that
+misstated `certify`'s branch order, a table disagreeing with its header, a
+sentence broken by a line-index edit. Those are repairs to the application, not
+new applications, and they do not move `Applied at`. What would move it is a
+further approved change to an upstream artifact — there has been none.
+
+Recorded because the field was re-pointed four times during review, each time
+chasing the newest commit, which is the wrong rule.
