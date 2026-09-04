@@ -570,6 +570,7 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   「`npx qfai validate --profile tdd` だけが評価する — どの wide profile も
   wire しないので `--fail-on error` だけでは決して検査されない」という
   独自の 1 文を付けた。 (#1122)
+
 - **`QFAI-DRIFT-001` の免除が承認済み CR 全文への substring 一致だったため、
   禁止文が許可として働いていた。** `readApprovedCrText` は `Status: approved`
   の CR **本文全体**を連結し、変更されたパスがその中に現れるかだけを見ていた。
