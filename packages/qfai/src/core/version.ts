@@ -140,12 +140,29 @@ function moduleDir(): string {
  * consumer's own manifest one level further out cannot be mistaken for it.
  */
 async function resolvePackageJsonPath(): Promise<string> {
-  const found = await findPackageJsonUpward(moduleDir(), PACKAGE_NAME);
-  if (found === null) {
-    throw new Error(`could not locate ${PACKAGE_NAME}'s package.json above ${moduleDir()}`);
+  // Memoised: the answer is a property of where this file was installed, which
+  // cannot change inside one process, and both `resolveToolVersion` and
+  // `resolveToolPackageDir` ask for it on every validate run. Without this the
+  // walk repeats its reads for an answer that was already known.
+  cachedPackageJsonPath ??= (async (): Promise<string> => {
+    const found = await findPackageJsonUpward(moduleDir(), PACKAGE_NAME);
+    if (found === null) {
+      throw new Error(`could not locate ${PACKAGE_NAME}'s package.json above ${moduleDir()}`);
+    }
+    return found;
+  })();
+  try {
+    return await cachedPackageJsonPath;
+  } catch (error) {
+    // A rejected promise must not become the permanent answer: clear it so a
+    // later call re-walks rather than replaying a failure from a moment when
+    // the tree was mid-write.
+    cachedPackageJsonPath = null;
+    throw error;
   }
-  return found;
 }
+
+let cachedPackageJsonPath: Promise<string> | null = null;
 
 /**
  * The nearest `package.json` at or above `startDir` whose `name` is `name`.
