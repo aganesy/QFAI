@@ -53,7 +53,7 @@ Given the first required delegation fails, when the orchestrator handles the fai
 - US-Refs: US-0015-0007
 - Given a future PR that wires `certify` to read validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts (i.e. reintroduces the cycle the option-B path was chosen to eliminate),
 - When the Reviewer Gate runs against that PR,
-- Then it emits `R-CERTIFY-VERIFY-CIRCULAR` at severity error; the finding names (a) the certify code path that reads the offending validator output, (b) the validator output file / profile whose artifact requirements include `/qfai-atdd` or `/qfai-implement`, (c) the option-B contract clause that is violated. A PR whose certify path reads no validator output requiring `/qfai-atdd`/`/qfai-implement` artifacts (i.e. holds the option-B path intact) passes without `R-CERTIFY-VERIFY-CIRCULAR`.
+- Then it emits `R-CERTIFY-VERIFY-CIRCULAR` at severity **info**, and `qfai prototyping certify` refuses that verdict with exit 2. The finding is info because a `scope: "full"` verdict on disk is not damage — a full-profile run records it truthfully, and at error severity an ordinary repo-wide `validate` made `/qfai-verify`'s Completion Contract unsatisfiable outside Work Order H (#1097). The finding names (a) the certify code path that reads the offending validator output, (b) the validator output file / profile whose artifact requirements include `/qfai-atdd` or `/qfai-implement`, (c) the option-B contract clause that is violated. A PR whose certify path reads no validator output requiring `/qfai-atdd`/`/qfai-implement` artifacts (i.e. holds the option-B path intact) passes without `R-CERTIFY-VERIFY-CIRCULAR`.
 
 ## AC-0015-0014: Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with non-empty `justification:`
 
