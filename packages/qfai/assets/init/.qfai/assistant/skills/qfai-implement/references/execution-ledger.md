@@ -441,9 +441,21 @@ When transitioning to `exception`:
 
 ### Where the Decision Record is written
 
-Write it to `.qfai/decisions/DR-<id>-<slug>.md`, beside the Change
-Requests, using the same `DR-*` ID scheme those files declare. Do **not** write
-`07_Decisions.md` or `09_delta.md`.
+Write it beside the Change Requests as
+`.qfai/decisions/DR-NNNN-MMMM-<slug>.md` when the anomaly is spec-scoped, or
+`.qfai/decisions/DR-NNNN-<slug>.md` when it is policy-level — never the CR's
+date form. The two shapes have different declaration homes, and the anomaly's
+scope picks the one it belongs in: a spec-scoped `DR-NNNN-MMMM` is
+declared in that spec's `07_Decisions.md`, and a policy-level `DR-NNNN` is
+declared in `_policies/08_Decisions.md`.
+
+**That split is a convention, not a gate.** `TDDLIST_EXCEPTION_UNRESOLVED_DR`
+reports an id declared in **neither** file: the validator reads both and
+resolves against their union, without checking which shape came from which
+file. A policy-level `DR-NNNN` parked in a spec's `07_Decisions.md` therefore
+resolves clean and nothing reports it. Follow the split because the wrong home
+hides a shared decision inside one spec, not because a validator will catch it.
+Do **not** write `07_Decisions.md` or `09_delta.md`.
 
 Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
 this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either

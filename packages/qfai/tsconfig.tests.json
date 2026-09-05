@@ -40,6 +40,7 @@
     "tests/assets/completionContractPlaceholderScan.test.ts",
     "tests/assets/completionContractSmokeCheck.test.ts",
     "tests/assets/coverageDepthMatrix.test.ts",
+    "tests/assets/decisionRecordIdGrammar.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
     "tests/assets/coverageDepthMatrixSections.test.ts",
     "tests/assets/deltaTemplateParses.test.ts",

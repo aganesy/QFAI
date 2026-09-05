@@ -118,7 +118,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 4. Run the test and **watch it fail**. Admissible only when an assertion — or an expected-exception check — inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error, or an unasserted throw, is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation. Submit that run to `qa-gatekeeper` and obtain confirmation **while no implementation makes that assertion pass** — the step 3a seam does not, it implements none, and neither does a surface that already exists and implements the row's predicate wrongly — routing phase `red`.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
-   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md` — never in
+   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-NNNN-MMMM-<slug>.md` (spec-scoped, declared in that spec's `07_Decisions.md`) or `.qfai/decisions/DR-NNNN-<slug>.md` (policy-level, declared in `_policies/08_Decisions.md`) — deliberately **not** the CR's date form, and never written into
    `07_Decisions.md` / `09_delta.md`, which are upstream SSOT this skill may not patch. Never weaken a correct
    test until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
    > **RED observation is only as good as the selector's granularity.** A single test function can fail
