@@ -137,6 +137,7 @@
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
+    "tests/scripts/renovateMechanism.test.ts",
     "tests/scripts/sliceSurfaceAlignment.test.ts",
     "tests/scripts/testTypeCheckEnumeration.test.ts",
     "tests/scripts/vitestWorkspaceKnobs.test.ts",
