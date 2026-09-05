@@ -32,6 +32,46 @@
   届かず、ローカル実行では誰も読まない行が増えるだけである。全件は JSON に
   残る。
 
+- **テストが実 GitHub annotation を出さなくなった。**
+  `qfai validate --format github` は `::error file=…::message` を
+  `process.stdout` へ直接書き、`issue.file` は**検証対象ツリーからの相対
+  パス**である。テストは `mkdtemp` の fixture を検証するため
+  `.qfai/specs/_policies/03_Capabilities.md` のような相対パスが出力され、
+  runner はそれをリポジトリ root に解決する。結果、実在する健全なファイルが
+  「見つかりません」と注釈されていた (#1160)。
+
+  被害は見た目ではない。GitHub の annotation 上限は **level ごと 10 件 /
+  step** で、fixture が 10 件出した lane には本物の指摘の席が残らない。
+  `cli` lane を実測すると **184 件**が漏れていた。
+
+  vitest の `setupFiles` 1 箇所で全 project を守る。個別テストの
+  `vi.spyOn` による規律は既に 2 件存在していて**スケールしなかった** —
+  `qfai init` + validate を足す新しいテストが無自覚に穴を開ける。
+
+  **抑止であって黙殺ではない。** 落とした行はその場で stderr に報告する
+  (上限付き)。stderr である理由は、GitHub が workflow command を stdout
+  からしか読まないため、報告自身が command になれないようにするため。
+
+  setup の宣言場所も動かしている。当初は `vitest.knobs.ts` の `projectKnobs`
+  に入れていたが、**parallelism の E2E はこの object を `mkdtemp` の fixture
+  root へそのまま spread する** (宣言された knob を再現して runner の挙動を
+  測るのがその suite の目的である)。相対パスの `setupFiles` は fixture root
+  から解決されて存在せず、slot 4 ファイルが全部 collect に失敗した。
+  `vitest.knobs.ts` は _parallelism_ の knob 集合であり、`setupFiles` は
+  parallelism の knob ではない。別 export にして `vitest.workspace.ts` 側
+  (fixture が写さない場所) で各 project に渡す。`projectKnobs` に root 相対
+  パスが無いことをテストで固定した — 「setupFiles が無いこと」ではなく
+  「root 相対のものが無いこと」が守るべき不変条件である。
+
+  child process で走らせる 3 行は Node の `--experimental-strip-types` に
+  依存していたが、このフラグは Node 22.6 で入ったもので `engines.node` は
+  `>=20.19.0` である。floor lane では child が **コマンドラインの時点で
+  status 9 で死に**、setup が読み込まれる前に落ちていた — フィルタの挙動
+  ではなくフラグの有無を報告していたことになる。version 判定で skip する案は
+  取らなかった: package が約束している版を実際に走らせる唯一の lane で、
+  フィルタが一度も動かなくなる。型除去は devDependency の `typescript`
+  (`transpileModule`) で行い、child は素の `node` で走る。
+
 - **`qfai init` が `.gitignore` の managed ブロックを毎回重複追記しなくなった。**
   ブロックの範囲を求める 2 つの走査は「既知の行である限り前進し、知らない行で
   止まる」形だった。旧版が書いた行がブロック内にあり、現行のブロックにも legacy
