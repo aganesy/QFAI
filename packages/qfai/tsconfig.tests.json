@@ -34,6 +34,7 @@
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
     "tests/assets/changeTypeRecordName.test.ts",
+    "tests/assets/clarificationBudget.test.ts",
     "tests/assets/completionContractPlaceholderScan.test.ts",
     "tests/assets/coverageDepthMatrix.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
