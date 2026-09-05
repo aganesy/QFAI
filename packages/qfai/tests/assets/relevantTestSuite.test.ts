@@ -153,9 +153,16 @@ describe('"relevant test suite" is defined and bounded', () => {
       // AC-group boundary degenerates back to a full run per item.
       expect(section).toContain("every **N-th** completed row, with `N = 10` by default");
       expect(section).toContain("An AC or BR group is **not** a boundary");
-      expect(section).toContain("`TC-0006-0001..0009`");
       expect(section).toContain("coarser than the obligation granularity");
       expect(section).not.toContain("the **last row of each BR/AC group**");
+      // The degenerate case is stated generically. The file ships verbatim into
+      // every consuming project, so a concrete spec id here names that
+      // project's own unrelated spec, not the one the sentence measured.
+      expect(section).toContain(
+        "every `TC` mapping to a distinct `AC` and occupying one ledger row",
+      );
+      expect(section).not.toContain("this repository's `spec-");
+      expect(section).not.toMatch(/`TC-\d{4}-\d{4}/);
     });
 
     it(`${tree}: test-layers.md bounds test-file granularity`, async () => {
