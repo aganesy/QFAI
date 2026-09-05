@@ -688,10 +688,18 @@ describe("qfai-implement checkpoint verification contract", () => {
       // `qfai-atdd` hands branch-1 rows to this skill, and its own reference
       // restated the cadence as one full suite per row. Two skills, two
       // frequencies — the same contradiction one directory over.
-      const provenance = await readFile(
-        path.join(dir, "..", "qfai-atdd", "references", "red-provenance.md"),
-        "utf-8",
-      );
+      // `red-provenance.md` and the stage-handover topic it points at. The
+      // handover protocol moved out when the file crossed the shipped-asset
+      // line ceiling, and the cadence deferral travelled with it — the subject
+      // here is that the ATDD side states no cadence of its own, which is a
+      // property of the pair, not of whichever file currently holds the words.
+      const provenance = (
+        await Promise.all(
+          ["red-provenance.md", "stage-handover.md"].map(async (name) =>
+            readFile(path.join(dir, "..", "qfai-atdd", "references", name), "utf-8"),
+          ),
+        )
+      ).join("\n");
       expect(provenance, "red-provenance.md must not restate the cadence").not.toContain(
         "every row's checkpoint runs the full suite",
       );
