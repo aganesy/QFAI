@@ -134,6 +134,12 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // gate can read it; a repository is free to leave a placeholder there
   // deliberately, so there is no release at which this should fail a build.
   "QFAI-ATDD-119",
+  // A US whose E2E obligation is deferred by `- x-qfai-status: planned`. The
+  // deferral is the author's declared intent, so the finding exists to keep it
+  // visible rather than silent — there is no release at which a legitimately
+  // deferred story should fail the build, and promoting it would make the
+  // marker unusable for the case it was added for.
+  "QFAI-ATDD-118",
 ];
 
 // tests/core/<this file> -> packages/qfai

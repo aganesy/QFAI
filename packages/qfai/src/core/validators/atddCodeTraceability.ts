@@ -6,6 +6,7 @@ import { resolvePath } from "../config.js";
 import {
   atddTestKindDirs,
   evaluateAtddCodeTraceability,
+  PLANNED_CONTRACT_KEY,
   type AtddCodeTraceabilityResult,
   type AtddTestKind,
   type AtddUnknownRef,
@@ -131,6 +132,10 @@ function narrowToScope(
     // the finding is filed at a spec directory, which survives the scope
     // filter, so the scoped evidence artifact named another spec's ids.
     unitComponentTcIds: result.unitComponentTcIds.filter(inScope),
+    // Same terms again: `QFAI-ATDD-118` names the deferred stories by id and is
+    // filed at a spec directory, so an unnarrowed list would put a sibling
+    // spec's deferrals in this run's evidence artifact.
+    deferredUsIds: result.deferredUsIds.filter(inScope),
     forbidden: {
       tcInApi: narrowForbidden(result.forbidden.tcInApi),
       tcInE2e: narrowForbidden(result.forbidden.tcInE2e),
@@ -298,6 +303,13 @@ type AtddTraceabilitySummary = {
    * from "every contract is deferred" — the audit artifact has to answer that.
    */
   deferred: {
+    /**
+     * `US-*` refs whose story declares `- x-qfai-status: planned`, so they are
+     * outside the `QFAI-ATDD-111` obligation. Persisted for the same reason the
+     * contract lists are: `missing.us: []` alone cannot tell "every story is
+     * covered" apart from "every story is deferred".
+     */
+    us: string[];
     conApi: string[];
     conDb: string[];
   };
@@ -377,6 +389,24 @@ export async function validateAtddCodeTraceability(
         // E2E tree `catalog/test-layers.md` forbids.
         "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
         { relatedFiles: usAttribution.relatedFiles },
+      ),
+    );
+  }
+
+  if (result.deferredUsIds.length > 0) {
+    const deferred = result.deferredUsIds;
+    const deferredHome = specAttribution(deferred, result.specsRoot, result.declaredSpecDirs);
+    issues.push(
+      issue(
+        "QFAI-ATDD-118",
+        `US の E2E テスト義務を \`- ${PLANNED_CONTRACT_KEY}: planned\` で延期しています: ${deferred.join(", ")}`,
+        "info",
+        deferredHome.file,
+        "atddCodeTraceability.coverage.usDeferred",
+        deferred,
+        "canonical",
+        `スライス実装時に \`- ${PLANNED_CONTRACT_KEY}: planned\` を外し、${dirs.e2e} で \`QFAI:SPEC-XXXX:US-YYYY\` 注釈を追加してください。`,
+        { relatedFiles: deferredHome.relatedFiles },
       ),
     );
   }
@@ -835,6 +865,7 @@ async function writeAtddTraceabilityReport(
       conDb: result.coveredByCarrierOnly.conDb,
     },
     deferred: {
+      us: result.deferredUsIds,
       conApi: Array.from(result.deferredApiContractIds).sort((left, right) =>
         left.localeCompare(right),
       ),
@@ -921,6 +952,8 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("");
   lines.push("## Deferred Coverage");
   lines.push("");
+  lines.push("- US (`- x-qfai-status: planned`, outside QFAI-ATDD-111)");
+  lines.push(...toList(summary.deferred.us));
   lines.push("- CON-API (`x-qfai-status: planned`, outside QFAI-ATDD-113)");
   lines.push(...toList(summary.deferred.conApi));
   lines.push("- CON-DB (`-- x-qfai-status: planned`, outside QFAI-ATDD-115)");

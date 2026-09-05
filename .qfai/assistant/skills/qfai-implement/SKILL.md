@@ -339,9 +339,9 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
-- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared `US-*` and
-  `CON-API-*` is traced by an annotation in the test tree, and where `06_Test-Cases.md` declares an
-  E2E coverage-target TC, by a `Layer = E2E` row naming it. Phase 2b seeds an `E2E` /
+- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every still-owed `US-*` and `CON-API-*` is traced by an annotation in the test tree, and where `06_Test-Cases.md` declares an E2E coverage-target TC, by a `Layer = E2E` row naming it; a deferral is recorded instead:
+  `QFAI-ATDD-118` for a `US-*` (a `- x-qfai-status: planned` meta line inside its story block), `QFAI-ATDD-114` for a `CON-API-*` (document-root `x-qfai-status: planned` — no list dash,
+  which would make the OpenAPI document an array). Phase 2b seeds an `E2E` /
   `API` row per **active** obligation, so those rows are present unless every one is exempt (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain, and this spec's `## Record defects` queue is drained — every `record:*` advisory filed there is **repaired in place**, and where the rule it names is one no validator checks the entry **also** owes a `validateTddList` bug report, which tracks the missing check and never stands in for the repair (`references/finding-classification.md#advisory`). Closing on the report alone would leave the wrong record exactly as wrong with the round that found it already spent, so repair is the only close: where the round's artifacts no longer say what the run did, the record cannot be repaired honestly and the entry is reclassified `defect:code-quality`, blocking, rather than closed. A repaired entry a reviewer had hashed is open until its record re-attestation exists. Making that class advisory removed the round it used to force, not the defect; the drain is the only place it is collected, so an open entry here is an uncorrected record certified as complete

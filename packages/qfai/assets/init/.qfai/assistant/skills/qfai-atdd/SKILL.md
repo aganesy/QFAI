@@ -160,7 +160,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage.
 
 - Coverage obligations are mandatory:
-  - `tests/e2e/**` must cover all required `US-*`.
+  - `tests/e2e/**` must cover all required `US-*`. A story outside the current slice is deferred in `02_User-stories.md` with a `- x-qfai-status: planned` meta line in its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) — the same token both contract kinds use — and is named at `info` by `QFAI-ATDD-118`. It is not left uncovered, and it is not covered by a test that asserts nothing. `exception` is not the alternative here: that branch belongs to a ledger row, and a `US-*` owns none (`references/red-provenance.md#a-spec-with-no-atdd-owned-rows`).
   - Every `TC-*` must be covered from the directory its declared `Level` routes
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level`
@@ -279,7 +279,7 @@ Notes:
 
 ## Success Criteria (Definition of Done)
 
-- All required `US` are covered by E2E tests.
+- All required `US` are covered by E2E tests (`QFAI-ATDD-111`); a story outside the current slice is deferred with `- x-qfai-status: planned` in its `02_User-stories.md` block and reported by `QFAI-ATDD-118` (`info`), not left uncovered.
 - All required `TC` are covered from the directory their declared `Level` routes
   to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
   `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` ->

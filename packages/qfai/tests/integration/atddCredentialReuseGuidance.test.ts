@@ -194,6 +194,13 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // longer holds. `validators-are-wired.test.ts` holds the row that keeps it
     // retired.
     //
+    // `QFAI-ATDD-118` is in the baseline because a separate change added it
+    // deliberately, with its own tests: it is the `info` finding that reports a
+    // `US-*` deferred out of the current slice by `- x-qfai-status: planned`
+    // (`tests/core/atddUsPlannedDeferral.test.ts`). Moving the baseline is the
+    // correct response to a code someone meant to add; the row still reddens
+    // for one nobody declared.
+    //
     // `QFAI-ATDD-131`/`-132`/`-133` are present for the mirror-image reason:
     // the Coverage Depth Matrix gate (`src/core/validators/atddCoverageDepth.ts`)
     // is a validator, so its codes are declarations the tree now holds and the
@@ -230,6 +237,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-115",
       "QFAI-ATDD-116",
       "QFAI-ATDD-117",
+      "QFAI-ATDD-118",
       // Obligations referenced only from carriers that declare no test. 118 is
       // taken by the US planned-deferral finding on its own branch, so this one
       // holds the next free number rather than colliding with it.

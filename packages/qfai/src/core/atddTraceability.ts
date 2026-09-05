@@ -187,7 +187,25 @@ export type AtddCodeTraceabilityResult = {
    * send the CLI report and the GitHub annotation at a file that is not there.
    */
   declaredSpecDirs: Map<string, string>;
+  /**
+   * Every declared `US-*`, active and deferred alike — the same
+   * declared-not-owed distinction the contract sets draw. A deferred story is
+   * still a known id, so an E2E test written ahead of its slice must not become
+   * a `QFAI-ATDD-101` unknown reference.
+   */
   specUsIds: Map<string, Set<string>>;
+  /**
+   * `US-*` refs excluded from the `QFAI-ATDD-111` obligation because their
+   * story declares `- x-qfai-status: planned`, formatted as `SPEC-NNNN:US-…`.
+   * Reported at `info` (`QFAI-ATDD-118`) so the deferral stays visible rather
+   * than silently shrinking the gate — the same treatment `QFAI-ATDD-114` and
+   * `-116` give the two contract kinds.
+   *
+   * Restricted to specs that owe `QFAI-ATDD-111` at all: under surface typing a
+   * non-UI-bearing spec's stories are already outside the E2E gate, so nothing
+   * there is deferred by the marker.
+   */
+  deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
    * Every declared `CON-API-*`, active and deferred alike. This is the public
@@ -504,8 +522,17 @@ export async function evaluateAtddCodeTraceability(
   // an L1/L2 annotation is owed to no ATDD directory at all.
   skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
 
-  const missing = buildMissingRefs({
+  // Active = declared minus deferred, mirroring the contract collectors:
+  // `x-qfai-status: planned` suspends the E2E obligation for that one story, it
+  // does not un-declare it.
+  const { active: activeUsIds, deferred: deferredUsIds } = partitionDeclaredUs(
     specUsIds,
+    specRefs.usPlanned,
+    uiBearingSpecs,
+  );
+
+  const missing = buildMissingRefs({
+    specUsIds: activeUsIds,
     usObligationScope: uiBearingSpecs,
     specTcIds,
     apiContractIds: activeApiContractIds,
@@ -548,6 +575,7 @@ export async function evaluateAtddCodeTraceability(
     testsRoot,
     contractsApiRoot,
     specUsIds,
+    deferredUsIds,
     specTcIds,
     apiContractIds: declaredApiContractIds,
     activeApiContractIds,
@@ -666,6 +694,8 @@ type SpecScopedRef = {
 
 async function collectSpecRefs(specsRoot: string): Promise<{
   us: Map<string, Set<string>>;
+  /** `spec -> US-ID` deferred by `- x-qfai-status: planned`; a subset of `us`. */
+  usPlanned: Map<string, Set<string>>;
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
@@ -674,6 +704,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
+  const usPlanned = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
   const declaredSpecDirs = new Map(entries.map((entry) => [entry.specNumber, entry.dir]));
@@ -698,6 +729,16 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (usIds.size > 0) {
       us.set(entry.specNumber, usIds);
     }
+
+    // Intersected with the declared set, never taken on its own: a marker under
+    // a heading no collector recognises as a story would otherwise report a
+    // deferral for an id that carries no obligation to defer.
+    const plannedUsIds = new Set(
+      Array.from(collectPlannedUsIds(usText)).filter((id) => usIds.has(id)),
+    );
+    if (plannedUsIds.size > 0) {
+      usPlanned.set(entry.specNumber, plannedUsIds);
+    }
     if (tcIds.size > 0) {
       tc.set(entry.specNumber, tcIds);
     }
@@ -708,7 +749,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     }
   }
 
-  return { us, tc, tcLevels, declaredSpecDirs };
+  return { us, usPlanned, tc, tcLevels, declaredSpecDirs };
 }
 
 /**
@@ -1082,6 +1123,50 @@ function partitionMissingTcByObligation(
   return { owed, unitComponent };
 }
 
+/**
+ * Splits the declared `US-*` ids into those that still owe an E2E reference and
+ * those a `- x-qfai-status: planned` marker defers.
+ *
+ * The deferred half is returned as formatted `SPEC-NNNN:US-…` refs — the shape
+ * `narrowToScope` filters and the CLI prints — so a `--spec` run reports its own
+ * deferrals only, exactly as it does for `QFAI-ATDD-117`.
+ *
+ * Only a spec inside `usObligationScope` can defer anything. A non-UI-bearing
+ * spec's stories are already outside `QFAI-ATDD-111` under surface typing, so
+ * reporting them at `QFAI-ATDD-118` would claim an obligation was suspended
+ * that never existed — and its remediation would tell the implementer to add an
+ * E2E annotation there, the annotation-only E2E that the surface-scope rule
+ * exists to prevent.
+ */
+function partitionDeclaredUs(
+  specUsIds: Map<string, Set<string>>,
+  plannedBySpec: Map<string, Set<string>>,
+  usObligationScope: ReadonlySet<string> | null,
+): { active: Map<string, Set<string>>; deferred: string[] } {
+  const active = new Map<string, Set<string>>();
+  const deferred: string[] = [];
+  for (const [spec, ids] of specUsIds.entries()) {
+    const planned = plannedBySpec.get(spec);
+    const owesE2e = usObligationScope === null || usObligationScope.has(spec);
+    if (planned === undefined || planned.size === 0 || !owesE2e) {
+      active.set(spec, ids);
+      continue;
+    }
+    const remaining = new Set<string>();
+    for (const id of ids) {
+      if (planned.has(id)) {
+        deferred.push(formatUsRef(spec, id.replace(/^US-/, "")));
+      } else {
+        remaining.add(id);
+      }
+    }
+    if (remaining.size > 0) {
+      active.set(spec, remaining);
+    }
+  }
+  return { active, deferred: deferred.sort((left, right) => left.localeCompare(right)) };
+}
+
 export const PLANNED_CONTRACT_KEY = "x-qfai-status";
 const PLANNED_CONTRACT_VALUE = "planned";
 
@@ -1200,6 +1285,197 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
   )}[ \\t]*$`,
   "im",
 );
+
+/**
+ * Heading form of a user story, e.g. `## US-0001-0002: title`.
+ *
+ * The compound id is admitted as well as the short one: a layered spec pack
+ * numbers its stories `US-<spec>-<serial>`, and matching only `US-\d{4}` would
+ * leave every real project's stories unable to carry the marker below.
+ *
+ * Any depth from `##` down is a story heading, because the declaring collector
+ * ({@link collectShortIds}) accepts an id at any depth via its loose scan — real
+ * packs write `### US-…` far more often than `## US-…`. Recognising only `##`
+ * here left those stories unable to defer at all, and in an H2/H3 document it
+ * also mis-attributed an H3 story's marker to the preceding H2 story, because
+ * the `###` line neither opened a block nor closed the open one.
+ */
+const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+
+/** Any ATX heading — the block terminator paired with {@link US_HEADING_RE}. */
+const ANY_HEADING_RE = /^#{1,6}\s+/;
+
+/** Markdown's bullet list markers, as a regex character class. */
+const BULLET_MARKER = "[-*+]";
+
+/** Markdown's ordered list marker — `1.` or `1)`, at its nine-digit ceiling. */
+const ORDERED_MARKER = "\\d{1,9}[.)]";
+
+/**
+ * Catalog form of a user story, e.g. `- US-0001: summary`.
+ *
+ * {@link collectShortIds} declares an id from this line too, so a pack whose
+ * stories live only in the `## US Catalog` list — no per-story heading — owed
+ * `QFAI-ATDD-111` with no way to defer. The id must *open* the item, not merely
+ * appear in it: `- Goal: as described in US-0002` is prose about another story,
+ * not a declaration of one, and treating it as a block opener would hand the
+ * next marker to the wrong id.
+ *
+ * Every list form Markdown writes opens a block, not just `-` and `*`. The
+ * declaring collector is not list-aware at all — its loose scan lifts the id out
+ * of `+ US-0001: …` and `1. US-0001: …` exactly as it does out of `- US-0001: …`
+ * — so a narrower opener here left a catalog written in either of those forms
+ * declared, owed and undeferrable.
+ *
+ * Group 1 is the prefix (indent, marker, and the whitespace after it), whose
+ * width is the item's content column; group 2 is the id.
+ */
+const US_LIST_ITEM_RE = new RegExp(
+  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:：]?`,
+);
+
+/**
+ * The `x-qfai-status: planned` deferral in user-story meta-line form.
+ *
+ * The same token both contract kinds use, written as one of the `- Key: value`
+ * meta lines a `## US-NNNN` / `### US-NNNN` block already carries (`- Parent:`,
+ * `- Goal:`).
+ * Matched on its own line only, and attributed to the block it sits in — a
+ * marker written once at the top of the document must not be able to defer
+ * every story the file declares, which is the nesting mistake
+ * {@link isPlannedApiContract} guards against on the contract side.
+ *
+ * Only the canonical meta line is accepted, because a match silently removes a
+ * `QFAI-ATDD-111` error: whitespace after the list marker is required (so the
+ * non-list `-x-qfai-status: planned` is not a deferral), and a quoted key or
+ * value must carry the *same* quote character at both ends (so neither the
+ * unterminated `- x-qfai-status: 'planned` nor a mixed `"…'` pair defers a
+ * story). A typo in a meta line has to fail loudly rather than pass as a
+ * deferral.
+ *
+ * The bullet class is the one {@link US_LIST_ITEM_RE} opens catalog entries
+ * with, so a pack that writes its lists with `+` can write this line the same
+ * way. An ordered marker is deliberately not accepted: a meta line is a bullet
+ * in every shipped template, and `1. x-qfai-status: planned` is a numbered step,
+ * not a story attribute.
+ */
+const PLANNED_US_META_LINE_RE = (() => {
+  const key = escapeRegExp(PLANNED_CONTRACT_KEY);
+  const value = escapeRegExp(PLANNED_CONTRACT_VALUE);
+  /** Bare, or wrapped in a matched pair of the same quote character. */
+  const quoted = (token: string): string => `(?:"${token}"|'${token}'|${token})`;
+  return new RegExp(
+    `^[ \\t]*${BULLET_MARKER}[ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${quoted(value)}[ \\t]*$`,
+    "i",
+  );
+})();
+
+/** Markdown's tab stop: a tab advances to the next multiple of four columns. */
+const TAB_WIDTH = 4;
+
+/**
+ * Column reached after `prefix`, on Markdown's own accounting.
+ *
+ * A tab advances to the next tab stop rather than a flat four columns, so the
+ * content of `-\tUS-0001: …` starts at column 4 and a child line indented with
+ * one tab reaches it.
+ */
+function columnAfter(prefix: string): number {
+  let column = 0;
+  for (const char of prefix) {
+    column += char === "\t" ? TAB_WIDTH - (column % TAB_WIDTH) : 1;
+  }
+  return column;
+}
+
+/** Indent column of a line — where its first non-whitespace character sits. */
+function indentColumn(line: string): number {
+  return columnAfter(/^[ \t]*/.exec(line)?.[0] ?? "");
+}
+
+/**
+ * The `US-*` ids a spec pack defers from the `QFAI-ATDD-111` obligation.
+ *
+ * A story whose acceptance cannot be observed at E2E in this slice had no
+ * in-band way to say so: `CON-API-*` and `CON-DB-*` both defer with
+ * `x-qfai-status: planned`, while a `US-*` could only be left uncovered (a hard
+ * `QFAI-ATDD-111` error), covered by a test asserting nothing, or erased by
+ * declaring the whole spec non-user-facing. This is the per-story counterpart.
+ *
+ * Fenced samples and HTML comments are masked first, on the same terms as
+ * {@link collectTcLevels}: an illustrative block showing the marker must not
+ * silently drop a real story's obligation.
+ *
+ * A block opens at either shape {@link collectShortIds} declares an id from — a
+ * `##`-or-deeper heading ({@link US_HEADING_RE}) or a catalog list entry
+ * ({@link US_LIST_ITEM_RE}) — and closes at the next opener or any heading, so
+ * every declared story can carry the marker and none inherits a neighbour's.
+ *
+ * A catalog entry closes on its Markdown item boundary as well: its block ends
+ * at the first non-blank line that does not reach the entry's *content* column —
+ * the column its marker plus the whitespace after it ends at, which is where
+ * Markdown puts the item's own children. Without that, prose or a blank line
+ * after `- US-0001: …` left the entry open to the next heading, and a
+ * document-level `- x-qfai-status: planned` written well outside it deferred
+ * US-0001 — the very leak the document-root rule closes on the heading side.
+ *
+ * Comparing against the *marker* column instead would leave a narrower version
+ * of the same leak: under a column-0 `- US-0001: …` a one-space-indented
+ * ` - x-qfai-status: planned` clears the marker column while falling short of
+ * the two columns a child needs, so Markdown reads it as a separate list item
+ * and the entry must already be closed by then. The marker has to sit *inside*
+ * the entry, indented to its content.
+ */
+export function collectPlannedUsIds(rawUsText: string): Set<string> {
+  const planned = new Set<string>();
+  const lines = maskNonSpecRegions(rawUsText).replace(/\r\n/g, "\n").split("\n");
+  let current: string | null = null;
+  /** Content column of the catalog entry that opened `current`; `null` for a heading. */
+  let entryContentColumn: number | null = null;
+  const close = (): void => {
+    current = null;
+    entryContentColumn = null;
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const heading = US_HEADING_RE.exec(trimmed);
+    if (heading?.[1]) {
+      current = heading[1].toUpperCase();
+      entryContentColumn = null;
+      continue;
+    }
+    // Any other heading closes the block, at every depth: the marker belongs to
+    // the story it is written under, not to whatever story came before it in
+    // the file, and a non-story subsection (`#### Notes`) ends the block too.
+    if (ANY_HEADING_RE.test(trimmed)) {
+      close();
+      continue;
+    }
+    // A catalog entry opens a block of its own, so the marker reaches a story
+    // that has no heading. Checked after the heading arms and before the marker
+    // arm: the marker's own line does not open with a `US-*` id, so the two
+    // list forms cannot collide.
+    // Read from the raw line, not the trimmed one: the entry's own indent is
+    // part of the content column its children have to reach.
+    const listItem = US_LIST_ITEM_RE.exec(line);
+    if (listItem?.[2]) {
+      current = listItem[2].toUpperCase();
+      entryContentColumn = columnAfter(listItem[1] ?? "");
+      continue;
+    }
+    // Left the catalog entry: a sibling list item, a paragraph, or any other
+    // content short of its content column is no longer inside it.
+    if (entryContentColumn !== null && trimmed !== "" && indentColumn(line) < entryContentColumn) {
+      close();
+      continue;
+    }
+    if (current !== null && PLANNED_US_META_LINE_RE.test(line)) {
+      planned.add(current);
+      close();
+    }
+  }
+  return planned;
+}
 
 async function collectDbContractIds(dbRoot: string): Promise<CollectedContractIds> {
   const files = await collectDbContractFiles(dbRoot);

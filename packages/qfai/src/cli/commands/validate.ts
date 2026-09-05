@@ -933,6 +933,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every US must be referenced at least once from tests/e2e/**. Scoped to user-facing specs when any spec declares a surface type; project-wide otherwise.",
   "QFAI-ATDD-112":
     "Every TC must be referenced at least once from the test directory its declared Level routes to (default tests/integration/**).",
+  "QFAI-ATDD-118":
+    "User stories declaring `- x-qfai-status: planned` are deferred from the E2E-test obligation.",
   "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
   "QFAI-ATDD-114":
     "CON-API contracts declaring `x-qfai-status: planned` are deferred from the API-test obligation.",
