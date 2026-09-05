@@ -35,8 +35,6 @@ export type QfaiValidationConfig = {
     specSections: string[];
   };
   testStrategy: {
-    requireLayerTags: boolean;
-    requireSizeTags: boolean;
     maxE2eScenarioRatio: number | null;
     maxE2eScenarioCount: number | null;
     /**
@@ -47,6 +45,18 @@ export type QfaiValidationConfig = {
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;
+    /**
+     * @deprecated 検証側の読み取り箇所が存在しない dead knob。true にしても
+     * 診断は出ない。shipped な `qfai.config.yaml` からは除外済みで、次の
+     * major で型からも削除する。paths.promptsDir と同じ扱いで、それまでは
+     * 既定値・パースともに従来どおり維持する (公開型なので既存の
+     * TypeScript 利用者が `boolean` として参照できる状態を保つ)。
+     */
+    requireLayerTags: boolean;
+    /**
+     * @deprecated `testStrategy.requireLayerTags` と同じ扱い。
+     */
+    requireSizeTags: boolean;
   };
   traceability: {
     brMustHaveSc: boolean;
@@ -160,6 +170,16 @@ export type QfaiConfig = {
   baseBranch?: string;
 };
 
+/**
+ * Default for the two deprecated `testStrategy` compat knobs. Both are dead —
+ * no validator reads either — so the default is a fixed `false` rather than a
+ * behavioural choice. It lives here, once, so `defaultConfig` and the loader
+ * cannot drift apart, and so the loader can state the fallback instead of
+ * reading it back off a deprecated property (which is what previously forced a
+ * lint suppression at each of the two call sites).
+ */
+const DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT = false;
+
 export type ConfigPathKey = keyof QfaiPaths;
 
 export type ConfigLoadResult = {
@@ -191,11 +211,11 @@ export const defaultConfig: QfaiConfig = {
       specSections: [],
     },
     testStrategy: {
-      requireLayerTags: false,
-      requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
+      requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+      requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
     },
     traceability: {
       brMustHaveSc: true,
@@ -418,20 +438,6 @@ function normalizeValidation(
       ),
     },
     testStrategy: {
-      requireLayerTags: readBoolean(
-        testStrategyRaw?.requireLayerTags,
-        base.testStrategy.requireLayerTags,
-        "validation.testStrategy.requireLayerTags",
-        configPath,
-        issues,
-      ),
-      requireSizeTags: readBoolean(
-        testStrategyRaw?.requireSizeTags,
-        base.testStrategy.requireSizeTags,
-        "validation.testStrategy.requireSizeTags",
-        configPath,
-        issues,
-      ),
       maxE2eScenarioRatio: readOptionalRatio(
         testStrategyRaw?.maxE2eScenarioRatio,
         base.testStrategy.maxE2eScenarioRatio,
@@ -450,6 +456,26 @@ function normalizeValidation(
         testStrategyRaw?.forbidTestTodoStubs,
         base.testStrategy.forbidTestTodoStubs,
         "validation.testStrategy.forbidTestTodoStubs",
+        configPath,
+        issues,
+      ),
+      // Deprecated compat shim: no validator reads either flag, but the type is
+      // public, so keep parsing them until the next major instead of handing a
+      // `undefined` back to a caller that used to get its configured value. The
+      // fallback is named rather than read off `base.testStrategy`, which is
+      // `defaultConfig.validation.testStrategy` and therefore the very same
+      // constant — reading it back would only re-enter the deprecated property.
+      requireLayerTags: readBoolean(
+        testStrategyRaw?.requireLayerTags,
+        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+        "validation.testStrategy.requireLayerTags",
+        configPath,
+        issues,
+      ),
+      requireSizeTags: readBoolean(
+        testStrategyRaw?.requireSizeTags,
+        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+        "validation.testStrategy.requireSizeTags",
         configPath,
         issues,
       ),
