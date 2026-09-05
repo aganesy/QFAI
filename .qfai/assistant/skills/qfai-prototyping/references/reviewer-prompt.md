@@ -9,7 +9,7 @@ the static compliance gate, not by you.
 ## Inputs
 
 - Screenshot: `.qfai/evidence/prototyping/iter-NN/<screen>.png`
-- HTML snapshot: `iter-NN/<screen>.html`
+- HTML snapshot: `.qfai/evidence/prototyping/iter-NN/<screen>.html`
 - Prior reviews: `iter-(NN-1)/review.json`, `iter-(NN-2)/review.json`
   (when present)
 - Progress log: `.qfai/evidence/prototyping/progress.md`
@@ -36,6 +36,11 @@ type Review = {
     found: string;
   }[];
   pivotDirective: "continue" | "refine" | "pivot";
+  // Repository-relative, full form — the same
+  // `.qfai/evidence/prototyping/iter-NN/<screen>.<ext>` paths listed under
+  // Inputs above. `validate` compares these against the copies the
+  // orchestrator transcribes into `prototyping.json#iterations[N]`, so a
+  // shortened form here is reported as a mirror disagreement.
   evidenceRefs: { screenshot: string; html: string };
 };
 ```
