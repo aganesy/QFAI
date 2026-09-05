@@ -6,3 +6,5 @@
 !coverage-depth-*.md
 !decisions/
 !decisions/**
+!implement-*.md
+!atdd-*.md

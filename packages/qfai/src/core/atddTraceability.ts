@@ -23,9 +23,72 @@ import {
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
+import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
-const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}(?:-\d{4})?)\b/g;
-const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)\b/g;
+// The short form carries `(?!-)`; the long form does not.
+//
+// Written as `(?:-\d{4})?`, the optional half let a test that validates its own
+// annotations — `/^QFAI:SPEC-0001:TC-0001-\d{4}$/`, the shape a self-checking
+// deferral ledger reaches for — match as the FOUR-DIGIT-SHORT prefix of itself:
+// the optional half cannot consume `-\d`, the short form succeeds, and `\b` is
+// satisfied because `-` is not a word character. The scanner then reported a TC
+// id four digits short, unregistered BY CONSTRUCTION because the truncation
+// invented it (#1123).
+//
+// This paragraph deliberately spells no complete short-form id. Naming one
+// would make the comment itself an annotation — the other half of what #1123
+// reports, an explanation of the hazard re-triggering it. The illustration
+// above is safe for the reason the fix turns on: it continues with `-`.
+//
+// Both lengths stay legal: `TC-0001` and `TC-0001-0002` are accepted by
+// `TC_ID_RE`, `TC_REF_SHAPE` and `TC_ID_TOKEN` alike, so requiring eight digits
+// would reject real annotations. What is not legal is a short form the text
+// then continues with `-`, because a real one is followed by whitespace, a
+// quote, `)` or end of line.
+//
+// The guard sits on the short alternative only, so a complete-but-malformed
+// annotation (`TC-0001-0002-foo`) still matches and is still reported as an
+// unknown reference. Trading a false report for a silent miss is the worse
+// direction in a validator.
+/**
+ * Extensions whose literals {@link maskTestSource} can blank.
+ *
+ * The scan walks whatever a project puts under its test roots. A JS lexer over
+ * a `.py` or `.rb` file would blank spans by JS's rules, and over-blanking here
+ * hides a real annotation — the one failure this must not introduce.
+ */
+const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+]);
+
+/**
+ * A test file's text with its string, template and regex literals blanked.
+ *
+ * Comments are kept, because an annotation is written in one. Without this the
+ * scanner could not tell a reference from an id a fixture holds as DATA — a
+ * generator suite, or a self-validating deferral ledger quoting the id it is
+ * about — and reported `QFAI-ATDD-101` / `-102` (`error`) against a file that
+ * never claimed the reference (#1141).
+ *
+ * `maskJsNonCode` replaces one character for one, so a match offset and the
+ * line a finding names are unchanged.
+ */
+function maskTestSource(file: string, text: string): string {
+  if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+    return text;
+  }
+  return maskJsNonCode(text, { comments: false });
+}
+
+const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
+const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 /**
  * `CON-DB-*` annotation, the DB peer of the API form above.
@@ -83,12 +146,21 @@ export type AtddTraceabilityScan = {
   limit: number;
 };
 
-export type AtddTraceabilityMissing = {
+/**
+ * Obligation refs bucketed by ID kind.
+ *
+ * Shared by the two partitions the coverage result reports: `missing` (owed and
+ * referenced nowhere) and `coveredByCarrierOnly` (owed, referenced, but from no
+ * carrier that declares a runnable test).
+ */
+export type AtddObligationRefs = {
   us: string[];
   tc: string[];
   conApi: string[];
   conDb: string[];
 };
+
+export type AtddTraceabilityMissing = AtddObligationRefs;
 
 export type AtddCodeTraceabilityResult = {
   specsRoot: string;
@@ -115,7 +187,25 @@ export type AtddCodeTraceabilityResult = {
    * send the CLI report and the GitHub annotation at a file that is not there.
    */
   declaredSpecDirs: Map<string, string>;
+  /**
+   * Every declared `US-*`, active and deferred alike — the same
+   * declared-not-owed distinction the contract sets draw. A deferred story is
+   * still a known id, so an E2E test written ahead of its slice must not become
+   * a `QFAI-ATDD-101` unknown reference.
+   */
   specUsIds: Map<string, Set<string>>;
+  /**
+   * `US-*` refs excluded from the `QFAI-ATDD-111` obligation because their
+   * story declares `- x-qfai-status: planned`, formatted as `SPEC-NNNN:US-…`.
+   * Reported at `info` (`QFAI-ATDD-118`) so the deferral stays visible rather
+   * than silently shrinking the gate — the same treatment `QFAI-ATDD-114` and
+   * `-116` give the two contract kinds.
+   *
+   * Restricted to specs that owe `QFAI-ATDD-111` at all: under surface typing a
+   * non-UI-bearing spec's stories are already outside the E2E gate, so nothing
+   * there is deferred by the marker.
+   */
+  deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
    * Every declared `CON-API-*`, active and deferred alike. This is the public
@@ -158,6 +248,28 @@ export type AtddCodeTraceabilityResult = {
     tcInIntegration: AtddForbiddenRef[];
   };
   missing: AtddTraceabilityMissing;
+  /**
+   * Owed obligations whose every carrier declares no test a runner collects.
+   *
+   * Satisfaction is a text match, and the scan deliberately reads past test
+   * code so a Gherkin feature or a markdown ledger can carry annotations. The
+   * consequence is that a bullet list of IDs discharges `QFAI-ATDD-111` /
+   * `-112` / `-113` / `-115` exactly as an executable acceptance test does, and
+   * `missing: []` cannot tell the two apart. Reported at `info`
+   * (`QFAI-ATDD-119`) and persisted into the summary artifact for the same
+   * reason `unitComponentTcIds` is: a coverage scan must never leave "covered
+   * by a test" and "covered by an ID written down" indistinguishable.
+   *
+   * Membership is decided per carrier by {@link hasRunnableTestStructure}, not
+   * by extension: markdown never qualifies, a `.feature` with a `Scenario:`
+   * does, and a `.test.ts` holding only an annotation comment does not — so
+   * renaming the ledger cannot clear the obligation. Skip state is out of
+   * scope, so this asserts a test is *declared*, never that it is enabled.
+   *
+   * Empty whenever `scan.truncated` is set: an executable carrier may sit past
+   * the file limit, so the claim is unproven and suppressed rather than guessed.
+   */
+  coveredByCarrierOnly: AtddObligationRefs;
   /**
    * Formatted missing TC ref -> the test kind its declared `Level` routes to.
    * Lets the CLI phrase `QFAI-ATDD-112` (message, `suggested_action`, report)
@@ -264,6 +376,9 @@ export async function evaluateAtddCodeTraceability(
   const skippedTestFiles: string[] = [];
   const unknown: AtddUnknownRef[] = [];
   const unknownDedup = new Set<string>();
+  // Scanned files that declare a test a runner would collect. Filled while the
+  // bodies are already in hand, and read only by `buildCarrierOnlyRefs`.
+  const executableCarriers = new Set<string>();
 
   const forbiddenTcInApi = new Map<string, Set<string>>();
   const forbiddenTcInE2e = new Map<string, Set<string>>();
@@ -288,10 +403,28 @@ export async function evaluateAtddCodeTraceability(
       continue;
     }
 
-    const text = await readSafe(file);
+    const text = maskTestSource(file, await readSafe(file));
     const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
     const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
     const apiAnnotations = extractApiContractAnnotations(text);
+    const dbAnnotations = extractDbContractAnnotations(text);
+    // Only a file that carries an annotation can ever be looked up in
+    // `executableCarriers`, so classifying the rest is work with no reader —
+    // and the classification tokenizes the whole body, which on a monorepo of
+    // twenty thousand test files is the difference between a cheap scan and a
+    // CI timeout. Deliberately ordered after the extractions for that reason.
+    if (
+      (usAnnotations.length > 0 ||
+        tcAnnotations.length > 0 ||
+        apiAnnotations.length > 0 ||
+        dbAnnotations.length > 0) &&
+      hasRunnableTestStructure(file, text)
+    ) {
+      // `path.normalize`, because that is the key `recordSpecRef` /
+      // `recordContractRef` store — fast-glob yields POSIX separators even on
+      // Windows, so the raw path would never match the recorded one there.
+      executableCarriers.add(path.normalize(file));
+    }
 
     for (const ref of usAnnotations) {
       const token = formatUsToken(ref.spec, ref.id);
@@ -356,7 +489,7 @@ export async function evaluateAtddCodeTraceability(
       }
     }
 
-    for (const contractId of extractDbContractAnnotations(text)) {
+    for (const contractId of dbAnnotations) {
       // Declared = active ∪ deferred, for the same reason as CON-API: a
       // deferral suspends the obligation, it does not un-declare the contract.
       if (!declaredDbContractIds.has(contractId)) {
@@ -382,8 +515,17 @@ export async function evaluateAtddCodeTraceability(
   // an L1/L2 annotation is owed to no ATDD directory at all.
   skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
 
-  const missing = buildMissingRefs({
+  // Active = declared minus deferred, mirroring the contract collectors:
+  // `x-qfai-status: planned` suspends the E2E obligation for that one story, it
+  // does not un-declare it.
+  const { active: activeUsIds, deferred: deferredUsIds } = partitionDeclaredUs(
     specUsIds,
+    specRefs.usPlanned,
+    uiBearingSpecs,
+  );
+
+  const missing = buildMissingRefs({
+    specUsIds: activeUsIds,
     usObligationScope: uiBearingSpecs,
     specTcIds,
     apiContractIds: activeApiContractIds,
@@ -399,6 +541,25 @@ export async function evaluateAtddCodeTraceability(
   );
   missing.tc = owedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
+  // A truncated scan cannot support the negative claim this partition makes.
+  // `collectFilesByGlobs` stops at the limit, so the executable test that
+  // references the same ID may simply sit past the cut — reporting the
+  // obligation as carrier-only would then be a false "nothing runs for this".
+  // Suppressed rather than guessed; `scan.truncated` is already warned on by
+  // the CLI and persisted into the summary artifact, so a downstream gate reads
+  // an indeterminate scan there instead of an empty list it can trust.
+  const coveredByCarrierOnly = scanResult.truncated
+    ? { us: [], tc: [], conApi: [], conDb: [] }
+    : buildCarrierOnlyRefs({
+        usRefs,
+        usObligationScope: uiBearingSpecs,
+        tcRefs,
+        apiRefs,
+        apiContractIds: activeApiContractIds,
+        dbRefs,
+        dbContractIds: activeDbContractIds,
+        executableCarriers,
+      });
 
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
@@ -407,6 +568,7 @@ export async function evaluateAtddCodeTraceability(
     testsRoot,
     contractsApiRoot,
     specUsIds,
+    deferredUsIds,
     specTcIds,
     apiContractIds: declaredApiContractIds,
     activeApiContractIds,
@@ -428,6 +590,7 @@ export async function evaluateAtddCodeTraceability(
       tcInIntegration: toForbiddenList(forbiddenTcInIntegration),
     },
     missing,
+    coveredByCarrierOnly,
     missingTcHomes,
     skippedTestFiles: skippedTestFiles.sort(),
     scan: {
@@ -509,7 +672,7 @@ async function collectUncountedTestFiles(
   }
   const annotated: string[] = [];
   for (const file of files) {
-    const text = await readSafe(file);
+    const text = maskTestSource(file, await readSafe(file));
     if (!ANY_QFAI_ANNOTATION.test(text)) continue;
     if (carriesOnlyExcludedAnnotations(text, tcLevels)) continue;
     annotated.push(toPosixPath(path.relative(root, file)));
@@ -524,6 +687,8 @@ type SpecScopedRef = {
 
 async function collectSpecRefs(specsRoot: string): Promise<{
   us: Map<string, Set<string>>;
+  /** `spec -> US-ID` deferred by `- x-qfai-status: planned`; a subset of `us`. */
+  usPlanned: Map<string, Set<string>>;
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
@@ -532,6 +697,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
+  const usPlanned = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
   const declaredSpecDirs = new Map(entries.map((entry) => [entry.specNumber, entry.dir]));
@@ -556,6 +722,16 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (usIds.size > 0) {
       us.set(entry.specNumber, usIds);
     }
+
+    // Intersected with the declared set, never taken on its own: a marker under
+    // a heading no collector recognises as a story would otherwise report a
+    // deferral for an id that carries no obligation to defer.
+    const plannedUsIds = new Set(
+      Array.from(collectPlannedUsIds(usText)).filter((id) => usIds.has(id)),
+    );
+    if (plannedUsIds.size > 0) {
+      usPlanned.set(entry.specNumber, plannedUsIds);
+    }
     if (tcIds.size > 0) {
       tc.set(entry.specNumber, tcIds);
     }
@@ -566,7 +742,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     }
   }
 
-  return { us, tc, tcLevels, declaredSpecDirs };
+  return { us, usPlanned, tc, tcLevels, declaredSpecDirs };
 }
 
 /**
@@ -940,6 +1116,50 @@ function partitionMissingTcByObligation(
   return { owed, unitComponent };
 }
 
+/**
+ * Splits the declared `US-*` ids into those that still owe an E2E reference and
+ * those a `- x-qfai-status: planned` marker defers.
+ *
+ * The deferred half is returned as formatted `SPEC-NNNN:US-…` refs — the shape
+ * `narrowToScope` filters and the CLI prints — so a `--spec` run reports its own
+ * deferrals only, exactly as it does for `QFAI-ATDD-117`.
+ *
+ * Only a spec inside `usObligationScope` can defer anything. A non-UI-bearing
+ * spec's stories are already outside `QFAI-ATDD-111` under surface typing, so
+ * reporting them at `QFAI-ATDD-118` would claim an obligation was suspended
+ * that never existed — and its remediation would tell the implementer to add an
+ * E2E annotation there, the annotation-only E2E that the surface-scope rule
+ * exists to prevent.
+ */
+function partitionDeclaredUs(
+  specUsIds: Map<string, Set<string>>,
+  plannedBySpec: Map<string, Set<string>>,
+  usObligationScope: ReadonlySet<string> | null,
+): { active: Map<string, Set<string>>; deferred: string[] } {
+  const active = new Map<string, Set<string>>();
+  const deferred: string[] = [];
+  for (const [spec, ids] of specUsIds.entries()) {
+    const planned = plannedBySpec.get(spec);
+    const owesE2e = usObligationScope === null || usObligationScope.has(spec);
+    if (planned === undefined || planned.size === 0 || !owesE2e) {
+      active.set(spec, ids);
+      continue;
+    }
+    const remaining = new Set<string>();
+    for (const id of ids) {
+      if (planned.has(id)) {
+        deferred.push(formatUsRef(spec, id.replace(/^US-/, "")));
+      } else {
+        remaining.add(id);
+      }
+    }
+    if (remaining.size > 0) {
+      active.set(spec, remaining);
+    }
+  }
+  return { active, deferred: deferred.sort((left, right) => left.localeCompare(right)) };
+}
+
 export const PLANNED_CONTRACT_KEY = "x-qfai-status";
 const PLANNED_CONTRACT_VALUE = "planned";
 
@@ -1059,6 +1279,197 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
   "im",
 );
 
+/**
+ * Heading form of a user story, e.g. `## US-0001-0002: title`.
+ *
+ * The compound id is admitted as well as the short one: a layered spec pack
+ * numbers its stories `US-<spec>-<serial>`, and matching only `US-\d{4}` would
+ * leave every real project's stories unable to carry the marker below.
+ *
+ * Any depth from `##` down is a story heading, because the declaring collector
+ * ({@link collectShortIds}) accepts an id at any depth via its loose scan — real
+ * packs write `### US-…` far more often than `## US-…`. Recognising only `##`
+ * here left those stories unable to defer at all, and in an H2/H3 document it
+ * also mis-attributed an H3 story's marker to the preceding H2 story, because
+ * the `###` line neither opened a block nor closed the open one.
+ */
+const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+
+/** Any ATX heading — the block terminator paired with {@link US_HEADING_RE}. */
+const ANY_HEADING_RE = /^#{1,6}\s+/;
+
+/** Markdown's bullet list markers, as a regex character class. */
+const BULLET_MARKER = "[-*+]";
+
+/** Markdown's ordered list marker — `1.` or `1)`, at its nine-digit ceiling. */
+const ORDERED_MARKER = "\\d{1,9}[.)]";
+
+/**
+ * Catalog form of a user story, e.g. `- US-0001: summary`.
+ *
+ * {@link collectShortIds} declares an id from this line too, so a pack whose
+ * stories live only in the `## US Catalog` list — no per-story heading — owed
+ * `QFAI-ATDD-111` with no way to defer. The id must *open* the item, not merely
+ * appear in it: `- Goal: as described in US-0002` is prose about another story,
+ * not a declaration of one, and treating it as a block opener would hand the
+ * next marker to the wrong id.
+ *
+ * Every list form Markdown writes opens a block, not just `-` and `*`. The
+ * declaring collector is not list-aware at all — its loose scan lifts the id out
+ * of `+ US-0001: …` and `1. US-0001: …` exactly as it does out of `- US-0001: …`
+ * — so a narrower opener here left a catalog written in either of those forms
+ * declared, owed and undeferrable.
+ *
+ * Group 1 is the prefix (indent, marker, and the whitespace after it), whose
+ * width is the item's content column; group 2 is the id.
+ */
+const US_LIST_ITEM_RE = new RegExp(
+  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:：]?`,
+);
+
+/**
+ * The `x-qfai-status: planned` deferral in user-story meta-line form.
+ *
+ * The same token both contract kinds use, written as one of the `- Key: value`
+ * meta lines a `## US-NNNN` / `### US-NNNN` block already carries (`- Parent:`,
+ * `- Goal:`).
+ * Matched on its own line only, and attributed to the block it sits in — a
+ * marker written once at the top of the document must not be able to defer
+ * every story the file declares, which is the nesting mistake
+ * {@link isPlannedApiContract} guards against on the contract side.
+ *
+ * Only the canonical meta line is accepted, because a match silently removes a
+ * `QFAI-ATDD-111` error: whitespace after the list marker is required (so the
+ * non-list `-x-qfai-status: planned` is not a deferral), and a quoted key or
+ * value must carry the *same* quote character at both ends (so neither the
+ * unterminated `- x-qfai-status: 'planned` nor a mixed `"…'` pair defers a
+ * story). A typo in a meta line has to fail loudly rather than pass as a
+ * deferral.
+ *
+ * The bullet class is the one {@link US_LIST_ITEM_RE} opens catalog entries
+ * with, so a pack that writes its lists with `+` can write this line the same
+ * way. An ordered marker is deliberately not accepted: a meta line is a bullet
+ * in every shipped template, and `1. x-qfai-status: planned` is a numbered step,
+ * not a story attribute.
+ */
+const PLANNED_US_META_LINE_RE = (() => {
+  const key = escapeRegExp(PLANNED_CONTRACT_KEY);
+  const value = escapeRegExp(PLANNED_CONTRACT_VALUE);
+  /** Bare, or wrapped in a matched pair of the same quote character. */
+  const quoted = (token: string): string => `(?:"${token}"|'${token}'|${token})`;
+  return new RegExp(
+    `^[ \\t]*${BULLET_MARKER}[ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${quoted(value)}[ \\t]*$`,
+    "i",
+  );
+})();
+
+/** Markdown's tab stop: a tab advances to the next multiple of four columns. */
+const TAB_WIDTH = 4;
+
+/**
+ * Column reached after `prefix`, on Markdown's own accounting.
+ *
+ * A tab advances to the next tab stop rather than a flat four columns, so the
+ * content of `-\tUS-0001: …` starts at column 4 and a child line indented with
+ * one tab reaches it.
+ */
+function columnAfter(prefix: string): number {
+  let column = 0;
+  for (const char of prefix) {
+    column += char === "\t" ? TAB_WIDTH - (column % TAB_WIDTH) : 1;
+  }
+  return column;
+}
+
+/** Indent column of a line — where its first non-whitespace character sits. */
+function indentColumn(line: string): number {
+  return columnAfter(/^[ \t]*/.exec(line)?.[0] ?? "");
+}
+
+/**
+ * The `US-*` ids a spec pack defers from the `QFAI-ATDD-111` obligation.
+ *
+ * A story whose acceptance cannot be observed at E2E in this slice had no
+ * in-band way to say so: `CON-API-*` and `CON-DB-*` both defer with
+ * `x-qfai-status: planned`, while a `US-*` could only be left uncovered (a hard
+ * `QFAI-ATDD-111` error), covered by a test asserting nothing, or erased by
+ * declaring the whole spec non-user-facing. This is the per-story counterpart.
+ *
+ * Fenced samples and HTML comments are masked first, on the same terms as
+ * {@link collectTcLevels}: an illustrative block showing the marker must not
+ * silently drop a real story's obligation.
+ *
+ * A block opens at either shape {@link collectShortIds} declares an id from — a
+ * `##`-or-deeper heading ({@link US_HEADING_RE}) or a catalog list entry
+ * ({@link US_LIST_ITEM_RE}) — and closes at the next opener or any heading, so
+ * every declared story can carry the marker and none inherits a neighbour's.
+ *
+ * A catalog entry closes on its Markdown item boundary as well: its block ends
+ * at the first non-blank line that does not reach the entry's *content* column —
+ * the column its marker plus the whitespace after it ends at, which is where
+ * Markdown puts the item's own children. Without that, prose or a blank line
+ * after `- US-0001: …` left the entry open to the next heading, and a
+ * document-level `- x-qfai-status: planned` written well outside it deferred
+ * US-0001 — the very leak the document-root rule closes on the heading side.
+ *
+ * Comparing against the *marker* column instead would leave a narrower version
+ * of the same leak: under a column-0 `- US-0001: …` a one-space-indented
+ * ` - x-qfai-status: planned` clears the marker column while falling short of
+ * the two columns a child needs, so Markdown reads it as a separate list item
+ * and the entry must already be closed by then. The marker has to sit *inside*
+ * the entry, indented to its content.
+ */
+export function collectPlannedUsIds(rawUsText: string): Set<string> {
+  const planned = new Set<string>();
+  const lines = maskNonSpecRegions(rawUsText).replace(/\r\n/g, "\n").split("\n");
+  let current: string | null = null;
+  /** Content column of the catalog entry that opened `current`; `null` for a heading. */
+  let entryContentColumn: number | null = null;
+  const close = (): void => {
+    current = null;
+    entryContentColumn = null;
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const heading = US_HEADING_RE.exec(trimmed);
+    if (heading?.[1]) {
+      current = heading[1].toUpperCase();
+      entryContentColumn = null;
+      continue;
+    }
+    // Any other heading closes the block, at every depth: the marker belongs to
+    // the story it is written under, not to whatever story came before it in
+    // the file, and a non-story subsection (`#### Notes`) ends the block too.
+    if (ANY_HEADING_RE.test(trimmed)) {
+      close();
+      continue;
+    }
+    // A catalog entry opens a block of its own, so the marker reaches a story
+    // that has no heading. Checked after the heading arms and before the marker
+    // arm: the marker's own line does not open with a `US-*` id, so the two
+    // list forms cannot collide.
+    // Read from the raw line, not the trimmed one: the entry's own indent is
+    // part of the content column its children have to reach.
+    const listItem = US_LIST_ITEM_RE.exec(line);
+    if (listItem?.[2]) {
+      current = listItem[2].toUpperCase();
+      entryContentColumn = columnAfter(listItem[1] ?? "");
+      continue;
+    }
+    // Left the catalog entry: a sibling list item, a paragraph, or any other
+    // content short of its content column is no longer inside it.
+    if (entryContentColumn !== null && trimmed !== "" && indentColumn(line) < entryContentColumn) {
+      close();
+      continue;
+    }
+    if (current !== null && PLANNED_US_META_LINE_RE.test(line)) {
+      planned.add(current);
+      close();
+    }
+  }
+  return planned;
+}
+
 async function collectDbContractIds(dbRoot: string): Promise<CollectedContractIds> {
   const files = await collectDbContractFiles(dbRoot);
   const active = new Set<string>();
@@ -1143,6 +1554,437 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
  * so they are unioned in rather than replaced.
  */
 const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
+
+/**
+ * The subset of {@link STRUCTURAL_ANNOTATION_EXTENSIONS} that no runner runs.
+ *
+ * A bare `.md` is prose whatever it contains — a fenced `it(...)` sample in a
+ * ledger is documentation, not a suite — so markdown is settled by extension
+ * and never inspected further. Every other extension is decided by
+ * {@link hasRunnableTestStructure}, because the extension alone cannot say
+ * whether anything runs.
+ */
+const PROSE_CARRIER_EXTENSIONS: ReadonlySet<string> = new Set(["md", "markdown"]);
+
+/**
+ * Chain segments that still leave a call declaring a test or a suite.
+ *
+ * An open `[\w$]+` chain accepted the configuration and hook forms too, and
+ * those declare nothing: a Playwright file holding only `test.use(...)`,
+ * `test.beforeEach(...)` and `test.describe.configure(...)` collects no test
+ * yet read as an executable carrier, which took every obligation in it out of
+ * `coveredByCarrierOnly`. Only modifiers a runner still collects through are
+ * listed, so `test.describe.serial(` matches and `test.describe.configure(`
+ * does not.
+ */
+const TEST_MODIFIER_SEGMENT =
+  "skip|only|todo|fails|failing|concurrent|sequential|serial|parallel|each|for|runIf|skipIf|describe";
+
+/**
+ * xUnit / BDD call form with the modifier chains the frameworks allow:
+ * `it(`, `test.each(`, `describe.skip(`, `it.concurrent.each(`.
+ */
+const CALL_FORM_PATTERN = new RegExp(
+  `(?:^|[^\\w$.])(?:it|test|describe|context|specify|suite|scenario)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\\(`,
+);
+
+/**
+ * Runners whose entry point is a property, so {@link CALL_FORM_PATTERN} rejects
+ * them on the `.` before `test`: Deno's built-in runner and QUnit.
+ */
+const NAMESPACED_CALL_PATTERN =
+  /(?:^|[^\w$.])(?:Deno\s*\.\s*test|QUnit\s*\.\s*(?:test|only|todo|skip))(?:\s*\.\s*(?:only|skip|ignore|each))*\s*\(/;
+
+/**
+ * JUnit 5's collectable annotations, listed rather than matched by prefix so a
+ * lifecycle or container annotation is not read as a declaration.
+ */
+const JVM_ANNOTATION_PATTERN =
+  /^\s*@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b/m;
+
+/**
+ * NUnit / xUnit.net attributes that name a collected case.
+ *
+ * `[TestFixture]` is deliberately absent: it marks the class, and a fixture
+ * holding no case declares nothing a runner collects.
+ */
+const DOTNET_ATTRIBUTE_PATTERN = /^\s*\[\s*(?:Test|TestCase|TestCaseSource|Fact|Theory)\s*[\]([]/m;
+
+/** Rust's `#[test]`, including the framework-qualified `#[tokio::test]` form. */
+const RUST_ATTRIBUTE_PATTERN = /^\s*#\[\s*(?:\w+::)?test\s*\]/m;
+
+/**
+ * The `def test...` convention pytest and minitest both collect on.
+ *
+ * The form stops at the name rather than requiring `(`, because Ruby's
+ * parameter list is optional and minitest collects `def test_serves_story` as
+ * written; Python, where the parentheses are mandatory, is unaffected.
+ */
+const DEF_NAMING_PATTERN = /^\s*(?:async\s+)?def\s+test\w*\b/m;
+
+/** PHPUnit's `test*` method convention. */
+const PHP_NAMING_PATTERN = /^\s*(?:public\s+)?function\s+test\w*\s*\(/m;
+
+/** The Go names `go test` collects and always runs. */
+const GO_NAMING_PATTERN = /^\s*func\s+(?:Test|Benchmark|Fuzz)\w*\s*\(/m;
+
+/**
+ * Go's `Example` names, kept apart because the form alone settles nothing.
+ *
+ * `go doc testing`: an example without an output comment is compiled and never
+ * run, so the function on its own declares no test — see
+ * {@link GO_OUTPUT_COMMENT_RE}.
+ */
+const GO_EXAMPLE_PATTERN = /^\s*func\s+Example\w*\s*\(/m;
+
+/**
+ * The comment that makes a Go example executable.
+ *
+ * Read off the raw body, because {@link stripCommentsAndLiterals} blanks it
+ * along with every other comment. `go/doc` matches this prefix
+ * case-insensitively, so this does too.
+ */
+const GO_OUTPUT_COMMENT_RE = /^[ \t]*\/\/[ \t]*(?:unordered[ \t]+)?output[ \t]*:/im;
+
+/**
+ * The declaration forms each language's runner collects, keyed by extension.
+ *
+ * An extension is not executability — a `.test.ts` whose whole body is an
+ * annotation comment is prose that happens to end in `.ts`, and classifying by
+ * extension alone would let a markdown ledger clear the same obligation with
+ * the same bytes simply by being renamed. But the extension *is* the language,
+ * and a form written for one language reads noise in another: PHPUnit's
+ * `function test\w*(` convention matched a plain TypeScript helper named
+ * `testData`, which took every obligation in that file out of the partition
+ * with no test collected anywhere. Each carrier is therefore read with its own
+ * language's forms only. Gherkin has its own set again — see
+ * {@link GHERKIN_STRUCTURE_PATTERNS}.
+ *
+ * Container and lifecycle forms are excluded throughout on the same terms as
+ * the hook chains above: an `[TestFixture]` on an otherwise empty class and a
+ * `@pytest.mark.integration` on a plain helper declare nothing a runner
+ * collects, and pytest's own collection is the `def test\w*` convention anyway.
+ *
+ * Deliberately blind to skip state — `describe.skip(` matches. The claim these
+ * support is "a test is declared here", not "it is enabled" or "it passes": a
+ * disabled skeleton is owned by the scaffold placeholder gate, and a green run
+ * is owned by the test command itself.
+ */
+const TEST_PATTERNS_BY_LANGUAGE: readonly (readonly [readonly string[], readonly RegExp[]])[] = [
+  [
+    ["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"],
+    [CALL_FORM_PATTERN, NAMESPACED_CALL_PATTERN],
+  ],
+  [["py"], [DEF_NAMING_PATTERN]],
+  // RSpec declares with the call form, minitest with the naming convention.
+  [["rb"], [CALL_FORM_PATTERN, DEF_NAMING_PATTERN]],
+  [["go"], [GO_NAMING_PATTERN]],
+  // JUnit's annotations, plus the call form Kotest / Spock / ScalaTest use.
+  [
+    ["java", "kt", "kts", "groovy", "scala"],
+    [JVM_ANNOTATION_PATTERN, CALL_FORM_PATTERN],
+  ],
+  [["cs", "fs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["rs"], [RUST_ATTRIBUTE_PATTERN]],
+  [["php"], [PHP_NAMING_PATTERN]],
+];
+
+const TEST_PATTERNS_BY_EXTENSION: ReadonlyMap<string, readonly RegExp[]> = new Map(
+  TEST_PATTERNS_BY_LANGUAGE.flatMap(([extensions, patterns]) =>
+    extensions.map((extension): readonly [string, readonly RegExp[]] => [extension, patterns]),
+  ),
+);
+
+/**
+ * Every code form, for a carrier whose extension names no language above.
+ *
+ * The pre-split reading, kept for the unrecognised case on purpose: over-
+ * counting a carrier costs a finding that would not have been raised, while
+ * narrowing a language the scan cannot name would report a suite its runner
+ * does execute as unwritten. {@link GO_EXAMPLE_PATTERN} stays out — it is the
+ * one form that needs a second condition before it means anything.
+ */
+const EVERY_TEST_PATTERN: readonly RegExp[] = [
+  ...new Set(TEST_PATTERNS_BY_LANGUAGE.flatMap(([, patterns]) => patterns)),
+];
+
+/** The declaration forms a runner for a carrier of `extension` collects. */
+function runnableTestPatterns(extension: string, text: string): readonly RegExp[] {
+  const patterns = TEST_PATTERNS_BY_EXTENSION.get(extension) ?? EVERY_TEST_PATTERN;
+  if (extension === "go" && GO_OUTPUT_COMMENT_RE.test(text)) {
+    return [...patterns, GO_EXAMPLE_PATTERN];
+  }
+  return patterns;
+}
+
+/**
+ * The declarations a Gherkin runner collects — the whole of a `.feature`'s say.
+ *
+ * A feature body is not code, so the code forms above read its prose: an
+ * ordinary step such as `Given test(account) is open` matched the xUnit call
+ * form, which let a feature holding only a `Background:` count as executable
+ * while Cucumber collected nothing from it. A `.feature` is therefore judged on
+ * scenario structure alone.
+ *
+ * `Background:` is deliberately absent — it is the shared preamble those
+ * scenarios run, not a scenario a runner collects, so a feature that has only
+ * one declares no test.
+ *
+ * `Scenario Template` is the English dialect's standard alias of
+ * `Scenario Outline`, and `Example` of `Scenario`; a feature written with the
+ * alias collects exactly the same scenarios.
+ */
+const GHERKIN_STRUCTURE_PATTERNS: readonly RegExp[] = [
+  /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:/m,
+];
+
+/**
+ * A `.feature` written in a Gherkin dialect this scan cannot read English.
+ *
+ * Cucumber resolves `Scenario:` through the `# language:` header, so a feature
+ * declaring `ja` collects `シナリオ:` and matches no English keyword above.
+ * Carrying a keyword table for seventy dialects is not this scan's job, so a
+ * non-English feature is taken at its word and counted as declaring a test:
+ * over-counting one file costs a finding that would not have been raised,
+ * while under-counting reports a suite the runner does execute as unwritten.
+ */
+const LOCALISED_GHERKIN_RE = /^\s*#\s*language\s*:\s*(?!en\s*$)[A-Za-z]/im;
+
+/**
+ * Blanks a comment or literal span, keeping its newlines.
+ *
+ * The patterns above anchor on `^`/`m`, so a span must be replaced with
+ * something of the same line shape rather than deleted: collapsing the lines
+ * would slide an unrelated declaration up behind a stripped prefix.
+ */
+function blankSpan(span: string): string {
+  return span.replace(/[^\n]/g, " ");
+}
+
+/**
+ * Removes comments and string literals so a declaration is only read from code.
+ *
+ * Applying {@link TEST_PATTERNS_BY_LANGUAGE} to the raw body made an
+ * annotation-only file executable as soon as it mentioned the shape it lacks:
+ * `// TODO: add test("story", ...)` matched the call form, so a ledger renamed
+ * to `.test.ts` cleared the obligation with a comment. Comments and literals
+ * are therefore blanked first.
+ *
+ * One tokenizer covers every ecosystem the scan meets: `//` and slash-star are
+ * the C family (TS/JS, Java, C#, Go, Rust, Kotlin, Swift, PHP), `#` is the hash
+ * family (Python, Ruby, Gherkin) minus Rust's `#[test]` attribute and a
+ * shebang, and quoted spans cover the string literals. Single- and
+ * double-quoted spans stop at end of line, so an apostrophe in prose costs at
+ * most the rest of its own line; triple quotes are matched first so a Python
+ * docstring is blanked whole.
+ *
+ * Regex literals are tracked for one reason: a backtick inside one (`/^\s*```/`
+ * is real code in this repository) would otherwise open a template literal and
+ * blank every line up to the next backtick, taking a genuine declaration with
+ * it. Whether a `/` opens a literal or divides is decided by the token before
+ * it, which is the standard heuristic.
+ *
+ * Single pass, and it never slices the tail: {@link NON_CODE_OPENER_RE} jumps
+ * straight to the next character that could open a span, and the sticky
+ * patterns match in place. Re-reading the remainder of the body at every
+ * character made the cost quadratic in file size, on a path that runs over
+ * every annotated carrier in the project.
+ */
+const NON_CODE_OPENER_RE = /["'`/#]/g;
+const BLOCK_COMMENT_RE = /\/\*[\s\S]*?(?:\*\/|$)/y;
+const LINE_COMMENT_RE = /(?:\/\/|#(?![[!]))[^\n]*/y;
+const TRIPLE_QUOTED_RE = /"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)/y;
+const QUOTED_RE = /"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?/y;
+const REGEX_LITERAL_RE = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[A-Za-z]*/y;
+/** Characters that can end a value, so a `/` after one divides. */
+const VALUE_END_RE = /["'`\w$)\]]/;
+/**
+ * Words that end in an identifier character yet still open an expression.
+ *
+ * `return /^\s*```/;` reads as division on the character test alone, which
+ * leaves the backtick inside the literal free to open a template literal and
+ * blank the declaration below it — the failure the regex branch exists to
+ * prevent, one token further along.
+ */
+const EXPRESSION_KEYWORDS: ReadonlySet<string> = new Set([
+  "return",
+  "throw",
+  "typeof",
+  "instanceof",
+  "in",
+  "of",
+  "new",
+  "delete",
+  "void",
+  "case",
+  "do",
+  "else",
+  "yield",
+  "await",
+]);
+
+/** Matches the non-code span opening at `at`, or `null` when none does. */
+function nonCodeSpanAt(text: string, at: number): string | null {
+  for (const pattern of [BLOCK_COMMENT_RE, LINE_COMMENT_RE, TRIPLE_QUOTED_RE, QUOTED_RE]) {
+    pattern.lastIndex = at;
+    const match = pattern.exec(text);
+    if (match && match[0].length > 0) {
+      return match[0];
+    }
+  }
+  if (text.charAt(at) !== "/" || endsValueBefore(text, at)) {
+    return null;
+  }
+  REGEX_LITERAL_RE.lastIndex = at;
+  return REGEX_LITERAL_RE.exec(text)?.[0] ?? null;
+}
+
+/**
+ * Keywords whose parenthesised header ends a statement rather than a value.
+ *
+ * `if (enabled) /^\s*```/.test(value)` is a legal regex literal, but the `)`
+ * before it reads as the end of a call on the character test alone — which
+ * leaves the backtick inside free to open a template literal and blank the
+ * declaration below it, the failure this branch exists to prevent.
+ */
+const CONTROL_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
+  "if",
+  "for",
+  "while",
+  "switch",
+  "catch",
+  "with",
+]);
+
+/**
+ * Characters walked back to pair a `)` with its `(`.
+ *
+ * A control-statement header is short; the budget only stops a pathological
+ * body from making the walk quadratic on a path that reads every annotated
+ * carrier in the project. Exhausting it falls back to "the `)` ended a value",
+ * which is the reading before this branch existed.
+ */
+const PAREN_LOOKBACK_LIMIT = 2000;
+
+/** The identifier ending immediately before `at`, or `""` when none does. */
+function wordBefore(text: string, at: number): string {
+  let end = at - 1;
+  while (end >= 0 && /\s/.test(text.charAt(end))) {
+    end -= 1;
+  }
+  if (end < 0 || !/[\w$]/.test(text.charAt(end))) {
+    return "";
+  }
+  let start = end;
+  while (start > 0 && /[\w$]/.test(text.charAt(start - 1))) {
+    start -= 1;
+  }
+  return text.slice(start, end + 1);
+}
+
+/** True when the `)` at `at` closes a control statement's header. */
+function closesControlHeader(text: string, at: number): boolean {
+  const stop = Math.max(0, at - PAREN_LOOKBACK_LIMIT);
+  let depth = 0;
+  for (let back = at; back >= stop; back -= 1) {
+    const char = text.charAt(back);
+    if (char === ")") {
+      depth += 1;
+    } else if (char === "(") {
+      depth -= 1;
+      if (depth === 0) {
+        return CONTROL_STATEMENT_KEYWORDS.has(wordBefore(text, back));
+      }
+    }
+  }
+  return false;
+}
+
+/** True when the token before `at` ends a value, so a `/` there divides. */
+function endsValueBefore(text: string, at: number): boolean {
+  let back = at - 1;
+  while (back >= 0 && /\s/.test(text.charAt(back))) {
+    back -= 1;
+  }
+  if (back < 0) {
+    return false;
+  }
+  const char = text.charAt(back);
+  if (!VALUE_END_RE.test(char)) {
+    return false;
+  }
+  if (char === ")") {
+    return !closesControlHeader(text, back);
+  }
+  if (!/[\w$]/.test(char)) {
+    return true;
+  }
+  return !EXPRESSION_KEYWORDS.has(wordBefore(text, back + 1));
+}
+
+function stripCommentsAndLiterals(text: string): string {
+  const parts: string[] = [];
+  let plainFrom = 0;
+  NON_CODE_OPENER_RE.lastIndex = 0;
+  let opener: RegExpExecArray | null;
+  while ((opener = NON_CODE_OPENER_RE.exec(text)) !== null) {
+    const at = opener.index;
+    const span = nonCodeSpanAt(text, at);
+    if (span === null) {
+      continue;
+    }
+    parts.push(text.slice(plainFrom, at), blankSpan(span));
+    plainFrom = at + span.length;
+    NON_CODE_OPENER_RE.lastIndex = plainFrom;
+  }
+  parts.push(text.slice(plainFrom));
+  return parts.join("");
+}
+
+/** True when `file` is a carrier a runner could execute, judged on its body. */
+function hasRunnableTestStructure(file: string, text: string): boolean {
+  const extension = path.extname(file).slice(1).toLowerCase();
+  if (PROSE_CARRIER_EXTENSIONS.has(extension)) {
+    return false;
+  }
+  if (extension === "feature") {
+    // Read off the raw body: the header is a `#` comment, which the tokenizer
+    // below blanks along with every other one.
+    if (LOCALISED_GHERKIN_RE.test(text)) {
+      return true;
+    }
+    return matchesAny(GHERKIN_STRUCTURE_PATTERNS, text);
+  }
+  return matchesAny(runnableTestPatterns(extension, text), text);
+}
+
+/** True when any of `patterns` matches `text` once its non-code spans are gone. */
+function matchesAny(patterns: readonly RegExp[], text: string): boolean {
+  const code = stripCommentsAndLiterals(text);
+  return patterns.some((pattern) => pattern.test(code));
+}
+
+/**
+ * True when no recorded carrier for an obligation declares a runnable test.
+ *
+ * `executableCarriers` holds the scanned files {@link hasRunnableTestStructure}
+ * accepted, so an obligation lands here when its every carrier is a prose file
+ * or a code-extension file with no test declaration in it.
+ */
+function isAnnotationOnlyCarrier(
+  files: ReadonlySet<string>,
+  executableCarriers: ReadonlySet<string>,
+): boolean {
+  if (files.size === 0) {
+    return false;
+  }
+  for (const file of files) {
+    if (executableCarriers.has(file)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /**
  * Lifts the bare extension set out of the project's configured `testFileGlobs`
@@ -1385,6 +2227,66 @@ function buildMissingRefs(input: {
     conApi: missingConApi.sort((left, right) => left.localeCompare(right)),
     conDb: missingConDb.sort((left, right) => left.localeCompare(right)),
   };
+}
+
+/**
+ * The refs no runnable carrier references, bucketed like `missing`.
+ *
+ * Read off the same `*Refs` maps `buildMissingRefs` reads, so the two
+ * partitions cannot drift: an owed obligation is in exactly one of `missing`
+ * (no carrier), `coveredByCarrierOnly` (carriers, none of which declares a
+ * test), or neither (at least one carrier that does). Only owed obligations are
+ * considered — `tcRefs` already holds none for a Unit/Component TC, and the US
+ * and contract sets are narrowed to their obligation scope here.
+ */
+function buildCarrierOnlyRefs(input: {
+  usRefs: AtddSpecRefs;
+  usObligationScope: ReadonlySet<string> | null;
+  tcRefs: AtddSpecRefs;
+  apiRefs: Map<string, Set<string>>;
+  apiContractIds: Set<string>;
+  dbRefs: Map<string, Set<string>>;
+  dbContractIds: Set<string>;
+  executableCarriers: ReadonlySet<string>;
+}): AtddObligationRefs {
+  const { executableCarriers } = input;
+  return {
+    us: carrierOnlySpecRefs(input.usRefs, input.usObligationScope, formatUsRef, executableCarriers),
+    tc: carrierOnlySpecRefs(input.tcRefs, null, formatTcRef, executableCarriers),
+    conApi: carrierOnlyContractRefs(input.apiRefs, input.apiContractIds, executableCarriers),
+    conDb: carrierOnlyContractRefs(input.dbRefs, input.dbContractIds, executableCarriers),
+  };
+}
+
+function carrierOnlySpecRefs(
+  refs: AtddSpecRefs,
+  obligationScope: ReadonlySet<string> | null,
+  format: (spec: string, id: string) => string,
+  executableCarriers: ReadonlySet<string>,
+): string[] {
+  const carrierOnly: string[] = [];
+  for (const [spec, byId] of refs.entries()) {
+    if (obligationScope !== null && !obligationScope.has(spec)) {
+      continue;
+    }
+    for (const [id, files] of byId.entries()) {
+      if (isAnnotationOnlyCarrier(files, executableCarriers)) {
+        carrierOnly.push(format(spec, id.replace(/^(?:US|TC)-/, "")));
+      }
+    }
+  }
+  return carrierOnly.sort((left, right) => left.localeCompare(right));
+}
+
+function carrierOnlyContractRefs(
+  refs: Map<string, Set<string>>,
+  owed: Set<string>,
+  executableCarriers: ReadonlySet<string>,
+): string[] {
+  return sortStrings(owed).filter((id) => {
+    const files = refs.get(id);
+    return files !== undefined && isAnnotationOnlyCarrier(files, executableCarriers);
+  });
 }
 
 function hasSpecId(target: Map<string, Set<string>>, specNumber: string, id: string): boolean {
