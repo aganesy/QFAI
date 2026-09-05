@@ -1574,9 +1574,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     // Every pipe-separated surface enumeration attributed to `prototyping.yaml`
     // must be the execution set, never the wider classification set.
-    const enumerations = [...(noteLine ?? "").matchAll(/`([a-z-]+(?:\|[a-z-]+)+)`/g)].map(
-      (match) => match[1],
-    );
+    // Narrowed rather than asserted: `noUncheckedIndexedAccess` makes a capture group
+    // `string | undefined`, and the group is optional to the type system even though this
+    // pattern always fills it. A `!` or an `as string` would type-check by claiming
+    // something the regex engine does not promise.
+    const enumerations = [...(noteLine ?? "").matchAll(/`([a-z-]+(?:\|[a-z-]+)+)`/g)]
+      .map((match) => match[1])
+      .filter((value): value is string => value !== undefined);
     expect(enumerations).toContain(PROTOTYPING_SUPPORTED_SURFACES.join("|"));
     for (const enumeration of enumerations) {
       expect(enumeration.split("|")).not.toContain("cli");
