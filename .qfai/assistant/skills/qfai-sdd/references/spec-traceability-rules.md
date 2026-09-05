@@ -172,8 +172,13 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
-  `blocked` row is waiting on and is required on those rows.
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`. `Blocked-By`
+  names what a `blocked` row is waiting on and is required on those rows.
+  `Owning module` declares the production module the row will write, is filled at
+  Phase 2b alongside the row itself, and is what the parallel-dispatch gate is evaluated
+  against before RED: a ledger with no `Owning module` column supports parallel dispatch
+  only for seams that already exist
+  (`qfai-implement/references/execution-ledger.md`, `parallelization-policy.md`).
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.

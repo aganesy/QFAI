@@ -562,6 +562,72 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(preconditions).toContain('Report\n  "nothing to do" and exit');
     });
 
+    it(`${tree}: the template points at the schema instead of restating it`, async () => {
+      const template = await read(tree, TEMPLATE);
+      // The inline `## Schema` table drifted five cells behind the reference it
+      // linked two lines below itself, and the `Evidence` row told the author to
+      // paste command output into a one-line GFM cell — which truncates the
+      // ledger or misaligns every column after it, silently. A copy has nothing
+      // keeping it honest, so the template now carries exactly one table (the
+      // ledger) and a pointer.
+      const tableLines = template.split(/\r?\n/).filter((line) => line.trim().startsWith("|"));
+      expect(tableLines).toHaveLength(2);
+
+      expect(template).toContain("references/spec-traceability-rules.md#tdd-execution-ledger");
+      expect(template).toContain("Do not restate it here.");
+
+      // The three descriptions the reference had already superseded.
+      expect(template).not.toContain("RED/GREEN command+result pairs proving the TDD cycle");
+      expect(template).not.toContain("Decision Record ID for exception rows");
+      expect(template).not.toMatch(/`todo`\s*\/\s*`red`\s*\/\s*`green`/);
+
+      // The pointer must resolve: the heading the anchor is built from, and the
+      // rules it promises are there.
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("## TDD Execution Ledger");
+      expect(rules).toContain(
+        "Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`",
+      );
+      expect(rules).toContain("`Evidence` is a **pointer**");
+      expect(rules).toContain(
+        "Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,",
+      );
+    });
+
+    it(`${tree}: the schema pointer carries the parallel-dispatch seam column`, async () => {
+      // `Owning module` is filled at Phase 2b like any other cell, and
+      // `parallelization-policy.md` cannot evaluate a single allow condition
+      // when the ledger has no such column. An author who reads only the
+      // template and the reference it points at must still learn the column
+      // exists, or every new ledger is born serial-only.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("`Owning module`");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      const ledgerSection = rules.slice(
+        rules.indexOf("## TDD Execution Ledger"),
+        rules.indexOf("## Traceability Ledger"),
+      );
+      expect(ledgerSection).toContain("`Owning module`");
+
+      const seam = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(seam).toContain("| Owning module |");
+      const policy = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/parallelization-policy.md",
+      );
+      expect(policy).toContain("If the ledger carries no `Owning module` column");
+    });
+
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {
       const template = await read(tree, TEMPLATE);
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-tpl-"));
