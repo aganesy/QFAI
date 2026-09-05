@@ -9,6 +9,12 @@ export type ParsedArgs = {
     yes: boolean;
     dryRun: boolean;
     upgradeAssistantTree: boolean;
+    /**
+     * `qfai init --verbose`: expand the run report's `skipped` list. Off by
+     * default so a no-op re-run reports its skip count instead of every
+     * shipped asset path.
+     */
+    verbose: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
     reportIn?: string;
@@ -208,6 +214,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     yes: false,
     dryRun: false,
     upgradeAssistantTree: false,
+    verbose: false,
     reportFormat: "md",
     reportRunValidate: false,
     doctorFormat: "text",
@@ -490,6 +497,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
+        break;
+      case "--verbose":
+        // init 専用。ヘルプでもそう公開しているので、他コマンドに付けた
+        // 場合は黙って捨てず誤指定として扱う（自動化が「詳細が出た」と
+        // 誤認したまま成功扱いになるのを防ぐ）。
+        if (command !== "init") {
+          markInvalid();
+          break;
+        }
+        options.verbose = true;
         break;
       case "--format": {
         const next = consumeOptionValue();
