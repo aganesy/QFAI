@@ -6,6 +6,7 @@ import {
   lstat,
   mkdtemp,
   mkdir,
+  readdir,
   readFile,
   readlink,
   rename,
@@ -14,7 +15,7 @@ import {
   writeFile,
   symlink,
 } from "node:fs/promises";
-import { execFile as execFileCb } from "node:child_process";
+import { execFile as execFileCb, spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -2401,22 +2402,233 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0003
-  it("--force does not override instructions", async () => {
+  it("--force refreshes instructions from the shipped template", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
-      await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
-      await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "stale-cr\n", "utf-8");
+      await writeFile(path.join(instrDir, "principles.instructions.md"), "stale-pr\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect(await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8")).toBe(
-        "custom-cr\n",
+      const codeReview = await readFile(
+        path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
       );
-      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toBe(
-        "custom-pr\n",
+      const principles = await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8");
+
+      expect(codeReview).not.toBe("stale-cr\n");
+      expect(codeReview).toContain("[BLOCKER]");
+      expect(principles).not.toBe("stale-pr\n");
+      expect(principles).toContain("YAGNI");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force replaces an instructions symlink instead of writing through it", async () => {
+    // `writeFile` follows a symlink, so refreshing without unlinking first
+    // would rewrite the link's target — a file outside the project that init
+    // was never asked to touch.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const escapee = path.join(outside, "shared-review-rules.md");
+      await writeFile(escapee, "someone-elses-file\n", "utf-8");
+      const linked = path.join(instrDir, "code-review.instructions.md");
+      try {
+        await symlink(escapee, linked, "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The link is gone, replaced by a regular file holding the template.
+      expect((await lstat(linked)).isSymbolicLink()).toBe(false);
+      expect(await readFile(linked, "utf-8")).toContain("[BLOCKER]");
+      // And the file the link pointed at is untouched.
+      expect(await readFile(escapee, "utf-8")).toBe("someone-elses-file\n");
+      // The staging file the replacement goes through is renamed, not left behind.
+      const leftovers = (await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"));
+      expect(leftovers).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
+    // `lstat` only answers about the last path component, so with
+    // `.github/instructions` pointing at a shared directory the destination
+    // looks like an ordinary file — one that belongs to whatever the link
+    // points at. Refresh must not follow the ancestor out of the project.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await mkdir(path.join(root, ".github"), { recursive: true });
+      await writeFile(path.join(outside, "code-review.instructions.md"), "shared-cr\n", "utf-8");
+      await writeFile(path.join(outside, "principles.instructions.md"), "shared-pr\n", "utf-8");
+      try {
+        await symlink(outside, path.join(root, ".github", "instructions"), "dir");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(outside, "code-review.instructions.md"), "utf-8")).toBe(
+        "shared-cr\n",
       );
+      expect(await readFile(path.join(outside, "principles.instructions.md"), "utf-8")).toBe(
+        "shared-pr\n",
+      );
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force does not delete a real directory standing where an instructions file goes", async () => {
+    // `rename` cannot replace a populated directory, and the recovery for that
+    // failure is meant for a *symlink* — which `lstat` reports as a link, not
+    // as a directory. Treating a real directory the same way turned "refresh
+    // the shipped instructions" into an unbounded `rm -r` of user data.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      const collision = path.join(instrDir, "code-review.instructions.md");
+      await mkdir(collision, { recursive: true });
+      await writeFile(path.join(collision, "notes.md"), "user-data\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The directory and everything under it survive untouched…
+      expect((await lstat(collision)).isDirectory()).toBe(true);
+      expect(await readFile(path.join(collision, "notes.md"), "utf-8")).toBe("user-data\n");
+      // …no staging file is left behind…
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual(
+        [],
+      );
+      // …and the sibling file, which has no collision, is still refreshed.
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
+        "YAGNI",
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--force does not replace a FIFO standing where an instructions file goes", async () => {
+    // The refusal was written as "not a directory", and `lstat` calls a FIFO,
+    // a socket and a device node none of those — so `rename` replaced the
+    // entry outright. Create-only kept every one of them; the allowlist keeps
+    // that true without having to enumerate the file types to refuse.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const fifo = path.join(instrDir, "code-review.instructions.md");
+      const made = spawnSync("mkfifo", [fifo]);
+      if (made.status !== 0) return; // no mkfifo on this platform — nothing to assert
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The FIFO is still a FIFO, not a template file…
+      expect((await lstat(fifo)).isFIFO()).toBe(true);
+      // …nothing was staged beside it…
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual(
+        [],
+      );
+      // …and a sibling with no collision is still refreshed, so the refusal is
+      // scoped to the entry rather than aborting the whole step.
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
+        "YAGNI",
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--force sweeps a staging file a killed run left in the tracked directory", async () => {
+    // `replaceWithRegularFile` cleans up its own staging file, but `finally` is
+    // a JavaScript construct: SIGKILL, a crash or a power loss ends the run
+    // without one. Every run stages under a fresh pid-timestamp name, so
+    // without a sweep the orphans only accumulate in a tracked directory until
+    // one is committed by accident.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      // The shape a killed run leaves: a destination name, the infix, then the
+      // base-36 pid and timestamp.
+      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      await writeFile(orphan, "half-written\n", "utf-8");
+      // An unrelated dotfile in the same directory must survive: the sweep is
+      // scoped to names this command could have written.
+      const bystander = path.join(instrDir, "notes.qfai-init-notes.md");
+      await writeFile(bystander, "keep\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual([
+        "notes.qfai-init-notes.md",
+      ]);
+      expect(await readFile(bystander, "utf-8")).toBe("keep\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--dry-run sweeps nothing", async () => {
+    // `--dry-run` promises to change nothing, and an orphan is still a change.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      await writeFile(orphan, "half-written\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: true, yes: true });
+
+      expect(await readFile(orphan, "utf-8")).toBe("half-written\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
+    // The escape check compared `path.relative(...)` with a `startsWith("..")`
+    // prefix, which also matches a directory merely *named* `..rules`. Link
+    // `.github/instructions` at one and the relative path is `..rules` — a
+    // path that never leaves the project, since the escape is the `..`
+    // segment, not the characters. The prefix test skipped the refresh, and
+    // silently: the "resolves outside" notice is only printed for a real
+    // escape, so nothing said why the file had not changed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const inProject = path.join(root, "..rules");
+      await mkdir(inProject, { recursive: true });
+      await writeFile(path.join(inProject, "code-review.instructions.md"), "stale-cr\n", "utf-8");
+      await mkdir(path.join(root, ".github"), { recursive: true });
+      try {
+        await symlink(inProject, path.join(root, ".github", "instructions"), "dir");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(
+        await readFile(path.join(inProject, "code-review.instructions.md"), "utf-8"),
+      ).toContain("[BLOCKER]");
     } finally {
       await removeTempTree(root);
     }

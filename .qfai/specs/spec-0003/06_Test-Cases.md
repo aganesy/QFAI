@@ -37,7 +37,7 @@ stays the first markdown table in this file):
 | TC-0003-0010 | unit        | AC-0003-0010               | EX-0003-0008 | error    | Windows EPERM エラーメッセージ                        |
 | TC-0003-0011 | integration | AC-0003-0011               | EX-0003-0009 | normal   | instructions 新規配置                                 |
 | TC-0003-0012 | integration | AC-0003-0012               | EX-0003-0010 | edge     | instructions 既存ファイル skip                        |
-| TC-0003-0013 | integration | AC-0003-0013               | EX-0003-0011 | edge     | --force でも instructions 保護                        |
+| TC-0003-0013 | integration | AC-0003-0013               | EX-0003-0011 | edge     | --force で instructions 再生成                        |
 | TC-0003-0014 | integration | AC-0003-0014               | EX-0003-0012 | normal   | instructions アクティベーション案内表示               |
 | TC-0003-0015 | integration | AC-0003-0002               | EX-0003-0013 | edge     | symlink idempotency (3 consecutive runs)              |
 | TC-0003-0016 | integration | AC-0003-0001               | EX-0003-0014 | normal   | migrated example EX-0003-0014 coverage                |

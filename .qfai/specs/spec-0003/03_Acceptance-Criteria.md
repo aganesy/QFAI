@@ -112,10 +112,10 @@ Scenario: instructions の既存ファイル保護
 
 ```gherkin
 # AC-0003-0013
-Scenario: --force でも instructions は上書きされない
-  Given 両方の instructions ファイルが存在する
+Scenario: --force で instructions が更新される
+  Given 両方の instructions ファイルがカスタム内容で存在する
   When `qfai init --force` を実行する
-  Then どちらのファイルも変更されない
+  Then どちらのファイルも shipped テンプレートの内容で再生成される
 ```
 
 ```gherkin
@@ -167,7 +167,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0010 | Windows EPERM エラー              | REQ-0015   | P1       |
 | AC-0003-0011 | instructions 新規配置             | REQ-0012   | P1       |
 | AC-0003-0012 | instructions 既存保護             | REQ-0013   | P1       |
-| AC-0003-0013 | --force instructions 保護         | REQ-0013   | P1       |
+| AC-0003-0013 | --force instructions 更新         | REQ-0013   | P1       |
 | AC-0003-0014 | instructions アクティベーション   | REQ-0014   | P2       |
 | AC-0003-0015 | gitignore 管理ブロック追記        | REQ-0016   | P1       |
 | AC-0003-0016 | レガシーブロック自動移行          | REQ-0017   | P1       |
