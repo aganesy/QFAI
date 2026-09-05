@@ -340,7 +340,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
   9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  10: "8edf8d74903ab1ecd506e9237bc3a9a92c1ad4f7acca31a9efb3b76388be5b4f",
+  10: "c6f25a8aa00ef2c7bc0a414694d04300648d82af61eb5e36b1b10ad155c70199",
   11: "e4c7de62d79995caf9578da4383a0281b120867d5ffb54246ea541ccbe8d1dba",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
