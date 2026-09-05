@@ -160,6 +160,11 @@ describe("describeIncompleteRun", () => {
 });
 
 describe("the boundary is wired into every command", () => {
+  // `--root`, not `--dir`. These rows were written with `--dir`, which `report`
+  // accepted and never read — the confusion #1143 is about, reproduced in this
+  // repository's own suite. Once `--dir` became an argument error outside
+  // `init`, `run` returned before dispatching and the boundary was never
+  // reached, so the rows failed. That is the fix working.
   // `validate` answers a fault with `QFAI-SCAN-002` because #1112 wrapped
   // `validateProject`. The rest have no verdict artifact, so the rows above
   // only matter if `run` actually consults them — which is what this checks,
@@ -167,20 +172,20 @@ describe("the boundary is wired into every command", () => {
   it("attributes a fault raised inside `report` to `report`", async () => {
     runReportSpy.mockRejectedValueOnce(libuvError("EPERM", "stat", "/p/.qfai"));
 
-    await expect(run(["report", "--dir", process.cwd()], process.cwd())).rejects.toThrow(/report/);
+    await expect(run(["report", "--root", process.cwd()], process.cwd())).rejects.toThrow(/report/);
   });
 
   it("says the run is undetermined, not that it is clean", async () => {
     runReportSpy.mockRejectedValueOnce(libuvError("EPERM", "stat", "/p/.qfai"));
 
-    await expect(run(["report", "--dir", process.cwd()], process.cwd())).rejects.toThrow(/未判定/);
+    await expect(run(["report", "--root", process.cwd()], process.cwd())).rejects.toThrow(/未判定/);
   });
 
   it("passes a command's own refusal through unchanged", async () => {
     const refusal = new Error("report: .qfai/specs is empty — nothing to report");
     runReportSpy.mockRejectedValueOnce(refusal);
 
-    await expect(run(["report", "--dir", process.cwd()], process.cwd())).rejects.toBe(refusal);
+    await expect(run(["report", "--root", process.cwd()], process.cwd())).rejects.toBe(refusal);
   });
 });
 

@@ -22,6 +22,53 @@ describe("parseArgs", () => {
     expect(parsed.options.validateFormat).toBe("github");
   });
 
+  it("accepts --dir on init, which is the only command that reads it", () => {
+    const parsed = parseArgs(["init", "--dir", "/tmp/out"], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.dir).toBe("/tmp/out");
+  });
+
+  for (const command of ["validate", "report", "doctor", "atdd"] as const) {
+    it(`rejects --dir on ${command}, which never reads it`, () => {
+      // `options.dir` is read at exactly one place — the `init` arm of the
+      // dispatch. Anywhere else the flag reached nothing and `resolveRoot` fell
+      // through to the current directory, so `validate --dir <path>` answered
+      // about the CURRENT tree and `report --dir <path>` overwrote its
+      // `report.md`. A confident verdict about a tree the operator did not name
+      // is worse than an error, because it looks like an answer (#1143).
+      const parsed = parseArgs([command, "--dir", "/tmp/elsewhere"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+    });
+  }
+
+  it("accepts --upgrade-assistant-tree on init", () => {
+    const parsed = parseArgs(
+      ["init", "--dir", "/tmp/out", "--upgrade-assistant-tree"],
+      process.cwd(),
+    );
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.upgradeAssistantTree).toBe(true);
+  });
+
+  for (const command of ["validate", "report", "doctor"] as const) {
+    it(`rejects --upgrade-assistant-tree on ${command}`, () => {
+      // The same shape as --dir and worse in one way: accepted here it exited 0
+      // having upgraded nothing, so the operator went on reading an assistant
+      // tree they believed had been refreshed (#1143).
+      const parsed = parseArgs([command, "--upgrade-assistant-tree"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+    });
+  }
+
+  it("still accepts --root on the commands that resolve a target", () => {
+    // The flag the operator wanted. A rejection that did not leave this working
+    // would have removed the only way to point those commands at a tree.
+    const parsed = parseArgs(["validate", "--root", "/tmp/project"], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.root).toBe("/tmp/project");
+    expect(parsed.options.rootExplicit).toBe(true);
+  });
+
   it("parses --fail-on {never|warning|error} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["never", "warning", "error"] as const) {
