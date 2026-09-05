@@ -47,6 +47,38 @@
 
 ### Fixed
 
+- **`QFAI-DRIFT-001` が二点比較していたため、`origin/main` 側で変わった
+  ファイルが「このブランチで変更された」と報告されていた。**
+  `git diff <base>..HEAD` は「この 2 つの木はどう違うか」に答える — つまり
+  ブランチが分岐した**後に `base` が得た変更**も全部含む。finding の文面は
+
+  > Upstream SSOT modified **on this branch** without an approved Change Request
+
+  であり、main で変わりブランチが一度も触れていないファイルについて、この文は
+  偽である。実測 (`tmp/1149/probe.mjs`):
+
+  ```text
+  two-dot   (main..HEAD):  [".qfai/contracts/api/other.yaml", ".qfai/contracts/db/owned.sql"]
+  three-dot (main...HEAD): [".qfai/contracts/db/owned.sql"]
+  ```
+
+  これは偽陽性以上の問題だった。gate item 12 の step 4 は
+  `qfai validate --fail-on error` なので、**`origin/main` が進むだけで error 数が
+  増える** — しかもその gate 自身が 2 名のレビュアと `qa-gatekeeper` を各 round
+  に要求してレビューサイクルを遅くしている。報告者のレビュアの診断が的確である:
+  「増加は tree の内容ではなく validate を**いつ**実行したかの関数になっている」。
+
+  `<base>...HEAD` は merge-base 比較で、これが「このブランチが変更した」の意味で
+  ある。消費者は 2 つあり、どちらもその問いを立てている —
+  `upstreamSsotGuard`（downstream フェーズが保護対象を編集したか）と
+  `traceabilityIntegrity`（このブランチが変えた spec pack はどれか）。
+
+  `changedFilesSince` (#1146) の**二点比較はそのまま**にし、意図的である旨を
+  明記した。あちらの `revision` は別ブランチではなくこのブランチの履歴上の
+  **点**であり、問うているのは「その点から今までに木が動いたか」である。
+  三点にすると rebase で捨てられた線の上の観測を取りこぼす —
+  過少報告であり、しかも沈黙する。 (#1149)
+
 - **staleness の規則を「commit の性質」ではなく「計算する区間」として述べた。**
   `#what-makes-evidence-stale` の書き方だと「自分の**最後の commit** 以降に
   何か変わったか?」という別の、はるかに弱い問いに手が伸びる。issue が報告した

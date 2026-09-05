@@ -14,7 +14,21 @@ export function normalizeRepoPath(p: string): string {
 }
 
 /**
- * Files changed between `baseBranch` and `HEAD`, as repo-relative paths.
+ * Files this branch changed since it diverged from `baseBranch`, as
+ * repo-relative paths.
+ *
+ * **Three-dot, deliberately.** `<base>..HEAD` answers "how do these two trees
+ * differ", which includes everything `<base>` gained after the branch left it —
+ * so a file changed on `origin/main` and never touched here was reported as
+ * "modified on this branch", and `QFAI-DRIFT-001`'s error count grew as main
+ * advanced, on a branch whose review cycle the gate itself makes slow. Gate
+ * item 12's step 4 is `qfai validate --fail-on error`, so the gate became a
+ * function of wall-clock time rather than of the tree (#1149).
+ *
+ * `<base>...HEAD` is the merge-base comparison, which is what both callers
+ * mean: `upstreamSsotGuard` asks whether a downstream phase edited a protected
+ * artifact, and `traceabilityIntegrity` asks which spec packs this branch
+ * changed. Neither question is about what happened on `base`.
  *
  * Returns an empty set when git is unavailable, the base branch cannot be
  * resolved, or the directory is not a repository. Callers treat "no changed
@@ -23,7 +37,7 @@ export function normalizeRepoPath(p: string): string {
  */
 export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> {
   try {
-    const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
+    const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}...HEAD`], {
       cwd: root,
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "ignore"],
@@ -56,6 +70,12 @@ export function getChangedFilesAgainstBase(root: string, baseBranch: string): Se
  * `paths` is a pathspec. Passing the observation's own test file plus the
  * source directory is the computation `#what-makes-evidence-stale` specifies
  * in prose — "a commit that changes any file the observation covered".
+ *
+ * **Two-dot here, unlike {@link getChangedFilesAgainstBase} above, and not an
+ * oversight.** `revision` is a POINT on this branch's own history, not another
+ * branch: the question is whether the tree moved between that point and now.
+ * Three-dot would compare against a merge base with a point, which excludes
+ * changes on the far side of it and means nothing for a recorded observation.
  */
 export type ChangedSince =
   | { readonly kind: "changed"; readonly files: readonly string[] }

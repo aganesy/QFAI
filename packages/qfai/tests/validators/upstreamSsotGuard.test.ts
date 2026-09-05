@@ -454,6 +454,55 @@ describe("validateUpstreamSsotGuard", () => {
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
   });
 
+  it("does not attribute a file `base` changed to this branch", async () => {
+    // `..` answers "how do these two trees differ", which includes everything
+    // `base` gained after the branch left it. The finding says "modified ON
+    // THIS BRANCH", and for such a file that sentence is false — so the error
+    // count grew as `origin/main` advanced, on a branch whose review cycle the
+    // gate itself makes slow. Gate item 12's step 4 is
+    // `qfai validate --fail-on error`, which made the gate a function of
+    // wall-clock time rather than of the tree (#1149).
+    const root = await newRepo({
+      ".qfai/contracts/db/branch-owned.sql": "SELECT 1;\n",
+      ".qfai/contracts/api/main-owned.yaml": "openapi: 3.0.0\n",
+    });
+    // The branch touches its own contract, declared by an approved CR.
+    await commitEdits(root, {
+      ".qfai/contracts/db/branch-owned.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-branch.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Contracts: `.qfai/contracts/db/branch-owned.sql`",
+      ]),
+    });
+    // `base` advances on a different contract while the branch sits.
+    git(root, "checkout", "base");
+    await write(root, ".qfai/contracts/api/main-owned.yaml", "openapi: 3.1.0\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "base advances");
+    git(root, "checkout", "work");
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("still reports a file the branch changed after `base` advanced", async () => {
+    // The direction a three-dot diff could break: moving `base` must not stop
+    // the rule seeing what the branch actually did.
+    const root = await newRepo({
+      ".qfai/contracts/db/branch-owned.sql": "SELECT 1;\n",
+      ".qfai/contracts/api/main-owned.yaml": "openapi: 3.0.0\n",
+    });
+    await commitEdits(root, { ".qfai/contracts/db/branch-owned.sql": "SELECT 2;\n" });
+    git(root, "checkout", "base");
+    await write(root, ".qfai/contracts/api/main-owned.yaml", "openapi: 3.1.0\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "base advances");
+    git(root, "checkout", "work");
+
+    const issues = await validateUpstreamSsotGuard(root, config);
+    expect(issues.map((i) => i.file)).toEqual([".qfai/contracts/db/branch-owned.sql"]);
+  });
+
   it("stays quiet outside a git checkout", async () => {
     // `qfai validate` must remain usable in a tarball export; a hard failure
     // here would be a worse regression than the gap it closes.
