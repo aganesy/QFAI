@@ -412,8 +412,9 @@ const SPEC_LEVEL_PARITY: readonly {
   },
   {
     heading: PROHIBITIONS_HEADING,
-    condition: "A `## Cross-spec obligations` entry in this spec's evidence file is still open",
-    box: "No `## Cross-spec obligations` entry",
+    condition:
+      "A `## Cross-spec obligations` entry of the **code-ownership** kind in this spec's evidence file is still open",
+    box: "No `## Cross-spec obligations` entry of the **code-ownership** kind",
   },
   {
     heading: PROHIBITIONS_HEADING,
