@@ -64,8 +64,9 @@ steps:
   returning `PASS`.
 - Reviewer responses use the response template in
   `shared-skill-delegation-baseline.md#reviewer-response-template`, including the
-  REQUIRED `Authored/edited under review:` line. A response omitting that line is
-  not a valid verdict; anything other than `none` cannot be a `PASS`.
+  REQUIRED `Reviewer role:`, `Reviewed artifact:` and `Authored/edited under review:`
+  lines. A response omitting any of them is not a valid verdict; anything other than
+  `none` on the last cannot be a `PASS`.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
 - A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.
