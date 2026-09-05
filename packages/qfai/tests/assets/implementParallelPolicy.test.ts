@@ -29,10 +29,7 @@ const ROLE_FAN_OUT = "assistant/skills/qfai-implement/references/role-fan-out.md
  * through the pointer the policy keeps.
  */
 const policy = async (tree: string): Promise<string> => {
-  const [dispatch, fanOut] = await Promise.all([
-    read(tree, REFERENCE),
-    read(tree, ROLE_FAN_OUT),
-  ]);
+  const [dispatch, fanOut] = await Promise.all([read(tree, REFERENCE), read(tree, ROLE_FAN_OUT)]);
   return `${dispatch}
 ${fanOut}`;
 };
