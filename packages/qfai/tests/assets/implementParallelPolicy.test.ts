@@ -16,8 +16,23 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 const REFERENCE = "assistant/skills/qfai-implement/references/parallelization-policy.md";
 
-/** The full rules live in a reference file; the skill keeps the summary. */
-const policy = (tree: string): Promise<string> => read(tree, REFERENCE);
+const ROLE_FAN_OUT = "assistant/skills/qfai-implement/references/role-fan-out.md";
+
+/**
+ * The full rules live in reference files; the skill keeps the summary.
+ *
+ * Two files, because role fan-out moved into a topic file of its own when the
+ * policy crossed the shipped-asset line ceiling — it is about who does what
+ * inside ONE row, which holds whether or not anything is dispatched, while the
+ * policy is about dispatching rows. The rows below judge the pair: a rule is
+ * stated once, and `#role-fan-out-inside-one-row-build-phase` still resolves
+ * through the pointer the policy keeps.
+ */
+const policy = async (tree: string): Promise<string> => {
+  const [dispatch, fanOut] = await Promise.all([read(tree, REFERENCE), read(tree, ROLE_FAN_OUT)]);
+  return `${dispatch}
+${fanOut}`;
+};
 
 /**
  * Collapse markdown soft wraps so assertions pin wording, not the column at
@@ -58,9 +73,12 @@ describe("qfai-implement states one parallelization policy", () => {
     });
 
     it(`${tree}: defines coordinated parallel ledger ownership`, async () => {
+      // One `## Ledger ownership` section, with the dispatch-specific rules as
+      // a subsection under it, so the `#ledger-ownership` anchor reaches both.
       const section = await policy(tree);
-      expect(section).toContain("## Coordinated parallel mode (ledger ownership)");
-      expect(section).toContain("owns every `test-list.md` write");
+      expect(section).not.toContain("## Coordinated parallel mode (ledger ownership)");
+      expect(section).toContain("### Coordinated parallel mode");
+      expect(section).toContain("has exactly one writer: the\n**orchestrator**, in the **trunk**");
       expect(section).toContain("Item 10 of the 12-point gate is satisfied by the orchestrator");
     });
 
@@ -295,22 +313,36 @@ describe("qfai-implement states one parallelization policy", () => {
       );
     });
 
-    it(`${tree}: worker evidence blocks carry the whole per-item contract`, async () => {
+    it(`${tree}: worker evidence blocks cite the per-item contract, not a copy of it`, async () => {
+      // The inline copy named 11 of the contract's 23 fields while claiming to
+      // carry **every** one. The ledger cells (`TDD-ID`, `Status`, `DR-ID`) are
+      // named here because they are not contract fields; the fields themselves
+      // must be reached by pointer so a second list cannot drift again.
       const section = unwrap(await policy(tree));
-      for (const field of [
-        "`TDD-ID`",
-        "`TC-ref`",
-        "RED command and result",
-        "GREEN command and result",
-        "Refactor verify command and result",
-        "`Spec review`",
-        "`Code quality review`",
-        "`Prototype parity`",
-        "`DR-ID`",
-      ]) {
-        expect(section).toContain(field);
+      for (const cell of ["`TDD-ID`", "final `Status`", "`DR-ID`"]) {
+        expect(section).toContain(cell);
       }
+      expect(section).toContain("`../SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
+      expect(section).not.toContain("RED command and result");
+      expect(section).not.toContain("Refactor verify command and result");
       expect(section).toContain("A block missing any contract field does not satisfy item 10");
+    });
+
+    it(`${tree}: the cited contract pointer resolves from the policy's own directory`, async () => {
+      // A pointer is only better than a copy while it lands somewhere. Resolve
+      // it the way a worker would — relative to `references/` — rather than
+      // reading a separately known path and calling that a check.
+      const raw = await policy(tree);
+      const cited = /`([^`]*SKILL\.md)#per-item-evidence-contract-fresh-evidence-required`/.exec(
+        raw,
+      );
+      expect(cited).not.toBeNull();
+      const target = path.resolve(
+        path.dirname(path.join(repoRoot, tree, REFERENCE)),
+        cited?.[1] ?? "",
+      );
+      const skill = await readFile(target, "utf-8");
+      expect(skill).toContain("### Per-item evidence contract (fresh evidence required)");
     });
   }
 });

@@ -15,112 +15,10 @@ carries the summary and the precedence statement.
 
 ## Role fan-out inside one row (build phase)
 
-The manifest ships exactly one non-empty `parallel_groups`:
-`qfai-implement`'s `build` phase groups `frontend-engineer` and
-`backend-engineer`. Both are `conditional_agents` in that phase, and Handoff
-Contract 1 assigns the row to the _appropriate_ implementation agent, so the
-group is a permission, not a roster: the two run concurrently only **when both
-roles apply to the row and the planner selects both**. A frontend-only or
-backend-only row routes one role — starting the other anyway hands it work
-another specialist owns, which is one of its own stop conditions. Do not read
-the empty lists elsewhere in `agent-routing.yml` as a statement that nothing
-ever runs concurrently.
-
-That fan-out dispatches no second **item**, so the gates below that exist to
-authorize a second item do not apply to it: it needs no `delivery-planner`
-authorization and no user consent. **Those two are the whole exemption.** The
-row's own contract, the constitution's concurrency rule, and the allow list's
-external-runtime-resource condition all still bind it:
-
-- **One row, one `Owning module`, split between the roles.** The fan-out does
-  not widen the row's declared seam. Both roles write inside that one module,
-  and each is given a disjoint set of paths within it before either starts;
-  work that will not fit the module belongs to a **different ledger row**, not
-  to a second writer on this one. `delivery-planner` may only _select_ such a
-  row: rows are upstream (`SKILL.md` Non-goals) and `/qfai-sdd` is their
-  producer, so neither the planner nor this skill may author one here. **If no
-  such row exists, do not fan out and do not invent one** — raise a Change
-  Request and hand the redesign to `/qfai-sdd`. This is the usual shape of one
-  full-stack behaviour that needs a frontend and a backend module at once:
-  splitting it into two rows is not the remedy either, because neither half is
-  independently observable and `references/selector-granularity.md` allows one
-  independently observable boundary per row.
-- **External runtime resources are checked for the roles too.** Two roles
-  running a suite — and often a dev server — at the same time contend exactly
-  as two items do, and separate worktrees do not help: fixed ports, paths
-  outside the worktree or under `os.tmpdir()`, shared test databases, caches,
-  queues and OS-global environment state stay shared, as
-  `## Isolation requirement (worktree separation)` states below. So evaluate
-  the allow list's **external runtime resource** condition over the two roles,
-  by the same disjoint-write-set or per-worker-isolation test, before starting
-  them. Neither disjoint nor isolated has the same outcome it has for items:
-  the roles run one at a time.
-- **No disjoint split, no fan-out.** A row whose work cannot be divided into
-  non-overlapping write ranges runs its roles **one at a time** — the
-  item-level gate's DENY-to-serial outcome, applied inside the row. This is not
-  waivable: `constitution/workflow.md#concurrency-stage-independent-mandatory`
-  binds every set of delegated agents that write concurrently, and it requires
-  worktree separation whenever they do. In one checkout the second role
-  overwrites the first's edits; in separate worktrees the same module comes
-  back as a merge conflict.
-- **One evidence block per row.** The per-item evidence contract is satisfied
-  once, by the orchestrator, from what the roles returned — never one block per
-  role, and a row whose block is missing a field stays out of `done` exactly as
-  in the coordinated mode below.
-- **One GREEN, judged over both outputs — taken on the merged tree by one
-  role.** `qa-gatekeeper` blocks `build` on the row's single GREEN
-  observation, and that observation covers the merged result of both roles;
-  neither role's output is admissible on its own. On a full-stack row neither
-  worktree can produce it: each holds half the behaviour, so the selector
-  fails there for a reason that is not the row's. **Nobody else may supply it
-  either** — Handoff Contract 2 has the _implementation agent_ submit the
-  GREEN run and Contract 3 has `qa-gatekeeper` judge what was submitted, so
-  the orchestrator cannot synthesize a pass it never observed (it may not
-  write or run production code at all) and the gatekeeper cannot stand in for
-  an observation nobody made. So once the per-role reconciliation below
-  passes, the orchestrator merges the two heads and **re-delegates the merged
-  tree to one of the two roles: the one that owns the row's `Selector`** — its
-  layer decides, a UI or E2E selector being the frontend's and an API or
-  service-level one the backend's. That role runs Phase Green steps 2 and 2a
-  against the merged tree — `Oracle proof` mutation, its failing output, the
-  immediate revert, and the restored run that **is** the GREEN — and returns
-  both in the per-item evidence contract's form for the orchestrator to write
-  into the row's one evidence block before `qa-gatekeeper` is routed. Only
-  that one agent runs, so no worktree separation is owed for this step; it is
-  still the `build` phase and still one of its `conditional_agents`, so it
-  needs no new routing. If the only predicate that can falsify the row sits in
-  the other role's assigned range, that role takes the mutation run on the
-  same merged tree **after** the first role's run and never beside it — two
-  runs, still one evidence block. A fanned-out row that reaches `build` with
-  no such post-merge run has no admissible GREEN and does not leave it.
-- **Seam reconciliation stays per row, and adds a per-role pass.**
-  `#seam-reconciliation-after-a-parallel-run` diffs slices, and a fanned-out
-  row is one slice: its touched `src/` paths are compared against its one
-  declared `Owning module` just as a serially implemented row's are. That
-  comparison alone cannot see the split, because it reads the roles' merged
-  result — two roles that both wrote the same file, whether the conflict was
-  resolved by hand or the hunks merged cleanly, still land inside the one
-  module and pass it. So diff **each role's own head** as well
-  (`git diff --name-only <base>..<role-head> -- <source root>`), against the
-  path set that role was assigned **and** against the other role's, and report
-  every path outside its assignment, or touched by both, as a deny-condition
-  breach under step 3 of that section. Without this pass the non-overlapping
-  write ranges required above are asserted at dispatch and never verified.
-
-  That command is a **two-commit range**, which `git diff` defines as a
-  separate usage from its working-tree forms: it enumerates commits and
-  nothing else, so a role that returns with its edits still in its index, its
-  working tree, or as untracked files contributes an empty list and passes the
-  comparison however it wrote. So **reconcile no uncommitted role.** Each role
-  commits in its own worktree before it returns — `git add` over the paths it
-  was assigned, so that anything it wrote outside them stays visible in
-  `git status` instead of being swept into the same commit unexamined — and
-  returns that commit as its `<role-head>`. Verify the return rather than
-  trust it: `git status --porcelain` in that worktree must come back empty.
-  A non-empty status is itself a deny-condition breach — record it, add every
-  path it names (untracked `??` entries included) to that role's touched set,
-  and compare the union against both the assignment and the other role
-  **before anything merges**.
+Who does what inside ONE row's build phase — the roles, what each owns, and what
+none of them may do — is in `role-fan-out.md`. It is true whether or not
+anything is dispatched in parallel, which is why it is not stated here: this
+file is about dispatching rows.
 
 ## Gates and precedence
 
@@ -309,25 +207,13 @@ This is the same re-take a T1 group close performs, for the same reason
 (`volume-policy.md#group-formation-states-and-transitions`): the address was
 taken before the tree the item ships on existed.
 
-## Coordinated parallel mode (ledger ownership)
-
-When parallel dispatch is authorized, the ledger has one writer:
-
-- The **orchestrator** owns every `test-list.md` write. Workers never edit it.
-- Workers return a per-item evidence block carrying **every** field of the
-  `SKILL.md` "Per-item evidence contract": `TDD-ID`, `TC-ref`, RED command and
-  result, GREEN command and result, Refactor verify command and result,
-  `Spec review`, `Code quality review`, and `Prototype parity` for UI-affecting
-  items — plus the resulting status and `DR-ID`.
-- Item 10 of the 12-point gate is satisfied by the orchestrator applying a
-  **complete** evidence block to the row, not by the worker writing it. A block
-  missing any contract field does not satisfy item 10: the orchestrator obtains
-  the missing fields first, and the row stays out of `done` until it has them.
-
 ## Ledger ownership
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` has exactly one writer: the
-**orchestrator**, in the **trunk**.
+**orchestrator**, in the **trunk**. Both `SKILL.md` citation sites reach this
+section by the `#ledger-ownership` anchor, so the whole rule — serial and
+parallel — lives under this one heading. A second top-level section restating it
+is what let the two halves drift apart.
 
 This is not a style preference. Delegation is mandatory and the orchestrator may
 not write code, so the only role that ever observes RED/GREEN is the
@@ -339,11 +225,135 @@ the artifact the gate reads.
 So:
 
 - Parallel workers **MUST NOT** edit `.qfai/specs/<spec-id>/tdd/**`. Their
-  worktree copy is read-only for the duration of the slice.
-- Each worker returns, per item it processed: `TDD-ID`, final `Status`, and the
-  `Evidence` payload in the per-item evidence contract's form.
+  worktree copy is read-only for the duration of the slice. This is the scope of
+  the prohibition: it is the whole `tdd/` subtree, not `test-list.md` alone.
+- Each worker returns, per item it processed: `TDD-ID`, final `Status`, its
+  `DR-ID` where the item's status requires one, and the `Evidence` payload
+  carrying **every** field of
+  `../SKILL.md#per-item-evidence-contract-fresh-evidence-required` — the parent
+  directory, because this file lives in `references/`. That contract is
+  the only statement of the field list — `Status` and `DR-ID` are ledger cells
+  rather than contract fields, which is why they are named here and the fields
+  are not. Do not restate the list in this file: an enumeration maintained in two
+  places is what went stale, and a worker returning the short copy returns a
+  block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
   `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
+- A merged item whose row is still `todo` fails that verify. Silence there is
+  indistinguishable from work that was never done.
+
+In serial mode the same rule holds with no merge step: the implementation agent
+returns Status + Evidence, the orchestrator writes them.
+
+### Coordinated parallel mode
+
+When parallel dispatch is authorized the single-writer rule above applies
+unchanged. Two consequences are specific to dispatch:
+
+- Item 10 of the 12-point gate is satisfied by the orchestrator applying a
+  **complete** evidence block to the row, not by the worker writing it. A block
+  missing any contract field does not satisfy item 10: the orchestrator obtains
+  the missing fields first, and the row stays out of `done` until it has them.
+- Some contract fields are **not** obtainable that way. Each names a tree that
+  no longer exists after the merge, so the worker takes it while that tree is
+  still there — before the revert, in its own worktree — and returns it with the
+  block. **Which one is required is decided by the row's branch**: demanding the
+  other branch's field rejects a conforming block just as surely as accepting a
+  missing one lets an unprovable row through.
+  - A row **with a RED pair** returns `RED revision` in every round block. A RED
+    is observed before the code that makes it pass exists, so on an uncommitted
+    tree Phase Green moves the content address by construction and the merged
+    trunk no longer holds the tree the RED named. This is the ordinary
+    `observed-red` row, not a special case (`evidence-revision.md`).
+  - A **`falsifiability`** row returns `Falsifiability revision` **in place of**
+    it: its observation is the mutation run that Phase Red step 3c reverts. An
+    `observed-red` row has no such field, so requiring it there sends back a row
+    that is already complete.
+  - A row whose proof was re-taken after a **test-only replacement** returns
+    `Replacement proof revision` too — _beside_ its `RED revision`, not instead
+    of it. It names the temporary tree the replacement test's mutation proof ran
+    against, which is why the contract gives it a field of its own rather than
+    letting it overwrite the original RED's address
+    (`../SKILL.md#per-item-evidence-contract-fresh-evidence-required`). That
+    tree is no more reconstructible from the merged trunk than the other two,
+    so a rework row is un-recoverable in the same way — and only a rework row
+    is: a row with no replacement owes nothing here.
+
+  `Oracle proof` is **not** in this class, though the orchestrator cannot
+  produce it alone either, since it may not write code. The contract gives it no
+  revision field of its own, so it rides the row's final `Revision` together
+  with the GREEN and the two reviews, and step 2 below re-takes it on the
+  integrated tree by **re-delegating** the mutation. The one row that owes no
+  separate entry is the one the contract already exempts: a row on the _RED not
+  observable_ path satisfies `Oracle proof` with its falsifiability fields
+  (`oracle-strength.md`).
+
+  A block missing the field **its own branch** requires goes back to the worker
+  that produced it, not to the orchestrator's recovery path — and that return
+  path exists only while that worker's worktree does, which is what the next
+  subsection sequences.
+
+#### Check completeness before the merge, re-take the rest after it
+
+The two remedies above have opposite deadlines. Run them in one order or a
+merged row can never reach `done`:
+
+1. **Before the merge, and before any slice worktree is removed**, the
+   orchestrator validates every returned block against the field list the row's
+   own branch selects — including `Replacement proof revision` where the row
+   took a test-only replacement. A short block goes back to its worker
+   **there**, while the tree its missing field names still stands. Afterwards no
+   one can re-take `RED revision`, `Falsifiability revision` or
+   `Replacement proof revision`: the tree each named is not reconstructible from
+   the trunk, and the orchestrator may not write code. So an incomplete block
+   blocks the **merge**, which is recoverable, rather than the row, which by
+   then is not.
+2. **After the merge**, the trunk is a different revision from every slice
+   worktree — the sibling slices landed in it. Every field that must name the
+   state the item finally landed at is therefore stale on arrival however
+   complete the block is: the GREEN `Revision` and the `Oracle proof` bound to
+   it, each reviewer's `Reviewed revision` and `Audited evidence hash`, the
+   `Round N: Review pack` and its `Round N: Review pack seal`, and all three
+   checkpoint verification fields. Gate item 10 requires items 5, 7 and 8 to
+   agree on one revision, so applying the worker's payload verbatim leaves every
+   merged row unable to reach `done`
+   (`evidence-revision.md#what-makes-evidence-stale`). **Re-take those
+   observations on the integrated tree** and write the refreshed values into the
+   row:
+   - **The GREEN and the `Oracle proof` together.** Item 5 is one observation of
+     one tree, and `Oracle proof` has no revision field of its own, so keeping
+     the slice's mutation result beside a re-run GREEN either backdates it to a
+     tree the row never landed at or leaves item 5 stale. Re-delegate the
+     mutation and its immediate revert to the implementation agent in the
+     integrated worktree, and have `qa-gatekeeper` confirm both. A _RED not
+     observable_ row owes nothing here: its falsifiability fields already
+     satisfy item 5, and those are step 1's to preserve.
+   - **Both reviewers, and the pack each round writes.** A re-dispatch is a new
+     review round, so it produces a new `review-<timestamp>/`
+     (`review-artifact-layout.md`). Replace `Round N: Review pack` **and**
+     `Round N: Review pack seal` as a pair: a new seal under the old path makes
+     gate item 10 recompute over a different directory and mismatch, and the old
+     seal under the new path leaves the fresh verdict unprotected
+     (`evidence-revision.md`).
+   - **The checkpoint verification, re-run.** Its seal is an audit hash over the
+     recorded command and result _together with_ the `Revision` the checkpoint
+     ran against, so refreshing `Revision` alone breaks the seal, and refreshing
+     neither leaves item 12 ruling on the worker's private tree. Re-run the
+     per-item command set on the integrated tree and replace
+     `Checkpoint verification command`, `Checkpoint verification result` and
+     `Checkpoint verification seal` (`checkpoint-verification.md`).
+
+   All of it is re-observation, not new code, so it stays inside the
+   orchestrator's delegation. Post-merge integration verify does not cover it:
+   it rules on the merged suite, not on each row's audit trail.
+
+3. **After the last integration-verify remedy, run step 2 again — over every
+   merged item, not only the slice that was faulted.** Any remedy under
+   `#failed-integration-verify` edits code or tests, and a revision addresses
+   the whole tree, so the observations step 2 just took are stale again by the
+   rule that made the slice payloads stale. "The change was unrelated" is not an
+   exemption — whether it was unrelated is the judgement the field exists to
+
 - **The reconciliation write replays the row's own path, one listed edge at a
   time.** A dispatched row is still `todo` in the trunk — workers never edited
   it — so assigning the returned status directly is a single unlisted jump:
@@ -380,12 +390,22 @@ So:
   the ledger write gate item 10 reads, and it is now the first time the row's
   status asserts anything about the integrated tree.
 - A merged item whose row is still `todo` fails that verify. Silence there is
-  indistinguishable from work that was never done.
+  remove (`evidence-revision.md#what-makes-evidence-stale`). Order it so the
+
+  re-take is the **last** thing before the rows go to `done`: a verify that
+  passes first time costs one pass, and each further remedy round costs
+  another.
 
 In serial mode the same rule holds with no merge step, and the replay has
 nothing to reconstruct: the implementation agent returns Status + Evidence after
 each phase and the orchestrator writes them then, so the row walks those same
 edges as they happen rather than afterwards.
+`RED revision`, `Falsifiability revision` and `Replacement proof revision` are
+exempt from steps 2 and 3 and carry over unchanged — they are transient
+observations that name their own tree by design
+(`evidence-revision.md#a-transient-observation-names-its-own-revision`). That
+exemption is exactly why step 1 has a deadline: they are the only fields the
+later steps cannot regenerate.
 
 ## Failed integration verify
 
