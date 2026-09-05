@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
+  git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
+  だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
+  ファイルが消えたように見え、次の commit でリポジトリから削除される。pack は
+  操作者のディスクにだけ残り、しかもその削除は "remediate" という名前の
+  コマンドによる意図的な操作としてレビューに現れる (#1157)。
+
+  条件は **両方**必要である。現在の同梱 `.gitignore` では pack は追跡されない
+  ので、行き先が ignore されていても失うものは無く、そこで拒否すると `--clean`
+  が全プロジェクトで無意味になる。失うのは pack を force-add した
+  プロジェクト — QFAI 自身のリポジトリがそれである。
+
+  拒否した pack は `kept-tracked=N` として数え、pack ごとに理由を出力する。
+  黙って何もしないと `archived=0` が「TTL がまだ切れていない」と読まれる。
+
 ## [1.10.2] - 2026-09-05
 
 ### Added
