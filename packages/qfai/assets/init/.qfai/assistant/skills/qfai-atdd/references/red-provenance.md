@@ -239,20 +239,41 @@ gate condition where it is defined below.
    neither owns production source — the same ownership boundary branch 1 step 5
    states. Hand the row over naming the predicate to break: its Phase Red
    **step 3c** applies the mutation, runs this row's selector, captures the
-   failure, reverts, and writes the trio into this row's entry here. The row
-   is not deferred waiting for evidence only that step can produce. Writing
-   the mutation here to "just take the evidence" is the breach the boundary
-   exists to prevent, and the alternative — stopping because no agent may
-   touch the file — sends a row with a perfectly good falsifiability story to
-   `exception`.
+   failure, writes the trio into this row's entry here, and reverts only once
+   `qa-gatekeeper` has answered. The row is not deferred waiting for evidence
+   only that step can produce. Writing the mutation here to "just take the
+   evidence" is the breach the boundary exists to prevent, and the alternative
+   — stopping because no agent may touch the file — sends a row with a
+   perfectly good falsifiability story to `exception`.
 
-   Use the shared path in
-   `../../qfai-implement/references/red-not-observable.md`: record `Satisfied-by`,
-   mutate the production predicate the journey asserts on, run this row's test
-   and confirm it fails, restore, and record `Falsifiability command` /
-   `Falsifiability result` beside the GREEN pair. `qa-gatekeeper` accepts this
-   form as the row's minimum evidence, and the row proceeds to `green` and
-   `done` normally.
+   `/qfai-implement` Phase Red **step 3c** follows the shared path in
+   `../../qfai-implement/references/red-not-observable.md`, **in this order**:
+   it mutates the production predicate the journey asserts on, runs this row's
+   selector, writes the entry complete — `Falsifiability command` /
+   `Falsifiability result` among the rest — and routes `qa-gatekeeper` **while
+   the mutation is still in the tree**, because that gatekeeper's ownership
+   check reads the mutated tree to confirm what broke is the predicate
+   `Satisfied-by` names. It restores and re-runs for the GREEN only after that
+   verdict, whatever the verdict was. `qa-gatekeeper` accepts this form as the
+   row's minimum evidence, and the row proceeds to `green` and `done` normally.
+
+   What this stage owes at the handover is the predicate to break and a branch
+   still true of the tree: **record `Satisfied-by` naming the predicate, re-run
+   this row's classification test immediately before handing it over (P4b) so
+   an earlier branch-1 row's production code has not made the branch stale, and
+   hand the row over.** Nothing else in this branch is this stage's to run. The
+   entry's fields are listed in the `Falsifiability` row of `## Evidence shape`
+   below, so no partial list here can disagree with it. **Which of those fields
+   take a `Round N:` prefix is not that table's to say, and not this file's** —
+   it is `../../qfai-implement/references/round-evidence.md`'s closed list and
+   only that, as `/qfai-implement` step 3c reads it. They do not all take one:
+   the round block's fields are prefixed, and the row identity that same table
+   row opens with (`Layer`, `Test file`, `Selector`) is row-level and takes
+   none. Prefixing a row-level field is as malformed as dropping the prefix from
+   a round field — step 3b looks the identity up unprefixed, so a handoff that
+   writes `Round 1: Layer` stalls at `todo` with a perfectly good falsifiability
+   story. Do not re-derive the split here; the entry is not complete until it
+   matches the one that reference states.
 
    **`Satisfied-by` takes whatever already implements the predicate.** The
    shared reference names a sibling `TDD-NNNN` because that is its usual case,

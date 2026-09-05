@@ -680,6 +680,86 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     );
     expect(provenance).toContain("writes the trio into this row's entry here");
   });
+
+  it("keeps branch 2's closing procedure in the third person, with step 3c as its subject", async () => {
+    // The paragraph that closes branch 2 is the only one shaped like a
+    // procedure, so it is the one an operator follows. Written in the bare
+    // imperative it told this stage to mutate production source — verbatim the
+    // act the paragraph above it calls the breach the boundary exists to
+    // prevent — and the actor it names, `/qfai-implement` Phase Red step 3c,
+    // appeared nowhere in it.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "`/qfai-implement` Phase Red **step 3c** follows the shared path in",
+    );
+    expect(provenance).not.toContain(
+      "mutate the production predicate the journey asserts on, run this row's test",
+    );
+    // The one obligation that is this stage's, and so the only imperative left.
+    expect(provenance).toContain("What this stage owes at the handover is the predicate to break");
+
+    // The partial field list is gone: the entry's fields are listed once, in
+    // the `## Evidence shape` table, so the two cannot disagree.
+    expect(provenance).toContain("listed in the `Falsifiability` row of `## Evidence shape` below");
+  });
+
+  it("keeps the gatekeeper ahead of the revert in branch 2's summary", async () => {
+    // Summarised as "run, confirm, restore, then record", the paragraph put the
+    // gatekeeper in front of a restored tree. `qfai-implement/SKILL.md` step 3c
+    // routes it while the mutation is still applied, because its ownership
+    // check is what confirms the broken predicate is the one `Satisfied-by`
+    // names — against the reverted tree there is nothing left to inspect.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "routes `qa-gatekeeper` **while the mutation is still in the tree**",
+    );
+    expect(provenance).toContain("It restores and re-runs for the GREEN only after that verdict");
+    // The paragraph above it summarises the same step and must not invert it.
+    expect(provenance).toContain(
+      "writes the trio into this row's entry here, and reverts only once `qa-gatekeeper` has answered",
+    );
+  });
+
+  it("keeps the pre-handover branch re-run on this stage's side of the boundary", async () => {
+    // `Nothing else in this branch is this stage's to run` read as licence to
+    // skip the P4b re-run, which `## What each stage gate owes` requires: a
+    // branch chosen at P1b goes stale when an earlier branch-1 row's production
+    // code satisfies this row's predicate, and a stale `falsifiability` hands
+    // step 3c a test that is already failing to mutate.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "re-run this row's classification test immediately before handing it over (P4b)",
+    );
+  });
+
+  it("does not let the Evidence shape table stand in for the per-round entry contract", async () => {
+    // The table lists which fields each branch records; it says nothing about
+    // the `Round N:` prefix or the round block they sit in. Cited as the sole
+    // statement of the entry's contents, it licensed row-level fields the
+    // completion gate cannot find under the round it is judging.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "**Which of those fields take a `Round N:` prefix is not that table's to say, and not this file's**",
+    );
+    expect(provenance).toContain(
+      "`../../qfai-implement/references/round-evidence.md`'s closed list and only that",
+    );
+    expect(provenance).not.toContain("it is the one statement of the entry's contents");
+  });
+
+  // Deferring to the reference is not the same as claiming it prefixes
+  // everything: the `Falsifiability` row of `## Evidence shape` opens with the
+  // row identity, which `round-evidence.md` puts outside the round block. A
+  // blanket reading makes a handoff write `Round 1: Layer`, and step 3b — which
+  // looks the identity up unprefixed — leaves the row at `todo`.
+  it("keeps the round prefix off the row identity the Evidence shape row opens with", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("They do not all take one");
+    expect(provenance).toContain("(`Layer`, `Test file`, `Selector`) is row-level and takes none");
+    expect(provenance).toContain("a handoff that writes `Round 1: Layer` stalls at `todo`");
+    // The split has one authority; restating it here is how the two drift.
+    expect(provenance).toContain("Do not re-derive the split here");
+  });
 });
 
 describe.each(TREES)("%s (someone can perform every step)", (tree) => {
