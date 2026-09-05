@@ -243,6 +243,18 @@ export const RULE_PROMOTIONS = {
    * re-take; a row at rest is making a claim.
    */
   tddListEvidenceRevisionStale: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-ASSETS-003` — a Stage 0 steering catalog file still holding the
+   * angle-bracket slots and bare to-do keywords it shipped with. `qfai init`
+   * copies those four templates verbatim, so on the release that adds the
+   * detector every project that has not yet run `/qfai-configure` meets four
+   * findings at once, on files it never edited.
+   *
+   * (The keywords are spelled out rather than quoted here: a backticked
+   * all-caps word in this comment reads as a second finding code to the
+   * wiring assertion in `tests/core/sunsetLedger.test.ts`.)
+   */
+  steeringCatalogPlaceholders: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

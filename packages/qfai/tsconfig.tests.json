@@ -148,6 +148,7 @@
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
     "tests/unit/sourceReduction.test.ts",
+    "tests/validators/assistantAssets.test.ts",
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/importLite.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
