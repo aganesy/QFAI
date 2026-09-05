@@ -917,6 +917,14 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   non-fast-forward で拒否されて手が無くなる。既存 branch と既存 PR を検出して採用するので、
   原因を直して再実行すればそのまま続けられる (同名でも別の版を宣言している branch は衝突
   として名指しで拒否する)。
+- **`qfai --version` / `qfai -V` print the tool version.** Both spellings were
+  unrecognised and fell through to `Unknown command`, and `usage()` advertised
+  no version affordance at all; the only way to read the version was
+  `qfai doctor --format json | jq -r .version`, which appeared in no usage line
+  and no README. The flag is accepted in the command position and as a trailing
+  flag on any command, prints to stdout and exits 0 — including outside a
+  project, where there is no `qfai.config.yaml` to read. `usage()` and both
+  READMEs now list it next to `-h, --help`.
 
 ### Changed
 

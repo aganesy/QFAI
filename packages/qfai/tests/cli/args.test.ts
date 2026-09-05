@@ -972,3 +972,141 @@ describe("parseArgs", () => {
     });
   });
 });
+
+describe("parseArgs --version", () => {
+  it("treats --version in the command position as a version request", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["--version"], cwd);
+    expect(parsed.command).toBeNull();
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.version).toBe(true);
+    expect(parsed.options.help).toBe(false);
+  });
+
+  it("treats -V in the command position as a version request", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["-V"], cwd);
+    expect(parsed.command).toBeNull();
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("accepts --version as a trailing flag without marking the args invalid", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--version"], cwd);
+    expect(parsed.command).toBe("validate");
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("leaves version false when no version flag is present", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate"], cwd);
+    expect(parsed.options.version).toBe(false);
+  });
+
+  // The subcommand scan runs before the flag loop and only skipped `--`
+  // tokens, so a short flag was shifted away as an unknown action: the long
+  // form worked on these commands and the short one printed help.
+  for (const command of [
+    "prototyping",
+    "guardrails",
+    "audit",
+    "handoff",
+    "atdd",
+    "discussion",
+  ] as const) {
+    for (const flag of ["--version", "-V"] as const) {
+      it(`sets version for \`qfai ${command} ${flag}\``, () => {
+        const parsed = parseArgs([command, flag], process.cwd());
+        expect(parsed.options.version).toBe(true);
+      });
+    }
+  }
+
+  it("does not read a short flag as the handoff upgrade legacy file", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "-V"], process.cwd());
+    expect(parsed.options.handoffAction).toBe("upgrade");
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("does not read a short flag as the discussion use id", () => {
+    const parsed = parseArgs(["discussion", "use", "-V"], process.cwd());
+    expect(parsed.options.discussionAction).toBe("use");
+    expect(parsed.options.discussionId).toBeUndefined();
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("still rejects an unknown subcommand name", () => {
+    // Skipping dash-prefixed tokens must not skip a real typo: the post-loop
+    // "action required" guard still has to fire.
+    const parsed = parseArgs(["prototyping", "itrate"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.prototypingAction).toBeUndefined();
+  });
+
+  it("still requires a subcommand when only flags follow", () => {
+    const parsed = parseArgs(["prototyping", "--root", "."], process.cwd());
+    expect(parsed.invalid).toBe(true);
+  });
+});
+
+describe("parseArgs dash-leading positionals", () => {
+  // A subcommand name is a closed set and never starts with `-`, but the
+  // positional after it is caller data: a relative path may legitimately begin
+  // with a single `-`. Excluding every dash-prefixed token from both positions
+  // stopped `qfai handoff upgrade -legacy.yaml` from converting anything —
+  // the file was left unread and the command died on `<legacy-file> is
+  // required.`
+  it("accepts a legacy file whose name starts with a dash", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "-legacy.yaml"], process.cwd());
+    expect(parsed.options.handoffAction).toBe("upgrade");
+    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
+    expect(parsed.invalid).toBe(false);
+  });
+
+  it("accepts a legacy file that starts with a dash alongside a trailing flag", () => {
+    const parsed = parseArgs(
+      ["handoff", "upgrade", "-legacy.yaml", "--root", "/tmp/example"],
+      process.cwd(),
+    );
+    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
+    expect(parsed.options.root).toBe("/tmp/example");
+    expect(parsed.invalid).toBe(false);
+  });
+
+  it("accepts a discussion id that starts with a dash", () => {
+    const parsed = parseArgs(["discussion", "use", "-discussion-0001"], process.cwd());
+    expect(parsed.options.discussionAction).toBe("use");
+    expect(parsed.options.discussionId).toBe("-discussion-0001");
+    expect(parsed.invalid).toBe(false);
+  });
+
+  // Over-correction pins: relaxing the positional must not re-admit the two
+  // short flags the parser reserves, nor any long flag.
+  it("keeps -h out of the handoff upgrade legacy file", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "-h"], process.cwd());
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("keeps a long flag out of the handoff upgrade legacy file", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "--root", "/tmp/example"], process.cwd());
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.options.root).toBe("/tmp/example");
+  });
+
+  it("keeps -h out of the discussion use id", () => {
+    const parsed = parseArgs(["discussion", "use", "-h"], process.cwd());
+    expect(parsed.options.discussionId).toBeUndefined();
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("still refuses a dash-leading token in the subcommand position", () => {
+    const parsed = parseArgs(["handoff", "-legacy.yaml"], process.cwd());
+    expect(parsed.options.handoffAction).toBeUndefined();
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.invalid).toBe(true);
+  });
+});

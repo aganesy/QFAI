@@ -2479,18 +2479,99 @@ function collectOptionKeys(source: string): Set<string> {
   return keys;
 }
 
+/** A token `args.ts` can register as a CLI flag: `--long` or a `-s` alias. */
+const CLI_FLAG_TOKEN = /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/;
+
+/**
+ * Flag alias sets `args.ts` declares as named constants, e.g.
+ * `const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"])`.
+ *
+ * The parser tests these with `.has(...)` where it once carried switch labels,
+ * so a derivation that reads only `case` labels resolves no flag at all for
+ * the options such a guard writes.
+ */
+function collectFlagAliasSets(argsSource: string): Map<string, string[]> {
+  const sets = new Map<string, string[]>();
+  for (const declaration of argsSource.matchAll(
+    /\bconst\s+([A-Za-z_][A-Za-z0-9_]*)\b[^=\n]*=\s*new Set\(\s*\[([^\]]*)\]/g,
+  )) {
+    const name = declaration[1];
+    const literals = declaration[2];
+    if (name === undefined || literals === undefined) {
+      continue;
+    }
+    const flags = [...literals.matchAll(/"([^"]+)"/g)]
+      .map((literal) => literal[1])
+      .filter((flag): flag is string => flag !== undefined && CLI_FLAG_TOKEN.test(flag));
+    if (flags.length > 0) {
+      sets.set(name, flags);
+    }
+  }
+  return sets;
+}
+
+/** Net brace balance a single line contributes. */
+function braceBalance(line: string): number {
+  return (line.match(/\{/g)?.length ?? 0) - (line.match(/\}/g)?.length ?? 0);
+}
+
 /**
  * Map `options.<key>` -> the CLI flags that write it, read straight out of
- * `args.ts`. Consecutive `case` labels share the body they fall through into
- * (`case "--help": case "-h":`), and short aliases are kept, so a flag is only
- * missing here when the parser really does not register it.
+ * `args.ts`. Two registration shapes count, because the parser uses both:
+ * consecutive `case` labels sharing the body they fall through into
+ * (`case "--help": case "-h":`), and a named alias set tested in a guard
+ * (`if (arg !== undefined && HELP_FLAGS.has(arg)) {`). Short aliases are kept
+ * in both, so a flag is only missing here when the parser really does not
+ * register it.
  */
 function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
   const flagsByOption = new Map<string, Set<string>>();
+  const aliasSets = collectFlagAliasSets(argsSource);
   let pendingFlags: string[] = [];
   let sawBody = false;
+  // The alias set an enclosing guard is matching, and the depth at which its
+  // block closes. Attribution is scoped to that block so a set cannot leak
+  // onto the assignments that follow it.
+  let guardFlags: readonly string[] = [];
+  let guardDepth = 0;
+
+  const record = (line: string, flags: readonly string[]): void => {
+    if (flags.length === 0) {
+      return;
+    }
+    for (const assignment of line.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=[^=]/g)) {
+      const key = assignment[1];
+      if (key === undefined) {
+        continue;
+      }
+      const bucket = flagsByOption.get(key) ?? new Set<string>();
+      for (const flag of flags) {
+        bucket.add(flag);
+      }
+      flagsByOption.set(key, bucket);
+    }
+  };
 
   for (const line of argsSource.split("\n")) {
+    if (guardFlags.length > 0) {
+      record(line, guardFlags);
+      guardDepth += braceBalance(line);
+      if (guardDepth <= 0) {
+        guardFlags = [];
+      }
+      continue;
+    }
+    // A single-line `if (... NAME.has(token)) {` guard over a known alias set.
+    // Requiring the brace on the same line keeps the scan off `.has(...)` uses
+    // that are not guards at all, such as the positional-token predicate.
+    const guard =
+      /^\s*(?:\}\s*else\s+)?if\s*\(.*\b([A-Za-z_][A-Za-z0-9_]*)\.has\(.*\)\s*\{\s*$/.exec(line);
+    const guarded = guard === null ? undefined : aliasSets.get(guard[1] ?? "");
+    if (guarded !== undefined) {
+      guardFlags = guarded;
+      guardDepth = 1;
+      continue;
+    }
     // A label line, with or without the block brace prettier keeps on it.
     const label = /^\s*(?:case "([^"]*)"|default)\s*:\s*\{?\s*$/.exec(line);
     if (label !== null) {
@@ -2499,7 +2580,7 @@ function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
         sawBody = false;
       }
       const flag = label[1];
-      if (flag !== undefined && /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/.test(flag)) {
+      if (flag !== undefined && CLI_FLAG_TOKEN.test(flag)) {
         pendingFlags.push(flag);
       }
       continue;
@@ -2508,20 +2589,7 @@ function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
       continue;
     }
     sawBody = true;
-    if (pendingFlags.length === 0) {
-      continue;
-    }
-    for (const assignment of line.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=[^=]/g)) {
-      const key = assignment[1];
-      if (key === undefined) {
-        continue;
-      }
-      const bucket = flagsByOption.get(key) ?? new Set<string>();
-      for (const flag of pendingFlags) {
-        bucket.add(flag);
-      }
-      flagsByOption.set(key, bucket);
-    }
+    record(line, pendingFlags);
   }
 
   return flagsByOption;

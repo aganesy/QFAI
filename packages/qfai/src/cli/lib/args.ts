@@ -159,6 +159,11 @@ export type ParsedArgs = {
     reportSpecIds: string[];
     help: boolean;
     /**
+     * `--version` / `-V`: print the resolved tool version to stdout and
+     * exit 0. Accepted in the command position and as a trailing flag.
+     */
+    version: boolean;
+    /**
      * Unrecognized `--flag` tokens, in argv order. The CLI prints them
      * before the usage text so a typo names itself.
      */
@@ -171,6 +176,21 @@ export type ParsedArgs = {
     invalidExitCode: number;
   };
 };
+
+/** Every spelling of the help flag the parser accepts. */
+const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
+
+/** Every spelling of the version flag the parser accepts. */
+const VERSION_FLAGS: ReadonlySet<string> = new Set(["--version", "-V"]);
+
+/**
+ * The single-dash flags the parser reserves, derived from the alias sets above
+ * so the flag loop and the positional scan can never disagree about which short
+ * tokens are flags. Every other option is spelled with `--`.
+ */
+const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
+  [...HELP_FLAGS, ...VERSION_FLAGS].filter((flag) => !flag.startsWith("--")),
+);
 
 /** `qfai prototyping <action>` のサブコマンド名。 */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
@@ -197,6 +217,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateSpecIds: [],
     reportSpecIds: [],
     help: false,
+    version: false,
     unknownFlags: [],
     invalidExitCode: 2,
   };
@@ -205,8 +226,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   let command = args.shift() ?? null;
   let invalid = false;
 
-  if (command === "--help" || command === "-h") {
+  if (command !== null && HELP_FLAGS.has(command)) {
     options.help = true;
+    command = null;
+  }
+
+  if (command !== null && VERSION_FLAGS.has(command)) {
+    options.version = true;
     command = null;
   }
 
@@ -278,7 +304,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   if (command === "guardrails") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       const action = normalizeGuardrailsAction(candidate);
       if (action) {
         options.guardrailsAction = action;
@@ -293,7 +319,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // flag loop.
   if (command === "prototyping") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (
         candidate === "preflight" ||
         candidate === "iterate" ||
@@ -312,7 +338,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai audit <subcommand>` — currently only `log` is supported.
   if (command === "audit") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "log") {
         options.auditAction = candidate;
       } else {
@@ -325,7 +351,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
   if (command === "handoff") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "upgrade") {
         options.handoffAction = candidate;
       } else {
@@ -334,7 +360,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.handoffAction === "upgrade") {
         const fileCandidate = args[0];
-        if (fileCandidate && !fileCandidate.startsWith("--")) {
+        if (isPositionalToken(fileCandidate)) {
           options.handoffLegacyFile = fileCandidate;
           args.shift();
         }
@@ -345,7 +371,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
   if (command === "atdd") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "scaffold") {
         options.atddAction = candidate;
       } else {
@@ -359,7 +385,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // positional <id> for `use`) before the flag loop.
   if (command === "discussion") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "list" || candidate === "use") {
         options.discussionAction = candidate;
       } else {
@@ -368,7 +394,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.discussionAction === "use") {
         const idCandidate = args[0];
-        if (idCandidate && !idCandidate.startsWith("--")) {
+        if (isPositionalToken(idCandidate)) {
           options.discussionId = idCandidate;
           args.shift();
         }
@@ -395,6 +421,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   for (; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg !== undefined && HELP_FLAGS.has(arg)) {
+      options.help = true;
+      continue;
+    }
+    if (arg !== undefined && VERSION_FLAGS.has(arg)) {
+      options.version = true;
+      continue;
+    }
     switch (arg) {
       case "--root":
         {
@@ -955,10 +989,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--help":
-      case "-h":
-        options.help = true;
-        break;
       default:
         // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
         // parse error として markInvalid() する。位置引数
@@ -1003,6 +1033,41 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   return { command, invalid, options };
+}
+
+/**
+ * Whether a token can be the subcommand name in `qfai <command> <subcommand>`.
+ *
+ * The scan that pulls it runs *before* the flag loop, so testing only for a
+ * `--` prefix let the short forms through as candidates: `qfai prototyping -V`
+ * had `-V` taken as an unknown action and shifted away, which both raised a
+ * usage error and stopped the flag loop from ever setting `options.version`,
+ * while the long `--version` was skipped here and worked. A subcommand name is
+ * drawn from a closed set and none of them starts with `-`, so this position
+ * excludes every dash-prefixed token.
+ */
+function isSubcommandToken(token: string | undefined): token is string {
+  return token !== undefined && token.length > 0 && !token.startsWith("-");
+}
+
+/**
+ * Whether a token can be the positional value after a subcommand — the
+ * `<legacy-file>` of `handoff upgrade`, the `<id>` of `discussion use`.
+ *
+ * A positional is caller data rather than a closed set, and a relative path may
+ * legitimately begin with a single `-`: `qfai handoff upgrade -legacy.yaml`
+ * names a file in the working directory and has to keep converting. So this
+ * position excludes only the spellings the parser actually reserves — any `--`
+ * long flag, plus RESERVED_SHORT_FLAGS — which still keeps `-V` and `-h` out
+ * of the positional and lets them reach the flag loop.
+ */
+function isPositionalToken(token: string | undefined): token is string {
+  return (
+    token !== undefined &&
+    token.length > 0 &&
+    !token.startsWith("--") &&
+    !RESERVED_SHORT_FLAGS.has(token)
+  );
 }
 
 function parseNonNegativeInteger(value: string): number | null {
