@@ -176,7 +176,7 @@ describe("countLines", () => {
 
 describe("checkAssistantAssetLineBudget", () => {
   it("exposes the ceiling as a runtime constant", () => {
-    expect(ASSISTANT_ASSET_MAX_LINES).toBe(500);
+    expect(ASSISTANT_ASSET_MAX_LINES).toBe(800);
   });
 
   it("reports a file over the ceiling with its measured line count", async () => {

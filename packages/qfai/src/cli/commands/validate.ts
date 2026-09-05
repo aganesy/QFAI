@@ -761,7 +761,14 @@ function emitStrictSupersededNotice(failOn: FailOn): void {
   );
 }
 
-function emitText(result: ValidationResult, failOn: FailOn): void {
+/**
+ * Renders the default `--format text` output.
+ *
+ * The emitted line grammar is documented for users in the shipped
+ * `assistant/catalog/cli-ux-guidelines.md` (Error Message Format section);
+ * both must be changed together.
+ */
+export function emitText(result: ValidationResult, failOn: FailOn): void {
   for (const item of result.issues) {
     const location = item.file ? ` (${item.file})` : "";
     const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";

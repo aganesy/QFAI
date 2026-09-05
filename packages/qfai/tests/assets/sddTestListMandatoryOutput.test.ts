@@ -69,10 +69,13 @@ describe("Phase 2b's tdd/test-list.md is on the completion surfaces", () => {
       // ledger from a skipped phase — both are a file with no rows.
       expect(outputs).toContain("empty table only when the spec declares no coverage-target TC");
 
-      // No new rule: the checklist page already says the same thing.
+      // No new rule: the checklist page already says the same thing. Its
+      // sentence gained a second condition upstream while this branch was open,
+      // so the assertion follows the sentence that ships rather than the one it
+      // was written against - the rule being pinned is unchanged.
       const checklists = flat(await read(tree, CHECKLISTS));
       expect(checklists).toContain(
-        "An empty table is a valid outcome when the spec declares no coverage-target TC.",
+        "An empty table is a valid outcome when the spec declares no coverage-target TC and no active `US-*` / `CON-API-*`.",
       );
     });
 

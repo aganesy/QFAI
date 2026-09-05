@@ -4,6 +4,74 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **出荷アセットの行上限を 500 から 800 に上げた。** 分割では届かないことを
+  実測した上での変更である (#1179)。
+
+  3 つの skill 本体が上限に張り付いていた: `qfai-implement` 498 行、`qfai-sdd`
+  498 行、`qfai-atdd` 500 行。触れている open PR はそれぞれ 33 / 22 / 16 本。
+  差分を実測すると、`qfai-implement` と `qfai-atdd` は増減がほぼ相殺する
+  (-7 行 / -4 行) が、`qfai-sdd` は違う: 11 本が**単独で**上限を超え (最大
+  549 行)、意図された差分の合計は 498 行の本体に **+161 行**である。
+
+  相殺するから安全、でもない。PR は 1 本ずつ入る。498 行の本体は、4 行足す
+  最初の 1 本で落ちる — 後の 1 本がそれを戻すとしても、その中間状態が main
+  を壊す。
+
+  分割では埋まらない。`execution-ledger.md` のときは参照 0 件の 85 行トピックが
+  残っていた (#1175) が、skill 本体に同じものはない。全 `##` セクションを
+  テスト側から測ると、どのセクションも本文の 2〜8% を assets テストが文字列で
+  固定しており、固定している側には「実装エージェントが自分の義務として読む形
+  だから本体に置く」という趣旨のコメントが付いている。実際に
+  `### Handoff Contracts` (25 行) を `references/` へ出してみたところ、8 ファイル
+  14 アサーションが落ちた。動かせる残りは数十行で、275 行には届かない。
+
+  上限に張り付くこと自体が兆候だった。本体はトピックを外に出すのをやめ、行を
+  長くする方向へ逃げる。`qfai-implement/SKILL.md` は 98 行が 200 文字を超え、
+  最長行は 6192 文字ある。行数はもうエージェントが読む量を測っていない。
+  文字数ベースの予算は別 issue として起票する。
+
+  数字は `src/core/doctor/assetLineBudget.ts` が持ち、出荷される
+  `shared-skill-operating-baseline.md` が同じ数字を書く。両者が黙って食い違わない
+  よう、後者を読んで定数と突き合わせるテストを `assets.test.ts` に追加した。
+
+- **`execution-ledger.md` の義務列トピックを `obligation-columns.md` に分割した。**
+  出荷アセットの 500 行上限に達しており、**次の追加が入らない**状態だった
+  (#1175)。実測で 10 本の PR がこれで止まっていた。
+
+  再ラップでは足りない。30 行削る必要があるが、42 行を 140 文字幅にしても
+  19 行しか縮まらず、MD013 の上限 200 文字まで使っても届かない。
+  `skillBudget.ts` 自身が「上限に近づいたファイルはセクションを外に出す合図で
+  あって、上限を上げる合図ではない」と書いており、これはその通りの対応である。
+
+  出したのは `## Obligation columns` (85 行)。**アンカー参照が
+  assets / tests / src のどこからも 0 件**で、最も安く動かせるトピックだった
+  (`#allowed-transitions` は 16 箇所から参照されている)。本文は 1 バイトも
+  変えていない — 見出しの階層だけが変わり、元の位置には要約と行き先を残した。
+
+  ledger は 488 → 413 行になり、次の追加のための余裕ができた。
+
+  移動したテキストを検証していた 2 つの suite — `tddLedgerTemplate.test.ts` の
+  6 箇所と `tddListObligationColumns.test.ts` の 3 箇所 — は、緩めるのではなく
+  **新しい surface に向け直した**。検証内容は変えていないので、その文が出荷
+  ツリーから消えれば従来どおり落ちる。
+
+### Fixed
+
+- **`brandCatalogStepAnchor.test.ts` の path 判定を Windows でも成立するように
+  した。** `fast-glob` は `absolute: true` でも**常に `/` 区切り**を返すのに、
+  比較相手が `path.sep` (`\`) 由来だった (#1176)。
+
+  2 つの assertion が**逆方向に**壊れていた:
+  - `startsWith(dir + path.sep)` は `/` 区切りの結果を `\` 区切りの prefix と
+    比べるので**決して真にならず**、誰も触っていない木で行が落ちる
+  - `not.toContain(verifySkillMd)` は `\` 区切りの絶対パスと比べるので
+    **決して一致せず、常に通る** — Windows では何も検証していなかった
+
+  後者のほうが悪い。落ちない行は coverage として報告されるからである。
+  両側を `/` に正規化し、scan が空でないことも主張した。
+
 ### Fixed
 
 - **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
@@ -879,6 +947,14 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   non-fast-forward で拒否されて手が無くなる。既存 branch と既存 PR を検出して採用するので、
   原因を直して再実行すればそのまま続けられる (同名でも別の版を宣言している branch は衝突
   として名指しで拒否する)。
+- **`qfai --version` / `qfai -V` print the tool version.** Both spellings were
+  unrecognised and fell through to `Unknown command`, and `usage()` advertised
+  no version affordance at all; the only way to read the version was
+  `qfai doctor --format json | jq -r .version`, which appeared in no usage line
+  and no README. The flag is accepted in the command position and as a trailing
+  flag on any command, prints to stdout and exits 0 — including outside a
+  project, where there is no `qfai.config.yaml` to read. `usage()` and both
+  READMEs now list it next to `-h, --help`.
 
 ### Changed
 

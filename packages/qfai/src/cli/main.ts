@@ -15,6 +15,7 @@ import { parseArgs } from "./lib/args.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
+import { resolveToolVersion } from "../core/version.js";
 
 /**
  * Exit code for a command name nothing recognizes.
@@ -33,6 +34,13 @@ const UNKNOWN_COMMAND_EXIT_CODE = 1;
 
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
+
+  // `--version` / `-V` short-circuits before the usage branch so the
+  // version is readable from anywhere, including outside a project.
+  if (options.version) {
+    info(await resolveToolVersion());
+    return;
+  }
 
   if (!command || options.help) {
     // Name the offending token before anything else prints, so a typo is
@@ -91,6 +99,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         dryRun: options.dryRun,
         yes: options.yes,
         upgradeAssistantTree: options.upgradeAssistantTree,
+        verbose: options.verbose,
       });
       return;
     case "validate":
@@ -399,6 +408,7 @@ Options:
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
   --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: 変更を行わず表示のみ
+  --verbose       init: 実行レポートの skipped パス一覧を展開（既定は件数のみ）
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --remove <surface-id>        prototyping rescope: 外す surface id (repeatable)
@@ -441,6 +451,7 @@ Options:
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
                                  report: 既定の入出力も validate.spec-<ids>.json / report.spec-<ids>.md へ切り替える
   -h, --help      ヘルプ表示
+  -V, --version   バージョン表示（インストール済み qfai の版番を stdout に出力）
 `;
 }
 

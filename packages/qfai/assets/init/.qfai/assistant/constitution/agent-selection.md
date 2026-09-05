@@ -1,7 +1,7 @@
 ---
+id: agent-selection
 category: project
-update-frequency: occasional
-version: 2.0.0
+update_frequency: occasional
 ---
 
 <!-- markdownlint-disable MD041 -->

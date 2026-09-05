@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 describe("cli root discovery", { timeout: 15000 }, () => {
@@ -264,5 +265,48 @@ describe("cli usage text", () => {
 
     expect(entry).not.toContain("それ以外は既存があればスキップ");
     expect(entry).toContain("assistant/manifest/**");
+  });
+});
+
+describe("cli --version", () => {
+  async function captureRun(argv: string[]): Promise<{ stdout: string; exitCode: unknown }> {
+    const chunks: string[] = [];
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    process.stdout.write = ((chunk: unknown): boolean => {
+      chunks.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      await run(argv, process.cwd());
+      return { stdout: chunks.join(""), exitCode: process.exitCode };
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = previousExitCode;
+    }
+  }
+
+  it("prints the resolved tool version and leaves the exit code unset", async () => {
+    const expected = await resolveToolVersion();
+    const { stdout, exitCode } = await captureRun(["--version"]);
+    expect(stdout.trim()).toBe(expected);
+    expect(exitCode).toBeUndefined();
+  });
+
+  it("supports the -V alias", async () => {
+    const expected = await resolveToolVersion();
+    const { stdout } = await captureRun(["-V"]);
+    expect(stdout.trim()).toBe(expected);
+  });
+
+  it("does not print usage for a version request", async () => {
+    const { stdout } = await captureRun(["--version"]);
+    expect(stdout).not.toContain("qfai <command> [options]");
+  });
+
+  it("advertises the version flag in usage output", async () => {
+    const { stdout } = await captureRun(["--help"]);
+    expect(stdout).toContain("-V, --version");
   });
 });

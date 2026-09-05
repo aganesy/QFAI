@@ -66,8 +66,8 @@ case required reading the agent roster and reasoning backwards from it.
 
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
-  anomaly Decision Record — `DR-NNNN-MMMM-<slug>.md` declared in that spec's `07_Decisions.md`,
-  or `DR-NNNN-<slug>.md` declared in `_policies/08_Decisions.md`; never the CR's date form
+  anomaly Decision Record — `DR-NNNN-MMMM-<slug>.md` declared in that spec's `07_Decisions.md`, or `DR-NNNN-<slug>.md` declared in `_policies/08_Decisions.md`;
+  deliberately **not** the CR's date form
 
 Any exception beyond this list requires explicit user approval.
 
@@ -262,18 +262,12 @@ ratifies a comparison the author knew was fabricated.
    rerun executes or what it costs, and "rerun the owner skill" is the whole
    plan.
 
-5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
-   rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
-   changed or disappeared — and apply the upstream reset transition
-   (any status -> `todo`), recording the approved CR/DR ID in `DR-ID` — that
-   column carries both `DR-*` and `CR-*` references. The
-   sweep covers in-flight rows too: a `red` row whose obligation changed, and
-   an `exception` row whose anomaly the rerun resolved or superseded, reset the
-   same way. A row whose obligation was deleted outright is removed, not reset
-   — and removing it drops its `TDD-ID` out of the ledger's maximum, so record
-   that id as a tombstone bullet under the ledger's `## TDD-ID reservations`
-   section (`qfai-sdd/references/spec-traceability-rules.md`) or the next
-   allocation reissues it.
+5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation changed or
+   disappeared — and apply the upstream reset transition (any status -> `todo`), recording the approved CR/DR ID in `DR-ID` — that column carries both `DR-*` and
+   `CR-*` references. The sweep covers in-flight rows too: a `red` row whose obligation changed, and an `exception` row whose anomaly the rerun resolved or
+   superseded, reset the same way. A row whose obligation was deleted outright is removed, not reset — and removing it drops its `TDD-ID` out of the ledger's
+   maximum, so record that id as a tombstone bullet under the ledger's `## TDD-ID reservations` section
+   (`qfai-sdd/references/spec-traceability-rules.md`) or the next allocation reissues it.
 6. Resume the **blocked set of this CR** only after upstream artifacts are
    updated **and** the sweep has run. Resuming with a stale `done` row is
    resuming on a ledger that asserts something known to be false. Resume is
