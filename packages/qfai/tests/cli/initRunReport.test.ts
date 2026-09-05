@@ -141,7 +141,9 @@ describe("qfai init run report", { timeout: 60000 }, () => {
       });
 
       const listed = pathsUnder(output, "  would write paths:");
-      const migrated = path.join(".qfai", "assistant", "constitution", "quality.md");
+      // POSIX-joined, because that is what the report writes. `path.join` here would
+      // build `\`-separated on Windows and never match a `/`-separated entry (#1176).
+      const migrated = ".qfai/assistant/constitution/quality.md";
       expect(listed.filter((entry) => entry === migrated)).toHaveLength(1);
       expect(new Set(listed).size).toBe(listed.length);
       expect(output).toContain(`  would write: ${listed.length}`);
@@ -189,64 +191,74 @@ describe("qfai init run report", { timeout: 60000 }, () => {
   // not by qfai. Printed verbatim, a newline in it forges the report's own
   // headings and an ANSI escape drives the terminal — in the one mode whose
   // purpose is reviewing changes before they are made.
-  it("escapes and quotes a control character in a migrated file name", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
-    try {
-      const legacy = path.join(root, ".qfai", "assistant", "instructions");
-      await mkdir(legacy, { recursive: true });
-      const hostile = "spoof\n    - forged-entry.md\u001b[31m.md";
-      await writeFile(path.join(legacy, hostile), "# hostile\n", "utf-8");
+  // NTFS forbids a newline or an escape character in a file name, so this fixture
+  // cannot be built on Windows: `writeFile` fails with ENOENT before anything is
+  // asserted. The escaping it checks is platform-independent; only the fixture is not.
+  it.skipIf(process.platform === "win32")(
+    "escapes and quotes a control character in a migrated file name",
+    async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+      try {
+        const legacy = path.join(root, ".qfai", "assistant", "instructions");
+        await mkdir(legacy, { recursive: true });
+        const hostile = "spoof\n    - forged-entry.md\u001b[31m.md";
+        await writeFile(path.join(legacy, hostile), "# hostile\n", "utf-8");
 
-      const output = await captureStdout(async () => {
-        await runInit({
-          dir: root,
-          force: false,
-          dryRun: true,
-          yes: true,
-          upgradeAssistantTree: true,
+        const output = await captureStdout(async () => {
+          await runInit({
+            dir: root,
+            force: false,
+            dryRun: true,
+            yes: true,
+            upgradeAssistantTree: true,
+          });
         });
-      });
 
-      // Neither the raw newline nor the raw escape reaches stdout.
-      expect(output).not.toContain(hostile);
-      expect(output).not.toContain("\u001b[31m");
-      expect(output).toContain("\\x0a");
-      expect(output).toContain("\\x1b");
-      // The forged bullet is not a list entry of its own.
-      expect(pathsUnder(output, "  would write paths:")).not.toContain("forged-entry.md");
-      // The escaped form is quoted, so the escapes read as one token.
-      const quoted = pathsUnder(output, "  would write paths:").filter((entry) =>
-        entry.startsWith('"'),
-      );
-      expect(quoted).toHaveLength(1);
-      expect(quoted[0]?.endsWith('"')).toBe(true);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
+        // Neither the raw newline nor the raw escape reaches stdout.
+        expect(output).not.toContain(hostile);
+        expect(output).not.toContain("\u001b[31m");
+        expect(output).toContain("\\x0a");
+        expect(output).toContain("\\x1b");
+        // The forged bullet is not a list entry of its own.
+        expect(pathsUnder(output, "  would write paths:")).not.toContain("forged-entry.md");
+        // The escaped form is quoted, so the escapes read as one token.
+        const quoted = pathsUnder(output, "  would write paths:").filter((entry) =>
+          entry.startsWith('"'),
+        );
+        expect(quoted).toHaveLength(1);
+        expect(quoted[0]?.endsWith('"')).toBe(true);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   // The destination is operator-supplied through `--dir` and echoed in the
   // report's own header. Escaping only the listings left the one line above
   // them forgeable, in the report whose purpose is reviewing changes first.
-  it("escapes a control character in the destination it announces", async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
-    const hostile = "dest\n  would write paths:\n    - forged-entry.md\u001b[31mx";
-    const root = path.join(parent, hostile);
-    try {
-      await mkdir(root, { recursive: true });
+  // Same fixture limitation as the row above.
+  it.skipIf(process.platform === "win32")(
+    "escapes a control character in the destination it announces",
+    async () => {
+      const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+      const hostile = "dest\n  would write paths:\n    - forged-entry.md\u001b[31mx";
+      const root = path.join(parent, hostile);
+      try {
+        await mkdir(root, { recursive: true });
 
-      const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: true, yes: true });
-      });
+        const output = await captureStdout(async () => {
+          await runInit({ dir: root, force: false, dryRun: true, yes: true });
+        });
 
-      expect(output).not.toContain(hostile);
-      expect(output).not.toContain("\u001b[31m");
-      expect(output).toContain("\\x0a");
-      expect(output).toContain("\\x1b");
-    } finally {
-      await rm(parent, { recursive: true, force: true });
-    }
-  });
+        expect(output).not.toContain(hostile);
+        expect(output).not.toContain("\u001b[31m");
+        expect(output).toContain("\\x0a");
+        expect(output).toContain("\\x1b");
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("leaves an ordinary path unquoted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
@@ -289,7 +301,8 @@ describe("qfai init run report", { timeout: 60000 }, () => {
 
       const written = pathsUnder(output, "  written paths:");
       const skipped = pathsUnder(output, "  skipped paths:");
-      const migrated = path.join(".qfai", "assistant", "constitution", "quality.md");
+      // POSIX-joined for the same reason as the row above: the report writes `/`.
+      const migrated = ".qfai/assistant/constitution/quality.md";
 
       // The migration really wrote the file — this is not a dry run.
       await expect(readFile(path.join(root, migrated), "utf-8")).resolves.toContain(
