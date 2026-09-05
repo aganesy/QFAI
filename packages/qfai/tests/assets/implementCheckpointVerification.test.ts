@@ -611,6 +611,121 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // The boundary cadence was stated three times: this file denied the counted
+  // rule that `relevant-test-suite.md` and gate item 12 both assume, so an agent
+  // ran either ~1 full suite per row or ~1 per 10 depending on which document it
+  // opened. The cadence now lives in one file; the other two cite its anchor.
+  it("defers the boundary cadence to relevant-test-suite.md instead of restating it", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      const cadence = await readFile(
+        path.join(dir, "references", "relevant-test-suite.md"),
+        "utf-8",
+      );
+
+      // Neither the reference nor the skill may deny the counted rule again.
+      for (const [name, document] of [
+        ["checkpoint-verification.md", reference],
+        ["SKILL.md", skill],
+      ] as const) {
+        expect(document, `${name} must not deny the counted cadence`).not.toContain(
+          'There is no "every N items" rule',
+        );
+        expect(document, `${name} must not claim a boundary per row`).not.toContain(
+          "Every item has exactly one",
+        );
+        // Nor may either re-derive the condition. "The last row a run completes
+        // is always a boundary" is false for a run that completes one named row
+        // while others are still `todo` — the ordinary `/qfai-atdd` handoff.
+        expect(document, `${name} must not re-derive the condition`).not.toContain(
+          "always a boundary",
+        );
+      }
+
+      expect(reference).toContain("**Not every row is one.**");
+      expect(reference).toContain("`relevant-test-suite.md#checkpoint-boundaries`");
+      expect(skill).toContain("**Not every row is one**");
+      expect(skill).toContain("`references/relevant-test-suite.md#checkpoint-boundaries`");
+
+      // The cited anchor has to resolve, and the cadence has to stay in the one
+      // file that owns it.
+      expect(headingSlugs(cadence)).toContain("checkpoint-boundaries");
+      // Scoped to the per-item tier: that anchor owns which ROWS are boundaries.
+      // The spec-level boundary has no row and is defined in THIS file, so the
+      // anchor must not claim to be the single definition of every full-suite
+      // run — that claim is what made its "only at" read as licence to skip the
+      // per-spec run this file separately requires.
+      expect(cadence).toContain(
+        "**This list is the single definition of the PER-ITEM boundary cadence",
+      );
+      expect(cadence).not.toContain(
+        "**This list is the single definition of the boundary cadence.**",
+      );
+      expect(cadence).toContain("is defined there, not here");
+      expect(cadence).toContain("every **N-th** completed row, with `N = 10` by default");
+
+      // The off-boundary record takes the narrow command set VERBATIM and is
+      // sealed over it, so the resolution-step label cannot live inside that
+      // field: mixing it in changes the sealed bytes. It has a home already —
+      // `relevant-test-suite.md` requires the step in the item's evidence.
+      expect(reference).toContain("never inside `Checkpoint verification command`");
+      expect(reference).toContain("changes the sealed bytes");
+      expect(reference, "the label's location is left to the reader again").not.toContain(
+        "Label the entry with the\nresolution step used",
+      );
+
+      // `qfai-atdd` hands branch-1 rows to this skill, and its own reference
+      // restated the cadence as one full suite per row. Two skills, two
+      // frequencies — the same contradiction one directory over.
+      const provenance = await readFile(
+        path.join(dir, "..", "qfai-atdd", "references", "red-provenance.md"),
+        "utf-8",
+      );
+      expect(provenance, "red-provenance.md must not restate the cadence").not.toContain(
+        "every row's checkpoint runs the full suite",
+      );
+      expect(provenance).toContain(
+        "../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries",
+      );
+      // Nor may it re-derive one. "The last row a run completes is always a
+      // boundary" is false for the single-row handoff P1c makes while other
+      // `todo` rows are still open, and reading it that way puts every
+      // ATDD-driven run back on one full suite per row.
+      expect(provenance, "red-provenance.md must state no cadence condition").toContain(
+        "this file states no condition of its own",
+      );
+    }
+  });
+
+  // Off a boundary nothing is re-run, but item 12 still recomputes the seal over
+  // all three checkpoint fields on every row. Without a stated source for those
+  // fields an off-boundary row either cannot reach `done` or has to fabricate a
+  // full-suite command it never executed.
+  it("gives an off-boundary row a completable checkpoint evidence contract", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+
+      expect(reference).toContain("**A row between boundaries records the same three fields.**");
+      expect(reference).toContain("recomputes the seal on every row");
+      expect(reference).toContain("invent a full-suite command it never ran");
+      expect(reference).toContain("takes the narrow relevant-suite command set of Phase: Refactor");
+
+      expect(skill).toContain(
+        "**Off a boundary nothing is re-run, and the three fields are still required**",
+      );
+      expect(skill).toContain("`references/checkpoint-verification.md#evidence`");
+      expect(headingSlugs(reference)).toContain("evidence");
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");

@@ -637,9 +637,11 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
   });
 
   it("takes branch-1 rows through P1c one at a time", async () => {
-    // Every row's checkpoint runs the full suite, so a second deliberate RED
-    // left open elsewhere fails the first row's checkpoint — and that row is
-    // then stranded at `refactor`, which Phase Red does not re-select.
+    // A deliberate RED left open elsewhere fails any checkpoint that runs the
+    // full suite — at the latest the spec-level one — and the row whose
+    // checkpoint it fails is then stranded at `refactor`, which Phase Red does
+    // not re-select. How often that happens is `relevant-test-suite.md`'s to
+    // define, not this file's.
     expect(flat(await read(tree, PROVENANCE))).toContain(
       "P1c — discharge branch 1, one row at a time",
     );

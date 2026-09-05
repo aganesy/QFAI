@@ -156,7 +156,8 @@ The eight required columns, the allowed transitions and the exception rules are 
 5. After all routed blocking reviewers return PASS, run checkpoint verification
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
-   satisfied by step 2's narrow suite — nothing is re-run. Transition to `done`
+   satisfied by step 2's narrow suite — nothing is re-run, and step 2's command
+   set and outcome are what the checkpoint fields record. Transition to `done`
    only on PASS; on failure transition to `exception` with a DR-ID (legal from
    `refactor`, whereas re-opening a `done` row is not). For a T1 group every member
    transitions in the same ledger write.
@@ -370,7 +371,7 @@ Completion MUST NOT be declared when any of the following are true:
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
   DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
-- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero. Which rows are boundaries is defined only in `references/relevant-test-suite.md#checkpoint-boundaries` — never derive one here, and never read it as the physical last row of the file, which is often already `done` and skipped. Every spec still runs the full suite at least once: the spec-level boundary runs it unconditionally on a terminal ledger
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
@@ -419,7 +420,7 @@ review is requested.
 - `Spec review` — completion-reviewer result (PASS or REVISE), recorded with the unambiguous sibling fields `Spec reviewed revision`, `Spec audited evidence hash`, `Spec review pack`, and `Spec review pack seal`. The revision and audit hash must be the values in the sealed pack's PASS response, and gate item 10 recomputes both the evidence hash and the whole-pack seal (`references/evidence-revision.md`)
 - `Code quality review` — implementation-reviewer result (PASS or REVISE), with the parallel sibling fields `Code quality reviewed revision`, `Code quality audited evidence hash`, `Code quality review pack`, and `Code quality review pack seal`, checked the same way. Do not use two unlabeled `Reviewed revision` / `Audited evidence hash` pairs: the completion gate cannot tell which reviewer owns which pair. A record repair drained from the `## Record defects` queue adds `Record re-attestation`, `Record re-attestation pack` and `Record re-attestation pack seal` **beside** the verdict they supersede — never an edit to that verdict's own hash line, and never an edit inside the sealed pack holding it (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE). On a cli-only target the field records the captured-command-output surface review item 9 substitutes for parity; the field name does not change, so nothing downstream has to learn a second key
-- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary. **Off a boundary nothing is re-run, and the three fields are still required**: record Phase: Refactor step 2's narrow relevant-suite command set and its outcome here verbatim and seal them the same way — item 12 demands the full suite only on a boundary row, so this pair satisfies it, and an empty field or an unrun full-suite command is the only way to fail it (`references/checkpoint-verification.md#evidence`)
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
 
 These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their
@@ -437,9 +438,8 @@ the completion gate (see `Completion prohibition conditions`).
 ## Checkpoint Verification
 
 "Checkpoint verification" is the whole-repository regression check run at a checkpoint boundary. It
-is what item 12 of the 12-point gate refers to and the only thing it refers to. A boundary is
-reached **per item** (after all routed blocking reviewers return PASS, before `refactor` -> `done`)
-and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
+is what item 12 of the 12-point gate refers to and the only thing it refers to. A boundary is reached
+**per item** (routed blocking reviewers PASS, before `refactor` -> `done`) and **per spec** (last ledger row terminal). **Not every row is one** — which rows are is defined only in `references/relevant-test-suite.md#checkpoint-boundaries`, and no other file restates that cadence.
 
 It PASSES only when **every** command in the verification command set exits 0; a partial run is not
 a pass. The boundary definition, command set, pass criteria and evidence fields are in

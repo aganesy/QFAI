@@ -7,12 +7,18 @@ is what item 12 of the 12-point gate refers to and the only thing it refers to.
 
 A checkpoint boundary is reached in exactly two places:
 
-- **Per item** — after all routed blocking reviewers have returned PASS for the item and before it
-  transitions `refactor` -> `done`. Every item has exactly one.
+- **Per item** — on a row that is _on_ a boundary: after all routed blocking reviewers have returned
+  PASS for the item and before it transitions `refactor` -> `done`. **Not every row is one.** Which
+  rows are is defined in `relevant-test-suite.md#checkpoint-boundaries`, and a row between
+  boundaries is already satisfied by the narrow relevant suite of Phase: Refactor step 2 — nothing
+  is re-run there. That row still owes the three checkpoint evidence fields; what it records in
+  them is in `#evidence`.
 - **Per spec** — after the last item in `test-list.md` reaches `done` or a valid `exception`, before
   declaring spec-level completion.
 
-No other point is a checkpoint boundary. There is no "every N items" rule.
+No other point is a checkpoint boundary. This file does not restate the per-item frequency: the
+anchor above is its single definition, and a second copy here is exactly what let the two drift into
+contradicting each other.
 
 The two do **not** run the same commands. The per-item set is confined to what the item's own
 change can reach; the spec-wide commands belong to the per-spec set. Both are below, and each one
@@ -349,6 +355,18 @@ The seal input is canonical and machine-recomputable: the exact three lines
 `Checkpoint verification result: <value>`, in that order. Normalize them to LF, strip trailing
 whitespace from each line, remove leading/trailing blank lines, add one final newline, then record the
 lowercase SHA-256 of those bytes. Do not wrap this field-only seal in a file-path manifest record.
+**A row between boundaries records the same three fields.** They are unconditional — gate item 12
+recomputes the seal on every row — so a row off a boundary cannot leave them empty and cannot
+invent a full-suite command it never ran. Nothing is re-run there, so
+`Checkpoint verification command` takes the narrow relevant-suite command set of Phase: Refactor
+step 2 verbatim, `Checkpoint verification result` takes that run's outcome, and the seal is taken
+over the two together with the `Revision` exactly as at a boundary. Item 12 accepts that pair: it
+requires the **full** suite only for a row that sits on a boundary. What lets a reviewer tell a
+narrow off-boundary record from a truncated boundary one is the resolution step (1-3), and it
+already has a home: `relevant-test-suite.md` requires it in the item's evidence. Record it there,
+beside these fields — **never inside `Checkpoint verification command`**. That field is the command
+set verbatim and the seal is taken over it, so a label mixed into it changes the sealed bytes and
+stops the record matching the run it describes.
 
 **The spec-level boundary records a seal of its own, and the spec completion conditions recompute
 it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was
