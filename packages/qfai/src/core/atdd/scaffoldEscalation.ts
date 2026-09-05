@@ -24,45 +24,23 @@
  *
  * Counters survive across runs; callers reset them when they observe
  * progress on a given TC (the placeholder shape is gone).
+ *
+ * Persistence goes through `core/state.ts`, the single loader/writer
+ * for `.qfai/state.json`. A private copy of that logic here would mean
+ * two copies of the same read-failure policy, and the counters live in
+ * the same document as `discussion.currentId`: a write that starts
+ * from a failed read would erase the other writer's namespace. So the
+ * read-modify-write paths use `readStateStrict`, which refuses to
+ * merge onto an empty document when the existing file is unreadable.
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { readStateStrict, readStateTolerant, writeStateFile } from "../state.js";
 
-const STATE_REL = path.join(".qfai", "state.json");
 /** Default escalation threshold when the config key is absent/invalid. */
 export const DEFAULT_SCAFFOLD_ESCALATE_CYCLES = 3;
 
-function stateAbsPath(root: string): string {
-  return path.join(root, STATE_REL);
-}
-
 function attemptKey(specId: string, tcId: string): string {
   return `${specId}:${tcId}`;
-}
-
-async function loadState(root: string): Promise<Record<string, unknown> | null> {
-  let raw: string;
-  try {
-    raw = await readFile(stateAbsPath(root), "utf-8");
-  } catch {
-    return null;
-  }
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-async function writeState(root: string, state: Record<string, unknown>): Promise<void> {
-  const abs = stateAbsPath(root);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
 }
 
 function readAttemptsMap(
@@ -93,7 +71,7 @@ async function readMapCount(
   specId: string,
   tcId: string,
 ): Promise<number> {
-  const state = await loadState(root);
+  const state = await readStateTolerant(root);
   const attempts = readAttemptsMap(state, mapName);
   return attempts[attemptKey(specId, tcId)] ?? 0;
 }
@@ -104,7 +82,7 @@ async function recordAttemptInMap(
   specId: string,
   tcId: string,
 ): Promise<number> {
-  const existing = (await loadState(root)) ?? {};
+  const existing = (await readStateStrict(root)) ?? {};
   const atddField = existing.atdd;
   const atdd =
     atddField !== null && typeof atddField === "object" && !Array.isArray(atddField)
@@ -128,7 +106,7 @@ async function recordAttemptInMap(
   attempts[key] = next;
   atdd[mapName] = attempts;
   const updated: Record<string, unknown> = { ...existing, atdd };
-  await writeState(root, updated);
+  await writeStateFile(root, updated);
   return next;
 }
 
@@ -138,7 +116,7 @@ async function resetAttemptInMap(
   specId: string,
   tcId: string,
 ): Promise<void> {
-  const existing = await loadState(root);
+  const existing = await readStateStrict(root);
   if (existing === null) return;
   const atddField = existing.atdd;
   if (atddField === null || typeof atddField !== "object" || Array.isArray(atddField)) {
@@ -162,7 +140,7 @@ async function resetAttemptInMap(
   }
   atddRecord[mapName] = attempts;
   const updated: Record<string, unknown> = { ...existing, atdd: atddRecord };
-  await writeState(root, updated);
+  await writeStateFile(root, updated);
 }
 
 /**
@@ -264,7 +242,7 @@ export async function resetValidateCycle(
 export async function listValidateCycleKeys(
   root: string,
 ): Promise<Array<{ specId: string; tcId: string }>> {
-  const state = await loadState(root);
+  const state = await readStateTolerant(root);
   const map = readAttemptsMap(state, "scaffoldValidateCycles");
   const out: Array<{ specId: string; tcId: string }> = [];
   for (const key of Object.keys(map)) {

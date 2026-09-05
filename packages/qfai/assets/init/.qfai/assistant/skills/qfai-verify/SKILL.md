@@ -3,7 +3,7 @@ name: qfai-verify
 title: QFAI Verify (Quality Gates + Evidence)
 description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."
 argument-hint: "[--auto]"
-allowed-tools: [Read, Glob, Bash, Write, TodoWrite, Task]
+allowed-tools: [Read, Glob, Bash, Write, TodoWrite, Task, Agent]
 roles:
   [
     orchestrator,
@@ -143,19 +143,19 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - Do NOT declare completion without running the defined gates.
 - You MUST produce the required evidence file: `.qfai/evidence/verify-<spec-id>.md`.
-  - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
-  - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+  - The run-scoped `.qfai/evidence/verify-<spec-id>.md` remains local and ignored by the QFAI-managed block in the project root `.gitignore`.
+  - Durable per-item `implement-*.md` and `atdd-*.md` governance records are committed through the managed negations. Do not commit the verify run file; summarize its key outcomes in the PR description instead.
 - You MUST write `.qfai/output/verify.json` per "Verify Output Contract" above. Downstream gates read that file, not the evidence markdown.
 - You MUST run the mandatory checks listed below and record outcomes.
 - **This** gate is full-scan, in CI and everywhere else: `npx qfai validate --profile verify --fail-on error`, or the default `npx qfai validate --fail-on error`. A partial profile does not satisfy it, and no waiver or environment makes it satisfy it. That is a statement about the verification gate, not a ban on narrow profiles in CI: `qfai-discussion`, `qfai-prototyping` and `qfai-atdd` each define a narrow profile as their own stage gate, those runs are legitimate under `CI=true`, and `QFAI-VALIDATE-017` (`warning`) marks them as not-full-scan rather than blocking them. The prototyping carve-out below is a local, pre-`certify` run.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
-- A waiver's `rule:` is the finding's `code`, copied verbatim from `.qfai/report/validate.json` — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form is a back-compat alias only.
+- A waiver's `rule:` is the finding's `code` — `issues[].code` in `.qfai/report/validate.json` (the array is `issues`, not `findings`; keys are documented in `references/validate-json-schema.md`) — copied verbatim — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form is a back-compat alias only.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the mandatory gate set below, run to completion, with every outcome written to `.qfai/output/verify.json` — a gate with no discoverable command is UNRUN, not a pass.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
@@ -299,8 +299,8 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
    only), **populate them by analyzing the current repository**:
 
 - derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints from package.json, CI config, lockfiles (tech.md)
-- derive repo layout + key directories + gate commands from the file tree and scripts (structure.md)
+- derive runtime/tooling versions + constraints + standard gate commands from the task-runner manifest (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, …), then CI config, then lockfiles — same order as `constitution/quality.md` (tech.md#standard-commands-copy-paste)
+- derive repo layout + key directories from the file tree and scripts (structure.md)
 
 1. Do **not** invent facts. If something cannot be verified, write it as:
 
@@ -310,18 +310,22 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
 ### Steering refresh checklist
 
 - [ ] product.md: what we build / users / success / non-goals / release posture
-- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
-- [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
+- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints, plus the standard gate commands under `tech.md#standard-commands-copy-paste` — the section `/qfai-implement` reads
+- [ ] structure.md: repo layout, key packages, entrypoints, how to run locally (setup + launcher only — gate commands stay in tech.md)
 
 ## Step 1 — Discover project gate commands (DevOps/CI Engineer)
 
-Prefer existing scripts:
+Prefer existing scripts, in this order:
 
-- package.json scripts
-- Makefile / task runner
+- task-runner manifest: `package.json` scripts, `Makefile`, `justfile`,
+  `pyproject.toml`, `Cargo.toml`, …
 - CI config
+- the project's own contributing docs
 
-If unknown, propose defaults and mark assumptions.
+Write what you discover back into
+`.qfai/assistant/catalog/tech.md#standard-commands-copy-paste` — that is the
+section `/qfai-implement` reads, and a capability left without an entry there is
+UNRUN. If unknown, propose defaults and mark assumptions.
 
 ## Step 2 — Run QFAI gates
 
@@ -448,7 +452,7 @@ When you declare DONE, include:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 
@@ -482,7 +486,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 
