@@ -11,6 +11,9 @@ Required sections (all of them, in this order):
 - Decisions made (with rationale)
 - Work performed (what changed, where)
 - Commands executed + key outputs
+- QFAI gates
+- Repo gates
+- Next actions (if any)
 - Gaps / Open risks (must be explicit; "none" is acceptable if justified)
 - Final status (PASS/FAIL) + who confirmed
 
