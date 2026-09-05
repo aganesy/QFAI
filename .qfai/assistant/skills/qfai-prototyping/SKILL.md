@@ -79,10 +79,14 @@ current `DESIGN.md` hash does not match the lock.
   `D-DEPRECATED-PROBE` reports `error`. Install `playwright`
   (`npm i -D playwright`) rather than reaching for it.
 
-### Step 2-B.1 — Opt-in iterate flags
+### Step 2-B.1 — `iterate` flag surface
 
-Three flags extend `npx qfai prototyping iterate`; all default OFF so the
-prior invocation pattern is byte-equivalent when no flag is passed:
+The flags below extend `npx qfai prototyping iterate`. `--target-url` is
+required at cycle 0 once at least one UI-bearing spec resolves; every
+other flag is opt-in and defaults OFF, so the prior invocation pattern is
+byte-equivalent when no opt-in flag is passed. This list is the flag
+reference for the sub-command — when it and `npx qfai --help` disagree,
+the help text wins and this section is stale.
 
 - `--capture` — enable PNG / HTML capture per screen each cycle via
   the default Playwright runner (dynamic `import("playwright")`;
@@ -102,6 +106,57 @@ prior invocation pattern is byte-equivalent when no flag is passed:
   Exits `0` when converged (`stopReason === "axes-exceptional"` with
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
   no Playwright launches. Use at cycle 9 before recovery.
+- `--target-url <url>` — base URL the capture / review steps drive.
+  Required at cycle 0 whenever at least one UI-bearing spec resolves;
+  the zero-UI cycle-0 no-op exits `0` before this gate, so a project
+  with no UI surface needs no URL. Also required at cycle >= 1 whenever
+  `--capture` is set and a screen `url` is route-relative. Used
+  throughout Step 2-C.
+- `--force` — **required**, not optional, to re-run cycle 0 once an
+  `iter-00` exists: the destructive-rerun gate refuses to overwrite it
+  otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears
+  stale `iter-NN` directories. Detail:
+  `references/iteration-loop.md#sealed-loop`.
+- `--dry-run` — plan the cycle and write nothing. Reports what a real
+  run would create, move or overwrite — including the `iter-00` backup
+  `--force` would take — and exits without touching the tree. Use it to
+  read a destructive cycle-0 re-seed before authorising it.
+- `--license-patch <file>` — apply an add-only patch to the license
+  allowlist. Usable at **any** cycle, not only cycle 0: broaden the
+  catalog mid-loop instead of discarding progress with
+  `--cycle 0 --force`. The model is immutable baseline + audit overlay:
+  the frozen catalog stays byte-equal to the shipped default and the
+  patch is appended to the audit ledger, from which the effective
+  allowlist is rebuilt on every cycle. Audit and back up the ledger
+  too — the frozen catalog alone omits every added permission. The
+  overlay covers sources and tiers only: a patch never pins
+  `sourceHosts`, and a `--cycle 0 --force` re-seed does not revoke
+  earlier rows. Never hand-edit the frozen catalog; that is a
+  lock-drift exit 2. See "License-verify hard-stop (exit 66)" below.
+- `--primary-spec-id <NNNN>` — compatibility escape hatch, not the
+  normal path. Step 2-A runs every UI-bearing spec in one invocation;
+  this flag pins the one spec cycle 0 treats as primary, so it narrows
+  the run and never widens it. Reach for it only when resolution lands
+  on the wrong spec. Accepts digits only (`12`, `0012`, both normalised
+  to `0012`) — a `spec-` prefix is rejected before resolution. Takes
+  precedence over the equivalent `qfai.config.yaml` pin under
+  `prototyping`.
+- `--emit-skeletons` — cycle 0 only: write one placeholder HTML file
+  per declared screen as a seed aid, not an alternative output shape.
+  Ignored at cycle >= 1. Detail:
+  `references/generator-prompt.md`.
+- `--skeleton-mode <placeholder|full|stub>` — output mode for
+  `--emit-skeletons` (default `placeholder`). No effect without it.
+- `--mode <convergence|exploration>` — loop posture, default
+  `convergence`. `exploration` relaxes the soft-rubric gates to
+  warning, i.e. it changes which gates block. It only takes effect at
+  cycle 0: the resolved posture is recorded once on the seed iteration,
+  and passing the flag at cycle >= 1 merely echoes the resolved value —
+  it neither switches the loop into exploration nor clears a recorded
+  one. `npx qfai prototyping certify` exits `2` on any loop that
+  contains an exploration iteration, and the only way back is a fresh
+  `--cycle 0 --force` re-seed. Never reach for it to clear a failing
+  gate on a loop you intend to certify.
 
 ### Step 2-C — Run the Loop
 
@@ -136,8 +191,9 @@ Two specifics that are easy to get wrong:
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
 `designMdViolations` empty); `65` 10 cycles reached; `66` license-verify
 failure (`imageSources[]` resolved to a non-allowlisted source, unknown
-license tier, non-HTTPS URL, host mismatch vs the cycle-0 frozen
-`sourceHosts`, or missing / empty `attribution` — see "License-verify
+license tier, non-HTTPS URL, host mismatch vs the frozen
+`sourceHosts` (host pinning is never patched — see below), or
+missing / empty `attribution` — see "License-verify
 hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 (incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
 editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0; also
@@ -193,8 +249,10 @@ exists.
 ### License-verify hard-stop (exit 66)
 
 `npx qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
-`prototyping.json` violates the cycle-0 frozen license catalog. The
-verifier rejects five distinct error codes:
+`prototyping.json` violates the **effective** license catalog: the
+immutable `frozenLicenseCatalog` baseline unioned with every
+`licensePatchAudit[]` row. The verifier rejects five distinct error
+codes:
 
 - `license-not-allowlisted` — `source` not in `allowedSources`
 - `license-tier-unknown` — `license` not in `licenseTiers[source]`
@@ -204,14 +262,29 @@ verifier rejects five distinct error codes:
 
 Recovery path (no in-loop retry — the verifier is fail-closed):
 
-1. Inspect `prototyping.json#frozenLicenseCatalog` for the frozen
-   `allowedSources` / `licenseTiers` / `sourceHosts`.
+1. Inspect `prototyping.json#frozenLicenseCatalog` **and**
+   `prototyping.json#licensePatchAudit[]`: the effective
+   `allowedSources` / `licenseTiers` is the baseline plus every audit
+   row, so the frozen field alone omits every permission a
+   `--license-patch` already added. `sourceHosts` is the exception —
+   an audit row persists no hosts, so the effective `sourceHosts` stays
+   exactly the baseline and a patch-added source carries **no** host
+   binding. The verifier skips the host check for a source with no
+   `sourceHosts` entry, so any HTTPS host passes under that source
+   name; host pinning for an added source is not available today.
 2. Edit the offending `imageSources[]` entry to use an allowlisted
    source / known tier / HTTPS URL / matching host / non-empty
    attribution. **Do not** edit `frozenLicenseCatalog` mid-loop
    (separate exit-2 lock-drift class).
-3. To change the allowlist, refreeze the catalog by restarting from
-   cycle 0 with the updated stock-photo configuration.
+3. To broaden the allowlist, apply an add-only `--license-patch` at the
+   current cycle — no cycle-0 restart. Deletions / modifications inside
+   a patch file are rejected outright. Revoking an already-applied
+   permission is a manual step: `--cycle 0 --force` re-seeds the loop
+   but does **not** clear `licensePatchAudit[]`, so every prior row is
+   unioned back in from cycle 1. Delete (or archive elsewhere) the
+   offending rows from `prototyping.json#licensePatchAudit[]` yourself
+   as part of the re-seed — that array is not covered by the lock-drift
+   gate, unlike `frozenLicenseCatalog`.
 
 ### Cycle 9 budget exhaustion
 

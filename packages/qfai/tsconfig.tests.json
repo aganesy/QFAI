@@ -108,6 +108,7 @@
     "tests/integration/shippedWorkflowShapeGate.test.ts",
     "tests/integration/shippedWorkflowTopology.test.ts",
     "tests/integration/shippedWorkflows.test.ts",
+    "tests/integration/skills/qfaiPrototyping.iterateFlagSurface.test.ts",
     "tests/integration/spec0006DoctorFailOnError.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.declined.test.ts",

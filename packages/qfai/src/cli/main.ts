@@ -391,8 +391,9 @@ Options:
                   QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
                   .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
   --force         handoff upgrade: 既存の .qfai/handoff.yaml を上書き（上書き前に .backup-<ISO> へ退避）
-  --force         prototyping iterate: cycle 0 の破壊的な再実行を許可（iter-00 を
-                  iter-00.backup-<ISO> へ退避してからリセット）
+  --force         prototyping iterate --cycle 0: 既存 iter-00 の再シードに必須。iter-00 を
+                  iter-00.backup-<ISO> へ退避してから stale な iter-NN を掃除（未指定なら
+                  exit 2 で拒否）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --yes           doctor --autoremediate: 対話確認をスキップ（それ以外では無効）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
@@ -423,7 +424,7 @@ Options:
   --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
   --capture                     prototyping iterate: opt-in な PNG/HTML キャプチャ (default OFF; Playwright を dynamic import)
   --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
-  --license-patch <file>        prototyping iterate: cycle 0 ライセンス allowlist パッチを適用 (audit ledger に追記; replay 対応)
+  --license-patch <file>        prototyping iterate: 任意 cycle で add-only なライセンス allowlist パッチを適用 (cycle 0 限定ではない; audit ledger に追記し以降の cycle で replay。sourceHosts は replay 対象外)
   --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
   --emit-skeletons              prototyping iterate --cycle 0: frozenSurfaceUnion の screen ごとに placeholder HTML を出力 (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
