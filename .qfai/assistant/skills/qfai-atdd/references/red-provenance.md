@@ -267,14 +267,13 @@ gate condition where it is defined below.
    **Which of those fields take a `Round N:` prefix is not that table's to say,
    and not this file's** — it is
    `../../qfai-implement/references/round-evidence.md`'s closed list and only
-   that, as `/qfai-implement` step 3c reads it. They do not all take one: the
-   round block's fields are prefixed, and the row identity that same table row
-   opens with (`Layer`, `Test file`, `Selector`) is row-level and takes none.
-   Prefixing a row-level field is as malformed as dropping the prefix from a
-   round field — step 3b looks the identity up unprefixed, so a handoff that
-   writes `Round 1: Layer` stalls at `todo` with a perfectly good
-   falsifiability story. Do not re-derive the split here; the entry is not
-   complete until it matches the one that reference states.
+   that, as `/qfai-implement` step 3c reads it, and the entry is not complete
+   until it matches. They do not all take one: the round block's fields are
+   prefixed, and the row identity that same table row opens with (`Layer`,
+   `Test file`, `Selector`) is row-level and takes none. Prefixing a row-level
+   field is as malformed as dropping the prefix from a round field — step 3b
+   looks the identity up unprefixed, so a handoff that writes `Round 1: Layer`
+   stalls at `todo` with a perfectly good falsifiability story.
 
    **`Satisfied-by` takes whatever already implements the predicate.** The
    shared reference names a sibling `TDD-NNNN` because that is its usual case,
