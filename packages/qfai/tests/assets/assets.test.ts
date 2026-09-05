@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
@@ -18,6 +19,98 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateRootDir = path.join(templateRoot, "root");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
+
+// --- shipped iteration-budget vocabulary -----------------------------------
+// Two skills talk about the same budget under opposite obligations:
+// `qfai-prototyping` owns it and may print it, but every number it prints must
+// equal the constant; `qfai-discussion` owns nothing here and may not print a
+// number at all. Both guards read the patterns below so neither can grow an
+// arm the other lacks — the noun-first arm used to exist only on the
+// discussion side, which is how `Iteration count cap is 10` shipped unchecked.
+const BUDGET_NOUN = String.raw`(?:cycles?|iterations?)`;
+const BUDGET_CAP = String.raw`(?:cap(?:ped|s)?|budget|limit(?:ed|s)?|max(?:imum)?|total|at\s+most|up\s+to)`;
+// Gaps stay inside one clause (no `.`, `;` or newline) so
+// `Iteration count cap is 10; ... reaching cycle 9 ...` yields 10, not 9.
+const BUDGET_GAP = String.raw`[^.;\n]{0,24}?`;
+
+type BudgetLiteralPattern = {
+  readonly label: string;
+  readonly re: RegExp;
+  /** `terminal` is compared to MAX_ITERATION_INDEX, `total` to MAX_ITERATIONS. */
+  readonly against: "terminal" | "total";
+};
+
+const BUDGET_LITERAL_PATTERNS: readonly BudgetLiteralPattern[] = [
+  {
+    label: "terminal index",
+    against: "terminal",
+    re: /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi,
+  },
+  {
+    label: "count before the noun",
+    against: "total",
+    re: /\b(\d+)(?:\s+(?:cycles|iterations)|-(?:cycle|iteration))\b/gi,
+  },
+  {
+    // `Iteration count cap is 10`, `cycle limit: 10`, `max-iterations: 10`.
+    // A cap word is required: without it every `--cycle 0` would be flagged.
+    label: "count after the noun",
+    against: "total",
+    re: new RegExp(
+      String.raw`\b(?:${BUDGET_NOUN}${BUDGET_GAP}${BUDGET_CAP}|${BUDGET_CAP}${BUDGET_GAP}${BUDGET_NOUN})${BUDGET_GAP}\b(\d+)\b`,
+      "gi",
+    ),
+  },
+];
+
+type BudgetLiteral = {
+  readonly label: string;
+  readonly text: string;
+  readonly value: number;
+  readonly expected: number;
+};
+
+/** Every budget number a shipped surface states, with the constant it must equal. */
+function collectBudgetLiterals(content: string): BudgetLiteral[] {
+  const found: BudgetLiteral[] = [];
+  for (const { label, re, against } of BUDGET_LITERAL_PATTERNS) {
+    for (const match of content.matchAll(re)) {
+      found.push({
+        label,
+        text: match[0],
+        value: Number(match[1]),
+        expected: against === "terminal" ? MAX_ITERATION_INDEX : MAX_ITERATIONS,
+      });
+    }
+  }
+  return found;
+}
+
+/** Budget literals whose value has drifted away from the source constant. */
+function findStaleBudgetLiterals(content: string): string[] {
+  return collectBudgetLiterals(content)
+    .filter(({ value, expected }) => value !== expected)
+    .map(({ label, text, expected }) => `${text} [${label}] (expected ${expected})`);
+}
+
+// Non-owning surfaces are held to a stricter rule: no number near the noun at
+// all, cap word or not. That arm cannot be shared with the prototyping guard,
+// where `--cycle 0` and `reaching cycle 9` are legitimate.
+const BUDGET_RESTATEMENT_PATTERNS: readonly { readonly label: string; readonly re: RegExp }[] = [
+  ...BUDGET_LITERAL_PATTERNS.map(({ label, re }) => ({ label, re })),
+  {
+    label: "bare count adjacent to the noun",
+    re: new RegExp(String.raw`\b${BUDGET_NOUN}\b[^.\n]{0,40}?\b\d+\b`, "gi"),
+  },
+  { label: "loose range", re: /\b(?:C|cycles?|iterations?)\s*\d+\s*\.\.\s*\d+/gi },
+];
+
+/** Any numeric restatement of the budget, for surfaces that must only point at it. */
+function findBudgetRestatements(content: string): string[] {
+  return BUDGET_RESTATEMENT_PATTERNS.flatMap(({ label, re }) =>
+    [...content.matchAll(re)].map((match) => `${match[0]} [${label}]`),
+  );
+}
 
 describe("assets guardrails", { timeout: 30000 }, () => {
   it("checks relative path references in markdown", async () => {
@@ -735,6 +828,110 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/review\.json/);
     expect(content).toMatch(/exit code|`64`|`65`/);
     expect(content).toMatch(/best-of-history is gone/i);
+  });
+
+  it("keeps shipped prototyping cycle literals aligned with the iteration budget", async () => {
+    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const files = await fg(["SKILL.md", "references/*.md"], { cwd: skillDir, absolute: true });
+
+    expect(files.length).toBeGreaterThan(0);
+
+    // Two families of free-text restatement drift independently, so
+    // BUDGET_LITERAL_PATTERNS scans both. Three divergent values once
+    // circulated here.
+    //   - terminal: the last legal cycle index ("cycles 1..9", "C1..9") — must
+    //     equal MAX_ITERATION_INDEX.
+    //   - total: the size of the budget, written either number-first ("up to
+    //     10 cycles", "fixed 10-cycle budget") or noun-first ("Iteration count
+    //     cap is 10") — must equal MAX_ITERATIONS. These are the user-facing
+    //     headline numbers; a missing arm leaves them stale and green.
+    const mismatches: string[] = [];
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      const relPath = path.relative(repoRoot, filePath);
+      for (const stale of findStaleBudgetLiterals(content)) {
+        mismatches.push(`${relPath}: ${stale}`);
+      }
+    }
+
+    expect(
+      mismatches,
+      `cycle literals must equal MAX_ITERATION_INDEX (${MAX_ITERATION_INDEX}) ` +
+        `or MAX_ITERATIONS (${MAX_ITERATIONS})`,
+    ).toEqual([]);
+
+    // The scan is the deliverable, so pin its reach in both directions: a
+    // guard that only ever reads correct files proves nothing. The noun-first
+    // phrasing is the one SKILL.md actually ships, and the number-first-only
+    // arm read straight past it.
+    const staleValue = MAX_ITERATIONS + 5;
+    for (const phrasing of [
+      `Iteration count cap is ${staleValue}`,
+      `iteration count is capped globally to ${staleValue}`,
+      `cycle limit: ${staleValue}`,
+      `max-iterations: ${staleValue}`,
+      `up to ${staleValue} cycles`,
+      `a fixed ${staleValue}-cycle budget`,
+      `Cycles 1..${staleValue}`,
+    ]) {
+      expect(findStaleBudgetLiterals(phrasing), `must flag: ${phrasing}`).not.toEqual([]);
+    }
+
+    // …and what it must not flag: this skill is full of legitimate per-cycle
+    // indices, so requiring a cap word is what keeps the guard usable.
+    for (const legitimate of [
+      "npx qfai prototyping iterate --cycle 0 --target-url <url>",
+      "reaching cycle 9 on a non-converged iteration set exits 65 directly",
+      "commit `prototyping: iter-09`",
+      "200..500 word critique",
+    ]) {
+      expect(findStaleBudgetLiterals(legitimate), `must not flag: ${legitimate}`).toEqual([]);
+    }
+  });
+
+  it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
+    const discussionDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const files = [
+      path.join(discussionDir, "references", "discussion-artifact-rules.md"),
+      path.join(discussionDir, "templates", "prototyping.yaml"),
+    ];
+
+    // qfai-discussion neither owns nor enforces the prototyping budget;
+    // restating it there is what produced a third value. Matching the exact
+    // sentence that was deleted would only forbid one spelling: `15
+    // iterations`, `fixed 15-cycle budget` and `cycles 1..15` all say the same
+    // thing and would all have passed. BUDGET_RESTATEMENT_PATTERNS rejects a
+    // number *anywhere near* a cycle/iteration word instead — in these two
+    // files there is no legitimate reason for one, since the budget is stated
+    // by pointer.
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      const rel = path.relative(repoRoot, filePath);
+      expect(findBudgetRestatements(content), `${rel} restates the budget`).toEqual([]);
+      expect(content).toContain(".qfai/assistant/skills/qfai-prototyping/SKILL.md");
+    }
+
+    // The matcher itself is the deliverable here, so pin what it rejects:
+    // a guard that only ever sees clean files proves nothing about its reach.
+    for (const restated of [
+      "up to 15 iterations",
+      "a fixed 15-cycle budget",
+      "cycles 1..15",
+      "C1..15",
+      "iteration count is capped globally to 15",
+      "Iteration count cap is 15",
+      "max-iterations: 15",
+      "the loop runs 10 cycles",
+    ]) {
+      expect(findBudgetRestatements(restated), `must reject: ${restated}`).not.toEqual([]);
+    }
+    // …and what it must not reject: the pointer form these files actually use.
+    for (const allowed of [
+      "The single-thread evolution loop owns its iteration budget; see the skill.",
+      "# budget is owned by `.qfai/assistant/skills/qfai-prototyping/SKILL.md`.",
+    ]) {
+      expect(findBudgetRestatements(allowed), `must allow: ${allowed}`).toEqual([]);
+    }
   });
 
   it("placeholder for removed v1.x test (ships ui contract sample) — replaced by ui-contract.sample.yaml direct check above", () => {
