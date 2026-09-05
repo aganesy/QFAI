@@ -144,6 +144,7 @@ type LineKind =
   | "warn"
   | "header"
   | "counts"
+  | "fail-on"
   | "run-log"
   | "detail"
   | "detail-continuation"
@@ -179,6 +180,11 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       section = "none";
       severity = undefined;
       return { kind: "counts" as const, line };
+    }
+    if (line.startsWith("fail-on: ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "fail-on" as const, line };
     }
     if (line.startsWith("run-log: ")) {
       section = "none";
@@ -436,7 +442,8 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
       });
       const lines = output.trimEnd().split("\n");
 
-      expect(lines.at(-2)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
+      expect(lines.at(-3)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
+      expect(lines.at(-2)).toMatch(/^fail-on: \S/);
       expect(lines.at(-1)).toMatch(/^run-log: \S/);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -495,8 +502,8 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
    */
   it("declares the scan-truncation warning line the CLI prints before the issues", async () => {
     const guideline = await readGuideline();
-    expect(fenceWith(guideline, "file scan truncated").trim()).toBe(
-      "[warn] <command>: file scan truncated: collected <n> files (limit <n>)",
+    expect(fenceWith(guideline, "test-file scan stopped").trim()).toBe(
+      "[warn] <command>: test-file scan stopped at the <n>-file cap; traceability/ATDD coverage in this run is computed over a partial file set",
     );
 
     const truncated = await captureStdout(() => {
@@ -507,7 +514,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
       return Promise.resolve();
     });
     expect(truncated).toBe(
-      "[warn] validate: file scan truncated: collected 20001 files (limit 20000)\n",
+      "[warn] validate: test-file scan stopped at the 20000-file cap; traceability/ATDD coverage in this run is computed over a partial file set\n",
     );
 
     const complete = await captureStdout(() => {
@@ -530,8 +537,8 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(6);
-    const anchors = ["[warn] ", "[info] ", "counts: ", "run-log: ", "error_code:"];
+    expect(rules).toHaveLength(7);
+    const anchors = ["[warn] ", "[info] ", "counts: ", "fail-on: ", "run-log: ", "error_code:"];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
@@ -558,7 +565,8 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
       expect(classified[0]?.kind).toBe("warn");
       expect(classified.at(-1)?.kind).toBe("run-log");
-      expect(classified.at(-2)?.kind).toBe("counts");
+      expect(classified.at(-2)?.kind).toBe("fail-on");
+      expect(classified.at(-3)?.kind).toBe("counts");
       expect(classified.filter((entry) => entry.kind === "counts")).toHaveLength(1);
 
       const header = classified.findIndex(
@@ -575,6 +583,9 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
       for (const entry of classified.filter((item) => item.kind === "message-continuation")) {
         expect(entry.line.startsWith("counts: "), `structural line absorbed: ${entry.line}`).toBe(
+          false,
+        );
+        expect(entry.line.startsWith("fail-on: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
         expect(entry.line.startsWith("run-log: "), `structural line absorbed: ${entry.line}`).toBe(
