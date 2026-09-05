@@ -136,12 +136,15 @@ describe("TC-0003-0012: Instructions existing file skip", () => {
   });
 });
 
-// TC-0003-0013: --force does not overwrite instructions
-describe("TC-0003-0013: --force does not overwrite instructions", () => {
-  it("init protects instructions from force overwrite", async () => {
+// TC-0003-0013: --force refreshes instructions from the shipped template
+describe("TC-0003-0013: --force refreshes instructions", () => {
+  it("init gates the instructions skip on the force flag", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toMatch(/instructions/i);
-    expect(content).toMatch(/force/i);
+    // The Step 3.5 loop must consult --force, not skip unconditionally.
+    expect(content).toMatch(/Step 3\.5[\s\S]*?if \(alreadyExists && \(!options\.force \|\|/);
+    // …and a refresh must still refuse an entry that resolves out of the project.
+    expect(content).toMatch(/Step 3\.5[\s\S]*?await resolvesOutsideProject\(destRoot, dest\)/);
   });
 });
 
