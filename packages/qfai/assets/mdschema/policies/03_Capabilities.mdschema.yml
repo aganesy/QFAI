@@ -23,11 +23,16 @@ structure:
           pattern: "^## CAP Catalog$"
           regex: true
         description: >-
-          One row per capability, each naming the spec that realises it. The
-          `Spec` column is the link the chain is walked along.
+          One row per capability, each stating what it solves.
+
+          `CAP ID` and the statement are the required columns. The binding to a
+          spec pack is NOT required here: each pack already declares it in
+          `01_Spec.md` as `Parent: CAP-NNNN`, and that direction is the one a
+          reader follows. A second copy of the mapping in this table is a second
+          thing to keep true.
         allow_additional: true
         tables:
           - min: 1
             required_headers:
               - CAP ID
-              - Spec
+              - Statement (what)

@@ -200,4 +200,70 @@ describe("deltaV1 parser", () => {
     expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
     expect(entry?.verificationPlanItems[1]?.links).toEqual(["issue:123"]);
   });
+
+  /**
+   * The plan body may be fenced, and both spellings mean the same thing.
+   *
+   * The fence is not cosmetic. A YAML comment indented by two spaces —
+   * `  # unit | integration | ...` — is a legal ATX heading under CommonMark, so
+   * an UNFENCED plan renders its own comments as top-level headings on GitHub.
+   * The shipped `09_delta.md` template did exactly that until it was fenced.
+   *
+   * The unfenced form stays supported rather than being migrated away from:
+   * this parser runs over adopter trees, and every delta written before the
+   * fence was introduced is unfenced.
+   */
+  const planDocument = (planLines: readonly string[]): string =>
+    [
+      "# Delta",
+      "",
+      "## Decision Log",
+      "### DL-20260207-01",
+      "#### Verification",
+      "",
+      "### Plan",
+      ...planLines,
+      "",
+    ].join("\n");
+
+  const UNFENCED_PLAN = [
+    "- id: VFY-001",
+    "  # unit | integration | acceptance | manual | migration | rollback",
+    "  level: unit",
+    "  target: sample",
+    "  method: sample",
+    "  owner: dev",
+    "  expected: sample",
+  ];
+
+  const FENCED_PLAN = ["```yaml", ...UNFENCED_PLAN, "```"];
+
+  it("reads a fenced Verification.Plan block", () => {
+    const entry = parseDeltaV1(planDocument(FENCED_PLAN)).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems).toHaveLength(1);
+    expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
+    expect(entry?.verificationPlanItems[0]?.level).toBe("unit");
+  });
+
+  it("reads fenced and unfenced Verification.Plan bodies identically", () => {
+    // Same bytes inside the fence as outside it, so any difference in the
+    // result is the fence handling and nothing else.
+    const fenced = parseDeltaV1(planDocument(FENCED_PLAN)).entries[0];
+    const unfenced = parseDeltaV1(planDocument(UNFENCED_PLAN)).entries[0];
+
+    expect(fenced?.verificationPlanItems).toEqual(unfenced?.verificationPlanItems);
+    expect(fenced?.verificationPlanError).toBeNull();
+    expect(unfenced?.verificationPlanError).toBeNull();
+  });
+
+  it("reports a parse error for a fenced plan whose YAML is not a list", () => {
+    // The fence must not become a way to smuggle an unparsable body past the
+    // check: what is inside it is still validated as a Verification.Plan.
+    const entry = parseDeltaV1(planDocument(["```yaml", "id: VFY-001", "```"])).entries[0];
+
+    expect(entry?.verificationPlanItems).toEqual([]);
+    expect(entry?.verificationPlanError).not.toBeNull();
+  });
 });

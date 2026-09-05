@@ -23,6 +23,12 @@ structure:
         description: >-
           In, out, and why the border falls there — one row per border so the
           reason travels with the pair it explains.
+
+          Optional, because the border has exactly one home and it may be
+          `01_Objective.md`. Requiring it in both files gives the border two
+          statements to disagree with each other, which is the failure this
+          layer exists to prevent. When it IS stated here, it is a paired table.
+        optional: true
         allow_additional: true
         tables:
           - min: 1

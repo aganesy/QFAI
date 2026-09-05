@@ -15,25 +15,31 @@ structure:
           pattern: "^## Implementation approach$"
           regex: true
         description: >-
-          The shape of the change and the alternative that was rejected, as a
-          list. The rejected option is half the value: it is what stops the
-          same alternative being re-proposed in review.
+          The shape of the change and the alternative that was rejected. The
+          rejected option is half the value: it is what stops the same
+          alternative being re-proposed in review.
+
+          No notation is imposed. A small change is a list; a change with a
+          file-by-file ownership split is a table; a change with ordering
+          constraints is a numbered walk. Requiring one of the three would make
+          the other two rewrite themselves into a worse shape to pass a lint.
         allow_additional: true
-        lists:
-          - min: 1
 
       - heading:
           pattern: "^## Test approach$"
           regex: true
-        description: What is proven at which layer, as a list.
+        description: What is proven, and at which layer.
         allow_additional: true
-        lists:
-          - min: 1
 
       - heading:
           pattern: "^## NFR approach$"
           regex: true
-        description: How this spec meets the inherited floors, and what would show a breach.
+        description: >-
+          How this spec meets the inherited floors, and what would show a
+          breach. Optional: a spec whose `01_Spec.md#Applicable NFR` inherits no
+          floor has nothing to answer here, and a required section would be
+          answered with the word "none" rather than with a measurement.
+        optional: true
         allow_additional: true
         lists:
           - min: 1
@@ -42,11 +48,6 @@ structure:
           pattern: "^## Risk mitigation$"
           regex: true
         description: >-
-          Risks with a trigger to act. A table so that every risk carries its
-          own trigger rather than sharing one paragraph.
+          Risks with a trigger to act. A list or a table; the obligation is that
+          each risk names what reduces it, not the notation it is written in.
         allow_additional: true
-        tables:
-          - min: 1
-            required_headers:
-              - Risk
-              - Mitigation

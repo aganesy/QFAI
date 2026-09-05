@@ -357,7 +357,19 @@ function parseVerificationPlan(body: string | null): {
     return { planHeadingLine: null, parseError: null, items: [] };
   }
   const planBody = readHeadingBody(lines, headings, planHeading, lines.length);
-  const yamlSource = planBody.trim();
+  // A fenced block wins over the raw body when one is present.
+  //
+  // Both spellings are accepted, and the unfenced one is not deprecated: it is
+  // what every document written before this read existed contains, and this
+  // parser runs over adopter trees it does not control.
+  //
+  // A fence is worth accepting because the unfenced form is not inert Markdown.
+  // A YAML comment indented by two spaces — `  # unit | integration | ...` — is
+  // a legal ATX heading under CommonMark, so an unfenced plan renders its own
+  // comments as top-level headings on GitHub. The shipped template hit exactly
+  // that. Reading the fence lets the template be correct Markdown without
+  // breaking a single document already in the wild.
+  const yamlSource = (extractYamlCodeBlock(planBody) ?? planBody).trim();
   if (yamlSource.length === 0) {
     return { planHeadingLine: planHeading.line, parseError: null, items: [] };
   }

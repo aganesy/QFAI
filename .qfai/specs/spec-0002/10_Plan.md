@@ -3,7 +3,7 @@
 - Spec: spec-0002
 - Parent: CAP-0002
 
-## 実装戦略
+## Implementation approach
 
 ### 実装済みコンポーネント
 
@@ -34,7 +34,7 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 - UIX-VAL-STRATEGY-\*: strategy artifact バリデーション
 - UIX-VAL-SCREEN-CONTRACT-\*: screen contract バリデーション
 
-## テスト戦略
+## Test approach
 
 ### Unit（L3）
 
@@ -57,12 +57,12 @@ CAP-0002 の多くは既に実装済みである。本 spec は設計意図と�
 - 旧 spec-0023 の integration テスト（TDD-0025~0041）は v1.7.13 で `packages/qfai/tests/core/discussionDesignHardening.integration.test.ts` に実装され、v1.8.9 で同 validator の retire とともに削除済み
 - 旧 spec-0026/0034 のバリデータテストは各テストファイルに実装済み
 
-## 依存関係
+## Dependencies
 
 - spec-0002 は spec-0001（spec-pack 構造定義）のトレーサビリティ連鎖ルールに準拠
 - discussion-pack は SDD フェーズ（spec 作成）の入力となる
 
-## リスクと軽減策
+## Risk mitigation
 
 | リスク                                    | 影響度 | 軽減策                                                    |
 | ----------------------------------------- | ------ | --------------------------------------------------------- |

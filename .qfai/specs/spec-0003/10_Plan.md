@@ -4,7 +4,7 @@
 - Parent: CAP-0003
 - Role: solution-architect + test-design-analyst
 
-## 1. Implementation Strategy
+## Implementation approach
 
 ### Primary Source File
 
@@ -27,7 +27,7 @@
 | `pruneLegacySkillFiles()`   | Remove 10_workflow.md from skill directories                                 |
 | `configureGitSymlinks()`    | Set git config core.symlinks true                                            |
 
-## 2. Test Strategy
+## Test approach
 
 ### Integration Tests (`tests/cli/init.test.ts`)
 
@@ -39,14 +39,14 @@
 | QFAI:SPEC-0003:US-0003-0005 | Skill symlinks are valid directory symlinks         |
 | QFAI:SPEC-0003:US-0003-0011 | Instructions files created in new repo              |
 
-## 3. Dependencies
+## Dependencies
 
 | Dependency           | Content                                              |
 | -------------------- | ---------------------------------------------------- |
 | spec-0004 (validate) | validate checks init-created directory structure     |
 | spec-0006 (doctor)   | doctor diagnoses init-created config and directories |
 
-## 4. Implementation Order
+## Implementation Order
 
 US-0003-0001..US-0003-0020 are already implemented; those sections document existing behaviour.
 US-0003-0021..US-0003-0028 (CHG-007) are not implemented and carry the order below.
@@ -83,3 +83,12 @@ US-0003-0021..US-0003-0028 (CHG-007) are not implemented and carry the order bel
 ### Test placement
 
 New obligations are discharged in `packages/qfai/tests/integration/**` per the ATDD annotation hard gate (`QFAI-ATDD-112`), including the rows whose derived `Level` is `unit` — per-level routing is a target state that is not enforced.
+
+## Risk mitigation
+
+| Risk                                                                                                                                       | Likelihood / impact | Mitigation                                                                                                                                              | Trigger to act                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| The shipped pin change lands before the pre-build version rule, so pack verification, the leakage guard and the asset suite break together | med / high          | Ordering constraint 1 makes the pre-build rule a co-change rather than a follow-up; the asset suite is updated in the same commit                       | `pnpm verify:pack` or the leakage guard fails on a branch that only touched a shipped pin |
+| The structural contract gate lands after the repository's own copy of the shipped validate workflow is retired, leaving no cross-check     | med / high          | Ordering constraint 2 requires the gate with-or-before the retirement, so the eye-check is replaced before it is removed                                | The own-copy retirement appears in a diff with no gate in the same change                 |
+| The shipped set grows before an owner is declared, so a wider create-only surface ships unowned                                            | low / high          | Ordering constraint 3 lands the ownership contract first; `SHIPPED_WORKFLOW_NAMES` is in-binary, so a new name cannot arrive by globbing the asset tree | A new `qfai-*.yml` asset appears without a matching entry in the shipped-name list        |
+| A refresh path re-implements `pruneMatchingEntries` instead of reusing it, splitting the prune rule in two                                 | med / med           | Ordering constraint 4 exports the helper first, which makes the no-parallel-implementation criterion satisfiable rather than aspirational               | A second prune walk appears anywhere under `src/cli/`                                     |

@@ -1,6 +1,6 @@
 # 10 Plan
 
-## Implementation Strategy
+## Implementation approach
 
 1. `/qfai-verify` は repo gates と `qfai validate --fail-on error` を必ず実行する
 2. downstream quality gate は contract-first validator 群を truth source にする
@@ -8,7 +8,7 @@
 4. direct discussion-pack canonical validators は coexist してよいが、repo-root completion path の primary dependency にしない
 5. verify summary は fix loop に必要な validate/review/evidence の要点を残す
 
-## Test Strategy
+## Test approach
 
 - Unit tests: verify summary formatting, PASS/REVISE interpretation, contract-first issue grouping
 - Integration tests: verify executes repo gates and validate in the correct order
@@ -20,7 +20,7 @@
 - Requires: review artifacts and validate output
 - Consumed by: completion gate, PR handoff
 
-## Risk
+## Risk mitigation
 
 - historical validator wording に `full-harness` や discussion-side 用語が残る可能性
 - mitigation: active path と historical vocabulary を区別し、public guidance では contract-first posture のみを説明する

@@ -1,6 +1,6 @@
 # 10 Plan — Web Research Enhancement
 
-## Implementation Strategy
+## Implementation approach
 
 ### Overview
 
@@ -86,7 +86,7 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 
 **Verification**: TC-0016-0017, TC-0016-0018, TC-0016-0019, TC-0016-0020
 
-## Test Strategy
+## Test approach
 
 ### Layer Assignment
 
@@ -112,7 +112,7 @@ CAP-0016 (Web Research Enhancement) は CLI エージェントの Web リサー�
 2. **Should** (high value): TC-0016-0005 (MCP crash), TC-0016-0006 (rate limit), TC-0016-0018 (HITL trigger)
 3. **Could** (completeness): TC-0016-0017 (golden task eval), TC-0016-0024 (cache staleness)
 
-## Risk Mitigation
+## Risk mitigation
 
 | Risk                                  | Mitigation                                                                     | Owner |
 | ------------------------------------- | ------------------------------------------------------------------------------ | ----- |

@@ -14,28 +14,25 @@ structure:
       - heading:
           pattern: "^## Change Summary$"
           regex: true
-        description: Change ID, date and one-line summary, as a list.
+        description: >-
+          What changed, when, and why. A list in a fresh tree; a dated table
+          once the layer has accreted enough entries that a reader needs to
+          sort them. Both say the same thing, so neither is imposed.
         allow_additional: true
-        lists:
-          - min: 1
 
       - heading:
           pattern: "^## Triage$"
           regex: true
-        description: One run sub-section per triage pass, appended rather than merged.
+        description: >-
+          Cross-spec triage — the SPLIT / MERGE / SUPERSEDE rows that touch more
+          than one pack. Single-pack rows live in that pack's `09_delta.md`.
+
+          Structure only, and deliberately. This is the one document in the set
+          that is append-only across the project's whole life, so its run
+          sub-sections carry the shape that was current when each run happened —
+          a bare table early on, dated `## <date> — <change>` sections with
+          `### Triage Table` children later. Pinning one of those shapes here
+          would either reject the file's own history or force a rewrite of
+          records that are supposed to be immutable. The column contract is
+          enforced where the layout IS fixed: `spec-NNNN/09_delta.md`.
         allow_additional: true
-        children:
-          - heading:
-              pattern: "^### DELTA-[0-9]{4}.*"
-              regex: true
-            description: >-
-              One triage run, with the operation applied and who approved it.
-              `Existing Spec` may name more than one pack for a MERGE.
-            count:
-              min: 1
-            allow_additional: true
-            tables:
-              - min: 1
-                required_headers:
-                  - Source
-                  - Operation

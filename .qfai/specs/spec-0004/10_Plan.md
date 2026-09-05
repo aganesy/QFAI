@@ -1,8 +1,17 @@
 # 10 Plan
 
-## Goal
+- Goal: keep validate SSOT aligned to the current contract-first, skill-first validator wiring.
 
-- Keep validate SSOT aligned to the current contract-first, skill-first validator wiring.
+## Implementation approach
+
+The change is maintenance-shaped rather than feature-shaped: the validator set
+already exists, and this spec's job is to keep the SSOT describing the set that
+is actually wired. The three subsections below are the shape of that work —
+what is wired today, which files carry it, and the standing rules that keep the
+two in step. The alternative considered was to let the spec describe a target
+wiring and reconcile later; it was rejected because a spec that describes a set
+the code does not have is worse than no spec, since it is read as if it were
+true.
 
 ## Current State
 
@@ -42,9 +51,10 @@
 - Add `packages/qfai/scripts/check-pack-locations.mjs` (NEW) scanning staged/changed dirs (per DR-0274) for `review-*/` / `discussion-*/` outside `tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`; wire into `pnpm ci:lint`.
 - On a misplaced dir emit `R-PACK-LOCATION-DRIFT` (error) referencing `.agents/rules/root-additions-policy.md` and proposing the correct path; pass silently otherwise (no full-tree walk).
 
-### Test strategy
+## Test approach
 
 - `validators` level for finding-emit checks (`D-SAAS-PACKAGE-VERIFY-SKIPPED`, `QFAI-AUD-020`, closed-schema reject); `integration` level for end-to-end profile wiring and the CI lane (CLI shape: `--profile saas-package`, `pnpm ci:lint`). Each REQ has normal AND error/boundary coverage (TC-0004-0067..0073).
+- The boundary that needs its own case rather than a shared one is the closed schema: `additionalProperties: false` on the structured `primary_tasks` shape is only proven by a rejection case, and the string-only form must keep passing for the length of the deprecation window — so acceptance and rejection are separate cases, not one parameterised case.
 
 ### File Touchpoints (additions)
 
@@ -53,3 +63,12 @@
 | `packages/qfai/src/core/validate.ts`                      | Adds the `saas-package` profile + skip-gate finding emission          |
 | `packages/qfai/src/core/validators/auditProfile.ts` (NEW) | Accepts string-only + structured `primary_tasks`; `QFAI-AUD-020` band |
 | `packages/qfai/scripts/check-pack-locations.mjs` (NEW)    | Pack-location lint lane wired into `pnpm ci:lint`                     |
+
+## Risk mitigation
+
+| Risk                                                                                                                     | Likelihood / impact | Mitigation                                                                                                                                             | Trigger to act                                                         |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| The `saas-package` profile skips ATDD-class and implement-class gates silently, and a skipped gate reads as a passed one | med / high          | Each skipped gate emits `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) naming itself, so the skip is stated rather than inferred from an absence               | A gate is added to the skip set without a matching finding             |
+| The validate-side skip set and the certify-side `notes:` (spec-0014) drift apart                                         | med / high          | The two are required to be identical; they are a declared pair rather than two independently maintained lists                                          | Either side's skip set changes in a diff that does not touch the other |
+| Deleted validators stay referenced in active spec text, so the SSOT describes a set the code does not have               | high / med          | Maintenance note 1 makes removal part of the same change; the File Touchpoints table names real module paths, so a deletion breaks the reader's search | A path in the touchpoints table no longer resolves                     |
+| The pack-location lane walks the whole tree and becomes slow enough to be disabled                                       | low / med           | The lane scans staged / changed directories only (DR-0274) and passes silently otherwise; no full-tree walk                                            | A full-tree walk is proposed for the lane                              |

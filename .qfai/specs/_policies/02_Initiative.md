@@ -1,10 +1,10 @@
 # 02 Initiative
 
-## エレベーターピッチ
+## Initiative
 
 **QFAI** は、AI コーディングエージェント向けの品質第一開発キットである。`npx qfai init` でプロジェクトに導入し、仕様駆動開発（SDD）、受入テスト駆動開発（ATDD）、テスト駆動開発（TDD）の統合ワークフローをバリデーションゲートで強制する。50以上のルールでスペック→コントラクト→テストのトレーサビリティを検証し、CI/CD パイプラインに組み込める。
 
-## イニシアティブ概要
+## Initiative overview
 
 | Key                | Value                                                           |
 | ------------------ | --------------------------------------------------------------- |
@@ -16,7 +16,21 @@
 | 配布方法           | npm パッケージ（`npx qfai init` でプロジェクト初期化）          |
 | ライセンス         | MIT                                                             |
 
-## 優先順位
+## Assumptions
+
+- 導入先は Node.js / npm エコシステム上のプロジェクトであり、`npx` が使える。
+- 導入先の CI は GitHub Actions である。配布する workflow テンプレートはこの前提の上にある。
+- スペック・コントラクト・テストはリポジトリ内にテキストとして存在する。外部の課題管理システムを SSOT とする運用は想定しない。
+- AI エージェントは skill / agent 定義を読み込める。読み込めない環境では QFAI は CLI バリデータとしてのみ機能する。
+
+## Dependencies
+
+- Node.js / npm — 配布と実行の土台。`engines` の下限がサポート範囲を定める。
+- GitHub Actions — 配布する CI ワークフローの実行主体。QFAI 自身は CI ランナーにならない。
+- pnpm workspace — 本リポジトリのビルド構成。導入先には要求しない。
+- Playwright (任意) — prototyping の Reviewer が UI を駆動する場合のみ。未導入でも他の機能は動作する。
+
+## Priorities
 
 | Priority | Item                    | Rationale                          |
 | -------- | ----------------------- | ---------------------------------- |
@@ -26,7 +40,7 @@
 | 4        | パフォーマンス          | 大規模プロジェクトでも実用的な速度 |
 | 5        | 拡張性                  | プラグイン機構より安定性を優先     |
 
-## マイルストーン
+## Milestones
 
 - 注記: この表は initiative 履歴を保持するため、旧 `qfai prototyping` / runtime / full-harness / sidecar-first wording を含みうる。
 - 注記: それらは current public contract ではない。active execution contract は spec-0012 / spec-0013 / spec-0014 / `_policies/04_Business-Flow.md` / `_policies/05_Contracts.md` を優先する。
@@ -110,7 +124,7 @@ Source: SRC-0001 — QFAI v1.7.15 継続開発設計書
 | WS-8 | Validator 14 項目 error 昇格               | prototypingEvidence.ts の 14 項目を error に昇格。packVersion hardcoded / calibrationRef 欠落 / count<plateauLookback / weightedTotal mismatch / evidenceRefs 欠落 / specCoverage fallback / DB 無観測 / uiFidelity 不足 / mockPaths.pass 無 QA / reviewerLogs length / iteration evidenceRefs / 旧 schema 検出 | REQ-0055        |
 | WS-9 | Docs / SKILL / README / tests reality sync | docs 主張と runtime failure conditions の 1:1 対応保証。旧 fixture を異常系に移動/削除                                                                                                                                                                                                                          | REQ-0056〜0057  |
 
-## リスク
+## Risks
 
 | Risk                                 | Probability | Impact | Mitigation                                 |
 | ------------------------------------ | ----------- | ------ | ------------------------------------------ |

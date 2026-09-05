@@ -29,11 +29,15 @@ structure:
               - Criterion
 
       - heading:
-          pattern: "^## Out of scope$"
+          pattern: "^## (Out of scope|Scope)$"
           regex: true
         description: >-
-          The adjacent things this product is not, as a list. Required: an
-          objective with no stated border is one every reader draws differently.
+          The border, stated. Required: an objective with no stated border is
+          one every reader draws differently.
+
+          Two spellings, because two shapes say it equally well. `Out of scope`
+          is the template's out-only list. `Scope` is a paired in / out table,
+          which is strictly more informative — it says what each exclusion sits
+          next to. Demanding the first would force a pack using the second to
+          duplicate half its table as prose.
         allow_additional: true
-        lists:
-          - min: 1

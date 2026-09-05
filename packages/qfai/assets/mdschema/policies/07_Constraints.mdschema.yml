@@ -12,12 +12,19 @@ structure:
     allow_additional: true
     children:
       - heading:
-          pattern: "^## Constraints$"
+          pattern: "^## ([A-Za-z-]+ )?Constraints$"
           regex: true
         description: >-
-          What is not permitted, and who imposes it. The `Source` column
-          matters: a constraint with no imposer cannot be renegotiated, because
-          nobody knows who to ask.
+          What is not permitted, in a table keyed by ID.
+
+          The optional leading word admits the kind-split a grown policy layer
+          converges on — `## Technical Constraints`, `## Operational
+          Constraints`, `## Business Constraints` — as well as the template's
+          single `## Constraints`. What is fixed is that a constraint is a
+          numbered row and not a paragraph, because an unnumbered constraint
+          cannot be cited by the spec it binds.
+        count:
+          min: 1
         allow_additional: true
         tables:
           - min: 1
@@ -31,6 +38,11 @@ structure:
         description: >-
           Measurable bars with the gate or probe that verifies each. A floor
           with no verification is a preference.
+
+          Optional here: a policy layer may keep its floors in the constraint
+          tables above, under an `NFR-` ID prefix, rather than in a section of
+          their own. What must not happen is a floor stated in neither.
+        optional: true
         allow_additional: true
         tables:
           - min: 1

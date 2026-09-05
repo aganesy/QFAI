@@ -3,7 +3,7 @@
 spec ディレクトリのスライスと、Stage 1 Triage における 8 種オペレーションの
 判定基準を定義する。
 
-## 原則 (read first)
+## Principle (read first)
 
 既定の操作は **既存 active spec への UPDATE (APPEND / MODIFY / REMOVE)**。
 CREATE は「明らかなスコープ逸脱で、かつ新しい capability を
@@ -24,7 +24,7 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 する (impact cascade)。同じ `Source` ID が複数行に登場するのは正規
 パターン。
 
-## スライスカテゴリ
+## Slice categories
 
 | Category   | Slice Rule                        | ID Range                   |
 | ---------- | --------------------------------- | -------------------------- |

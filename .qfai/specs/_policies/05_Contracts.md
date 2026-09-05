@@ -6,7 +6,7 @@
 - discussion pack は planner artifact であり、`/qfai-sdd` 以降の skill は contracts を primary truth とする。
 - 本ファイルは current-active な contract family を定義する。
 
-## Active Contract Sets
+## Contract Index
 
 ### Design Contracts
 

@@ -1,15 +1,5 @@
 # 10 Delta
 
-## 2026-04-22 Contract-First Downstream Alignment
-
-- adopted: downstream execution truth を `specs + .qfai/contracts/**` に固定
-- adopted: discussion UIUX sidecar は `/qfai-sdd` 入力専用に再定義
-- adopted: `runCanonicalUixValidators` を direct discussion-pack validation 専用に再定義
-- adopted: Web Research Enhancement の active spec ID を `spec-0016` に収束し、`spec-0034` を historical に降格
-- superseded: downstream skill が discussion pack を直接読む posture
-- superseded: repo-root validate の production path を canonical UIX direct-pack runner に置く posture
-- superseded: `spec-0034` を active capability mapping に使う運用
-
 ## Change Summary
 
 | Date       | Change Type | Section                         | Summary                                                                                                                                                                                     | Rationale                                                                                                                       |
@@ -565,6 +555,16 @@
 | 2026-04-22 | adopted | 02_Initiative.md / 03_Capabilities.md / 04_Business-Flow.md / 06_Glossary.md / 07_Constraints.md / 08_Decisions.md | prototyping posture shifted to skill-first execution with validate/verify gates and mandatory screenshot/html evidence; old CLI/runtime/mode wording explicitly superseded | current implementation alignment |
 | 2026-04-22 | adopted | 02_Initiative.md / 08_Decisions.md / spec-0002 / spec-0004 / spec-0010 / spec-0012 / spec-0013 | discussion/preflight no longer requires `prototyping.yaml`; full-harness evidence contract is reviewerScores/allReviewerAxesPerfect100 + snapshot scoringTrace + iterationBudget | v1.8.1 prototyping evidence model sync |
 | 2026-04-24 | adopted | spec-0012 / qfai-prototyping | prototyping completion now requires post-selection polish, completion certificate, and all reviewer axes scored 100/100; previous 95-point completion border removed | prototyping completion incident remediation |
+
+## 2026-04-22 Contract-First Downstream Alignment
+
+- adopted: downstream execution truth を `specs + .qfai/contracts/**` に固定
+- adopted: discussion UIUX sidecar は `/qfai-sdd` 入力専用に再定義
+- adopted: `runCanonicalUixValidators` を direct discussion-pack validation 専用に再定義
+- adopted: Web Research Enhancement の active spec ID を `spec-0016` に収束し、`spec-0034` を historical に降格
+- superseded: downstream skill が discussion pack を直接読む posture
+- superseded: repo-root validate の production path を canonical UIX direct-pack runner に置く posture
+- superseded: `spec-0034` を active capability mapping に使う運用
 
 ## Triage
 
