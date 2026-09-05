@@ -134,4 +134,17 @@ export const projectKnobs = {
   pool: "forks",
   poolOptions: { forks: { singleFork: false, isolate: true } },
   maxConcurrency: tunable(CONCURRENCY_ENV),
+  /**
+   * Here rather than in one project, because the leak it stops is not one
+   * project's: a test anywhere that validates a `mkdtemp` fixture with
+   * `--format github` emits `::error file=<relative path>::…` to the runner's
+   * stdout, and GitHub resolves that path against THIS repository (#1160).
+   *
+   * `pool: "forks"` with `isolate: true` gives every test file its own process,
+   * so a setup that patches `process.stdout` has to run per file — which is
+   * what `setupFiles` does and what a `globalSetup` would not.
+   */
+  // `as string[]` because `projectKnobs` is `as const`, and `ProjectConfig`
+  // declares `setupFiles` mutable — a readonly tuple is not assignable to it.
+  setupFiles: ["./tests/setup/suppressWorkflowCommands.ts"] as string[],
 } as const;

@@ -6,6 +6,28 @@
 
 ### Fixed
 
+- **テストが実 GitHub annotation を出さなくなった。**
+  `qfai validate --format github` は `::error file=…::message` を
+  `process.stdout` へ直接書き、`issue.file` は**検証対象ツリーからの相対
+  パス**である。テストは `mkdtemp` の fixture を検証するため
+  `.qfai/specs/_policies/03_Capabilities.md` のような相対パスが出力され、
+  runner はそれをリポジトリ root に解決する。結果、実在する健全なファイルが
+  「見つかりません」と注釈されていた (#1160)。
+
+  被害は見た目ではない。GitHub の annotation 上限は **level ごと 10 件 /
+  step** で、fixture が 10 件出した lane には本物の指摘の席が残らない。
+  `cli` lane を実測すると **184 件**が漏れていた。
+
+  vitest の `setupFiles` 1 箇所で全 project を守る。個別テストの
+  `vi.spyOn` による規律は既に 2 件存在していて**スケールしなかった** —
+  `qfai init` + validate を足す新しいテストが無自覚に穴を開ける。
+
+  **抑止であって黙殺ではない。** 落とした行はその場で stderr に報告する
+  (上限付き)。stderr である理由は、GitHub が workflow command を stdout
+  からしか読まないため、報告自身が command になれないようにするため。
+
+### Fixed
+
 - **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
   git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
   だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
