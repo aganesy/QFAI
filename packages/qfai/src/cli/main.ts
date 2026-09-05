@@ -99,6 +99,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         dryRun: options.dryRun,
         yes: options.yes,
         upgradeAssistantTree: options.upgradeAssistantTree,
+        verbose: options.verbose,
       });
       return;
     case "validate":
@@ -407,6 +408,7 @@ Options:
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
   --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: 変更を行わず表示のみ
+  --verbose       init: 実行レポートの skipped パス一覧を展開（既定は件数のみ）
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --remove <surface-id>        prototyping rescope: 外す surface id (repeatable)
