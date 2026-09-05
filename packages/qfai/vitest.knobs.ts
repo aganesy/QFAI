@@ -135,3 +135,31 @@ export const projectKnobs = {
   poolOptions: { forks: { singleFork: false, isolate: true } },
   maxConcurrency: tunable(CONCURRENCY_ENV),
 } as const;
+
+/**
+ * The per-file setup every project loads, declared apart from the knobs above.
+ *
+ * ## Why it is not in `projectKnobs`
+ *
+ * It was, and the parallelism E2E went red on it. That suite writes a fixture project into a
+ * `mkdtemp` root and spreads `projectKnobs` into its config verbatim — which is the point of the
+ * suite, since it exists to reproduce the declared knobs and measure what the runner does with
+ * them. A relative `setupFiles` path resolves against the FIXTURE root, where this file does not
+ * exist, so all four slot files failed to collect and the measurement never ran.
+ *
+ * The lesson is the file's own docblock: this is the PARALLELISM knob set. `setupFiles` is not a
+ * parallelism knob, and anything spread into a foreign root has to be about that root. Kept here
+ * as a separate export rather than inlined seven times in `vitest.workspace.ts`, so there is
+ * still one definition — it is the SPREAD that had to stop, not the sharing.
+ *
+ * ## Why every project and not one
+ *
+ * The leak it stops is not one project's: a test anywhere that validates a `mkdtemp` fixture with
+ * `--format github` emits `::error file=<relative path>::…` to the runner's stdout, and GitHub
+ * resolves that path against THIS repository (#1160).
+ *
+ * `pool: "forks"` with `isolate: true` gives every test file its own process, so a setup that
+ * patches `process.stdout` has to run per file — which is what `setupFiles` does and what a
+ * `globalSetup` would not.
+ */
+export const SETUP_FILES: string[] = ["./tests/setup/suppressWorkflowCommands.ts"];

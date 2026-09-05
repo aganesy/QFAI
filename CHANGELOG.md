@@ -6,6 +6,142 @@
 
 ### Fixed
 
+- **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
+  取り除くようにした。** このマーカーはパッケージ内で出荷アセット 2 本にしか
+  出現せず、**埋めるコードが 1 行も無かった** (#1167)。1 つ前の版はそこに
+  具体的な TypeScript レビュー規則を出荷していたので、以降に作られた
+  プロジェクトは規則の代わりに HTML コメントを受け取っていた。機能が
+  半分だけ入っていて、しかも入る前より出荷内容が薄い状態である。
+
+  埋める内容は **(ファイル, 言語) の組**で決まる。消えた TypeScript 規則は
+  レビュー観点なので code-review 側に戻し、principles 側はどの言語でも
+  内容が無い (マーカー導入前もそこには何も無かった)。
+
+  **入れるものが無いスロットは残さず削除する。** ここが置き換え前との違いで
+  ある — 出力を読む人は、プロジェクトが何で書かれていようとマーカーに
+  出会ってはいけない。規則の無い言語では、スロット導入前とまったく同じ
+  内容になる。
+
+  言語判定は manifest (`tsconfig.json` / `package.json` の `typescript`)
+  のみで、ツリー走査はしない。判定できない場合は「いいえ」に倒す —
+  読めない manifest を「はい」と読むと、別言語のレビュアーの前に
+  TypeScript 規則が並ぶ。認識する言語を 1 つに絞っているのは、規則と判定を
+  同時に足させるためである (それが今回の「半分だけ出荷」を構造的に防ぐ)。
+
+- **JS リテラルを消す tokenizer が 1 つになった。** `atddTraceability.ts` は
+  2 つの独立した実装でリテラルを blank していた — annotation scan は
+  `validators/jsSourceMask.ts` の `maskJsNonCode`、carrier 判定はこのファイル
+  ローカルの `stripCommentsAndLiterals` である。そして **`if (x) /re/` の `/`
+  が正規表現であることを知っているのは後者だけだった** (#1154)。
+
+  前者は `/` の直前の有意文字だけを見て判定するため、制御構文のヘッダを閉じる
+  `)` を「値の終わり」と読む。すると `/^\s*```/` は除算として読まれ、中の
+  backtick が template literal を開いて次の backtick までの全行を blank する。
+  実際、緑の branch 2 本を統合した時点で **live な `it(` を持つファイルが
+  annotation only の carrier として報告された**。
+
+  制御構文ヘッダの規則を `maskJsNonCode` 側に移し、ローカル実装 (184 行) を
+  削除した。判定は後方走査ではなく `(` ごとのスタックにしてある — 走査時点で
+  文字列とコメントは既にスキップ済みなので、その中の括弧を数えてしまうことが
+  なく、lookback の上限も要らない。正規表現リテラルの flag も literal の一部
+  として消費する。
+
+  **統合は「`comments` option の有無だけ」ではなかった。** ローカル実装は
+  多言語 (Python / Ruby / Gherkin の `#` コメント、docstring の三重引用符) を
+  扱っており、`maskJsNonCode` は JS 専用である。`#` を無条件に コメントとして
+  扱うと JS の private field (`this.#count`) が行末まで消える。そこで言語側の
+  span は option (`hashComments` / `tripleQuoted`) にした。Rust の `#[test]`
+  は carrier 検出パターンそのものなので、`#` 規則が食べないことをテストで
+  固定している。
+
+- **`--format github` の annotation 上限が GitHub の実際の上限と一致するように
+  なり、summary が「全件出した」と誤読されなくなった。** 上限は 100 件・run 全体
+  で持っていたが、GitHub の上限は **level ごと 10 件 / step** であり、
+  `error` / `warning` / `notice` は別勘定である。error が 40 件ある run は
+  `annotations=40/40` と表示し、これは「全件 annotation 化した」と読めるが、
+  実際には runner が 10 件だけ表示して 30 件を黙って捨てていた。operator が
+  見るのは summary だけなので、起きたことと逆を表示していた (#1164)。
+  `test (cli)` lane の実測では 3 つの level がすべてちょうど 10 件で、
+  切り捨ては例外ではなく定常状態だった。
+
+  上限を level ごとに適用し、summary の `annotations=` は
+  **このプロセスが実際に書き出した workflow command の数**を報告する。
+  切り捨てが起きた level は `上限省略=error 10/40, warning 10/12` のように
+  level ごとに名指しする — 1 つの数字では per-level の上限を表現できず、
+  「error 5 件 / notice 200 件」の run は片方の level では完全で
+  もう片方では切れている。
+
+  上限判定は severity ではなく **annotation の level** で行う。suppressed な
+  error は `notice` として出力されるため、severity で数えると error の予算を
+  消費したことになり、runner の勘定と食い違う。level の導出は 1 箇所に
+  切り出して emitter と共有している。
+
+  上限を超えて出し続ける案は取らなかった: runner が捨てるので読み手には
+  届かず、ローカル実行では誰も読まない行が増えるだけである。全件は JSON に
+  残る。
+
+- **テストが実 GitHub annotation を出さなくなった。**
+  `qfai validate --format github` は `::error file=…::message` を
+  `process.stdout` へ直接書き、`issue.file` は**検証対象ツリーからの相対
+  パス**である。テストは `mkdtemp` の fixture を検証するため
+  `.qfai/specs/_policies/03_Capabilities.md` のような相対パスが出力され、
+  runner はそれをリポジトリ root に解決する。結果、実在する健全なファイルが
+  「見つかりません」と注釈されていた (#1160)。
+
+  被害は見た目ではない。GitHub の annotation 上限は **level ごと 10 件 /
+  step** で、fixture が 10 件出した lane には本物の指摘の席が残らない。
+  `cli` lane を実測すると **184 件**が漏れていた。
+
+  vitest の `setupFiles` 1 箇所で全 project を守る。個別テストの
+  `vi.spyOn` による規律は既に 2 件存在していて**スケールしなかった** —
+  `qfai init` + validate を足す新しいテストが無自覚に穴を開ける。
+
+  **抑止であって黙殺ではない。** 落とした行はその場で stderr に報告する
+  (上限付き)。stderr である理由は、GitHub が workflow command を stdout
+  からしか読まないため、報告自身が command になれないようにするため。
+
+  setup の宣言場所も動かしている。当初は `vitest.knobs.ts` の `projectKnobs`
+  に入れていたが、**parallelism の E2E はこの object を `mkdtemp` の fixture
+  root へそのまま spread する** (宣言された knob を再現して runner の挙動を
+  測るのがその suite の目的である)。相対パスの `setupFiles` は fixture root
+  から解決されて存在せず、slot 4 ファイルが全部 collect に失敗した。
+  `vitest.knobs.ts` は _parallelism_ の knob 集合であり、`setupFiles` は
+  parallelism の knob ではない。別 export にして `vitest.workspace.ts` 側
+  (fixture が写さない場所) で各 project に渡す。`projectKnobs` に root 相対
+  パスが無いことをテストで固定した — 「setupFiles が無いこと」ではなく
+  「root 相対のものが無いこと」が守るべき不変条件である。
+
+  child process で走らせる 3 行は Node の `--experimental-strip-types` に
+  依存していたが、このフラグは Node 22.6 で入ったもので `engines.node` は
+  `>=20.19.0` である。floor lane では child が **コマンドラインの時点で
+  status 9 で死に**、setup が読み込まれる前に落ちていた — フィルタの挙動
+  ではなくフラグの有無を報告していたことになる。version 判定で skip する案は
+  取らなかった: package が約束している版を実際に走らせる唯一の lane で、
+  フィルタが一度も動かなくなる。型除去は devDependency の `typescript`
+  (`transpileModule`) で行い、child は素の `node` で走る。
+
+- **`qfai init` が `.gitignore` の managed ブロックを毎回重複追記しなくなった。**
+  ブロックの範囲を求める 2 つの走査は「既知の行である限り前進し、知らない行で
+  止まる」形だった。旧版が書いた行がブロック内にあり、現行のブロックにも legacy
+  一覧にも登録されていない場合、その行でブロックが途中で切れる。本リポジトリには
+  実際に `.qfai/output/*` (legacy な validate 出力先) が 3 行目にあった (#1168)。
+
+  影響は見た目の重複では終わらない。鮮度判定は抽出したブロックを読むので
+  governance negation が「無い」と判定されて早期 return が働かず、除去も同じ
+  途中までしか消さず、再構築されたブロックが**消されていない 20 行の上に**
+  差し込まれる。git は最後にマッチしたパターンを採用するため、追記された
+  negation 群は自分を打ち消す ignore 行より上に来て**何の効果も持たない**。
+  実行のたびに無効な行が 1 ブロックずつ増える。
+
+  ブロックの終端は空行・マーカー以外のコメント・EOF とし、その範囲内の
+  **最後の既知行**までをブロックとする。間に挟まった未登録行では切れず、
+  ブロック直下にプロジェクトが書いた行 (空行なし) は従来どおりブロックの外に
+  残る — 内側に取り込むと negation より上に移動し、プロジェクトが ignore した
+  かったファイルが追跡対象に変わってしまう。
+
+  取り込まれた未登録行は失われない。`rebuildManagedBlock` は「マーカーでも
+  negation でも legacy でもない行」を保持する。
+
 - **`.qfai/steering/_templates/entry.md` の seed が formatter を通ると必ず drift
   するのをやめた。** frontmatter の trailing comment を桁揃えしていたが、Prettier は
   YAML の `#` 直前の連続スペースを潰す。seed は create-only で、re-init は seed と
@@ -15,6 +151,21 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   ようになり、本物の seed 変更を伝えるという通知本来の役目が失われる。
 
   桁揃えをやめ、`#` の前を 1 スペースに統一した。コメントの中身は変えていない。
+
+- **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
+  git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
+  だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
+  ファイルが消えたように見え、次の commit でリポジトリから削除される。pack は
+  操作者のディスクにだけ残り、しかもその削除は "remediate" という名前の
+  コマンドによる意図的な操作としてレビューに現れる (#1157)。
+
+  条件は **両方**必要である。現在の同梱 `.gitignore` では pack は追跡されない
+  ので、行き先が ignore されていても失うものは無く、そこで拒否すると `--clean`
+  が全プロジェクトで無意味になる。失うのは pack を force-add した
+  プロジェクト — QFAI 自身のリポジトリがそれである。
+
+  拒否した pack は `kept-tracked=N` として数え、pack ごとに理由を出力する。
+  黙って何もしないと `archived=0` が「TTL がまだ切れていない」と読まれる。
 
 ### Added
 
@@ -64,23 +215,6 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   `ALLOWED_STEP_SHAPE`、そして `ALLOWED_WORKFLOW_FILES` の byte digest。
   `uses:` だけ書き換えると label が古い版を指したまま残り、e2e の
   scaffold gate が落ちる。4 箇所すべてを更新済み。
-
-### Fixed
-
-- **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
-  git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
-  だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
-  ファイルが消えたように見え、次の commit でリポジトリから削除される。pack は
-  操作者のディスクにだけ残り、しかもその削除は "remediate" という名前の
-  コマンドによる意図的な操作としてレビューに現れる (#1157)。
-
-  条件は **両方**必要である。現在の同梱 `.gitignore` では pack は追跡されない
-  ので、行き先が ignore されていても失うものは無く、そこで拒否すると `--clean`
-  が全プロジェクトで無意味になる。失うのは pack を force-add した
-  プロジェクト — QFAI 自身のリポジトリがそれである。
-
-  拒否した pack は `kept-tracked=N` として数え、pack ごとに理由を出力する。
-  黙って何もしないと `archived=0` が「TTL がまだ切れていない」と読まれる。
 
 ## [1.10.2] - 2026-09-05
 
