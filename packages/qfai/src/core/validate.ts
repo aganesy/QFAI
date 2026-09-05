@@ -18,7 +18,7 @@ import {
   collectScTestReferences,
 } from "./traceability.js";
 import type { Issue, ValidationCounts, ValidationProfile, ValidationResult } from "./types.js";
-import { resolveToolVersion } from "./version.js";
+import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
@@ -70,7 +70,9 @@ import {
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
+  validateFrozenSurfaceReachability,
   validatePrototypingDesignContractReadiness,
+  validateRootDesignMdParse,
   validateSddDesignContractReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
@@ -159,6 +161,9 @@ export async function validateProject(
   const toolVersion = await resolveToolVersion();
   return {
     toolVersion,
+    // Stamped where the result is assembled, so every writer of a
+    // `ValidationResult` carries it without having to remember to.
+    generatedAt: new Date().toISOString(),
     profile,
     issues,
     counts: countIssues(issues),
@@ -323,6 +328,84 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * failures return `"unknown"`, read as inside the window), so an unreadable
  * version cannot be what escalates this into a build failure.
  */
+/**
+ * A finding when the running qfai was resolved from outside the project root.
+ *
+ * `npx qfai` resolves a bare name by walking PARENT directories for
+ * `node_modules/.bin`, and every shipped skill prescribes exactly that form. A
+ * Claude Code worktree sits three levels below the main checkout, so a worktree
+ * without its own dependencies silently ran the enclosing checkout's binary —
+ * another branch, another lockfile — and the run said nothing about it. The
+ * version was reachable only inside `validate.json`, which the README calls
+ * internal, so no gate and no pasted evidence block could tell the two apart
+ * (#1096).
+ *
+ * `info`, at every site, and deliberately off P7's promotion ladder. The same
+ * path test catches a deliberate global install and a dependency hoisted to a
+ * monorepo root, and both of those are correct operation — so a window ending
+ * in `error` would make `--fail-on error` fail for a project doing nothing
+ * wrong, with no way out: `applyWaivers` rejects a waiver against an `error`
+ * finding (`QFAI-WAIVER-002`). This is the shape
+ * `INFO_ONLY_SINCE_BASELINE` exists for, in the words its first member is
+ * described with — it does not claim the tree is wrong, and it is not a gate
+ * waiting to close. Promoting it needs the project's own dependency
+ * declaration to tell an intended resolution from an ambient one, which is
+ * more than a path comparison, and what that would take is recorded in #1108.
+ */
+async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
+  const located = await locateToolAgainstProject(root);
+  if (located === null || !located.outside) {
+    return [];
+  }
+  // The one resolution nobody chose: a declaration exists and a different copy
+  // answered it. `QFAI-TOOL-001` cannot carry this — it is `info` because the
+  // path test alone admits a deliberate global install and a monorepo hoist,
+  // and those are correct operation. Splitting the code rather than promoting
+  // it is what keeps both statements true (#1108).
+  if (located.declaredElsewhere) {
+    const promoteAt = RULE_PROMOTIONS.toolResolvedAgainstDeclaration.promoteAt;
+    const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+    const windowNote =
+      severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+    return [
+      issue(
+        "QFAI-TOOL-002",
+        `このプロジェクトは qfai を依存として宣言していますが、実行されているのは ` +
+          `${located.packageDir} の別の copy です。宣言が指すディレクトリの外から解決されて` +
+          `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
+          `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
+          `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
+          `走っています。${windowNote}`,
+        severity,
+        undefined,
+        "toolProvenance.resolvedAgainstDeclaration",
+        [located.packageDir],
+        "canonical",
+        "この作業ツリーで `npm ci` / `pnpm install` を実行してから再実行してください。" +
+          "グローバルインストールを意図している場合は、そのプロジェクトから qfai の依存宣言を" +
+          "外してください — 宣言と実行の食い違いが、この finding が報告している状態です。",
+      ),
+    ];
+  }
+  return [
+    issue(
+      "QFAI-TOOL-001",
+      `実行中の qfai (${located.packageDir}) は検証対象のプロジェクト root ` +
+        `(${root}) の外から解決されています。このプロジェクトは qfai を依存として` +
+        `宣言していないため、グローバルインストールか npx による取得が唯一の実行経路で、` +
+        `いずれも意図した選択です。宣言と実行が食い違う場合は別に QFAI-TOOL-002 で` +
+        `報告されます。`,
+      "info",
+      undefined,
+      "toolProvenance.resolvedOutsideProject",
+      [located.packageDir],
+      "canonical",
+      "意図した解決であれば無視して構いません。そうでなければ、この作業ツリーで " +
+        "`npm ci` / `pnpm install` を実行してから再実行してください。",
+    ),
+  ];
+}
+
 async function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
@@ -363,6 +446,11 @@ async function runProfileValidators(
   // A CLI-boundary observation, independent of the tree below: it survives the
   // short-circuit so the operator still learns the flag went nowhere.
   const unusedPlatform = await buildUnusedPlatformIssues(profile, platformOption);
+  // Same standing as `unusedPlatform`: a property of the run rather than of the
+  // tree, so it survives the short-circuit below. It is also the finding most
+  // worth keeping when the tree turns out to be damaged — a validate run
+  // against another checkout's qfai explains a whole class of confusing damage.
+  const toolProvenance = await buildToolProvenanceIssues(root);
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -384,9 +472,14 @@ async function runProfileValidators(
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...unusedPlatform, ...surface.issues];
+    return [...toolProvenance, ...unusedPlatform, ...surface.issues];
   }
-  return [...unusedPlatform, ...surface.issues, ...(await runProfileOwnValidators())];
+  return [
+    ...toolProvenance,
+    ...unusedPlatform,
+    ...surface.issues,
+    ...(await runProfileOwnValidators()),
+  ];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
@@ -395,7 +488,7 @@ async function runProfileValidators(
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
-        return runPrototypingValidators(root, config, platformOption);
+        return runPrototypingProfileValidators(root, config, platformOption);
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
@@ -414,7 +507,7 @@ async function runSaasPackage(
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  const prototypingIssues = await runPrototypingValidators(root, config, platformOption);
+  const prototypingIssues = await runPrototypingProfileValidators(root, config, platformOption);
   return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
@@ -428,6 +521,12 @@ async function runDiscussionValidators(
   reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
+    // `qfai-discussion` MUSTs a parsable root DESIGN.md and prescribes this
+    // profile as its gate, so the gate has to be able to see whether the file
+    // it mandates parses. Only the parse half — the lock comparison is
+    // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
+    // later stages (#1098).
+    ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
@@ -545,12 +644,24 @@ async function runSddValidators(
   ];
 }
 
+/**
+ * The prototyping issue set at its validators' declared severity.
+ *
+ * `full` / `verify` call this one. The exploration relaxation belongs to the
+ * prototyping profile, not to this validator group: its trigger is a file
+ * committed to the repository under test
+ * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
+ * the project leaves the prototyping stage, and the last explicit mode is
+ * inherited forward — so applying it here let an abandoned exploration loop
+ * downgrade four gates of the verification profile permanently. Callers that
+ * want the relaxation go through `runPrototypingProfileValidators`.
+ */
 async function runPrototypingValidators(
   root: string,
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw: Issue[] = [
+  return [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await detectMockHrefDrift(root)),
     // Second-wave reviewer-gate findings (prototyping
@@ -561,6 +672,11 @@ async function runPrototypingValidators(
     ...(await validateDesignMdPatchZone(root, config)),
     ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
+    // A screen retired mid-loop leaves `frozenSurfaceUnion` naming a spec that
+    // no longer resolves, and nothing said so: `iterate`'s drift hard-stop only
+    // fires when EVERY UI signal is gone, so the partial case reported
+    // `error=0` over a loop describing a screen that does not exist (#1099).
+    ...(await validateFrozenSurfaceReachability(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
@@ -575,11 +691,24 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDelegationMap(root)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
-  // Prototyping-mode relaxation: under `mode: exploration` the
-  // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
-  // error → warning. Schema / path / license gates stay hard error.
-  // The mode is read from `prototyping.json#mode` written by iterate
-  // at cycle 0 (absent → legacy "convergence" interpretation).
+}
+
+/**
+ * The prototyping issue set as the `prototyping` (and `saas-package`) profile
+ * reports it.
+ *
+ * Prototyping-mode relaxation: under `mode: exploration` the
+ * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+ * error → warning. Schema / path / license gates stay hard error.
+ * The mode is read from `prototyping.json#mode` written by iterate
+ * at cycle 0 (absent → legacy "convergence" interpretation).
+ */
+async function runPrototypingProfileValidators(
+  root: string,
+  config: ConfigLoadResult["config"],
+  platformOption?: string,
+): Promise<Issue[]> {
+  const raw = await runPrototypingValidators(root, config, platformOption);
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 
