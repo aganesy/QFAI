@@ -2298,6 +2298,61 @@ async function ensureLegacyEvidenceIgnoreNegations(
 }
 
 /**
+ * One past the last line of the managed block that starts at `startIdx`.
+ *
+ * ## What this replaces, and the bug it closes
+ *
+ * Both callers used to walk forward while the line was KNOWN and stop at the first that was
+ * not. A line sitting inside the block that the current writer no longer emits and that was
+ * never registered as legacy therefore truncated the block at itself — and this repository had
+ * one, `.qfai/output/*`, written by an older release. The consequences compound:
+ *
+ *   - `extractManagedBlock` returned the marker plus one line, so the freshness check found the
+ *     governance negations "missing" and the early return never fired;
+ *   - `removeManagedBlock` stripped that same two-line prefix and left the rest in place;
+ *   - the rebuilt block — marker, the one line it saw, and every negation — went back in at the
+ *     old position, ABOVE the twenty lines that had never been removed.
+ *
+ * So every `qfai init` appended a second copy of the negations, and appended it above the
+ * ignore lines that cancel them, where git's last-match rule makes it inert. Noise that grows
+ * by a block per run, and noise is what makes a real change to `.gitignore` unreadable in
+ * review (#1168).
+ *
+ * ## The rule, and why it still protects a project's own lines
+ *
+ * The block is terminated by a blank line, by a comment that is not the marker, or by the end
+ * of the file — that is how it is written, and how a project's own section is separated from
+ * it. Inside that region the block ends at its LAST known line.
+ *
+ * Both halves matter. Tolerating unknown lines between known ones is what stops a retired line
+ * truncating the block. Ending at the last KNOWN line is what keeps the old protection: lines a
+ * project appended directly under the block, with no blank between, are still outside it, so
+ * they keep their position relative to the negations and git's last-match verdict for them does
+ * not change.
+ *
+ * An unknown line absorbed from between two known ones is not lost: `rebuildManagedBlock` keeps
+ * every block line that is neither the marker, a governance negation, nor a retired line, which
+ * is exactly what "the project's own ignore set" means there.
+ */
+function managedBlockEnd(
+  lines: readonly string[],
+  startIdx: number,
+  knownLines: ReadonlySet<string>,
+): number {
+  let lastKnown = startIdx; // the marker itself is always part of the block
+  for (let index = startIdx + 1; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.trim() === "" || line.trimStart().startsWith("#")) {
+      break;
+    }
+    if (knownLines.has(line)) {
+      lastKnown = index;
+    }
+  }
+  return lastKnown + 1;
+}
+
+/**
  * The QFAI managed block, or `""` when the marker is absent.
  *
  * Freshness is judged against the block this writer owns, not the whole file:
@@ -2326,10 +2381,7 @@ function extractManagedBlock(content: string): string {
       (line, index) => index >= cursor && line.includes(QFAI_GITIGNORE_MARKER),
     );
     if (startIdx === -1) break;
-    let endIdx = startIdx + 1;
-    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-      endIdx += 1;
-    }
+    const endIdx = managedBlockEnd(lines, startIdx, knownLines);
     for (const line of lines.slice(startIdx, endIdx)) {
       // The marker itself is deduplicated with everything else, so a merged
       // block carries exactly one.
@@ -2365,12 +2417,9 @@ function removeManagedBlock(content: string): { stripped: string; blockAt: numbe
       blockAt = startIdx;
     }
 
-    let endIdx = startIdx + 1; // marker is always consumed
-
-    // Consume contiguous lines that belong to any known block line (order-independent)
-    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-      endIdx++;
-    }
+    // Through the last known line, tolerating a retired line the writer no longer
+    // emits. See {@link managedBlockEnd}.
+    let endIdx = managedBlockEnd(lines, startIdx, knownLines);
 
     // Also remove one trailing blank line if present
     if (endIdx < lines.length) {

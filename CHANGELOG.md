@@ -46,6 +46,28 @@
   フィルタが一度も動かなくなる。型除去は devDependency の `typescript`
   (`transpileModule`) で行い、child は素の `node` で走る。
 
+- **`qfai init` が `.gitignore` の managed ブロックを毎回重複追記しなくなった。**
+  ブロックの範囲を求める 2 つの走査は「既知の行である限り前進し、知らない行で
+  止まる」形だった。旧版が書いた行がブロック内にあり、現行のブロックにも legacy
+  一覧にも登録されていない場合、その行でブロックが途中で切れる。本リポジトリには
+  実際に `.qfai/output/*` (legacy な validate 出力先) が 3 行目にあった (#1168)。
+
+  影響は見た目の重複では終わらない。鮮度判定は抽出したブロックを読むので
+  governance negation が「無い」と判定されて早期 return が働かず、除去も同じ
+  途中までしか消さず、再構築されたブロックが**消されていない 20 行の上に**
+  差し込まれる。git は最後にマッチしたパターンを採用するため、追記された
+  negation 群は自分を打ち消す ignore 行より上に来て**何の効果も持たない**。
+  実行のたびに無効な行が 1 ブロックずつ増える。
+
+  ブロックの終端は空行・マーカー以外のコメント・EOF とし、その範囲内の
+  **最後の既知行**までをブロックとする。間に挟まった未登録行では切れず、
+  ブロック直下にプロジェクトが書いた行 (空行なし) は従来どおりブロックの外に
+  残る — 内側に取り込むと negation より上に移動し、プロジェクトが ignore した
+  かったファイルが追跡対象に変わってしまう。
+
+  取り込まれた未登録行は失われない。`rebuildManagedBlock` は「マーカーでも
+  negation でも legacy でもない行」を保持する。
+
 - **`.qfai/steering/_templates/entry.md` の seed が formatter を通ると必ず drift
   するのをやめた。** frontmatter の trailing comment を桁揃えしていたが、Prettier は
   YAML の `#` 直前の連続スペースを潰す。seed は create-only で、re-init は seed と
