@@ -31,7 +31,32 @@ qfai prototyping iterate --cycle <0..9> [--target-url <url>]
                          [--license-patch <file>]
                          [--check-convergence]
                          [--primary-spec-id <spec-id>]
+                         [--emit-skeletons]
+                         [--skeleton-mode <placeholder|full|stub>]
+                         [--mode <convergence|exploration>]
 ```
+
+`--emit-skeletons` is cycle-0 only: it writes one placeholder
+`.qfai/evidence/prototyping/iter-00/<screenId>.html` per declared screen
+(the cycle's `iterationDir(0)`) as a seed aid and never an `index.html`;
+`iterate` ignores it at cycle >= 1. `--skeleton-mode` selects the
+emission shape and has no effect without `--emit-skeletons`; any value
+other than `placeholder` (default, token-driven static HTML) / `full`
+(placeholder plus the caller-replaces-via-generation marker) / `stub`
+(minimal `<!doctype html>` marker) is rejected in `args.ts` as a parse
+error, which prints the usage text and exits 1 (the prototyping
+sub-commands do not raise `invalidExitCode` to 2). SSOT:
+`packages/qfai/src/core/prototyping/emitSkeletons.ts`.
+
+`--mode` selects the loop posture: `convergence` (default) keeps every
+rubric gate blocking, `exploration` relaxes the soft-rubric gates to
+warning. Any other value is the same `args.ts` parse error as above —
+usage text plus exit 1. The posture is resolved and recorded at cycle 0
+only, onto the seed iteration written by `writeSeedMetadata`; at
+cycle >= 1 the flag is echoed but neither re-recorded nor cleared, so
+switching posture mid-loop requires a `--cycle 0 --force` re-seed.
+`qfai prototyping certify` exits 2 on any loop that contains an
+exploration-mode iteration (`detectExplorationCertifyAttempt`).
 
 `--check-convergence` is a read-only peek path: it reads
 `.qfai/evidence/prototyping/prototyping.json`, exits `0` when
@@ -43,9 +68,10 @@ performs no writes, no Playwright launches, and does not require
 cycle-required guard is short-circuited on this path.
 
 `--primary-spec-id <spec-id>` pins the primary UI-bearing spec at
-cycle 0 when multiple candidates resolve. Accepted forms: bare
-`NNNN` (e.g. `0012`) or fully-qualified `spec-NNNN` (e.g.
-`spec-0012`); any other shape is exit 2. Equivalent to the
+cycle 0 when multiple candidates resolve. Accepted forms are digit
+strings only — `12` / `0012` / the number `12`, all normalised to
+`0012` by `parsePrimarySpecId`; a `spec-` prefix (e.g. `spec-0012`)
+and any other shape are exit 2. Equivalent to the
 `qfai.config.yaml` `prototyping.primarySpecId` field; the CLI flag
 takes precedence when both are set.
 
@@ -111,9 +137,12 @@ absence of both flags preserves the DR-0012-0029 bit-default.
 
 Accepts an **add-only** diff to the cycle-0 frozen license catalog
 (`prototyping.json#frozenLicenseCatalog.allowedSources`,
-`licenseTiers`, `sourceHosts`). The diff is applied in-place to the
-frozen catalog and an audit-log entry is appended to
-`prototyping.json#licensePatchAudit[]` recording:
+`licenseTiers`, `sourceHosts`). The frozen catalog itself is NOT
+rewritten — it stays byte-equal to `DEFAULT_LICENSE_CATALOG` so the
+cycle >= 1 drift gate keeps passing. The patch is recorded instead as an
+audit-log entry appended to `prototyping.json#licensePatchAudit[]`, and
+the effective catalog is rebuilt from baseline + ledger on every cycle
+(see the replay paragraph below). The entry records:
 
 ```yaml
 licensePatchAudit:
@@ -144,22 +173,40 @@ unions `addedSources` into the frozen `allowedSources` AND
 `addedLicenseTiers` into the frozen `licenseTiers`. Without the tier
 replay, a cycle-0 patch that introduces both a new source and its tier
 mapping would cause cycle-1 license-verify to raise
-`license-tier-unknown` on the previously-accepted entry.
+`license-tier-unknown` on the previously-accepted entry. `sourceHosts`
+is NOT replayed — the audit row schema persists no hosts, so the
+effective `sourceHosts` is always the frozen baseline and a
+patch-added source carries no host binding. `licenseVerify` skips the
+host check for a source with no `sourceHosts` entry, so a patched
+source accepts any HTTPS host. Persisting host additions requires the
+contract amendment + classifier update named above (`addedHosts`).
 
-Deletions and modifications are REJECTED with a hint to use the
-cycle-0-restart path (re-seed via `--cycle 0`). The rejection error
-text MUST name (a) the removed / modified key, (b) the recovery
-command. Full unfreeze automation remains deferred (OQ-0114=A,
+The ledger is NOT per-loop state: `writeSeedMetadata` resets
+`iterations[]` / `reviewerGate` / `imageSources` / the frozen fields on
+a `--cycle 0 --force` re-seed but leaves `licensePatchAudit[]` in
+place, so prior rows are unioned back into the effective catalog from
+cycle 1. Revocation is therefore a manual edit of
+`prototyping.json#licensePatchAudit[]` (the array is not covered by the
+`frozenLicenseCatalog` lock-drift gate), not a side effect of the
+re-seed.
+
+The patch apply block is NOT cycle-gated: `--license-patch` may be
+passed at any cycle, so the catalog can be broadened mid-program without
+a cycle-0 restart (US-0012-0135). Deletions and modifications are
+REJECTED with a hint to use the cycle-0-restart path (re-seed via
+`--cycle 0`). The rejection error text MUST name (a) the removed /
+modified key, (b) the recovery command. Full unfreeze automation remains deferred (OQ-0114=A,
 add-only path only).
 
 ## Exit codes (canonical matrix)
 
-| Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Continue: cycle accepted, paths assigned, loop should advance.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| 2    | Input / lock-drift error. Drift classes enumerated in `qfai-prototyping.md` § "Exit-2 drift classes"; the cycle-range out-of-range path (REQ-0129), cycle-0 refusal without `--force` (REQ-0117), foreign-process port conflict under `--auto-serve` (NFR-0106), `--license-patch` rejection (delete / modify), AND the capture URL composition path (route-relative `screens[].url` with no `--target-url` at any cycle when `--capture` is set) ALSO map to exit 2 with the explicit error text named in this contract. See the prose paragraph immediately below for the cycle 0 vs cycle ≥ 1 distinction. |
-| 64   | STOP: converged OR Reviewer-Playwright hard-stop (distinguishable via `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`). On convergence, top-level `acceptedIterationIndex` and `stopReason` (per REQ-0111) MUST be set.                                                                                                                                                                                                                                                                                                                                                                                |
-| 66   | STOP: license-verify failure. `imageSources[]` resolved to non-allowlisted source / unknown license tier / non-HTTPS URL / per-source host mismatch / missing attribution. `frozenLicenseCatalog` SSOT was frozen at cycle 0 (and possibly extended via `--license-patch` add-only).                                                                                                                                                                                                                                                                                                                          |
+| Code | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | Argument parse error: a value-taking flag with no value, or an out-of-enum `--skeleton-mode` / `--mode` value. `args.ts#markInvalid` raises `invalidExitCode` to 2 only for `guardrails`, so the prototyping sub-commands print the usage text and exit 1 here — not 2. An UNKNOWN flag is NOT in this class today: the `args.ts` option switch ends in `default: break`, so an unrecognised token is dropped silently and the run continues (a typo such as `--captur` yields a normal iterate with capture OFF, not a usage error). Rejecting unknown flags is a behavioural change tracked separately from this documentation contract. |
+| 0    | Continue: cycle accepted, paths assigned, loop should advance.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2    | Input / lock-drift error. Drift classes enumerated in `qfai-prototyping.md` § "Exit-2 drift classes"; the cycle-range out-of-range path (REQ-0129), cycle-0 refusal without `--force` (REQ-0117), foreign-process port conflict under `--auto-serve` (NFR-0106), `--license-patch` rejection (delete / modify), AND the capture URL composition path (route-relative `screens[].url` with no `--target-url` at any cycle when `--capture` is set) ALSO map to exit 2 with the explicit error text named in this contract. See the prose paragraph immediately below for the cycle 0 vs cycle ≥ 1 distinction.                              |
+| 64   | STOP: converged OR Reviewer-Playwright hard-stop (distinguishable via `iter-NN/spec-NNNN/<screen>.review.json#sessionStatus`). On convergence, top-level `acceptedIterationIndex` and `stopReason` (per REQ-0111) MUST be set.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 66   | STOP: license-verify failure. `imageSources[]` resolved to non-allowlisted source / unknown license tier / non-HTTPS URL / per-source host mismatch / missing attribution. The verifier reads the EFFECTIVE catalog — `effectiveLicenseCatalog(DEFAULT_LICENSE_CATALOG, licensePatchAudit[])` — i.e. the cycle-0 immutable baseline unioned with every audit row. Recovery MUST inspect BOTH `frozenLicenseCatalog` and `licensePatchAudit[]`: the frozen field alone omits every permission an earlier `--license-patch` added.                                                                                                           |
 
 Note: exit 65 ("budget exhausted") is described in
 `qfai-prototyping.md` § exit-code table for completeness; the

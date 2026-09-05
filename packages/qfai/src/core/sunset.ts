@@ -74,6 +74,37 @@ export const SUNSETS = {
  */
 export const RULE_PROMOTIONS = {
   /**
+   * `QFAI-TOOL-002` — the project declares a `qfai` dependency and a different
+   * copy is running. Unlike its `info` sibling this is not anybody's choice:
+   * the project said what it wanted and something else answered.
+   *
+   * A window, and P7's default is right here — the condition is INVISIBLE
+   * today, so a project carrying it has never been told. It needs a minor to
+   * notice and fix before the gate starts failing on it. That is the opposite
+   * of a code whose condition already crashes the run, where a window would
+   * turn a hard failure into a pass for two minors.
+   */
+  toolResolvedAgainstDeclaration: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CTYPE-004` — a delta file was read and counted for nothing, per
+   * `### DL-` entry. The window is P7's default and it is doing real work: the
+   * condition was previously a Markdown NOTE that left `issues`,
+   * `summary.counts` and `deltaCoverage.status` untouched, so every project
+   * carrying it has been reporting a clean run. Failing the gate on the release
+   * that first makes the condition visible would fail it on a backlog nobody
+   * was ever told about.
+   */
+  deltaEntryUncounted: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
+   * as UI-bearing. The window is doing real work: the in-loop way out does not
+   * exist yet (a `rescope` operation is proposed in #1099), so until it does,
+   * the only remedy is the cycle-0 reset this finding exists to warn about in
+   * advance. Failing a gate for a condition whose remedy discards the review
+   * already paid for would make the warning worse than the silence it replaces.
+   */
+  frozenSurfaceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
    * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
    * full minor beyond it.
@@ -157,6 +188,12 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
+   * declared grammar, or names a spec that is not on disk. The grammar is new,
+   * so every delta file written before it carries whatever spelling its author
+   * chose, and the cell is never rewritten once a row is approved.
+   */
+  triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
    * `QFAI-SPLIT-106` — a CAP row the declared catalog cannot resolve to exactly
    * one spec directory: a blank `Spec` cell, one naming several directories, a
    * CAP repeated across rows, or two CAPs claiming the same directory. The
@@ -171,6 +208,40 @@ export const RULE_PROMOTIONS = {
    * arrives in the first run after the upgrade.
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
+   * cell states an outcome in prose and carries no canonical pointer into the
+   * evidence file its `Layer` owns. Nothing read the cell before, so every
+   * ledger written under the old shape states its evidence exactly this way.
+   */
+  tddListEvidenceAnchorMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-008` — a pointer that does not resolve: the
+   * wrong owner file for the row's `Layer`, another row's item, a heading that
+   * is not there, or an entry behind it that is not complete. The rule is
+   * right and the rows it lands on are already at `done`, a state with no
+   * transition left that could re-observe anything — the same shape the first
+   * entry in this registry was written after. This repository meets 29 of
+   * these on the release that introduces the code.
+   */
+  tddListEvidenceAnchorUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+
+  /**
+   * `QFAI-TDDLIST-009` — the row's `Revision` names a tree that files the
+   * observation covered have moved past.
+   *
+   * `evidence-revision.md#what-makes-evidence-stale` has always defined
+   * staleness mechanically, and nothing computed it: the field was written by
+   * hand, required in three places, and compared against nothing (#1146). So
+   * every project carries whatever stale revisions it has accumulated, by
+   * construction — an immediate `error` would fail gates over a backlog nobody
+   * has been told about, which is exactly what this window is for.
+   *
+   * After the window the severity splits by status: `error` at `refactor` /
+   * `done` / `review-fix`, `warning` earlier. A row still moving is expected to
+   * re-take; a row at rest is making a claim.
+   */
+  tddListEvidenceRevisionStale: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

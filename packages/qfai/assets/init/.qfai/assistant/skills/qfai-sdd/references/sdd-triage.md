@@ -44,11 +44,10 @@ Concretely, before persisting any Triage row:
    confirm no `QFAI-SPLIT-106` remains. The finding's own message names
    the release it becomes an `error` in.
 
-The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
-append-first fallback: when the REQ's capability does not match exactly,
-it still proposes APPEND on the active spec whose title/capability/scope
-shares the most subject tokens. CREATE is emitted only when there is
-**zero** token overlap with any active spec.
+The triage classifier implements an append-first fallback: when the REQ's
+capability does not match exactly, it still proposes APPEND on the active
+spec whose title/capability/scope shares the most subject tokens. CREATE is
+emitted only when there is **zero** token overlap with any active spec.
 
 ## Operation set (8 first-class)
 
@@ -104,7 +103,9 @@ and that none were added or dropped — in the `Rationale` column of the
 
 ## Inputs
 
-1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
+1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md` — reference
+   input, not normative. Requirement seeds to triage, not obligations to obey;
+   an explicit user requirement or an import-lite source serves the same slot.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
 4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.
@@ -124,13 +125,23 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column.
+   approver in the `Approved By` column. Under `--auto` the row leaves
+   `--auto` scope and no question may be asked — not through
+   AskUserQuestion and not in plain text, operator present or not — so stop
+   at step 7 instead. Never synthesize an `Approved By` value — the column
+   records who authorized the operation, so an invented approver is a false
+   audit record. See `../SKILL.md#--auto-and-approval-required-rows`.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /
      SUPERSEDE) and policy-only changes.
 7. **Stop.** Do not enter Phase 0 until every required-approval row has
    an approver recorded and every CREATE row cites a registered CAP.
+   Stopping here is a reportable outcome, not a failure to repair: leave
+   `Approved By` as `-`, write a `consultation-needed` work-log entry
+   naming each unapproved row with its Operation and target, and report the
+   `QFAI-TRIAGE-005` errors as the reason the run stopped. Under `--auto`,
+   also ask for a rerun without `--auto` so the approvals can be collected.
 
 ## Impact cascade (1 REQ → N rows)
 
@@ -175,6 +186,48 @@ instead of extending the first table. A decorated heading
 Triage validator; put the date or the note in the section body, not in
 the heading.
 
+### `Existing Spec` grammar
+
+`Existing Spec` is the cell that binds the row to the spec it acts on, so
+it has exactly one grammar (enforced by `QFAI-TRIAGE-009`). The **whole
+cell** must be one of these — a valid target with anything else beside it is
+still a rejected cell:
+
+- **One spec** — `spec-NNNN`, e.g. `spec-0003`.
+- **Several specs** — join them with `+`, e.g. `spec-0003+spec-0004`.
+  This is what the classifier emits for a MERGE row. A target may not be
+  repeated: `spec-0003+spec-0003` names one spec in two slots, not two.
+- **Policy-only row** — `_policies`, or a path under it such as
+  `_policies/05_Contracts.md`. Valid on `UPDATE` rows only: `DELETE` /
+  `SPLIT` / `MERGE` / `SUPERSEDE` act on a whole spec directory, and a
+  policy target gives them nothing to act on. A cell that merely contains
+  the word (`not_policies`) resolves to nothing either way, and a path that
+  leaves the directory (`_policies/../spec-0003`) is not a policy target —
+  no segment may be `.` or `..`.
+- **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
+  NOT name the spec it is about to create; the new spec ID belongs in
+  `Subject`. (`(none)` is the legacy spelling of this literal and is still
+  accepted, but new rows should use `-`.) Every other operation needs a real
+  target: the classifier's "no active spec absorbed this removal" DELETE
+  proposal carries `-` as a **placeholder** and must have the spec it
+  removes filled in before the row is persisted, exactly as its CREATE
+  counterpart must have a `CAP-NNNN` filled into `Rationale`.
+
+A **range is not a form**: `spec-0003〜spec-0008` names no spec directory
+and is rejected. Enumerate the specs with `+` instead. Each target is read
+whole, so a suffixed ID (`spec-0003_old`, `spec-0003/01_Spec.md`), an empty
+slot around a separator (`spec-0003+`), trailing prose, or a mix of spec and
+policy targets (`spec-0003+_policies`) is rejected rather than read as the
+`spec-NNNN` it contains.
+
+Every `spec-NNNN` named here must resolve to a directory under
+`.qfai/specs/`. On `DELETE` / `MERGE` / `SPLIT` — whose completion removes
+the directories the row names while the row stays as history — existence is
+read as a state instead: all targets present means the row is not yet
+carried out, all gone means it is and the row is its tombstone. A row where
+only some targets resolve is in neither state and is rejected, which is what
+catches a source that was misspelled or never allocated.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no
@@ -200,6 +253,13 @@ the heading.
 - `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
   `Triage` but is not a canonical `## Triage` section — its rows are read by
   none of the checks above. Rename the heading to `## Triage`.
+- `QFAI-TRIAGE-009` (error): `Existing Spec` does not follow the grammar
+  above — the cell is empty, uses range notation, carries a malformed or
+  suffixed spec token, holds anything outside the grammar beside a valid
+  target, gives a spec-scoped operation a `_policies` target, names a
+  `spec-NNNN` that has no directory under `.qfai/specs/` (on a removal
+  operation, only when the row's other targets do resolve), names nothing
+  resolvable, or is a non-CREATE row left on `-`.
 
 ## Status field interaction
 
