@@ -79,8 +79,28 @@ The 8-archetype catalog is the SSOT in
 casual`. Read that reference for archetype semantics, do not duplicate
 here.
 
+## `accessibility` allowed keys
+
+`accessibility` accepts exactly `contrast_ratio_min` and `motion`. The
+list is CLOSED: any other key fails the whole-file parse with
+`QFAI-DCON-033`, and the message names the allowed set.
+
+An unknown key is rejected rather than ignored because a dropped
+directive would still hash into `DESIGN.md.lock` while the parsed
+tokens the iterate and certify stages read would not carry it — the
+document and its lock would agree, and neither would match what was
+authored.
+
+A new accessibility obligation does not go here. Put it in the
+`# Brand Philosophy` body, or in a screen contract's
+`observable_outcome`, where it is prose a reviewer reads rather than a
+token the gate compares.
+
 ## Validation rules
 
+- `accessibility`: only `contrast_ratio_min` and `motion` (see above).
+  `contrast_ratio_min` must be a finite number and `motion` a string;
+  a present-but-wrong-typed value is rejected, not coerced.
 - `visual.colors.*` (except `overlay`): must be a 6-digit or 8-digit
   hex (`#RRGGBB` or `#RRGGBBAA`). 3-digit shorthand (`#abc`) is
   rejected so the gate can do strict equality comparison.
