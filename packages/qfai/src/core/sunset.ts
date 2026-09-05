@@ -86,6 +86,16 @@ export const RULE_PROMOTIONS = {
    */
   toolResolvedAgainstDeclaration: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CTYPE-004` — a delta file was read and counted for nothing, per
+   * `### DL-` entry. The window is P7's default and it is doing real work: the
+   * condition was previously a Markdown NOTE that left `issues`,
+   * `summary.counts` and `deltaCoverage.status` untouched, so every project
+   * carrying it has been reporting a clean run. Failing the gate on the release
+   * that first makes the condition visible would fail it on a backlog nobody
+   * was ever told about.
+   */
+  deltaEntryUncounted: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
    * as UI-bearing. The window is doing real work: the in-loop way out does not
    * exist yet (a `rescope` operation is proposed in #1099), so until it does,
