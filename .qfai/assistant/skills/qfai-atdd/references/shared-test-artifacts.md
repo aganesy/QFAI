@@ -57,7 +57,12 @@ same lines under `## Shared-artifact re-verify` in the stage evidence file
 the same identity — spec and `TDD-ID` together — and the same "a passing re-run
 is not enough on a row that has a proof" rule below. A consumer clearing a
 mismatch reads **both** places: the editing row's entry when one exists, and the
-stage block of any stage that touched the artifact. `/qfai-implement`'s gate
+stage block of any stage that touched the artifact. **Exactly one of the two
+holds it for any one edit.** Where an editing row exists the record is that
+row's entry and the stage section is `None`; the stage block is only for a stage
+that owns no ATDD row to carry it. Two originals of one record would leave the
+consumer clearing a mismatch from either, with no precedence between them and no
+way to tell a stale copy from the live one. `/qfai-implement`'s gate
 item 10 does not run on a spec with no rows, so this block is checked where the
 stage's own pack seal is: it is inside the sealed stage evidence, so a record
 added after the fact moves the seal. A stage block is read only from

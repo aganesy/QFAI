@@ -2530,6 +2530,48 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("A consumer clearing a mismatch reads **both** places");
   });
 
+  it("names the stage re-verify block's one home at BOTH ends, not just the producer", async () => {
+    // The producer parenthesises the file; the consumer said only "the stage
+    // evidence file", and that term means `atdd-<spec-id>.md` everywhere else
+    // in these assets. So the author was told one file by the sentence that
+    // sends them and a different one by the sentence that reads it back.
+    //
+    // The file is not a preference: `STAGE_EVIDENCE_FILE_NAME` in
+    // `core/validators/tddList.ts` matches `coverage-depth-spec-NNNN.md` alone,
+    // so a block written anywhere else is never consulted and the `done` row's
+    // mismatch stands — with no way out, because a `done` row cannot take the
+    // fresh RED the mismatch route asks for.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain(
+      "in the stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`, beside `## Final status`)",
+    );
+
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "the `## Shared-artifact re-verify` block in the stage evidence file of a stage that moved the artifact — `.qfai/evidence/coverage-depth-<spec-id>.md`",
+    );
+    // And it says which file the ambiguous term does NOT mean, because that is
+    // the reading the shipped assets otherwise support.
+    expect(implement).toContain("never `atdd-<spec-id>.md` beside it");
+  });
+
+  it("keeps the stage block to what no row can carry, so one re-verify has one copy", async () => {
+    // The ordinary case belongs to the editing row's own entry; the stage block
+    // is only for a stage with no row of its own. Without a precedence between
+    // them one edit could have two originals, and the consumer clears a
+    // mismatch from either with nothing to tell a stale copy from the live one.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("**Exactly one of the two holds it for any one edit.**");
+    expect(shared).toContain(
+      "Where an editing row exists the record is that row's entry and the stage section is `None`",
+    );
+
+    // And the consumer says the same, so its two read points cannot disagree.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**Exactly one of the two holds it for any one edit**");
+    expect(implement).toContain("a second copy is a stale one nothing distinguishes");
+  });
+
   it("reads the validate evidence from the configured output paths", async () => {
     // A project that moved `output.validateJsonPath` or `paths.outDir` writes
     // its evidence where it said to, and looking at the default path reported a
