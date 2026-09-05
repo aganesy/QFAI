@@ -79,5 +79,10 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 ## Phase 4: Delta update
 
 - Update `09_delta.md` or `*_delta.md`.
+- A re-run appends to the existing `## Triage`; never open a second `## Triage` H2.
+  Add one `### DELTA-NNNN (YYYY-MM-DD)` sub-section per run and put that run's rows
+  in it. The same holds for `## Change Summary`: append an entry, do not duplicate
+  the heading. `QFAI-TRIAGE-*` reads the first `## Triage` heading only, so rows
+  under a dated duplicate heading go unchecked.
 - Record adoption and rejection rationale.
 - When rejections exist, include `DO NOT` and `Temptation`.
