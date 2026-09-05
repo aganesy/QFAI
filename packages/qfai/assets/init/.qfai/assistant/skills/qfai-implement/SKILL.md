@@ -97,7 +97,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`; the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> `done` plus the re-entry edges the reference enumerates, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
-The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
+The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger. **This skill allocates no `TDD-ID`**: rows are upstream (Non-goals) and `/qfai-sdd` Phase 2b is their producer, so a scope gap that needs a new row is handed there through a Change Request — never appended here. Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation` and belongs to that phase; read it to check an id you were handed, and never guess the next value from a ledger another worktree holds, because that read is stale on arrival and `TDDLIST_DUPLICATE_ID` is an `error`.
 
 ## Required Process
 

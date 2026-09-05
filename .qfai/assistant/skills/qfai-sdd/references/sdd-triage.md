@@ -152,7 +152,13 @@ A single requirement frequently affects multiple specs. The agent MUST:
    companion edit:
    - Existing US/AC/BR/EX/TC that references the changed concept →
      **UPDATE:MODIFY** in that spec.
-   - Now-obsolete US/AC/BR/EX/TC → **UPDATE:REMOVE** in that spec.
+   - Now-obsolete US/AC/BR/EX/TC → **UPDATE:REMOVE** in that spec. Removing a
+     coverage-target `TC` also retires its ledger row, and dropping that row
+     takes its `TDD-ID` out of the ledger's maximum — so tombstone the id under
+     `## TDD-ID reservations`, citing this row's `Source`, or the next
+     allocation reissues it
+     (`spec-traceability-rules.md#tdd-execution-ledger`). This path raises no
+     Change Request, so its tombstone cites the Triage row, not a `CR-*`.
    - Glossary / contract impact → record in `_policies/10_delta.md`.
 3. Emit one Triage row per affected spec. The same `Source` (REQ ID) may
    appear on multiple rows — this is the canonical cascade pattern.

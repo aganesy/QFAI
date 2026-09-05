@@ -7,7 +7,7 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 | Column    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001). Allocated per `#tdd-id-allocation` — never by guessing the next value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | TC-Refs   | References to test cases from `06_Test-Cases.md`. Belongs on `Layer = Unit` / `Component` / `Integration` rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Test file | Path to the test file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -15,6 +15,48 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | Status    | Current lifecycle status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses. A row swept out of `exception` by `exception -> todo` **keeps** the anomaly's `DR-*` — that is the only record of why it was parked. **A row that enters `exception` again records a new `DR-*` for the new anomaly**, appended, not substituted: the retained one documents an anomaly already resolved, and `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty and its tokens resolvable, so the stale id alone would pass the gate while the current anomaly has no Decision Record at all. Blank otherwise |
 | Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the evidence file this row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row (see "ATDD-owned rows"). **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                    |
+
+## TDD-ID allocation
+
+`TDD-NNNN` is spec-scoped and monotonic, so the next value is `max + 1`
+over every table in the file when authoring serially — including retired,
+`blocked` and `exception` rows — and comes from a block reserved under
+`## TDD-ID reservations` when authors run concurrently. The maximum ranges
+over the upper bound of every reservation bullet as well, and those bullets
+are never deleted: a consumed or abandoned block is closed in place
+(`- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`) so its
+end stays the permanent high-water mark. Drop the bullet and `max + 1` falls
+back into the block's unused tail, reissuing ids the gap was meant to retire
+and colliding with a block still being worked. A deleted row is tombstoned in
+that same section as a single-id bullet
+(`- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <ref>`):
+the Drift Protocol removes such a row rather than resetting it, so without the
+tombstone the id leaves the table and the next allocation reissues it. `<ref>`
+is a `CR-*` on the Drift Protocol path and the `UPDATE:REMOVE` Triage row's
+`Source` (`REQ-XXXX`) on the ordinary `/qfai-sdd` path, which raises no Change
+Request — demanding a `CR-*` there leaves nothing true to write and the
+tombstone gets skipped. An
+empty candidate set has a
+maximum of 0, so a freshly seeded ledger starts at `TDD-0001`; `TDD-9999` is
+the last legal id, because `TDD_ID_FORMAT` accepts exactly four digits — a
+spec that reaches the ceiling rolls over under an approval-required Triage
+row, SPLIT when it owns more than one `CAP-NNNN` and SUPERSEDE when it owns
+exactly one (a count-driven SPLIT of a single-capability spec is rejected at
+`error`), never allocated past. Both exits assume the ceiling came from
+churn; count the still-live rows to tell. Near 9999 they gain nothing — the
+successor reseeds to the same ceiling from the same obligations — and the
+answer is upstream scope, not allocation. Worktree
+separation is
+mandatory for parallel work (`constitution/workflow.md`), so a `max + 1` read
+taken inside one worktree is stale as soon as another appends, and
+`TDDLIST_DUPLICATE_ID` is an `error`: guessing locks out every writer but the
+last. Reserve the block on the shared branch **before** the worktrees split —
+it is a one-line bullet append, so it serializes where a batch of rows cannot.
+Never renumber an id that has already been written outside this ledger (a
+commit message, `.qfai/evidence/implement-*.md`, `.qfai/evidence/atdd-*.md`, a
+`DR-*` cross-reference); a merge does not rewrite those. Full rule, including
+the reservation bullet's shape and why it must not be a markdown table:
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`.
 
 ## Declared seam column (optional, required for parallel dispatch)
 

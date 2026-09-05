@@ -66,6 +66,7 @@
     "tests/assets/skillDelegationTool.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
+    "tests/assets/tddIdAllocation.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
     "tests/cli/commands/validateTextFormat.test.ts",

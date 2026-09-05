@@ -251,6 +251,125 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
+- **`TDD-ID` allocation is by reserved block, decided before the workers
+  split.** Uniqueness alone does not say who takes the next value.
+  `TDD-NNNN` is spec-scoped and monotonic, so that value is `max + 1`
+  over the very file every concurrent author is also appending to — and
+  `constitution/workflow.md` requires worktree separation for parallel work,
+  which makes the read stale the moment another author appends.
+  `TDDLIST_DUPLICATE_ID` is an `error`, so everyone but the last writer is
+  locked out of landing their rows at all. The rule:
+  1. **Serial authoring — `max + 1`.** Take the maximum `TDD-NNNN` over the
+     whole ledger, including retired, `blocked` and `exception` rows, **and
+     the upper bound of every bullet under `## TDD-ID reservations`**, and
+     allocate upward from it. A bullet that names a single id has that id as
+     its upper bound, so a retired-row tombstone (rule 3) counts the same way
+     as a block. The reservation bullets are part of the
+     maximum, not decoration: a block that is still being worked has no rows
+     in the file yet, and a block that is finished may have consumed only its
+     first id. Nothing else changes for the ordinary case. **An empty
+     candidate set has a maximum of 0**, so the first row a freshly seeded
+     ledger takes is `TDD-0001` — Phase 2b seeds every ledger from empty, so
+     that base case is the most common allocation there is. **`TDD-9999` is
+     the last legal id**: `TDD_ID_FORMAT` accepts exactly four digits, so
+     `max + 1` past it yields a value every subsequent row and reservation
+     fails `TDDLIST_*` validation on. A ledger whose maximum reaches it stops
+     allocating, and the spec rolls over under an approval-required Triage
+     row — never by widening the format on your own:
+     - the spec genuinely owns more than one `CAP-NNNN` → **SPLIT**
+       (`_policies/11_Slice-Policy.md`);
+     - **the spec owns exactly one capability → SUPERSEDE, not SPLIT.**
+       `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN` per spec,
+       so a count-driven SPLIT of a single-capability spec raises
+       `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error` — pointing the ceiling
+       at SPLIT alone leaves the most common spec shape with no legal exit
+       and the ledger simply stuck. SUPERSEDE is the rollover `sdd-triage.md`
+       already defines for a spec that needs a new ID at unchanged scope:
+       create the successor spec, set `Status: superseded` and
+       `Superseded-by: spec-NNNN` on the exhausted one, and the successor's
+       ledger allocates from the empty base case at `TDD-0001`. Nothing is
+       renumbered — `TDD-NNNN` is spec-scoped, so the successor starting over
+       collides with none of the ids rule 4 froze.
+
+     **Both exits assume the ceiling was reached by churn, and one measurement
+     says whether it was**: count the rows that are still live obligations —
+     not retired, not tombstoned by rule 3 — against 9999. Well under it, the
+     maximum is high because ids were spent and released, the successor's
+     ledger reseeds far below the ceiling, and SUPERSEDE is a real rollover.
+     **At or near it, neither exit gains anything**: the successor inherits
+     the same obligations, Phase 2b writes one row per coverage-target TC, and
+     the empty ledger refills to the same ceiling before a single new
+     obligation is added. That is not an allocation problem and must not be
+     answered as one — a spec carrying that many live coverage-target TCs has
+     outgrown what one spec holds. Its exit is upstream: decompose the
+     capability, which both is the honest fix and is what makes SPLIT legal
+     (it is `QFAI-SPLIT-102` / `QFAI-SPLIT-104` refusing a **single**-`CAP`
+     split, not a count). If the capability genuinely does not decompose, then
+     the id format is the thing that is too small, and widening `TDD-NNNN`
+     is a package change decided with the user — never taken inline here, and
+     never worked around by reusing an id rule 4 froze.
+
+  2. **Concurrent authoring — reserve first, on the shared branch.** Before
+     dispatching authors that will append to one spec's ledger from separate
+     worktrees, make one serialized write on the branch they all fork from
+     that records a disjoint block per author under a
+     `## TDD-ID reservations` heading in that ledger. Record it as a bullet
+     list, never a markdown table: `validateTddList` reads every table in the
+     file as ledger rows, so a reservation table would be validated as rows.
+     One bullet per author, shaped
+     `- TDD-0065..TDD-0079 — <author or slice>, reserved <YYYY-MM-DD>`. Each
+     author then allocates only inside its own block, and the appends cannot
+     collide. **If no reservation exists and you need IDs anyway, take one
+     yourself** — the bullet is a one-line append that can land on the shared
+     branch in its own commit long before the rows are ready, so it serializes
+     where a batch of rows cannot. **What serializes it is the push, not the
+     commit**, so a self-reservation taken after the worktrees have already
+     split follows a compare-and-set: compute the block from the shared
+     branch's current tip, push the bullet there, and **if the push is
+     rejected, fetch and recompute the block from the new tip before
+     retrying** — never rebase the old range forward. Choosing a range inside
+     your own worktree is the very stale read this rule exists to stop: two
+     authors reading the same tip pick the same block, and
+     `validateTddList` never looks at reservation bullets, so a merge that
+     keeps both raises nothing and both authors write the same `TDD-ID`s. **A
+     bullet that overlaps one already on the shared branch is invalid** —
+     recompute it; never resolve that conflict by keeping both.
+  3. **A block is a budget, not a promise.** An author that exhausts its block
+     stops and asks for another one; it does not continue past the boundary.
+     Unused reserved IDs stay unused — leave the gap, exactly as
+     `_policies/11_Slice-Policy.md` says for spec IDs. Density is not a
+     property `TDD-NNNN` is required to have. **The reservation bullet is
+     never deleted**; close it in place, shaped
+     `- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`, so
+     its upper bound survives as the high-water mark rule 1 reads. Delete it
+     and the next serial `max + 1` walks straight back into the block's
+     unused tail — reserve `TDD-0065..TDD-0079`, spend `TDD-0065` only, and
+     the next author is handed `TDD-0066`, reissuing the very ids the gap
+     retired. **A deleted row leaves its id behind the same way.** The
+     Drift Protocol removes — does not reset — a row whose obligation was
+     deleted outright (`constitution/drift-protocol.md`), so the id leaves
+     the table and rule 1's maximum falls back with it: delete the highest
+     row, `TDD-0002`, and the next allocation is handed `TDD-0002` again,
+     breaking rule 4 for every reference already written outside the ledger.
+     Tombstone it in the same section, one id per bullet, shaped
+     `- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <ref>`.
+     **`<ref>` is whatever authorised the removal on the path it took**, and
+     the two paths record different things: a Drift Protocol removal cites its
+     `CR-*`, while an ordinary `/qfai-sdd` run removing a TC does so through an
+     `UPDATE:REMOVE` Triage row — approval-required, recorded in its
+     `Approved By` column, and raising no Change Request at all. Requiring a
+     `CR-*` on that path leaves it with nothing true to write, and an agent
+     that will not invent one simply skips the tombstone and reissues the id.
+     Cite the Triage row's `Source` (`REQ-XXXX`) there. Either reference is
+     complete; neither may be a placeholder.
+     Closing a reservation block does not cover this: a serially allocated row
+     never had a bullet to close.
+  4. **A written `TDD-ID` is never renumbered.** Once an id appears anywhere
+     outside the ledger — a commit message, `.qfai/evidence/implement-*.md`,
+     `.qfai/evidence/atdd-*.md`, or a `DR-*` cross-reference — a merge does
+     not rewrite it, so renumbering at merge time silently breaks those
+     references. Reservation is what makes "never renumber" affordable.
+
 - Missing `tdd/test-list.md` is a warning **only when the spec declares no
   coverage-target TC**. If it declares any, the absent file also raises
   `TDDLIST_TC_NOT_COVERED` (error) naming them: the obligations do not
