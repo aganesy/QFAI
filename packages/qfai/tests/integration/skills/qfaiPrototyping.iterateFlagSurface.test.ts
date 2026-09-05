@@ -52,6 +52,7 @@ const CONTRACT_MD = path.resolve(
 const ITERATE_FLAGS: ReadonlyArray<{ flag: string; optionKey: string }> = [
   { flag: "--target-url", optionKey: "prototypingTargetUrl" },
   { flag: "--force", optionKey: "force" },
+  { flag: "--dry-run", optionKey: "dryRun" },
   { flag: "--license-patch", optionKey: "prototypingLicensePatch" },
   { flag: "--primary-spec-id", optionKey: "prototypingPrimarySpecId" },
   { flag: "--check-convergence", optionKey: "prototypingCheckConvergence" },
