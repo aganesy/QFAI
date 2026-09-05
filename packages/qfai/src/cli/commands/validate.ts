@@ -910,6 +910,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
   "QFAI-TRIAGE-009":
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
+  "QFAI-SPLIT-106":
+    "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
@@ -1155,6 +1157,12 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
   "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
   "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+  // All four declared-mapping paths (blank cell, several directories, a CAP on
+  // two rows, two CAPs on one directory) pass no `suggested_action`, and one
+  // repair covers them: the `Spec` cell is the mapping, so the fix is always to
+  // make each row name exactly one directory that no other row names.
+  "QFAI-SPLIT-106":
+    "Edit the `Spec` cell of each `CAP-NNNN` row the message names in `_policies/03_Capabilities.md` so it holds exactly one `spec-NNNN` directory: fill a blank cell with the directory that capability owns, cut a cell that lists several down to the one that owns it, merge a CAP that appears on two rows into one row, and give a directory claimed by two CAPs to only one of them.",
   // The agent-catalog drift emitter passes no `suggested_action` on either of
   // its paths (absent block, stale block), so both depend on this catalog for
   // their `fix:` line. One repair covers both: the markdown file is the source.

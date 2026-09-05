@@ -195,6 +195,14 @@ export const RULE_PROMOTIONS = {
    */
   triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-SPLIT-106` — a CAP row the declared catalog cannot resolve to exactly
+   * one spec directory: a blank `Spec` cell, one naming several directories, a
+   * CAP repeated across rows, or two CAPs claiming the same directory. The
+   * `Spec` column is new, so every catalog written before it exists resolves
+   * nothing and draws the finding on every one of its rows at once.
+   */
+  specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed

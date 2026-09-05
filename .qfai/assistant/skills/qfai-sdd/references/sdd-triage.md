@@ -30,9 +30,19 @@ Concretely, before persisting any Triage row:
    state. See `_policies/11_Slice-Policy.md` step 4.
 4. Only when no active spec's scope can absorb the requirement, AND the
    underlying capability is itself new, propose **CREATE**. Add the new
-   `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it in
-   the Triage row's Rationale column. `QFAI-TRIAGE-006` will fail the
-   validator otherwise.
+   `CAP-NNNN` row to `_policies/03_Capabilities.md` _first_ and fill its
+   `Spec` cell with the next unused `spec-NNNN` (never reuse a retired
+   one), then cite the CAP in the Triage row's Rationale column.
+   `QFAI-TRIAGE-006` will fail the validator otherwise, and a row left
+   with an empty `Spec` cell reports `QFAI-SPLIT-106`.
+
+   `QFAI-SPLIT-106` is inside its promotion window, so it is emitted at
+   `warning` and `validate --fail-on error` **still exits 0** while the
+   cell is empty. A blank cell also suppresses `QFAI-SPLIT-103` / `104` /
+   `105` for that row, so no other code stands in for it. Do not treat
+   the exit code as the check here: read the reported findings and
+   confirm no `QFAI-SPLIT-106` remains. The finding's own message names
+   the release it becomes an `error` in.
 
 The triage classifier implements an append-first fallback: when the REQ's
 capability does not match exactly, it still proposes APPEND on the active
@@ -255,6 +265,30 @@ catches a source that was misspelled or never allocated.
 
 - SUPERSEDE rewrites the source spec's `01_Spec.md` to
   `Status: superseded` and sets `Superseded-by: spec-NNNN`.
-- DELETE removes the spec directory entirely (record reason in delta).
+- DELETE removes the spec directory entirely and drops the capability's row
+  from `_policies/03_Capabilities.md` (record reason in delta). Leaving the row
+  behind makes `validateSpecSplitByCapability` raise `QFAI-SPLIT-103` for the
+  deleted directory. Surviving specs keep their IDs — see the gap policy in
+  `_policies/11_Slice-Policy.md`.
+  - **A catalog with no `Spec` column must be migrated BEFORE the DELETE, and
+    nothing does it for you.** The gap the surviving IDs leave is absorbed by
+    the DECLARED mapping; a catalog written before that column existed has none,
+    so the derivation falls back to position and reads the gap as a mismatch —
+    `QFAI-SPLIT-103` for a directory that was deliberately removed,
+    `QFAI-SPLIT-104` for every surviving one after it, and `QFAI-SPLIT-105` for
+    the pairing that shifted. All three are `error`.
+  - The migration is one edit: add a `Spec` column to the catalog table and fill
+    **every** row with the directory that capability owns, then delete the row.
+    Half a migration is worse than none — the column's presence, not how many
+    cells are filled, is what selects the declared mapping, so a partially
+    filled column reports `QFAI-SPLIT-106` on each empty cell instead of
+    falling back. `npx qfai init` keeps `.qfai/specs/**` as your data and
+    never rewrites it, `--force` included, so an upgrade will not perform this.
+- SPLIT reassigns the `Spec` cell of every moved `CAP-NNNN` row in
+  `_policies/03_Capabilities.md` to the new directory that now owns it, and the
+  source spec keeps only the capability it retains. A moved row left on the old
+  directory raises `QFAI-SPLIT-106` (two rows claim it), `QFAI-SPLIT-104` (the
+  new directory is owned by no CAP) and `QFAI-SPLIT-105` (the CAP is paired
+  with the wrong `01_Spec.md`).
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.

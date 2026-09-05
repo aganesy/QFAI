@@ -16,7 +16,55 @@ the static compliance gate, not by you.
 - Root `DESIGN.md` (read-only context: `# Brand Philosophy`,
   `audience.emotion`, `audience.do_not_look_like`).
 
-## Output (`iter-NN/review.json`)
+## Outputs — two files, two schemas
+
+You write two different files. They are not interchangeable. Both
+paths are given in full below and are relative to the project root —
+write them exactly there, or the CLI will not find them.
+
+1. **Per-spec / per-screen payload** —
+   `.qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json`,
+   one per screen. `<spec-id>` is the spec directory name
+   (`spec-NNNN`); the per-spec subdirectory is mandatory for every run
+   that declares UI screens — single-spec runs included, and a
+   multi-spec run is rejected outright without it. This is the file the
+   prototyping CLI parses and certify requires. Its schema is closed
+   (11 required top-level fields, unknown keys rejected) and lives in
+   `references/review-payload-schema.md`. Write it from that
+   reference, not from the block below.
+2. **Per-cycle summary** —
+   `.qfai/evidence/prototyping/iter-NN/review.json`, one per cycle.
+   The orchestrator folds it into `prototyping.json#iterations[]`,
+   which is what `npx qfai validate` checks. Its shape is the block
+   below.
+
+The two share only `layoutAntiPatternsDetected` and
+`designMdViolations`. `scores` / `proseCritique` / `pivotDirective` /
+`evidenceRefs` exist on the summary only — putting them in a
+`<screen>.review.json` fails the closed schema.
+
+### Aggregating the payloads into the summary
+
+The summary is derived from the payloads you just wrote, never from
+one screen alone. Fold every `(spec, screen)` pair of this cycle:
+
+- `scores.<axis>` — the **worst** verdict that axis takes across all
+  pairs (`weak` < `acceptable` < `strong` < `exceptional`).
+- `layoutAntiPatternsDetected` — the **union** of the pairs' arrays,
+  deduplicated by ID.
+- `designMdViolations` — the **union**, deduplicated on
+  `(kind, found)`.
+- `proseCritique` / `pivotDirective` describe the cycle as a whole and
+  read the aggregated `scores`.
+
+This keeps the loop's stop test identical to the convergence AND that
+`npx qfai prototyping certify` re-derives per pair: the cycle stops
+only when every pair is `exceptional` with both arrays empty. A
+summary built from the best screen would stop the loop while certify
+still rejects the per-screen payloads — with no further cycle left in
+which to fix them.
+
+## Per-cycle summary (`iter-NN/review.json`)
 
 ```ts
 type Review = {
@@ -125,7 +173,8 @@ button in the browser is not sufficient for app-like interfaces.
 
 If `layoutAntiPatternsDetected.length > 0`, cap
 `informationArchitecture` at `acceptable` (cannot be `strong` /
-`exceptional`).
+`exceptional`). The cap applies to both outputs: `scores.*` on the
+per-cycle summary and `ordinalAxes.*` on the per-screen payload.
 
 ## pivotDirective rules
 
