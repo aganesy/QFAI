@@ -38,6 +38,7 @@
     "tests/assets/implementCheckpointVerification.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
     "tests/assets/retractedClaims.test.ts",
+    "tests/assets/reviewerResponseProvenance.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",

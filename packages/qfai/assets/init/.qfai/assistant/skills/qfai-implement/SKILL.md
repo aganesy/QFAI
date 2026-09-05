@@ -251,15 +251,15 @@ Precedence rules:
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Reviewer role:` + `Reviewed artifact:` + `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
-- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
+- Reviewer response must include `Reviewer role:`, `Reviewed artifact:` and `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template). A bare `Result:` line is not a verdict — without the role and the artifact it is textually identical to a doer's self-assessment, so a response missing either line is re-requested, never read for its `Result:`.
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
-- Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+- Do not declare DONE until Reviewer returns `PASS` under those two lines, naming the artifact this gate covers; otherwise apply `REVISE`.
 
 #### Blocking vs advisory findings
 

@@ -213,14 +213,14 @@ Constraints:
   STOP + Change Request + owner rerun per constitution/drift-protocol.md
 Output format:
 - <headings / bullet schema>
-Quality bar:
-- PASS if ...
-- REVISE if ...
+Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`: that is the reviewer's vocabulary and the completion gate matches on it, so a doer told to report in it emits a verdict on its own work
 ```
 
 ## Reviewer response template
 
 ```text
+Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
+Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
 Round: 1 | 2 | 2b
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
@@ -422,7 +422,7 @@ post-escalation verification review of a user-named fix.
   allowed to move under them: an honest, independent verdict on a tree that no longer exists is the
   normal failure this field addresses. If the tree changed mid-review, say so and name the revision
   the ruling is pinned to.
-- `Authored/edited under review` is REQUIRED. A response omitting it is not a valid review verdict.
+- `Reviewer role`, `Reviewed artifact` and `Authored/edited under review` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
 - Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
   and the review must be handed to a non-participating reviewer (see
   `Definition: independent reviewer`).
