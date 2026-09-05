@@ -271,7 +271,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
   assertion; route it per `drift-protocol.md#reviewer-originated-obligations`.
 - Do **not** edit `08_Open-questions.md` here — it is upstream SSOT under the Drift Protocol and
   creating spec artifacts is a non-goal of this skill; the owner phase (`/qfai-sdd`) records and
-  adjudicates it.
+  adjudicates it. The open-question item in the closing Completion Checklist below asks for that routing, never for a write to that file.
 - What each class cites, when an advisory takes the Change Request path, and why an advisory-only
   review still returns `PASS`: `references/finding-classification.md`.
 
@@ -455,7 +455,7 @@ must be ticked; a box that cannot be ticked is a reason not to declare completio
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions were logged to the proper OQ file (if applicable).
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 

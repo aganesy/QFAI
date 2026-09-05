@@ -41,6 +41,7 @@
     "tests/assets/gateCommandHome.test.ts",
     "tests/assets/implementCheckpointVerification.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
+    "tests/assets/openQuestionRouting.test.ts",
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
