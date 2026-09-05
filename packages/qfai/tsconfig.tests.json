@@ -70,6 +70,7 @@
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
     "tests/assets/verifyEvidenceSections.test.ts",
+    "tests/cli/commands/validateTextFormat.test.ts",
     "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/githubAnnotationCap.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
