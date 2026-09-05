@@ -88,7 +88,7 @@ export function parseDeltaV1(text: string): ParsedDeltaV1 {
   const headings = parseHeadings(text);
   const sections = extractH2Sections(text);
   const hasDeltaHeading = headings.some(
-    (heading) => heading.level === 1 && normalizeHeading(heading.title).startsWith("delta"),
+    (heading) => heading.level === 1 && isDeltaTitle(heading.title),
   );
   const updateHistorySection = findSection(sections, "Update History");
   const decisionLogSection = findSection(sections, "Decision Log");
@@ -148,6 +148,35 @@ export function toDeltaMeta(record: Record<string, unknown>): DeltaMeta {
     scope: asStringArray(record.scope),
     notes: asString(record.notes),
   };
+}
+
+/** `date: YYYY-MM-DD`, as the shipped skeleton spells an unfilled date. */
+const DATE_PLACEHOLDER_RE = /^y{4}-m{2}-d{2}$/i;
+/** `<file / module this decision touches>`, as the skeleton spells free text. */
+const ANGLE_PLACEHOLDER_RE = /^<[^<>]*>$/;
+
+function isUnfilledValue(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed === "" || DATE_PLACEHOLDER_RE.test(trimmed) || ANGLE_PLACEHOLDER_RE.test(trimmed);
+}
+
+/**
+ * True when the entry is still the shipped skeleton rather than a decision.
+ *
+ * The delta template has to parse — an author copies it and fills it in — and
+ * it deliberately carries real `primary` / `tags` / `compat` values so the
+ * first copy teaches the vocabulary the report counts. That leaves `date`,
+ * `scope` and `notes` as the only evidence of whether anybody wrote anything,
+ * so those three decide it. Counting an untouched copy publishes
+ * `Initial 1 / @docs 1 / Improvement 1` for a spec whose decision log is empty,
+ * and a fabricated 1 also hides the "nothing was counted" disclosure that a
+ * real zero would raise.
+ */
+export function isPlaceholderDeltaMeta(meta: DeltaMeta): boolean {
+  if (isUnfilledValue(meta.date) || isUnfilledValue(meta.notes)) {
+    return true;
+  }
+  return meta.scope.length > 0 && meta.scope.every((item) => isUnfilledValue(item));
 }
 
 export function hasMigrationBullets(sectionBody: string | null): boolean {
@@ -401,6 +430,18 @@ function sanitizeMetaYaml(block: string): string {
   }
 
   return out.join("\n");
+}
+
+/**
+ * The shipped delta files are numbered (`# 09 Delta`, `# 18 Delta`) because every
+ * file in a spec pack follows the `NN Title` convention. Strip that leading
+ * ordinal before the prefix test, so the heading the templates ship and the
+ * heading this parser recognises are the same thing.
+ */
+function isDeltaTitle(title: string): boolean {
+  return normalizeHeading(title)
+    .replace(/^\d+\s+/, "")
+    .startsWith("delta");
 }
 
 function normalizeHeading(value: string): string {
