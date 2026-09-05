@@ -117,4 +117,23 @@ describe("QFAI-SPACK-101 reaches a cross-spec EX/TC id", () => {
       expect(await codes(root)).not.toContain("QFAI-SPACK-101");
     });
   });
+
+  it("names the supported cross-spec citation form in its remedy", async () => {
+    // The old remedy said "fix the IDs to match this spec", which is the one
+    // thing the author cannot do — the ID belongs to another spec. Layered
+    // specs share entities, so citing the owner is a real need, and the only
+    // form that passes is the owner's CONTRACT id. That was discoverable only
+    // by tripping the validator repeatedly (#1101).
+    await withSpec({ testCases: "# TC\n\n## TC-0007-0001\n" }, async (root) => {
+      const found = (await validateSpecPacks(root, defaultConfig)).find(
+        (i) => i.code === "QFAI-SPACK-101",
+      );
+      expect(found).toBeDefined();
+      expect(found?.suggested_action).toContain("contract id");
+      expect(found?.suggested_action).toContain("CON-DB-*");
+      // And the file boundary, which was the issue's other open question: five
+      // files are checked and `09_delta.md` is not one of them.
+      expect(found?.suggested_action).toContain("09_delta.md");
+    });
+  });
 });

@@ -21,7 +21,11 @@ The SSOT for this list is the `TASK_FIDELITY_REQUIRED_KEYWORDS`
 constant shipped inside the QFAI package. The validator (`QFAI-CRIT-009`),
 the `--capture` template emitter, and this document all read from
 that constant so the keyword set cannot silently drift between the
-three surfaces.
+three surfaces. This page mirrors it and does not define it: adding a
+keyword here changes the guidance but not what `npx qfai validate`
+accepts, so report a disagreement between this page and the validator's
+error text as a QFAI bug rather than treating the list as a local
+customization point.
 
 ## Canonical markdown structure
 

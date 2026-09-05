@@ -74,11 +74,72 @@ export async function validateSddDesignContractReadiness(
   });
 }
 
+/**
+ * Whether the root DESIGN.md parses — and nothing else.
+ *
+ * Split out because the stage that AUTHORS the file could not see whether it
+ * parses. `qfai-discussion` mandates a parsable root DESIGN.md and prescribes
+ * `--profile discussion`, whose validators read discussion packs, mermaid,
+ * visuals, research summaries and review artifacts — none of them DESIGN.md.
+ * `QFAI-DCON-033` reached a run only through the sdd or prototyping readiness
+ * gates, so a malformed file surfaced a review round later, under a different
+ * skill, with the earlier gate having passed (#1098).
+ *
+ * The parse half only. The readiness validator also compares DESIGN.md against
+ * its lock, requires UI contracts and rejects premature ones — all of which
+ * belong to later stages, and the lock in particular is `/qfai-sdd` Phase 0's
+ * to clear. "The file is malformed" and "the file no longer matches its frozen
+ * hash" are different failures with different owners, which is why this is a
+ * separate entry point rather than a flag on the existing one.
+ *
+ * Silent when the file is absent: `QFAI-DCON-030` owns missing-file, and a
+ * discussion run happens before the file necessarily exists.
+ */
+export async function validateRootDesignMdParse(root: string): Promise<Issue[]> {
+  let text: string;
+  try {
+    text = await readFile(path.join(root, ROOT_DESIGN_MD_REL), "utf-8");
+  } catch {
+    // Absent or unreadable: `QFAI-DCON-030` owns missing-file, and a discussion
+    // run happens before the file necessarily exists. Reporting either here
+    // would put a second finding on one state, or a finding on a project that
+    // has not reached this artifact yet.
+    return [];
+  }
+  const parsed = parseDesignMd(text);
+  return "error" in parsed ? [rootDesignMdParseIssue(parsed.error.message)] : [];
+}
+
 export async function validatePrototypingDesignContractReadiness(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
   return validateDesignContractReadinessForStage(root, config, "prototyping");
+}
+
+/**
+ * The `QFAI-DCON-033` finding, built in one place.
+ *
+ * Two callers emit it now — the readiness gate and the discussion-profile parse
+ * check — and a finding whose message, rule or remedy differed between them
+ * would send automated remediation down two paths for one defect.
+ *
+ * The parse error's own message is passed through verbatim because it already
+ * names what to fix: `rejectUnknownKeys` produces
+ * `Unknown '<section>' key '<k>'. Allowed: <list>.`, so the allowed set reaches
+ * the operator without opening the spec.
+ */
+function rootDesignMdParseIssue(detail: string): Issue {
+  return issue(
+    "QFAI-DCON-033",
+    `Root DESIGN.md failed to parse: ${detail}`,
+    "error",
+    ROOT_DESIGN_MD_REL,
+    "designContractReadiness.rootDesignMdParse",
+    undefined,
+    "canonical",
+    "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
+  );
 }
 
 async function validateDesignContractReadinessForStage(
@@ -548,18 +609,7 @@ async function validateRootDesignMdAndLock(
   if (designMdText !== null) {
     const parseResult = parseDesignMd(designMdText);
     if ("error" in parseResult) {
-      issues.push(
-        issue(
-          "QFAI-DCON-033",
-          `Root DESIGN.md failed to parse: ${parseResult.error.message}`,
-          "error",
-          ROOT_DESIGN_MD_REL,
-          "designContractReadiness.rootDesignMdParse",
-          undefined,
-          "canonical",
-          "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
-        ),
-      );
+      issues.push(rootDesignMdParseIssue(parseResult.error.message));
     } else {
       designMd = parseResult.data;
     }

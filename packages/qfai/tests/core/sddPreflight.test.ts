@@ -200,6 +200,44 @@ describe("runSddPreflight", () => {
     }
   });
 
+  // The skill path has to reach the same verdict this function does. `/qfai-sdd`
+  // Stage 0 once said to STOP on a `prototyping.yaml` that does not parse, while
+  // this preflight answers `ready` for the very same input — so whether SDD could
+  // proceed depended on which entry point you came in through, and a project
+  // carrying an old-format file could not run the skill at all. Assert both
+  // halves in one place: the runtime verdict, and the shipped prose that
+  // describes it.
+  it("agrees with the shipped Stage 0 playbook that a malformed file is not a blocker", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203099");
+      await writeFile(
+        path.join(root, ".qfai", "discussion", "discussion-20260216010203099", "prototyping.yaml"),
+        "prototyping: invalid\n",
+        "utf-8",
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+      expect(result.status).toBe("ready");
+      expect(result.blockers).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+
+    const repoRoot = path.resolve(process.cwd(), "..", "..");
+    const playbookRel = "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md";
+    for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      const playbook = (await readFile(path.join(repoRoot, tree, playbookRel), "utf-8")).replace(
+        /\s*\n\s*/g,
+        " ",
+      );
+      expect(playbook, `${tree} Stage 0 still stops where this preflight continues`).not.toContain(
+        "Stop if `prototyping.yaml` is present in the latest UI-bearing pack",
+      );
+      expect(playbook).toContain("A malformed optional artifact is **not** a Stage 0 blocker");
+    }
+  });
+
   // W-4.10: non-object namespaced block blocks preflight
   it("does not block when prototyping.yaml has scalar namespaced block", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
