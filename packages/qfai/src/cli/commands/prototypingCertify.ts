@@ -31,6 +31,7 @@
  * marker-scan based) so AI consumers do not hardcode a specific spec id.
  */
 
+import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -348,6 +349,58 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
+  // Freshness gate. The three checks above say the stored result PASSED; none
+  // of them says it passed against the tree about to be sealed. So a success
+  // recorded while a flat `review.json` was present let certify seal a
+  // per-spec-only layout the current `validate` rejects, and the certificate
+  // recorded `validateRun.ranAt` as the CERTIFY instant — a timestamp
+  // manufactured at the moment the question became unanswerable (#1107).
+  //
+  // Known limitations, carried forward from the sibling mtime check below
+  // rather than dropped: filesystem granularity can make a write in the same
+  // second look not-newer, and an mtime is not tamper-resistant. Linking the
+  // certificate to the run by content digest is the stronger form and needs
+  // its own decision; this makes the relation exist at all.
+  const validateRanAtRaw = extractString(validateJson, "generatedAt");
+  const validateRanAt =
+    validateRanAtRaw !== undefined && !Number.isNaN(Date.parse(validateRanAtRaw))
+      ? validateRanAtRaw
+      : null;
+  // A missing `generatedAt` is an OLDER WRITER, not a failed check, and it is
+  // reported rather than refused. The issue asks certify to refuse when the
+  // evidence is newer than the run; refusing when the run carries no instant
+  // would also reject every `validate.json` written before this field existed,
+  // for a condition none of them can express. Any `validate` run on this
+  // version stamps it, so the window is one stale file wide and the next run
+  // closes it.
+  if (validateRanAt === null) {
+    info(
+      `  note: ${validateJsonRel} carries no generatedAt (written by an earlier version), ` +
+        "so this certification could not be checked against the age of the evidence. " +
+        "Re-run `qfai validate --profile prototyping --fail-on error` to get that check.",
+    );
+  }
+  const newerThanRun =
+    validateRanAt === null
+      ? []
+      : await findEvidenceNewerThan(
+          options.root,
+          path.join(options.root, PROTOTYPING_EVIDENCE_REL),
+          Date.parse(validateRanAt),
+        );
+  if (newerThanRun.length > 0) {
+    error(
+      [
+        `qfai prototyping certify: ${newerThanRun.length} evidence file(s) changed after ` +
+          `${validateJsonRel} was written (${validateRanAt}), so that result is not a ` +
+          "verdict on the tree being sealed:",
+        ...newerThanRun.slice(0, 10).map((rel) => `  - ${rel}`),
+        ...(newerThanRun.length > 10 ? [`  ... and ${newerThanRun.length - 10} more`] : []),
+        "Run `qfai validate --profile prototyping --fail-on error` and rerun certify.",
+      ].join("\n"),
+    );
+    return 2;
+  }
 
   // Canonical `.qfai/report/verify.json` first, legacy `.qfai/output/` as a
   // fallback — the same shape `validate.json` and the saas-package gates
@@ -403,10 +456,17 @@ export async function runPrototypingCertify(
   // pass to surface the same condition.
   const verifyScope = extractString(verifyRead.json, "scope");
   if (verifyScope !== undefined && verifyScope !== "prototyping") {
+    // This is the enforcement for the circular-read class. The validator
+    // finding is `info` because a `scope: "full"` verdict on disk is not damage
+    // — a full-profile run records it truthfully, and making it an `error`
+    // repo-wide left `/qfai-verify` with no honest value to write outside Work
+    // Order H (#1097). Consuming such a verdict here is the actual defect, and
+    // this refuses it.
     error(
       `qfai prototyping certify: ${verifyRead.rel} scope is "${verifyScope}" but the ` +
         'prototyping certify gate accepts only scope="prototyping". ' +
-        "Re-run `/qfai-verify` with the prototyping scope before certification " +
+        "Close the prototyping loop, then re-run `/qfai-verify` for Work Order H so the file " +
+        'records scope="prototyping" before certification ' +
         "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",
     );
     return 2;
@@ -1129,7 +1189,12 @@ export async function runPrototypingCertify(
     runId,
     toolVersion,
     evidenceRoot,
-    validateRun: { errorCount: 0, ranAt: new Date().toISOString() },
+    // The run's own instant when the result carries one. `new Date()` here
+    // recorded when the CERTIFICATE was built and called it when validation
+    // ran, so a certificate could not be audited for the very relation it was
+    // standing for (#1107). The fallback is that old behaviour and applies only
+    // to a `validate.json` written before `generatedAt` existed.
+    validateRun: { errorCount: 0, ranAt: validateRanAt ?? new Date().toISOString() },
     verifyRun: { status: "PASS", ranAt: new Date().toISOString() },
     reviewerSignoff: {
       reviewerId,
@@ -2060,6 +2125,60 @@ async function loadJson(filePath: string): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Evidence files modified after `runAtMs`, repo-relative and sorted.
+ *
+ * The walk mirrors `scanEvidenceDigests` in
+ * `core/prototyping/certificate.ts` — same tree, same tolerance for an
+ * unreadable directory — because the question is about the same file set the
+ * certificate is about to digest. An unreadable entry is skipped rather than
+ * reported: this function answers "what is newer", and a path it cannot read is
+ * a different problem that the digest scan raises on its own terms.
+ *
+ * `>` not `>=`: a file written in the same clock tick as the run is not
+ * evidence of a change, and on a coarse filesystem it is not distinguishable
+ * from one written just before. That is the granularity limitation the caller
+ * records, and erring toward "not newer" keeps the gate from refusing a
+ * correct sequence.
+ */
+async function findEvidenceNewerThan(
+  root: string,
+  evidenceRoot: string,
+  runAtMs: number,
+): Promise<string[]> {
+  const newer: string[] = [];
+  const visit = async (dir: string): Promise<void> => {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const absolute = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await visit(absolute);
+        continue;
+      }
+      // The certificate itself lives at the top of the tree and is written
+      // after this gate runs, so it is never part of the answer.
+      if (dir === evidenceRoot && absolute === path.join(root, COMPLETION_CERTIFICATE_REL_PATH))
+        continue;
+      try {
+        const stats = await stat(absolute);
+        if (stats.mtimeMs > runAtMs) {
+          newer.push(path.relative(evidenceRoot, absolute).replace(/\\/g, "/"));
+        }
+      } catch {
+        // Unreadable: not this function's verdict to give.
+      }
+    }
+  };
+  await visit(evidenceRoot);
+  newer.sort();
+  return newer;
 }
 
 /**

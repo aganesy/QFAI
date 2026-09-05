@@ -40,11 +40,22 @@ function defaultPatternsPath(): string {
   const base = import.meta.url;
   const basePath = base.startsWith("file:") ? fileURLToPath(base) : base;
   const baseDir = path.dirname(basePath);
-  // src/core/validators/ (dev) or dist/ (bundled) からの候補
+  // Candidates for each place this module is loaded from. The depth differs
+  // per entry point, and a missing candidate is not a loud failure: the
+  // caller fails soft, so an unresolvable registry silently drops the
+  // unknown-code obligation. `../assets/...` is the one that resolves from
+  // `dist/index.mjs` — the `exports["."]` import path a library consumer
+  // reaches `validateProject` through. Without it all three candidates
+  // missed there, so `qfai-prototyping/SKILL.md`'s unconditional promise
+  // that an unknown `lap-*` code fails validate was true only for the `bin`.
+  //   src/core/validators/       -> layoutAntiPatterns.json  (dev, colocated)
+  //   dist/cli/index.mjs         -> ../../assets/validators/...
+  //   dist/index.mjs             -> ../assets/validators/...
   const candidates = [
     path.join(baseDir, "layoutAntiPatterns.json"),
     path.resolve(baseDir, "../../../assets/validators/layoutAntiPatterns.json"),
     path.resolve(baseDir, "../../assets/validators/layoutAntiPatterns.json"),
+    path.resolve(baseDir, "../assets/validators/layoutAntiPatterns.json"),
   ];
   for (const c of candidates) {
     if (existsSync(c)) return c;
