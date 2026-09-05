@@ -24,13 +24,27 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
 3. Stop only when there is no usable source at all: no pack, no import-lite
    input, and no explicit user requirement.
-4. Stop if a **visual-prototyping** UI-bearing pack is missing valid
-   `prototyping.yaml`. A pack is visual-prototyping when its `01_Context.md`
-   classification names `web`, `mobile`, `desktop` or `mixed` as
-   `primary_surface` or in `secondary_surfaces`. A cli-only pack
-   (`primary_surface: cli` with no visual `secondary_surfaces`) emits no
-   `prototyping.yaml` — `/qfai-prototyping` rejects `cli` as an execution
-   surface — so its absence is not a blocker there.
+4. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
+   and does not parse against the schema in
+   `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
+   Record the file and what failed to parse, and continue; `/qfai-prototyping` is where an
+   unusable recommendation actually bites, and it re-reads the file.
+
+   A malformed optional artifact is **not** a Stage 0 blocker, and making it one would put this
+   skill at odds with the runtime: `runSddPreflight` returns `status: "ready"` with zero blockers
+   for a `prototyping.yaml` carrying an invalid mode, a scalar block or a null block, and the
+   acceptance criterion it implements says side-artifact state alone does not block SDD. Two
+   entry points that disagree means whether SDD can proceed depends on which one you came in
+   through, and a project holding an old-format file could not run `/qfai-sdd` at all.
+
+   Absence is legal and must not stop Stage 0: `/qfai-discussion` emits the file only when the
+   pack is UI-bearing on a **visual-prototyping** surface — its `01_Context.md` classification
+   names `web`, `mobile`, `desktop` or `mixed` as `primary_surface` or in `secondary_surfaces` —
+   **and** an explicit prototyping recommendation is useful, so a complete UI-bearing pack may
+   legitimately omit it. A cli-only pack (`primary_surface: cli` with no visual
+   `secondary_surfaces`) emits none at all: `/qfai-prototyping` rejects `cli` as an execution
+   surface. Never author one to clear this gate — a recommendation the discussion did not make is
+   a fabricated rationale record.
 
 ### Import-lite entrypoint (no discussion-pack at all)
 
