@@ -194,6 +194,7 @@ export const RULE_PROMOTIONS = {
    * chose, and the cell is never rewritten once a row is approved.
    */
   triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-SPLIT-106` — a CAP row the declared catalog cannot resolve to exactly
    * one spec directory: a blank `Spec` cell, one naming several directories, a
    * CAP repeated across rows, or two CAPs claiming the same directory. The

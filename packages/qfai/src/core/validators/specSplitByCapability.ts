@@ -124,8 +124,14 @@ const CAP_ID_CELL_RE = /\bCAP-\d{4}(?![-\w])/g;
  * directory that does exist, every downstream check passed, and the invalid
  * name reached the final gate unreported — `03_Capabilities.md`'s own id-format
  * check only inspects CAP ids. Require the id to END where the token ends.
+ *
+ * `(?!\.\w)` is the same defect one character along: `-` and word characters
+ * were excluded and `.` was not, so a cell naming a FILE — `spec-0001.md`, or a
+ * renamed `spec-0001.old` — resolved to the directory beside it. A trailing
+ * period is left alone deliberately: `spec-0001.` at the end of a sentence is
+ * punctuation, and the lookahead only rejects a dot that CONTINUES the token.
  */
-const SPEC_ID_CELL_RE = /\bspec-\d{4}(?![-\w])/gi;
+const SPEC_ID_CELL_RE = /\bspec-\d{4}(?![-\w])(?!\.\w)/gi;
 const CAP_HEADER_RE = /^cap(\s*id)?$/i;
 const SPEC_HEADER_RE = /^spec(\s*(id|dir|directory))?$/i;
 /** A GFM alignment cell (`---`, `:---`, `---:`, `:---:`). */
@@ -248,14 +254,25 @@ function readCatalogBody(
  * table or a fenced example sitting above the live table would otherwise be
  * returned as the catalog, and the live table's own breaches would go unseen.
  *
- * The search is bounded to the `## CAP Catalog` section, and inside it only
- * the first well-formed markdown table that carries both headers is parsed —
- * header row, alignment row, then its own consecutive body rows. Declared mode
- * is decided by the presence of the spec column, not by how many cells are
- * filled in: a catalog that adds the column and leaves every cell empty
- * declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`) rather
- * than silently falling back to the positional derivation. Returns `null` only
- * when no such table carries a spec column at all.
+ * The search is bounded to the `## CAP Catalog` section where the document has
+ * one. A catalog written before the heading existed has none, and there the
+ * whole document is scanned — the fallback is what keeps a legacy catalog
+ * readable at all, and it is why the rule below is stated in terms of the FIRST
+ * table rather than "the table in the section".
+ *
+ * **The first well-formed table carrying a CAP column is the catalog**, and its
+ * spec column decides the mode. Scanning past it for a later table that has
+ * both headers made an audit or change-history table below a legacy catalog
+ * into the mapping: those tables legitimately carry `CAP ID` and `Spec`
+ * columns, and the live catalog's own rows then resolved through somebody
+ * else's history.
+ *
+ * Declared mode is decided by the presence of the spec column, not by how many
+ * cells are filled in: a catalog that adds the column and leaves every cell
+ * empty declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`)
+ * rather than silently falling back to the positional derivation. Returns
+ * `null` when the catalog table carries no spec column, and when there is no
+ * CAP table at all.
  */
 function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
   // The SAME section resolver the CAP roll-call uses (`resolveCatalogTable` ->
@@ -276,14 +293,19 @@ function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
       continue;
     }
     const capColumn = header.findIndex((cell) => CAP_HEADER_RE.test(cell));
-    const specColumn = header.findIndex((cell) => SPEC_HEADER_RE.test(cell));
-    if (capColumn < 0 || specColumn < 0) {
+    if (capColumn < 0) {
       continue;
     }
     if (!isDelimiterRow(tableCells(lines[index + 1] ?? ""))) {
       continue;
     }
-    return readCatalogBody(lines, index + 2, capColumn, specColumn);
+    // The catalog is THIS table, whatever its columns. Returning `null` for a
+    // missing spec column ends the search rather than continuing it: a later
+    // table that happens to carry both headers is an audit or history table,
+    // not a second catalog, and reading it as one resolved the live rows
+    // through somebody else's record.
+    const specColumn = header.findIndex((cell) => SPEC_HEADER_RE.test(cell));
+    return specColumn < 0 ? null : readCatalogBody(lines, index + 2, capColumn, specColumn);
   }
   return null;
 }
@@ -454,13 +476,23 @@ async function capReferenceIssues(
   layeredEntries: SpecEntry[],
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
+  // Indexed once. The lookup used to be a `find` per CAP row, which is O(n*m)
+  // in a repository with many specs and many capabilities; first entry wins, as
+  // the linear scan did.
+  const byDirName = new Map<string, SpecEntry>();
+  for (const entry of layeredEntries) {
+    const key = path.basename(entry.dir).toLowerCase();
+    if (!byDirName.has(key)) {
+      byDirName.set(key, entry);
+    }
+  }
   for (let index = 0; index < capIds.length; index += 1) {
     const capId = capIds[index];
     const specId = expectedSpecIds[index];
     if (!capId || !specId) {
       continue;
     }
-    const entry = layeredEntries.find((value) => path.basename(value.dir).toLowerCase() === specId);
+    const entry = byDirName.get(specId);
     if (!entry) {
       continue;
     }
@@ -594,8 +626,15 @@ export async function validateSpecSplitByCapability(
     catalog ? (catalog.byCap.get(capId) ?? null) : `spec-${to4(index + 1)}`,
   );
 
-  const missingSpecIds = expectedSpecIds.filter(
-    (specId): specId is string => specId !== null && !specDirsById.has(specId),
+  // De-duplicated: two CAP rows may declare the SAME missing directory, and the
+  // id would then appear twice in `QFAI-SPLIT-103`'s message and twice in its
+  // `refs`. The finding is about the directory, not about how many rows want it.
+  const missingSpecIds = Array.from(
+    new Set(
+      expectedSpecIds.filter(
+        (specId): specId is string => specId !== null && !specDirsById.has(specId),
+      ),
+    ),
   );
   // While a CAP row is still unresolved — blank cell, or several directories in
   // one cell — an unnamed directory may well be the one that row owns, so 104

@@ -331,6 +331,85 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("refuses a Spec cell that names a file rather than the directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `spec-0001.md` is not `spec-0001`. The tail lookahead excluded `-` and
+      // word characters but not `.`, so the cell truncated to a directory that
+      // does exist — and every downstream check then passed on a declaration
+      // nobody made.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001.md", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not read an audit table below a legacy catalog as the mapping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A legacy catalog has no `Spec` column, so the derivation is positional.
+      // The change-history table below it legitimately carries `CAP ID` and
+      // `Spec` columns; scanning past the catalog for "a table with both
+      // headers" made that history the mapping, and the live rows then resolved
+      // through it. Here it would claim CAP-0001 owns `spec-0002`.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], undefined, {
+        trailingSection: [
+          // An H3, so it stays INSIDE the `## CAP Catalog` section — which is
+          // where the finding puts it, and the only place the two readings can
+          // disagree. Under an H2 the section ends before the table and both
+          // readings decline it, which is a fixture that never reaches the
+          // distinguishing input.
+          "### Change history",
+          "",
+          "| CAP ID | Spec | Moved on |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0002 | 2026-01-01 |",
+          "",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      // Positional derivation holds: CAP-0001 -> spec-0001, CAP-0002 ->
+      // spec-0002, both present, so nothing is missing, extra or unresolved.
+      expect(
+        issues.map((issue) => issue.code),
+        "the history table is not a catalog and must not resolve anything",
+      ).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("names a missing directory once when two CAP rows declare it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The finding is about the directory, not about how many rows want it.
+      // Filtering the per-row expectations without de-duplicating put the id in
+      // the message twice and in `refs` twice.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0009", "spec-0009"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const missing = issues.filter((issue) => issue.code === "QFAI-SPLIT-103");
+      expect(missing).toHaveLength(1);
+      expect(missing[0]?.refs).toEqual(["spec-0009"]);
+      expect(missing[0]?.message).toContain("spec-0009");
+      expect(missing[0]?.message).not.toContain("spec-0009, spec-0009");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("treats an all-blank Spec column as a declared mapping, not as a legacy catalog", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {

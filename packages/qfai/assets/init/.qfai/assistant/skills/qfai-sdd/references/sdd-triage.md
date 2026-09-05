@@ -270,6 +270,20 @@ catches a source that was misspelled or never allocated.
   behind makes `validateSpecSplitByCapability` raise `QFAI-SPLIT-103` for the
   deleted directory. Surviving specs keep their IDs — see the gap policy in
   `_policies/11_Slice-Policy.md`.
+  - **A catalog with no `Spec` column must be migrated BEFORE the DELETE, and
+    nothing does it for you.** The gap the surviving IDs leave is absorbed by
+    the DECLARED mapping; a catalog written before that column existed has none,
+    so the derivation falls back to position and reads the gap as a mismatch —
+    `QFAI-SPLIT-103` for a directory that was deliberately removed,
+    `QFAI-SPLIT-104` for every surviving one after it, and `QFAI-SPLIT-105` for
+    the pairing that shifted. All three are `error`.
+  - The migration is one edit: add a `Spec` column to the catalog table and fill
+    **every** row with the directory that capability owns, then delete the row.
+    Half a migration is worse than none — the column's presence, not how many
+    cells are filled, is what selects the declared mapping, so a partially
+    filled column reports `QFAI-SPLIT-106` on each empty cell instead of
+    falling back. `npx qfai init` keeps `.qfai/specs/**` as your data and
+    never rewrites it, `--force` included, so an upgrade will not perform this.
 - SPLIT reassigns the `Spec` cell of every moved `CAP-NNNN` row in
   `_policies/03_Capabilities.md` to the new directory that now owns it, and the
   source spec keeps only the capability it retains. A moved row left on the old
