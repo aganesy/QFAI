@@ -33,7 +33,10 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
-import { hasInitMarkerSignature } from "../../src/core/paths/assistantPaths.js";
+import {
+  WORKLOG_ENTRY_STATUSES,
+  hasInitMarkerSignature,
+} from "../../src/core/paths/assistantPaths.js";
 import {
   INTEGRATION_SURFACE_DIRS,
   validateIntegrationSurface,
@@ -3448,6 +3451,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(tplBody).toMatch(/id:\s*2026-MM-DD-kebab-case-id/);
       expect(tplBody).toContain("kind: decision");
       expect(tplBody).toMatch(/promote-to:/);
+      // The status enum is derived from the same SSOT the validator reads
+      // (WORKLOG_ENTRY_STATUSES), so seed and validator cannot drift.
+      expect(tplBody).toContain(`enum: ${WORKLOG_ENTRY_STATUSES.join(" | ")}`);
     } finally {
       await removeTempTree(root);
     }
