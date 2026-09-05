@@ -40,6 +40,7 @@
     "tests/assets/brandCatalogStepAnchor.test.ts",
     "tests/assets/capabilitySpecMapping.test.ts",
     "tests/assets/changeTypeRecordName.test.ts",
+    "tests/assets/changeTypeTagVocabulary.test.ts",
     "tests/assets/clarificationBudget.test.ts",
     "tests/assets/completionContractPlaceholderScan.test.ts",
     "tests/assets/completionContractSmokeCheck.test.ts",
