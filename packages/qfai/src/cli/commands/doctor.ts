@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
+import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
@@ -196,17 +197,23 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // (`would run ...` / `would fill ...`).
     if (options.dryRun) {
       sideEffectLines.push(
-        `doctor --clean (dry-run): would archive=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+        `doctor --clean (dry-run): would archive=${result.archived.length}, in-ttl=${result.skippedInTtl.length}, kept-tracked=${result.skippedWouldUntrack.length} (ttlDays=${result.ttlDays})`,
       );
       for (const entry of result.archived) {
         sideEffectLines.push(`  would move -> _archive/${entry.packName}`);
       }
+      for (const entry of result.skippedWouldUntrack) {
+        sideEffectLines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
+      }
     } else {
       sideEffectLines.push(
-        `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+        `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length}, kept-tracked=${result.skippedWouldUntrack.length} (ttlDays=${result.ttlDays})`,
       );
       for (const entry of result.archived) {
         sideEffectLines.push(`  -> _archive/${entry.packName}`);
+      }
+      for (const entry of result.skippedWouldUntrack) {
+        sideEffectLines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
       }
     }
   }
