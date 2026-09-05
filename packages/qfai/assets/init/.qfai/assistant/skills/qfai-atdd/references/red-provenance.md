@@ -463,18 +463,16 @@ An earlier branch-1 row's production code can satisfy a later row's predicate,
 so a branch recorded at P1b as `observed-red` can have no observable RED left by
 the time that row's turn comes.
 
-**P1b and P1c are one loop per `TDD-ID`**, not two phases. P1c takes each row
-through GREEN and its checkpoint before the next row's failing test is written;
-completing every branch-1 RED in P1b first would leave several deliberate
-failures open at once, and any checkpoint that runs the full suite sees all of
-them. This file does not restate which rows those are, or how often they come:
-the cadence is defined only in
-`../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries`
-and this file states no condition of its own. Deferring the RED does not escape
-it either — a spec cannot be declared complete without the spec-level boundary,
-which runs the full suite unconditionally — so a stray RED is reached at the
-latest there, and the row whose checkpoint it fails is then
-stranded at `refactor`, which Phase Red does not re-select.
+**P1b and P1c are one loop per `TDD-ID`**, not two phases. P1c takes each row through
+GREEN and its checkpoint before the next row's failing test is written; completing every
+branch-1 RED in P1b first would leave several deliberate failures open at once, and any
+checkpoint that runs the full suite sees all of them. This file does not restate which
+rows those are, or how often they come: the cadence is defined only in
+`../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries` and
+this file states no condition of its own. Deferring the RED does not escape it either — a
+spec cannot be declared complete without the spec-level boundary, which runs the full
+suite unconditionally — so a stray RED is reached at the latest there, and the row whose
+checkpoint it fails is then stranded at `refactor`, which Phase Red does not re-select.
 
 **P1c — discharge branch 1, one row at a time.** Branch 1 ends with a
 deliberately failing test and no production code, and this stage does not write
