@@ -3453,6 +3453,57 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // The seeded template's frontmatter survives a formatter, so the drift notice keeps meaning
+  // what it says.
+  //
+  // The seed is create-only and re-init compares it byte for byte against what this release
+  // generates. Column-aligned trailing comments are what breaks that pairing: Prettier collapses
+  // a run of spaces before a YAML `#`, so the first `prettier --write` over an adopter's tree
+  // rewrites a file the adopter never touched — and from then on **every** re-init reports
+  // `_templates/entry.md differs from the seed this qfai release generates`. A notice that fires
+  // forever on a file nobody edited is one a reader learns to skip, which costs the notice its
+  // one job: saying that a real seed change is waiting.
+  //
+  // Asserted as the PROPERTY rather than by running Prettier. Prettier is the repository's
+  // formatter and not this package's dependency; a test reaching up the workspace for it would
+  // couple the package suite to the monorepo layout for a claim the property states directly.
+  // The second half is what keeps the first honest — deleting every comment also satisfies
+  // "no run of spaces", and would pass a row that only forbade one.
+  it("TC-0003-0022 (TDD-0022): seeds a steering template whose frontmatter a formatter leaves alone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-fmt-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const body = await readFile(
+        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
+        "utf-8",
+      );
+      const lines = body.split(/\r?\n/);
+      const closing = lines.indexOf("---", 1);
+      expect(closing, "the seeded template must open with a frontmatter block").toBeGreaterThan(0);
+      const frontmatter = lines.slice(1, closing);
+
+      expect(
+        frontmatter.filter((line) => / {2,}/.test(line)),
+        "a run of spaces in the frontmatter is column alignment, and Prettier collapses it — " +
+          "which makes every later re-init report seed drift on a file nobody edited",
+      ).toEqual([]);
+
+      // Non-vacuity, both halves: the block was read, and it still carries the guidance the
+      // alignment existed to lay out.
+      expect(
+        frontmatter.length,
+        "the frontmatter must have lines for this to be about",
+      ).toBeGreaterThan(0);
+      expect(
+        frontmatter.filter((line) => line.includes(" # required;")).length,
+        "every field keeps its trailing `# required;` note: dropping the comments would satisfy " +
+          "the spacing claim above while removing what it protects",
+      ).toBe(frontmatter.length);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init preserves user edits in .qfai/steering/
   it("TC-0003-0022 (TDD-0022): re-init does not overwrite user edits in .qfai/steering/README.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022b-"));
