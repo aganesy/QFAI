@@ -14,10 +14,13 @@
 - When reference direction is checked
 - Then error: upper-to-lower reference detected
 
-## EX-0013-0003: Incomplete Discussion Pack Stops SDD
+## EX-0013-0003: Incomplete Pack Continues; No Usable Source Stops
 
 - BR-Ref: BR-0013-0003
-- Given discussion pack missing `06_REQ.md`
+- Given a discussion pack missing `06_REQ.md`, and specs that already exist
+- When SDD preflight runs
+- Then SDD continues, recording the gap as a reference-quality fact
+- Given no discussion pack, no import-lite input, and no explicit user requirement
 - When SDD preflight runs
 - Then SDD stops and guides to `/qfai-discussion`
 
