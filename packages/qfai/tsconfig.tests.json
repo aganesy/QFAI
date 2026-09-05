@@ -37,6 +37,7 @@
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
+    "tests/assets/brandCatalogStepAnchor.test.ts",
     "tests/assets/capabilitySpecMapping.test.ts",
     "tests/assets/changeTypeRecordName.test.ts",
     "tests/assets/clarificationBudget.test.ts",
