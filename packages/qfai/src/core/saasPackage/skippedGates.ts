@@ -41,7 +41,7 @@ export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number]
 export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, readonly string[]> =
   {
     validateAtddCodeTraceability: ["QFAI-ATDD-*"],
-    validateTddList: ["TDDLIST_*"],
+    validateTddList: ["TDDLIST_*", "QFAI-TDDLIST-*"],
     validateTestTodoStubs: ["QFAI-TEST-*"],
     validateTraceabilityIntegrity: ["QFAI-TRACE-*"],
   };
