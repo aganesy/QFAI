@@ -14,7 +14,16 @@
 ```
 .qfai/prototypes/iter-NN/index.html
 .qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}
+.qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json
 ```
+
+The last path is mandatory from cycle 0 onward: the reviewer writes one
+payload per `(spec, screen)` pair alongside the per-cycle `review.json`
+summary (schema: `references/review-payload-schema.md`, aggregation
+rule: `references/reviewer-prompt.md`). `npx qfai prototyping certify`
+rejects the run (exit `64`) when a declared pair has no payload, so a
+run that only writes the flat summary cannot be certified — that holds
+for a single-spec run as much as for a multi-spec one.
 
 `progress.md` is one file for the whole run. The generator appends a
 one-line summary at each iter's end.

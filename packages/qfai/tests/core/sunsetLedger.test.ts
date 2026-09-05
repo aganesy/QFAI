@@ -81,11 +81,65 @@ const RETIRED_SINCE_BASELINE: string[] = [
  * `warning`, an `error`, or a computed severity falls out of the exemption and
  * owes a promotion entry like any other new code.
  */
+/**
+ * Codes that are an `error` from the release that introduced them.
+ *
+ * P7's fourth answer, and the narrowest. The other three are: behind a window
+ * ({@link RULE_PROMOTIONS}), off the ladder at `info`
+ * ({@link INFO_ONLY_SINCE_BASELINE}), or predating the policy
+ * ({@link FINDING_CODES_BEFORE_PROMOTION_POLICY}). None of them can express
+ * "an `error` immediately, and that is not a regression" — and the guards are
+ * right to reject the attempts: a registered entry must take its severity from
+ * `newRuleSeverity`, and a pin at or before the introducing release is the
+ * regression P7 was written after (#1111).
+ *
+ * **The criterion is one thing, and it is checkable at review time: the
+ * condition the code reports ALREADY fails the run today.** Then the window has
+ * no backlog to absorb — no project is passing in that state — and shipping at
+ * `warning` would be a regression rather than a courtesy, because a `warning`
+ * under the default `--fail-on error` exits 0 where the previous behaviour did
+ * not.
+ *
+ * Every entry states its reason. A guard can check the reason is present, that
+ * the code is `"error"` at every site, that something still emits it, and that
+ * the frozen baseline does not already cover it. **No guard can check that the
+ * reason is true** — a reviewer tests it by asking what the tree did before the
+ * code existed. That is why this list is meant to stay short.
+ */
+const ERROR_FROM_INTRODUCTION: readonly { code: string; reason: string }[] = [
+  {
+    code: "QFAI-SCAN-002",
+    reason:
+      "The run could not finish, so the result is not a verdict. Before this code existed the " +
+      "condition ended the process with a bare stderr line and a non-zero exit, so there is no " +
+      "backlog for a window to absorb — and at `warning` the default `--fail-on error` would " +
+      "exit 0, turning a crash into a pass.",
+  },
+];
+
 const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // `.qfai/review/` holds a directory whose name is not a pack timestamp. The
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.
   "QFAI-REVIEW-010",
+  // Which qfai ran, when it was resolved from outside the project root. The
+  // same path test covers a deliberate global install and a dependency hoisted
+  // to a monorepo root, both of which are correct operation, so the finding
+  // reports a fact rather than a defect and there is nothing for a promotion to
+  // close. Telling an intended resolution from an ambient one needs the
+  // project's dependency declaration, not a path comparison — see #1108.
+  "QFAI-TOOL-001",
+  // An obligation referenced only from carriers that declare no test. The
+  // finding reports which partition the obligation landed in so a downstream
+  // gate can read it; a repository is free to leave a placeholder there
+  // deliberately, so there is no release at which this should fail a build.
+  "QFAI-ATDD-119",
+  // A US whose E2E obligation is deferred by `- x-qfai-status: planned`. The
+  // deferral is the author's declared intent, so the finding exists to keep it
+  // visible rather than silent — there is no release at which a legitimately
+  // deferred story should fail the build, and promoting it would make the
+  // marker unusable for the case it was added for.
+  "QFAI-ATDD-118",
   // The BR/AC to implementation integrity check (`QFAI-TRACE-001`) could not be
   // run: the base ref is unfetchable, or a spec present in the diff is absent
   // from the working tree. Both say a check did not execute — neither says the
@@ -131,6 +185,30 @@ const ISSUE_ARG_RE = new RegExp(
 );
 
 /**
+ * A CONDITIONAL first argument: `issue(cond ? "A" : "B", …)`.
+ *
+ * The literal-or-identifier pattern above cannot see this. Its identifier
+ * alternative matches `cond` and then demands a comma, which is not there — so
+ * the call site produced no match at all, and both codes behind it went
+ * unattributed and unchecked. `validators/reviewArtifacts.ts` emits
+ * `QFAI-REVIEW-007` / `QFAI-REVIEW-009` exactly this way, twice.
+ *
+ * Nothing is currently hidden by it, and that is luck rather than design: both
+ * codes are baseline, and both also appear as literal first arguments
+ * elsewhere in the same file. #1062's point is the structure — a NEW hard
+ * error emitted through a ternary would be registered nowhere and owned by
+ * nothing, having followed the house style.
+ *
+ * Both branches are captured. Either can be the code that reaches users, so
+ * attributing one and dropping the other would trade a blind spot for a
+ * half-blind one.
+ */
+const ISSUE_TERNARY_ARG_RE = new RegExp(
+  `\\bissue\\(\\s*\\n?\\s*[A-Za-z_$][\\w$.]*\\s*\\?\\s*\\n?\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))\\s*:\\s*\\n?\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))\\s*,`,
+  "g",
+);
+
+/**
  * `const NAME = "CODE";` — with an optional type annotation, an optional
  * `as const`, and the `cond ? "A" : "B"` pair that `validators/designFidelity.ts`
  * uses to pick between two codes.
@@ -164,7 +242,7 @@ const CODE_LITERAL_RE = new RegExp(`"(${CODE})"`, "g");
  * direction that fails loudly rather than silently, the same trade the opaque
  * files above are read under.
  */
-const OBJECT_CODE_RE = new RegExp(`\\bcode:\\s*"(${CODE})"`, "g");
+const OBJECT_CODE_RE = new RegExp(`\\bcode:\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))`, "g");
 
 /** `RegExp`-safe form of a finding code: `.` is legal in {@link CODE}. */
 function escapeForRegExp(value: string): string {
@@ -254,6 +332,30 @@ function topLevelArgs(body: string, open: number): string[] {
  * wired one — the direction that reports a gap instead of assuming one is not
  * there.
  */
+/**
+ * Whether an `issue(...)` first argument names `code` — directly, through a
+ * file-local alias, or through either branch of a conditional.
+ *
+ * The conditional case is #1062: the severity of a code emitted as
+ * `cond ? "A" : "B"` was never located, so the P7 ratchet could not tell
+ * whether that emission went through `newRuleSeverity` or hard-coded
+ * `"error"`. The branches are split on the top-level `?` and `:` only, so a
+ * nested conditional or a `:` inside a string does not confuse it — anything
+ * this cannot split falls through and the call site stays unattributed, which
+ * is the direction that reports a gap rather than inventing coverage.
+ */
+function firstArgNames(first: string, code: string, aliases: ReadonlySet<string>): boolean {
+  const names = (expr: string): boolean => expr === `"${code}"` || aliases.has(expr);
+  if (names(first)) return true;
+  const question = first.indexOf("?");
+  if (question === -1) return false;
+  const colon = first.indexOf(":", question + 1);
+  if (colon === -1) return false;
+  const thenBranch = first.slice(question + 1, colon).trim();
+  const elseBranch = first.slice(colon + 1).trim();
+  return names(thenBranch) || names(elseBranch);
+}
+
 function severityExpressionsFor(body: string, code: string): string[] {
   const found: string[] = [];
 
@@ -268,19 +370,26 @@ function severityExpressionsFor(body: string, code: string): string[] {
     const args = topLevelArgs(body, open);
     const first = args[0];
     if (first === undefined) continue;
-    if (first !== `"${code}"` && !aliases.has(first)) continue;
+    if (!firstArgNames(first, code, aliases)) continue;
     const severity = args[2];
     if (severity !== undefined) found.push(severity);
   }
 
-  const escaped = escapeForRegExp(code);
-  for (const re of [
-    new RegExp(`\\bcode:\\s*"${escaped}"\\s*,\\s*severity:\\s*([^,\\n]+)`, "g"),
-    new RegExp(`\\bseverity:\\s*([^,\\n]+),\\s*code:\\s*"${escaped}"`, "g"),
-  ]) {
-    for (const m of body.matchAll(re)) {
-      const severity = m[1];
-      if (severity) found.push(severity.trim().replace(/,$/, ""));
+  // The literal AND every module-level alias of it. `aliases` is already
+  // computed above for the `issue(...)` half; this half read only the literal,
+  // so a finding written as `{ code: SOME_CODE, severity: "error" }` — which is
+  // how `cli/lib/warnings.ts` builds both scan findings — reported no severity
+  // at all, and a code exempted on the strength of its severity could not be
+  // checked (#1110, #1111).
+  for (const escaped of [code, ...aliases].map(escapeForRegExp)) {
+    for (const re of [
+      new RegExp(`\\bcode:\\s*(?:"${escaped}"|${escaped})\\s*,\\s*severity:\\s*([^,\\n]+)`, "g"),
+      new RegExp(`\\bseverity:\\s*([^,\\n]+),\\s*code:\\s*(?:"${escaped}"|${escaped})`, "g"),
+    ]) {
+      for (const m of body.matchAll(re)) {
+        const severity = m[1];
+        if (severity) found.push(severity.trim().replace(/,$/, ""));
+      }
     }
   }
   return found;
@@ -329,7 +438,11 @@ const GA_SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
  * baseline lines once; skipping the file is the hole this ratchet exists to
  * close, and it is the direction that fails loudly rather than silently.
  *
- * Findings written as object literals join the set too ({@link OBJECT_CODE_RE}):
+ * Findings written as object literals join the set too ({@link OBJECT_CODE_RE}),
+ * through a quoted code OR a module-level constant. `cli/lib/warnings.ts` writes
+ * `code: TRUNCATED_SCAN_CODE`, and requiring the literal meant a post-P7 code
+ * declared that way was never asked for an answer — the same resolution the
+ * `issue(...)` half already does through `resolveArg` (#1110):
  * `issue(...)` is a convenience, not the only door out, and the door it is not
  * covering is the one three shipped files already use.
  */
@@ -360,18 +473,30 @@ async function collectIssueCodes(): Promise<Set<string>> {
     }
 
     let opaque = false;
-    for (const m of body.matchAll(ISSUE_ARG_RE)) {
-      const [, literal, identifier] = m;
+    const resolveArg = (literal: string | undefined, identifier: string | undefined): boolean => {
       if (literal) {
         codes.add(literal);
-        continue;
+        return true;
       }
       const bound = identifier ? (local.get(identifier) ?? exported.get(identifier)) : undefined;
       if (bound) {
         for (const code of bound) codes.add(code);
-        continue;
+        return true;
       }
-      opaque = true;
+      return false;
+    };
+
+    for (const m of body.matchAll(ISSUE_ARG_RE)) {
+      const [, literal, identifier] = m;
+      if (!resolveArg(literal, identifier)) opaque = true;
+    }
+    // Both branches of a conditional first argument, each resolved the same
+    // way. An unresolvable branch makes the file opaque exactly as an
+    // unresolvable plain argument does.
+    for (const m of body.matchAll(ISSUE_TERNARY_ARG_RE)) {
+      const [, thenLiteral, thenIdent, elseLiteral, elseIdent] = m;
+      if (!resolveArg(thenLiteral, thenIdent)) opaque = true;
+      if (!resolveArg(elseLiteral, elseIdent)) opaque = true;
     }
 
     if (opaque) {
@@ -382,8 +507,9 @@ async function collectIssueCodes(): Promise<Set<string>> {
     }
 
     for (const m of body.matchAll(OBJECT_CODE_RE)) {
-      const code = m[1];
-      if (code) codes.add(code);
+      // `resolveArg` is the same resolution the `issue(...)` half performs: the
+      // literal when there is one, else the file-local or exported `const`.
+      resolveArg(m[1], m[2]);
     }
   }
   return codes;
@@ -455,6 +581,53 @@ async function readShippedVersion(): Promise<string> {
  * an exemption measured by a second reader could disagree with the rule it is
  * exempting a code from.
  */
+/**
+ * {@link ERROR_FROM_INTRODUCTION}, checked against the tree before any code is
+ * excused by it.
+ *
+ * The same four checks the info-only helper below makes, with `"error"` where it
+ * expects `"info"`, plus one this list needs and that one does not: the reason
+ * must be non-empty. An entry with no reason is an exemption nobody can review.
+ */
+async function verifiedErrorFromIntroductionCodes(
+  baseline: ReadonlySet<string>,
+): Promise<Set<string>> {
+  const files = (await collectSources(SRC)).filter(
+    (f) => !f.endsWith(path.join("core", "sunset.ts")),
+  );
+  const bodies = await Promise.all(files.map((f) => readFile(f, "utf-8")));
+
+  const exempt = new Set<string>();
+  for (const { code, reason } of ERROR_FROM_INTRODUCTION) {
+    expect(
+      reason.trim().length,
+      `${code} is listed as error-from-introduction with no reason — the criterion is that the ` +
+        "condition already fails the run today, and an entry that does not say so cannot be " +
+        "reviewed",
+    ).toBeGreaterThan(0);
+
+    expect(
+      baseline.has(code),
+      `${code} predates the promotion policy, so the baseline already covers it — ` +
+        "this list is for codes introduced after P7",
+    ).toBe(false);
+
+    const severities = [...new Set(bodies.flatMap((body) => severityExpressionsFor(body, code)))];
+    expect(
+      severities,
+      `${code} is listed as error-from-introduction but nothing in src/ emits it — retire the line`,
+    ).not.toEqual([]);
+    expect(
+      severities.sort(),
+      `${code} is listed as error-from-introduction but is emitted with ` +
+        `${severities.join(", ")} — the exemption is for a finding that is \`error\` at every ` +
+        "site; anything softer belongs behind a promotion window",
+    ).toEqual(['"error"']);
+    exempt.add(code);
+  }
+  return exempt;
+}
+
 async function verifiedInfoOnlyCodes(baseline: ReadonlySet<string>): Promise<Set<string>> {
   const files = (await collectSources(SRC)).filter(
     (f) => !f.endsWith(path.join("core", "sunset.ts")),
@@ -607,8 +780,15 @@ describe("sunset ledger", () => {
     const promotions = await readRulePromotionEntries();
     const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
     const infoOnly = await verifiedInfoOnlyCodes(baseline);
+    const errorFromIntroduction = await verifiedErrorFromIntroductionCodes(baseline);
     const unregistered = [...codes]
-      .filter((code) => !baseline.has(code) && !promotions.includes(code) && !infoOnly.has(code))
+      .filter(
+        (code) =>
+          !baseline.has(code) &&
+          !promotions.includes(code) &&
+          !infoOnly.has(code) &&
+          !errorFromIntroduction.has(code),
+      )
       .sort();
 
     expect(
@@ -691,6 +871,67 @@ describe("sunset ledger", () => {
     expect(
       missing,
       `named by a sunset constraint but emitted by nothing in src/: ${missing.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  // #1062. Both assertions run over a SYNTHETIC body rather than over `src/`,
+  // because the real tree hides the hole twice by luck: the only two
+  // conditional emissions (`validators/reviewArtifacts.ts`) name codes that
+  // are baseline, and that also appear as literal first arguments elsewhere in
+  // the same file. A test pointed at `src/` would pass today and keep passing
+  // if the extractor regressed.
+  it("sees both codes behind a conditional first argument", () => {
+    const body = [
+      "function f(flag: boolean) {",
+      "  return issue(",
+      '    flag ? "QFAI-FAKE-101" : "QFAI-FAKE-102",',
+      '    "message",',
+      '    "warning",',
+      "  );",
+      "}",
+    ].join("\n");
+
+    const seen = [...body.matchAll(ISSUE_TERNARY_ARG_RE)].flatMap((m) => [m[1], m[3]]);
+    expect(seen).toEqual(["QFAI-FAKE-101", "QFAI-FAKE-102"]);
+    // And the plain pattern still cannot: its identifier alternative matches
+    // `flag` and then demands a comma, which is why the site was invisible.
+    expect([...body.matchAll(ISSUE_ARG_RE)]).toEqual([]);
+  });
+
+  it("finds the severity of a code emitted through either branch", () => {
+    const body = [
+      "function f(flag: boolean) {",
+      "  return issue(",
+      '    flag ? "QFAI-FAKE-101" : "QFAI-FAKE-102",',
+      '    "message",',
+      "    newRuleSeverity(version, RULE_PROMOTIONS.fake),",
+      "  );",
+      "}",
+    ].join("\n");
+
+    // Both codes resolve to the same call site, so the ratchet can now tell
+    // that this emission goes through `newRuleSeverity` rather than a literal.
+    for (const code of ["QFAI-FAKE-101", "QFAI-FAKE-102"]) {
+      const severities = severityExpressionsFor(body, code);
+      expect(severities, `no severity located for ${code}`).toHaveLength(1);
+      expect(severities[0]).toContain("newRuleSeverity");
+    }
+    // A code the conditional does not name stays unattributed.
+    expect(severityExpressionsFor(body, "QFAI-FAKE-999")).toEqual([]);
+  });
+
+  // The measurement that says why nothing needs registering today, so a reader
+  // does not have to re-derive it to trust the change.
+  it("has no conditional emission that owes a promotion window", async () => {
+    const sources = await readConsumerSources();
+    const conditional = [...sources.matchAll(ISSUE_TERNARY_ARG_RE)].flatMap((m) => [m[1], m[3]]);
+    const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
+    const owing = [...new Set(conditional.filter((code) => code && !baseline.has(code)))].sort();
+
+    expect(
+      owing,
+      "a conditional emission names a post-baseline code, which now owes a RULE_PROMOTIONS " +
+        "entry — the extractor can see it, so the ratchet above will say so too",
     ).toEqual([]);
   });
 

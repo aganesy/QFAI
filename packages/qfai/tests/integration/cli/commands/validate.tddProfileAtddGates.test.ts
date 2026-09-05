@@ -217,11 +217,56 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("emits no partial-profile notice for the full profile", async () => {
+  it("says the full profile does not wire the drift gate", async () => {
+    // The claim #1122 reports. `full` and `verify` both call
+    // `runFullValidators`, which passes `includeUpstreamGuard = false`, so
+    // `QFAI-DRIFT-001` — the gate the drift protocol says detects a downstream
+    // phase patching upstream SSOT — never runs. The row this replaces
+    // asserted the silence, so an operator following this notice's own advice
+    // was told a run that never looked had looked.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "full" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.severity).toBe("info");
+      expect(notice?.message).toContain("QFAI-DRIFT-*");
+      expect(notice?.message).toContain("--profile tdd");
+    });
+  });
+
+  it("names drift and nothing else for the full profile", async () => {
+    // `FULL_GATE_GROUPS` is `ALL_GATE_GROUPS` minus `drift`, so any second
+    // family here means a group `full` does run got dropped from the map.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "full" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).not.toContain("is a partial profile");
+      for (const family of ["QFAI-HYG-*", "QFAI-SKILLS-*", "QFAI-COV-*", "QFAI-ATDD-*"]) {
+        expect(notice?.message).not.toContain(family);
+      }
+    });
+  });
+
+  it("does NOT list drift for --profile tdd, the one profile that runs it", async () => {
+    // The other direction. A fix that listed the family unconditionally would
+    // pass the rows above and be wrong here — `runTddValidators` passes
+    // `includeUpstreamGuard = true`.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "tdd" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).not.toContain("QFAI-DRIFT-*");
+    });
+  });
+
+  it("treats a run with no --profile as the full profile it is", async () => {
+    // The exact command this notice's own advice sends an operator to.
+    // `core/validate.ts` resolves an absent `--profile` to `full`, so the
+    // reason such a run said nothing was the map entry, not the resolution --
+    // and this row is where that end-to-end fact is pinned.
     await withProject(async (root) => {
       await runValidate({ root, strict: false });
-      const codes = (await findings(root)).map((entry) => entry.code);
-      expect(codes).not.toContain("QFAI-PROFILE-001");
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).toContain('profile="full"');
+      expect(notice?.message).toContain("QFAI-DRIFT-*");
     });
   });
 
