@@ -131,6 +131,25 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
     at,
   }));
 
+  // ORDER IS LOAD-BEARING: derived artifacts first, `prototyping.json` last.
+  //
+  // The intuitive order is the other one — write the authoritative record
+  // before anything derived from it — and it is the order that cannot recover.
+  // This command refuses a surface that is not in `frozenSurfaceUnion`, so a
+  // process that died between the two groups leaves either:
+  //
+  //   this order   — the surface still frozen, so a re-run is ACCEPTED. The
+  //                  annotations are already present and skipped, the plan
+  //                  pruning is a no-op, and the last write completes. It
+  //                  converges.
+  //   reversed     — the surface already gone, so a re-run is REFUSED, and the
+  //                  stale plan and un-annotated review can never be fixed by
+  //                  this command.
+  //
+  // Neither is crash-safe without a journal; this one is recoverable.
+  // `tests/cli/prototypingRescopeCrashWindow.test.ts` enters that window on
+  // purpose, because every other row runs to completion and so passes with the
+  // lines swapped (#1137).
   const planTouched = await rescopeIteratePlans(options);
   const reviewsTouched = await annotateReviews(options, entries);
 
@@ -146,6 +165,7 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
     frozenSurfaceUnion: remaining,
     rescopeLog: [...readAuditLog(record.rescopeLog), ...entries],
   };
+  // Last, per the ordering note above.
   await writeFile(protoAbs, `${JSON.stringify(nextRecord, null, 2)}\n`, "utf-8");
 
   info(`qfai prototyping rescope: ${PROTOTYPING_JSON_REL} updated.`);
