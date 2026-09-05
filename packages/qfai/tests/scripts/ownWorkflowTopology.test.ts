@@ -1442,13 +1442,22 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
  * on a push to `main`. They report no check on any pull request, so the configured set is
  * unchanged.
  *
+ * `renovate.yml` is outside it for the same reason, and the reason is worth stating precisely
+ * because this one does report a check somewhere. It runs on `schedule`, on `workflow_dispatch`,
+ * and on a push to `renovate/**` — never on `pull_request`. The push trigger puts a `repin` check
+ * on the head commit of Renovate's own update branches, so it is visible on THOSE pull requests
+ * and on no others; a human's pull request gains nothing, and
+ * `.github/required-status-contexts.json` still declares exactly one required context. Nothing in
+ * branch protection has to be configured for it, which is the surface `AC-0017-0018` is about.
+ *
  * The list stays a literal for the reason it always was: a creation, removal or rename should be
- * a failing test naming which file, not a diff somebody has to interpret. It named these two.
+ * a failing test naming which file, not a diff somebody has to interpret. It named each of these.
  */
 const OWN_WORKFLOW_FILES = [
   "ci.yml",
   "prepare-release.yml",
   "release.yml",
+  "renovate.yml",
   "tag-release.yml",
 ] as const;
 
@@ -1525,14 +1534,15 @@ function checkNames(file: string): string[] {
 
 describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no check name", () => {
   it("keeps the layer split inside the existing file as matrix legs of one job", () => {
-    // CLAIM 1 — two files, and neither is a per-layer workflow. A new workflow file would
-    // create a check name nobody has configured, which is why `AC-0017-0018` rejects it in
-    // review rather than treating it as a style choice.
+    // CLAIM 1 — this exact set, and no member of it is a per-layer workflow. A per-layer
+    // workflow would create a check name nobody has configured, which is why `AC-0017-0018`
+    // rejects it in review rather than treating it as a style choice.
     //
-    // Two and not three: change 7 deleted the repository's own duplicate of the shipped
-    // validate workflow. That deletion is `BR-0017-0058`'s, recorded in `DR-0017-0007`, and
-    // this row asserts the count layer separation must not change — not a count frozen at
-    // the moment the spec was written.
+    // The set has both shrunk and grown since the spec was written, which is the point:
+    // change 7 deleted the repository's own duplicate of the shipped validate workflow
+    // (`BR-0017-0058`, recorded in `DR-0017-0007`), and the release-automation and Renovate
+    // files were added. Each move had to be argued past the docblock above. This row asserts
+    // the set layer separation must not change — not a set frozen at that moment.
     expect
       .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
       .toEqual([...OWN_WORKFLOW_FILES]);
