@@ -267,18 +267,13 @@ const stubConfig: QfaiConfig = {
     failOn: "error",
     require: { specSections: [] },
     testStrategy: {
-      requireLayerTags: false,
-      requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
     },
     traceability: {
-      brMustHaveSc: true,
       scMustHaveTest: true,
       testFileGlobs: ["**/*.test.ts"],
       testFileExcludeGlobs: [],
-      scNoTestSeverity: "warning",
-      orphanContractsPolicy: "warning",
       unknownContractIdSeverity: "warning",
     },
   },

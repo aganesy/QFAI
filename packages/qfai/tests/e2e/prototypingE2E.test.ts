@@ -93,8 +93,6 @@ async function seedRepo(root: string): Promise<void> {
       "  require:",
       "    specSections: []",
       "  testStrategy:",
-      "    requireLayerTags: false",
-      "    requireSizeTags: false",
       "    requireApiAtdd: false",
       "    requireE2eAtdd: false",
       "    requireIntegrationAtdd: false",

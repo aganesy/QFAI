@@ -165,6 +165,24 @@ describe("validateSpecPacks - status & triage integration", () => {
     expect(codes(issues)).toEqual([]);
   });
 
+  it("emits QFAI-TRIAGE-009 when a triage row names a spec with no directory on disk", async () => {
+    const root = await newTempRoot();
+    await seedLayeredSpec(root, "0001", {
+      status: "active",
+      capability: "CAP-0001",
+      deltaTriage: [
+        "## Triage",
+        "",
+        "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| REQ-0001 | extend rule | spec-0099 | UPDATE | APPEND | - | seed |",
+        "",
+      ].join("\n"),
+    });
+    const issues = await validateSpecPacks(root, defaultConfig);
+    expect(codes(issues)).toContain("QFAI-TRIAGE-009");
+  });
+
   it("emits QFAI-TRIAGE-001 when delta has Change Summary but no Triage", async () => {
     const root = await newTempRoot();
     await seedLayeredSpec(root, "0001", {
