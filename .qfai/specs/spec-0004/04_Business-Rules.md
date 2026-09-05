@@ -57,7 +57,7 @@
 ## BR-0004-0011: prototypingEvidenceV3 Schema Validation
 
 - AC-Refs: AC-0004-0011
-- prototypingEvidenceV3 validator enforces schema v3 on each `iter-NN/review.json`: required keys `scores` (4 UX axes ordinal), `prose` (200..500 words), `pivotDirective` (∈ continue|refine|pivot), `layoutAntiPatternsDetected`, `designMdViolations`.
+- prototypingEvidenceV3 validator enforces schema v3 on each `iter-NN/review.json`: required keys `scores` (4 UX axes ordinal), `proseCritique` (200..500 words), `pivotDirective` (∈ continue|refine|pivot), `layoutAntiPatternsDetected`, `designMdViolations`.
 - Schema violation emits `QFAI-PROT-002` at error severity. v1.x fields (`mode`, `fullHarness`, `scoringTrace`, `allReviewerAxesPerfect100`) being present is an additional schema warning.
 
 ## BR-0004-0012: layoutAntiPatternsDetected Whitelist

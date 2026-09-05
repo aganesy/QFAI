@@ -86,14 +86,44 @@ Non-discussion commands MUST minimize questions.
 
 Default policy:
 
-- Ask **at most 5** clarifying questions total.
+- Ask **at most 5 clarifying questions per invocation**. The unit is one
+  top-level skill or command invocation: every `/qfai-*` stage listed in
+  `workflow.md` → “Stages (canonical)”, and equally a non-stage command such as
+  `/qfai-configure` or `/web-research`. Each invocation spends its own budget and
+  the next one starts with a full budget. It is not per session and not per
+  conversation.
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
+
+### What spends the budget (MUST)
+
+- A **clarification** — a question asked to resolve ambiguity in the request,
+  the specs, or the repository — spends budget.
+- An **approval** — a question asked because a document requires a recorded
+  human decision before the work may proceed — does **not** spend budget.
+  Approvals are unbounded by construction: SDD triage requires an `Approved By`
+  on every approval-required row and puts no cap on rows, and the reviewer-gate
+  escalation exit requires a user decision per escalation
+  (`shared-skill-delegation-baseline.md#round-budget-must`). Counting them would
+  make this article impossible to satisfy in the stage that asks the most.
+- Classify **each question, not the prompt**. A prompt that carries both spends
+  one unit per clarification it contains; only its approval questions are exempt.
+  Attaching an approval to a clarification does not buy the clarification back.
 
 Stop conditions:
 
 - User says “stop / proceed / done”.
 - Question budget is exhausted.
+
+### On exhaustion (MUST)
+
+Do not ask a sixth clarification. Settle the remaining ambiguity the way `--auto`
+does: proceed with explicit assumptions, label them, and record them in the
+invocation's output — as Open Questions when the assumption is still unresolved.
+Exhaustion silences clarifications only. A **required approval is still asked**:
+it never spent budget, and Article X's `--auto` no-question mode is not in force
+here — only its assumption-recording behaviour is. Silently stopping is not a
+sanctioned move, and neither is asking a sixth clarification anyway.
 
 ---
 
@@ -160,10 +190,16 @@ This article survives context compaction because `constitution.md` is a P1 reloa
 
 All temporary files, scratch scripts, and intermediate build artifacts **MUST** be placed under the repository‑root `tmp/` directory.
 
+Scope: this article is about files written **into the working tree** — scratch
+scripts, intermediate build artifacts, downloaded fixtures, notes. A sandbox a
+test creates with `mkdtemp` under the OS temporary directory is **not** covered:
+it lives outside the repository, so it cannot put a file in any of the
+directories Rule 1 protects, and the test that created it removes it.
+
 Rules:
 
 1. **Never** create temporary files in the repository root, `src/`, `.qfai/specs/`, or any other production/artifact directory.
 2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/glossary/`, `tmp/build/`).
 3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
 4. Clean up `tmp/` contents when the task that created them is complete.
-5. If a temporary file is found outside `tmp/`, treat it as a defect and move or delete it immediately.
+5. If a temporary file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox is not one — see Scope above.
