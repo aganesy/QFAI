@@ -212,6 +212,22 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * `qfai prototyping <action>` のサブコマンドトークンは flag loop より
    * 前に確定するため、ループ内のどの arm からでも安全に呼べる。
    */
+  /**
+   * Whether an `init`-only flag is on the command that reads it.
+   *
+   * `options.dir` and `options.upgradeAssistantTree` are read at exactly one
+   * place each — the `init` arm of the dispatch. Without this, both were
+   * accepted everywhere and reached nothing: `validate --dir <path>` answered
+   * about the CURRENT tree, `report --dir <path>` overwrote its `report.md`,
+   * and `validate --upgrade-assistant-tree` exited 0 having upgraded nothing
+   * while the operator believed otherwise (#1143).
+   *
+   * Named rather than inlined so the next `init`-only flag is correct without
+   * anyone remembering this — the same reason `ownedByPrototyping` below is a
+   * predicate and not a comparison at each site.
+   */
+  const ownedByInit = (): boolean => command === "init";
+
   const ownedByPrototyping = (...actions: PrototypingAction[]): boolean => {
     if (command !== "prototyping") {
       return false;
@@ -371,7 +387,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             markInvalid();
             break;
           }
-          options.dir = next;
+          // `--root` is the flag for pointing another command at a tree, and
+          // the usage text this refusal prints says so.
+          if (ownedByInit()) {
+            options.dir = next;
+          } else {
+            markInvalid();
+          }
         }
         break;
       case "--force":
@@ -384,7 +406,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.dryRun = true;
         break;
       case "--upgrade-assistant-tree":
-        options.upgradeAssistantTree = true;
+        // Same shape as `--dir`, and worse in one way: accepted elsewhere it
+        // exited 0 having upgraded nothing, so the operator went on reading an
+        // assistant tree they believed had been refreshed.
+        if (ownedByInit()) {
+          options.upgradeAssistantTree = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--format": {
         const next = consumeOptionValue();

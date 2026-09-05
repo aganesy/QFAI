@@ -588,6 +588,50 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
+- **`--dir` が `init` 以外でも受理され、黙って無視されていた。** その結果
+  `validate --dir <path>` は**現在のディレクトリ**について判定を返し、
+  `report --dir <path>` は現在のディレクトリの `report.md` を**上書き**していた。
+
+  ```console
+  $ npx qfai validate --dir "C:/nope/does/not/exist"
+  counts: info=6 warning=950 error=0        # <- 現在のリポジトリの結果
+
+  $ npx qfai validate --dir /tmp/empty-dir  # 存在する空ディレクトリでも
+  counts: info=6 warning=950 error=0        # <- やはり現在のリポジトリ
+
+  $ npx qfai report --dir "C:/nope/does/not/exist"
+  wrote report: C:\Users\...\QFAI\.qfai\report\report.md   # <- 名指ししていない木に書く
+  ```
+
+  機構: `--dir` は `options.dir` を設定し、`resolveRoot` が読むのは
+  `options.root` / `options.rootExplicit`（`--root` だけが設定する）。
+  `options.dir` の読み手は dispatch の `init` アームただ 1 箇所である。
+
+  これは文書化された制約ではなく欠陥である。`lib/args.ts` は「所有していない
+  コマンドで使われたフラグは引数エラー」を **80 箇所**で実装しており
+  (`--target-url`、`--spec`、`--remove`、`--reason` …)、`--dir` だけが例外
+  だった — その `markInvalid()` は**値が無い**場合のみだった。
+
+  `init` 以外では引数エラーにした。usage 行も「init 専用。他コマンドの対象指定は
+  `--root`」と述べる — `markInvalid` は理由を取らず usage を出す方式なので、
+  そこが操作者の学ぶ場所である。判定は `ownedByInit()` という名前付き述語に
+  した (`ownedByPrototyping` / `ownedByGuardrails` に倣う) ので、次の
+  init 専用フラグは誰もこの issue を覚えていなくても正しくなる。
+
+  **同じ形の 2 例目**として `--upgrade-assistant-tree` も塞いだ。こちらは
+  ある意味より悪く、`validate --upgrade-assistant-tree` は exit 0 で**何も
+  更新せず**、操作者は assistant tree が更新されたと信じたまま古い tree を
+  読み続けていた。
+
+  本リポジトリ自身のスイートにもこの取り違えがあった:
+  `validateRunIncomplete.test.ts` の 3 行が `report --dir` を使っており、
+  修正後に落ちた（`--dir` が引数エラーになり dispatch に届かなくなったため）。
+  `--root` に直した — これは修正が効いている証拠である。
+
+  **アップグレード時の注意:** `validate --dir X` のようなスクリプトは失敗する
+  ようになる。それらは以前から意図した動作をしておらず（別の木について答えて
+  いた）、失敗する方が厳密に良い。`--root` に置き換えること。 (#1143)
+
 - **注釈スキャナが、文字列 / template / 正規表現リテラルの中の**完全な** TC / US
   id を今も参照として読んでいた。** #1123 は**切り詰められた** id が
   `/^…TC-0001-\d{4}$/` から取り出されるのを止めたが、同 issue が述べていた
