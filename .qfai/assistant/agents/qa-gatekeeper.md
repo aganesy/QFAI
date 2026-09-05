@@ -138,9 +138,8 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 
 - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
   Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
-  A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that file is ignored by the
-  managed `.gitignore` block, so neither it nor the justification for any `❌` reaches a commit, and the "unjustified"
-  judgement cannot be re-made by anyone reading the repository.
+  A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that committed file is the
+  ledger's per-item evidence payload, not the dedicated matrix artifact whose justifications this gate reads.
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
@@ -154,8 +153,9 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
 `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
 Mandatory Output,
-and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path, unlike the rest of
-`.qfai/evidence/**`. `qfai-sdd` neither defines its layout nor ships a section for it, so:
+and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed governance path alongside
+`implement-<spec-id>.md` and `atdd-<spec-id>.md`. Only run-scoped evidence remains ignored.
+`qfai-sdd` neither defines the matrix layout nor ships a section for it, so:
 
 - Apply this check from the **ATDD review cycle onward**, where
   `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists

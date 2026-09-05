@@ -22,6 +22,30 @@ ledger, not across them, and one fixture is read by acceptance tests from
 several specs — named by id alone, a re-verify could clear a hash mismatch on a
 row in the wrong spec, or fail to clear the right one.
 
+**The machine-readable form is fixed.** Write a `Shared-artifact re-verify`
+heading with one `spec-NNNN/TDD-NNNN` subsection per consumer one level below
+it, carrying these fields: `Evidence file`, `Revision`, `Selector`,
+`Re-verify command`, `Re-verify result`, `Proof command`, `Proof result`,
+`Restored GREEN command`, `Restored GREEN result`, `RED test manifest`, and
+`RED test hash`. Both GREEN results are PASS outcomes, the proof result is the
+observed failure, `Revision` names a tree in one of the two forms
+`../../qfai-implement/references/evidence-revision.md` defines, and every
+command is the exact command executed. Gate item 10 accepts a moved current
+manifest only when this complete subsection targets the same spec/item,
+evidence file and selector, and its manifest/hash recompute from the current
+artifacts. Prose mentioning a re-run, or a subsection for another item, clears
+nothing.
+
+**And it is fixed where it is written, not only in what it says.** The record
+goes **inside the editing row's own entry** — `#### Shared-artifact re-verify`
+under that `### TDD-NNNN`, ahead of its review and checkpoint fields, so the
+`audited evidence hash` its reviewers recorded covers these bytes. That
+placement is the whole claim: a block written anywhere else is a paragraph
+nobody audited, and one appended to the consumer's own `done` entry would be
+the row clearing its own mismatch. Gate item 10 reads a record only from an
+entry whose recorded `Spec` and `Code quality audited evidence hash` still
+recompute over it, and never from the consumer's own item.
+
 **When this stage has no row of its own, the record is stage-level.** A fresh
 spec is the ordinary case here and can own no ATDD row at all, while still
 creating and editing the fixtures a completed spec's handed-over rows read. With
@@ -29,14 +53,18 @@ the record tied to an "editing row" there was nowhere to put it: the re-run was
 made and had no home, so the earlier row's `RED test hash` stayed mismatched
 with nothing able to clear it, or the change was accepted unverified. Write the
 same lines under `## Shared-artifact re-verify` in the stage evidence file
-(`.qfai/evidence/atdd-<spec-id>.md`, beside `## Final status`), with
+(`.qfai/evidence/coverage-depth-<spec-id>.md`, beside `## Final status`), with
 the same identity — spec and `TDD-ID` together — and the same "a passing re-run
 is not enough on a row that has a proof" rule below. A consumer clearing a
 mismatch reads **both** places: the editing row's entry when one exists, and the
 stage block of any stage that touched the artifact. `/qfai-implement`'s gate
 item 10 does not run on a spec with no rows, so this block is checked where the
 stage's own pack seal is: it is inside the sealed stage evidence, so a record
-added after the fact moves the seal.
+added after the fact moves the seal. A stage block is read only from
+`.qfai/evidence/coverage-depth-<spec-id>.md` and only when that file's
+`## Final status` names its `Review pack` and a `Review pack seal` that still
+recomputes from it — the stage has no item entry to hold an audit hash, so the
+seal is what stands in its place.
 
 **A passing re-run is not enough on a row that has a proof.** Weakening an
 assertion helper, a snapshot or an expected-value fixture leaves the earlier
