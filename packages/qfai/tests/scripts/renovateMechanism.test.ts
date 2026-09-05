@@ -25,6 +25,22 @@
  * re-pin, split by `if:` on `github.event_name`. A condition that excludes both jobs from an event
  * produces a run that succeeds having done nothing, which is indistinguishable from a run with
  * nothing to do.
+ *
+ * **The automerge policy and the check it rests on.** Every update type is automerged, and
+ * platform-native automerge is what performs the merge — which means GitHub's branch protection,
+ * not Renovate, decides whether anything was verified first. With no required status check
+ * configured, GitHub merges a pull request whose checks never started. The repository setting is
+ * unreadable from here, but the file that DECLARES which context is expected is not, and the two
+ * halves of that pair are asserted together: automerge on with nothing declared is the
+ * configuration this row exists to refuse.
+ *
+ * **The re-pin's branch lookup.** Automerge lets the pull request merge and its branch vanish
+ * while the re-pin job is still computing — and a push to a deleted branch recreates it rather
+ * than failing, leaving an orphan behind every automerged action bump.
+ *
+ * **The published presets.** `.github/renovate-presets/*.json` are consumed by OTHER repositories,
+ * through a `github>` reference that names their path. Nothing else in this tree resolves that
+ * reference, so a rename or a move breaks every adopter's Renovate run and reports nothing here.
  */
 
 import { readFileSync } from "node:fs";
@@ -36,6 +52,9 @@ import { parse as parseYaml } from "yaml";
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const WORKFLOW_REL = ".github/workflows/renovate.yml";
 const CONFIG_REL = ".github/renovate.json5";
+const CONTEXTS_REL = ".github/required-status-contexts.json";
+const BASE_PRESET_REL = ".github/renovate-presets/qfai.json";
+const SELF_HOSTED_PRESET_REL = ".github/renovate-presets/qfai-self-hosted.json";
 
 const workflowText = (): string => readFileSync(path.join(REPO_ROOT, WORKFLOW_REL), "utf-8");
 const configText = (): string => readFileSync(path.join(REPO_ROOT, CONFIG_REL), "utf-8");
@@ -113,6 +132,45 @@ function quotedFromConfig(pattern: RegExp): string {
   return parsed;
 }
 
+/**
+ * One BARE token captured out of the JSON5 config — a boolean, a number, `null`.
+ *
+ * The sibling above unescapes a quoted string; this returns the token as written, because what
+ * the rows below are about is which literal the key carries. `automerge: "true"` is a different
+ * declaration from `automerge: true`, and a reader that normalised the two would report agreement
+ * across the difference that matters.
+ */
+function tokenFromConfig(key: string): string {
+  const found = new RegExp(`^\\s*${key}:\\s*([^,\\n]+?),?\\s*$`, "m").exec(configText());
+  const token = found?.[1];
+  expect(
+    token,
+    `${CONFIG_REL} must declare \`${key}\` at the top level — this row reads the config's own ` +
+      "declaration rather than restating it, and an unmatched key means it read nothing",
+  ).toBeDefined();
+  return token ?? "";
+}
+
+/** A JSON file in this repository, parsed. Unlike the config, these carry no JSON5 syntax. */
+function readJson(rel: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(readFileSync(path.join(REPO_ROOT, rel), "utf-8"));
+  if (!isRecord(parsed)) throw new Error(`${rel} does not parse as an object`);
+  return parsed;
+}
+
+/** The `packageRules` entries of a preset that match one dependency by exact name. */
+function rulesMatching(
+  preset: Record<string, unknown>,
+  depName: string,
+): Record<string, unknown>[] {
+  const rules = preset["packageRules"];
+  if (!Array.isArray(rules)) return [];
+  return rules.filter(isRecord).filter((rule) => {
+    const names = rule["matchPackageNames"];
+    return Array.isArray(names) && names.includes(depName);
+  });
+}
+
 describe("the Renovate config's self-update manager still matches the workflow it is written for", () => {
   it("captures the exact version the workflow pins", () => {
     // The config's own regex, taken from the config. A copy restated here would pass while the
@@ -174,6 +232,31 @@ describe("the re-pin commits under the identity Renovate recognises as its own",
     expect(body, "and under the same address, for the same reason").toContain(
       `git config user.email "${parts?.[2] ?? ""}"`,
     );
+  });
+
+  it("declines to resurrect a branch that was merged out from under it", () => {
+    const body = allRunBodies();
+    const lookupAt = body.indexOf("git ls-remote --exit-code --heads");
+    const pushAt = body.indexOf('git push "$remote"');
+
+    // The lookup exists at all. Every update automerges, so the pull request this branch belongs
+    // to can be merged and its branch deleted while the re-pin is still computing — and
+    // `git push HEAD:refs/heads/<name>` to a deleted branch does not fail, it recreates it.
+    expect(
+      lookupAt,
+      "the push step must check the branch still exists on the remote before pushing: a push to " +
+        "a branch that was deleted by an automerge recreates it, leaving an orphan branch behind " +
+        "every automerged action bump",
+    ).toBeGreaterThanOrEqual(0);
+    expect(pushAt, "the re-pin must push to the branch it was given").toBeGreaterThanOrEqual(0);
+
+    // …and BEFORE the push, which is the whole content of the guard. A lookup after the fact
+    // reports on a branch this job has already recreated.
+    expect(
+      lookupAt,
+      "the existence check must run before the push, not after it — afterwards the branch it is " +
+        "asking about is one this job has already brought back",
+    ).toBeLessThan(pushAt);
   });
 
   it("never forces a push", () => {
@@ -265,5 +348,123 @@ describe("the two jobs partition the events this workflow declares", () => {
       "without this, Renovate discovers every repository the token can see and processes all of " +
         "them. The scope is stated rather than inherited from how the token happened to be cut",
     ).toBe("${{ github.repository }}");
+  });
+});
+
+describe("automerge is declared together with the check that decides whether anything was verified", () => {
+  it("keeps the platform-automerge pair complete: merge without review, but not without a check", () => {
+    // CLAIM 1 — the policy is on, and on for everything. Read from the config rather than
+    // restated: a `matchUpdateTypes` rule that narrowed it later would leave this row passing
+    // against a top-level key that no longer decides anything, so the pins below are what the
+    // file says at the level the file says it.
+    expect(
+      tokenFromConfig("automerge"),
+      "the top-level automerge declaration is what makes every update type — major included — " +
+        "merge without a human. This suite is written for that policy; narrowing it is a change " +
+        "worth restating here rather than one that should slip through green",
+    ).toBe("true");
+
+    // CLAIM 2 — the merge is performed by GitHub, which is why CLAIM 3 exists at all. Renovate
+    // merging on its own next run would answer to `ignoreTests` and nothing else; platform
+    // automerge answers to branch protection.
+    expect(
+      tokenFromConfig("platformAutomerge"),
+      "platform-native automerge is what merges the moment CI goes green rather than at the next " +
+        "weekly Renovate run — and it is also what hands the decision to branch protection",
+    ).toBe("true");
+
+    // CLAIM 3 — and tests are not ignored on the fallback path. `ignoreTests: true` would merge a
+    // branch whose checks failed, on the one route platform automerge does not cover.
+    expect(
+      tokenFromConfig("ignoreTests"),
+      "`ignoreTests` must stay false: it is the single knob that would turn the automerge policy " +
+        "above into merging red branches, and it is stated in the config so it cannot drift by " +
+        "way of a changed default",
+    ).toBe("false");
+
+    // CLAIM 4 — and a required context is DECLARED. This is the half that makes the three above
+    // safe, and the half no file here can enforce: with platform automerge on and branch
+    // protection requiring nothing, GitHub merges a pull request whose checks never started.
+    // `.github/required-status-contexts.json` is where the expectation lives, so an empty
+    // declaration is the reachable failure — the setting itself is not readable from a pull
+    // request, which is the reason that file exists.
+    const declared = readJson(CONTEXTS_REL)["contexts"];
+    expect(
+      Array.isArray(declared) ? declared : [],
+      `${CONTEXTS_REL} must declare at least one required status context. Automerge is enabled ` +
+        "above and performed by the platform, so the branch-protection setting that file " +
+        "describes is the only thing standing between a dependency bump and the default branch",
+    ).not.toHaveLength(0);
+  });
+});
+
+describe("the presets other repositories extend still resolve to the files they name", () => {
+  /** `owner/repo`, from the manifest rather than restated — the reference below embeds it. */
+  const slug = (): string => {
+    const manifest = readJson("package.json")["repository"];
+    const url = isRecord(manifest) ? manifest["url"] : undefined;
+    const matched = /github\.com\/([^/]+\/[^/.]+)/.exec(typeof url === "string" ? url : "");
+    expect(
+      matched,
+      "the root manifest must name the GitHub repository these presets live in",
+    ).not.toBeNull();
+    return matched?.[1] ?? "";
+  };
+
+  it("points the self-hosted preset at the path the base preset actually occupies", () => {
+    // The one coupling nothing else in this tree resolves. A `github>` preset reference is a
+    // PATH: move or rename the base file and every adopter extending the self-hosted one gets a
+    // config-resolution error on their next Renovate run, while this repository stays green.
+    //
+    // `.json` is dropped because that is the extension Renovate appends to a path preset by
+    // default — the reference names the file without it, and spelling it out would resolve to
+    // `qfai.json.json`.
+    const expected = `github>${slug()}//${BASE_PRESET_REL.replace(/\.json$/, "")}`;
+    const extended = readJson(SELF_HOSTED_PRESET_REL)["extends"];
+
+    expect(
+      Array.isArray(extended) ? extended : [],
+      `${SELF_HOSTED_PRESET_REL} must extend the base preset by the path it is stored at`,
+    ).toContain(expected);
+  });
+
+  it("holds a qfai bump back in the base preset and releases it only in the self-hosted one", () => {
+    // The difference between the two files, and the only one. It is a safety property rather
+    // than a preference: the regeneration command runs only where an administrator allow-listed
+    // it, and a `qfai` bump that automerged without it leaves the adopter on a version whose
+    // skills their repository does not have.
+    const baseRules = rulesMatching(readJson(BASE_PRESET_REL), "qfai");
+    expect(baseRules, "the base preset must carry a rule for the qfai package").toHaveLength(1);
+    expect(
+      baseRules[0]?.["automerge"],
+      "the base preset must NOT automerge a qfai bump: whether the assistant tree was " +
+        "regenerated alongside it depends on an administrator setting this file cannot see",
+    ).toBe(false);
+
+    // …and the regeneration itself is declared there, so the self-hosted preset inherits it
+    // rather than carrying a second copy that could drift from this one.
+    const tasks = baseRules[0]?.["postUpgradeTasks"];
+    const commands = isRecord(tasks) ? tasks["commands"] : undefined;
+    const regenerating = (Array.isArray(commands) ? commands : []).filter(
+      (entry): entry is string => typeof entry === "string" && /\binit\b.*--force/.test(entry),
+    );
+    expect(
+      regenerating,
+      "the base preset must declare the command that regenerates the assistant tree, so a " +
+        "Renovate that is allowed to run it does so whichever preset is extended. `--force` is " +
+        "the operative half: a plain `init` is create-only and would leave every existing skill " +
+        "and wrapper at the version that wrote it",
+    ).not.toHaveLength(0);
+
+    const selfHostedRules = rulesMatching(readJson(SELF_HOSTED_PRESET_REL), "qfai");
+    expect(
+      selfHostedRules,
+      "the self-hosted preset must carry the rule that undoes the hold",
+    ).toHaveLength(1);
+    expect(
+      selfHostedRules[0]?.["automerge"],
+      "and it must be the release of the hold — a self-hosted preset that did not flip this is " +
+        "the base preset with an extra file to keep in sync",
+    ).toBe(true);
   });
 });

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "The `qfai` preset, for a Renovate whose administrator has allow-listed the regeneration command.",
+    "Everything comes from `qfai`; this file changes exactly one thing — a `qfai` bump automerges too. That is only sound once `npx --yes qfai@… init --force` is permitted by `allowedCommands`, because it is that command running inside the update branch that puts the regenerated assistant tree into the same pull request. Extend this preset only after the command is allow-listed; before then the base preset is the correct one, and the difference between them is whether a stale assistant tree can reach the default branch without anyone looking."
+  ],
+  "extends": ["github>aganesy/QFAI//.github/renovate-presets/qfai"],
+  "packageRules": [
+    {
+      "description": "Undoes the base preset's hold on `qfai`, and nothing else — the regeneration task, its file filters and the pull-request note are inherited unchanged.",
+      "matchPackageNames": ["qfai"],
+      "automerge": true
+    }
+  ]
+}

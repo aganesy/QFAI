@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "QFAI's recommended Renovate policy for a repository that has run `qfai init`.",
+    "Automerges every dependency update — major included — once the repository's own CI is green, and treats a `qfai` bump as the one update that is not finished when the version number changes: the package writes an assistant tree (skills, agents and the integration wrappers under `.agents/`, `.claude/`, `.codex/` and `.github/`) into the repository, and that tree is only refreshed by running `qfai init --force`. This preset runs it inside the update branch so the regenerated tree is part of the same pull request.",
+    "Extend it alongside `config:recommended` rather than instead of it — this file sets a merge policy and the `qfai` rule, and deliberately nothing else.",
+    "Running the regeneration command needs a Renovate whose administrator has allow-listed it (`allowedCommands`), which self-hosted Renovate has and the hosted app does not by default. Where it cannot run, this preset fails CLOSED: a `qfai` bump is the one update it does not automerge, so a stale assistant tree can never reach the default branch unreviewed. Extend `qfai-self-hosted` instead once the command is allow-listed."
+  ],
+  "automerge": true,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "ignoreTests": false,
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": [
+        "The `qfai` package itself. `postUpgradeTasks` runs the newly resolved version's own `init --force` in the update branch, and Renovate commits what it wrote alongside the manifest and lockfile change, so the pull request carries the regenerated assistant tree rather than a version number that has outrun it.",
+        "`--force` is what makes the refresh happen at all: a plain `init` is create-only and would leave every existing skill, agent and wrapper at the version they were written by. It rewrites the generated integration READMEs and `.github/copilot-instructions.md` without asking, so keep local edits out of those files — the package documents which ones they are.",
+        "`automerge` is false here even though everything else automerges. Whether the regeneration above actually ran is an administrator setting this file cannot see, and a `qfai` bump that merged without it would leave the repository claiming a version whose skills it does not have."
+      ],
+      "matchPackageNames": ["qfai"],
+      "automerge": false,
+      "postUpgradeTasks": {
+        "commands": ["npx --yes qfai@{{{newVersion}}} init --force"],
+        "fileFilters": [
+          ".qfai/**",
+          ".agents/**",
+          ".claude/**",
+          ".codex/**",
+          ".github/**",
+          "qfai.config.yaml",
+          "DESIGN.md"
+        ],
+        "executionMode": "update"
+      },
+      "prBodyNotes": [
+        "**This bump also has to refresh the QFAI assistant tree.** If the diff below contains only the manifest and the lockfile, the regeneration step did not run — run `npx qfai init --force` on this branch, commit the result, and merge the two together. If the regenerated tree is already here, this pull request is complete and only needs a review."
+      ]
+    }
+  ]
+}

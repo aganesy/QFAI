@@ -2,6 +2,11 @@ name: Renovate
 
 # Opens dependency-update pull requests, and keeps the digest files they invalidate consistent.
 #
+# The pull requests it opens are automerged — every update type, major included — on a green
+# `ci-pass` and nothing else. `.github/renovate.json5` holds that policy and the argument for it;
+# what matters HERE is that the branches this workflow pushes to can now disappear underneath it,
+# which the push step's own guard addresses.
+#
 # ## Why self-hosted, and not the Renovate GitHub App
 #
 # The App is installed at github.com, outside this repository, and what it may do is configured
@@ -205,6 +210,37 @@ jobs:
           # The remote is re-pointed at the token, because the checkout deliberately kept no
           # credentials in the work tree.
           remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # The branch still has to EXIST. `.github/renovate.json5` automerges every update, so
+          # the pull request this branch belongs to can be merged and its branch deleted while
+          # this job is still computing the re-pin — and `git push HEAD:refs/heads/<name>` to a
+          # deleted branch does not fail, it RECREATES it. That leaves an orphan branch behind
+          # every automerged action bump, carrying a commit whose pull request is already closed.
+          #
+          # A lookup, not a lease. `--force-with-lease` would also refuse the resurrection, and it
+          # would do so by making this a force push — the one thing the comment below rules out,
+          # for a reason that still holds. This costs one round trip and closes the ordinary case;
+          # the window between the lookup and the push stays open, and a branch merged inside it
+          # is recreated exactly as before. That is acceptable and this is not the last line of
+          # defence: the recreated branch carries no pull request, Renovate deletes branches it no
+          # longer has an update for, and nothing merges from it.
+          #
+          # The exit code is READ rather than tested for truth. `--exit-code` answers 2 for "no
+          # such ref" and 128 for "the question could not be asked" — a DNS blip, a rate limit, a
+          # revoked token — and `if ! git ls-remote` collapses the two. Under that collapse a
+          # transient failure skips the re-pin silently and leaves the branch red with nothing
+          # said, which is the failure mode this whole job exists to remove.
+          lookup=0
+          git ls-remote --exit-code --heads "$remote" "${BRANCH_REF#refs/heads/}" > /dev/null || lookup=$?
+          if [ "$lookup" -eq 2 ]; then
+            echo "renovate repin: ${BRANCH_REF} no longer exists on the remote — the update was merged or dropped while this job ran. Not pushing (a push would recreate the branch)."
+            exit 0
+          fi
+          if [ "$lookup" -ne 0 ]; then
+            echo "::error::renovate repin: could not determine whether ${BRANCH_REF} still exists (git ls-remote exited ${lookup}). Failing rather than pushing blind or skipping the re-pin quietly — re-run this job once the remote answers."
+            exit 1
+          fi
+
           # Never forced. A rejection means Renovate moved the branch while this ran, and its
           # next run rebuilds the branch from scratch — losing this commit is the correct
           # outcome, and overwriting Renovate's newer work is not.

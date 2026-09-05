@@ -441,6 +441,51 @@ Typical customizations.
 - Add a `doctor` step before validate if you want to fail fast on path/glob/config issues.
 - Publish `.qfai/report/validate.json`, `report.md`, and relevant `.qfai/report/run-*/` logs as CI artifacts.
 
+### Keeping QFAI itself up to date
+
+A `qfai` bump is the one dependency update that is not finished when the version
+number changes. The package writes an assistant tree into your repository —
+skills and agents under `.qfai/assistant/**`, and the integration wrappers under
+`.agents/`, `.claude/`, `.codex/` and `.github/` — and a new version of the
+package does not refresh what a previous one already wrote. Only
+`npx qfai init --force` does that.
+
+Merging the bump on its own leaves the repository claiming a version whose
+skills it does not have. If you use Renovate, QFAI publishes a preset that keeps
+the two together:
+
+```json
+{
+  "extends": ["config:recommended", "github>aganesy/QFAI//.github/renovate-presets/qfai"]
+}
+```
+
+The preset automerges every dependency update once your CI is green, and asks
+Renovate to run `qfai init --force` inside the update branch so the regenerated
+tree is committed into the same pull request.
+
+Whether that command may run is a Renovate **administrator** setting
+(`allowedCommands`) that no config file can read: self-hosted Renovate can allow
+it, and the hosted app does not by default. So the preset above fails closed — a
+`qfai` bump is the one update it does **not** automerge, and the pull request
+tells you whether the regenerated tree is already in the diff. Once the command
+is allow-listed, extend
+`github>aganesy/QFAI//.github/renovate-presets/qfai-self-hosted` instead, which
+is the same preset with that hold removed.
+
+Two things to know before turning it on:
+
+- `--force` rewrites the generated integration READMEs and
+  `.github/copilot-instructions.md` without asking. Keep local edits out of those
+  files; the flag's table under [What you can do](#what-you-can-do-cli-commands)
+  lists exactly which ones it owns.
+- Automerge means your CI is the only gate. On GitHub, that requires branch
+  protection to actually require a status check — with none required, a pull
+  request merges before any lane starts.
+
+Not using Renovate? The equivalent is to run `npx qfai init --force` in the same
+commit that bumps the package, and to keep the two from being merged separately.
+
 ## Generated structure
 
 `npx qfai init` generates the following structure in your repository.

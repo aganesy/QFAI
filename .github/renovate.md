@@ -1,11 +1,16 @@
 # Renovate
 
-Dependency updates arrive as pull requests, opened weekly by this repository's own workflow.
+Dependency updates arrive as pull requests, opened weekly by this repository's own workflow — and
+merged by it. **Every update type is automerged, major included, and nothing waits for a review.**
+The only thing between a dependency bump and `main` is `ci-pass`.
 
 - **What runs it:** `.github/workflows/renovate.yml`
 - **What it does:** `.github/renovate.json5`
+- **What other repositories can extend:** `.github/renovate-presets/` (see below)
 
-## The one thing a human has to do
+## The two things a human has to do
+
+### 1. The token
 
 The workflow needs a `RENOVATE_TOKEN` secret, and **nothing in this repository can create it**.
 Until it exists, the scheduled run fails on its first step with a message saying so — deliberately,
@@ -22,6 +27,25 @@ update.
 3. Run the workflow once from **Actions → Renovate → Run workflow** with **Resolve every update and
    open nothing** ticked. That resolves everything and opens nothing, so the log shows what the
    first real run would do before it does it.
+
+### 2. Branch protection, which is what makes automerge safe
+
+**Branch protection on `main` must require the `ci-pass` status check.** This is not a
+recommendation; it is the other half of the automerge configuration.
+
+Renovate uses GitHub's own automerge (`platformAutomerge`), which means **GitHub** decides when the
+pull request may merge, and GitHub asks branch protection. If branch protection requires no status
+check, GitHub merges the pull request as soon as it is mergeable — possibly before a single lane has
+started. Automerge with nothing required is not "merge when tests pass". It is "merge".
+
+`.github/required-status-contexts.json` declares which context is expected and argues why it is
+`ci-pass` rather than `build`. A repository setting cannot be read from a pull request, so nothing
+here can verify the setting agrees — what the tree can do, and does, is refuse to let the automerge
+declaration stand without a declared context beside it
+(`packages/qfai/tests/scripts/renovateMechanism.test.ts`).
+
+Set it at **Settings → Branches → Branch protection rules → Require status checks to pass before
+merging**, and select **`ci-pass`**.
 
 ### Why not the job token
 
@@ -40,20 +64,34 @@ The App is installed at github.com and configured there. Everything else that wr
 repository is a workflow whose actions are pinned by SHA and whose changes go through review, and
 running the bot the same way keeps it inside that.
 
-## What gets opened, and when
+## What gets opened, when, and what merges it
 
-|               |                                                                                        |
-| ------------- | -------------------------------------------------------------------------------------- |
-| Schedule      | Before 6am Monday, Asia/Tokyo                                                          |
-| At most       | 5 open pull requests, 2 opened per hour                                                |
-| Age floor     | A release must be 3 days old before it is offered                                      |
-| Commit style  | `chore(deps): …`                                                                       |
-| Grouping      | Every GitHub Action in one pull request, monorepo packages by monorepo                 |
-| Held back     | `engines.node` and `packageManager` — listed on the dashboard, opened only when ticked |
-| Not held back | Vulnerability alerts: no schedule, no age floor, opened immediately                    |
+|               |                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------- |
+| Schedule      | Before 6am Monday, Asia/Tokyo — branch creation only                                |
+| At most       | 10 open pull requests, 5 opened per hour                                            |
+| Age floor     | A release must be 3 days old before it is offered                                   |
+| Commit style  | `chore(deps): …`                                                                    |
+| Grouping      | Every GitHub Action in one pull request, monorepo packages by monorepo              |
+| Automerged    | **Everything** — patch, minor, major, digest, lockfile, `engines`, `packageManager` |
+| Merge gate    | `ci-pass`, and nothing else. No review, no approval, no dashboard tick              |
+| Merged when   | As soon as the checks pass — not on the next weekly run                             |
+| Not held back | Vulnerability alerts: no schedule, no age floor, opened immediately                 |
 
-The **Dependency dashboard** issue lists everything waiting, including what is held back. It is the
-place to look before assuming nothing is happening.
+Nothing is held back for approval any more. `engines.node` and `packageManager` used to sit on the
+dashboard until someone ticked a box; they still get their own pull request rather than riding
+inside a group, but CI decides them like everything else — the `node-floor` lane checks the declared
+`engines` range, and a `packageManager` bump is executed by every job in the tree before anything
+else runs.
+
+The **Dependency dashboard** issue lists what is open and what has been detected. With nothing
+waiting on a human, it is the place to look when a dependency you expected to move has not moved.
+
+### Turning it off for one dependency
+
+Add a `packageRules` entry with `matchPackageNames` and `automerge: false`. That is the supported
+way to exempt something; editing the top-level `automerge` narrows the policy for everything and
+fails the row in `renovateMechanism.test.ts` that pins it.
 
 ### The shipped workflows move with ours
 
@@ -88,7 +126,15 @@ The re-pin commits under `renovate[bot]`, matching `gitAuthor` in the config. Th
 Renovate stops updating a branch whose commits it does not recognise as its own, so a re-pin under
 any other name would freeze the branches it had just fixed.
 
+It also checks the branch still exists before pushing. Automerge is why: the pull request can be
+merged and its branch deleted while the job is still computing, and `git push HEAD:refs/heads/<name>`
+to a deleted branch does not fail — it recreates it, leaving an orphan branch behind every
+automerged action bump. The lookup closes the ordinary case; the push is still never forced.
+
 ## When an update pull request is red
+
+An update that goes red does **not** merge — that is the whole design — and it stays open until
+somebody looks at it.
 
 - **Only the hygiene lane is red, on an action bump.** The re-pin job either did not run or
   failed. Check the `Renovate / repin` run for that branch.
@@ -96,6 +142,34 @@ any other name would freeze the branches it had just fixed.
   differ, because it runs those programs with a write-capable token and Renovate never writes
   there. A branch that differs is not the plain dependency bump it claims to be.
 - **Tests are red.** That is the update, and it is what the pull request is for.
+
+## The presets other repositories extend
+
+`.github/renovate-presets/` holds the policy QFAI recommends to repositories that have run
+`qfai init`. They are not used by this repository — it declares no dependency on the `qfai` package,
+so no Renovate run here will ever produce a `qfai` bump — and they are published from here because
+that is where Renovate resolves a `github>` preset from.
+
+| Preset                                                           | Extend it when                                     |
+| ---------------------------------------------------------------- | -------------------------------------------------- |
+| `github>aganesy/QFAI//.github/renovate-presets/qfai`             | Always — the safe default                          |
+| `github>aganesy/QFAI//.github/renovate-presets/qfai-self-hosted` | Once `allowedCommands` permits the `qfai init` run |
+
+Both automerge every dependency update on a green CI run. What they differ on is the `qfai` package
+itself, which is the one update that is not finished when the version number changes: the package
+writes an assistant tree into the adopter's repository, and only `qfai init --force` refreshes it.
+
+Both presets ask Renovate to run that command inside the update branch via `postUpgradeTasks`, so
+the regenerated tree rides in the same pull request. Whether it actually runs is an **administrator**
+setting (`allowedCommands`), which self-hosted Renovate has and the hosted app does not by default —
+and no config file can read it. So the base preset **fails closed**: a `qfai` bump is the one update
+it does not automerge, which means a stale assistant tree can never reach the default branch
+unreviewed. `qfai-self-hosted` is the same preset with that hold removed, for a Renovate that is
+known to run the command.
+
+**These paths are a public interface.** A rename breaks every adopter's Renovate run and would
+report nothing here, which is why `renovateMechanism.test.ts` resolves the cross-preset reference
+against the path the file actually occupies.
 
 ## Renovate's own version
 

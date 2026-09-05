@@ -1,7 +1,8 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  // Dependency update pull requests, opened by this repository's own workflow.
+  // Dependency update pull requests, opened by this repository's own workflow — and merged by
+  // it, without a human in the loop.
   //
   // Read `.github/workflows/renovate.yml` alongside this: it holds the reasoning for running
   // self-hosted, for the token, and for the second job that re-pins the digest files an action
@@ -24,11 +25,46 @@
   timezone: "Asia/Tokyo",
   schedule: ["before 6am on monday"],
 
-  // A ceiling, not a target. The queue this repository already carries is the argument: a bot
-  // that opens thirty pull requests produces a backlog nobody reads, and an unread update pull
-  // request is worse than none — it reads as "the dependency is being watched".
-  prConcurrentLimit: 5,
-  prHourlyLimit: 2,
+  // ── Automerge: every update type, major included ─────────────────────────────────────────────
+  //
+  // The merge condition is CI and nothing else. That is a deliberate trade and it is only sound
+  // because of what CI here IS: `ci-pass` aggregates every lane — lint, both type lanes, the Node
+  // floor, the full Vitest set, scanner coverage and the packaged-build verification — and its
+  // accepting set rejects any job result that is not `success` or `skipped`. A dependency that
+  // breaks this repository fails that verdict, so the pull request does not merge; a dependency
+  // that does not, merges without anyone reading it.
+  //
+  // Set at the TOP LEVEL rather than through `matchUpdateTypes`, which is how the common
+  // "everything but major" policy is spelled. Major bumps are in scope here on purpose.
+  automerge: true,
+  automergeType: "pr",
+  // Platform-native automerge — GitHub merges the moment the required checks pass, rather than
+  // Renovate merging on its next run. With the weekly schedule above, Renovate-side automerge
+  // would park a green pull request for up to a week; this is not a preference but the
+  // difference between the policy working and the policy reading as if it worked.
+  platformAutomerge: true,
+  // STATED rather than left to its default, because it is the one knob that would quietly undo
+  // the whole block: `true` merges a branch whose checks failed.
+  ignoreTests: false,
+  // Deliberately unconstrained, and NOT copied from `schedule` above. That one holds branch
+  // creation to Monday morning; a merge happens when CI goes green, which is a different moment,
+  // and pinning the two together would hold a finished pull request until the next window.
+  automergeSchedule: ["at any time"],
+  //
+  // ⚠ Load-bearing repository SETTING, which no file here can assert: branch protection on the
+  // default branch must require the `ci-pass` status check. With `platformAutomerge` on and no
+  // required check configured, GitHub merges a pull request whose checks never ran — the exact
+  // failure this whole block is otherwise built to avoid. `.github/required-status-contexts.json`
+  // is where that expectation is declared and argued; `.github/renovate.md` repeats it as the
+  // second thing a maintainer has to do once.
+
+  // A ceiling, not a target — and one that now has to be able to DRAIN. The old limits (5 open,
+  // 2 per hour) were sized against a human reading the queue, and the argument for them was that
+  // an unread update pull request is worse than none. Nothing reads this queue any more, so the
+  // ceiling that remains is about CI concurrency rather than attention: a backlog that can only
+  // clear at five per week is a policy that says "automerge" and behaves like a slow manual one.
+  prConcurrentLimit: 10,
+  prHourlyLimit: 5,
 
   labels: ["dependencies"],
 
@@ -68,12 +104,18 @@
       groupName: "github actions",
     },
     {
-      // A toolchain floor is a decision, not an update: raising `engines.node` changes what the
-      // published package promises its users, and `packageManager` changes what every lane runs.
-      // Renovate lists these on the dashboard and opens nothing until someone ticks the box.
+      // A toolchain floor still gets its OWN pull request. Raising `engines.node` changes what
+      // the published package promises its users and `packageManager` changes what every lane
+      // runs, so neither rides along inside a group where the diff that matters is one line among
+      // twenty.
+      //
+      // What it no longer gets is a hold. `dependencyDashboardApproval: true` used to sit here and
+      // opened nothing until someone ticked a box on the dashboard; the policy above is that CI is
+      // the gate, and these two are the changes CI is most able to judge — the Node floor is
+      // verified by the `node-floor` lane against the declared `engines` range, and a
+      // `packageManager` bump is executed by every job in the tree before anything else runs.
       matchDepTypes: ["engines", "packageManager"],
       groupName: null,
-      dependencyDashboardApproval: true,
     },
   ],
 
@@ -91,14 +133,18 @@
     },
   ],
 
-  // One issue listing everything that is waiting, so the queue is readable without opening thirty
-  // pull requests to see it.
+  // One issue listing everything in flight. It no longer lists a queue WAITING on anybody — with
+  // nothing held back for approval, what it shows is what is open and what has been detected — and
+  // it stays on for exactly that: it is the one place to look when a dependency you expected to
+  // move has not moved.
   dependencyDashboard: true,
   dependencyDashboardTitle: "Dependency dashboard",
 
   vulnerabilityAlerts: {
     // A known-exploitable advisory does not wait for Monday, and does not wait three days for the
-    // fix to settle either.
+    // fix to settle either. Automerge is INHERITED from the top level rather than restated: this
+    // block lists what differs from the ordinary path, and a security fix merging on a green CI
+    // run is the ordinary path, reached sooner.
     labels: ["dependencies", "security"],
     schedule: null,
     minimumReleaseAge: null,
