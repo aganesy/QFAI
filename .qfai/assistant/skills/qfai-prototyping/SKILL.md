@@ -56,8 +56,8 @@ current `DESIGN.md` hash does not match the lock.
 ### Step 2-A — Verify Contract Preconditions
 
 - The skill resolves **every UI-bearing spec in one invocation** via
-  `resolveAllUiBearingSpecs()` (`core/prototyping/specResolution.ts`):
-  strict `surface_type: ui-bearing` frontmatter + matching
+  its `resolveAllUiBearingSpecs()` resolver: strict
+  `surface_type: ui-bearing` frontmatter + matching
   `.qfai/contracts/ui/<spec-id>*.yaml`, with legacy title-marker and
   `qfai.config.yaml` `prototyping` pinning folded in. Run
   `npx qfai doctor --profile prototyping` to surface the resolved value.

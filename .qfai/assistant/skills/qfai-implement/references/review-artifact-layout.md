@@ -2,8 +2,8 @@
 
 Items 7-9 of the 11-point reviewer gate in `SKILL.md` are evidence-bearing: the reviewer verdicts
 must be written to a review pack, not left in conversation. There is exactly **one**
-`.qfai/review/**` layout, the one validated by the review-artifact validator
-shipped inside the QFAI package and archived by `npx qfai doctor`:
+`.qfai/review/**` layout — the one the review-artifact validator shipped inside the
+QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
 
 ```text
 .qfai/review/review-<YYYYMMDDhhmmssSSS>/     # 17-digit timestamp; no other directory shape is recognized

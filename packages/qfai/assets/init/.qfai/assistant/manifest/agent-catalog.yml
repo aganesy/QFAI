@@ -430,7 +430,8 @@ agents:
       - .github/instructions/principles.instructions.md
       - Root `DESIGN.md` (brand SSOT: front-matter tokens plus `# Brand Philosophy` body)
       - Reference pool framed as deviate-from inputs, screen contracts (`uiux/40_screen_contracts.md`), optional tokens, optional fallback HTML/CSS mock, and Mermaid flows
-      - Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (information architecture / navigation flow / usability / functionality) and no longer authored as sidecar files
+      - Evaluator axes (information architecture / navigation flow / usability / functionality) are fixed by
+        the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`), not sidecar files
       - Runtime screenshots or rendered evidence when available
 
       ## Deliverables
