@@ -21,12 +21,15 @@ import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
 import { PROTOTYPING_JSON_REL } from "./prototyping/paths.js";
 import {
+  isPlaceholderDeltaMeta,
   normalizeCompat,
   normalizePrimary,
   REQUIRED_DELTA_META_KEYS,
   normalizeTag,
   parseDeltaV1,
   toDeltaMeta,
+  type DeltaDecisionEntry,
+  type DeltaMeta,
 } from "./deltaV1.js";
 import {
   loadDecisionGuardrails,
@@ -45,8 +48,11 @@ import type {
   ValidationProfile,
   ValidationResult,
   ValidationWaiverEntry,
+  ValidationWaiverSuppressed,
 } from "./types.js";
 import { validateProject } from "./validate.js";
+import { applyWaiversToExtraFindings } from "./waivers.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 
@@ -154,7 +160,76 @@ export type ReportGuardrails = {
   scanErrors: Array<{ path: string; message: string }>;
 };
 
+/** One `### DL-` entry the Change Type counters skipped. */
+export type ReportDeltaScanEntry = {
+  /**
+   * The entry's `### DL-` heading, which is also the id a waiver names in
+   * `match.dl_ids`.
+   *
+   * Suffixed with `#<position>` when the same heading appears twice in one
+   * file, so one waiver entry can never cover both: an id that identifies two
+   * rows is the over-suppression this key exists to prevent.
+   */
+  dlId: string;
+  /**
+   * `unparsed` — no complete `#### Meta` block, so the parser cannot see it.
+   * `placeholder` — it parsed but is still the shipped skeleton (see
+   * {@link isPlaceholderDeltaMeta}), so counting it would publish a decision
+   * nobody made.
+   */
+  reason: "unparsed" | "placeholder";
+};
+
+/** A delta file that holds `### DL-` entries the counters could not use. */
+export type ReportDeltaScanGap = {
+  /** Root-relative path of the delta file. */
+  file: string;
+  /**
+   * What is wrong with the entries this file could not contribute — the union
+   * of {@link uncountedEntries}' own reasons, or `unparsed` when the file holds
+   * no `### DL-` entry at all.
+   */
+  reason: "unparsed" | "placeholder" | "mixed";
+  /**
+   * `### DL-` entries in this file that reached the counters.
+   *
+   * Positive means the file is only *partly* uncounted: it was tracked because
+   * of the entries beside them, not because the whole file is invisible.
+   */
+  countedEntries: number;
+  /**
+   * The `### DL-` entries in this file the counters skipped, in file order.
+   *
+   * Empty together with `countedEntries: 0` is the empty case — the file holds
+   * no `### DL-` entry the parser recognises at all, so there is no row to name
+   * and the finding is raised against the file itself.
+   *
+   * Per entry rather than a count so each one gets its own `QFAI-CTYPE-004`
+   * finding carrying its `dl_id`: a single per-file finding lets a
+   * `scope.paths` waiver accept one deliberately unfilled entry and silently
+   * take every broken — and every future — entry beside it with it.
+   */
+  uncountedEntries: ReportDeltaScanEntry[];
+};
+
 export type ReportChangeTypeSummary = {
+  /**
+   * How many delta files were opened. `totalEntries: 0` means "nothing parsed"
+   * when this is positive and "nothing to parse" when it is zero; without it
+   * the two are the same report.
+   */
+  deltaFilesScanned: number;
+  /**
+   * The delta files holding at least one entry the counters skipped, one row
+   * per file, each carrying its own counted/uncounted entry split.
+   *
+   * Tracked per entry rather than inferred from `totalEntries === 0` or from
+   * "this file counted for nothing". Both coarser tests go quiet on the case
+   * that actually under-reports: as soon as one entry in the file is complete,
+   * the file looks healthy while the broken entries beside it vanish from the
+   * counters and from `QFAI-CTYPE-004` alike.
+   */
+  uncountedDeltaFiles: ReportDeltaScanGap[];
   totalEntries: number;
   primary: Record<"Initial" | "Behavior" | "Structural" | "Ops" | "unknown", number>;
   tags: Record<"@api" | "@db" | "@nfr" | "@docs" | "@test", number>;
@@ -179,7 +254,16 @@ export type ReportRuleFinding = {
 
 export type ReportDeltaCoverage = {
   missingUpdateIssues: number;
-  status: "ok" | "missing-delta-update";
+  /**
+   * How many delta files hold decision entries the counters could not use, once
+   * the project's waivers have had their say.
+   *
+   * Part of the coverage verdict, not only of the Markdown prose: a tree whose
+   * deltas cannot be counted has no delta coverage, and a dashboard that still
+   * says `OK` under it reports a defect as a clean run.
+   */
+  uncountedDeltaFiles: number;
+  status: "ok" | "missing-delta-update" | "delta-not-counted";
 };
 
 export type ReportChangeType = {
@@ -497,7 +581,29 @@ export async function createReportData(
     path: toRelativePath(resolvedRoot, item.path),
     message: item.message,
   }));
-  const changeTypeSummary = await collectChangeTypeSummary(specsRoot, specScope);
+  const scannedChangeTypeSummary = await collectChangeTypeSummary(
+    resolvedRoot,
+    specsRoot,
+    specScope,
+  );
+  // `validateProject` already ran its waiver pass by the time the report adds
+  // findings of its own, so run the same pass over these: a finding appended
+  // afterwards could be neither suppressed nor downgraded, and a project that
+  // keeps an unfilled delta on purpose would have no way to accept it.
+  const deltaScan = await applyWaiversToExtraFindings(
+    resolvedRoot,
+    buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles, await resolveToolVersion()),
+  );
+  const deltaScanGaps = selectUnwaivedDeltaScanGaps(
+    scannedChangeTypeSummary.uncountedDeltaFiles,
+    deltaScan.issues,
+  );
+  const changeTypeSummary: ReportChangeTypeSummary = {
+    ...scannedChangeTypeSummary,
+    uncountedDeltaFiles: deltaScanGaps,
+  };
+  const reportIssues = [...normalizedValidation.issues, ...deltaScan.issues];
+  const reportCounts = addIssueCounts(normalizedValidation.counts, deltaScan.issues);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -546,6 +652,15 @@ export async function createReportData(
       byRule: {},
     },
   };
+  // Whatever the delta scan's own waiver pass suppressed belongs in the same
+  // totals: a suppression the report never reports is a waiver the operator
+  // cannot see working.
+  const suppressedWaivers = mergeSuppressedWaivers(waiverState.suppressed, deltaScan.suppressed);
+  // The waivers that pass loaded belong there too. `validation` can be a stored
+  // `validate.json` with no `waivers` block at all, and then the active list is
+  // empty while the suppressed total is not — `active 0 / suppressed 1`, naming
+  // no waiver for the suppression the same report just performed.
+  const activeWaivers = mergeActiveWaivers(waiverState.active, deltaScan.active);
   const expiredWaivers = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-WAIVER-003")
     .map((item) => toReportRuleFinding(item));
@@ -573,7 +688,7 @@ export async function createReportData(
         db: dbFiles.length,
         thema: themaFiles.length,
       },
-      counts: normalizedValidation.counts,
+      counts: reportCounts,
     },
     ids: {
       spec: idsByPrefix.SPEC,
@@ -643,24 +758,271 @@ export async function createReportData(
       verificationFindings,
       deltaCoverage: {
         missingUpdateIssues: missingDeltaUpdateIssues,
-        status: missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
+        uncountedDeltaFiles: changeTypeSummary.uncountedDeltaFiles.length,
+        status: resolveDeltaCoverageStatus(
+          missingDeltaUpdateIssues,
+          changeTypeSummary.uncountedDeltaFiles.length,
+        ),
       },
     },
     waivers: {
-      active: [...waiverState.active].sort((a, b) => a.id.localeCompare(b.id)),
+      active: activeWaivers,
       suppressed: {
-        total: waiverState.suppressed.total,
+        total: suppressedWaivers.total,
         byWaiver: Object.fromEntries(
-          Object.entries(waiverState.suppressed.byWaiver).sort(([a], [b]) => a.localeCompare(b)),
+          Object.entries(suppressedWaivers.byWaiver).sort(([a], [b]) => a.localeCompare(b)),
         ),
         byRule: Object.fromEntries(
-          Object.entries(waiverState.suppressed.byRule).sort(([a], [b]) => a.localeCompare(b)),
+          Object.entries(suppressedWaivers.byRule).sort(([a], [b]) => a.localeCompare(b)),
         ),
       },
       expired: expiredWaivers,
     },
-    issues: normalizedValidation.issues,
+    issues: reportIssues,
   };
+}
+
+/**
+ * The rule id for "a delta file was read and counted for nothing".
+ *
+ * Raised here rather than in `validate.ts` because the delta scan itself lives
+ * here: `report` is the only caller of `parseDeltaV1`, and this is the number
+ * whose silence the finding is about.
+ */
+const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
+
+/**
+ * Turns each uncounted delta entry into a finding the machine-readable outputs
+ * carry.
+ *
+ * A Markdown NOTE alone leaves `issues`, `summary.counts` and
+ * `deltaCoverage.status` untouched, so `report --format json` shows no finding
+ * and the Dashboard still prints `fail-on=warning: PASS` — a defect reported as
+ * a clean run for every consumer that reads anything but the prose.
+ *
+ * One finding per `### DL-` entry, each carrying its `dl_id`, so a waiver is
+ * scoped to the entry the operator actually accepted. Aggregated per file, a
+ * `scope.paths` waiver for one deliberately unfilled entry also cleared every
+ * broken entry beside it and every entry added to that file afterwards — and
+ * with the whole gap gone the Dashboard read `delta coverage: OK`.
+ *
+ * A file the parser finds no `### DL-` entry in has no row to name, so it keeps
+ * a file-wide finding with no `dl_id`; `waivers.ts#matchesWaiver` lets a
+ * `scope.paths` waiver reach exactly those.
+ */
+function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[], toolVersion: string): Issue[] {
+  // Decided here rather than passed in: the ratchet in `sunsetLedger.test.ts`
+  // reads the emission site, and a severity chosen anywhere else is a window
+  // that never opens.
+  const promoteAt = RULE_PROMOTIONS.deltaEntryUncounted.promoteAt;
+  const deltaScanSeverity = newRuleSeverity(toolVersion, promoteAt);
+  const issues: Issue[] = [];
+  for (const gap of gaps) {
+    if (gap.uncountedEntries.length === 0) {
+      issues.push({
+        code: DELTA_SCAN_ISSUE_CODE,
+        severity: deltaScanSeverity,
+        category: "change",
+        rule: "CTYPE-004",
+        file: gap.file,
+        message:
+          "delta ファイルから `#### Meta` の 7 キーが揃った `### DL-` entry を 1 件も読み取れないため、Change Type の集計対象になりません。",
+        suggested_action: DELTA_SCAN_STRUCTURE_ACTION,
+      });
+      continue;
+    }
+    for (const entry of gap.uncountedEntries) {
+      issues.push({
+        code: DELTA_SCAN_ISSUE_CODE,
+        severity: deltaScanSeverity,
+        category: "change",
+        rule: "CTYPE-004",
+        file: gap.file,
+        dl_id: entry.dlId,
+        message: describeDeltaScanEntry(gap, entry),
+        suggested_action: suggestDeltaScanEntryFix(entry),
+      });
+    }
+  }
+  return issues;
+}
+
+/** Why the skipped entry was skipped, in the finding's own language. */
+const DELTA_SCAN_ENTRY_CAUSE: Record<ReportDeltaScanEntry["reason"], string> = {
+  unparsed: "`#### Meta` の 7 キーが揃っていない",
+  placeholder: "テンプレートの未入力値（date / scope / notes）のまま",
+};
+
+/**
+ * Names the entry that went uncounted and how much of its file went with it.
+ *
+ * The surrounding counts are the point: a file with one real decision and three
+ * skeletons is not "an unparsable delta", it is a Change Type total that is
+ * short by three — and the message has to say so, because nothing else in the
+ * report distinguishes the two.
+ */
+function describeDeltaScanEntry(gap: ReportDeltaScanGap, entry: ReportDeltaScanEntry): string {
+  const total = gap.countedEntries + gap.uncountedEntries.length;
+  const partial =
+    gap.countedEntries > 0
+      ? `同じファイルの残り ${gap.countedEntries} 件は集計済みのため、ファイル単位では正常に見えます。`
+      : "";
+  return `\`### ${entry.dlId}\` は${DELTA_SCAN_ENTRY_CAUSE[entry.reason]}ため、Change Type の集計対象になりません（このファイルの \`### DL-\` entry ${total} 件のうち ${gap.uncountedEntries.length} 件が集計対象外）。${partial}`;
+}
+
+const DELTA_SCAN_FILL_ACTION =
+  "決定を記録した上で `date` / `scope` / `notes` を実際の値に置き換えてください。まだ決定がないなら、この entry は未記入のままで構いません（この warning は未記入である事実の通知です）。";
+const DELTA_SCAN_STRUCTURE_ACTION =
+  "`## Decision Log` -> `### DL-NNNN` -> `#### Meta` (id / date / primary / tags / compat / scope / notes) の構造に揃えてください。テンプレート: `assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md`。";
+
+/** How to accept one entry without accepting the rest of its file. */
+function describeDeltaScanWaiver(entry: ReportDeltaScanEntry): string {
+  return `恒久的に許容するなら \`.qfai/waivers.yml\` に rule: ${DELTA_SCAN_ISSUE_CODE} の waiver を登録し、\`match.dl_ids\` にこの entry の ID (\`${entry.dlId}\`) だけを列挙してください（\`scope.paths\` だけでは同じファイルの他の entry や後から追加される entry まで抑制されるため適用されません）。`;
+}
+
+function suggestDeltaScanEntryFix(entry: ReportDeltaScanEntry): string {
+  const repair =
+    entry.reason === "placeholder" ? DELTA_SCAN_FILL_ACTION : DELTA_SCAN_STRUCTURE_ACTION;
+  return `${repair} ${describeDeltaScanWaiver(entry)}`;
+}
+
+/**
+ * Drops the gaps and the individual entries whose finding a waiver suppressed.
+ *
+ * Keeping them would leave `delta coverage: NG` and a NOTE naming entries the
+ * project has already accepted — a waiver that silences the finding but not the
+ * verdict it drives is not a waiver. Per entry, because the findings are: a
+ * waiver naming one `dl_id` must leave the uncounted entries beside it standing,
+ * gap row and coverage verdict included.
+ */
+function selectUnwaivedDeltaScanGaps(
+  gaps: readonly ReportDeltaScanGap[],
+  findings: readonly Issue[],
+): ReportDeltaScanGap[] {
+  const suppressedFiles = new Set<string>();
+  const suppressedEntries = new Set<string>();
+  for (const item of findings) {
+    if (!item.suppressed) {
+      continue;
+    }
+    const file = item.file ?? "";
+    if (item.dl_id === undefined) {
+      suppressedFiles.add(file);
+    } else {
+      suppressedEntries.add(deltaScanEntryKey(file, item.dl_id));
+    }
+  }
+  if (suppressedFiles.size === 0 && suppressedEntries.size === 0) {
+    return [...gaps];
+  }
+
+  const kept: ReportDeltaScanGap[] = [];
+  for (const gap of gaps) {
+    if (gap.uncountedEntries.length === 0) {
+      if (!suppressedFiles.has(gap.file)) {
+        kept.push(gap);
+      }
+      continue;
+    }
+    const remaining = gap.uncountedEntries.filter(
+      (entry) => !suppressedEntries.has(deltaScanEntryKey(gap.file, entry.dlId)),
+    );
+    if (remaining.length === 0) {
+      continue;
+    }
+    kept.push({
+      ...gap,
+      reason: resolveDeltaScanGapReason(remaining),
+      uncountedEntries: remaining,
+    });
+  }
+  return kept;
+}
+
+/** `dl_id` is unique per file, not per tree, so the file has to be part of the key. */
+function deltaScanEntryKey(file: string, dlId: string): string {
+  return JSON.stringify([file, dlId]);
+}
+
+/**
+ * Folds the report's own findings into the validation counts.
+ *
+ * Severity is read off each finding *after* its waiver pass, and a suppressed
+ * one adds nothing — the same arithmetic `validate` does, so a waiver that
+ * clears `fail-on=warning` there clears it here too.
+ */
+function addIssueCounts(base: ValidationCounts, extra: readonly Issue[]): ValidationCounts {
+  const counts: ValidationCounts = {
+    info: base.info,
+    warning: base.warning,
+    error: base.error,
+  };
+  for (const item of extra) {
+    if (item.suppressed) {
+      continue;
+    }
+    counts[item.severity] += 1;
+  }
+  return counts;
+}
+
+/**
+ * Unions the two waiver passes' active lists, keyed by waiver id.
+ *
+ * Both passes read the same `.qfai/waivers.yml`, so in the common case the
+ * extra pass returns waivers the validation result already listed and the dedup
+ * is the whole job. It is not redundant, though: a `ValidationResult` handed in
+ * from outside — a stored `validate.json` written before waivers were reported —
+ * carries no active list, and dropping the extra pass's would publish
+ * suppressions attributed to no waiver at all.
+ *
+ * The validation pass wins a collision: it is the run whose findings the rest of
+ * the report is built from.
+ */
+function mergeActiveWaivers(
+  base: readonly ValidationWaiverEntry[],
+  extra: readonly ValidationWaiverEntry[],
+): ValidationWaiverEntry[] {
+  const byId = new Map<string, ValidationWaiverEntry>();
+  for (const waiver of [...extra, ...base]) {
+    byId.set(waiver.id, waiver);
+  }
+  return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function mergeSuppressedWaivers(
+  base: ValidationWaiverSuppressed,
+  extra: ValidationWaiverSuppressed,
+): ValidationWaiverSuppressed {
+  if (extra.total === 0) {
+    return base;
+  }
+  return {
+    total: base.total + extra.total,
+    byWaiver: addNumericRecords(base.byWaiver, extra.byWaiver),
+    byRule: addNumericRecords(base.byRule, extra.byRule),
+  };
+}
+
+function addNumericRecords(
+  base: Record<string, number>,
+  extra: Record<string, number>,
+): Record<string, number> {
+  const merged: Record<string, number> = { ...base };
+  for (const [key, value] of Object.entries(extra)) {
+    merged[key] = (merged[key] ?? 0) + value;
+  }
+  return merged;
+}
+
+function resolveDeltaCoverageStatus(
+  missingUpdateIssues: number,
+  uncountedDeltaFiles: number,
+): ReportDeltaCoverage["status"] {
+  if (missingUpdateIssues > 0) {
+    return "missing-delta-update";
+  }
+  return uncountedDeltaFiles > 0 ? "delta-not-counted" : "ok";
 }
 
 type ReportMarkdownOptions = {
@@ -763,7 +1125,7 @@ export function formatReportMarkdown(
     `- verification findings: info ${verificationFindingCounts.info} / warning ${verificationFindingCounts.warning} / error ${verificationFindingCounts.error}`,
   );
   lines.push(
-    `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
+    `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues} / uncounted delta files: ${data.changeType.deltaCoverage.uncountedDeltaFiles})`,
   );
   lines.push(
     `- waivers: active ${data.waivers.active.length} / suppressed ${data.waivers.suppressed.total} / expired ${data.waivers.expired.length}`,
@@ -1019,7 +1381,7 @@ export function formatReportMarkdown(
   lines.push("");
   lines.push("### Summary");
   lines.push("");
-  lines.push(`- decision entries: ${data.changeType.summary.totalEntries}`);
+  lines.push(...formatDeltaScanLines(data.changeType.summary, baseUrl));
   lines.push(
     `- primary: Initial ${data.changeType.summary.primary.Initial} / Behavior ${data.changeType.summary.primary.Behavior} / Structural ${data.changeType.summary.primary.Structural} / Ops ${data.changeType.summary.primary.Ops} / unknown ${data.changeType.summary.primary.unknown}`,
   );
@@ -1039,7 +1401,7 @@ export function formatReportMarkdown(
     `- verification findings: info ${verificationFindingCounts.info} / warning ${verificationFindingCounts.warning} / error ${verificationFindingCounts.error}`,
   );
   lines.push(
-    `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues})`,
+    `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues}, uncounted=${data.changeType.deltaCoverage.uncountedDeltaFiles})`,
   );
   lines.push("");
 
@@ -1698,10 +2060,13 @@ type SpecContractRefEntry = {
 };
 
 async function collectChangeTypeSummary(
+  root: string,
   specsRoot: string,
   scope: SpecScope | undefined,
 ): Promise<ReportChangeTypeSummary> {
   const summary: ReportChangeTypeSummary = {
+    deltaFilesScanned: 0,
+    uncountedDeltaFiles: [],
     totalEntries: 0,
     primary: {
       Initial: 0,
@@ -1730,22 +2095,15 @@ async function collectChangeTypeSummary(
   const deltaFiles = (await collectSpecDeltaFiles(specsRoot)).filter((file) =>
     isPathInSpecScope(file, { root: specsRoot, specsRoot }, scope),
   );
+  // Counted after the scope filter, so `deltaFilesScanned` reports what this run
+  // actually opened rather than what the repo holds.
+  summary.deltaFilesScanned = deltaFiles.length;
 
   for (const deltaFile of deltaFiles) {
     const text = await readFile(deltaFile, "utf-8");
-    const parsed = parseDeltaV1(text);
-    for (const entry of parsed.entries) {
-      if (!entry.meta) {
-        continue;
-      }
-      const hasAllKeys = REQUIRED_DELTA_META_KEYS.every((key) =>
-        Object.prototype.hasOwnProperty.call(entry.meta, key),
-      );
-      if (!hasAllKeys) {
-        continue;
-      }
+    const partition = partitionDeltaEntries(parseDeltaV1(text).entries);
 
-      const meta = toDeltaMeta(entry.meta);
+    for (const meta of partition.counted) {
       summary.totalEntries += 1;
 
       const primary = normalizePrimary(meta.primary) ?? "unknown";
@@ -1762,9 +2120,93 @@ async function collectChangeTypeSummary(
         summary.tags[normalized] += 1;
       }
     }
+
+    const gap = toDeltaScanGap(toRelativePath(root, deltaFile), partition);
+    if (gap) {
+      summary.uncountedDeltaFiles.push(gap);
+    }
   }
 
   return summary;
+}
+
+/** One delta file's `### DL-` entries, split by whether the counters can use them. */
+type DeltaEntryPartition = {
+  counted: DeltaMeta[];
+  uncounted: ReportDeltaScanEntry[];
+};
+
+/**
+ * Splits a file's `### DL-` entries into the countable and the skipped.
+ *
+ * Per entry, not per file: a file that mixes one complete decision with three
+ * skeletons used to read as fully counted, because a single countable entry was
+ * enough to clear the file-level check — and those three were exactly the
+ * decisions the Dashboard then under-reported, with nothing anywhere saying so.
+ *
+ * The skipped ones keep their heading id, so each becomes a finding a waiver
+ * can accept on its own.
+ */
+function partitionDeltaEntries(entries: readonly DeltaDecisionEntry[]): DeltaEntryPartition {
+  const partition: DeltaEntryPartition = { counted: [], uncounted: [] };
+  const seenHeadings = new Set<string>();
+  entries.forEach((entry, index) => {
+    // A duplicated `### DL-0001` would otherwise hand two rows the same waiver
+    // key, so the second one gets its position appended.
+    const heading = entry.heading.trim();
+    const dlId = seenHeadings.has(heading) ? `${heading}#${index + 1}` : heading;
+    seenHeadings.add(heading);
+
+    const record = entry.meta;
+    const hasAllKeys =
+      record !== null &&
+      REQUIRED_DELTA_META_KEYS.every((key) => Object.prototype.hasOwnProperty.call(record, key));
+    if (record === null || !hasAllKeys) {
+      partition.uncounted.push({ dlId, reason: "unparsed" });
+      return;
+    }
+
+    const meta = toDeltaMeta(record);
+    if (isPlaceholderDeltaMeta(meta)) {
+      partition.uncounted.push({ dlId, reason: "placeholder" });
+      return;
+    }
+    partition.counted.push(meta);
+  });
+  return partition;
+}
+
+/**
+ * Describes what a file failed to contribute, or `null` when it contributed
+ * everything it holds.
+ *
+ * A file with no recognisable entry at all is a gap too: `countedEntries: 0`
+ * with an empty `uncountedEntries` is "nothing here parsed", which is the shape
+ * the old shipped template produced (#545).
+ */
+function toDeltaScanGap(file: string, partition: DeltaEntryPartition): ReportDeltaScanGap | null {
+  const countedEntries = partition.counted.length;
+  if (partition.uncounted.length === 0 && countedEntries > 0) {
+    return null;
+  }
+  return {
+    file,
+    reason: resolveDeltaScanGapReason(partition.uncounted),
+    countedEntries,
+    uncountedEntries: partition.uncounted,
+  };
+}
+
+/** `mixed` only when both kinds are present; an empty file reads as `unparsed`. */
+function resolveDeltaScanGapReason(
+  uncounted: readonly ReportDeltaScanEntry[],
+): ReportDeltaScanGap["reason"] {
+  const hasPlaceholder = uncounted.some((entry) => entry.reason === "placeholder");
+  const hasUnparsed = uncounted.some((entry) => entry.reason === "unparsed");
+  if (hasPlaceholder && hasUnparsed) {
+    return "mixed";
+  }
+  return hasPlaceholder ? "placeholder" : "unparsed";
 }
 
 async function collectPrototypingSummary(
@@ -1960,6 +2402,70 @@ async function evaluateTraceability(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
+}
+
+/** How many uncounted delta files the NOTE names before it summarises the rest. */
+const REPORT_DELTA_SCAN_GAP_MAX = 10;
+
+/**
+ * Names the input the Change Type counters were computed from.
+ *
+ * `decision entries: N` alone reads as "this is what the tree classified",
+ * which is the same output as "some deltas were read and counted for nothing" —
+ * the second is a defect in the files, and it must not report as a clean run.
+ * Driven by the per-entry split, not by `totalEntries === 0` and not by "this
+ * file counted for nothing": one spec adopting the current template is enough
+ * to take the total positive, and one complete entry is enough to make the file
+ * around it look healthy, while the entries beside it stay silently uncounted.
+ */
+function formatDeltaScanLines(summary: ReportChangeTypeSummary, baseUrl?: string): string[] {
+  const lines = [
+    `- delta files scanned: ${summary.deltaFilesScanned}`,
+    `- decision entries: ${summary.totalEntries}`,
+  ];
+  const gaps = summary.uncountedDeltaFiles;
+  if (gaps.length === 0) {
+    return lines;
+  }
+  const uncountedEntries = gaps.reduce((acc, gap) => acc + gap.uncountedEntries.length, 0);
+  lines.push(
+    `- NOTE: ${gaps.length} of ${summary.deltaFilesScanned} delta file(s) hold decision entries the counters could not use` +
+      `${uncountedEntries > 0 ? ` (${uncountedEntries} entr${uncountedEntries === 1 ? "y" : "ies"} skipped)` : ""}. ` +
+      "The counters above cover the rest of the tree only — they are not evidence that nothing changed. " +
+      `See [${DELTA_SCAN_ISSUE_CODE}](#change-issues).`,
+  );
+  for (const gap of gaps.slice(0, REPORT_DELTA_SCAN_GAP_MAX)) {
+    lines.push(`  - ${formatPathLink(gap.file, baseUrl)}: ${formatDeltaScanGapDetail(gap)}`);
+  }
+  if (gaps.length > REPORT_DELTA_SCAN_GAP_MAX) {
+    lines.push(`  - ... and ${gaps.length - REPORT_DELTA_SCAN_GAP_MAX} more`);
+  }
+  return lines;
+}
+
+/** Reason text per gap, in the prose the Markdown body speaks. */
+const DELTA_SCAN_GAP_DETAIL: Record<ReportDeltaScanGap["reason"], string> = {
+  unparsed: "incomplete `#### Meta`",
+  placeholder: "still the unfilled template (`date` / `scope` / `notes`)",
+  mixed: "incomplete `#### Meta` or still the unfilled template",
+};
+
+/**
+ * Spells out how much of one file went uncounted, and which entries.
+ *
+ * `2/5 entries uncounted` and "this whole file is invisible" are different
+ * repairs, and a partly counted file is the one a reader would otherwise never
+ * look at — its `delta coverage` row and its Change Type totals both look fine.
+ * The ids are named because they are what a waiver has to list in
+ * `match.dl_ids`.
+ */
+function formatDeltaScanGapDetail(gap: ReportDeltaScanGap): string {
+  if (gap.uncountedEntries.length === 0) {
+    return "no `### DL-` entry with a complete `#### Meta` block";
+  }
+  const total = gap.countedEntries + gap.uncountedEntries.length;
+  const ids = gap.uncountedEntries.map((entry) => `\`${entry.dlId}\``).join(", ");
+  return `${gap.uncountedEntries.length}/${total} entries uncounted (${DELTA_SCAN_GAP_DETAIL[gap.reason]}): ${ids}`;
 }
 
 function formatIdLine(label: string, values: string[]): string {

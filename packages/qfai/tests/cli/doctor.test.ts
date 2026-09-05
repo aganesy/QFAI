@@ -250,6 +250,51 @@ describe("doctor", { timeout: 60000 }, () => {
     }
   });
 
+  // `traceability.testGlobs` is the check `/qfai-configure` owns end to end, and
+  // its Completion Contract smoke check reads `doctor --fail-on error`'s exit
+  // code as the verdict. While globs that matched nothing were `warning`, that
+  // exit code was 0 for a configuration collecting no test at all — the one
+  // defect the stage exists to prevent — even though `validate` already calls
+  // the same state a `QFAI-TRACE-124` error. The two tools have to agree.
+  it("errors when configured testFileGlobs match no test file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedScenarioSpecPack(root);
+      await writeTestGlobsConfig(root, ["tests/**/*.matches-nothing.ts"]);
+
+      const parsed = await readDoctorData(root);
+      const globsCheck = findCheck(parsed.checks, "traceability.testGlobs");
+      expect(globsCheck?.severity).toBe("error");
+      expect(globsCheck?.details?.["scenarioFiles"]).toBe(1);
+
+      expect(await runDoctorExit(root, "error")).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Over-correction pin: globs that do cover the tree stay `ok`, so a correct
+  // configure run is not turned into a permanent completion blocker.
+  it("keeps testGlobs ok — and doctor at exit 0 — once the globs match a test", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedScenarioSpecPack(root);
+      await mkdir(path.join(root, "tests"), { recursive: true });
+      await writeFile(path.join(root, "tests", "sample.test.ts"), "export {};\n", "utf-8");
+      await writeTestGlobsConfig(root, ["tests/**/*.test.ts"]);
+
+      const parsed = await readDoctorData(root);
+      const globsCheck = findCheck(parsed.checks, "traceability.testGlobs");
+      expect(globsCheck?.severity).toBe("ok");
+
+      expect(await runDoctorExit(root, "error")).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns when deprecated promptsDir is configured", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
@@ -793,6 +838,56 @@ uiux:
 
 function findCheck(checks: DoctorCheck[], id: string): DoctorCheck | undefined {
   return checks.find((check) => check.id === id);
+}
+
+/** The exit code `/qfai-configure`'s smoke check reads as its verdict. */
+async function runDoctorExit(root: string, failOn: "warning" | "error"): Promise<number> {
+  return runDoctor({
+    root,
+    rootExplicit: true,
+    format: "json",
+    outPath: path.join(root, ".qfai", "report", "doctor.json"),
+    failOn,
+  });
+}
+
+/**
+ * A spec pack whose scenario file exists, so the SC->Test gate is armed
+ * (`collectScenarioFiles` is non-empty). `qfai init` ships no spec packs, which
+ * is why a bare init tree never reaches the glob verdict at all.
+ */
+async function seedScenarioSpecPack(root: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "specs", "spec-0001");
+  await mkdir(dir, { recursive: true });
+  // `01_Spec.md` + `02_User-stories.md` + `05_Examples.md` select the layered
+  // layout whose `examplesPath` is `05_Examples.md`.
+  await writeFile(path.join(dir, "01_Spec.md"), "# Spec\n", "utf-8");
+  await writeFile(path.join(dir, "02_User-stories.md"), "# User stories\n", "utf-8");
+  await writeFile(path.join(dir, "05_Examples.md"), "# Examples\n", "utf-8");
+}
+
+async function writeTestGlobsConfig(root: string, globs: string[]): Promise<void> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    [
+      "paths:",
+      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/contracts",
+      "  discussionDir: .qfai/discussion",
+      "  outDir: .qfai/report",
+      "  skillsDir: .qfai/assistant/skills",
+      "  srcDir: src",
+      "  testsDir: tests",
+      "validation:",
+      "  traceability:",
+      "    scMustHaveTest: true",
+      `    testFileGlobs: [${globs.map((glob) => JSON.stringify(glob)).join(", ")}]`,
+      "output:",
+      "  validateJsonPath: .qfai/report/validate.json",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
 }
 
 /**

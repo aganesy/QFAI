@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../helpers/sourceReduction.js";
 
 // Anchored to this file, not to `process.cwd()`: a runner launched from the
 // repo root resolves `src/core` to a path that does not exist, and the walk
@@ -217,6 +218,28 @@ const ISSUE_FIRST_ARG =
   /(?<!function\s)(?<![.\w$])issue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*,/g;
 
 /**
+ * A CONDITIONAL first argument: `issue(cond ? "A" : "B", …)`.
+ *
+ * The literal-or-identifier pattern above cannot see this. Its identifier
+ * alternative matches `cond` and then demands a comma, which is not there — so
+ * the call site produced no match at all, and both codes behind it went
+ * unattributed and unchecked. `validators/reviewArtifacts.ts` emits
+ * `QFAI-REVIEW-007` / `QFAI-REVIEW-009` exactly this way, twice.
+ *
+ * Nothing is currently hidden by it, and that is luck rather than design: both
+ * codes are baseline, and both also appear as literal first arguments
+ * elsewhere in the same file. #1062's point is the structure — a NEW hard
+ * error emitted through a ternary would be registered nowhere and owned by
+ * nothing, having followed the house style.
+ *
+ * Both branches are captured. Either can be the code that reaches users, so
+ * attributing one and dropping the other would trade a blind spot for a
+ * half-blind one.
+ */
+const ISSUE_TERNARY_FIRST_ARG =
+  /(?<!function\s)(?<![.\w$])issue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*[A-Za-z_$][\w$.]*\s*\?\s*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*:\s*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*,/g;
+
+/**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
  * (or becomes) an `Issue`. Several validators build the object directly instead
  * of calling `issue()` — `skillsIntegrity.ts`, `uix/designSystemPresence.ts`,
@@ -311,47 +334,18 @@ async function collectScanFiles(): Promise<string[]> {
  * literals so a `//` inside a string is not mistaken for a comment, which is
  * the only ambiguity that matters here.
  */
+/**
+ * Comments blanked, literals kept — the shared reduction (#1089).
+ *
+ * The hand-rolled scan this replaced tracked strings and templates but not
+ * regular expressions, so a regex whose body held a backtick opened a phantom
+ * template and comment prose leaked into this text in 8 of the 264 modules
+ * under `src/core`. A module can then be credited with a finding code it only
+ * DOCUMENTS, and `DYNAMIC_CODE_SITES` gain or lose an entry for reasons
+ * unrelated to any code.
+ */
 function stripComments(source: string): string {
-  let out = "";
-  let i = 0;
-  while (i < source.length) {
-    const two = source.slice(i, i + 2);
-    if (two === "//") {
-      const end = source.indexOf("\n", i);
-      const stop = end === -1 ? source.length : end;
-      out += " ".repeat(stop - i);
-      i = stop;
-      continue;
-    }
-    if (two === "/*") {
-      const end = source.indexOf("*/", i + 2);
-      const stop = end === -1 ? source.length : end + 2;
-      out += source.slice(i, stop).replace(/[^\n]/g, " ");
-      i = stop;
-      continue;
-    }
-    const ch = source[i] ?? "";
-    if (ch === '"' || ch === "'" || ch === "`") {
-      let j = i + 1;
-      while (j < source.length) {
-        if (source[j] === "\\") {
-          j += 2;
-          continue;
-        }
-        if (source[j] === ch) {
-          j += 1;
-          break;
-        }
-        j += 1;
-      }
-      out += source.slice(i, j);
-      i = j;
-      continue;
-    }
-    out += ch;
-    i += 1;
-  }
-  return out;
+  return withoutComments(source);
 }
 
 async function scanIssueSources(): Promise<Scan> {
@@ -379,9 +373,13 @@ async function scanIssueSources(): Promise<Scan> {
       continue;
     }
 
-    const tokens = [...source.matchAll(ISSUE_FIRST_ARG), ...source.matchAll(OBJECT_LITERAL_CODE)]
-      .map((match) => match[1])
-      .filter((token): token is string => token !== undefined);
+    const tokens = [
+      ...[...source.matchAll(ISSUE_FIRST_ARG)].map((match) => match[1]),
+      // Both branches, so a conditional emission attributes an owner to each
+      // code it can reach rather than to neither.
+      ...[...source.matchAll(ISSUE_TERNARY_FIRST_ARG)].flatMap((match) => [match[1], match[2]]),
+      ...[...source.matchAll(OBJECT_LITERAL_CODE)].map((match) => match[1]),
+    ].filter((token): token is string => token !== undefined);
 
     const unresolved = new Map<string, number>();
     for (const token of tokens) {
