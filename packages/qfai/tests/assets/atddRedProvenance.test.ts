@@ -34,6 +34,7 @@ const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
+const MIGRATION = "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 const DRIFT = "assistant/constitution/drift-protocol.md";
@@ -914,7 +915,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("keeps a pre-split row gateable where its evidence actually is", async () => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "an `E2E` / `API` row that reached `done` or `review-fix` before this split",
+      "an `E2E` / `API` / `Integration` row advanced past `todo` before its layer's split",
     );
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
@@ -1061,6 +1062,227 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     expect(implement).toContain("A row with no marker is judged by the current rule");
   });
 
+  it("gives the pre-split marker pass a phase that owns it", async () => {
+    // Item 10 carried the whole backfill and named "taking this version" as its
+    // trigger, which is not a phase: nothing ran it, so an unmarked legacy row
+    // failed item 10 forever, and a one-time repository migration was re-read
+    // on every transition to `done`.
+    const implement = await read(tree, IMPLEMENT);
+    const flatImplement = flat(implement);
+    expect(flatImplement).toContain(
+      "3. **Run the pre-split evidence marker pass, once per repository** (`references/pre-split-evidence-migration.md`)",
+    );
+    expect(flatImplement).toContain("`migrations.preSplitEvidence` in `.qfai/state.json`");
+
+    const item10 = implement
+      .split("\n")
+      .filter((line) => line.startsWith("10. `test-list.md` Status is current"));
+    expect(item10).toHaveLength(1);
+    // The gate reads the marker; it no longer prescribes the history walk.
+    expect(item10[0]).toContain("**This item reads the marker; it never writes one.**");
+    expect(item10[0]).not.toContain("Write it once, from the history");
+    expect(item10[0]).not.toContain("git log");
+  });
+
+  it("states the marker pass's guard and its per-row procedure in one reference", async () => {
+    // Without the flag the pass is either never run or run every session; both
+    // are what putting it in the gate already cost.
+    const migration = flat(
+      await read(
+        tree,
+        "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md",
+      ),
+    );
+    expect(migration).toContain("runs **once per repository**");
+    expect(migration).toContain("**Flag set → skip.**");
+    expect(migration).toContain("**Flag absent → run the procedure below, then set the flag.**");
+    // `-S` matches a filepair only when one side holds the string, so it walks
+    // back to the commit that added the row instead of the one that moved it.
+    expect(migration).toContain("not with `git log -S`");
+    expect(migration).toContain("`git log -p -- <test-list.md>`");
+    expect(migration).toContain("append `Pre-split-evidence: implement`");
+  });
+
+  it("migrates every ledger in the repository, not the selected spec's", async () => {
+    // The skill runs on one spec, but the flag is repository-wide: migrating
+    // the spec in hand and then setting it strands every other spec's legacy
+    // rows behind a flag that says the migration is done.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("Enumerate **every** `.qfai/specs/*/tdd/test-list.md`");
+    expect(migration).toContain("Not the selected spec's");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**It reads every `.qfai/specs/*/tdd/test-list.md` in the repository, not the selected spec's**",
+    );
+  });
+
+  it("keys the guard to the ledgers it read, not to the checkout", async () => {
+    // `.qfai/state.json` is checkout-local: a branch with no legacy row set the
+    // flag, and the next branch's legacy rows were never read again.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain('{ "migrations": { "preSplitEvidence": { "ledgers"');
+    expect(migration).toContain("Absent covers either recorded address no longer matching");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**the fingerprint of the ledgers it read, taken from the working tree after it wrote its markers**",
+    );
+  });
+
+  it("fingerprints the ledgers themselves, not a commit-tree address", async () => {
+    // A tree object reads the same before and after an uncommitted marker
+    // write, so discarding those edits left a fingerprint that still matched
+    // while every legacy row had lost its marker.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("`path + NUL + git hash-object <path>`");
+    expect(migration).toContain(
+      "**Not a commit-tree address such as `git rev-parse HEAD:.qfai/specs`.**",
+    );
+  });
+
+  it("takes the last advance from Layer, Status or the anchor, not from the line moving", async () => {
+    // A post-split reflow or typo fix on the row's line dated a legacy row's
+    // last advance after the split, and the boundary test then refused it the
+    // marker it lawfully needs.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain('**Take "advanced" semantically, not as "the line moved".**');
+    expect(migration).toContain("`git show <sha>^:<test-list.md>`");
+    expect(migration).toContain("the newest commit where **any of them changed**");
+  });
+
+  it("counts a `Layer` change as an advance, and dates it against the current layer", async () => {
+    // Retyping a Unit/Component row to E2E/API/Integration moves who owns its
+    // evidence: ignored, the walk settles on an older pre-split status update
+    // and marks a row that is ATDD-owned today and never produced a handoff.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**`Layer` counts, because it moves who owns the evidence.**");
+    expect(migration).toContain("the layer the row carries **now**, not the one it carried at `A`");
+  });
+
+  it("follows a merge commit to the parent that actually advanced the row", async () => {
+    // A row completed on a legacy branch before the split looks advanced by the
+    // merge that brought it in, which dates it after the boundary and leaves it
+    // permanently ungateable.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**A merge commit is not an advance in itself.**");
+    expect(migration).toContain("read the row at **every** parent");
+    expect(migration).toContain("the merge only took the change in");
+  });
+
+  it("resolves every parent that carries a merge's values, and disagrees closed", async () => {
+    // Two branches can advance the same row to identical Layer/Status/anchor,
+    // one before the split and one after it in error, so the merge leaves both
+    // parents carrying its values. Walking "that parent" picked one of them by
+    // enumeration order, and the pre-split side marked a row whose other
+    // lineage never produced an ATDD handoff.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).not.toContain("continue the walk into that parent's history");
+    expect(migration).toContain("into the history of **every** parent that carries them");
+    expect(migration).toContain(
+      "**More than one parent can carry them, and then the verdicts must agree.**",
+    );
+    expect(migration).toContain("**Verdicts that disagree → refuse the marker for that row**");
+    // Over-correction pin: a merge that no parent's values reach is still the
+    // advance, and a unanimous verdict is still acted on.
+    expect(migration).toContain("Only when **no** parent carries them");
+    expect(migration).toContain("every lineage pre-split → mark");
+  });
+
+  it("reads the contract at `A` when `B(L)` is an ancestor of it too", async () => {
+    // A skill-tree rollback puts `A` after `B(L)` in the graph while the ledger
+    // it obeyed still routed the layer to the implement file. Declared
+    // post-split unconditionally, that row is refused the marker its lawful
+    // evidence needs and `done` leaves it no transition to earn one.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).not.toContain("succeeds → `A` is at or after the split. No marker.");
+    expect(migration).toContain(
+      "**The contract as of `A` decides the second and third cases above.**",
+    );
+    expect(migration).toContain(
+      "**Descending from `B(L)` is not proof that the split was in force at `A`**",
+    );
+    // Over-correction pin: `A` older than `B(L)` is still settled by ancestry —
+    // a row predating the vendored tree has no contract to read at `A`.
+    expect(migration).toContain("**This is the only case ancestry settles by itself**");
+  });
+
+  it("re-runs the pass when a boundary override is added or corrected", async () => {
+    // The override exists to overturn a verdict, but a guard addressing only
+    // the ledgers skipped on sight: the ledgers hash the same, so the new
+    // boundary was never evaluated and the mismarked rows stayed as they were.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain('"boundaries": "<boundary fingerprint>"');
+    expect(migration).toContain(
+      "**An override is an input to this pass's verdict, so it belongs in the guard that decides whether to re-run it.**",
+    );
+    expect(migration).toContain("**Setting, correcting or removing one re-runs this pass**");
+    expect(migration).toContain("or a boundary override added, corrected or removed");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**and alongside it the fingerprint of the `migrations.preSplitEvidence.boundary` overrides it obeyed**",
+    );
+  });
+
+  it("refuses a row whose advance is still uncommitted", async () => {
+    // `git log -p` sees committed state only, so a row advanced in the working
+    // tree after the split is dated by its previous, possibly pre-split advance.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**Reject an uncommitted advance before any history is read.**");
+    expect(migration).toContain("`git show HEAD:<test-list.md>`");
+    expect(migration).toContain("**Refuse the marker for that row**");
+  });
+
+  it("refuses a row whose last advance the history cannot date", async () => {
+    // An untracked or uncommitted ledger yields no candidate at all; marking
+    // then burns a fingerprint the later commit does not move, so the pass
+    // would skip forever with those rows unmarked.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**No `A` → refuse, do not mark.**");
+    expect(migration).toContain("record no fingerprint");
+    expect(migration).toContain("committing the very same ledger afterwards leaves each blob");
+  });
+
+  it("does not read a diverged boundary as `A` predating the split", async () => {
+    // After several branches update the assistant tree, `B(L)` and `A` can be
+    // siblings: `--is-ancestor` failing then means "not an ancestor", not
+    // "before", and reading it as pre-split marks a post-split row.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("`git merge-base --is-ancestor <A> <B(L)>` succeeds");
+    expect(migration).toContain("**Neither succeeds → `A` and `B(L)` have diverged");
+    expect(migration).toContain("Decide from the contract `A` itself was written under instead");
+    expect(migration).toContain("`git show <A>:.qfai/assistant/skills");
+  });
+
+  it("refuses the marker where the split boundary cannot be proven", async () => {
+    // Reading an unprovable boundary as "everything predates it" marks the
+    // post-split row written to the wrong file — the one case the boundary
+    // test exists to catch.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**`B(L)` cannot be resolved → mark nothing for that layer.**");
+    expect(migration).toContain("**Fail closed**");
+    expect(migration).toContain("`migrations.preSplitEvidence.boundary.<layer>`");
+    expect(migration).toContain("**A run that refused a layer records no fingerprint**");
+    expect(migration).not.toContain("no split has landed in this history, every row here predates");
+  });
+
+  it("marks only a row advanced before its layer's split", async () => {
+    // The anchor at the last advance also describes a post-split row written to
+    // the implement file by mistake, and marking that one hands item 10's
+    // acceptance to the case the marker exists to keep out.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("## The split boundary, per layer");
+    expect(migration).toContain("`git merge-base --is-ancestor <B(L)> <A>` succeeds");
+    expect(migration).toContain("**`B(L)` cannot be resolved");
+  });
+
+  it("covers the legacy `Integration` rows the later split left behind", async () => {
+    // Integration joined the ATDD file one release after E2E / API, so rows
+    // already past `todo` at that upgrade hold a lawful implement anchor.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("`Integration` joined the ATDD file one release **after**");
+    expect(migration).toContain("They take the same history test as `E2E` / `API`");
+    expect(migration).not.toContain("An `Integration` row gets no marker");
+  });
+
   it("defines the rework path a review-fix row takes through this stage", async () => {
     // Step 3b sends the row back here when the REVISE touches the acceptance
     // test, and the three branches only cover a `todo` row's first handoff.
@@ -1108,11 +1330,16 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
 
   it("names the migration that writes the pre-split marker", async () => {
     // Without one, no row ever carries the marker, so the compatibility clause
-    // it gates is unreachable and every legacy row is rejected.
+    // it gates is unreachable and every legacy row is rejected. The skill names
+    // the phase step that runs it; the procedure itself is in the reference.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Write it once, from the history**");
-    expect(implement).toContain("`git log -S`");
-    expect(implement).toContain("until it has run, those rows are judged by the current rule");
+    expect(implement).toContain("`references/pre-split-evidence-migration.md`");
+    expect(implement).toContain(
+      "until it has run, unmarked legacy rows are reported rather than accepted",
+    );
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**Write it once, from the history**");
+    expect(migration).toContain("`git log -S`");
   });
 
   it("recomputes the test hash over what the producer hashed", async () => {
@@ -1190,9 +1417,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("finds the migration's commit from the patch, not from -S", async () => {
     // The id is on both sides of a status-only change, so `-S` walks back to
     // the commit that added the row and the marker lands on the wrong one.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("from the row's **patch history**, not with `git log -S`");
-    expect(implement).toContain("`git log -p -- <test-list.md>`");
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("from the row's **patch history**, not with `git log -S`");
+    expect(migration).toContain("`git log -p -- <test-list.md>`");
   });
 
   it("submits branch 2's mutation to the gate before the transition", async () => {
@@ -1595,9 +1822,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("migrates a pre-split row at any status, not two", async () => {
     // A row interrupted mid-cycle by the upgrade stored evidence there too, and
     // unmarked it is judged by the current rule whatever its status.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("for **every** `E2E` / `API` row past `todo`");
-    expect(implement).toContain("A row interrupted mid-cycle by the upgrade");
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("for **every** `E2E` / `API` / `Integration` row past `todo`");
+    expect(migration).toContain("A row interrupted mid-cycle by the upgrade");
   });
 
   it("gives a stage review a subject that needs no row", async () => {
@@ -1989,7 +2216,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // let a row that never produced an ATDD handoff pass as complete.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("**A row that carries the marker**");
-    expect(implement).toContain("which for an `E2E` / `API` row means the ATDD file");
+    expect(implement).toContain(
+      "which for an `E2E` / `API` / `Integration` row means the ATDD file",
+    );
     expect(implement).not.toContain(
       "A row with no marker is judged by the current rule whatever its status. Accept that anchor",
     );
