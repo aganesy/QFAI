@@ -21,16 +21,13 @@ import {
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
-import { resolveFailOn, shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
 import {
   buildIncompleteRunIssue,
   buildTruncatedScanIssue,
   incompleteRunResult,
   warnIfTruncated,
 } from "../lib/warnings.js";
-import { resolveToolVersion } from "../../core/version.js";
-import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
-import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
