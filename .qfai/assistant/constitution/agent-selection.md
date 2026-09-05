@@ -1,17 +1,14 @@
 ---
+id: agent-selection
 category: project
-update-frequency: occasional
-dependencies:
-  - 02_project/spec-driven-development.md
-  - 02_project/mcp.md
-version: 2.0.0
+update_frequency: occasional
 ---
 
 <!-- markdownlint-disable MD041 -->
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
+> **出力言語**: `constitution.md` の Absolute Rule — Output Language に従う。
+> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、
+> エージェントの出力に対する指示ではない）。
 
 # エージェント選択ガイド（QFAI Toolkit）
 

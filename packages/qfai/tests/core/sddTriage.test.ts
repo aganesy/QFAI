@@ -12,6 +12,7 @@ import {
   type TriageRow,
 } from "../../src/core/sddTriage.js";
 import type { SpecSummary } from "../../src/core/specSummary.js";
+import { validateTriageSection } from "../../src/core/validators/specPack.js";
 
 function makeSummary(spec: Partial<SpecSummary> & { specId: string }): SpecSummary {
   return {
@@ -247,6 +248,41 @@ describe("classifyTriage", () => {
       summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", acCount: 5 })],
     });
     expect(rows[0]?.op).toEqual({ update: "REMOVE" });
+  });
+
+  it("marks the targetless DELETE proposal as a placeholder the validator will refuse", () => {
+    // No active spec absorbs the removal, so the classifier can only propose
+    // DELETE with an unresolved target. DELETE removes a whole spec
+    // directory, so `QFAI-TRIAGE-009` refuses the rendered row until the
+    // target is filled in — the rationale has to say so, the same contract
+    // the CREATE placeholder has with `QFAI-TRIAGE-006`.
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0011",
+          subject: "retire zeta",
+          capability: "CAP-0099",
+          removalHint: true,
+        },
+      ],
+      summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", title: "alpha" })],
+    });
+    const proposal = rows[0];
+    expect(proposal?.op).toBe("DELETE");
+    expect(proposal?.existingSpec).toBeNull();
+    expect(proposal?.rationale).toContain("QFAI-TRIAGE-009");
+    expect(proposal?.rationale).toMatch(/Existing Spec/);
+    if (!proposal) return;
+    const rendered = renderTriageMarkdown([{ ...proposal, approvedBy: "user@host" }]);
+    expect(
+      // A version inside every promotion window, so a rule still inside its
+      // window reports at its pre-promotion severity. `renderTriageMarkdown`
+      // writes a canonical `## Triage`, so nothing here reaches the heading
+      // rule and this stays a single-code assertion either way.
+      validateTriageSection(`# 09 Delta\n\n${rendered}`, "spec-0042/09_delta.md", "0.0.0").map(
+        (entry) => entry.code,
+      ),
+    ).toEqual(["QFAI-TRIAGE-009"]);
   });
 
   it("classifies removal hint with multiple capability matches as MERGE", () => {
@@ -568,9 +604,7 @@ describe("renderTriageMarkdown", () => {
     expect(md).toContain(
       "| REQ-0043 | obsolete CLI flag | spec-0005 | UPDATE | REMOVE | user@host | Flag dropped in v1.9 |",
     );
-    expect(md).toContain(
-      "| REQ-0044 | new packaging command | (none) | CREATE | - | user@host | - |",
-    );
+    expect(md).toContain("| REQ-0044 | new packaging command | - | CREATE | - | user@host | - |");
   });
 
   it("escapes literal pipes and newlines so the table round-trips through parseAllMarkdownTables", async () => {
