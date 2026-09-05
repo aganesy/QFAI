@@ -21,7 +21,7 @@ import {
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
-import { resolveFailOn, shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
 import {
   buildIncompleteRunIssue,
   buildTruncatedScanIssue,
@@ -226,6 +226,9 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // decides. The invariant it was protecting — that this finding stays an
   // `error` — is pinned in `validateRunIncomplete.test.ts` instead, which is
   // where it can actually fail.
+  if (strictSupersededBy(options)) {
+    emitStrictSupersededNotice(failOn);
+  }
   const willFail = shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
@@ -235,6 +238,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     startedAt,
     command: "/qfai-validate",
     status: willFail ? "fail" : "pass",
+    failOn,
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
 
@@ -707,6 +711,12 @@ function recountIssues(
   };
 }
 
+function emitStrictSupersededNotice(failOn: FailOn): void {
+  process.stderr.write(
+    `qfai validate: --strict is superseded by --fail-on ${failOn} (effective failOn=${failOn})\n`,
+  );
+}
+
 function emitText(result: ValidationResult, failOn: FailOn): void {
   for (const item of result.issues) {
     const location = item.file ? ` (${item.file})` : "";
@@ -726,6 +736,9 @@ function emitText(result: ValidationResult, failOn: FailOn): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
+  // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
+  // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
+  process.stdout.write(`fail-on: ${failOn}\n`);
 }
 
 function emitTextRunLog(runLogPath: string): void {
