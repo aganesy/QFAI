@@ -23,6 +23,10 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
+
+import { defaultConfig } from "../../src/core/config.js";
+import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const initQfaiDir = path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai");
@@ -37,6 +41,14 @@ const initRootConfig = path.join(
   "qfai.config.yaml",
 );
 const rootConfig = path.join(repoRoot, "qfai.config.yaml");
+
+/**
+ * `validation.testStrategy` keys kept on the public type and on
+ * `defaultConfig` only so existing TypeScript consumers keep compiling. No
+ * validator reads them; they must never reappear in a shipped
+ * `qfai.config.yaml`.
+ */
+const DEPRECATED_TEST_STRATEGY_KEYS = new Set(["requireLayerTags", "requireSizeTags"]);
 
 /** Every file under `dir`, as paths relative to `dir`, with `/` separators. */
 async function collectFiles(dir: string, base: string = dir): Promise<string[]> {
@@ -56,6 +68,18 @@ async function collectFiles(dir: string, base: string = dir): Promise<string[]> 
     }
   }
   return collected;
+}
+
+/** Narrow an unknown YAML node to a plain object, or null when it is not one. */
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const record: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    record[key] = entry;
+  }
+  return record;
 }
 
 async function readOrNull(filePath: string): Promise<Buffer | null> {
@@ -117,5 +141,95 @@ describe("init assets root mirror", () => {
       expect(text, `${label} qfai.config.yaml has no validation block`).toMatch(/^validation:/m);
       expect(text, `${label} qfai.config.yaml has no paths block`).toMatch(/^paths:/m);
     }
+  });
+
+  // The shipped `testStrategy` block used to declare `requireLayerTags` and
+  // `requireSizeTags`, which nothing outside `config.ts` ever read, and to omit
+  // `forbidTestTodoStubs`, the one key a validator actually gates on. Hold the
+  // shipped surface equal to the LIVE surface the loader resolves, so every key
+  // an operator can see in the file is a key that can change an outcome. The
+  // two retired knobs stay on `defaultConfig` purely as a deprecated compat
+  // shim for TypeScript consumers of the public `QfaiValidationConfig` type
+  // (same treatment as `paths.promptsDir`, which is likewise unshipped), so
+  // they are excluded here rather than seeded back into a fresh project.
+  //
+  // The name is about the SHIPPED surface, not about what `loadConfig` returns:
+  // the loader resolves the two deprecated compat keys as well, and always has.
+  // What this case holds is narrower — the file an operator opens lists exactly
+  // the keys that can still change an outcome.
+  it("ships exactly the testStrategy keys that can change an outcome", async () => {
+    const liveKeys = Object.keys(defaultConfig.validation.testStrategy)
+      .filter((key) => !DEPRECATED_TEST_STRATEGY_KEYS.has(key))
+      .sort();
+    expect(liveKeys, "forbidTestTodoStubs is the live gate and must stay resolvable").toContain(
+      "forbidTestTodoStubs",
+    );
+    for (const key of DEPRECATED_TEST_STRATEGY_KEYS) {
+      expect(liveKeys, `${key} is deprecated and must not be advertised as live`).not.toContain(
+        key,
+      );
+    }
+
+    for (const [label, filePath] of [
+      ["init asset", initRootConfig],
+      ["repo root", rootConfig],
+    ] as const) {
+      const buffer = await readOrNull(filePath);
+      expect(buffer, `${label} qfai.config.yaml is missing`).not.toBeNull();
+      if (buffer === null) {
+        continue;
+      }
+      const validation = asRecord(asRecord(parseYaml(buffer.toString("utf-8")))?.validation);
+      const testStrategy = asRecord(validation?.testStrategy);
+      expect(
+        testStrategy,
+        `${label} qfai.config.yaml has no validation.testStrategy block`,
+      ).not.toBeNull();
+      if (testStrategy === null) {
+        continue;
+      }
+      expect(
+        Object.keys(testStrategy).sort(),
+        `${label} testStrategy keys drifted from the live, non-deprecated key set`,
+      ).toEqual(liveKeys);
+    }
+  });
+
+  // The shipped comment used to say the `forbidTestTodoStubs` opt-out "needs an
+  // accompanying waiver DR-ID", which reads as a requirement something enforces.
+  // Nothing does: `validateTestTodoStubs` returns an empty array the moment the
+  // flag is false, and no field on `QfaiValidationConfig` carries a DR-ID to
+  // associate. A project could therefore follow the shipped instruction, write
+  // no waiver at all, and still see `qfai validate` succeed. Pin the two halves
+  // together — the behaviour AND the sentence describing it — so that whichever
+  // one moves next, the other is forced to move with it.
+  //
+  // Only the init asset is read. `qfai.config.yaml` is seeded, not mirrored
+  // (`scripts/sync-init-to-root.mjs`): the repo root copy is this repository's
+  // own live config and diverges on purpose, so its comments are not the text a
+  // fresh `qfai init` hands a new project. The instruction under review is the
+  // shipped one.
+  it("does not promise enforcement of the stub opt-out that no validator performs", async () => {
+    const optedOut = structuredClone(defaultConfig);
+    optedOut.validation.testStrategy.forbidTestTodoStubs = false;
+    optedOut.validation.traceability.testFileGlobs = ["tests/**/*.test.ts"];
+    expect(
+      await validateTestTodoStubs(repoRoot, optedOut),
+      "opting out silences the stub check entirely; if this ever reports, the shipped comment must say so",
+    ).toEqual([]);
+
+    const buffer = await readOrNull(initRootConfig);
+    expect(buffer, "init asset qfai.config.yaml is missing").not.toBeNull();
+    if (buffer === null) {
+      return;
+    }
+    const text = buffer.toString("utf-8");
+    expect(
+      text,
+      "shipped qfai.config.yaml still states the waiver as a requirement something checks",
+    ).not.toMatch(/needs an accompanying waiver DR-ID/);
+    expect(text, "shipped qfai.config.yaml must say the opt-out is not machine-checked").toMatch(
+      /not machine-checked/,
+    );
   });
 });

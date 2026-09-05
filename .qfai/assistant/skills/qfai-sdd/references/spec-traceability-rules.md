@@ -77,6 +77,35 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
     only in `Notes` are untraced.
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
+
+### Citing an ID another spec owns
+
+Layered specs share entities, so "this spec's rule defers to the owner's rule"
+is a real relationship. It has one supported form, and it is not the obvious
+one.
+
+- **Cite the owning spec's contract id** (`CON-DB-*` / `CON-API-*` /
+  `CON-UI-*`), not its `BR-*` / `US-*` / `AC-*`. The owning spec is identifiable
+  from the Contracts table of the spec that reads the entity.
+- A foreign-namespace layer ID is an `error` from two rules at once —
+  `QFAI-SPACK-101` (namespace) and `TRACE_DOWNSTREAM_REF` (reference direction).
+  Writing _"per BR-0017-0004"_ in `04_Business-Rules.md` trips both.
+
+**Which files the namespace check covers**, measured against
+`validateLayeredNamespace`:
+
+| file                        | checked | IDs                                                                   |
+| --------------------------- | ------- | --------------------------------------------------------------------- |
+| `02_User-stories.md`        | yes     | `US`                                                                  |
+| `03_Acceptance-Criteria.md` | yes     | `AC`                                                                  |
+| `04_Business-Rules.md`      | yes     | `BR`                                                                  |
+| `05_Examples.md`            | yes     | `EX` / `SC`                                                           |
+| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                         |
+| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs           |
+| `10_Plan.md`                | **no**  | not covered today — see #1101 for whether that is a decision or a gap |
+
+## ID and Parent Rules (continued)
+
 - `_policies/**` must not **define or own** lower-layer items. Concretely: no
   traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
   `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
@@ -143,8 +172,13 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
-  `blocked` row is waiting on and is required on those rows.
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`. `Blocked-By`
+  names what a `blocked` row is waiting on and is required on those rows.
+  `Owning module` declares the production module the row will write, is filled at
+  Phase 2b alongside the row itself, and is what the parallel-dispatch gate is evaluated
+  against before RED: a ledger with no `Owning module` column supports parallel dispatch
+  only for seams that already exist
+  (`qfai-implement/references/execution-ledger.md`, `parallelization-policy.md`).
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
