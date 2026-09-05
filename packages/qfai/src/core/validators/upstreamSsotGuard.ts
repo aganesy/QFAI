@@ -14,8 +14,9 @@
  * is the *owner* of these files, so running the check on its own authoring runs
  * would flag every legitimate contract edit.
  *
- * The finding is waived by an approved Change Request that names the changed
- * path, which is the sanctioned route — see `#when-drift-is-detected`.
+ * The finding is waived by an approved Change Request that declares the changed
+ * path in its `## Impact scope`, which is the sanctioned route — see
+ * `#when-drift-is-detected`.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -25,6 +26,7 @@ import type { QfaiConfig } from "../config.js";
 import { getChangedFilesAgainstBase } from "../gitChanges.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
+import { maskNonSpecRegions } from "../specPackParsers.js";
 
 /** Waivable as `QFAI-DRIFT-001`; `DRIFT-001` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const UPSTREAM_SSOT_EDIT_RULE_ID = "QFAI-DRIFT-001";
@@ -97,36 +99,130 @@ function classifyChange(
   return null;
 }
 
+/** The `## Impact scope` heading, however it is cased or spaced. */
+const IMPACT_SCOPE_HEADING_RE = /^[ \t]*##[ \t]+Impact[ \t]+scope[ \t]*$/gim;
+
+/** Any `##` heading, which is where a scope section ends. */
+const NEXT_H2_RE = /^[ \t]*##[ \t]+/m;
+
 /**
- * Paths named by an **approved** Change Request.
+ * A Change Request's `## Impact scope` section, or `""` when it has none.
  *
- * A CR is a plain Markdown document, so the match is textual: the path appears
- * somewhere in an approved CR's body. That is deliberately permissive — the
- * detector's job is to make an undisclosed edit visible, and an edit disclosed
- * in an approved CR is by definition disclosed. An `open` CR authorises
- * nothing, matching `references/change-request-reset.md`.
+ * The section is the CR's declaration of what it covers, and a declaration is
+ * what an exemption has to rest on. Reading the whole body instead let a
+ * PROHIBITION grant permission — "DO NOT edit `<path>`" authorised that path —
+ * and made the `## Reproduction` block that a defect-class CR is REQUIRED to
+ * carry authorise the very edit it reports (#1121).
  */
-async function readApprovedCrText(root: string): Promise<string> {
+function extractImpactScope(content: string): string {
+  // Masked FIRST. A CR that documents the format inside a fenced sample —
+  // which the template's instructional comments invite — would otherwise have
+  // its EXAMPLE read as the authorisation, granting whatever path the example
+  // names. `collectTriageSections` masks for the same reason and records the
+  // Triage version of the bug; there an unmasked fence produced a false
+  // positive, here it produces a false EXEMPTION, which is #1121's headline
+  // re-opened by another route (#1139).
+  const masked = maskNonSpecRegions(content);
+  // EVERY section, not the first. Repeating an H2 on each re-run is an
+  // established shape here — `QFAI-TRIAGE-008`'s own remedy tells authors that
+  // "`## Triage` を複数置けば全セクションが検査されます" — and reading only the
+  // first silently ignored a later declaration, reporting an edit that WAS
+  // declared as undeclared.
+  // `matchAll` rather than an `exec` loop: a module-level `/g` pattern carries
+  // `lastIndex` between calls, and `matchAll` iterates without mutating it. An
+  // `exec` loop needs an explicit reset to be safe, and that reset is
+  // unreachable while the loop runs to `null` — untestable code guarding a
+  // footgun. This has neither.
+  const sections: string[] = [];
+  for (const heading of masked.matchAll(IMPACT_SCOPE_HEADING_RE)) {
+    const after = masked.slice(heading.index + heading[0].length);
+    const next = NEXT_H2_RE.exec(after);
+    sections.push(next === null ? after : after.slice(0, next.index));
+  }
+  // Belt and braces, and no row can distinguish it: `slice(0, next.index)` cuts
+  // at the `^##` of the following heading, so every non-final section already
+  // ends with the newline before it. Kept so the "a token cannot form across a
+  // boundary" property does not silently depend on that slicing detail.
+  return sections.join("\n");
+}
+
+/**
+ * Whether `scope` declares `file`.
+ *
+ * The repository-relative path is the canonical spelling, and the basename is
+ * accepted because it is one of the two forms an author reaches for first —
+ * the template's own `## Impact scope` asks for `Contracts: <CON-*>` and
+ * `Schema: <paths>`, so "name it by file" is what the section invites. A
+ * contract ID is NOT accepted: it names a declaration inside a file, not the
+ * file, and resolving one would make the exemption depend on parsing every
+ * contract. The remediation says which spellings work, because the previous
+ * wording was satisfied by four and only one of them was (#1121).
+ */
+function scopeDeclares(scope: string, file: string): boolean {
+  const base = file.slice(file.lastIndexOf("/") + 1);
+  return scopeNames(scope, file) || scopeNames(scope, base);
+}
+
+/**
+ * Whether `scope` names `token` as a whole token.
+ *
+ * `includes` is not enough for EITHER spelling: it is true for `<path>2` and
+ * for `<path>.bak`, so a scope naming a neighbouring artifact authorised the
+ * file it was named after. The trailing boundary rejects both — `(?![\w-])`
+ * for a longer name, `(?!\.\w)` for a sibling extension — while still
+ * accepting a filename at the end of a sentence, where the `.` is not followed
+ * by a word character.
+ */
+function scopeNames(scope: string, token: string): boolean {
+  if (token.length === 0) {
+    return false;
+  }
+  const pattern = `(?:^|[^\\w./-])${escapeForRegExp(token)}(?![\\w-])(?!\\.\\w)`;
+  return new RegExp(pattern, "m").test(scope);
+}
+
+/** Escapes `value` for literal use inside a `RegExp`. */
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * The `## Impact scope` of every **approved** Change Request, one entry each.
+ *
+ * One entry per CR rather than one concatenated blob. That shape is structural
+ * clarity, not the behaviour change: for a test of the form "does any scope
+ * name this path", an array and a join answer alike. What closes the
+ * repository-wide leak is the SECTION restriction above — an approved CR about
+ * one spec can now exempt only what ITS OWN scope declares, so a path it quotes
+ * in passing is no longer an authorisation (#1121).
+ *
+ * An `open` CR authorises nothing, matching
+ * `references/change-request-reset.md`.
+ */
+async function readApprovedCrScopes(root: string): Promise<string[]> {
   const dir = path.join(root, DECISIONS_REL_DIR);
   let entries: string[];
   try {
     entries = await readdir(dir);
   } catch {
-    return "";
+    return [];
   }
-  const bodies = await Promise.all(
+  const scopes = await Promise.all(
     entries
       .filter((name) => CR_FILE_RE.test(name))
       .map(async (name) => {
         try {
           const content = await readFile(path.join(dir, name), "utf-8");
-          return CR_APPROVED_RE.test(content) ? content : "";
+          return CR_APPROVED_RE.test(content) ? extractImpactScope(content) : "";
         } catch {
+          // Unreadable is not approval. The detector's job is to make an
+          // undisclosed edit visible, and a CR nobody can read discloses
+          // nothing.
           return "";
         }
       }),
   );
-  return bodies.join("\n");
+  return scopes.filter((scope) => scope.trim().length > 0);
 }
 
 export async function validateUpstreamSsotGuard(
@@ -153,11 +249,11 @@ export async function validateUpstreamSsotGuard(
     return [];
   }
 
-  const approvedCrText = await readApprovedCrText(root);
+  const approvedScopes = await readApprovedCrScopes(root);
 
   const issues: Issue[] = [];
   for (const change of protectedChanges) {
-    if (approvedCrText.includes(change.file)) {
+    if (approvedScopes.some((scope) => scopeDeclares(scope, change.file))) {
       continue;
     }
     const what =
@@ -176,9 +272,13 @@ export async function validateUpstreamSsotGuard(
         "canonical",
         "Downstream phases must not patch upstream SSOT directly — see " +
           ".qfai/assistant/constitution/drift-protocol.md. STOP, raise a Change Request at " +
-          "`.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` naming this path, and let the owner skill " +
-          "apply the change after approval. If the edit is already approved, the approved CR must " +
-          "name this path. Do not resolve this by reverting silently: the edit and the decision " +
+          "`.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` declaring this path under its " +
+          "`## Impact scope`, and let the owner skill apply the change after approval. " +
+          "If the edit is already approved, that CR's `## Impact scope` must name this path — " +
+          `as the repository-relative path (\`${change.file}\`) or as the bare filename. ` +
+          "A contract ID (`CON-DB-0022`) does not authorise a path, and a mention anywhere " +
+          "outside `## Impact scope` — including the `## Reproduction` block — authorises " +
+          "nothing. Do not resolve this by reverting silently: the edit and the decision " +
           "both belong in the audit trail.",
       ),
     );

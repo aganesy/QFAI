@@ -207,6 +207,23 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // baseline has to say so. What this row still guards is unchanged — the
     // set is enumerated, so the prose deliverable growing a code of its own
     // reddens it. Their promotion windows are held in `sunsetLedger.test.ts`.
+    //
+    // #1065 asked for a re-pin script per pinned guard, as the workflow-hygiene
+    // lane ships. This row gets the re-derivation COMMAND and deliberately not
+    // an auto-writer:
+    //
+    //     node -e "const fg=require('fast-glob');const fs=require('fs');\
+    //       const c=new Set();for(const f of fg.sync('packages/qfai/src/**/*.ts'))\
+    //       for(const m of fs.readFileSync(f,'utf8').matchAll(/QFAI-ATDD-\\d{3}/g))\
+    //       c.add(m[0]);console.log([...c].sort().join('\\n'))"
+    //
+    // A tool that rewrote this list would defeat it. The list is ENUMERATED
+    // rather than counted precisely so that a set which lost one code and
+    // gained another — same size, different declarations — reddens; an
+    // auto-writer would absorb that swap silently and the reviewer would never
+    // see it. Compare `pin-stage-evidence-counts.mjs`, which is right for a
+    // DERIVED NUMBER whose only correct value is a fresh measurement. Here the
+    // freeze is the review artifact, so the command prints and a human edits.
     expect(await atddFindingCodes()).toEqual([
       "QFAI-ATDD-101",
       "QFAI-ATDD-102",
@@ -221,6 +238,10 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-116",
       "QFAI-ATDD-117",
       "QFAI-ATDD-118",
+      // Obligations referenced only from carriers that declare no test. 118 is
+      // taken by the US planned-deferral finding on its own branch, so this one
+      // holds the next free number rather than colliding with it.
+      "QFAI-ATDD-119",
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",
