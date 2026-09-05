@@ -972,16 +972,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       absolute: true,
     });
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
-    const approvedVersionedDocs = new Set([
-      path.resolve(templateQfaiDir, "assistant", "constitution", "agent-selection.md"),
-    ]);
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
-      if (approvedVersionedDocs.has(path.resolve(filePath))) {
-        continue;
-      }
       if (versionPattern.test(content)) {
         matches.push(path.relative(repoRoot, filePath));
       }
