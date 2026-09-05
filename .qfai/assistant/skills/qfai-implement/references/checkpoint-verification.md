@@ -191,6 +191,12 @@ sit in no audit subject, and the revision that would otherwise cover them exclud
 `.qfai/evidence/**`. Without it a recorded FAIL could be edited to PASS on a `done` row and no hash
 anywhere would move.
 
+The seal input is canonical and machine-recomputable: the exact three lines
+`Revision: <value>`, `Checkpoint verification command: <value>`, and
+`Checkpoint verification result: <value>`, in that order. Normalize them to LF, strip trailing
+whitespace from each line, remove leading/trailing blank lines, add one final newline, then record the
+lowercase SHA-256 of those bytes. Do not wrap this field-only seal in a file-path manifest record.
+
 **The spec-level boundary records a seal of its own, and the spec completion conditions recompute
 it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was
 per-item only, and the full-suite result on a terminal ledger could still be edited from FAIL to

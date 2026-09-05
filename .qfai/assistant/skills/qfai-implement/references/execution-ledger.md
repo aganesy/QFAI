@@ -137,10 +137,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                          | Severity            |
-| ------------------------------ | ------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning             |
+| Finding                        | Fires when                                                                              | Severity            |
+| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -170,6 +172,13 @@ retained, then point the cell at that entry. The cell stays a pointer — prose
 about a missing run is a payload, and the section above says why a payload in
 the cell corrupts the ledger.
 
+`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
+code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
+check hangs off the anchor, so a `done` row whose cell is only an outcome —
+command-shaped, so the status-only rule passes over it — claimed completion with
+no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
+failing on warnings; one still migrating waives it per path.
+
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
 `TDDLIST_EXCEPTION_MISSING_DR` gates.
@@ -180,7 +189,9 @@ with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
 A pointer cell satisfies these rules: the `evidence at <path>` form carries a
 path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer.
+bare verdict, not a pointer. The pointer is also resolved against the file its
+row `Layer` owns; a file that exists only on the machine that produced it does
+not satisfy the gate on a fresh clone.
 
 ## Selector granularity (MUST)
 

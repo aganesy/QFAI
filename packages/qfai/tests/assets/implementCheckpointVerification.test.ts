@@ -138,6 +138,22 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  it("defines one reproducible field-only checkpoint seal", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("The seal input is canonical and machine-recomputable");
+      expect(reference).toContain(
+        "`Revision: <value>`, `Checkpoint verification command: <value>`, and",
+      );
+      expect(reference).toContain(
+        "Do not wrap this field-only seal in a file-path manifest record",
+      );
+    }
+  });
+
   // A spec-level re-run has no "item just completed" to build step 1 from.
   it("defines a per-spec command set without the item selector", async () => {
     for (const dir of SKILL_DIRS) {
