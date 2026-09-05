@@ -48,24 +48,33 @@ const stubConfig: QfaiConfig = {
     failOn: "error",
     require: { specSections: [] },
     testStrategy: {
-      requireLayerTags: false,
-      requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
     },
     traceability: {
-      brMustHaveSc: true,
       scMustHaveTest: true,
       testFileGlobs: ["**/*.test.ts"],
       testFileExcludeGlobs: [],
-      scNoTestSeverity: "error",
-      orphanContractsPolicy: "error",
       unknownContractIdSeverity: "error",
     },
   },
   output: { validateJsonPath: ".qfai/report/validate.json" },
   baseBranch: "origin/main",
 };
+
+/**
+ * Creates a spec directory the layout SSOT recognises as **layered**.
+ *
+ * `validateTraceabilityIntegrity` enumerates layered specs only: the legacy
+ * spec-pack layout gives `16_Traceability-ledger.md` a different, nine-column
+ * schema that `QFAI-LEDGER-001` owns, so a bare `mkdir spec-NNNN` is classified
+ * spec-pack and is invisible to the layered checks.
+ */
+async function seedLayeredSpec(specDir: string): Promise<void> {
+  await mkdir(specDir, { recursive: true });
+  await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User stories\n", "utf-8");
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Group 1: specDiffDetector file operations (TC-0013-0001..0005)
@@ -470,7 +479,7 @@ describe("TC-0013-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
   it("emits QFAI-TRACE-001 error when BR changed but linked impl not changed", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
 
     const ledger = [
       "# Traceability Ledger",
@@ -508,7 +517,7 @@ describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
   it("emits no QFAI-TRACE-001 when both BR and impl are changed", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
 
     const ledger = [
       "# Traceability Ledger",
@@ -546,7 +555,7 @@ describe("TC-0013-0012: missing traceability ledger → QFAI-TRACE-002 warning",
   it("emits QFAI-TRACE-002 warning when ledger file is missing", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
     // Deliberately do NOT create 16_Traceability-ledger.md
 
     // Git shows BR file changed
