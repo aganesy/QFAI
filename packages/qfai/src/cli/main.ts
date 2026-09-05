@@ -16,10 +16,31 @@ import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
+/**
+ * Exit code for a command name nothing recognizes.
+ *
+ * Deliberately not `options.invalidExitCode`. That field carries the
+ * CLI-arg-error code the exit-code table in `.qfai/contracts/cli/qfai-init.md`
+ * reserves — 2, for an unknown flag or a malformed value — and the parser never
+ * sets `invalid` for an unrecognized command, so borrowing it here would file a
+ * mistyped command under a row the contract wrote for something else. 1 keeps
+ * the two distinguishable while still refusing to report success, which is the
+ * defect this branch closed: the `default:` arm used to print `Unknown command`
+ * and exit 0. A `--flag`-shaped first token never reaches here — the parser
+ * catches it, leaves `command` null, and the invalid-args branch above exits 2.
+ */
+const UNKNOWN_COMMAND_EXIT_CODE = 1;
+
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
+    // Name the offending token before anything else prints, so a typo is
+    // legible whichever stream the usage text ends up on below.
+    if (invalid && options.unknownFlags.length > 0) {
+      const label = options.unknownFlags.length > 1 ? "unknown options" : "unknown option";
+      error(`qfai: ${label}: ${options.unknownFlags.join(", ")}`);
+    }
     // A parser rejection never reaches runGuardrails(), so the `--format json`
     // promise ("stdout stays parseable for every outcome") has to be honoured
     // here too: usage goes to stderr and stdout carries the refusal envelope.
@@ -329,7 +350,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     default:
       error(`Unknown command: ${command}`);
       info(usage());
-      process.exitCode = options.invalidExitCode;
+      process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
       return;
   }
 }
