@@ -403,7 +403,14 @@ export async function evaluateAtddCodeTraceability(
       continue;
     }
 
-    const text = maskTestSource(file, await readSafe(file));
+    // Two readings of the same file, and they must not be the same string.
+    // `text` is masked so an id inside a literal is not read as an annotation;
+    // the carrier-kind check below needs the RAW body, because it runs its own
+    // tokenizer and that one knows a `/.../` after a control header is a regex
+    // rather than a division. Handing it the masked text let a blanked span
+    // swallow the `it(` beside it and reported a real test as annotation-only.
+    const raw = await readSafe(file);
+    const text = maskTestSource(file, raw);
     const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
     const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
     const apiAnnotations = extractApiContractAnnotations(text);
@@ -418,7 +425,7 @@ export async function evaluateAtddCodeTraceability(
         tcAnnotations.length > 0 ||
         apiAnnotations.length > 0 ||
         dbAnnotations.length > 0) &&
-      hasRunnableTestStructure(file, text)
+      hasRunnableTestStructure(file, raw)
     ) {
       // `path.normalize`, because that is the key `recordSpecRef` /
       // `recordContractRef` store — fast-glob yields POSIX separators even on
