@@ -59,6 +59,7 @@
     "tests/assets/reviewerResponseProvenance.test.ts",
     "tests/assets/sddRoutingPhaseCrosswalk.test.ts",
     "tests/assets/sddStage0PrototypingOptional.test.ts",
+    "tests/assets/skillDelegationTool.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/assets/triageColonShorthand.test.ts",

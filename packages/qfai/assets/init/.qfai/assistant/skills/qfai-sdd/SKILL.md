@@ -3,7 +3,7 @@ name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
 description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
 argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
   [
     orchestrator,

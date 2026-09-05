@@ -3,7 +3,7 @@ name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
 description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
 argument-hint: "[spec-id]"
-allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
+allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:
   [
     orchestrator,

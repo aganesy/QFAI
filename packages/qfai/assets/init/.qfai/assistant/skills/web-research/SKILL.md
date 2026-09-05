@@ -3,7 +3,7 @@ name: web-research
 title: "Web Research Pipeline"
 description: "8-stage web research pipeline with MCP integration, caching, and citation generation."
 argument-hint: "[query] [--max-depth N] [--yolo]"
-allowed-tools: [Read, Glob, Bash, Write, WebSearch, WebFetch]
+allowed-tools: [Read, Glob, Bash, Write, Task, Agent, WebSearch, WebFetch]
 roles: [Researcher, Analyst, FactChecker]
 mode: research-pipeline
 ---
