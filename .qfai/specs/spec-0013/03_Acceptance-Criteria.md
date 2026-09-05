@@ -8,9 +8,9 @@ Given SDD execution, when phases run, then Contracts-first -> Outline -> Slice -
 
 Given `_policies/05_Contracts.md` with indexed IDs, when checked, then every indexed short ID maps to a declared contract file in `.qfai/contracts/**`.
 
-## AC-0013-0003: Discussion-Pack Preflight Stop
+## AC-0013-0003: Usable-Source Preflight Stop
 
-Given a missing or incomplete discussion pack, when SDD starts, then it stops and guides to `/qfai-discussion`.
+Given no usable source at all — no discussion pack, no import-lite input, and no explicit user requirement — when SDD starts, then it stops and guides to `/qfai-discussion`. Given a pack that exists but is incomplete, contradictory, or carries a blocking OQ, SDD continues: the pack is non-normative reference material (`constitution/drift-protocol.md#core-rule`), so the correction belongs in the SDD-owned artifact with the discrepancy recorded in delta/evidence, not in the pack.
 
 ## AC-0013-0004: Slice Gate Enforcement
 
