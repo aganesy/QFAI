@@ -588,6 +588,46 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
+- **`--force` / `--yes` / `--dry-run` も、読まないコマンドで受理されていた。**
+  #1143 の残りである。`validate --dry-run` は exit 0 で**実際の実行**を行い
+  `.qfai/report/validate.json` と run-log を書いていた — リハーサルのつもりの
+  操作者が本番を得る。
+
+  ```console
+  $ npx qfai validate --force    --root .   # exit 0、フラグは無視
+  $ npx qfai validate --yes      --root .   # exit 0、フラグは無視
+  $ npx qfai validate --dry-run  --root .   # exit 0、フラグは無視
+  ```
+
+  所有リストは推測ではなく `main.ts` の読み取り位置を `case` アームに対応
+  づけて導出した:
+
+  | field                         | 読むアーム                                 |
+  | ----------------------------- | ------------------------------------------ |
+  | `force`                       | `init`, `handoff`, `prototyping`           |
+  | `yes`                         | `init`, `doctor`                           |
+  | `dryRun`                      | `init`, `doctor`, `handoff`, `prototyping` |
+  | `dir`, `upgradeAssistantTree` | `init` (#1143)                             |
+
+  #1143 で入れた `ownedByInit()` は `ownedBy(...commands)` に一般化し、5 つの
+  フラグすべてを 1 つの述語に通した。ほぼ同じ意味の述語が 2 つあると、歩調を
+  合わせるべき契約が 2 つになる。
+
+  **配布物との照合を先に行った**: これらのフラグをコマンドと組で書いている
+  配布例は `qfai init --force` と `qfai prototyping iterate … --force` の
+  2 つだけで、どちらも所有リスト内。README 2 つは 5 つとも `npx qfai init` の
+  下でのみ文書化している。配布された手順が失敗し始めることはない。
+
+  拒否時に出る usage banner が**所有先の唯一の答え**になるので、過小に述べて
+  いた 2 行も直した: `--force` は `prototyping iterate`（配布 SKILL.md の
+  破壊的リセット手順そのもの）を挙げておらず、`--yes` は `doctor` を挙げて
+  いなかった。`--yes` の doctor 側の説明は `doctor.ts` 自身の docblock
+  (`skip interactive confirmation (autoremediate)`) から取った。
+
+  **アップグレード時の注意:** `validate --dry-run` のようなスクリプトは失敗する
+  ようになる。以前からリハーサルではなく本番を実行していたので、失敗する方が
+  厳密に良い。 (#1144)
+
 - **`--dir` が `init` 以外でも受理され、黙って無視されていた。** その結果
   `validate --dir <path>` は**現在のディレクトリ**について判定を返し、
   `report --dir <path>` は現在のディレクトリの `report.md` を**上書き**していた。

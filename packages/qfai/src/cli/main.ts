@@ -370,7 +370,10 @@ Options:
                   QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
                   .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
   --force         handoff upgrade: 既存の .qfai/handoff.yaml を上書き（上書き前に .backup-<ISO> へ退避）
+  --force         prototyping iterate: cycle 0 の破壊的な再実行を許可（iter-00 を
+                  iter-00.backup-<ISO> へ退避してからリセット）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
+  --yes           doctor --autoremediate: 対話確認をスキップ（それ以外では無効）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
   --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: 変更を行わず表示のみ
