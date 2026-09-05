@@ -50,6 +50,25 @@ async function seedSpec(root: string): Promise<void> {
   );
 }
 
+/**
+ * Adds a layered ledger linking a BR to an implementation file that is not in
+ * any diff — the state `/qfai-sdd` leaves behind before `/qfai-implement` runs.
+ */
+async function seedLedger(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, ".qfai", "specs", "spec-0001", "16_Traceability-ledger.md"),
+    [
+      "# 16 Traceability Ledger",
+      "",
+      "| BR/AC | Implementation File | Test File |",
+      "| --- | --- | --- |",
+      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-profile-"));
   try {
@@ -274,6 +293,71 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
       expect(SAAS_PACKAGE_SKIPPED_GATE_FAMILIES[gate] ?? []).not.toHaveLength(0);
     }
+  });
+});
+
+// #536: `/qfai-sdd` owns `16_Traceability-ledger.md` but `--profile sdd` — the
+// gate that skill stops on — never ran the validator that asks for it.
+describe("--profile sdd owns the traceability-ledger gate", () => {
+  it("raises QFAI-TRACE-002 for a ledger-less spec under the sdd profile", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const codes = (await findings(root)).map((entry) => entry.code);
+        expect(codes).toContain("QFAI-TRACE-002");
+      });
+    });
+  });
+
+  it("does not double-report the ledger gate under the full profile", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false });
+      const trace002 = (await findings(root)).filter((entry) => entry.code === "QFAI-TRACE-002");
+      expect(trace002).toHaveLength(1);
+    });
+  });
+
+  it("keeps the ledger gate off the unevaluated list for sdd", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).not.toContain("QFAI-TRACE-002");
+        // But the implementation-drift half is genuinely not evaluated by sdd,
+        // so the notice must keep saying so.
+        expect(notice?.message).toContain("QFAI-TRACE-001");
+        // The TDD-list gates are still not part of what sdd evaluates.
+        expect(notice?.message).toContain("TDDLIST_*");
+      });
+    });
+  });
+
+  // PR #856 review: `/qfai-sdd` updates BR/AC and the ledger and hands the
+  // implementation to `/qfai-implement`, so the linked code is untouched by
+  // design at this gate. Raising the history-based QFAI-TRACE-001 here would
+  // fail the mandatory `--profile sdd --fail-on error` run on the normal flow.
+  it("never raises QFAI-TRACE-001 under the sdd profile", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedLedger(root);
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const codes = (await findings(root)).map((entry) => entry.code);
+        expect(codes).not.toContain("QFAI-TRACE-001");
+        expect(codes).not.toContain("QFAI-TRACE-003");
+      });
+    });
+  });
+
+  it("keeps the ledger gate on the unevaluated list for tdd's own drift half", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        // tdd runs both halves.
+        expect(notice?.message).not.toContain("QFAI-TRACE-001");
+        expect(notice?.message).not.toContain("QFAI-TRACE-002");
+      });
+    });
   });
 });
 

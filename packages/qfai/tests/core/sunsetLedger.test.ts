@@ -140,6 +140,13 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // deferred story should fail the build, and promoting it would make the
   // marker unusable for the case it was added for.
   "QFAI-ATDD-118",
+  // The BR/AC to implementation integrity check (`QFAI-TRACE-001`) could not be
+  // run: the base ref is unfetchable, or a spec present in the diff is absent
+  // from the working tree. Both say a check did not execute — neither says the
+  // tree is wrong — so there is nothing here for a window to promote into an
+  // error. Promoting it would fail every shallow CI clone on the pin date for
+  // the shape of its checkout rather than for anything in the repository.
+  "QFAI-TRACE-003",
 ];
 
 // tests/core/<this file> -> packages/qfai

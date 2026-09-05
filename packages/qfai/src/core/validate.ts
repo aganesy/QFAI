@@ -492,7 +492,7 @@ async function runProfileValidators(
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
-        return runTddValidators(root, config, true, true, true, true, true, specScope);
+        return runTddValidators(root, config, true, true, true, true, true, true, specScope);
       case "verify":
       case "full":
         return runFullValidators(root, config, platformOption, specScope);
@@ -581,6 +581,11 @@ async function runSddValidators(
   // `full` runs the discussion profile too, which already carries the same
   // validator, so it opts out here to keep every QFAI-REVIEW-* finding once.
   includeReviewArtifacts = true,
+  // `full` is the repo-wide audit and covers the downstream stage too, so it
+  // opts into the history-based `QFAI-TRACE-001` here — `runTddValidators`
+  // opts out in exchange, so the ledger is still read exactly once.
+  // `--profile sdd` on its own must never ask for it: see below.
+  includeImplementationDrift = false,
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
@@ -608,6 +613,20 @@ async function runSddValidators(
       enforceNoPrematurePrototypingContracts,
     })),
     ...(await validateTraceability(root, config, { includeCodeReferences })),
+    // `16_Traceability-ledger.md` is an artifact `/qfai-sdd` writes, and
+    // `--profile sdd` is that skill's completion gate — so the profile that
+    // owns the file is the one that must hear `QFAI-TRACE-002` about it.
+    //
+    // Presence and shape only for `--profile sdd`. `/qfai-sdd` updates BR/AC
+    // and the ledger and leaves the implementation to `/qfai-implement`, so the
+    // linked code is untouched *by design* when that gate runs; asking for the
+    // history-based `QFAI-TRACE-001` there would fail the mandatory
+    // `--profile sdd --fail-on error` run on the flow the profile exists to
+    // certify. `QFAI-TRACE-001` gates the downstream profiles, which run after
+    // the code exists.
+    ...(await validateTraceabilityIntegrity(root, config, {
+      includeImplementationDiff: includeImplementationDrift,
+    })),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateNavigationFlow(root, config)),
@@ -768,6 +787,10 @@ async function runTddValidators(
   // `full` runs the sdd profile, which already calls
   // `validateMarkdownTableArity`.
   includeTableArity = true,
+  // Same reason: the sdd profile owns the traceability ledger and now runs
+  // `validateTraceabilityIntegrity` itself — under `full` with the
+  // implementation-drift check switched on — so `full` opts out here.
+  includeTraceabilityIntegrity = true,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
@@ -790,7 +813,7 @@ async function runTddValidators(
     ...(includeTraceability
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),
-    ...(await validateTraceabilityIntegrity(root, config)),
+    ...(includeTraceabilityIntegrity ? await validateTraceabilityIntegrity(root, config) : []),
     // The drift protocol names `--profile tdd` as the downstream completion
     // gate, so the downstream-only ownership rule is enforced here and nowhere
     // else: `/qfai-sdd` owns these files and edits them legitimately.
@@ -818,11 +841,14 @@ async function runFullValidators(
     // ones this runner gates inside its own profile.
     ...(await runDiscussionValidators(root, config, specScope, "all")),
     // Review artifacts come in with the discussion profile above, so the sdd
-    // profile opts out rather than reporting every QFAI-REVIEW-* twice.
-    ...(await runSddValidators(root, config, true, false, specScope, false)),
+    // profile opts out rather than reporting every QFAI-REVIEW-* twice. The
+    // trailing `true` is the opposite trade: `full` covers the downstream
+    // stage, so it opts INTO the history-based implementation-drift check here
+    // and `runTddValidators` opts out of it below.
+    ...(await runSddValidators(root, config, true, false, specScope, false, true)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
-    ...(await runTddValidators(root, config, false, false, false, false, false)),
+    ...(await runTddValidators(root, config, false, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
 }

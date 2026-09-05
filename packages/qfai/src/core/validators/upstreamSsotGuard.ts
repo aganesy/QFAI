@@ -230,8 +230,11 @@ export async function validateUpstreamSsotGuard(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const baseBranch = config.baseBranch ?? "origin/main";
+  // `null` = git could not answer (no base ref / not a repo). This guard only
+  // ever accuses a change it can see, so an unanswerable diff is the same
+  // no-op as an empty one here.
   const changedFiles = getChangedFilesAgainstBase(root, baseBranch);
-  if (changedFiles.size === 0) {
+  if (changedFiles === null || changedFiles.size === 0) {
     return [];
   }
 

@@ -456,10 +456,13 @@ function buildDeprecationIssue(args: {
  * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
  * calls it.
  *
- * Entries are prefix globs, never bare codes: a gate that gains a second code
- * would otherwise drop out of the notice unannounced. Exported so
- * `tests/core/findingCodeGrammar.test.ts` can prove that for the gates whose
- * emitted codes it scans.
+ * Entries are prefix globs wherever a group owns a whole prefix: a gate that
+ * gains a second code would otherwise drop out of the notice unannounced.
+ * Exported so `tests/core/findingCodeGrammar.test.ts` can prove that for the
+ * gates whose emitted codes it scans. A group that is deliberately a *subset*
+ * of a prefix — the three `QFAI-TRACE-*` groups below, split because the `sdd`
+ * and `tdd` profiles run different halves of it — names its codes instead, and
+ * then the split has to partition the prefix rather than sample it.
  */
 export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
@@ -492,10 +495,6 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
-  // its canonical spelling. Both are listed because the legacy family is frozen
-  // and every code the gate gains from here on is canonical.
-  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
   // The downstream-ownership gate, and the only group `full` does NOT run.
   //
   // `/qfai-sdd` owns the protected files and edits them without a Change
@@ -509,6 +508,30 @@ export const GATE_GROUP_FAMILIES = {
   // unevaluated, so a `full` PASS looked drift-checked to an operator following
   // `QFAI-PROFILE-001`'s own advice (#1122).
   drift: ["QFAI-DRIFT-*"],
+  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
+  // its canonical spelling. Both are listed because the legacy family is frozen
+  // and every code the gate gains from here on is canonical.
+  //
+  // `QFAI-TRACE-*` is deliberately NOT here: the three `traceability-*` groups
+  // below split that prefix, and leaving the glob would count every trace code
+  // in two groups at once.
+  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*"],
+  // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
+  // and both profiles check that it is present and well-shaped, but `sdd` does
+  // not run the TDD-list gates.
+  "traceability-ledger": ["QFAI-TRACE-002"],
+  // Split from the group above because `sdd` deliberately does not run it: at
+  // that gate the linked implementation is untouched by design. `QFAI-TRACE-003`
+  // only ever reports that *this* check could not run — no diff at all, or a
+  // spec the diff names that the working tree no longer carries — so it travels
+  // with it.
+  "traceability-impl-drift": ["QFAI-TRACE-001", "QFAI-TRACE-003"],
+  // The rest of the `QFAI-TRACE-*` prefix: the layered-traceability report,
+  // dispatched by both `runSddValidators` and `runTddValidators`. It kept its
+  // place in the notice through the `QFAI-TRACE-*` glob the two groups above
+  // replaced, so it needs a group of its own or it drops out for every profile
+  // that runs neither.
+  "traceability-layered": ["QFAI-TRACE-1*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -539,7 +562,13 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // family the run did not evaluate. `runSddValidators` additionally calls
   // `runPackageSelfGovernanceValidators`, so sdd evaluates that group too.
   discussion: ["discussion", "review-artifacts"],
-  sdd: ["sdd", "package-self-governance", "review-artifacts"],
+  sdd: [
+    "sdd",
+    "package-self-governance",
+    "review-artifacts",
+    "traceability-ledger",
+    "traceability-layered",
+  ],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
@@ -547,7 +576,14 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // `drift`: `runTddValidators` passes `includeUpstreamGuard = true` here and
   // `runFullValidators` passes `false`, so this is the only profile that
   // evaluates `QFAI-DRIFT-*`.
-  tdd: ["tdd", "atdd-traceability", "drift"],
+  tdd: [
+    "tdd",
+    "atdd-traceability",
+    "drift",
+    "traceability-ledger",
+    "traceability-impl-drift",
+    "traceability-layered",
+  ],
   "saas-package": ["prototyping"],
 };
 

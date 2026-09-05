@@ -269,9 +269,21 @@ Optional per-spec artifact linking `BR-*` / `AC-*` to the implementation file th
 Template: `templates/specs/spec/16_Traceability-ledger.md`.
 
 - It is **optional**. Without it `npx qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
-  implementation-integrity check; the spec is still valid.
+  implementation-integrity check; the spec is still valid. Presence is a property of the working
+  tree, so this is checked for every **layered** spec on every run — it does not depend on the branch
+  diff. Both `--profile sdd` and `--profile tdd` evaluate it.
 - With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
-  `04_Business-Rules.md` changed on the branch but a linked implementation file did not.
+  `04_Business-Rules.md` changed on the branch but a linked implementation file did not. Only
+  `--profile tdd` / `full` evaluate it: `/qfai-sdd` hands implementation to `/qfai-implement`, so at
+  the `--profile sdd` gate the linked code is untouched by design.
+- `QFAI-TRACE-001` needs the branch diff. When git cannot produce one (base ref absent, shallow CI
+  clone, not a repository) `QFAI-TRACE-003` (`info`) says so and that check is skipped for every
+  spec; fetch the base ref or set `baseBranch` at the **top level** of `qfai.config.yaml` (it is not
+  read from under `validation`). `QFAI-TRACE-003` also fires per spec when the diff carries BR/AC
+  changes for a spec the working tree no longer holds as layered (whole-spec `DELETE`, rename,
+  conversion): the ledger went with it, so the check is un-runnable rather than passing.
+- A ledger path that is not a regular file (FIFO, socket, device, directory) is never opened: it is
+  reported as `QFAI-TRACE-002` and that spec's integrity check is skipped.
 - Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
   columns, one named `Implementation File`:
 
@@ -285,7 +297,8 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
 - The legacy **spec-pack** layout uses the same filename with a different schema
   (`trace_id, obj_id, init_id, cap_id, flow_id, us_id, ac_id, ex_ids, tc_ids`, checked by
   `QFAI-LEDGER-001`). That check runs only on spec-pack layouts — the two schemas never apply to the
-  same file. Do not merge them.
+  same file. Do not merge them. `QFAI-TRACE-001` / `-002` are the mirror image: they enumerate
+  layered specs only, so a spec-pack ledger is never judged against the layered schema.
 - Authored and refreshed by `/qfai-sdd` in the same change as the BR/AC it links. It is upstream
   SSOT; downstream skills must not edit it.
 
