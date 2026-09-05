@@ -60,6 +60,41 @@ describe("parseArgs", () => {
     });
   }
 
+  describe("shared flags reach only the commands that read them", () => {
+    // The owner lists are derived from where `main.ts` reads each field. A flag
+    // accepted where nothing reads it reaches nothing and the run proceeds as if
+    // it had not been given — `--dry-run` most sharply, since an operator who
+    // believes a run is a rehearsal gets a real one (#1144).
+    //
+    // `handoff` and `prototyping` take a subcommand, so their rows name one: a
+    // bare `handoff` is invalid for its own reasons and would pass a rejection
+    // row without testing the flag.
+    const OWNERS = [
+      ["--force", [["init"], ["handoff", "upgrade"], ["prototyping", "iterate"]], ["validate"]],
+      ["--yes", [["init"], ["doctor"]], ["validate", "report"]],
+      [
+        "--dry-run",
+        [["init"], ["doctor"], ["handoff", "upgrade"], ["prototyping", "iterate"]],
+        ["validate", "report", "atdd"],
+      ],
+    ] as const;
+
+    for (const [flag, owners, strangers] of OWNERS) {
+      for (const owner of owners) {
+        it(`accepts ${flag} on ${owner.join(" ")}`, () => {
+          const parsed = parseArgs([...owner, flag], process.cwd());
+          expect(parsed.invalid).toBe(false);
+        });
+      }
+      for (const stranger of strangers) {
+        it(`rejects ${flag} on ${stranger}, which never reads it`, () => {
+          const parsed = parseArgs([stranger, flag], process.cwd());
+          expect(parsed.invalid).toBe(true);
+        });
+      }
+    }
+  });
+
   it("still accepts --root on the commands that resolve a target", () => {
     // The flag the operator wanted. A rejection that did not leave this working
     // would have removed the only way to point those commands at a tree.

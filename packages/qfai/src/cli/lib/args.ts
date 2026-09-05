@@ -213,20 +213,28 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * 前に確定するため、ループ内のどの arm からでも安全に呼べる。
    */
   /**
-   * Whether an `init`-only flag is on the command that reads it.
+   * Whether a flag is on one of the commands that actually reads it.
    *
-   * `options.dir` and `options.upgradeAssistantTree` are read at exactly one
-   * place each — the `init` arm of the dispatch. Without this, both were
-   * accepted everywhere and reached nothing: `validate --dir <path>` answered
-   * about the CURRENT tree, `report --dir <path>` overwrote its `report.md`,
-   * and `validate --upgrade-assistant-tree` exited 0 having upgraded nothing
-   * while the operator believed otherwise (#1143).
+   * A flag accepted where nothing reads it reaches nothing, and the run
+   * proceeds as if it had not been given. `--dir` produced a verdict about the
+   * CURRENT tree and made `report` overwrite its `report.md` (#1143);
+   * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
+   * `--dry-run` let an operator believe a run was a rehearsal (#1144).
    *
-   * Named rather than inlined so the next `init`-only flag is correct without
-   * anyone remembering this — the same reason `ownedByPrototyping` below is a
-   * predicate and not a comparison at each site.
+   * The owner lists are derived from where `main.ts` reads each field, not
+   * guessed:
+   *
+   * - `dir`, `upgradeAssistantTree` — `init`
+   * - `yes` — `init`, `doctor`
+   * - `force` — `init`, `handoff`, `prototyping`
+   * - `dryRun` — `init`, `doctor`, `handoff`, `prototyping`
+   *
+   * One predicate rather than one per flag: two that mean almost the same
+   * thing are two contracts to keep in step, and this is the shape
+   * `ownedByPrototyping` and `ownedByGuardrails` below already use.
    */
-  const ownedByInit = (): boolean => command === "init";
+  const ownedBy = (...commands: string[]): boolean =>
+    command !== null && commands.includes(command);
 
   const ownedByPrototyping = (...actions: PrototypingAction[]): boolean => {
     if (command !== "prototyping") {
@@ -389,7 +397,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           }
           // `--root` is the flag for pointing another command at a tree, and
           // the usage text this refusal prints says so.
-          if (ownedByInit()) {
+          if (ownedBy("init")) {
             options.dir = next;
           } else {
             markInvalid();
@@ -397,19 +405,34 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--force":
-        options.force = true;
+        // Read by the `init`, `handoff` and `prototyping` arms and nowhere else.
+        if (ownedBy("init", "handoff", "prototyping")) {
+          options.force = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--yes":
-        options.yes = true;
+        // Read by the `init` and `doctor` arms and nowhere else.
+        if (ownedBy("init", "doctor")) {
+          options.yes = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--dry-run":
-        options.dryRun = true;
+        // Read by `init`, `doctor`, `handoff` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
+        if (ownedBy("init", "doctor", "handoff", "prototyping")) {
+          options.dryRun = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--upgrade-assistant-tree":
         // Same shape as `--dir`, and worse in one way: accepted elsewhere it
         // exited 0 having upgraded nothing, so the operator went on reading an
         // assistant tree they believed had been refreshed.
-        if (ownedByInit()) {
+        if (ownedBy("init")) {
           options.upgradeAssistantTree = true;
         } else {
           markInvalid();
