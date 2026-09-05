@@ -171,7 +171,27 @@ async function collectTemplateFiles(root: string): Promise<string[]> {
   // A caller may name a single file rather than a directory — `qfai init`
   // forces `assistant/manifest/agent-catalog.yml` without forcing the tunable
   // manifests beside it. Without this, `readdir` throws ENOTDIR on the path.
-  if ((await stat(root)).isFile()) {
+  //
+  // Still propagates, and now says what it could not classify. `exists()` two
+  // lines above asks `lstat`, which SUCCEEDS on a symlink whose reparse type
+  // the OS will not follow — a Windows `git worktree` writes every
+  // `.claude/skills/*` that way — so the entry is present and the next line
+  // demanded that `stat` resolve it, unguarded, with `EPERM` escaping as a bare
+  // Node message naming neither the template tree nor the reason (#1104).
+  //
+  // Not swallowed. This module's history is the argument: its comments record
+  // `catch(() => false)` and `catch(() => [])` each being REMOVED for turning a
+  // failing filesystem into a confidently clean report, and skipping an
+  // unreadable template entry is that shape — `qfai init` would report a
+  // successful copy of a tree it never read.
+  const kind = await stat(root).catch((error: unknown) => {
+    throw new Error(
+      `テンプレートの種別を判定できません: ${root} — ` +
+        (error instanceof Error ? error.message : String(error)),
+      { cause: error },
+    );
+  });
+  if (kind.isFile()) {
     entries.push(root);
     return entries;
   }

@@ -125,6 +125,14 @@ Take the first that applies, and record which one in the evidence file.
       different sets get different values from an unchanged tree, so the gate
       either loops or passes an edit it never looked at.
 
+      **Every entry is a file.** A directory is not an entry: it hashes to a
+      value that never moves, so listing `tests/fixtures/` would leave every
+      fixture under it free to change with the RED hash unchanged — the exact
+      staleness the manifest exists to catch. List each file, and keep every
+      parent component a real directory: a path that reaches its bytes through
+      a symlinked parent addresses a tree the manifest does not describe, which
+      a fresh clone cannot reproduce. The gate rejects both.
+
       Not the `Selector` — that column is a test _name_ in the ordinary case
       (`../../qfai-implement/references/checkpoint-verification.md` runs
       `<Test file> -t '<Selector>'`), so keying the hash on it yields an empty

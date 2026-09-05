@@ -36,6 +36,8 @@ const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
+const DRIFT = "assistant/constitution/drift-protocol.md";
+const DEPTH = "assistant/skills/qfai-atdd/references/test-case-depth-checklist.md";
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
@@ -56,6 +58,27 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**This skill does not write the ledger.**");
     expect(atdd).toContain("references/execution-ledger.md#allowed-transitions");
+  });
+
+  it("commits the per-item evidence that fresh-clone ledger anchors resolve", async () => {
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "The per-item evidence file `.qfai/evidence/atdd-<spec-id>.md` is required and committed",
+    );
+    expect(atdd).toContain("validation must resolve them on a fresh clone");
+
+    const drift = flat(await read(tree, DRIFT));
+    expect(drift).toContain("**Durable per-item TDD evidence**");
+    expect(drift).toContain("`.qfai/evidence/implement-<spec-id>.md`");
+    expect(drift).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+
+    const depth = flat(await read(tree, DEPTH));
+    expect(depth).toContain("The per-item `atdd-<spec-id>.md` is committed too");
+    expect(depth).not.toContain("`atdd-<spec-id>.md` is deleted from history");
+
+    const catalog = flat(await read(tree, CATALOG));
+    expect(catalog).toContain("live in a committed per-item evidence file");
+    expect(catalog).not.toContain("live in an evidence file that is normally ignored");
   });
 
   it("points at the reference and names the three branches in order", async () => {
@@ -894,6 +917,8 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
     expect(implement).toContain("its implement anchor is accepted");
+    expect(implement).toContain("historical completed-artifact contract");
+    expect(implement).toContain("do not retroactively require the ATDD-only");
   });
 
   it("tells a project whose manifest predates the red phase what to do", async () => {
@@ -1213,7 +1238,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Audited evidence hash` is **recomputed** here");
     expect(implement).toContain(
-      "completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`",
+      "`Spec reviewed revision`, `Spec audited evidence hash`, `Spec review pack`, and `Spec review pack seal`",
+    );
+    expect(implement).toContain(
+      "gate item 10 recomputes both the evidence hash and the whole-pack seal",
     );
   });
 
@@ -1746,6 +1774,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // construction, and a `done` row cannot take a fresh RED.
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("**And the consumer has to accept that pairing.**");
+    expect(shared).toContain("**The machine-readable form is fixed.**");
+    expect(shared).toContain("`Restored GREEN result`, `RED test manifest`, and `RED test hash`");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
       "**unless a `Shared-artifact re-verify` entry names this row — its spec and `TDD-ID` together —",
@@ -2226,16 +2256,23 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("When this stage has no row of its own, the record is stage-level");
     expect(shared).toContain("`## Shared-artifact re-verify` in the stage evidence file");
-    // And it names that file, not the Coverage Depth Matrix: the matrix is a
-    // separate committed artifact the stage evidence only links to, it holds no
-    // `## Final status`, and gate item 10 in `/qfai-implement` reads the stage
-    // evidence file — a block written into the matrix would never be consulted.
+    // And it names the file the validator actually reads. The write instruction
+    // and the read rule sat two sentences apart naming different files — the
+    // author was sent to `atdd-<spec-id>.md` while `STAGE_EVIDENCE_FILE_NAME` in
+    // `validators/tddList.ts` matches `coverage-depth-spec-NNNN.md` alone — so a
+    // stage record written exactly as instructed was never consulted and the
+    // consumer rows it exists to clear stayed unresolvable. Both halves are
+    // pinned together here so they cannot drift apart again.
     expect(shared).toContain(
-      "in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`, beside `## Final status`)",
+      "in the stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`, " +
+        "beside `## Final status`)",
     );
-    expect(shared).not.toContain(
-      "stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`",
+    expect(shared).toContain(
+      "A stage block is read only from `.qfai/evidence/coverage-depth-<spec-id>.md`",
     );
+    // `atdd-<spec-id>.md` is where an *editing row's* own entry lives; it is not
+    // the home of the stage block.
+    expect(shared).not.toContain("in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`");
     // And a consumer is told to read both places, or the block would be written
     // and never consulted.
     expect(shared).toContain("A consumer clearing a mismatch reads **both** places");
@@ -2311,9 +2348,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("says what a seal catches and what it does not", async () => {
-    // Three homes for the expected value each fell to the same move, and a
-    // committed copy is not available either: stage evidence is regenerable and
-    // deliberately not committed, so requiring one would stop every completion.
+    // A committed per-item record still cannot make its own seal authoritative:
+    // the same authority can edit the record and its seal before the next commit.
+    // A fourth seal location would therefore repeat the same trust-boundary flaw.
     const evidence = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
@@ -2340,6 +2377,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
     );
     expect(layout).toContain('**`revision_form: "content-hash"`** and **`revision`**');
+    expect(layout).toContain("Review packs are local-only by default");
+    expect(layout).toContain("when the exact directory is absent");
     const playbook = flat(
       await read(tree, "assistant/skills/qfai-sdd/references/review-cycle-playbook.md"),
     );

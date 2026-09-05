@@ -3,7 +3,12 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { EMITTED_RULE_CODES, ERROR_ONLY_RULE_CODES, RULE_ID_ALIASES } from "./emittedRuleCodes.js";
+import {
+  EMITTED_RULE_CODES,
+  ERROR_ONLY_RULE_CODES,
+  POST_WAIVER_RULE_CODES,
+  RULE_ID_ALIASES,
+} from "./emittedRuleCodes.js";
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
 import {
@@ -474,7 +479,29 @@ async function loadWaivers(
     // a waiver whose root cause has been fixed — keeps the waiver active so it
     // stays in the audit record until it expires. The index is still consulted
     // first: a finding in hand proves the rule exists whatever the scan found.
-    if (ruleSeverity === undefined && !isKnownRuleId(ruleId)) {
+    // Three states, not two. The comment above distinguishes "nothing emits
+    // it" from "it stayed quiet this run"; this is the third — the rule EXISTS
+    // and no waiver can suppress it, because `applyWaivers` runs inside
+    // `core/validate.ts` and these findings are appended by `src/cli/`
+    // afterwards. Telling the operator "unknown rule" sent them looking for a
+    // typo that is not there, and the remedy is different: a typo is corrected,
+    // this waiver is removed (#1110).
+    if (ruleSeverity === undefined && POST_WAIVER_RULE_CODES.includes(ruleId)) {
+      blocked = true;
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-004",
+          `${label}: rule '${ruleId}' は存在しますが waiver では抑制できません。` +
+            "この finding は waiver 処理の後に追加されるため、どの waiver とも一致しません。" +
+            "この waiver は訂正ではなく削除してください。",
+          "warning",
+          waiverPath,
+          "WAIVER-004",
+          [ruleId],
+          "change",
+        ),
+      );
+    } else if (ruleSeverity === undefined && !isKnownRuleId(ruleId)) {
       blocked = true;
       validationIssues.push(
         issue(

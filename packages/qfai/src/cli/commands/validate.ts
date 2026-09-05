@@ -20,9 +20,14 @@ import {
 } from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
-import { resolveToolVersion } from "../../core/version.js";
+import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail } from "../lib/failOn.js";
-import { warnIfTruncated } from "../lib/warnings.js";
+import {
+  buildIncompleteRunIssue,
+  buildTruncatedScanIssue,
+  incompleteRunResult,
+  warnIfTruncated,
+} from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -105,11 +110,30 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for one. Replacing the run made every stage gate that names a narrow
   // profile unreachable in CI.
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  const validated = await validateProject(root, configResult, {
-    ...(options.profile ? { profile: options.profile } : {}),
-    ...(options.platform ? { platform: options.platform } : {}),
-    ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
-  });
+  // Wrapped, because an unhandled rejection here left the operator with one
+  // stderr line and no verdict — no `counts:`, no `run-log:`, no
+  // `validate.json` — and every shipped skill pipes validate through `| tail`,
+  // so that line was all an agent saw (#1104). Enumerating the `stat` sites
+  // that can raise reduces the ways in; this is what answers when the next one
+  // appears.
+  //
+  // `unknown`, deliberately not narrowed to a filesystem error: the point is a
+  // verdict for anything unexpected, and a narrowed catch would put the next
+  // unclassified failure back on the path this exists to close.
+  let validated: ValidationResult;
+  try {
+    validated = await validateProject(root, configResult, {
+      ...(options.profile ? { profile: options.profile } : {}),
+      ...(options.platform ? { platform: options.platform } : {}),
+      ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
+    });
+  } catch (error: unknown) {
+    validated = incompleteRunResult(
+      options.toolVersionOverride ?? (await resolveToolVersion()),
+      buildIncompleteRunIssue(error, "validate"),
+      options.profile,
+    );
+  }
   const rawResult = ciProfileIssue
     ? {
         ...validated,
@@ -121,6 +145,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // Test callers override; production reads the same package.json#version
   // the rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
+  await emitProvenance(effectiveToolVersion);
   const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
   const legacyWriteEnabled = legacySeverity === "warning";
   // Detect whether the operator's project config still aims the writer
@@ -180,8 +205,27 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
 
   warnIfTruncated(normalized.traceability.testFiles, "validate");
+  // The echo above is for a human reading stdout. The finding is what the exit
+  // gate, the annotation stream and the run-log can actually see, so a
+  // truncated scan can no longer pass `--fail-on warning` as a clean run.
+  const truncatedScanIssue = buildTruncatedScanIssue(normalized.traceability.testFiles, "validate");
+  if (truncatedScanIssue) {
+    normalized.issues.push(truncatedScanIssue);
+    normalized.counts = recountIssues(normalized.counts, truncatedScanIssue);
+  }
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  // No special case for an incomplete run. `QFAI-SCAN-002` is an `error`, so
+  // `counts.error` is non-zero and `shouldFail` already fails the run under
+  // every `--fail-on` but `never` — which is the one exception a caller asked
+  // for explicitly, and there the finding is still in the output and in
+  // `validate.json`.
+  //
+  // An earlier revision added `runIncomplete || …` here as a second guard. It
+  // was unreachable: removing it changed no row, because the severity is what
+  // decides. The invariant it was protecting — that this finding stays an
+  // `error` — is pinned in `validateRunIncomplete.test.ts` instead, which is
+  // where it can actually fail.
   const willFail = shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
@@ -448,7 +492,23 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
+  // its canonical spelling. Both are listed because the legacy family is frozen
+  // and every code the gate gains from here on is canonical.
+  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // The downstream-ownership gate, and the only group `full` does NOT run.
+  //
+  // `/qfai-sdd` owns the protected files and edits them without a Change
+  // Request by design, and that author is told to run the full profile before
+  // completion like everyone else — so emitting the finding there would flag
+  // every legitimate authoring edit. `--profile tdd` is the completion gate the
+  // drift protocol names, i.e. the downstream stage the rule binds, and it is
+  // where the guard runs.
+  //
+  // Absent from this map entirely, the family could not even be REPORTED as
+  // unevaluated, so a `full` PASS looked drift-checked to an operator following
+  // `QFAI-PROFILE-001`'s own advice (#1122).
+  drift: ["QFAI-DRIFT-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -456,13 +516,24 @@ type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
 /**
+ * What `full` and `verify` actually run: every group except `drift`.
+ *
+ * Derived by exclusion rather than enumerated, so a group added to
+ * `GATE_GROUP_FAMILIES` still reaches `full` without a second edit — which is
+ * the property `ALL_GATE_GROUPS` was there for. The one exclusion is named,
+ * and `runFullValidators` passing `includeUpstreamGuard = false` is the fact it
+ * mirrors (#1122).
+ */
+const FULL_GATE_GROUPS = ALL_GATE_GROUPS.filter((group) => group !== "drift");
+
+/**
  * Groups each profile actually runs, mirroring
  * `core/validate.ts#runProfileValidators`. Exhaustive over `ValidationProfile`
  * so a new profile cannot be added without deciding what it evaluates.
  */
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
-  full: ALL_GATE_GROUPS,
-  verify: ALL_GATE_GROUPS,
+  full: FULL_GATE_GROUPS,
+  verify: FULL_GATE_GROUPS,
   // Both stages mandate the review pack in their RCP footer and both now run
   // `validateReviewArtifacts`, so `QFAI-REVIEW-*` must not be listed as a
   // family the run did not evaluate. `runSddValidators` additionally calls
@@ -473,7 +544,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
+  // `drift`: `runTddValidators` passes `includeUpstreamGuard = true` here and
+  // `runFullValidators` passes `false`, so this is the only profile that
+  // evaluates `QFAI-DRIFT-*`.
+  tdd: ["tdd", "atdd-traceability", "drift"],
   "saas-package": ["prototyping"],
 };
 
@@ -508,9 +582,14 @@ function unevaluatedFamilies(
     for (const family of GATE_GROUP_FAMILIES[group]) push(family);
   }
   if (families.length === 0) {
-    // A profile that runs every group is not partial, and this notice is the
-    // partial-profile notice. Reporting a precondition-gated group there would
-    // put "full is a partial profile" into the artifact.
+    // Nothing unevaluated: no notice. This used to be the `full` case and the
+    // comment here reasoned that reporting anything for `full` would put
+    // "full is a partial profile" into the artifact — but `full` does not run
+    // the `drift` group, so with respect to that gate the statement is true and
+    // the silence was the false claim (#1122). What the branch still guards is
+    // a profile with genuinely nothing left out: reporting a
+    // precondition-gated group there would be the artifact contradicting
+    // itself.
     return families;
   }
   if (evaluated.has("package-self-governance")) {
@@ -540,6 +619,8 @@ function buildPartialProfileNotice(
   profile: string | undefined,
   unevaluatedSelfGovernance: readonly string[],
 ): Issue | null {
+  // `core/validate.ts` resolves `options.profile ?? "full"` before this runs,
+  // so the only caller always supplies one; this is the parser-rejection path.
   if (!profile) {
     return null;
   }
@@ -549,14 +630,31 @@ function buildPartialProfileNotice(
   if (unevaluated.length === 0) {
     return null;
   }
+  // Drift gets its own sentence because it is the one family NO wide profile
+  // reaches: `full` and `verify` both call `runFullValidators`, which passes
+  // `includeUpstreamGuard = false`. Sending the reader to `--fail-on error`
+  // for it would repeat the advice that produced the false PASS (#1122).
+  const driftNote = unevaluated.includes("QFAI-DRIFT-*")
+    ? " `QFAI-DRIFT-*` (a downstream phase patching upstream SSOT) is evaluated ONLY by " +
+      "`npx qfai validate --profile tdd`, the completion gate the drift protocol names — " +
+      "no wide profile wires it, so `--fail-on error` alone never checks it."
+    : "";
+  // `full` and `verify` run every group but `drift`. Calling them partial
+  // overstates it the other way — a reader would go looking for the rest — and
+  // telling a full run to go run the full profile is a loop. Every other
+  // profile keeps the wording it had, because it was already accurate.
+  const wide = profile === "full" || profile === "verify";
+  const body = wide
+    ? `profile="${profile}" runs every gate group except drift. NOT evaluated in ` +
+      `this run: ${unevaluated.join(", ")}.`
+    : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this ` +
+      `run: ${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
+      "`npx qfai validate --fail-on error` (full profile) before declaring completion.";
   return {
     code: "QFAI-PROFILE-001",
     severity: "info",
     category: "canonical",
-    message:
-      `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
-      `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
-      "`qfai validate --fail-on error` (full profile) before declaring completion.",
+    message: `${body}${driftNote}`,
     rule: "validate.partialProfileCoverage",
   };
 }
@@ -596,6 +694,32 @@ function emitText(result: ValidationResult, failOn: FailOn): void {
 
 function emitTextRunLog(runLogPath: string): void {
   process.stdout.write(`run-log: ${runLogPath}\n`);
+}
+
+/**
+ * The version and the directory it came from — first line of every run.
+ *
+ * A validate run printed findings, `counts:` and `run-log:` and nothing about
+ * its own provenance, while `toolVersion` lived only inside `validate.json` —
+ * which the README calls internal and not a stable external contract. So an
+ * `npx qfai` that resolved three directories up, against another branch's
+ * lockfile, was indistinguishable in the transcript from one that resolved
+ * locally (#1096).
+ *
+ * **Before the work, and in every format.** Printed beside `run-log:` it was
+ * absent from `--format github`, which is the format the shipped SDD loop
+ * prescribes (`skills/qfai-sdd/SKILL.md`, `templates/evidence/sdd-spec.md`), so
+ * the answer was missing from the path the product actually runs. And printed
+ * after `validateProject` returned, it was missing from the run that needs it
+ * most: an old externally-resolved qfai throwing on a newer project structure
+ * left a stack trace and nothing about which binary produced it.
+ *
+ * stdout is safe in both formats — neither puts machine-readable JSON there.
+ */
+async function emitProvenance(toolVersion: string): Promise<void> {
+  const packageDir = await resolveToolPackageDir();
+  const where = packageDir === null ? "resolution unknown" : packageDir;
+  process.stdout.write(`qfai: ${toolVersion} (${where})\n`);
 }
 
 function emitGitHubOutput(
@@ -770,12 +894,22 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-PROT-011":
+    "Every spec named in `prototyping.json#frozenSurfaceUnion` still resolves as UI-bearing, so the open loop describes screens that exist; a retired surface is either restored or the loop is reset deliberately from cycle 0.",
+  "QFAI-SCAN-002":
+    "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
+  "QFAI-TOOL-002":
+    "The qfai a project's gates run through is the one its own dependency declaration installs, so the gating version is pinned by its own lockfile rather than by whichever checkout `npx` reached first.",
+  "QFAI-TOOL-001":
+    "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
     "Every `--platform` given is read by the profile it is given to; the discussion / sdd / atdd / tdd profiles never reach platform detection, so a value passed there changes nothing about the run.",
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+  "QFAI-TRIAGE-009":
+    "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
   "QFAI-TEST-001":
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
@@ -1081,6 +1215,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-TDDLIST-007":
+    "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
+  "QFAI-TDDLIST-009":
+    "Every row's recorded `Revision` still names the tree its observation ran against: nothing the observation covered — the test file it names, or the source under test — has changed since. A stale Revision looks exactly like a fresh one, so this is computed rather than read.",
+  "QFAI-TDDLIST-008":
+    "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
 };
 
 /**
