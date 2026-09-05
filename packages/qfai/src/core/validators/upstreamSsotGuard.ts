@@ -26,6 +26,7 @@ import type { QfaiConfig } from "../config.js";
 import { getChangedFilesAgainstBase } from "../gitChanges.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
+import { maskNonSpecRegions } from "../specPackParsers.js";
 
 /** Waivable as `QFAI-DRIFT-001`; `DRIFT-001` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const UPSTREAM_SSOT_EDIT_RULE_ID = "QFAI-DRIFT-001";
@@ -99,9 +100,9 @@ function classifyChange(
 }
 
 /** The `## Impact scope` heading, however it is cased or spaced. */
-const IMPACT_SCOPE_HEADING_RE = /^[ \t]*##[ \t]+Impact[ \t]+scope[ \t]*$/im;
+const IMPACT_SCOPE_HEADING_RE = /^[ \t]*##[ \t]+Impact[ \t]+scope[ \t]*$/gim;
 
-/** Any other `##` heading, which is where the scope section ends. */
+/** Any `##` heading, which is where a scope section ends. */
 const NEXT_H2_RE = /^[ \t]*##[ \t]+/m;
 
 /**
@@ -114,13 +115,35 @@ const NEXT_H2_RE = /^[ \t]*##[ \t]+/m;
  * carry authorise the very edit it reports (#1121).
  */
 function extractImpactScope(content: string): string {
-  const heading = IMPACT_SCOPE_HEADING_RE.exec(content);
-  if (heading === null) {
-    return "";
+  // Masked FIRST. A CR that documents the format inside a fenced sample —
+  // which the template's instructional comments invite — would otherwise have
+  // its EXAMPLE read as the authorisation, granting whatever path the example
+  // names. `collectTriageSections` masks for the same reason and records the
+  // Triage version of the bug; there an unmasked fence produced a false
+  // positive, here it produces a false EXEMPTION, which is #1121's headline
+  // re-opened by another route (#1139).
+  const masked = maskNonSpecRegions(content);
+  // EVERY section, not the first. Repeating an H2 on each re-run is an
+  // established shape here — `QFAI-TRIAGE-008`'s own remedy tells authors that
+  // "`## Triage` を複数置けば全セクションが検査されます" — and reading only the
+  // first silently ignored a later declaration, reporting an edit that WAS
+  // declared as undeclared.
+  // `matchAll` rather than an `exec` loop: a module-level `/g` pattern carries
+  // `lastIndex` between calls, and `matchAll` iterates without mutating it. An
+  // `exec` loop needs an explicit reset to be safe, and that reset is
+  // unreachable while the loop runs to `null` — untestable code guarding a
+  // footgun. This has neither.
+  const sections: string[] = [];
+  for (const heading of masked.matchAll(IMPACT_SCOPE_HEADING_RE)) {
+    const after = masked.slice(heading.index + heading[0].length);
+    const next = NEXT_H2_RE.exec(after);
+    sections.push(next === null ? after : after.slice(0, next.index));
   }
-  const after = content.slice(heading.index + heading[0].length);
-  const next = NEXT_H2_RE.exec(after);
-  return next === null ? after : after.slice(0, next.index);
+  // Belt and braces, and no row can distinguish it: `slice(0, next.index)` cuts
+  // at the `^##` of the following heading, so every non-final section already
+  // ends with the newline before it. Kept so the "a token cannot form across a
+  // boundary" property does not silently depend on that slicing detail.
+  return sections.join("\n");
 }
 
 /**

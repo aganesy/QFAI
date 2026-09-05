@@ -357,6 +357,103 @@ describe("validateUpstreamSsotGuard", () => {
     expect(issues.map((i) => i.file)).toEqual([".qfai/contracts/db/CON-DB-0008.sql"]);
   });
 
+  it("honours a SECOND `## Impact scope`, the append-on-rerun shape", async () => {
+    // Repeating an H2 on each re-run is an established shape here —
+    // `QFAI-TRIAGE-008`'s own remedy tells authors that placing several
+    // `## Triage` sections means all of them are checked. Reading only the
+    // first ignored a later declaration and reported an edit that WAS
+    // declared as undeclared (#1139).
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-second-pass.md": approvedCr([
+        "## Impact scope",
+        "",
+        "- Specs: `spec-0004`",
+        "",
+        "## Resolution",
+        "",
+        "First pass done.",
+        "",
+        "## Impact scope",
+        "",
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("does NOT let a fenced example authorise the path it illustrates", async () => {
+    // The serious half. For `## Triage` an unmasked fence produced a false
+    // POSITIVE; for an exemption it is inverted — the CR's EXAMPLE grants what
+    // it names while the real scope declares nothing. That is #1121's own
+    // headline, "a prohibition reads as a permission", by another route.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-illustrated.md": approvedCr([
+        "## Context",
+        "",
+        "Declare the edited paths like this:",
+        "",
+        "```md",
+        "## Impact scope",
+        "",
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql`",
+        "```",
+        "",
+        "## Impact scope",
+        "",
+        "- Contracts: `none`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("does NOT let an HTML comment authorise a path either", async () => {
+    // The template is full of instructional HTML comments, so the same sample
+    // can arrive without a fence around it.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-commented.md": approvedCr([
+        "## Impact scope",
+        "",
+        "<!--",
+        "Name each edited file, e.g. `.qfai/contracts/db/CON-DB-0007.sql`",
+        "-->",
+        "",
+        "- Contracts: `none`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toHaveLength(1);
+  });
+
+  it("still exempts a real declaration that sits beside a fenced sample", async () => {
+    // The direction masking could break: a CR may legitimately show the format
+    // AND declare a path, and the declaration must survive.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
+      ".qfai/decisions/CR-20260801-0001-both.md": approvedCr([
+        "## Context",
+        "",
+        "```md",
+        "- Contracts: `.qfai/contracts/api/api-0001-rules.yaml`",
+        "```",
+        "",
+        "## Impact scope",
+        "",
+        "- Contracts: `.qfai/contracts/db/CON-DB-0007.sql`",
+      ]),
+    });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
   it("stays quiet outside a git checkout", async () => {
     // `qfai validate` must remain usable in a tarball export; a hard failure
     // here would be a worse regression than the gap it closes.
