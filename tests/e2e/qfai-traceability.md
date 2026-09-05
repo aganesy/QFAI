@@ -1,5 +1,11 @@
 # QFAI E2E Traceability
 
+This file is an annotation carrier, not a test. Every `US-*` listed here is
+reported by `QFAI-ATDD-118` (`info`) as carried by prose and by no file
+that declares a test, and appears under `coveredByCarrierOnly.us` in
+`.qfai/report/atdd-traceability/summary.json`. Moving an ID to an executable
+`tests/e2e/**` test is what turns it into coverage.
+
 - QFAI:SPEC-0001:US-0001-0001
 - QFAI:SPEC-0001:US-0001-0002
 - QFAI:SPEC-0001:US-0001-0003
@@ -152,9 +158,10 @@
 ## CHG-005 (v1.9.1 qfai-prototyping defect remediation pack)
 
 Skeleton test bodies live at `packages/qfai/tests/e2e/spec00XX*.test.ts`
-as `it.todo` Red placeholders; conversion to executable Red is the next
-`/qfai-implement` micro cycle. See
-`.qfai/evidence/atdd-CHG-005-prototyping-defect-remediation.md`.
+as `describe.skip` suites; conversion to executable Red is the next
+`/qfai-implement` micro cycle. Those files sit outside the scanned
+`tests/{e2e,api,integration}/` roots, so they contribute nothing to coverage
+either. See `.qfai/evidence/atdd-CHG-005-prototyping-defect-remediation.md`.
 
 - QFAI:SPEC-0004:US-0004-0034
 - QFAI:SPEC-0004:US-0004-0035
