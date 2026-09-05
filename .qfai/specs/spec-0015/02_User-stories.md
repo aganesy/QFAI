@@ -34,7 +34,7 @@ As a Reviewer-Gate consumer, I want the Reviewer Gate to emit `R-PROMPT-SCANNER-
 
 ## US-0015-0009: SKILL.md `## Default Autopilot Policy` section
 
-As a QFAI operator, I want every SKILL.md to carry a `## Default Autopilot Policy` section with three named buckets (auto-decide / ask-user / hard-required) and a Reviewer Gate that emits `R-AUTOPILOT-POLICY-MISSING` (severity error) when the section is absent OR is present but missing one or more required buckets (heading-only / partial population), so that avoidable per-session `AskUserQuestion` prompts collapse to 0–1 while triage / destructive / version-pin / scope-expansion decisions still require human authorization (REQ-0160, DR-0269).
+As a QFAI operator, I want every SKILL.md to carry a `## Default Autopilot Policy` section with three named buckets (auto-decide / ask-user / hard-required) and a Reviewer Gate that emits `R-AUTOPILOT-POLICY-MISSING` (severity error) when the section is absent OR is present but missing one or more required buckets (heading-only / partial population), so that avoidable per-session `AskUserQuestion` prompts collapse to 0–1 while approval-required governance operations / destructive / version-pin / scope-expansion decisions still require human authorization — the first being a category each skill instantiates with the operations its own run cannot authorize for itself, so a skill may narrow a bucket to what it can reach but may not add an entry outside the prototype's categories (REQ-0160, DR-0269 Amendment 2).
 
 ## US-0015-0010: Envelope-deviation `AskUserQuestion` audit-log
 

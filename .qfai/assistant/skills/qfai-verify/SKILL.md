@@ -486,7 +486,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 

@@ -479,16 +479,16 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - append-vs-create on subject overlap
   - equivalent-option pick
 - ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
+  - approving the `TDDLIST-001` accepted-risk waiver an `exception` row needs before completion (routing a row **to** `exception` is not asked — Red phase steps 3b and 5 decide it deterministically)
+  - Change-Request escalation under the Drift Protocol (an obligation the run found wrong)
+  - consent to item-level parallelism inside one spec, which the Parallelization Policy requires on top of the `delivery-planner` technical gate (consent cannot override a technical DENY, so it is asked only after an ALLOW)
   - destructive operations (rm / overwrite / force-push)
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `companyName`
-  - brand intent
-  - `primarySpecId` (when absent from inputs)
+  - `primarySpecId` (only when Spec Auto-Discovery cannot resolve one — zero candidates, or a selection the user has not made; a single unambiguous candidate is announced and proceeds, so it is not a required input)
 
-A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 

@@ -880,6 +880,27 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   原因を直して再実行すればそのまま続けられる (同名でも別の版を宣言している branch は衝突
   として名指しで拒否する)。
 
+### Changed
+
+- **Every `## Default Autopilot Policy` bucket may now be narrowed, and each
+  skill's policy is tailored to what that skill actually reaches.** The
+  3-bucket policy shipped with a narrowing permission that covered
+  `auto-decide` only, so `ask-user` and `hard-required` were copied verbatim
+  into every skill: `/qfai-implement` advertised `/qfai-sdd`'s triage ops and
+  `qfai init`'s branding inputs, neither of which an implement run can reach,
+  and its own authorizations had nowhere to go. Narrowing now applies to all
+  three buckets, and the `ask-user` bucket's first entry is a **category** —
+  _approval-required governance operations_ — that each skill instantiates
+  with its own human-authorized operations (`/qfai-sdd`: the triage ops;
+  `/qfai-implement`: the `TDDLIST-001` accepted-risk waiver and the
+  Drift-Protocol Change-Request escalation). Widening is still forbidden:
+  a skill may instantiate a category, never introduce one. Only
+  `auto-decide` widening is machine-detectable
+  (`R-AUTOPILOT-POLICY-WIDENED`); the other two buckets remain review-enforced.
+  Routing a ledger row **to** `exception` is not an `ask-user` decision — Red
+  phase steps 3b and 5 decide it deterministically, and only the waiver that
+  follows needs approval.
+
 ### Fixed
 
 - **`--force` / `--yes` / `--dry-run` も、読まないコマンドで受理されていた。**
