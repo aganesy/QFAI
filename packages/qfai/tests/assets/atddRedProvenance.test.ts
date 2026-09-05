@@ -32,6 +32,7 @@ const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
 const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
+const STAGE_HANDOVER = "assistant/skills/qfai-atdd/references/stage-handover.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
 const MIGRATION = "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md";
@@ -44,6 +45,24 @@ const flat = (s: string): string => s.replace(/\s+/g, " ");
 
 const read = async (tree: string, rel: string): Promise<string> =>
   await readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+/**
+ * `red-provenance.md` and the stage-handover topic file it points at.
+ *
+ * The handover protocol moved out when the file crossed the shipped-asset line
+ * ceiling — `red-provenance.md` answers what a RED observation IS, and
+ * `stage-handover.md` answers who takes the row through it. This guard's
+ * subject spans both, so it reads both; the pointer under the original heading
+ * keeps `#which-stage-hands-a-row-over` resolving for the shipped citation.
+ */
+const readProvenance = async (tree: string): Promise<string> => {
+  const [provenance, handover] = await Promise.all([
+    read(tree, PROVENANCE),
+    read(tree, STAGE_HANDOVER),
+  ]);
+  return `${provenance}
+${handover}`;
+};
 
 describe.each(TREES)("%s", (tree) => {
   it("the ATDD skill names the ledger it writes into", async () => {
@@ -91,7 +110,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(atdd).toContain("**Read `references/red-provenance.md` before advancing any row.**");
     expect(atdd).toContain("Branch 3 is the last resort");
 
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Observed RED (preferred).**");
     expect(provenance).toContain("**Falsifiability");
     expect(provenance).toContain("**Neither is possible.**");
@@ -119,7 +138,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(atdd).toContain("**Ledger rows advanced**");
     expect(atdd).toContain("Exactly one form per row, never both and never neither");
     expect(atdd).toContain("## Ledger rows advanced");
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain(
       "Exactly one form per row, never both and never neither:",
     );
   });
@@ -177,7 +196,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
   it("states the falsifiability branch's status transitions", async () => {
     // Without this the branch described a row reaching `green` with no `red`,
     // and the shared lifecycle has no `todo -> green` edge.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**The row still moves `todo -> red -> green`.**");
     expect(provenance).toContain("There is no `todo -> green` edge and none is needed");
   });
@@ -188,7 +207,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // clear the gate it is judged by. The branch names the mutation it
     // intends; the run is recorded at GREEN, which is `/qfai-implement`'s
     // phase, because there is no production code to mutate until then.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
@@ -201,7 +220,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     expect(atdd).toContain("or a `DR-*` recording why neither was available");
     expect(atdd).toContain("The third form is a valid _branch_, and it is **not a completion**");
     // ...and the qualification that keeps it from reading as "done".
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain(
       "## Branch 3 does not close a spec on its own",
     );
   });
@@ -220,7 +239,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // branch. But the seam *is* production code, and this stage's `red` phase
     // has no backend or frontend agent, so writing it here is the ownership
     // breach step 5 forbids. It is asked for, not authored.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "**Ask `/qfai-implement` for the minimal seam first — for a surface that does not exist.**",
     );
@@ -234,13 +253,13 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
   });
 
   it("branch 2 covers the surface this cycle built, not only a pre-existing one", async () => {
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("or this cycle built it before the journey was written");
     expect(provenance).not.toContain("When the surface predates this cycle, the correct test");
   });
 
   it("Satisfied-by accepts a surface, not only a sibling ledger row", async () => {
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "**`Satisfied-by` takes whatever already implements the predicate.**",
     );
@@ -287,7 +306,7 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
     expect(implement).toContain("steps 4 and 5 do not apply to it");
     expect(implement).toContain("red-provenance.md#handover-to-qfai-implement");
 
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("## Handover to /qfai-implement");
     expect(provenance).toContain("treat the mutation run as `todo -> red`");
     expect(provenance).toContain("stops with a handoff note");
@@ -298,7 +317,7 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
     // 403 on a refusal — a handler registered with "the declared status"
     // passes the assertion the moment it exists. There is no RED left to
     // observe, and the row's behaviour was implemented before its test failed.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**The seam must not return the contracted status.**");
     expect(provenance).toContain("not-implemented sentinel the contract does not use");
     expect(provenance).not.toContain("with **no behaviour**: the declared status");
@@ -317,7 +336,7 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
     expect(atdd).toContain("the cell is an anchor and the payload goes in the section");
     expect(atdd).toContain("### TDD-NNNN");
 
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "row per `TDD-*`, holding the branch and an anchor. The commands and their output",
     );
@@ -352,14 +371,14 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     expect(ledger).toContain("completion item 10 reads the same split");
   });
 
-  it("submits the observed RED to qa-gatekeeper before any production code exists", async () => {
+  it("submits the observed RED to qa-gatekeeper while nothing makes the assertion pass", async () => {
     // Branch 1 went straight from recording the RED to building the surface,
     // so the blocking confirmation `qfai-implement` requires could only be
     // sought after the fact — post-hoc self-attestation of a state nobody can
     // re-observe.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      "Submit that run to `qa-gatekeeper` (routing phase `red`) before any production code exists",
+      "Submit that run to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
     );
     expect(provenance).toContain("Stage gate **P1b** is where steps 1-4 happen.");
   });
@@ -368,7 +387,7 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // `agent-routing.yml` gives this stage `acceptance-test-engineer` and no
     // backend or frontend agent, so "build the surface and re-run for GREEN"
     // asked it to write code it does not own — or to stop without a GREEN.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Stop there. Do not build the surface.**");
     expect(provenance).toContain("no backend or frontend agent");
     expect(provenance).not.toContain("then build the surface and re-run for GREEN");
@@ -442,7 +461,7 @@ describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("P1c:");
     expect(atdd).toContain("A branch 1 row is discharged in that loop");
-    expect(flat(await read(tree, PROVENANCE))).toContain("return with the tree green");
+    expect(flat(await readProvenance(tree))).toContain("return with the tree green");
   });
 
   it("does not claim branch 2 has its evidence at P1b", async () => {
@@ -451,7 +470,7 @@ describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
     // could pass.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("A branch is chosen for every row");
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain(
       "A run whose rows are all branch 2 passes P1b with nothing submitted",
     );
   });
@@ -507,7 +526,7 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
       "3c. **A `falsifiability` entry with no evidence yet: take it here.**",
     );
 
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "**A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.**",
     );
@@ -517,7 +536,7 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
   it("hands the P1c round-trip a named row list", async () => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("hand it to `/qfai-implement`, GREEN,");
-    expect(flat(await read(tree, PROVENANCE))).toContain("Name the row in the handoff");
+    expect(flat(await readProvenance(tree))).toContain("Name the row in the handoff");
   });
 
   it("chooses branch 2 from a first-run pass, not from surface existence", async () => {
@@ -525,7 +544,7 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // buggy one fails naturally — an observed RED, not an exception. Branch 2's
     // mutation cannot run against an already-failing test and has no GREEN to
     // restore to, so keying on existence sent a real defect to `exception`.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Run the test before choosing this branch.**");
     expect(provenance).toContain("Surface existence is not the condition; a first-run **pass** is");
     expect(provenance).toContain("the row belongs in branch 1");
@@ -536,7 +555,7 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // a sufficient slice, and requires a scope REVISE settled before the RED is
     // submitted. Approving the RED first leaves the planner only "keep the PASS
     // and open a new row", which cannot repair a wrong-granularity handoff.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "**Scope approval — obtained before step 2 runs, listed here for the contract it carries.**",
     );
@@ -585,7 +604,7 @@ describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tre
     // branch 1 step 1 asks for a seam for a surface that does not exist and
     // step 4 confirms "before any production code exists" — neither is true
     // here, so the row that observed a real defect stopped.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("the row belongs in branch 1 — **at its step 2**");
     expect(provenance).toContain("observed **against the tree before the fix**");
     expect(provenance).toContain("for a surface that does not exist");
@@ -643,10 +662,10 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // checkpoint it fails is then stranded at `refactor`, which Phase Red does
     // not re-select. How often that happens is `relevant-test-suite.md`'s to
     // define, not this file's.
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain(
       "P1c — discharge branch 1, one row at a time",
     );
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain(
       "stranded at `refactor`, which Phase Red does not re-select",
     );
   });
@@ -655,7 +674,7 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // The `evidence` phase is `devops-ci-engineer` and `qa-gatekeeper`, neither
     // of which owns production source — the same boundary branch 1 step 5
     // states. Applying the mutation here is the breach; refusing to is a stop.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "**The mutation is production code, so `/qfai-implement` applies it.**",
     );
@@ -688,7 +707,7 @@ describe.each(TREES)("%s (someone can perform every step)", (tree) => {
     );
     expect(implement).toContain("this mutation _is_ the row's `Oracle proof`");
 
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("Phase Red **step 3c** applies the mutation");
     expect(provenance).toContain("not a stop, and not a defer either");
   });
@@ -697,7 +716,7 @@ describe.each(TREES)("%s (someone can perform every step)", (tree) => {
     // Only the seam is skipped when the surface already exists. Skipping steps
     // 3-4 dropped `delivery-planner`'s scope approval and the `qa-gatekeeper`
     // PASS the handover table then requires on every `observed-red` entry.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("Only step 1 is skipped");
     expect(provenance).toContain("Steps 3 and 4 still run");
   });
@@ -737,10 +756,10 @@ describe.each(TREES)("%s (gates only what has a payload)", (tree) => {
     // 2 row's payload is the falsifiability trio — which by the same gate's own
     // rule does not exist until P6. A run whose rows are all branch 2 had
     // nothing submittable and could not pass P1b to reach P6.
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain(
       "judges the rows that have evidence at P1b — the branch 1 ones",
     );
-    expect(flat(await read(tree, PROVENANCE))).toContain("its rows are gated when the trio lands");
+    expect(flat(await readProvenance(tree))).toContain("its rows are gated when the trio lands");
   });
 
   it("reruns the production owner when the RED gate faults its edit", async () => {
@@ -777,8 +796,8 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     // The gate names the rule; the reference carries it, which is what the
     // 500-line ceiling forces and what keeps one statement of it.
     expect(atdd).toContain("provisional until its handoff");
-    expect(flat(await read(tree, PROVENANCE))).toContain("**The choice is provisional");
-    expect(flat(await read(tree, PROVENANCE))).toContain(
+    expect(flat(await readProvenance(tree))).toContain("**The choice is provisional");
+    expect(flat(await readProvenance(tree))).toContain(
       "can have no observable RED left by the time that row's turn comes",
     );
   });
@@ -788,7 +807,7 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     // the producer recorded no revision at all — `/qfai-implement` cannot
     // recover an uncommitted tree's address after Phase Green has changed it,
     // so the required field was a guess or absent.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**and the revision it was observed at**");
     expect(provenance).toContain(
       "| Observed RED | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference",
@@ -857,7 +876,7 @@ describe.each(TREES)("%s (a gate must be reachable in the order it is listed)", 
     // `git status --porcelain` names paths and states. Edit the file under test
     // after the RED and the digest is unchanged, so a stale observation passes
     // the freshness gate the handover depends on.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("it needs a **content** address rather than a status one");
     expect(provenance).toContain("**Not `git stash create`**");
     expect(provenance).not.toContain("`working-tree+<porcelain digest>`");
@@ -881,7 +900,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("names the same handoff stage in the skill and in the reference", async () => {
     // The reference is mandatory reading before a row advances, so a stage name
     // that disagrees with the Do-not-skip list leaves the order undetermined.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("P4b, after P4 and before P6");
     expect(provenance).toContain("P4b hands it over in its turn.");
     expect(provenance).not.toContain("P1d, after P2-P4");
@@ -929,7 +948,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     // update can arrive without the phase it relies on.
     // The detail moved to its own reference when the catalog joined routing
     // as a thing that goes stale; the skill keeps the pointer.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("## A project without the `red` phase");
     expect(provenance).toContain("`stale-manifest.md`");
     const stale = flat(await read(tree, "assistant/skills/qfai-atdd/references/stale-manifest.md"));
@@ -939,7 +958,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("requires a neutral seam response, not an empty one", async () => {
     // An empty body raises a parse error in a test that decodes JSON before
     // asserting — a non-assertion failure `red-admissibility.md` rejects.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Neutral, not empty.**");
     expect(provenance).toContain("with only the contracted predicate withheld");
   });
@@ -951,7 +970,7 @@ describe.each(TREES)("%s (the nested run and the third branch)", (tree) => {
     // and its completion-gate inputs are P5/P6 artifacts. Owing them inside a
     // P1c handoff stranded the first branch-1 row at `refactor`, which Phase
     // Red does not re-select, so P2 was never reached.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("## What the nested run owes");
     expect(provenance).toContain("Either run is an **item cycle**, not this spec's completion");
     expect(flat(await read(tree, ATDD))).toContain(
@@ -964,7 +983,7 @@ describe.each(TREES)("%s (the nested run and the third branch)", (tree) => {
     // `TDDLIST-001` waiver. "A valid outcome, not a shortfall" read as done, so
     // a run could record the `DR-*`, hand over, and leave a spec that can never
     // legally close — nothing later can produce the approval retroactively.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("## Branch 3 does not close a spec on its own");
     expect(provenance).toContain("user-approved accepted-risk waiver");
     expect(provenance).toContain("user approval is a decision this stage asks for");
@@ -974,7 +993,7 @@ describe.each(TREES)("%s (the nested run and the third branch)", (tree) => {
     // The working-tree hash covers the production files Phase Green necessarily changes,
     // so it cannot be recomputed from the final tree — the reviewer cannot tell
     // "only production changed" from "the test was edited after the handoff".
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Record the test's own content hash as well.**");
     expect(provenance).toContain("`RED test hash` alongside `RED revision`");
   });
@@ -991,7 +1010,7 @@ describe.each(TREES)("%s (the contracts a row's Layer implies)", (tree) => {
     // `Selector` is a test *name* in the ordinary case — the checkpoint runs
     // `<Test file> -t '<Selector>'` — so hashing "the files the Selector names"
     // yields an empty or guessed value and detects no post-handoff edit.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("the files the row's **`Test file`** column names");
     expect(provenance).toContain("Not the `Selector` — that column is a test _name_");
   });
@@ -1013,7 +1032,7 @@ describe.each(TREES)("%s (the contracts a row's Layer implies)", (tree) => {
     // and this skill cannot write the ledger — so a fresh spec legitimately has
     // none, and reading that as "no work" skips the US/CON-API obligations that
     // are this skill's own.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("## A spec with no ATDD-owned rows");
     expect(provenance).toContain('Zero is a count, not "nothing to do"');
   });
@@ -1307,7 +1326,7 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
   it("covers the artifacts the acceptance test reads", async () => {
     // A snapshot or fixture edit reshapes the assertion after the handoff, and
     // the working-tree hash cannot be recomputed from the final tree.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "plus the acceptance-test-owned artifacts those files read — fixtures, snapshots",
     );
@@ -1408,7 +1427,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("records the manifest the test hash was taken over", async () => {
     // The consumer recomputes it; naming only the *kinds* of file leaves two
     // readers free to choose different sets from an unchanged tree.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Record the manifest, not only the hash.**");
     expect(provenance).toContain("`RED test manifest`");
     expect(provenance).toContain("`path + NUL + blob hash`");
@@ -1478,7 +1497,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A commit that touches several routes and a helper names no single
     // predicate, so the gatekeeper's ownership boundary cannot be applied to
     // it: it either REVISEs a correct mutation or accepts an unrelated one.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("otherwise the production **path and symbol**");
     expect(provenance).toContain("**A commit id does not**, and is not an alternative form");
     expect(provenance).not.toContain("or the commit that added it");
@@ -1497,7 +1516,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // P4b's nested run also sits before P5/P6, so naming only P1c left the
     // falsifiability rows stopped by completion inputs their own stage had not
     // produced yet.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**P4b hands a branch-2 row over on the same terms**");
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("an item cycle like P1c's");
@@ -1550,7 +1569,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The producer restated a divergent one — all of `git diff HEAD`, no
     // ledger/evidence exclusion — so its value and the gatekeeper`s for the
     // same RED tree could not be matched up in the ordinary multi-row loop.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("by the **one** procedure in");
     expect(provenance).toContain("do not restate it here");
     expect(provenance).not.toContain(
@@ -1607,7 +1626,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // P1c closes a row before the next test is written, so a `done` row`s
     // manifest addresses a fixture a later row may still edit — and a `done`
     // row has no re-entry edge of its own.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("## A shared test artifact outlives the row that recorded it");
     expect(provenance).toContain("`shared-test-artifacts.md`");
     const shared = flat(await read(tree, SHARED_ARTIFACT));
@@ -1618,7 +1637,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A selector that decodes JSON before asserting raises a parse error on an
     // empty body, which the admissibility rule rejects as a non-assertion
     // failure — so the gate could not accept the RED and P1c stopped.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**schema-compatible neutral body**");
     expect(provenance).toContain("Not an empty body");
     expect(provenance).not.toContain("`NotImplementedError`) and an empty body");
@@ -1693,7 +1712,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("puts kind and mode in the RED test manifest", async () => {
     // After Phase Green the original `RED revision` cannot be recomputed, so
     // this hash is the only thing still watching the test-owned artifacts.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("`path + NUL + kind + NUL + mode + NUL + blob hash`");
   });
 
@@ -1763,7 +1782,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("names a sibling reference as a sibling", async () => {
     // From inside `references/`, a `references/…` prefix resolves to
     // `references/references/…`, which does not exist.
-    const provenance = await read(tree, PROVENANCE);
+    const provenance = await readProvenance(tree);
     expect(provenance).not.toContain("references/shared-test-artifacts.md");
     expect(provenance).not.toContain("references/stale-manifest.md");
     expect(provenance).not.toContain("references/review-fix-rounds.md");
@@ -1809,13 +1828,13 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("stops restating the record shape in the producer reference", async () => {
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**the record shape least of all**");
     expect(provenance).not.toContain("through a sorted `path + NUL + blob hash` manifest");
   });
 
   it("has the exception producer record what P1d will hash", async () => {
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("recorded **before** P1d routes the gate");
   });
 
@@ -1896,7 +1915,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("records the obligation reference in the handoff shape", async () => {
     // The RED subject hashes it and the gatekeeper judges at P1b, so recorded
     // later it moves a stored hash and left out it can be repointed.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("the obligation reference the `Layer` selects");
     expect(provenance).toContain(
       "Every branch carries the row identity and the obligation reference",
@@ -2039,7 +2058,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`TDD-ID`, `Layer`, `Test file`, `Selector` — the row identity, copied from `test-list.md`",
     );
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("Row identity (`Layer`, `Test file`, `Selector`)");
   });
 
@@ -2270,7 +2289,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The consumer requires it before the reviewers run, and neither branch
     // recorded it — so a correct ATDD-owned row reached the completion gate
     // missing a mandatory field.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("`RED failure mode` is on both rows");
     expect(provenance).toContain("on branch 2 it is `falsifiability`");
   });
@@ -2381,7 +2400,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec");
     expect(implement).not.toContain("has a `Layer = E2E` row whose `US-Refs` names it");
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("**Do not raise it as a request for rows.**");
     expect(provenance).not.toContain("raise the missing rows as a request to `/qfai-sdd`");
   });
@@ -2626,7 +2645,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The table defines the canonical entry, and the consumer stops a handoff
     // that is missing any of these as malformed — so a producer following it
     // could not complete P1c or P4b.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
       "`RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS",
     );
@@ -2806,11 +2825,236 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // `completion-reviewer` is mandatory and blocking there too and requires
     // validate evidence, so exempting one left the row stopped at the same gate
     // for a different reason.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("applies to every blocking reviewer of the nested run");
     const reviewer = flat(await read(tree, "assistant/agents/completion-reviewer.md"));
     expect(reviewer).toContain(
       "**Validate evidence is a completion-gate input, not an item-cycle one.**",
+    );
+  });
+});
+
+describe.each(TREES)('%s ("production code" means one thing for the seam)', (tree) => {
+  it("states what the RED gate confirms once, above the three branches", async () => {
+    // The only text that settled it sat inside branch 2's narrative about a
+    // surface that already existed and was wrong. A reader executing branch 1
+    // in order never reaches it, so branch 1 read as: step 1 orders the seam,
+    // step 4 forbids it.
+    const provenance = await readProvenance(tree);
+    const preamble = provenance.slice(
+      provenance.indexOf("## The three branches (MUST)"),
+      provenance.indexOf("1. **Observed RED (preferred).**"),
+    );
+    expect(flat(preamble)).toContain(
+      '**What the `qa-gatekeeper` RED gate confirms on an `observed-red` row.** Not "no production code exists"',
+    );
+    expect(flat(preamble)).toContain("A step 1 seam is inside that state, not a breach of it");
+    // Scoped to branch 1, not asserted of all three: branch 2 observes its
+    // failure by mutating a predicate that is already implemented, and branch 3
+    // observes no RED at all, so a universal reading would REVISE every
+    // legitimate falsifiability run.
+    expect(flat(preamble)).toContain(
+      "**That precondition is branch 1's; it is not a gate on all three.**",
+    );
+    expect(flat(preamble)).toContain(
+      "Each of those branches states its own gate condition where it is defined below.",
+    );
+    expect(flat(preamble)).not.toContain("RED gate confirms — on every branch");
+    // And branch 2 defers to it rather than holding a second statement of it.
+    expect(flat(provenance)).not.toContain(
+      'What the gatekeeper confirms is not "no production code exists"',
+    );
+  });
+
+  it("does not call the step 1 seam production code while ordering it", async () => {
+    // Step 1's own wording made step 4's precondition false the moment step 1
+    // was carried out, on every new-surface row.
+    const provenance = flat(await readProvenance(tree));
+    expect(provenance).not.toContain("the seam is production code");
+    expect(provenance).toContain(
+      "That is an ownership boundary, not a gate condition: the seam implements no predicate, so step 4's precondition still holds with it in place",
+    );
+  });
+
+  it("gives qa-gatekeeper's RED gate a clause that admits the seam", async () => {
+    // Its accept list is a set of necessary conditions, so a gatekeeper handed
+    // step 4's old phrasing could defend a REVISE from the text it was given —
+    // the right answer was only reachable via a reference the RED gate does
+    // not cite.
+    const gatekeeper = await read(tree, GATEKEEPER);
+    const redGate = gatekeeper.slice(
+      gatekeeper.indexOf("## RED/GREEN Observation Gate (MUST)"),
+      gatekeeper.indexOf("**Accept a GREEN**"),
+    );
+    const flatGate = flat(redGate);
+    expect(flatGate).toContain(
+      "**A minimal seam in the tree is an admissible state, not a ground for REVISE.**",
+    );
+    // With the three properties that make it decidable from the artifact.
+    expect(flatGate).toContain("it resolves the symbol or route the test reaches for");
+    expect(flatGate).toContain("it implements no predicate");
+    expect(flatGate).toContain("it answers with something the row does not contract for");
+    // The third property takes the seam's own form. Stated as a status for
+    // every seam, a `Unit` / `Component` row whose step 3a seam is a module or
+    // export — which returns no status at all — could never satisfy it, so a
+    // correctly observed assertion-level RED was REVISEd by construction.
+    // The place the answer has to be wrong in is the row's own predicate, not
+    // the status slot regardless of what the row owns.
+    expect(flatGate).toContain(
+      "it answers with something the row does not contract for **in the place this row's predicate occupies**",
+    );
+    expect(flatGate).toContain(
+      "**registered-route** seam answers with a status the row does not contract for **only when the status is the predicate the row owns**",
+    );
+    expect(flatGate).toContain(
+      "**module, export or signature** seam — the form step 3a requires for a `Unit` / `Component` row whose test imports a new symbol — has no status to answer with and satisfies it by returning a placeholder value the row's predicate does not own",
+    );
+    expect(flatGate).toContain(
+      '"No production code exists" is **not** one of the conditions above',
+    );
+    // And cites the admissibility rule from the RED gate itself, not only from
+    // the `Satisfied-by` passage further down.
+    expect(flatGate).toContain(
+      ".qfai/assistant/skills/qfai-implement/references/red-admissibility.md",
+    );
+  });
+
+  it("leaves an existing wrong implementation inside the RED gate's precondition", async () => {
+    // `red-provenance.md` sends a correct test that fails against an existing,
+    // buggy surface to branch 1 and requires a `qa-gatekeeper` PASS on it. Read
+    // as "taken before any code implementing the row's predicate was written",
+    // the gate's own text excluded exactly that row — the predicate is
+    // implemented there, only wrongly — so the branch it is told to pass was
+    // unreachable from the text it is handed.
+    const gatekeeper = await read(tree, GATEKEEPER);
+    const redGate = gatekeeper.slice(
+      gatekeeper.indexOf("## RED/GREEN Observation Gate (MUST)"),
+      gatekeeper.indexOf("**Accept a GREEN**"),
+    );
+    const flatGate = flat(redGate);
+    expect(flatGate).toContain(
+      "the failure is the row's own assertion, taken against a tree that does not yet make that assertion pass",
+    );
+    expect(flatGate).toContain(
+      "so does a **surface that already exists and implements the row's predicate wrongly**",
+    );
+    expect(flatGate).not.toContain(
+      "taken before any code implementing the row's predicate was written",
+    );
+    // And it says which verdict that case takes, so the gate does not have to
+    // be reconciled with the producer contract by the reader.
+    expect(flatGate).toContain("routes to branch 1 as an `observed-red`");
+    expect(flatGate).toContain("the tree it was observed against being the one before the fix");
+  });
+
+  it("keeps the seam out of the precondition in both skills and the routing map", async () => {
+    // `qfai-implement/SKILL.md` reproduced both halves and cited both
+    // references from the same phase, and `agent-routing.yml` restated the
+    // ambiguous phrasing in the comment that justifies the `red` phase.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "obtain confirmation **while no implementation makes that assertion pass** — the step 3a seam does not, it implements none",
+    );
+    expect(implement).not.toContain("**before** any production code exists");
+    // Including the `Handoff Contracts` restatement, which is the form an
+    // implementation agent reads as its own obligation.
+    expect(implement).toContain(
+      "submits the RED run to `qa-gatekeeper` **while no implementation makes that assertion pass — neither the Phase Red step 3a seam nor a surface that already exists and implements the row's predicate wrongly does**",
+    );
+    expect(implement).not.toContain("**while no production code exists**");
+
+    // Asserted per comment line: `flat` keeps the leading `#` of every wrapped
+    // YAML comment line, so a phrase that spans two of them never matches.
+    const routing = flat(await read(tree, "assistant/manifest/agent-routing.yml"));
+    expect(routing).toContain("confirm the RED while nothing makes that assertion");
+    expect(routing).toContain("neither the step 1 seam nor an existing surface that implements");
+    expect(routing).not.toContain("row's predicate exists (the step 1 seam does not count)");
+    expect(routing).not.toContain("confirm the RED *before any production code exists*");
+  });
+
+  it("does not demand an uncontracted status from a body- or header-predicate seam", async () => {
+    // Counter-example the status-only phrasing left open: an HTTP row whose
+    // predicate is a response body field or a header, whose selector checks the
+    // contracted `200` on the way to it. An uncontracted status raises that
+    // status assertion first — an assertion the row does not own, which the
+    // gate's first accept condition already rejects — while the contracted
+    // status was read as breaking the seam condition, so no admissible seam
+    // existed for the row at all. `red-provenance.md` "Neutral, not empty" has
+    // always required the contracted status there.
+    const gatekeeper = await read(tree, GATEKEEPER);
+    const redGate = flat(
+      gatekeeper.slice(
+        gatekeeper.indexOf("## RED/GREEN Observation Gate (MUST)"),
+        gatekeeper.indexOf("**Accept a GREEN**"),
+      ),
+    );
+    expect(redGate).toContain(
+      "**registered-route** seam answers with a status the row does not contract for **only when the status is the predicate the row owns**",
+    );
+    expect(redGate).toContain(
+      "When the row's predicate is a **body field or a header**, the selector reaches it _through_ the contracted status, so the admissible seam answers with that contracted status",
+    );
+    expect(redGate).toContain(
+      "which is not an assertion this row owns and which the first accept condition above already rejects",
+    );
+    // The old unconditional form is gone from the gate.
+    expect(redGate).not.toContain(
+      "seam's own form: a **registered-route** seam answers with a status the row does not contract for, while a **module",
+    );
+
+    // And the preamble that states the gate once carries the same scoping, so
+    // the producer and the gatekeeper cannot read the seam differently.
+    const provenance = await readProvenance(tree);
+    const preamble = flat(
+      provenance.slice(
+        provenance.indexOf("## The three branches (MUST)"),
+        provenance.indexOf("1. **Observed RED (preferred).**"),
+      ),
+    );
+    expect(preamble).toContain(
+      "answers with something the row does not contract for **in the place the row's predicate occupies** — a sentinel status where the status _is_ the predicate, the contracted status with only the owned body field or header withheld where it is not",
+    );
+    expect(preamble).not.toContain(
+      "does not contract for — a sentinel status for a registered-route seam",
+    );
+  });
+
+  it("lets an existing wrong implementation submit its observed RED", async () => {
+    // The gatekeeper was already scoped to "a tree that does not yet make that
+    // assertion pass", but the producer contract still said "before any code
+    // implementing that predicate was written". Branch 2's step 2 note routes a
+    // correct test failing against an existing, buggy surface into branch 1 as
+    // an `observed-red` — its predicate IS written, only wrongly — so the
+    // producer could not submit the handoff the gate is required to PASS.
+    const provenance = await readProvenance(tree);
+    const preamble = flat(
+      provenance.slice(
+        provenance.indexOf("## The three branches (MUST)"),
+        provenance.indexOf("1. **Observed RED (preferred).**"),
+      ),
+    );
+    expect(preamble).toContain(
+      "observed **against a tree that does not yet make that assertion pass**",
+    );
+    expect(preamble).not.toContain(
+      "observed **before any code implementing that predicate was written**",
+    );
+    expect(preamble).toContain(
+      "So is a surface that already existed and implements the predicate **wrongly**",
+    );
+    // And "production code" is defined by the same criterion, so step 4 and
+    // `qfai-implement` Phase Red inherit it rather than a stricter one.
+    expect(preamble).toContain(
+      "an implementation that already makes this row's assertion pass — never the seam, and never a surface that implements the row's predicate wrongly",
+    );
+
+    // Step 4 — the handoff the producer actually submits — carries it too.
+    const flatProvenance = flat(provenance);
+    expect(flatProvenance).toContain(
+      "Submit that run to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
+    );
+    expect(flatProvenance).not.toContain(
+      "(routing phase `red`) before any code implementing the row's predicate exists",
     );
   });
 });

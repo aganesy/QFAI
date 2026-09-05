@@ -35,13 +35,41 @@ than as completed work.
 
 Take the first that applies, and record which one in the evidence file.
 
+**What the `qa-gatekeeper` RED gate confirms on an `observed-red` row.** Not "no
+production code exists", but that the failure is an assertion inside this row's
+selector, naming the predicate the row owns, observed **against a tree that does
+not yet make that assertion pass**. A step 1 seam is inside that state,
+not a breach of it: it resolves the symbol or route, implements no predicate,
+and answers with something the row does not contract for **in the place the
+row's predicate occupies** — a sentinel status where the status _is_ the
+predicate, the contracted status with only the owned body field or header
+withheld where it is not, a placeholder value for a module / export / signature
+one, which has no status to answer with
+(`../../qfai-implement/references/red-admissibility.md`). So is a surface that
+already existed and implements the predicate **wrongly** — the correct test
+fails against it on its first run, and the tree the RED is observed against is
+the one before the fix. Read "production code" in step 4 and in
+`qfai-implement/SKILL.md` Phase Red with this meaning: an implementation that
+already makes this row's assertion pass — never the seam, and never a surface
+that implements the row's predicate wrongly.
+
+**That precondition is branch 1's; it is not a gate on all three.** Branch 2
+observes its failure by mutating a predicate that is already implemented — that
+_is_ what falsifiability measures — and branch 3 records that no RED was
+observable at all. Applied literally to them it would REVISE every legitimate
+falsifiability run and every exception. Each of those branches states its own
+gate condition where it is defined below.
+
 1. **Observed RED (preferred).** Write the journey or API test **against the
    current tree**, before this cycle builds any surface it needs.
    1. **Ask `/qfai-implement` for the minimal seam first — for a surface that does not exist.** A row that reached branch 1 from branch 2's first-run check has its surface already; skip to step 2 and read the note there. A test for a route
       that does not exist yet fails with a 404 or an import error, and that is a
-      missing seam, not a RED — but the seam is production code, and this stage
-      owns none: its `red` phase is `acceptance-test-engineer` and
-      `qa-gatekeeper`, with no backend or frontend agent. Hand the row over for
+      missing seam, not a RED — but the seam lives in the production **tree**,
+      and this stage writes nothing there: its `red` phase is
+      `acceptance-test-engineer` and `qa-gatekeeper`, with no backend or
+      frontend agent. That is an ownership boundary, not a gate condition: the
+      seam implements no predicate, so step 4's precondition still holds with it
+      in place, per the preamble above. Hand the row over for
       its Phase Red step 3a — register the route, or add the export the test
       imports, so it **resolves but does not satisfy the row's predicate** — and
       come back with the seam in place. Skipping it makes the first failure of
@@ -159,12 +187,18 @@ Take the first that applies, and record which one in the evidence file.
       first leaves the planner nothing but "keep the PASS and open a new row",
       which cannot repair a handoff at the wrong granularity — the row has to be
       split before its RED is taken, not after.
-   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any
-      production code exists, and wait for PASS.** `qfai-implement/SKILL.md`
-      requires an independent reviewer to confirm the RED while the surface is
-      still absent; a confirmation sought after it is built is post-hoc
-      self-attestation of a state nobody can re-observe. Record the verdict
-      beside the pair.
+   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) while no
+      implementation makes that assertion pass — the step 1 seam does not, and
+      neither does an existing surface that implements the row's predicate
+      wrongly — and wait for PASS.** `qfai-implement/SKILL.md` requires an
+      independent reviewer to confirm the RED while the row's predicate is still
+      unsatisfied; a confirmation sought after it is built is post-hoc
+      self-attestation of a state nobody can re-observe. Phrased as "before any
+      code implementing the row's predicate exists" this shut out the
+      existing-but-wrong surface the step 2 note in branch 2 routes to this
+      branch: its predicate _is_ implemented, only incorrectly, so the producer
+      could not submit the very handoff the gate is required to PASS. Record the
+      verdict beside the pair.
    5. **Stop there. Do not build the surface.** This skill owns acceptance
       tests, not production code — `agent-routing.yml` gives its implementation
       phase `acceptance-test-engineer` and no backend or frontend agent. The
@@ -186,10 +220,11 @@ Take the first that applies, and record which one in the evidence file.
    skipped: the surface exists, so there is no seam to ask for. Steps 3 and 4
    still run — `delivery-planner` still approves the slice before the RED is
    confirmed, and `qa-gatekeeper` still passes it, because the handover table
-   requires that PASS on every `observed-red` entry. What the gatekeeper
-   confirms is not "no production code exists" but that the failure is an
-   assertion inside this row's selector, naming the predicate the row owns,
-   observed **against the tree before the fix**. Record that pair, get the
+   requires that PASS on every `observed-red` entry. What that gate confirms is
+   stated in the preamble above and holds unchanged for a row taken this way —
+   it is recorded as `observed-red`, so the preamble's condition is its
+   condition: an assertion inside this row's selector, naming the predicate the
+   row owns, observed **against the tree before the fix**. Record that pair, get the
    PASS, hand the fix to `/qfai-implement` Phase Green, and take the GREEN
    from the corrected surface. Record the branch as `observed-red` with a note
    that the surface existed and was wrong. Choosing branch 2 from existence alone sends a real,
@@ -437,62 +472,7 @@ marked stale when it passes, and where the round block goes — is in
 
 ## Which stage hands a row over
 
-All three branches are handed to `/qfai-implement`. None of them writes its own
-ledger transition — that skill owns `Status` / `DR-ID` / `Evidence` for every
-row — so a row `/qfai-atdd` never hands over stays at `todo` however complete
-its work is. What differs is _when_, and a run consisting only of branch-2 or
-only of branch-3 rows has to hand them over just as a branch-1 run does.
-
-| Branch           | Handed over                     | Why then                                                                                                                                                                                                                                            |
-| ---------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `observed-red`   | P1c, one row at a time          | The row ends with a deliberately failing test and no production code, and P5-P8 need a green suite. A second deliberate RED left open elsewhere fails the first full-suite checkpoint that reaches it.                                              |
-| `falsifiability` | P4b, after P4 and before P6     | The trio is produced by Phase Red **step 3c**, the only step that runs the mutation, and the mutation needs the surface P2-P4 build. The trio is the row's RED payload, so P6 has nothing to capture and P8 nothing to judge until step 3c has run. |
-| `exception`      | P1d, once the `DR-*` is written | Only `/qfai-implement` can write `todo -> exception`. A run with no branch-1 row otherwise ends with the Decision Record recorded and the ledger untouched.                                                                                         |
-
-A branch-2 row is _passed over_ by `/qfai-implement` when it is not the named
-row — see the note above — which is neither a stop nor a defer of the branch:
-P4b hands it over in its turn.
-
-### What each stage gate owes
-
-**P1b — choose, for every row.** A row with no branch chosen is the one that
-leaves P1b with no legal transition out of `todo`. **The choice is provisional
-until the row's own handoff**: re-run the test against the tree as it stands
-immediately before handing the row over and take the branch that result names.
-An earlier branch-1 row's production code can satisfy a later row's predicate,
-so a branch recorded at P1b as `observed-red` can have no observable RED left by
-the time that row's turn comes.
-
-**P1b and P1c are one loop per `TDD-ID`**, not two phases. P1c takes each row through
-GREEN and its checkpoint before the next row's failing test is written; completing every
-branch-1 RED in P1b first would leave several deliberate failures open at once, and any
-checkpoint that runs the full suite sees all of them. This file does not restate which
-rows those are, or how often they come: the cadence is defined only in
-`../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries` and
-this file states no condition of its own. Deferring the RED does not escape it either — a
-spec cannot be declared complete without the spec-level boundary, which runs the full
-suite unconditionally — so a stray RED is reached at the latest there, and the row whose
-checkpoint it fails is then stranded at `refactor`, which Phase Red does not re-select.
-
-**P1c — discharge branch 1, one row at a time.** Branch 1 ends with a
-deliberately failing test and no production code, and this stage does not write
-that code. P5-P8 require the suite and the repo quality gates to pass, which
-the RED makes impossible, so the handover is not deferred to the end: run
-`/qfai-implement` for the row now, let its Phase Green build the surface and
-take the GREEN, and return with the tree green. Name the row in the handoff —
-`/qfai-implement` passes over a branch-2 row sitting above it rather than
-stopping, which is what keeps this round-trip from deadlocking against its own
-P6.
-
-**What the blocking `qa-gatekeeper` judges.** The `red` phase's gatekeeper
-judges the rows that have evidence at P1b — the branch 1 ones. It cannot judge a
-branch 2 row there: that row's payload is the falsifiability trio, which does
-not exist yet by the same rule that lets the row leave P1b. A run whose rows are
-all branch 2 passes P1b with nothing submitted, and its rows are gated when the
-trio lands.
-
-If the entry is absent, names no branch, or is malformed in any other way, the
-row **stays at `todo`** and `/qfai-implement` **stops with a handoff note**.
-Writing `red` first and discovering the gap afterwards parks a `red` row with
-no RED behind it; inventing one for a test it did not author is a drift
-violation, not a recovery.
+Which stage takes a row through its RED, what each stage gate owes at that
+moment, and how the handover is recorded: `stage-handover.md`. The protocol
+lives there rather than here because this file answers what a RED observation
+IS, and that one answers who takes it.
