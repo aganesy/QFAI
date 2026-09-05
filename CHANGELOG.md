@@ -4,6 +4,35 @@
 
 ## [Unreleased]
 
+### Added
+
+- **依存更新 PR を GitHub 上で自動生成する仕組み。** `.github/workflows/renovate.yml`
+  が週次 (Asia/Tokyo の月曜 6 時前) と手動 dispatch で Renovate を回し、
+  `.github/renovate.json5` が何をどうまとめるかを持つ。設定手順は
+  `.github/renovate.md`。
+
+  **Renovate GitHub App ではなく self-hosted。** App の設定は github.com 側に
+  あってリポジトリのレビューを通らない。このリポジトリに書き込む他の仕組みは
+  すべて SHA pin 済みの workflow なので、bot も同じ扱いにした。
+
+  **job が 2 つあるのは #1161 が理由である。** action の SHA を書き換えるだけでは
+  済まない: `.github/actions/setup/action.yml` は `.github/pinned-bytes.txt` に
+  sha256 で pin され、その list の digest は `ci.yml` に、その step の body は
+  `.github/required-status-contexts.json` に入っている。`uses:` を書き換えて
+  終わる bot は、誰かが読む前から赤い PR を開き続けることになる。
+
+  Renovate 設定の `postUpgradeTasks` は使えなかった。action は Renovate を
+  自前の container の中で自前の clone に対して走らせるが、
+  `scripts/pin-verification-bodies.mjs` は `packages/qfai/node_modules` から
+  `yaml` を読む — その container で `pnpm install` は一度も走っていない。
+  そこで再 pin は `renovate/**` への push で動く 2 つ目の job にし、木の他の
+  toolchain job と同じ共有 setup action を使わせた。
+
+  書き込みは job token ではなく `RENOVATE_TOKEN` secret を通す。
+  `GITHUB_TOKEN` による push / PR 作成には workflow event が発生しないため、
+  checks が一度も走らない PR ができてしまう (`prepare-release.yml` と同じ理由)。
+  **この secret は本変更では作成できない** — 手順は `.github/renovate.md`。
+
 ### Changed
 
 - **`actions/checkout` と `actions/setup-node` を Node 24 対応版へ。**
