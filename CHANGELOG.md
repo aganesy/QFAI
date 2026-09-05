@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.10.2] - 2026-09-05
+
 ### Added
 
 - **`QFAI-TDDLIST-009` — `Revision` を読むだけでなく、木と突き合わせる。**
