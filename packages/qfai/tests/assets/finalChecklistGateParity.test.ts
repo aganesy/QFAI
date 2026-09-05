@@ -284,7 +284,7 @@ const GATE_ITEM_PARITY: readonly {
   {
     item: 10,
     condition:
-      "The item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+      "**only items 7 and 8 judge the final tree**, and they name the **same** revision as item 6's post-refactor re-confirmation",
     box: "**agree on the revision the row finally landed at**",
   },
   {
@@ -340,7 +340,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
   9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  10: "c6f25a8aa00ef2c7bc0a414694d04300648d82af61eb5e36b1b10ad155c70199",
+  10: "0a165ed4020bed87c3d98f215fdcff3b2e4c2bbc814af48116d63e732a577add",
   11: "e4c7de62d79995caf9578da4383a0281b120867d5ffb54246ea541ccbe8d1dba",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
@@ -628,7 +628,8 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     // Item 3 keeps its own field — demanding one revision across all four is
     // what made every correct handed-over and `falsifiability` row stale.
     expect(checklist).toContain(
-      "`RED revision` (or `Falsifiability revision` in its place) is the standing exception",
+      "`RED revision` (or `Falsifiability revision` in its place) and the GREEN's `Revision` " +
+        "are the standing exceptions",
     );
   });
 
@@ -668,7 +669,8 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     );
     // The waiver must not swallow the standing one it sits beside.
     expect(checklist).toContain(
-      "`RED revision` (or `Falsifiability revision` in its place) is the standing exception",
+      "`RED revision` (or `Falsifiability revision` in its place) and the GREEN's `Revision` " +
+        "are the standing exceptions",
     );
   });
 

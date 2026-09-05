@@ -343,8 +343,17 @@ Record a **per-item** result in the evidence file the row's `Layer` owns (the sp
 above has no row, and its own rule is stated there) —
 `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`
 row — using the per-item evidence fields `Checkpoint verification command`,
-`Checkpoint verification result` and `Checkpoint verification seal`. The seal is the audit hash over
-the first two together with the `Revision` this run was made against, taken the moment the run ends
+`Checkpoint verification result`, `Checkpoint verification revision` and
+`Checkpoint verification seal`. **The revision is this run's own**, taken by the procedure in
+`evidence-revision.md` against the tree the command set actually ran on. It is not a round block's
+`Revision`: `round-evidence.md` scopes that field to a round and it addresses the pre-refactor tree
+(`evidence-revision.md#which-tree-each-gate-item-addresses`), while this boundary sits after every
+reviewer PASS and before `refactor` -> `done`, so sealing with it would certify a run that was never
+made there — and a producer trying to make the two agree would overwrite item 5's address instead.
+It is not borrowed from `Refactor verify revision` either: a checkpoint failure is fixed and the
+whole set re-run (above), which moves this address, and the field has to be able to move with it.
+The seal is the audit hash over the command and the result together with that revision, taken the
+moment the run ends
 and recomputed at gate item 12: these fields are appended after every reviewer has hashed, so they
 sit in no audit subject, and the revision that would otherwise cover them excludes
 `.qfai/evidence/**`. Without it a recorded FAIL could be edited to PASS on a `done` row and no hash
@@ -374,8 +383,11 @@ per-item only, and the full-suite result on a terminal ledger could still be edi
 PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving. Take it the
 same way — the audit hash over the spec-level `Checkpoint verification command`,
 `Checkpoint verification result` and any `## Shared-artifact re-verify` block this boundary wrote
-(_Repairing a per-spec FAIL_), together with the `Revision` that run was made against — record it
-beside them as `Checkpoint verification seal`, and recompute it before spec-level completion is
+(_Repairing a per-spec FAIL_), together with a `Checkpoint verification revision` of its own,
+recorded beside them. That boundary has no row, so there is no round block to take a `Revision`
+from even in principle; the address is the one this spec-level run was made against and nothing
+else. Record the seal beside them as `Checkpoint verification seal`, and recompute it before
+spec-level completion is
 declared. A mismatch means the record was edited after the run, and completion is not declared.
 **Those four inputs are the whole subject, and the recomputation takes the same four.** The spec
 completion conditions in `SKILL.md` name them from the completion side and this list is the same

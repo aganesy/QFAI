@@ -465,9 +465,9 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     // Generalised: the exemption is item 3 on every row, because a RED always
     // precedes the code that makes it pass.
-    expect(implement).toContain("**except item 3**");
+    expect(implement).toContain("**Item 3** cannot be taken against the final tree on any row");
     expect(implement).toContain("a RED precedes the code that makes it pass");
-    expect(implement).toContain("items 5, 7 and 8 agree among themselves");
+    expect(implement).toContain("items 6, 7 and 8 agree among themselves");
   });
 
   it("keeps the whole per-item record in the file the gate reads", async () => {
@@ -633,7 +633,7 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // RED is one of the two.
     expect(revision).toContain("**Every RED is one.**");
     expect(revision).toContain("A RED `/qfai-atdd` handed over is taken before the production");
-    expect(revision).toContain("leaves `Revision` for the GREEN and the two reviews");
+    expect(revision).toContain("leaves `Refactor verify revision` for item 6 and the two reviews");
   });
 
   it("takes branch-1 rows through P1c one at a time", async () => {
@@ -1485,13 +1485,15 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("**its spec and `TDD-ID` together**");
   });
 
-  it("states the same-revision exemption once, for item 3", async () => {
+  it("states the same-revision exemption once, for items 3 and 5", async () => {
     // The consequences section still listed two special cases, so a reviewer
-    // applying it rejected the very cycle the section above permits.
+    // applying it rejected the very cycle the section above permits. Item 5
+    // joined it once the refactor between the GREEN and the reviews was
+    // recognised as moving the address by construction.
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(revision).toContain("**The exception is item 3, on every row");
+    expect(revision).toContain("**The exceptions are items 3 and 5, on every row");
     expect(revision).not.toContain("**Two exceptions, both structural");
   });
 
@@ -1763,9 +1765,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("takes Round 1: Revision from the restored tree, not the mutated one", async () => {
-    // `Revision` is the address items 5, 7 and 8 share, and the revert moves it
-    // by construction on an uncommitted tree — the mutated tree has its own
-    // field.
+    // `Round 1: Revision` is the address item 5's GREEN names, and the revert
+    // moves it by construction on an uncommitted tree — the mutated tree has
+    // its own field.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Round 1: Revision` is written from **that** run");
     expect(implement).toContain("The mutated tree has its own field.");
@@ -2135,7 +2137,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`Falsifiability revision` — **required on a `falsifiability` row**",
     );
-    expect(implement).toContain("**except item 3**");
+    expect(implement).toContain("**Item 3** cannot be taken against the final tree on any row");
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );

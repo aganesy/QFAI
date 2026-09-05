@@ -327,7 +327,7 @@ post-escalation verification review of a user-named fix.
        revision and the hash both unmoved. Gate item 10 also requires the
        verdict to name the `DR-ID` the row currently carries.
      - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
-       the GREEN subject plus `Refactor verify command` / `result`, the
+       the GREEN subject plus `Refactor verify command` / `result` / `revision`, the
        `Shared-artifact re-verify` block when the row has one — it records the
        earlier rows' re-runs and re-taken proofs, which these reviewers are the
        ones who audit, so leaving it out let it be edited or deleted without
@@ -408,9 +408,9 @@ post-escalation verification review of a user-named fix.
   legitimately track it, and then storing R01 moves the address R02 computes,
   so items 7-8 could not PASS on one revision. The phases write `test-list.md`
   and `.qfai/evidence/**` between the
-  GREEN and the reviews, so hashing all of `git diff HEAD` here produced a
-  `Reviewed revision` that could never equal the phase-authored `Revision` —
-  and gate item 10 wants them equal. `references/evidence-revision.md` is the
+  refactor-verify run and the reviews, so hashing all of `git diff HEAD` here
+  produced a `Reviewed revision` that could never equal the phase-authored
+  `Refactor verify revision` — and gate item 10 wants them equal. `references/evidence-revision.md` is the
   field's contract and this restates it; the two have to agree or the verdict
   cannot be re-checked. **Not** a
   `git status --porcelain` digest: that names the changed paths and their states, so it does not
