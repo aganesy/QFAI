@@ -119,7 +119,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Reviewer role:` + `Reviewed artifact:` + `Result: PASS | REVISE`). A response missing the role or artifact line is not a verdict; re-request it.
 
 ## Completion Message & Next Actions (MUST)
 

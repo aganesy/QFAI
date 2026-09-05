@@ -55,10 +55,10 @@ Rules:
 
 ## How this file is consumed
 
-The layer set below is read by `core/layerPolicy.ts` and is the SSOT for two
-checks: `QFAI-EX-005` on the legacy spec-pack layout, and `QFAI-EX-105` on the
-layered layout `npx qfai init` produces. Until both consumed it, the file was
-read, reported on, and then ignored on every modern project.
+This file is the SSOT for the layer set below: `npx qfai validate` reads the layers
+from here and applies them to two checks — `QFAI-EX-005` on the legacy spec-pack
+layout, and `QFAI-EX-105` on the layered layout `npx qfai init` produces. Until both
+consumed it, the file was read, reported on, and then ignored on every modern project.
 
 - A file that yields no layers raises `QFAI-SPACK-090` (error) rather than
   silently widening to the built-in set.
