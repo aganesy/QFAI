@@ -4,14 +4,19 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import {
+  looksLikeTableRow,
   maskNonSpecRegions,
   type MarkdownTable,
   parseAllMarkdownTables,
+  splitMarkdownRow,
 } from "../specPackParsers.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
+
 const CAP_ID_HEADER_RE = /^cap\s*id$/i;
 
 /**
@@ -109,6 +114,406 @@ function extractCatalogCapIds(rawText: string): string[] {
   return capIds.length > 0 ? capIds : uniqueMatches(text, CAP_ID_RE);
 }
 
+const CAP_ID_CELL_RE = /\bCAP-\d{4}(?![-\w])/g;
+/**
+ * A spec directory named by a `Spec` cell.
+ *
+ * The tail is a negative lookahead, not `\b`: a word boundary sits between the
+ * final digit and the hyphen of `spec-0001-old`, so `\b` extracted `spec-0001`
+ * from a directory name that is not `spec-0001`. The cell then resolved to a
+ * directory that does exist, every downstream check passed, and the invalid
+ * name reached the final gate unreported — `03_Capabilities.md`'s own id-format
+ * check only inspects CAP ids. Require the id to END where the token ends.
+ *
+ * `(?!\.\w)` is the same defect one character along: `-` and word characters
+ * were excluded and `.` was not, so a cell naming a FILE — `spec-0001.md`, or a
+ * renamed `spec-0001.old` — resolved to the directory beside it. A trailing
+ * period is left alone deliberately: `spec-0001.` at the end of a sentence is
+ * punctuation, and the lookahead only rejects a dot that CONTINUES the token.
+ */
+const SPEC_ID_CELL_RE = /\bspec-\d{4}(?![-\w])(?!\.\w)/gi;
+const CAP_HEADER_RE = /^cap(\s*id)?$/i;
+const SPEC_HEADER_RE = /^spec(\s*(id|dir|directory))?$/i;
+/** A GFM alignment cell (`---`, `:---`, `---:`, `:---:`). */
+const DELIMITER_CELL_RE = /^:?-+:?$/;
+
+/**
+ * Splits a markdown table row into trimmed cells; `[]` when the line is not a
+ * row.
+ *
+ * Delegates to the repository's {@link splitMarkdownRow}, whose contract is
+ * that `\|` is a literal pipe inside a cell rather than a column boundary — a
+ * hand-split on `|` would cut `owner \| spec-0001` in two and lose the spec id
+ * the cell actually declares.
+ */
+function tableCells(line: string): string[] {
+  return looksLikeTableRow(line) ? splitMarkdownRow(line) : [];
+}
+
+interface CatalogRow {
+  /**
+   * The **distinct** CAP ids the row's `CAP ID` cell named, in cell order. A
+   * well-formed row names exactly one; a cell such as `CAP-0001 / CAP-0002`
+   * names two and resolves to no single owner, which is its own
+   * `QFAI-SPLIT-106`.
+   */
+  readonly capIds: readonly string[];
+  /** The first id of {@link capIds}, which is what a one-CAP row declares. */
+  readonly capId: string;
+  /**
+   * The **distinct** spec directories the row's `Spec` cell named, lower-cased,
+   * in cell order. Distinct is what "exactly one" is measured against: a
+   * markdown link writes the same id twice, once as the label and once as the
+   * target, and that is still a single declaration.
+   */
+  readonly specIds: readonly string[];
+}
+
+interface DeclaredCatalog {
+  /** Every CAP row of the catalog table, in declaration order. */
+  readonly rows: readonly CatalogRow[];
+  /**
+   * The directory each CAP declared. A CAP is absent when no row of its own
+   * named exactly one directory — a blank cell and a cell listing several are
+   * both unresolved, and each draws its own `QFAI-SPLIT-106`.
+   */
+  readonly byCap: ReadonlyMap<string, string>;
+}
+
+/** True for a GFM alignment row (`| --- | :--- |`), which closes the header. */
+function isDelimiterRow(cells: string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => DELIMITER_CELL_RE.test(cell));
+}
+
+/**
+ * Reads the contiguous body rows of the catalog table starting at `start`.
+ *
+ * The table ends at the first line that is not a row, so a later table that
+ * happens to reuse the same column positions (a change log, for instance) is
+ * never folded into the catalog.
+ */
+function readCatalogBody(
+  lines: readonly string[],
+  start: number,
+  capColumn: number,
+  specColumn: number,
+): DeclaredCatalog {
+  const rows: CatalogRow[] = [];
+  for (let index = start; index < lines.length; index += 1) {
+    const cells = tableCells(lines[index] ?? "");
+    if (cells.length === 0) {
+      break;
+    }
+    // Every distinct CAP the cell names, not just the first. Taking `[0]` let
+    // `| CAP-0001 / CAP-0002 | spec-0001 |` pass as a well-formed one-CAP row:
+    // the count, the declaration and the back-reference all agreed, while
+    // `CAP-0002` silently owned no directory — and the orphan check did not
+    // catch it either, because it scans the whole document, where the string is
+    // present.
+    const capIds = Array.from(
+      new Set(Array.from((cells[capColumn] ?? "").matchAll(CAP_ID_CELL_RE), (match) => match[0])),
+    );
+    const capId = capIds[0];
+    if (capId === undefined) {
+      continue;
+    }
+    const specCell = cells[specColumn] ?? "";
+    // Case-normalise first, then de-duplicate: the cell may spell one directory
+    // several ways — `[spec-0001](../spec-0001)` repeats it, a link label may
+    // capitalise it — and counting raw matches would read that single, valid
+    // declaration as an ambiguous multi-spec one.
+    const specIds = Array.from(
+      new Set(Array.from(specCell.matchAll(SPEC_ID_CELL_RE), (match) => match[0].toLowerCase())),
+    );
+    rows.push({ capIds, capId, specIds });
+  }
+  const byCap = new Map<string, string>();
+  for (const row of rows) {
+    const [only] = row.specIds;
+    // A row that names several CAPs resolves an owner for none of them: which
+    // CAP the single directory belongs to is exactly what the cell failed to
+    // say. Leaving it out of `byCap` routes every CAP on the row through the
+    // unresolved path, which is the finding the reader needs.
+    if (
+      row.capIds.length === 1 &&
+      row.specIds.length === 1 &&
+      only !== undefined &&
+      !byCap.has(row.capId)
+    ) {
+      byCap.set(row.capId, only);
+    }
+  }
+  return { rows, byCap };
+}
+
+/**
+ * Reads the CAP catalog table as a declared CAP -> spec directory mapping.
+ *
+ * `capabilityText` must already be masked (see {@link maskNonSpecRegions}): the
+ * catalog document illustrates its own format, so a commented-out predecessor
+ * table or a fenced example sitting above the live table would otherwise be
+ * returned as the catalog, and the live table's own breaches would go unseen.
+ *
+ * The search is bounded to the `## CAP Catalog` section where the document has
+ * one. A catalog written before the heading existed has none, and there the
+ * whole document is scanned — the fallback is what keeps a legacy catalog
+ * readable at all, and it is why the rule below is stated in terms of the FIRST
+ * table rather than "the table in the section".
+ *
+ * **The first well-formed table carrying a CAP column is the catalog**, and its
+ * spec column decides the mode. Scanning past it for a later table that has
+ * both headers made an audit or change-history table below a legacy catalog
+ * into the mapping: those tables legitimately carry `CAP ID` and `Spec`
+ * columns, and the live catalog's own rows then resolved through somebody
+ * else's history.
+ *
+ * Declared mode is decided by the presence of the spec column, not by how many
+ * cells are filled in: a catalog that adds the column and leaves every cell
+ * empty declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`)
+ * rather than silently falling back to the positional derivation. Returns
+ * `null` when the catalog table carries no spec column, and when there is no
+ * CAP table at all.
+ */
+function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
+  // The SAME section resolver the CAP roll-call uses (`resolveCatalogTable` ->
+  // `extractCapCatalogSection`). A second matcher here is how the two readers
+  // came apart: this one accepted only a bare `## CAP Catalog`, while
+  // `CAP_CATALOG_HEADING` also accepts the qualified `## CAP Catalog
+  // (required)` / `（必須）` the template actually writes. Under that heading
+  // the roll-call scoped itself to the section and the declared mapping fell
+  // back to the whole document, so a migration table above the catalog was read
+  // as the mapping and the live table's empty `Spec` cells drew no
+  // `QFAI-SPLIT-106`. One matcher, so the two cannot disagree about which table
+  // is the catalog.
+  const section = extractCapCatalogSection(capabilityText);
+  const lines = (section ?? capabilityText).replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = tableCells(lines[index] ?? "");
+    if (header.length === 0) {
+      continue;
+    }
+    const capColumn = header.findIndex((cell) => CAP_HEADER_RE.test(cell));
+    if (capColumn < 0) {
+      continue;
+    }
+    if (!isDelimiterRow(tableCells(lines[index + 1] ?? ""))) {
+      continue;
+    }
+    // The catalog is THIS table, whatever its columns. Returning `null` for a
+    // missing spec column ends the search rather than continuing it: a later
+    // table that happens to carry both headers is an audit or history table,
+    // not a second catalog, and reading it as one resolved the live rows
+    // through somebody else's record.
+    const specColumn = header.findIndex((cell) => SPEC_HEADER_RE.test(cell));
+    return specColumn < 0 ? null : readCatalogBody(lines, index + 2, capColumn, specColumn);
+  }
+  return null;
+}
+
+/** CAP ids sharing a catalog row whose `CAP ID` cell named more than one. */
+function multiCapRowIds(catalog: DeclaredCatalog): string[] {
+  const shared: string[] = [];
+  for (const row of catalog.rows) {
+    if (row.capIds.length <= 1) {
+      continue;
+    }
+    for (const capId of row.capIds) {
+      if (!shared.includes(capId)) {
+        shared.push(capId);
+      }
+    }
+  }
+  return shared;
+}
+
+/** CAP ids whose catalog row names more than one spec directory. */
+function ambiguousCapIds(catalog: DeclaredCatalog): string[] {
+  const ambiguous: string[] = [];
+  for (const row of catalog.rows) {
+    if (row.specIds.length > 1 && !ambiguous.includes(row.capId)) {
+      ambiguous.push(row.capId);
+    }
+  }
+  return ambiguous;
+}
+
+/** CAP ids the declared mapping cannot resolve to a single spec directory. */
+function unresolvedCapIds(catalog: DeclaredCatalog, capIds: string[]): string[] {
+  return capIds.filter((capId) => !catalog.byCap.has(capId));
+}
+
+/** CAP ids whose catalog row declares no spec directory at all. */
+function undeclaredCapIds(catalog: DeclaredCatalog, capIds: string[]): string[] {
+  // Both other shapes of unresolved row get their own message below. Reporting
+  // them here too would tell an author to fill a `Spec` cell that is already
+  // filled.
+  const explained = new Set([...ambiguousCapIds(catalog), ...multiCapRowIds(catalog)]);
+  return unresolvedCapIds(catalog, capIds).filter((capId) => !explained.has(capId));
+}
+
+/** CAP ids that occupy more than one catalog row. */
+function repeatedCapIds(catalog: DeclaredCatalog): string[] {
+  const seen = new Set<string>();
+  const repeated: string[] = [];
+  for (const row of catalog.rows) {
+    if (!seen.has(row.capId)) {
+      seen.add(row.capId);
+      continue;
+    }
+    if (!repeated.includes(row.capId)) {
+      repeated.push(row.capId);
+    }
+  }
+  return repeated;
+}
+
+/** Spec directories claimed by more than one CAP, rendered for the message. */
+function reusedSpecIds(catalog: DeclaredCatalog): string[] {
+  const owners = new Map<string, string[]>();
+  for (const [capId, specId] of catalog.byCap) {
+    owners.set(specId, [...(owners.get(specId) ?? []), capId]);
+  }
+  return Array.from(owners.entries())
+    .filter(([, caps]) => caps.length > 1)
+    .map(([specId, caps]) => `${specId} (${caps.join(", ")})`);
+}
+
+/** Flags CAP rows the declared mapping cannot resolve, and spec ids it reuses. */
+async function declaredMappingIssues(
+  catalog: DeclaredCatalog,
+  capIds: string[],
+  capabilitiesPath: string,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  // The `Spec` column is what this rule reads, and it did not exist before this
+  // change — so every catalog authored under the positional scheme declares
+  // nothing and draws the finding on all of its rows in one upgrade. The window
+  // gives those catalogs a release to fill the column in before the gate
+  // latches. `resolveToolVersion` resolves rather than rejects: its own read
+  // failures return `"unknown"`, which the comparator reads as inside the
+  // window, so an unreadable version never escalates this into a build failure.
+  const declaredMappingPromotion = RULE_PROMOTIONS.specSplitDeclaredMapping.promoteAt;
+  const declaredMappingSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    declaredMappingPromotion,
+  );
+  const declaredMappingWindowNote =
+    declaredMappingSeverity === "warning"
+      ? ` (${declaredMappingPromotion} リリースまでは warning、それ以降は error)`
+      : "";
+  const undeclared = undeclaredCapIds(catalog, capIds);
+  if (undeclared.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `Spec 列に spec ディレクトリが宣言されていない CAP があります: ${undeclared.join(", ")}${declaredMappingWindowNote}`,
+        declaredMappingSeverity,
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        undeclared,
+      ),
+    );
+  }
+  const ambiguous = ambiguousCapIds(catalog);
+  if (ambiguous.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `Spec 列に複数の spec ディレクトリを宣言している CAP があります: ${ambiguous.join(", ")}${declaredMappingWindowNote}`,
+        declaredMappingSeverity,
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        ambiguous,
+      ),
+    );
+  }
+  const multiCap = multiCapRowIds(catalog);
+  if (multiCap.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `1 行の CAP ID セルに複数の CAP が書かれています (1 行 1 CAP): ${multiCap.join(", ")}${declaredMappingWindowNote}`,
+        declaredMappingSeverity,
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        multiCap,
+      ),
+    );
+  }
+  const repeated = repeatedCapIds(catalog);
+  if (repeated.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `同じ CAP が複数の行に登場しています: ${repeated.join(", ")}${declaredMappingWindowNote}`,
+        declaredMappingSeverity,
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        repeated,
+      ),
+    );
+  }
+  const duplicated = reusedSpecIds(catalog);
+  if (duplicated.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `複数の CAP が同じ spec ディレクトリを宣言しています: ${duplicated.join(", ")}${declaredMappingWindowNote}`,
+        declaredMappingSeverity,
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        duplicated,
+      ),
+    );
+  }
+  return issues;
+}
+
+/** Requires each spec's `01_Spec.md` to cite the CAP that owns it. */
+async function capReferenceIssues(
+  capIds: string[],
+  expectedSpecIds: (string | null)[],
+  layeredEntries: SpecEntry[],
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  // Indexed once. The lookup used to be a `find` per CAP row, which is O(n*m)
+  // in a repository with many specs and many capabilities; first entry wins, as
+  // the linear scan did.
+  const byDirName = new Map<string, SpecEntry>();
+  for (const entry of layeredEntries) {
+    const key = path.basename(entry.dir).toLowerCase();
+    if (!byDirName.has(key)) {
+      byDirName.set(key, entry);
+    }
+  }
+  for (let index = 0; index < capIds.length; index += 1) {
+    const capId = capIds[index];
+    const specId = expectedSpecIds[index];
+    if (!capId || !specId) {
+      continue;
+    }
+    const entry = byDirName.get(specId);
+    if (!entry) {
+      continue;
+    }
+    const specFilePath = path.join(entry.dir, "01_Spec.md");
+    const specText = await readSafe(specFilePath);
+    if (specText.trim().length === 0 || !specText.includes(capId)) {
+      issues.push(
+        issue(
+          "QFAI-SPLIT-105",
+          `01_Spec.md が CAP を参照していません: ${specId} -> ${capId}`,
+          "error",
+          specFilePath,
+          "specSplitByCapability.specParent",
+          [specId, capId],
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
 /**
  * Spec directories for a list of `spec-NNNN` ids, for `details.relatedFiles`.
  *
@@ -156,6 +561,15 @@ export async function validateSpecSplitByCapability(
   const policiesDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
   const capabilitiesPath = path.join(policiesDir, "03_Capabilities.md");
   const capabilityText = await readSafe(capabilitiesPath);
+  // Fenced examples, HTML-commented predecessors and indented samples are not
+  // the catalog. Both readers below mask the same *raw* text, each exactly
+  // once — the roll-call inside `extractCatalogCapIds`, the declared mapping
+  // through `maskedCapabilityText` — so they see one and the same document and
+  // a CAP that exists only in a comment is neither counted nor demanded of the
+  // catalog. Masking an already-masked string is not a no-op: a fenced block
+  // collapses to blank lines, which can make the line after it look like the
+  // start of an indented code block and blank it too.
+  const maskedCapabilityText = maskNonSpecRegions(capabilityText);
   const issues: Issue[] = [];
 
   if (!(await exists(capabilitiesPath))) {
@@ -199,11 +613,36 @@ export async function validateSpecSplitByCapability(
       dirs.push(entry.dir);
     }
   }
-  const expectedSpecIds = capIds.map((_, index) => `spec-${to4(index + 1)}`);
-  const missingSpecIds = expectedSpecIds.filter((specId) => !specDirsById.has(specId));
-  const extraSpecIds = Array.from(specDirsById.keys()).filter(
-    (specId) => !expectedSpecIds.includes(specId),
+
+  // The catalog may declare the CAP -> spec directory pairing explicitly. When
+  // it does, that declaration is the SSOT and ID gaps left by an approved
+  // DELETE stay legal; otherwise the pairing stays positional.
+  const catalog = parseDeclaredCatalog(maskedCapabilityText);
+  const unresolved = catalog ? unresolvedCapIds(catalog, capIds) : [];
+  // Declared mode never synthesises a directory for a blank cell: that row is
+  // already reported as QFAI-SPLIT-106, and inventing `spec-<row number>` for
+  // it would raise a 103 for a directory nobody asked for.
+  const expectedSpecIds: (string | null)[] = capIds.map((capId, index) =>
+    catalog ? (catalog.byCap.get(capId) ?? null) : `spec-${to4(index + 1)}`,
   );
+
+  // De-duplicated: two CAP rows may declare the SAME missing directory, and the
+  // id would then appear twice in `QFAI-SPLIT-103`'s message and twice in its
+  // `refs`. The finding is about the directory, not about how many rows want it.
+  const missingSpecIds = Array.from(
+    new Set(
+      expectedSpecIds.filter(
+        (specId): specId is string => specId !== null && !specDirsById.has(specId),
+      ),
+    ),
+  );
+  // While a CAP row is still unresolved — blank cell, or several directories in
+  // one cell — an unnamed directory may well be the one that row owns, so 104
+  // ("no CAP owns this directory") cannot be trusted until 106 is cleared.
+  const extraSpecIds =
+    unresolved.length > 0
+      ? []
+      : Array.from(specDirsById.keys()).filter((specId) => !expectedSpecIds.includes(specId));
   // An id held by several real directories is neither missing nor extra, yet it
   // is exactly what the count finding reports. Without it a duplicate-only
   // mismatch would leave `relatedFiles` empty, and `isFindingInSpecScope` reads
@@ -232,6 +671,10 @@ export async function validateSpecSplitByCapability(
         },
       ),
     );
+  }
+
+  if (catalog) {
+    issues.push(...(await declaredMappingIssues(catalog, capIds, capabilitiesPath)));
   }
 
   if (missingSpecIds.length > 0) {
@@ -266,31 +709,7 @@ export async function validateSpecSplitByCapability(
     );
   }
 
-  for (let index = 0; index < capIds.length; index += 1) {
-    const capId = capIds[index];
-    if (!capId) {
-      continue;
-    }
-    const specId = `spec-${to4(index + 1)}`;
-    const entry = layeredEntries.find((value) => path.basename(value.dir).toLowerCase() === specId);
-    if (!entry) {
-      continue;
-    }
-    const specFilePath = path.join(entry.dir, "01_Spec.md");
-    const specText = await readSafe(specFilePath);
-    if (specText.trim().length === 0 || !specText.includes(capId)) {
-      issues.push(
-        issue(
-          "QFAI-SPLIT-105",
-          `01_Spec.md が CAP を参照していません: ${specId} -> ${capId}`,
-          "error",
-          specFilePath,
-          "specSplitByCapability.specParent",
-          [specId, capId],
-        ),
-      );
-    }
-  }
+  issues.push(...(await capReferenceIssues(capIds, expectedSpecIds, layeredEntries)));
 
   return issues;
 }

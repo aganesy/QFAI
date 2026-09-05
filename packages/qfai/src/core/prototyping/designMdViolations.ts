@@ -46,6 +46,13 @@
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
  *
+ * The capture fan-out is not the only writer of the scanned tree:
+ * `--emit-skeletons` also writes `<screenId>.html` into the SAME
+ * `.qfai/evidence/prototyping/iter-00/` directory (`iterationDir(0)`), not
+ * into the authored `.qfai/prototypes/` tree. A cycle-0 skeleton left in
+ * place is therefore scanned here like any captured snapshot, so its
+ * placeholder CSS must stay inside the DESIGN.md token set.
+ *
  * Because the input is the capture fan-out, the routing shape the generator
  * declares decides which screens this scanner ever sees. Under `--auto-serve`
  * that shape is SPA-style: `defaultServerRunner.ts#resolveServablePath` serves
