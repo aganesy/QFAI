@@ -319,7 +319,7 @@ When parallel dispatch is authorized, the ledger has one writer:
   result, GREEN command and result, Refactor verify command and result,
   `Spec review`, `Code quality review`, and `Prototype parity` for UI-affecting
   items — plus the resulting status and `DR-ID`.
-- Item 10 of the 11-point gate is satisfied by the orchestrator applying a
+- Item 10 of the 12-point gate is satisfied by the orchestrator applying a
   **complete** evidence block to the row, not by the worker writing it. A block
   missing any contract field does not satisfy item 10: the orchestrator obtains
   the missing fields first, and the row stays out of `done` until it has them.

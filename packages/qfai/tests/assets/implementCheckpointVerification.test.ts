@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -737,6 +737,94 @@ describe("qfai-implement checkpoint verification contract", () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
       expect(skill.split(/\r?\n/).length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
+    }
+  });
+});
+
+/** `### Item completion checklist (N-point gate)` — the arity in the gate's own name. */
+const GATE_HEADING = /^#{1,6}\s+Item completion checklist \((\d+)-point gate\)\s*$/;
+
+/** Every spelling of the gate's size, wherever it is named. */
+const GATE_LABEL = /(\d+)-point (?:reviewer )?gate/g;
+
+/** Manifest comments that name the gate, relative to `assistant/`. */
+const GATE_NAMING_MANIFESTS = ["manifest/agent-routing.yml", "manifest/review-profiles.yml"];
+
+/** The arity the checklist heading claims, and the ordinals actually listed under it. */
+function gateArity(skill: string): { named: number; ordinals: number[] } {
+  const lines = skill.split(/\r?\n/);
+  const start = lines.findIndex((line) => GATE_HEADING.test(line));
+  if (start === -1) {
+    return { named: 0, ordinals: [] };
+  }
+  const named = Number(GATE_HEADING.exec(lines[start] ?? "")?.[1]);
+  const ordinals: number[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^#{1,6}\s/.test(line)) {
+      break;
+    }
+    const ordinal = /^(\d+)\.\s/.exec(line);
+    if (ordinal?.[1]) {
+      ordinals.push(Number(ordinal[1]));
+    }
+  }
+  return { named, ordinals };
+}
+
+/** Absolute paths of every prose/manifest file in the skill directory. */
+async function gateNamingFiles(skillDir: string): Promise<string[]> {
+  const entries = await readdir(skillDir, { recursive: true });
+  return entries.filter((entry) => /\.(md|ya?ml)$/.test(entry)).map((e) => path.join(skillDir, e));
+}
+
+describe("qfai-implement gate arity naming", () => {
+  // The twelfth item was inserted without renaming the gate, so nine lines went
+  // on calling it the 11-point gate. Counting the list is the only check that
+  // does not itself have to be kept in sync by hand.
+  it("names the gate by the number of items it actually has, everywhere", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      const { named, ordinals } = gateArity(skill);
+
+      expect(named).toBeGreaterThan(0);
+      expect(ordinals).toEqual(Array.from({ length: named }, (_, index) => index + 1));
+
+      const assistant = path.resolve(dir, "..", "..");
+      const files = [
+        ...(await gateNamingFiles(dir)),
+        ...GATE_NAMING_MANIFESTS.map((rel) => path.join(assistant, rel)),
+      ];
+      for (const file of files) {
+        const content = await readFile(file, "utf-8");
+        for (const [label, arity] of content.matchAll(GATE_LABEL)) {
+          const where = `${path.relative(repoRoot, file)} calls it the ${label}`;
+          expect(Number(arity), where).toBe(named);
+        }
+      }
+    }
+  });
+
+  // Item 11 was not deleted, it means something else now: a citation left on the
+  // old ordinal resolves to the reviewer-verdict append and looks satisfied, so
+  // the checkpoint the sentence exists to require is never located in the gate.
+  it("cites checkpoint verification by the item that carries it, not the one it displaced", async () => {
+    const citing = ["references/volume-policy.md", "references/relevant-test-suite.md"];
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      const { named } = gateArity(skill);
+      const last = `${named}. Checkpoint verification passed`;
+      const lines = skill.split(/\r?\n/);
+      expect(
+        lines.some((line) => line.startsWith(last)),
+        `gate item ${named} is "${last}"`,
+      ).toBe(true);
+
+      for (const rel of citing) {
+        const content = await readFile(path.join(dir, rel), "utf-8");
+        expect(content).toContain("`SKILL.md#checkpoint-verification`");
+        expect(content).toContain(`item ${named} of the ${named}-point gate`);
+        expect(content, `${rel} cites the pre-insertion ordinal`).not.toMatch(/\bitem 11\b/);
+      }
     }
   });
 });

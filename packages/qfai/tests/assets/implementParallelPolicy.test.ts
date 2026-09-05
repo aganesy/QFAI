@@ -61,7 +61,7 @@ describe("qfai-implement states one parallelization policy", () => {
       const section = await policy(tree);
       expect(section).toContain("## Coordinated parallel mode (ledger ownership)");
       expect(section).toContain("owns every `test-list.md` write");
-      expect(section).toContain("Item 10 of the 11-point gate is satisfied by the orchestrator");
+      expect(section).toContain("Item 10 of the 12-point gate is satisfied by the orchestrator");
     });
 
     it(`${tree}: agent-routing.yml documents what parallel_groups means`, async () => {

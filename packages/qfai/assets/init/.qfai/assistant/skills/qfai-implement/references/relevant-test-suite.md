@@ -81,8 +81,9 @@ the per-item full run would be right back. The boundary must be coarser than the
 obligation granularity, so it is defined by count, not by grouping.
 
 Rows that are not on a boundary are gated on the narrow suite alone: items 6, 7
-and 8 of the 11-point gate are evaluated against it, and item 11 requires the
-full suite only for a row that sits on a boundary.
+and 8 of the 12-point gate are evaluated against it, and the gate item that
+cites `SKILL.md#checkpoint-verification` (item 12 of the 12-point gate) requires
+the full suite only for a row that sits on a boundary.
 
 ### Checkpoint runs before `done`, never after
 
