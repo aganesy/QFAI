@@ -16,8 +16,26 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 const REFERENCE = "assistant/skills/qfai-implement/references/parallelization-policy.md";
 
-/** The full rules live in a reference file; the skill keeps the summary. */
-const policy = (tree: string): Promise<string> => read(tree, REFERENCE);
+const ROLE_FAN_OUT = "assistant/skills/qfai-implement/references/role-fan-out.md";
+
+/**
+ * The full rules live in reference files; the skill keeps the summary.
+ *
+ * Two files, because role fan-out moved into a topic file of its own when the
+ * policy crossed the shipped-asset line ceiling — it is about who does what
+ * inside ONE row, which holds whether or not anything is dispatched, while the
+ * policy is about dispatching rows. The rows below judge the pair: a rule is
+ * stated once, and `#role-fan-out-inside-one-row-build-phase` still resolves
+ * through the pointer the policy keeps.
+ */
+const policy = async (tree: string): Promise<string> => {
+  const [dispatch, fanOut] = await Promise.all([
+    read(tree, REFERENCE),
+    read(tree, ROLE_FAN_OUT),
+  ]);
+  return `${dispatch}
+${fanOut}`;
+};
 
 /**
  * Collapse markdown soft wraps so assertions pin wording, not the column at
@@ -70,6 +88,176 @@ describe("qfai-implement states one parallelization policy", () => {
     it(`${tree}: agent-routing.yml documents what parallel_groups means`, async () => {
       const routing = await read(tree, "assistant/manifest/agent-routing.yml");
       expect(routing).toContain("describes ROLE FAN-OUT within a phase, not item");
+    });
+
+    it(`${tree}: no document quotes a parallel_groups value as fact`, async () => {
+      // `build` ships a non-empty group, so quoting the empty literal asserts
+      // something false about the very skill doing the quoting.
+      for (const rel of ["assistant/skills/qfai-implement/SKILL.md", REFERENCE]) {
+        expect(await read(tree, rel)).not.toContain("`parallel_groups: []`");
+      }
+    });
+
+    it(`${tree}: the shipped build fan-out is described, not disclaimed away`, async () => {
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("## Role fan-out inside one row (build phase)");
+      expect(section).toContain("exactly one non-empty `parallel_groups`");
+      expect(section).toContain("**One row, one `Owning module`, split between the roles.**");
+      expect(section).toContain("**One evidence block per row.**");
+      expect(section).toContain(
+        "**One GREEN, judged over both outputs — taken on the merged tree by one role.**",
+      );
+      expect(section).toContain("**Seam reconciliation stays per row, and adds a per-role pass.**");
+      // The summary bullet must carry the same answers, so a reader who never
+      // opens the reference is not left with the disclaimer alone.
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "may fan out `frontend-engineer` and `backend-engineer` over **one**",
+      );
+      expect(skill).toContain("the row keeps one `Owning module`");
+      expect(skill).toContain("one GREEN observation covering both roles' output");
+    });
+
+    it(`${tree}: the fan-out starts only the roles the row actually needs`, async () => {
+      // Both engineers are `conditional_agents` in `build`; a group is a
+      // permission to run them together, not an instruction to always do so.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("Both are `conditional_agents` in that phase");
+      expect(section).toContain(
+        "the two run concurrently only **when both roles apply to the row and the planner selects both**",
+      );
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "only when both roles apply to that row and the planner selects both",
+      );
+    });
+
+    it(`${tree}: the fan-out is not exempt from concurrent-write separation`, async () => {
+      // Two roles writing one module at once are two delegated agents writing
+      // concurrently, which the constitution binds whether or not a second
+      // ledger item was dispatched.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**No disjoint split, no fan-out.**");
+      expect(section).toContain("runs its roles **one at a time**");
+      expect(section).toContain("constitution/workflow.md#concurrency-stage-independent-mandatory");
+      expect(section).toContain("each is given a disjoint set of paths within it before either");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain("a row that cannot be split that way runs its roles one at a time");
+    });
+
+    it(`${tree}: the fan-out exemption covers the item-dispatch gates only`, async () => {
+      // Two roles running suites and dev servers at once contend for ports,
+      // temp paths, test DBs and caches exactly as two items do, and a worktree
+      // isolates none of them — so that allow condition is not exempted.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**Those two are the whole exemption.**");
+      expect(section).toContain("**External runtime resources are checked for the roles too.**");
+      expect(section).toContain(
+        "evaluate the allow list's **external runtime resource** condition over the two roles",
+      );
+      expect(section).toContain("the roles run one at a time");
+      // The blanket phrasing the finding objected to must be gone.
+      expect(section).not.toContain("the item-level gates below never apply to it");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "clears the external-runtime-resource condition over the two roles as it would over two items",
+      );
+    });
+
+    it(`${tree}: reconciliation compares each role's head, not just the merged row`, async () => {
+      // Merged output can satisfy the row's `Owning module` while both roles
+      // wrote the same file, so the merged diff cannot verify the split.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("diff **each role's own head** as well");
+      expect(section).toContain("against the path set that role was assigned");
+      expect(section).toContain("or touched by both, as a deny-condition breach");
+      expect(section).toContain("asserted at dispatch and never verified");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "has each role's head diffed against its assigned range at seam reconciliation",
+      );
+    });
+
+    it(`${tree}: the per-role diff is taken over committed work only`, async () => {
+      // `git diff <a>..<b>` is the two-commit usage: a role that returns with
+      // its edits still in the index, the working tree or untracked files
+      // enumerates as nothing and passes the overlap check however it wrote.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**two-commit range**");
+      expect(section).toContain("**reconcile no uncommitted role.**");
+      expect(section).toContain("Each role commits in its own worktree before it returns");
+      expect(section).toContain("`git status --porcelain` in that worktree must come back empty");
+      expect(section).toContain("A non-empty status is itself a deny-condition breach");
+      expect(section).toContain("untracked `??` entries included");
+      expect(section).toContain("**before anything merges**");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "over a scoped commit whose worktree `git status --porcelain` comes back empty",
+      );
+      expect(skill).toContain("a two-commit range diff cannot see uncommitted or untracked");
+    });
+
+    it(`${tree}: the post-merge GREEN names the agent that produces it`, async () => {
+      // Neither worktree holds the whole full-stack behaviour, and Handoff
+      // Contracts 2-3 let neither the orchestrator nor the gatekeeper supply
+      // an observation nobody submitted — so the merged tree goes back to a
+      // role.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**Nobody else may supply it either**");
+      expect(section).toContain("the orchestrator cannot synthesize a pass it never observed");
+      expect(section).toContain(
+        "**re-delegates the merged tree to one of the two roles: the one that owns the row's `Selector`**",
+      );
+      expect(section).toContain("runs Phase Green steps 2 and 2a against the merged tree");
+      expect(section).toContain("returns both in the per-item evidence contract's form");
+      expect(section).toContain("has no admissible GREEN and does not leave it");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "**taken after the merge by the role that owns the row's `Selector`**",
+      );
+      expect(skill).toContain("neither the orchestrator nor `qa-gatekeeper` may supply");
+    });
+
+    it(`${tree}: out-of-module work needs an upstream row, never an invented one`, async () => {
+      // Rows are upstream (`SKILL.md` Non-goals): `delivery-planner` selects
+      // them, `/qfai-sdd` produces them.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("belongs to a **different ledger row**");
+      expect(section).toContain("`delivery-planner` may only _select_ such a row");
+      expect(section).toContain("**If no such row exists, do not fan out and do not invent one**");
+      expect(section).toContain("raise a Change Request and hand the redesign to `/qfai-sdd`");
+      expect(section).toContain("references/selector-granularity.md");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "work that does not fit the module needs an existing second row or a Change Request to `/qfai-sdd`",
+      );
+    });
+
+    it(`${tree}: the fan-out anchor cited from SKILL.md resolves to a heading`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      const anchor = "role-fan-out-inside-one-row-build-phase";
+      expect(skill).toContain(`references/parallelization-policy.md#${anchor}`);
+      const headings = (await policy(tree))
+        .split("\n")
+        .filter((line) => line.startsWith("## "))
+        .map((line) =>
+          line
+            .slice(3)
+            .trim()
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "-"),
+        );
+      expect(headings).toContain(anchor);
+    });
+
+    it(`${tree}: the build phase actually carries the fan-out the docs describe`, async () => {
+      // If the group is ever emptied, the prose above becomes false the other
+      // way round — this pins doc and manifest to the same reality.
+      const routing = await read(tree, "assistant/manifest/agent-routing.yml");
+      expect(routing).toContain(
+        "parallel_groups:\n          - [frontend-engineer, backend-engineer]",
+      );
     });
 
     it(`${tree}: worktree separation is required, with no degraded-mode escape`, async () => {
