@@ -1,0 +1,55 @@
+# Document schema: `<specsDir>/spec-NNNN/04_Business-Rules.md`
+#
+# One BR per independently falsifiable rule, in a table whose reference columns
+# are what the traceability reader walks. The required headers are named here
+# so a renamed column fails this lane rather than silently emptying a trace.
+
+structure:
+  - heading:
+      pattern: "^# 04 Business Rules.*"
+      regex: true
+    description: Acceptance criteria decomposed into falsifiable rules.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: Why this file exists, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: '^## Granularity \(required\)$'
+          regex: true
+        description: >-
+          The splitting rule, as a list. It is a section rather than a sentence
+          in Purpose because `05_Examples.md` pins EX to BR one-to-one: a BR
+          split late is a table of examples rewritten.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Reference Column Conventions$"
+          regex: true
+        description: How the typed reference columns are read, as a list.
+        optional: true
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: '^## Rule Table \(required\)$'
+          regex: true
+        description: >-
+          The rules themselves. A table rather than prose because every column
+          is read by something: `AC-Refs` by the traceability walker,
+          `Contract-Refs` by the contract binder.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - BR-ID
+              - Rule
+              - AC-Refs

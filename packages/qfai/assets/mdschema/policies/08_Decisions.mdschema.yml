@@ -1,0 +1,36 @@
+# Document schema: `<specsDir>/_policies/08_Decisions.md`
+#
+# Policy-level decision records — the ones that bind more than one spec. Same
+# shape as the per-spec file, different ID form; the `ID scheme` section is
+# what keeps the two from being confused.
+
+structure:
+  - heading:
+      pattern: "^# 08 Decisions.*"
+      regex: true
+    description: Decisions binding more than one spec.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## ID scheme$"
+          regex: true
+        description: Which ID form belongs here rather than in a spec pack.
+        optional: true
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Decisions$"
+          regex: true
+        description: >-
+          The records. Each subsection lists Status, Context, Decision,
+          Consequences and Related.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Empty State$"
+          regex: true
+        description: The stated count when there are no policy-level decisions.
+        optional: true
+        allow_additional: true

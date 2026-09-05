@@ -1,0 +1,36 @@
+# Document schema: `<specsDir>/spec-NNNN/08_Open-questions.md`
+#
+# Unresolved questions, with an owner and a due date attached to each. Those
+# two columns are what separates an open question from a note: a question
+# nobody owns and nothing dates is not tracked, it is merely written down.
+
+structure:
+  - heading:
+      pattern: "^# 08 Open Questions.*"
+      regex: true
+    description: The unresolved questions this spec is proceeding despite.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Open Questions$"
+          regex: true
+        description: >-
+          The question table. Present even when empty — the template's
+          zero-item row states the count rather than leaving a reader to infer
+          it from a missing section.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - OQ-ID
+              - Question
+              - Owner
+              - Due
+              - Status
+
+      - heading:
+          pattern: "^## Empty State$"
+          regex: true
+        description: The stated count when this pack has no open questions.
+        optional: true
+        allow_additional: true

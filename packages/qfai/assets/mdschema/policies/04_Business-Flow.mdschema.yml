@@ -1,0 +1,82 @@
+# Document schema: `<specsDir>/_policies/04_Business-Flow.md`
+#
+# The end-to-end flow the specs slice up. This is the document where a diagram
+# is not decoration: the ordering between actors is the content, and prose
+# describing a fan-out reads as a list of unrelated steps.
+#
+# So the Diagram section carries a typed `mermaid` code-block obligation. Typed
+# rather than "any fenced block" for the same reason the Gherkin block is
+# typed — an untyped fence renders as grey text on GitHub, and an ASCII-art
+# diagram in a `text` fence satisfies a bare fence count while answering none of
+# the questions a flow diagram is read for.
+
+structure:
+  - heading:
+      pattern: "^# 04 Business Flow.*"
+      regex: true
+    description: The cross-spec business flow.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: What this flow document covers, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Actors / Systems$"
+          regex: true
+        description: >-
+          Who and what participates, as a list. Named here so the diagram's
+          participants are declared somewhere a reader can check them against.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Preconditions$"
+          regex: true
+        description: What must hold before the flow starts, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Flow Overview$"
+          regex: true
+        description: >-
+          The happy path in order. Structure only: the ordered walk is the
+          Diagram section's obligation, and demanding the same content twice in
+          two notations is how the two drift apart.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Diagram.*"
+          regex: true
+        description: >-
+          At least one Mermaid diagram. The heading tail is open so a pack may
+          say `## Diagram (Mermaid required)` or just `## Diagram`; what is not
+          open is the block inside it.
+        allow_additional: true
+        code_blocks:
+          - lang: mermaid
+            min: 1
+
+      - heading:
+          pattern: "^## Alternate / Exception Flows$"
+          regex: true
+        description: >-
+          The paths that are not the happy one. A required section: a flow
+          document with no exception branch is describing a demo, not a system.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Notes$"
+          regex: true
+        description: Anything the sections above have no column for.
+        optional: true
+        allow_additional: true

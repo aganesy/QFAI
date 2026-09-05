@@ -1,0 +1,55 @@
+# Document schema: `<specsDir>/spec-NNNN/09_delta.md`
+#
+# What changed in this pack and why it was allowed to change. The triage table
+# is the audit record: `Operation` and `Approved By` are the two columns a
+# reviewer reads first, so both are required.
+
+structure:
+  - heading:
+      pattern: "^# 09 Delta.*"
+      regex: true
+    description: The change ledger for this spec pack.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Change Summary$"
+          regex: true
+        description: >-
+          The change ID, date and one-line summary, as a list. A summary
+          written as a paragraph cannot be scanned against the triage rows below.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Triage$"
+          regex: true
+        description: >-
+          Per-requirement triage. One run sub-section per triage pass; a re-run
+          appends a sub-section rather than opening a second Triage heading.
+        allow_additional: true
+        children:
+          - heading:
+              pattern: "^### DELTA-[0-9]{4}.*"
+              regex: true
+            description: >-
+              One triage run. The table lives HERE rather than under `## Triage`
+              because that is where a re-run appends it — an obligation written
+              one level up would be satisfied by the first run forever.
+              The operation and its approver are recorded per row: an approval
+              covering a whole change covers nothing a reviewer can check.
+            count:
+              min: 1
+            allow_additional: true
+            tables:
+              - min: 1
+                required_headers:
+                  - Source
+                  - Operation
+
+      - heading:
+          pattern: "^## Update History$"
+          regex: true
+        description: The dated list of revisions to this pack.
+        optional: true
+        allow_additional: true

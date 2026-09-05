@@ -4,7 +4,33 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Mermaid 図の構文チェックレーン (`scripts/check-mermaid.mjs`)。** markdownlint
+  はフェンスの中身を不透明なテキストとして扱うため、GitHub 上でエラーボックスに
+  なる図でも Markdown 規則は全て通る。唯一の判定基準は Mermaid 自身の文法なので、
+  レンダラが描画前に呼ぶ `mermaid.parse()` を jsdom 上で走らせる (ブラウザ不要)。
+  フェンス走査は CommonMark 準拠で、より広いフェンスの内側に書かれた
+  ` ```mermaid ` は「Mermaid の書き方の説明」であって図ではないため解析しない。
+  プレースホルダを含むテンプレート図は直前行の `<!-- mermaid-lint:ignore -->` で
+  個別に除外できる (ファイル単位の除外は、後から足された図を黙って覆うので設けない)。
+  現状リポジトリ全体で 1,472 ファイル中 52 図すべてが解析に成功する。
+
+- **宣言的な Markdown ドキュメントスキーマ (`packages/qfai/assets/mdschema/`)。**
+  「どの章が必要か」「その章はリストか、テーブルか、Mermaid か」を YAML で宣言し、
+  `mdschema` で検証する。spec パック 11 種と `_policies` 11 種の計 22 スキーマ +
+  `manifest.yml` を同梱し、`qfai-sdd` テンプレートを SSOT として写している。
+  テーブルは必須カラム名まで固定するので、`EX-Ref` 列の改名がトレースを黙って
+  空にする代わりにこのレーンで落ちる。`_policies/04_Business-Flow.md` は
+  `mermaid` 型のコードブロックを必須とする (無指定フェンスは不可)。
+  ドライバ `scripts/check-mdschema.mjs` は `qfai.config.yaml` の
+  `paths.specsDir` を読み、`--scope changed|all|files` で適用範囲を切り替える。
+
 ### Fixed
+
+- **`.qfai/specs/spec-0010/01_Spec.md` に欠けていた `## Evidence Summary`
+  節を追加。** 新設の spec スキーマが検出したもので、これで 17 本すべての
+  `01_Spec.md` がテンプレート構造に適合する。
 
 - **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
   取り除くようにした。** このマーカーはパッケージ内で出荷アセット 2 本にしか

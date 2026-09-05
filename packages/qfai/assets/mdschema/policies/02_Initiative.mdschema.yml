@@ -1,0 +1,47 @@
+# Document schema: `<specsDir>/_policies/02_Initiative.md`
+#
+# The initiative framing: what is in, what is out, and what the plan is
+# assuming. The scope table pairs each inclusion with the adjacent exclusion
+# and the reason for the border, which a two-list layout cannot express.
+
+structure:
+  - heading:
+      pattern: "^# 02 Initiative.*"
+      regex: true
+    description: Initiative framing, scope border and dependencies.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Initiative$"
+          regex: true
+        description: The initiative statement.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Scope$"
+          regex: true
+        description: >-
+          In, out, and why the border falls there — one row per border so the
+          reason travels with the pair it explains.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - In scope
+              - Out of scope
+
+      - heading:
+          pattern: "^## Assumptions$"
+          regex: true
+        description: What the plan takes as given, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Dependencies$"
+          regex: true
+        description: What this initiative needs from outside it, as a list.
+        allow_additional: true
+        lists:
+          - min: 1

@@ -1,0 +1,49 @@
+# Document schema: `<specsDir>/spec-NNNN/03_Acceptance-Criteria.md`
+#
+# Acceptance criteria live here and nowhere else. The Gherkin block is the
+# machine-readable half — the ATDD gates parse it — so it is required and typed
+# (`gherkin`, not a bare fence). The catalogue below it is a human index and
+# says so in its own heading.
+
+structure:
+  - heading:
+      pattern: "^# 03 Acceptance Criteria.*"
+      regex: true
+    description: The acceptance criteria for this spec.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: Why this file exists and what belongs in it, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: '^## AC Gherkin \(required\)$'
+          regex: true
+        description: >-
+          Every AC as a Gherkin scenario, each carrying its `# AC-NNNN` and
+          `# Source:` comments. Typed as `gherkin` because the traceability
+          reader selects blocks by info string: an untyped fence is invisible
+          to it and the AC traces to nothing.
+        allow_additional: true
+        code_blocks:
+          - lang: gherkin
+            min: 1
+
+      - heading:
+          pattern: '^## AC Catalog \(optional\)$'
+          regex: true
+        description: >-
+          A human-facing index. Optional by name and by rule; when present it
+          is a table, and it deliberately carries no `Source` column — that has
+          exactly one home, the Gherkin block above.
+        optional: true
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - AC-ID
+              - Title

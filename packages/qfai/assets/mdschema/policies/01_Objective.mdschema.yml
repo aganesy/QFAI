@@ -1,0 +1,39 @@
+# Document schema: `<specsDir>/_policies/01_Objective.md`
+#
+# What the product is for. `Success criteria` is a table because a criterion
+# without a stated measurement is an aspiration: the `How it is measured`
+# column is the part that makes it falsifiable.
+
+structure:
+  - heading:
+      pattern: "^# 01 Objective.*"
+      regex: true
+    description: The product objective and how success is measured.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Objective$"
+          regex: true
+        description: The objective in prose or as a list; either reads.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Success criteria$"
+          regex: true
+        description: Observable outcomes, each with the metric that settles it.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - ID
+              - Criterion
+
+      - heading:
+          pattern: "^## Out of scope$"
+          regex: true
+        description: >-
+          The adjacent things this product is not, as a list. Required: an
+          objective with no stated border is one every reader draws differently.
+        allow_additional: true
+        lists:
+          - min: 1

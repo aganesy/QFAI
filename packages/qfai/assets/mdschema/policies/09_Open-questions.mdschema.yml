@@ -1,0 +1,32 @@
+# Document schema: `<specsDir>/_policies/09_Open-questions.md`
+#
+# Policy-level open questions. Same shape as the per-spec ledger: a question
+# needs an owner and a due date, or it is a note.
+
+structure:
+  - heading:
+      pattern: "^# 09 Open Questions.*"
+      regex: true
+    description: Unresolved questions at policy level.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Open Questions$"
+          regex: true
+        description: The question table, present even when it holds zero rows.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - OQ-ID
+              - Question
+              - Owner
+              - Due
+              - Status
+
+      - heading:
+          pattern: "^## Empty State$"
+          regex: true
+        description: The stated count when there are no open questions.
+        optional: true
+        allow_additional: true

@@ -1,0 +1,28 @@
+# Document schema: `<specsDir>/_policies/05_Contracts.md`
+#
+# The contract index. Each family is its own subsection with its own table
+# because the columns differ — a DB contract names an entity, an API contract
+# names a router — and one merged table would carry a blank half on every row.
+
+structure:
+  - heading:
+      pattern: "^# 05 Contracts.*"
+      regex: true
+    description: Index of the declared contracts and their files.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: What this index is for, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Contract Index$"
+          regex: true
+        description: >-
+          One subsection per contract family, each a table. `Declared ID` is the
+          ID the validator resolves; `File` is where it lives.
+        allow_additional: true

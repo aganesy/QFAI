@@ -1,0 +1,33 @@
+# Document schema: `<specsDir>/_policies/03_Capabilities.md`
+#
+# The capability catalogue. Each row binds a capability to the spec that
+# realises it, which is what makes the CAP -> spec direction of the
+# traceability chain walkable.
+
+structure:
+  - heading:
+      pattern: "^# 03 Capabilities.*"
+      regex: true
+    description: Capability catalogue and the ordering rule behind it.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Capability order rule$"
+          regex: true
+        description: How capabilities are ordered and why, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## CAP Catalog$"
+          regex: true
+        description: >-
+          One row per capability, each naming the spec that realises it. The
+          `Spec` column is the link the chain is walked along.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - CAP ID
+              - Spec

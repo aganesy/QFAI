@@ -1,0 +1,107 @@
+# Which schema governs which document.
+#
+# `scripts/check-mdschema.mjs` reads this file, expands each pattern against the
+# repository, and runs `mdschema check` once per entry with the named schema.
+# Splitting the run per document type is not an optimisation — mdschema takes
+# ONE schema per invocation, and "how a test-case table is shaped" is a
+# different contract from "how a user story is shaped".
+#
+# `{specsDir}` expands to `paths.specsDir` from `qfai.config.yaml`, so an
+# adopter who keeps specs somewhere other than `.qfai/specs` is covered without
+# editing this file.
+#
+# Patterns are repository-root-relative and support `*` (one path segment) and
+# `**` (any depth). A pattern that matches nothing is not an error: a pack that
+# has not been created yet, and an optional document like the traceability
+# ledger, are both ordinary states.
+
+documents:
+  # ── Spec packs ────────────────────────────────────────────────────
+  - id: spec-overview
+    schema: spec/01_Spec.mdschema.yml
+    pattern: "{specsDir}/spec-*/01_Spec.md"
+
+  - id: spec-user-stories
+    schema: spec/02_User-stories.mdschema.yml
+    pattern: "{specsDir}/spec-*/02_User-stories.md"
+
+  - id: spec-acceptance-criteria
+    schema: spec/03_Acceptance-Criteria.mdschema.yml
+    pattern: "{specsDir}/spec-*/03_Acceptance-Criteria.md"
+
+  - id: spec-business-rules
+    schema: spec/04_Business-Rules.mdschema.yml
+    pattern: "{specsDir}/spec-*/04_Business-Rules.md"
+
+  - id: spec-examples
+    schema: spec/05_Examples.mdschema.yml
+    pattern: "{specsDir}/spec-*/05_Examples.md"
+
+  - id: spec-test-cases
+    schema: spec/06_Test-Cases.mdschema.yml
+    pattern: "{specsDir}/spec-*/06_Test-Cases.md"
+
+  - id: spec-decisions
+    schema: spec/07_Decisions.mdschema.yml
+    pattern: "{specsDir}/spec-*/07_Decisions.md"
+
+  - id: spec-open-questions
+    schema: spec/08_Open-questions.mdschema.yml
+    pattern: "{specsDir}/spec-*/08_Open-questions.md"
+
+  - id: spec-delta
+    schema: spec/09_delta.mdschema.yml
+    pattern: "{specsDir}/spec-*/09_delta.md"
+
+  - id: spec-plan
+    schema: spec/10_Plan.mdschema.yml
+    pattern: "{specsDir}/spec-*/10_Plan.md"
+
+  - id: spec-traceability-ledger
+    schema: spec/16_Traceability-ledger.mdschema.yml
+    pattern: "{specsDir}/spec-*/16_Traceability-ledger.md"
+
+  # ── Policy layer ──────────────────────────────────────────────────
+  - id: policies-objective
+    schema: policies/01_Objective.mdschema.yml
+    pattern: "{specsDir}/_policies/01_Objective.md"
+
+  - id: policies-initiative
+    schema: policies/02_Initiative.mdschema.yml
+    pattern: "{specsDir}/_policies/02_Initiative.md"
+
+  - id: policies-capabilities
+    schema: policies/03_Capabilities.mdschema.yml
+    pattern: "{specsDir}/_policies/03_Capabilities.md"
+
+  - id: policies-business-flow
+    schema: policies/04_Business-Flow.mdschema.yml
+    pattern: "{specsDir}/_policies/04_Business-Flow.md"
+
+  - id: policies-contracts
+    schema: policies/05_Contracts.mdschema.yml
+    pattern: "{specsDir}/_policies/05_Contracts.md"
+
+  - id: policies-glossary
+    schema: policies/06_Glossary.mdschema.yml
+    pattern: "{specsDir}/_policies/06_Glossary.md"
+
+  - id: policies-constraints
+    schema: policies/07_Constraints.mdschema.yml
+    pattern: "{specsDir}/_policies/07_Constraints.md"
+
+  - id: policies-decisions
+    schema: policies/08_Decisions.mdschema.yml
+    pattern: "{specsDir}/_policies/08_Decisions.md"
+
+  - id: policies-open-questions
+    schema: policies/09_Open-questions.mdschema.yml
+    pattern: "{specsDir}/_policies/09_Open-questions.md"
+
+  - id: policies-delta
+    schema: policies/10_delta.mdschema.yml
+    pattern: "{specsDir}/_policies/10_delta.md"
+
+  - id: policies-slice-policy
+    schema: policies/11_Slice-Policy.mdschema.yml
+    pattern: "{specsDir}/_policies/11_Slice-Policy.md"

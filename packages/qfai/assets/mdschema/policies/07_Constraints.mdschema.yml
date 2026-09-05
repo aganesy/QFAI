@@ -1,0 +1,40 @@
+# Document schema: `<specsDir>/_policies/07_Constraints.md`
+#
+# The floors every spec inherits. Both tables carry a verification column, so a
+# constraint that nothing checks is visible as an empty cell rather than as an
+# absence nobody notices.
+
+structure:
+  - heading:
+      pattern: "^# 07 Constraints.*"
+      regex: true
+    description: Constraints and non-functional floors.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Constraints$"
+          regex: true
+        description: >-
+          What is not permitted, and who imposes it. The `Source` column
+          matters: a constraint with no imposer cannot be renegotiated, because
+          nobody knows who to ask.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - ID
+              - Constraint
+
+      - heading:
+          pattern: "^## Non-functional floors$"
+          regex: true
+        description: >-
+          Measurable bars with the gate or probe that verifies each. A floor
+          with no verification is a preference.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - ID
+              - Dimension
+              - Floor

@@ -1,0 +1,41 @@
+# Document schema: `<specsDir>/spec-NNNN/02_User-stories.md`
+#
+# The story catalogue. Two obligations: an index a reader can scan, and one
+# block per story carrying the fields downstream gates read (`Parent`,
+# `Source`, `Goal`).
+#
+# This schema states the TEMPLATE's contract, not the current tree's average.
+# Packs authored before these conventions do not satisfy it; which documents
+# the contract is enforced over is the driver's decision (`--scope`), not this
+# file's. Encoding the average here instead would make the schema unable to
+# express the thing it exists to express.
+
+structure:
+  - heading:
+      pattern: "^# 02 User Stories.*"
+      regex: true
+    description: One block per user story, plus a scannable index.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## US Catalog$"
+          regex: true
+        description: >-
+          A one-line index of the stories in this pack, written as a list so
+          the story count is countable rather than inferred from prose.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## US-[0-9]{4}(-[0-9]{4})?:.*"
+          regex: true
+        description: >-
+          One story. The body carries `Parent`, `Source`, `Goal` and
+          `Non-goals` as a list — `Source` is the only machine-checkable trace
+          back to the discussion pack, so a story written as prose loses it.
+        count:
+          min: 1
+        allow_additional: true
+        lists:
+          - min: 1

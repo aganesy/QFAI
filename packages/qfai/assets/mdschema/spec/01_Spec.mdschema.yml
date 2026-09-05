@@ -1,0 +1,79 @@
+# Document schema: `<specsDir>/spec-NNNN/01_Spec.md`
+#
+# The spec pack's entry document. It is the primary SSOT an implementer reads,
+# so every section below answers one question the implementer must not have to
+# open `_policies` to answer.
+#
+# Headings are matched as anchored regular expressions: the pattern must match
+# the WHOLE heading line, `#` markers included. `.*` tails are therefore
+# deliberate — they admit the `— <subject>` suffix a titled spec carries.
+#
+# `allow_additional: true` appears on every element that owns sub-structure.
+# The schema fixes the sections a spec must have and the order they come in; it
+# does not forbid a spec from saying more. A spec that needs `### In` / `### Out`
+# under Scope, or a per-requirement subsection under Relevant Requirements, is
+# writing a better spec, not a malformed one.
+
+structure:
+  - heading:
+      pattern: "^# 01 Spec.*"
+      regex: true
+    description: Spec pack entry document.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Consumer View$"
+          regex: true
+        description: >-
+          What an implementer reads by default, as a list. Prose here invites a
+          reader to skim; a list makes the read-set countable.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Scope$"
+          regex: true
+        description: The boundary of this spec, stated in both directions.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Applicable NFR$"
+          regex: true
+        description: The non-functional floors this spec inherits.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Applicable Policy$"
+          regex: true
+        description: The policy constraints this spec inherits.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Evidence Summary$"
+          regex: true
+        description: What has been established for this spec, and where it is recorded.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Relevant Requirements$"
+          regex: true
+        description: The requirement IDs this spec answers.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Entry [Pp]oints$"
+          regex: true
+        description: >-
+          The story range and the actors. Case-insensitive on the second word:
+          both spellings are in the tree and neither is wrong.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Escalation Hook.*"
+          regex: true
+        description: >-
+          When to read `_policies`, and which file to read. Optional because a
+          spec whose constraints are fully local has nothing to escalate to.
+        optional: true
+        allow_additional: true

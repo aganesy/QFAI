@@ -1,0 +1,52 @@
+# Document schema: `<specsDir>/spec-NNNN/10_Plan.md`
+#
+# How the spec gets built and how it gets proven. The risk section is a table
+# rather than a list because a risk without a trigger is a worry: the column
+# forces the observable sign that says the mitigation is now due.
+
+structure:
+  - heading:
+      pattern: "^# 10 Plan.*"
+      regex: true
+    description: Implementation, test and NFR approach, plus risk handling.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Implementation approach$"
+          regex: true
+        description: >-
+          The shape of the change and the alternative that was rejected, as a
+          list. The rejected option is half the value: it is what stops the
+          same alternative being re-proposed in review.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Test approach$"
+          regex: true
+        description: What is proven at which layer, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## NFR approach$"
+          regex: true
+        description: How this spec meets the inherited floors, and what would show a breach.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Risk mitigation$"
+          regex: true
+        description: >-
+          Risks with a trigger to act. A table so that every risk carries its
+          own trigger rather than sharing one paragraph.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Risk
+              - Mitigation

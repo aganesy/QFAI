@@ -1,0 +1,41 @@
+# Document schema: `<specsDir>/_policies/10_delta.md`
+#
+# The policy-layer change ledger. Wider than a spec pack's delta because a
+# policy change can retarget several packs at once, which is what the triage
+# table's `Existing Spec` column records.
+
+structure:
+  - heading:
+      pattern: "^# 10 Delta.*"
+      regex: true
+    description: The policy-layer change ledger.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Change Summary$"
+          regex: true
+        description: Change ID, date and one-line summary, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Triage$"
+          regex: true
+        description: One run sub-section per triage pass, appended rather than merged.
+        allow_additional: true
+        children:
+          - heading:
+              pattern: "^### DELTA-[0-9]{4}.*"
+              regex: true
+            description: >-
+              One triage run, with the operation applied and who approved it.
+              `Existing Spec` may name more than one pack for a MERGE.
+            count:
+              min: 1
+            allow_additional: true
+            tables:
+              - min: 1
+                required_headers:
+                  - Source
+                  - Operation

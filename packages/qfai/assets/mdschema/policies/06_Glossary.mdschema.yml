@@ -1,0 +1,23 @@
+# Document schema: `<specsDir>/_policies/06_Glossary.md`
+#
+# Shared vocabulary. The third column — the near-miss a term is NOT — is the
+# one that does the work: most glossary failures are two adjacent concepts
+# sharing a word, and a definition alone does not separate them.
+
+structure:
+  - heading:
+      pattern: "^# 06 Glossary.*"
+      regex: true
+    description: Terms with definitions and their near-misses.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Terms$"
+          regex: true
+        description: One row per term.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Term
+              - Definition
