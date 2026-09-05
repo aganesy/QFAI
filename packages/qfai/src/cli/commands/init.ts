@@ -40,6 +40,7 @@ import {
   renderCodexAgentToml,
   type CodexAgentKind,
 } from "../../core/codexAgentToml.js";
+import { detectProjectLanguages, fillLanguageRules } from "../../core/instructionLanguageRules.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
@@ -2806,7 +2807,10 @@ async function syncIntegrationWrappers(
   // correction to the shipped template reached new projects and nobody else, with no
   // command that would update an installed repository and no signal that it was
   // running stale guidance. `--force` is the supported refresh path.
-  const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
+  const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"] as const;
+  // Resolved ONCE, not per file: the answer is a property of the project, and asking twice
+  // reads the same manifests twice on a path that already touches the disk plenty.
+  const projectLanguages = await detectProjectLanguages(destRoot);
   // Reclaim staging files an abnormally-terminated earlier run left here. A
   // crash skips `replaceWithRegularFile`'s `finally`, and every run stages under
   // a fresh name, so without this the orphans only accumulate in a tracked
@@ -2872,7 +2876,14 @@ async function syncIntegrationWrappers(
         const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
         let content: string;
         try {
-          content = await readFile(templateSrc, "utf-8");
+          // The shipped template carries `<!-- qfai:language-rules -->`; what lands in the
+          // project must not. Filled with the rules for this project's language, or with the
+          // slot removed when there are none.
+          content = fillLanguageRules(
+            await readFile(templateSrc, "utf-8"),
+            fileName,
+            projectLanguages,
+          );
         } catch (err: unknown) {
           const code =
             typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
