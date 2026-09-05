@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { TRIAGE_NO_EXISTING_SPEC } from "../../../src/core/sddTriage.js";
 import { RULE_PROMOTIONS } from "../../../src/core/sunset.js";
 import {
   validateCreateRowCapabilityRefs,
@@ -342,6 +343,389 @@ describe("validateTriageSection", () => {
       "",
     ].join("\n");
     expect(validateTriageSection(text, DELTA_PATH, TOOL_VERSION)).toEqual([]);
+  });
+});
+
+describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-009)", () => {
+  const KNOWN = new Set(["spec-0001", "spec-0003", "spec-0004"]);
+
+  const codesFor = (rows: string[][], known?: ReadonlySet<string>): string[] =>
+    validateTriageSection(buildDelta(rows), DELTA_PATH, TOOL_VERSION, known).map(
+      (entry) => entry.code,
+    );
+
+  it("accepts a single spec, a `+` enumeration and a `_policies` target", () => {
+    expect(
+      codesFor(
+        [
+          ["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "why"],
+          ["REQ-2", "merge two specs", "spec-0003+spec-0004", "MERGE", "-", "user@host", "why"],
+          ["REQ-3", "policy only", "\\_policies", "UPDATE", "APPEND", "-", "why"],
+          ["REQ-4", "policy file", "`_policies/05_Contracts.md`", "UPDATE", "MODIFY", "-", "why"],
+        ],
+        KNOWN,
+      ),
+    ).toEqual([]);
+  });
+
+  it("emits QFAI-TRIAGE-009 when a named spec has no directory on disk", () => {
+    const issues = validateTriageSection(
+      buildDelta([["REQ-1", "extend", "spec-0009", "UPDATE", "APPEND", "-", "why"]]),
+      DELTA_PATH,
+      TOOL_VERSION,
+      KNOWN,
+    );
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
+    // The `Existing Spec` grammar is new, so the rule lands on cells written
+    // before it existed — including approved rows nothing rewrites. It ships
+    // behind a promotion window (P7) rather than at `error` from day one.
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.message).toContain(
+      RULE_PROMOTIONS.triageExistingSpecCell.promoteAt,
+      // P7 step 3: the finding names the release that ends its window.
+    );
+    expect(issues[0]?.refs).toEqual(["spec-0009"]);
+  });
+
+  it("promotes QFAI-TRIAGE-009 to an error at its pinned release", () => {
+    // The half-landed state P7 exists to stop is a promotion that is declared
+    // and never applied. Asserted against the pin rather than a copy of it, so
+    // moving the pin moves this test with it.
+    const promoteAt = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
+    const issues = validateTriageSection(
+      buildDelta([["REQ-1", "extend", "spec-0009", "UPDATE", "APPEND", "-", "why"]]),
+      DELTA_PATH,
+      promoteAt,
+      KNOWN,
+    );
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
+    expect(issues[0]?.severity).toBe("error");
+    // The window note is dropped once the window has closed: there is no
+    // remaining grace to describe.
+    expect(issues[0]?.message).not.toContain(promoteAt);
+  });
+
+  it("emits QFAI-TRIAGE-009 for range notation even when both ends exist", () => {
+    // `spec-0001〜spec-0004` resolves to no directory; `+` is the only
+    // multi-spec form.
+    expect(
+      codesFor([["REQ-1", "sweep", "spec-0001〜spec-0004", "UPDATE", "MODIFY", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+    expect(
+      codesFor([["REQ-1", "sweep", "spec-0001..0004", "UPDATE", "MODIFY", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+  });
+
+  it("emits QFAI-TRIAGE-009 when a non-CREATE row leaves Existing Spec unfilled", () => {
+    expect(codesFor([["REQ-1", "extend", "", "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-009",
+    ]);
+    expect(codesFor([["REQ-1", "extend", "-", "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-009",
+    ]);
+  });
+
+  it("emits QFAI-TRIAGE-009 when the cell names nothing resolvable", () => {
+    expect(codesFor([["REQ-1", "extend", "TBD", "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-009",
+    ]);
+  });
+
+  it("emits QFAI-TRIAGE-009 for a spec token that is not exactly four digits", () => {
+    // `spec-00010` shares a prefix with the existing `spec-0001`; matching the
+    // whole token keeps the typo from borrowing that spec's existence.
+    const issues = validateTriageSection(
+      buildDelta([["REQ-1", "extend", "spec-00010", "UPDATE", "APPEND", "-", "why"]]),
+      DELTA_PATH,
+      TOOL_VERSION,
+      KNOWN,
+    );
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
+    expect(issues[0]?.refs).toEqual(["spec-00010"]);
+    expect(
+      codesFor([["REQ-1", "extend", "spec-001", "UPDATE", "APPEND", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+    // A malformed member of a `+` enumeration is caught even when the other
+    // member resolves.
+    expect(
+      codesFor(
+        [["REQ-1", "merge", "spec-0003+spec-0004x", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+    // The grammar check does not need the known-spec set.
+    expect(codesFor([["REQ-1", "extend", "spec-00010", "UPDATE", "APPEND", "-", "why"]])).toEqual([
+      "QFAI-TRIAGE-009",
+    ]);
+  });
+
+  it("requires the `-` literal on a CREATE row and rejects a spec ID there", () => {
+    expect(
+      codesFor([["REQ-1", "new scope", "-", "CREATE", "-", "user@host", "CAP-0001"]], KNOWN),
+    ).toEqual([]);
+    // `(none)` stays accepted so deltas written by an older renderer keep
+    // validating after an upgrade.
+    expect(
+      codesFor([["REQ-1", "new scope", "(none)", "CREATE", "-", "user@host", "CAP-0001"]], KNOWN),
+    ).toEqual([]);
+    expect(
+      codesFor(
+        [["REQ-1", "new scope", "spec-0004", "CREATE", "-", "user@host", "CAP-0001"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+  });
+
+  it("checks the grammar but not existence when the known-spec set is absent", () => {
+    // Callers that validate one delta.md in isolation cannot resolve spec
+    // directories, so only the shape is enforced.
+    expect(codesFor([["REQ-1", "extend", "spec-0099", "UPDATE", "APPEND", "-", "why"]])).toEqual(
+      [],
+    );
+    expect(codesFor([["REQ-1", "extend", "", "UPDATE", "APPEND", "-", "why"]])).toEqual([
+      "QFAI-TRIAGE-009",
+    ]);
+  });
+
+  it("reports the Existing Spec defect alongside the approval gate on the same row", () => {
+    expect(
+      codesFor([["REQ-1", "retire spec-0003", "spec-0009", "SUPERSEDE", "-", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-009", "QFAI-TRIAGE-005"]);
+  });
+
+  it("rejects a spec token that carries a suffix past the ID", () => {
+    // The token is read to the next separator, so `_` / `/` suffixes cannot
+    // borrow the existence of the spec whose ID they start with.
+    for (const cell of ["spec-0001_old", "spec-0001/01_Spec.md", "spec-0001-draft"]) {
+      const issues = validateTriageSection(
+        buildDelta([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]]),
+        DELTA_PATH,
+        TOOL_VERSION,
+        KNOWN,
+      );
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
+      expect(issues[0]?.refs).toEqual([cell]);
+    }
+  });
+
+  it("rejects a cell that only contains the `_policies` literal", () => {
+    for (const cell of ["_policies_typo", "not_policies", "`_policies` かどこか"]) {
+      expect(codesFor([["REQ-1", "policy", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+        "QFAI-TRIAGE-009",
+      ]);
+    }
+  });
+
+  it("does not turn a completed removal into a permanent existence error", () => {
+    // DELETE removes the spec directory, and MERGE / SPLIT collapse their
+    // source into other IDs, so the row outlives the directory it names.
+    for (const op of ["DELETE", "MERGE", "SPLIT"]) {
+      expect(
+        codesFor(
+          [["REQ-1", "retire the subject", "spec-0017", op, "-", "user@host", "why"]],
+          KNOWN,
+        ),
+      ).toEqual([]);
+    }
+    // A removal whose every target is gone is complete however many it named.
+    expect(
+      codesFor(
+        [["REQ-1", "collapse both", "spec-0017+spec-0018", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
+    // The shape is still enforced on those rows.
+    expect(
+      codesFor(
+        [["REQ-1", "retire the subject", "spec-00170", "DELETE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+    // SUPERSEDE keeps the directory, so existence still applies there.
+    expect(
+      codesFor(
+        [["REQ-1", "retire the subject", "spec-0017", "SUPERSEDE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-009"]);
+  });
+
+  it("checks existence on a removal row that has not been carried out", () => {
+    // A row whose other targets still resolve cannot be the tombstone of a
+    // completed removal, so the unresolvable one is a typo or an invented
+    // source and must not reach the approval stage unchallenged.
+    for (const op of ["MERGE", "SPLIT", "DELETE"]) {
+      const issues = validateTriageSection(
+        buildDelta([["REQ-1", "collapse", "spec-0003+spec-9999", op, "-", "user@host", "why"]]),
+        DELTA_PATH,
+        TOOL_VERSION,
+        KNOWN,
+      );
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-009"]);
+      expect(issues[0]?.refs).toEqual(["spec-9999"]);
+    }
+    // Over-correction pin: a pending removal whose targets all resolve is
+    // clean, and so is the all-gone tombstone above.
+    expect(
+      codesFor(
+        [["REQ-1", "collapse", "spec-0003+spec-0004", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects a `_policies` target on a spec-scoped operation", () => {
+    // SPLIT / MERGE / SUPERSEDE / DELETE act on a whole spec directory, so a
+    // policy target leaves the approved row with nothing to execute against.
+    for (const op of ["DELETE", "SPLIT", "MERGE", "SUPERSEDE"]) {
+      expect(
+        codesFor([["REQ-1", "policy work", "\\_policies", op, "-", "user@host", "why"]], KNOWN),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+      expect(
+        codesFor(
+          [["REQ-1", "policy work", "`_policies/05_Contracts.md`", op, "-", "user@host", "why"]],
+          KNOWN,
+        ),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+    }
+    // Over-correction pin: UPDATE rows are how policy-only work is recorded.
+    expect(
+      codesFor([["REQ-1", "policy work", "\\_policies", "UPDATE", "APPEND", "-", "why"]], KNOWN),
+    ).toEqual([]);
+  });
+
+  it("rejects the `-` placeholder the classifier renders for a targetless DELETE", () => {
+    // `classifyTriage` emits `op: "DELETE", existingSpec: null`, which
+    // `renderTriageMarkdown` writes as `TRIAGE_NO_EXISTING_SPEC`. DELETE
+    // removes a whole spec directory, so that proposal is not persistable
+    // until the target is filled in — the approval gate cannot supply one.
+    for (const op of ["DELETE", "SPLIT", "MERGE", "SUPERSEDE"]) {
+      expect(
+        codesFor(
+          [["REQ-1", "retire the subject", TRIAGE_NO_EXISTING_SPEC, op, "-", "user@host", "why"]],
+          KNOWN,
+        ),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+    }
+    expect(codesFor([["REQ-1", "retire", "", "DELETE", "-", "user@host", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-009",
+    ]);
+    // Over-correction pin: `-` remains the required CREATE spelling, and a
+    // DELETE that names its target is clean.
+    expect(
+      codesFor(
+        [["REQ-1", "new scope", TRIAGE_NO_EXISTING_SPEC, "CREATE", "-", "user@host", "CAP-0001"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
+    expect(
+      codesFor([["REQ-1", "retire", "spec-0003", "DELETE", "-", "user@host", "why"]], KNOWN),
+    ).toEqual([]);
+  });
+
+  it("matches the whole cell against the grammar, not a token inside it", () => {
+    // Each of these contains a well-formed, existing spec ID; none of them is
+    // a well-formed cell, and reading only the extracted token let them pass.
+    for (const cell of [
+      "spec-0001 trailing prose",
+      "spec-0001+",
+      "+spec-0001",
+      "spec-0001++spec-0003",
+      "spec-0001, ",
+      "spec-0001+_policies",
+      "see spec-0001",
+      "spec-0001 (spec-0003 も)",
+    ]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+        "QFAI-TRIAGE-009",
+      ]);
+    }
+    // Over-correction pin: the forms the grammar does declare stay clean,
+    // including the backticked / escaped and comma-separated spellings this
+    // repository's own `_policies/10_delta.md` uses.
+    for (const cell of [
+      "spec-0001",
+      "spec-0003+spec-0004",
+      "spec-0003, spec-0004",
+      "`spec-0001`",
+      "\\_policies",
+      "`_policies/03_Capabilities.md`",
+    ]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual(
+        [],
+      );
+    }
+  });
+
+  it("refuses a policy path that walks out of `_policies`", () => {
+    // The path charset admitted `.` and `..` as ordinary segments, so a cell
+    // that normalises to a spec — or to any neighbouring path — was accepted
+    // as a policy target and skipped the spec existence check entirely.
+    for (const cell of [
+      "\\_policies/../spec-0001",
+      "\\_policies/..",
+      "\\_policies/./05_Contracts.md",
+      "`_policies/sub/../../etc`",
+    ]) {
+      expect(
+        codesFor([["REQ-1", "policy work", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+    }
+    // Over-correction pin: an ordinary dotted filename is still a path.
+    expect(
+      codesFor(
+        [["REQ-1", "policy work", "`_policies/05_Contracts.md`", "UPDATE", "APPEND", "-", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
+  });
+
+  it("undoes markdown decoration only where markdown put it", () => {
+    // Deleting every backtick and backslash in the cell repaired the very
+    // values the grammar exists to reject: both of these normalised to the
+    // existing `spec-0001`.
+    for (const cell of ["spec-00\\01", "spec-00`01", "spec-`0001`", "\\spec-0001"]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+        "QFAI-TRIAGE-009",
+      ]);
+    }
+    // Over-correction pin: the decorations markdown really produces — one
+    // matched code span (around the whole cell or around each target) and the
+    // `\_` escape `renderTriageMarkdown` writes — still normalise away.
+    for (const cell of [
+      "`spec-0001`",
+      "`spec-0003`+`spec-0004`",
+      "`spec-0003+spec-0004`",
+      "\\_policies",
+    ]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual(
+        [],
+      );
+    }
+  });
+
+  it("rejects an enumeration that names the same target twice", () => {
+    // Two slots, one target. It also fools the removal check below, which
+    // reads "every target gone" as "the operation has been carried out": a
+    // duplicated ID makes one absent spec look like a complete set.
+    for (const cell of ["spec-0001+spec-0001", "`spec-0003`, spec-0003", "\\_policies+_policies"]) {
+      expect(
+        codesFor([["REQ-1", "collapse", cell, "MERGE", "-", "user@host", "why"]], KNOWN),
+      ).toEqual(["QFAI-TRIAGE-009"]);
+    }
+    // Over-correction pin: a MERGE row may name one spec — the destination
+    // that absorbs the `Source` — which is the form this repository's own
+    // `.qfai/specs/spec-0012/09_delta.md` uses, and distinct targets enumerate
+    // as before.
+    expect(
+      codesFor([["REQ-1", "absorb", "spec-0003", "MERGE", "-", "user@host", "why"]], KNOWN),
+    ).toEqual([]);
+    expect(
+      codesFor(
+        [["REQ-1", "collapse", "spec-0003+spec-0004", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
   });
 });
 

@@ -6,6 +6,7 @@
 - SSOT modules (shipped inside the QFAI package, run by `npx qfai validate`):
   - the work-log entry parser (`string → Result<Entry, SchemaError>`)
   - the work-log link-integrity check
+- The field checks, enums and required headings are compiled into the CLI, not read from this file: this document is their reference, so editing it does not change what `validate` accepts. Report a divergence as a QFAI bug instead of customizing the schema here.
 
 ## Storage model
 

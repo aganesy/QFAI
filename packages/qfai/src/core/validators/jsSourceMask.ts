@@ -150,7 +150,23 @@ function endOfRegexLiteral(source: string, start: number): number {
   return source.length;
 }
 
-export function maskJsNonCode(source: string): string {
+/** Which span kinds {@link maskJsNonCode} blanks. */
+export type JsMaskOptions = {
+  /**
+   * Blank comment spans. Default `true`.
+   *
+   * `false` for a scanner whose subject LIVES in comments — the ATDD
+   * annotation scan reads `/* QFAI:SPEC-0001:TC-0001 *\/`, so blanking
+   * comments would stop it finding every real annotation while it went on
+   * reading ids out of string and regex literals (#1141). The lexer still
+   * WALKS the comment either way: skipping it is what keeps a `/` inside it
+   * from being read as a regex literal.
+   */
+  readonly comments?: boolean;
+};
+
+export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
+  const blankComments = options.comments ?? true;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
@@ -161,9 +177,11 @@ export function maskJsNonCode(source: string): string {
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
     if (ch === "/" && next === "/") {
-      i = blank(out, i, endOfLineComment(source, i));
+      const end = endOfLineComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "/" && next === "*") {
-      i = blank(out, i, endOfBlockComment(source, i));
+      const end = endOfBlockComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "'" || ch === '"') {
       i = blank(out, i, endOfQuoted(source, i, ch));
       endsExpression = true;
