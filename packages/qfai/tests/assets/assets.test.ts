@@ -11,8 +11,14 @@ import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
-import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
+import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
+import {
+  findRepositoryAttribution,
+  formatAttributionOffender,
+  isBinary,
+  listShippedAssistantFiles,
+} from "../helpers/repositoryAttribution.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -324,6 +330,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
             return null;
           }
           return `${path.relative(repoRoot, filePath)}: ${found.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("ensures shipped assistant prose never attributes a concrete artifact id to this repository", async () => {
+    // Every file under assistant/ is copied verbatim by `qfai init`, so
+    // "this repository" resolves to the consuming project. Pairing that phrase
+    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `CON-API-NNNN` id
+    // therefore asserts a fact about an artifact the consumer does not have.
+    //
+    // The matcher, the soft-wrap normalizer and the file list live in
+    // `tests/helpers/repositoryAttribution.ts`; what stays here is the scan of
+    // the shipped tree. `tests/assets/repositoryAttributionGuard.test.ts`
+    // covers the matcher's own behaviour, so the two cannot drift.
+    const assistantDir = path.join(templateQfaiDir, "assistant");
+    const files = await listShippedAssistantFiles(assistantDir);
+
+    const offenders = (
+      await Promise.all(
+        files.map(async (filePath) => {
+          const raw = await readFile(filePath);
+          if (isBinary(raw)) {
+            return null;
+          }
+          const found = findRepositoryAttribution(raw.toString("utf-8"));
+          return found === null ? null : formatAttributionOffender(repoRoot, filePath, found);
         }),
       )
     ).filter((result): result is string => result !== null);
