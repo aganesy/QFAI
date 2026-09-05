@@ -30,7 +30,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const CROSSWALK_HEADING = "### Routing Phase Crosswalk (Normative)";
-const NEXT_HEADING = "### Reviewer Gate (MUST)";
+// The crosswalk's own terminator, in the topic file that owns it. It used
+// to be the heading that happened to follow the section inside `SKILL.md`,
+// which stopped meaning anything once the section moved.
+const NEXT_HEADING = "### Crosswalk sources";
 const FIXED_ORDER_HEADING = "## Stage and Phase Order (Fixed)";
 
 /**
@@ -152,8 +155,25 @@ function crosswalkRows(skill: string): string[][] {
     .slice(2);
 }
 
-const readSddSkill = (tree: string): Promise<string> =>
-  read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+/**
+ * The skill's contract text and the crosswalk topic file, in that order.
+ *
+ * The crosswalk is normative but it is not contract text: it is detail, which
+ * is where a `SKILL.md` puts it (`assets.test.ts` — "move a topic into
+ * references/"), and `SKILL.md` points at it rather than restating it. This
+ * guard's subject spans both — the table lives in the topic file, the fixed
+ * order it partitions lives in `SKILL.md` — so it reads both. Skill first, so
+ * a section extraction still ends at the next `SKILL.md` heading rather than
+ * running into the appended file.
+ */
+const readSddSkill = async (tree: string): Promise<string> => {
+  const [skill, crosswalk] = await Promise.all([
+    read(tree, "assistant/skills/qfai-sdd/SKILL.md"),
+    read(tree, "assistant/skills/qfai-sdd/references/sdd-routing-phase-crosswalk.md"),
+  ]);
+  return `${skill}
+${crosswalk}`;
+};
 
 describe.each(QFAI_TREES)("%s — qfai-sdd routing phases resolve to fixed-order phases", (tree) => {
   it("gives every routing phase ID exactly one crosswalk row", async () => {
