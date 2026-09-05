@@ -2425,6 +2425,78 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(layout).toContain(".qfai/review/.legacy-packs");
   });
 
+  it("lets one pack cover a whole T1 coherent group", async () => {
+    // The pack rule read "One pack per review round for one `TDD-ID`" while
+    // `volume-policy.md#batched-review` makes a T1 group one review round over
+    // several rows, so the batched round had no legal artifact: one pack per
+    // member asserts rounds that never happened, one pack naming every member
+    // contradicted the layout as written. The round is one turn *per required
+    // reviewer*, not one turn in total — reading it as a single agent call
+    // leaves gate items 3/5/7/8 without their verdicts.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "One pack per review round. A round covers one `TDD-ID`, or the members of one T1 coherent group (`volume-policy.md#batched-review`).",
+    );
+    expect(layout).toContain("name the round's `TDD-ID`s in `review_request.md` as a **list**");
+    expect(layout).toContain(
+      "A T1 group review is **one round**, not one turn per member — and not one turn in total.",
+    );
+    expect(layout).toContain(
+      "Each reviewer this pack carries (`completion-reviewer`, `implementation-reviewer`, and `product-surface-reviewer` where item 9 applies) takes **one** turn over the whole group",
+    );
+    // The pack is items 7-9. Naming `qa-gatekeeper` here is what put an
+    // observation into an artifact that cannot hold one.
+    expect(layout).not.toContain("required reviewer (`qa-gatekeeper`");
+    expect(layout).toContain(
+      "Those turns share **one** pack: one `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in `summary.json`.",
+    );
+    expect(layout).toContain(
+      "Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the same `review-<timestamp>/` directory **for that round**.",
+    );
+    expect(layout).not.toContain("One pack per review round for one `TDD-ID`");
+    // A group round is not a single agent call.
+    expect(layout).not.toContain("is **one** reviewer turn");
+  });
+
+  it("keeps the group's RED and GREEN observations out of the review pack", async () => {
+    // The T1 bullet claimed the pack carried "gate items 3, 5, 7 and 8", so one
+    // `qa-gatekeeper` turn had to hold both the RED and the GREEN — two
+    // observations at two revisions (item 3 names `RED revision`, items 5/7/8
+    // name `Revision`) in an artifact declaring a single top-level `revision`
+    // (`src/core/validators/reviewArtifacts.ts`). Sealing the RED into a pack of
+    // its own does not fix it either: a serial T1 group reaches RED on a
+    // different tree per member, and a row carries one `Round N: Review pack
+    // seal`. The pack is items 7-9 (line 1 of this file); the observations are
+    // phase-authored fields of each member row's evidence entry, which is
+    // per-row and per-round by construction.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "**`qa-gatekeeper` is not in the pack, and gate items 3 and 5 are not pack verdicts.**",
+    );
+    expect(layout).toContain("This layout covers items 7-9");
+    // Where the two observations actually live, per member row.
+    expect(layout).toContain(
+      "records them as **phase-authored fields of each member row's own entry** — `Round N: RED revision`",
+    );
+    expect(layout).toContain(
+      "distinct fields at distinct revisions **on the row that was observed**",
+    );
+    expect(layout).toContain(
+      "a group whose members reach RED on different trees records each one truthfully and neither can overwrite the other",
+    );
+    // Batching the gatekeeping does not batch the record.
+    expect(layout).toContain(
+      "a batched confirmation still writes one RED and one GREEN record per member row",
+    );
+    // And the shape this must not become.
+    expect(layout).toContain("Do not seal a RED into a `review-<timestamp>/`");
+    expect(layout).not.toContain("the group's RED confirmation is sealed in its own");
+  });
+
   it("gives the implementation reviewer the subject it hashes", async () => {
     // It records its own `Audited evidence hash` over the row s phase-authored
     // fields, and those live in an evidence file the diff does not carry.

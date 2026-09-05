@@ -12,12 +12,40 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
 └── summary.json                             # required
 ```
 
-- One pack per review round for one `TDD-ID`. Do not nest `<scope>/<layer>/attempt-NN/`
+- One pack per review round. A round covers one `TDD-ID`, or the members of one T1 coherent group
+  (`volume-policy.md#batched-review`). Do not nest `<scope>/<layer>/attempt-NN/`
   directories under `.qfai/review/` — that layout is not validated and packs written there are
   invisible to `npx qfai validate`.
 - The scope of the pack is recorded **inside** the artifacts, not in the directory name. In
-  `summary.json` set `target.kind: "spec"` and `target.path` to the spec dir, and name the
-  `TDD-ID` in `review_request.md`.
+  `summary.json` set `target.kind: "spec"` and `target.path` to the spec dir, and name the round's
+  `TDD-ID`s in `review_request.md` as a **list** — one id for a T2 or T3 row, the group's whole
+  membership for a T1 coherent group, written as the single block `volume-policy.md#batched-review`
+  already requires of the evidence file. The verdict then carries one `Audited evidence hash` per
+  listed id (`shared-skill-delegation-baseline.md#reviewer-response-template`).
+- A T1 group review is **one round**, not one turn per member — and not one turn in total. Each
+  reviewer this pack carries (`completion-reviewer`, `implementation-reviewer`, and
+  `product-surface-reviewer` where item 9 applies) takes **one** turn over the whole group, as
+  `volume-policy.md#batched-review` requires, so that gate items 7, 8 and 9 all have their
+  verdicts. Those turns share **one** pack: one `R0N_<reviewer-id>.md` per reviewer inside it, and
+  one `reviewers[]` entry each in `summary.json`. Do not write a pack per member: N packs assert N
+  rounds, N-1 of which never happened, each holding a copy of the same verdict. Every member row's
+  `Review pack seal` at gate item 10 is therefore the same seal over the same
+  `review-<timestamp>/` directory **for that round**.
+- **`qa-gatekeeper` is not in the pack, and gate items 3 and 5 are not pack verdicts.** This
+  layout covers items 7-9, as the first line of this file says; the RED and the GREEN are
+  _observations_, and the per-item evidence contract records them as **phase-authored fields of
+  each member row's own entry** — `Round N: RED revision`, `RED command` / `RED result` /
+  `RED failure mode`, then `Revision`, `GREEN command` / `GREEN result` and `Oracle proof`
+  (`SKILL.md#per-item-evidence-contract-fresh-evidence-required`). Only the three reviewers above
+  appear under _Gate-completed_. That is what keeps the two observations apart without a second
+  pack: they are distinct fields at distinct revisions **on the row that was observed**, so a group
+  whose members reach RED on different trees records each one truthfully and neither can overwrite
+  the other. `volume-policy.md` batches the _gatekeeping_ — "confirms RED/GREEN once per coherent
+  group" — but a batched confirmation still writes one RED and one GREEN record per member row, and
+  the RED is still taken while no production code exists (Handoff Contracts step 2). Do not seal a
+  RED into a `review-<timestamp>/`: a pack declares one `revision` and a row carries one
+  `Round N: Review pack seal`, so a pack can hold neither several members' RED revisions nor a
+  second seal beside the round's own.
 - Say which stage wrote the pack: `producer: "implement"` in `summary.json`, and a
   `- Producer: implement` line in `review_request.md`. Both, because `summary.json` is written
   last — the request line is the only thing that answers the question while the pack is in
