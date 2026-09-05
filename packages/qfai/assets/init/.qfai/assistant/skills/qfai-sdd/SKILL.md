@@ -59,7 +59,7 @@ Before any spec edit:
 1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).
 2. Classify each REQ/NFR into one of the 8 operations using `_policies/11_Slice-Policy.md`:
    - **CREATE / DELETE / SPLIT / MERGE / SUPERSEDE** (top-level, approval required)
-   - **UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE** (UPDATE:REMOVE also requires approval). The colon-separated form (no space) is the canonical SSOT used by validators (`QFAI-TRIAGE-003`/`004`) and `references/sdd-triage.md`.
+   - **UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE** (UPDATE:REMOVE also requires approval). The colon-separated form is **prose shorthand** for the operation pair, never a cell value. In the Triage table the pair occupies **two cells**: `Operation` = `UPDATE`, `Sub-op` = `APPEND` / `MODIFY` / `REMOVE`. Writing `UPDATE:APPEND` into the `Operation` cell fails `QFAI-TRIAGE-003`. Row shape: `references/sdd-triage.md` (`## Triage table format`).
 3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md`, then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
 4. Obtain AskUserQuestion approval for every approval-required row.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).

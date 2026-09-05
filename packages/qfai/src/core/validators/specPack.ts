@@ -1183,7 +1183,7 @@ function validateTriageRows(
           "triage.operation",
           [opCell],
           "canonical",
-          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。`,
+          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。UPDATE:APPEND のようなコロン形式は散文上の略記であり、セル値ではありません。Operation に UPDATE を、Sub-op に APPEND / MODIFY / REMOVE を分けて記載してください。`,
         ),
       );
       continue;

@@ -83,6 +83,16 @@ describe("validateTriageSection", () => {
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
   });
 
+  it("QFAI-TRIAGE-003 points a colon-form Operation at the Sub-op cell", () => {
+    // The colon form is prose shorthand only. Repairing from the old hint
+    // alone dropped the sub-op and landed the author on QFAI-TRIAGE-004.
+    const text = buildDelta([["REQ-1", "subject", "spec-0001", "UPDATE:APPEND", "-", "-", "-"]]);
+    const issues = validateTriageSection(text, DELTA_PATH);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-003"]);
+    expect(issues[0]?.suggested_action).toContain("Sub-op");
+    expect(issues[0]?.suggested_action).toContain("APPEND / MODIFY / REMOVE");
+  });
+
   it("emits QFAI-TRIAGE-004 when UPDATE has invalid Sub-op", () => {
     const text = buildDelta([["REQ-1", "subject", "spec-0001", "UPDATE", "PATCH", "-", "-"]]);
     const issues = validateTriageSection(text, DELTA_PATH, TOOL_VERSION);
