@@ -208,6 +208,23 @@ export const RULE_PROMOTIONS = {
    * these on the release that introduces the code.
    */
   tddListEvidenceAnchorUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+
+  /**
+   * `QFAI-TDDLIST-009` — the row's `Revision` names a tree that files the
+   * observation covered have moved past.
+   *
+   * `evidence-revision.md#what-makes-evidence-stale` has always defined
+   * staleness mechanically, and nothing computed it: the field was written by
+   * hand, required in three places, and compared against nothing (#1146). So
+   * every project carries whatever stale revisions it has accumulated, by
+   * construction — an immediate `error` would fail gates over a backlog nobody
+   * has been told about, which is exactly what this window is for.
+   *
+   * After the window the severity splits by status: `error` at `refactor` /
+   * `done` / `review-fix`, `warning` earlier. A row still moving is expected to
+   * re-take; a row at rest is making a claim.
+   */
+  tddListEvidenceRevisionStale: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

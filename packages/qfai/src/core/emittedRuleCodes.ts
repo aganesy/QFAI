@@ -308,6 +308,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-TC-001",
   "QFAI-TDDLIST-007",
   "QFAI-TDDLIST-008",
+  "QFAI-TDDLIST-009",
   "QFAI-TEST-001",
   "QFAI-TEST-002",
   "QFAI-TEST-003",

@@ -46,6 +46,7 @@
     "tests/cli/validateRunIncomplete.test.ts",
     "tests/cli/prototypingRescope.test.ts",
     "tests/cli/prototypingRescopeCrashWindow.test.ts",
+    "tests/core/evidenceRevisionStale.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
     "tests/core/bpApDb.test.ts",

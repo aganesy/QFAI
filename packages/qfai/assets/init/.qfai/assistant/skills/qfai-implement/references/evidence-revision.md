@@ -283,6 +283,18 @@ Consequences:
   the observation; do not carry the verdict forward because "the change was
   unrelated". Whether it was unrelated is exactly the judgement the evidence
   exists to remove.
+- **Compute it as an interval, from the revision the observation NAMES to now**
+  — not as "did anything change since my last commit?", which is a different
+  and much weaker question:
+
+  ```bash
+  git diff --name-only <the revision this observation names>..HEAD -- src tests
+  ```
+
+  A non-empty result means re-take before submitting. The wrong baseline is the
+  reading that produces a stale field, and it produces one that looks exactly
+  like a fresh one.
+
 - **Read that bullet by what it says: _any file the observation covered_.** A commit that changes only
   the record — this evidence file, the ledger's `Status` / `DR-ID` / `Evidence` cells — covers no file
   any observation ran against, so it does not stale one. This is what allows an item's anchors to be
