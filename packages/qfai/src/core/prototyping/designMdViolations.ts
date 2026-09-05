@@ -64,6 +64,15 @@
  * `generator-prompt.md` states the same contract for the generator; as the
  * paired halves of that SSOT, the two move together.
  *
+ * Consumption: the violations this scanner returns are persisted as the
+ * `designMdViolations` array of `iter-NN/review.json`, which the generator
+ * reads back on every post-seed cycle (`generator-prompt.md#read-order`,
+ * item 4). That prompt line also states the cycle range it applies to, and
+ * the range is owned by `MAX_ITERATION_INDEX` in `./iteration.ts` — the
+ * single source for the iteration budget. Neither surface may restate the
+ * number independently; a correction on the prompt side is a correction of
+ * a restatement, not of this scanner's contract.
+ *
  * Both trees are written by the CLI the prompt prescribes: the capture fan-out
  * by `npx qfai prototyping iterate --capture`, and this scanner runs under
  * `npx qfai prototyping certify`. `npx` is not cosmetic — qfai is a project
