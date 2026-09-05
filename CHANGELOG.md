@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`.qfai/steering/_templates/entry.md` の seed が formatter を通ると必ず drift
+  するのをやめた。** frontmatter の trailing comment を桁揃えしていたが、Prettier は
+  YAML の `#` 直前の連続スペースを潰す。seed は create-only で、re-init は seed と
+  byte 単位で突き合わせるため、adopter が一度でも `prettier --write` を掛けると
+  **本人が触っていないファイルについて** `_templates/entry.md differs from the seed
+this qfai release generates` が以後ずっと出続ける。毎回出る通知は読み飛ばされる
+  ようになり、本物の seed 変更を伝えるという通知本来の役目が失われる。
+
+  桁揃えをやめ、`#` の前を 1 スペースに統一した。コメントの中身は変えていない。
+
 ### Added
 
 - **依存更新 PR を GitHub 上で自動生成する仕組み。** `.github/workflows/renovate.yml`
