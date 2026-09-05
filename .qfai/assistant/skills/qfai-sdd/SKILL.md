@@ -352,17 +352,28 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)
-- `spec-*/16_Traceability-ledger.md` when the spec's `BR-*` / `AC-*` are linked to implementation
-  files (optional artifact; create or refresh it in the same change as the BR/AC it links, from
-  `templates/specs/spec/16_Traceability-ledger.md`). Without it `QFAI-TRACE-002` is emitted and the
-  BR/AC ↔ implementation integrity check (`QFAI-TRACE-001`) is skipped for that spec. See
-  `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 - Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight/run-<timestamp>/preflight_summary.md`, plus the `.qfai/report/preflight_summary.md` pointer
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
+
+## Optional Outputs
+
+Not owed by every run. Leaving one out is a valid outcome, so neither this skill's gate nor the
+completion reviewer treats an absent entry as unfinished work.
+
+- `spec-*/16_Traceability-ledger.md` — opt in per spec when its `BR-*` / `AC-*` should be held to
+  implementation drift. The check is per spec, not per row: once the spec's
+  `03_Acceptance-Criteria.md` or `04_Business-Rules.md` changed on the branch, `QFAI-TRACE-001`
+  (`error`) fires for every ledger row whose linked implementation file is unchanged — not only the
+  rows whose BR/AC you edited. A spec without one is valid: `QFAI-TRACE-002` (`warning`) records the
+  opt-out and the integrity check is skipped for that spec. Both findings belong to the `tdd` gate
+  group, so neither appears under the `--profile sdd` run this skill stops on. Create it from
+  `templates/specs/spec/16_Traceability-ledger.md`, and refresh an existing one — rows added,
+  removed, renumbered — in the same change as the BR/AC it links: a BR/AC with no row is never
+  checked. See `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 
 ## Phase 0 DESIGN.md Freeze (visual-prototyping surfaces only)
 
