@@ -65,11 +65,57 @@ separate.
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
 `TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
 
+**Both columns are seeded, not hand-added.** `/qfai-sdd` Phase 2b writes one
+`Layer = E2E` row per active `US-*` and one `Layer = API` row per active
+`CON-API-*` the spec owns, and the shipped ledger template carries the two
+columns in its header for exactly that reason — a row of that layer with nowhere
+to record its obligation is unverifiable, and `validateObligationColumn` reads an
+absent column as "this row carries no such obligation". "Active" is the
+`test-layers.md` exemption: a spec with no user-facing surface owes no `US-*`
+row and a contract at `x-qfai-status: planned` owes no API row, so seeding
+either would park a completion-prohibiting row on a test that must not be
+written. **The surface half is itself conditional**: `QFAI-ATDD-111` is scoped
+by surface type **only in a project that declares at least one UI-bearing
+spec**. Where surface typing is unused the obligation stays project-wide, so
+every `US-*` is active and owes a row — reading that exemption unconditionally
+in such a project drops every E2E row and leaves the gate with nothing to
+clear it. And because that condition is a property of the **project**, a
+`/qfai-sdd` run that adds its first surface signal or removes its last re-runs
+the E2E-row delta over every spec's ledger, not only the spec it targeted.
+
+**A seeded acceptance row's `Test file` and `Selector` are `-` until Phase Red
+step 3b writes them.** Phase 2b seeds the row before the acceptance test exists
+and invents no path for it, and `/qfai-atdd` — which authors the test — never
+writes this ledger; so the path and selector first exist in that stage's handoff
+entry, as the row identity, and this skill copies both into the row in the same
+edit that moves it out of `todo`. That is why the `Test file` existence check
+below starts at `green` and not at `todo`: a seeded row legitimately has no test
+file yet. Naming no writer for the two cells left them at `-` for the row's
+whole life, so the row could be selected, handed over and never run.
+
 The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
 so a forbidden placement cannot close a coverage-target TC.
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` likewise rejects a `US-Refs` /
-`CON-API-Refs` value on a layer that does not own it.
+`CON-API-Refs` value on a layer that does not own it, and — on a ledger whose
+header carries the column — an `E2E` / `API` row that leaves it empty or `-`.
+That last direction is what stops a seeded obligation row from reaching `done`
+with nothing recorded: `TC-Refs` is forbidden on it, so an empty obligation
+cell leaves the row with no auditable target at all. It fires only where the
+column exists, so an eight-column ledger written before these columns shipped is
+a legacy shape, not an error.
+
+**A legacy ledger needs a reader rule, not only that waiver.** Its `E2E` / `API`
+rows recorded their `US-*` / `CON-API-*` in `TC-Refs`, the only cell they had;
+waiving the validator alone leaves such a row selectable but with nothing in the
+column Phase Red step 3 and the per-item evidence contract read, so it stops at
+the handoff. Until the columns exist, read a non-`TC-*` obligation token in
+`TC-Refs` as that row's obligation — the row's `Layer` says which kind it is —
+and record it as the `US-ref` / `CON-API-ref` the evidence contract names. This
+fallback is for reading an existing ledger, never for writing one: the next
+`/qfai-sdd` Phase 2b reseed migrates the ledger, adding both columns and moving
+each token into the one its `Layer` owns as a cell move that keeps `Status`,
+`DR-ID` and `Evidence`.
 
 A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
 without a legal `Layer` the row has no obligation column. Coverage counting
@@ -137,10 +183,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                          | Severity            |
-| ------------------------------ | ------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning             |
+| Finding                        | Fires when                                                                              | Severity            |
+| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -170,6 +218,13 @@ retained, then point the cell at that entry. The cell stays a pointer — prose
 about a missing run is a payload, and the section above says why a payload in
 the cell corrupts the ledger.
 
+`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
+code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
+check hangs off the anchor, so a `done` row whose cell is only an outcome —
+command-shaped, so the status-only rule passes over it — claimed completion with
+no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
+failing on warnings; one still migrating waives it per path.
+
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
 `TDDLIST_EXCEPTION_MISSING_DR` gates.
@@ -180,7 +235,9 @@ with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
 A pointer cell satisfies these rules: the `evidence at <path>` form carries a
 path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer.
+bare verdict, not a pointer. The pointer is also resolved against the file its
+row `Layer` owns; a file that exists only on the machine that produced it does
+not satisfy the gate on a fresh clone.
 
 ## Selector granularity (MUST)
 
@@ -305,7 +362,17 @@ RED question different rather than absent.
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
 no backend or frontend agent. The surface a journey needs is built by this
-skill's Phase Green, from the RED that stage handed over. What makes the RED
+skill's Phase Green, from the RED that stage handed over.
+
+**Who writes the production code for an E2E/API row.** Normally nobody writes
+it _for that row_: the behaviour the journey exercises is delivered by the same
+spec's `TC-*` rows, which this skill executes on their own micro-cycles. The
+E2E/API row is a **coverage obligation** — it asserts that the delivered
+behaviour is reachable end to end, or that the contract is exercised — not the
+sole carrier of a feature. Reading it as the carrier leaves the row with no
+implementer, because `/qfai-atdd` has no production agent. Where the journey
+does reach a gap no TC row covers, Phase Green of **this** row closes it, and
+`red-not-observable.md`'s falsifiability path is what supplies the RED. What makes the RED
 question different there is ordering, not ownership: the work orders that build
 a spec's surfaces often run before the journey is written, and a test written
 after its surface passes on the first run. So:

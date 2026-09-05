@@ -127,7 +127,7 @@ Rules:
 
 When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `shared-skill-delegation-baseline.md#verdict-vocabulary`):
 
-- inspect exit code, logs, `validate.json`, and cited files before reporting;
+- inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skills/qfai-verify/references/validate-json-schema.md`);
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
 - fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
 - **upstream spec/contract findings: never repair.** STOP and follow `.qfai/assistant/constitution/drift-protocol.md` (Change Request + owner-skill rerun) — **even when the fix looks local and non-destructive, and even when it is one token and obviously correct**. "Local and non-destructive" is a permission for the two classes above it; it is not a test that upstream artifacts can pass. Ownership, not size, decides;
@@ -136,7 +136,7 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
 - stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
-- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `shared-skill-delegation-baseline.md#round-budget-must`.
+- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `review-convergence.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 

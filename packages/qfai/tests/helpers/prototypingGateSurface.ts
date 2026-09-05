@@ -25,6 +25,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { withoutComments } from "./sourceReduction.js";
 
 /** tests/helpers/<this file> -> packages/qfai */
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -85,30 +86,16 @@ export type GateSurface = {
 
 /**
  * Blank out comments, preserving offsets and line structure, so a code merely
- * NAMED in prose is never counted as emitted. String and template literals are
- * tracked so a `//` inside a string is not mistaken for a comment.
+ * NAMED in prose is never counted as emitted.
+ *
+ * Delegates to the shared reduction (#1089). The hand-rolled scan this replaced
+ * tracked strings and templates but not regular expressions, so a regex whose
+ * body held a backtick opened a phantom template — comment prose then leaked
+ * into the text this returns, in 8 of the 264 modules under `src/core`, which
+ * is exactly the "named in prose" case the paragraph above promises to exclude.
  */
 export function stripComments(source: string): string {
-  let out = "";
-  let i = 0;
-  while (i < source.length) {
-    const two = source.slice(i, i + 2);
-    if (two === "//") {
-      const end = source.indexOf("\n", i);
-      const stop = end === -1 ? source.length : end;
-      out += " ".repeat(stop - i);
-      i = stop;
-    } else if (two === "/*") {
-      const end = source.indexOf("*/", i + 2);
-      const stop = end === -1 ? source.length : end + 2;
-      out += source.slice(i, stop).replace(/[^\n]/g, " ");
-      i = stop;
-    } else {
-      const consumed = copyStringLiteral(source, i, (text) => (out += text));
-      i += consumed;
-    }
-  }
-  return out;
+  return withoutComments(source);
 }
 
 /** Copy one char, or a whole string/template literal, to `sink`. */
