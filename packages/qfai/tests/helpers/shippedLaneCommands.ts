@@ -1281,16 +1281,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // failure message: the point of the pin is that somebody looked at the block.
   [".gitignore", "e56620ef701cc655a4a52e7ef437f2beee6b06a587f9b4011d6c591fc1cbdfac"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  [
-    // Re-pinned when the `forbidTestTodoStubs` comment stopped calling the opt-out's waiver a
-    // requirement. `validateTestTodoStubs` returns `[]` the moment the flag is false and no field
-    // on `QfaiValidationConfig` carries a DR-ID, so the shipped file promised an enforcement that
-    // does not exist; it now says the waiver is a governance step the gate will not catch. Comment
-    // lines only — the key set this file ships is unchanged, which
-    // `initAssetsRootMirror.test.ts` asserts separately against the loader.
-    "qfai.config.yaml",
-    "d8ac45bb3c24c74bd140e29fe6ae44d79ec552e25675e1c09b3b9c583afeac80",
-  ],
+  // Re-derived for the MERGED file, which carries both sides' edits: the three
+  // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
+  // `scNoTestSeverity`, `orphanContractsPolicy`) AND the `forbidTestTodoStubs`
+  // comment no longer calls the opt-out's waiver a requirement. Neither
+  // predecessor's digest describes what ships, and the map is keyed by file
+  // name, so this is one pin rather than two.
+  //
+  // Derived by running `qfai init` into the E2E's temp root and reading what it
+  // wrote, which is how both predecessors were derived — not copied from a
+  // failure message.
+  ["qfai.config.yaml", "6c9016bf3fdc6c4704219b9c57bceb0d37871277ca122b102daa8a72f152bc3a"],
 ]);
 
 /**

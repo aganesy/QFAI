@@ -144,6 +144,7 @@
     "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
+    "tests/unit/config-keys-are-wired.test.ts",
     "tests/unit/core/doctor/assetLineBudget.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",

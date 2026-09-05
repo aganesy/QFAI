@@ -21,7 +21,6 @@ validation:
     # review ourselves; `qfai validate` will not ask for one.
     forbidTestTodoStubs: true
   traceability:
-    brMustHaveSc: true
     scMustHaveTest: true
     testFileGlobs:
       - tests/**/*.test.ts
@@ -35,8 +34,6 @@ validation:
       - features/**/*.feature
       - packages/*/features/**/*.feature
     testFileExcludeGlobs: []
-    scNoTestSeverity: error
-    orphanContractsPolicy: error
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json

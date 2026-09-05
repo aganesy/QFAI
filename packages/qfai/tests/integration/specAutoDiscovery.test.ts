@@ -52,12 +52,9 @@ const stubConfig: QfaiConfig = {
       maxE2eScenarioCount: null,
     },
     traceability: {
-      brMustHaveSc: true,
       scMustHaveTest: true,
       testFileGlobs: ["**/*.test.ts"],
       testFileExcludeGlobs: [],
-      scNoTestSeverity: "error",
-      orphanContractsPolicy: "error",
       unknownContractIdSeverity: "error",
     },
   },

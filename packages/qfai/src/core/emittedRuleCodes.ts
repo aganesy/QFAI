@@ -82,6 +82,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-BPAP-010",
   "QFAI-BPAP-011",
   "QFAI-BPAP-012",
+  "QFAI-CFG-001",
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-002",
   "QFAI-CFG-LINK-003",

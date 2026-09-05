@@ -314,7 +314,6 @@ validation:
     testFileExcludeGlobs:
       - "**/fixtures/**"
     scMustHaveTest: true
-    scNoTestSeverity: warning # error | warning
 ```
 
 Notes.
@@ -331,6 +330,8 @@ Notes.
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
 - `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
   Put calibration values in the referenced pack instead of `qfai.config.yaml`.
+- `validation.traceability.brMustHaveSc`, `scNoTestSeverity`, and `orphanContractsPolicy` were retired: no validator ever read them.
+  They are still accepted so an existing config keeps loading, but `qfai validate` reports each one still present as deprecated and inert.
 - Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)

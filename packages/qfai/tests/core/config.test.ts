@@ -1,11 +1,13 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { loadConfig, type QfaiValidationConfig } from "../../src/core/config.js";
-import { SUNSETS } from "../../src/core/sunset.js";
+import { RULE_PROMOTIONS, SUNSETS, newRuleSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
@@ -349,6 +351,92 @@ describe("testStrategy key surface", () => {
       const resolved: boolean = config.validation.testStrategy.requireSizeTags;
       expect(resolved).toBe(false);
       expect(config.validation.testStrategy.requireLayerTags).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("retired validation.traceability keys", () => {
+  it("reports every retired key still present as deprecated and inert", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "validation:",
+          "  traceability:",
+          "    brMustHaveSc: false",
+          "    scNoTestSeverity: warning",
+          "    orphanContractsPolicy: allow",
+          "    scMustHaveTest: false",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+
+      const deprecated = issues.filter((issue) => issue.code === "QFAI-CFG-001");
+      // Severity is the central promotion pin's, not a literal: warning
+      // inside the window, error from
+      // `RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt`. P7 keys the
+      // window on the finding code, and `QFAI-CFG-001` is new even
+      // though the config shape it names is old.
+      const { promoteAt } = RULE_PROMOTIONS.retiredTraceabilityKeys;
+      const expected = newRuleSeverity(await resolveToolVersion(), promoteAt);
+      expect(deprecated.map((issue) => issue.severity)).toEqual([expected, expected, expected]);
+      for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
+        expect(
+          deprecated.some((issue) => issue.message.includes(`validation.traceability.${key}`)),
+          `expected a deprecation warning naming ${key}`,
+        ).toBe(true);
+      }
+      // The window's end is stated to the operator, not just enforced silently.
+      expect(deprecated.every((issue) => issue.message.includes(promoteAt))).toBe(true);
+      // The retired keys must not be rejected outright: an existing config still loads,
+      // and the key that is actually wired keeps its effect.
+      expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);
+      expect(config.validation.traceability.scMustHaveTest).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the retired keys as deprecated optional types for existing consumers", async () => {
+    // Dropping a key from the runtime config is safe (an old YAML still loads); dropping it
+    // from the exported types is not — a consumer importing `OrphanContractsPolicy` or
+    // building a `QfaiConfig` literal would stop compiling on upgrade. The compat surface
+    // must outlive the runtime removal, so it is guarded here rather than left to review.
+    const configSource = await readFile(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../src/core/config.ts"),
+      "utf-8",
+    );
+
+    expect(configSource).toMatch(/export type OrphanContractsPolicy =/);
+    for (const declaration of [
+      "brMustHaveSc?: boolean;",
+      "scNoTestSeverity?: TraceabilitySeverity;",
+      // The field points at the internal union, not the `@deprecated` public
+      // alias: referencing the alias here is what forced an
+      // `eslint-disable-next-line @typescript-eslint/no-deprecated`.
+      "orphanContractsPolicy?: RetiredOrphanContractsPolicy;",
+    ]) {
+      expect(configSource, `expected a deprecated optional ${declaration}`).toContain(declaration);
+    }
+  });
+
+  it("stays silent when no retired key is present", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-clean-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["validation:", "  traceability:", "    scMustHaveTest: true", ""].join("\n"),
+        "utf-8",
+      );
+
+      const { issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

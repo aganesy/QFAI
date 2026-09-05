@@ -25,7 +25,6 @@ validation:
     # decision that needs a human reviewer, not one the gate will catch.
     forbidTestTodoStubs: true
   traceability:
-    brMustHaveSc: true
     scMustHaveTest: true
     # Intentionally empty: this matches the in-code default and must be set to the
     # repository's real test layout before the SC traceability gate means anything.
@@ -42,8 +41,6 @@ validation:
     #   Cucumber:   features/**/*.feature
     testFileGlobs: []
     testFileExcludeGlobs: []
-    scNoTestSeverity: error
-    orphanContractsPolicy: error
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json

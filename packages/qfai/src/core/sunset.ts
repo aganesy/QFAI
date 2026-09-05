@@ -255,6 +255,20 @@ export const RULE_PROMOTIONS = {
    * wiring assertion in `tests/core/sunsetLedger.test.ts`.)
    */
   steeringCatalogPlaceholders: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CFG-001` — a `validation.traceability` key that was
+   * declared, defaulted and parsed but that no validator ever read
+   * (`brMustHaveSc`, `scNoTestSeverity`, `orphanContractsPolicy`).
+   *
+   * The *shape* being retired is old, which is what a {@link SUNSETS} entry
+   * describes — but the finding code is new, and P7 keys on the code, because
+   * that is what an upgrade meets. Nothing warned about these keys before, so
+   * every config in the wild still carries whichever of them it was written
+   * with; at `error` on day one the rule would fail a repository for a knob
+   * this same change is what made inert. Per OC-63 the one-minor window opens
+   * at the release that starts warning and closes at the next minor.
+   */
+  retiredTraceabilityKeys: { introducedIn: "1.10.1", promoteAt: "1.11.0" },
 } as const;
 
 type FullSemver = {

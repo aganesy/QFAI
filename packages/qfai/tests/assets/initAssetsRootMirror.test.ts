@@ -140,6 +140,15 @@ describe("init assets root mirror", () => {
       const text = buffer.toString("utf-8");
       expect(text, `${label} qfai.config.yaml has no validation block`).toMatch(/^validation:/m);
       expect(text, `${label} qfai.config.yaml has no paths block`).toMatch(/^paths:/m);
+      // Retired `validation.traceability` knobs: parsed for backward
+      // compatibility but read by no validator, so shipping them advertises
+      // gates that never run. `qfai validate` now warns on each one still
+      // present — a seed that reintroduces them warns every fresh project.
+      for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
+        expect(text, `${label} qfai.config.yaml still ships retired key ${key}`).not.toMatch(
+          new RegExp(`^\\s*${key}:`, "m"),
+        );
+      }
     }
   });
 
