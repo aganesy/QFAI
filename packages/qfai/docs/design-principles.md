@@ -50,9 +50,21 @@ When a new validator is added, it MUST be:
 3. registered in the error-codes expected-message table in `cli/commands/validate.ts`.
 
 Enforcement: `tests/unit/validators-are-wired.test.ts` (added in Phase 2)
-fails CI if any prototyping validator export is not referenced from
-`validate.ts`. This is the primary defence against the Phase 1.8.3
-"executionPlan / delegationMap dead-code" failure mode.
+fails CI if any validator export under `src/core/validators/` is not invoked
+from the `validate.ts` symbol graph, which `tests/helpers/validatorGraph.ts`
+walks on the TypeScript AST. "Exported" covers all three forms —
+`export function validateX`, `export const validateX =` and
+`export { local as validateX }`. Wiring means an identifier in value position:
+a barrel re-export in `validators/index.ts`, an `import` declaration, a mention
+in a comment or inside a string, and a call sitting in a sibling export that
+nothing imports all fail to count — only a call or a registry reference does.
+An aliased import (`import { validateX as runX }`) is credited to `validateX`,
+so renaming at the import site is still wiring. The same test checks
+obligation 1 across the whole tree. This is the primary defence against
+the Phase 1.8.3 "executionPlan / delegationMap dead-code" failure mode.
+Validators that were already dead, or already missing their barrel re-export,
+when the guard was widened are grandfathered on the dated `PENDING_WIRING` /
+`BARREL_EXPORT_EXEMPT` lists in that file; both lists may only shrink.
 
 ## P5. "Completion" is an artifact
 
