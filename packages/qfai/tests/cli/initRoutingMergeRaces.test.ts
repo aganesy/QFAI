@@ -132,38 +132,53 @@ describe("the routing merge under concurrent writes", () => {
     });
   });
 
-  it("declines rather than taking over a manifest whose owner it cannot restore", async () => {
-    await withStaleRouting(async (root, stale) => {
-      const target = routingPath(root);
-      openSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
-        refuseStagingChown(actual)(...args),
-      );
+  // POSIX only, both rows below: `restoreOwnership` returns early with
+  // `if (process.platform === "win32") return true` — "Windows has no
+  // meaningful `fchown`", as `init.ts` says — so `handle.chown` is never
+  // called and `refuseStagingChown`'s simulated `EPERM` cannot happen. The
+  // decline then never triggers and the merge proceeds (#1133).
+  it.skipIf(process.platform === "win32")(
+    "declines rather than taking over a manifest whose owner it cannot restore",
+    async () => {
+      await withStaleRouting(async (root, stale) => {
+        const target = routingPath(root);
+        openSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+          refuseStagingChown(actual)(...args),
+        );
 
-      const output = await captureStdout(() =>
-        runInit({ dir: root, force: true, dryRun: false, yes: true }),
-      );
+        const output = await captureStdout(() =>
+          runInit({ dir: root, force: true, dryRun: false, yes: true }),
+        );
 
-      expect(await readFile(target, "utf-8")).toBe(stale);
-      expect(output).toContain("W-ROUTING-MANIFEST-UNREADABLE");
-      expect(output).toContain("cannot restore that ownership");
-      expect(output).not.toContain("I-ROUTING-PHASE-MERGED");
-    });
-  });
+        expect(await readFile(target, "utf-8")).toBe(stale);
+        expect(output).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+        expect(output).toContain("cannot restore that ownership");
+        expect(output).not.toContain("I-ROUTING-PHASE-MERGED");
+      });
+    },
+  );
 
-  it("leaves no staging file behind when it declines", async () => {
-    await withStaleRouting(async (root) => {
-      const target = routingPath(root);
-      openSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
-        refuseStagingChown(actual)(...args),
-      );
+  // Skipped for the same reason, and this one was the more dangerous of the
+  // two: on Windows it PASSED while verifying nothing, because no `.tmp` is
+  // left behind whether the decline happens or not. A green row that proves
+  // nothing has no failure to notice.
+  it.skipIf(process.platform === "win32")(
+    "leaves no staging file behind when it declines",
+    async () => {
+      await withStaleRouting(async (root) => {
+        const target = routingPath(root);
+        openSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+          refuseStagingChown(actual)(...args),
+        );
 
-      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+        await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
 
-      const leftovers = (await readdir(path.dirname(target))).filter((name) =>
-        name.endsWith(".tmp"),
-      );
-      expect(leftovers).toEqual([]);
-      expect((await lstat(target)).isFile()).toBe(true);
-    });
-  });
+        const leftovers = (await readdir(path.dirname(target))).filter((name) =>
+          name.endsWith(".tmp"),
+        );
+        expect(leftovers).toEqual([]);
+        expect((await lstat(target)).isFile()).toBe(true);
+      });
+    },
+  );
 });
