@@ -10,45 +10,6 @@ export const SIZE_TAGS = new Set(["size-s", "size-m", "size-l"]);
 export type LayerBucket = "unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown";
 export type SizeBucket = "s" | "m" | "l" | "none" | "unknown";
 
-export function evaluateStrategyTags(tags: string[]): {
-  layerTags: string[];
-  sizeTags: string[];
-  unknownLayerTags: string[];
-  unknownSizeTags: string[];
-  multipleLayerTags: boolean;
-  multipleSizeTags: boolean;
-  hasAnyTag: boolean;
-  isAdopted: boolean;
-} {
-  const layerTags = tags.filter((tag) => tag.startsWith("layer-"));
-  const sizeTags = tags.filter((tag) => tag.startsWith("size-"));
-  const unknownLayerTags = layerTags.filter((tag) => !LAYER_TAGS.has(tag));
-  const unknownSizeTags = sizeTags.filter((tag) => !SIZE_TAGS.has(tag));
-  const validLayerTags = layerTags.filter((tag) => LAYER_TAGS.has(tag));
-  const validSizeTags = sizeTags.filter((tag) => SIZE_TAGS.has(tag));
-  const multipleLayerTags = layerTags.length > 1;
-  const multipleSizeTags = sizeTags.length > 1;
-  const hasAnyTag = layerTags.length > 0 || sizeTags.length > 0;
-  const isAdopted =
-    validLayerTags.length === 1 &&
-    validSizeTags.length === 1 &&
-    layerTags.length === 1 &&
-    sizeTags.length === 1 &&
-    unknownLayerTags.length === 0 &&
-    unknownSizeTags.length === 0;
-
-  return {
-    layerTags,
-    sizeTags,
-    unknownLayerTags,
-    unknownSizeTags,
-    multipleLayerTags,
-    multipleSizeTags,
-    hasAnyTag,
-    isAdopted,
-  };
-}
-
 export function classifyLayer(tags: string[]): LayerBucket {
   const layerTags = tags.filter((tag) => tag.startsWith("layer-"));
   const validTags = layerTags.filter((tag) => LAYER_TAGS.has(tag));
