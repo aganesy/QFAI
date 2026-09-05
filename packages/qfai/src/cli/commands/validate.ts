@@ -991,128 +991,30 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
-  "QFAI-PROT-101":
-    "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-150": "prototyping.json exists at the canonical evidence path for UI prototyping.",
-  "QFAI-PROT-151": "surface must be one of web|mobile|desktop|mixed.",
-  "QFAI-PROT-152":
-    "mode.requested/mode.effective/mode.source/mode.rationale must follow the current prototyping evidence schema.",
-  "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, mixed.",
-  "QFAI-PROT-172":
-    "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
-  "QFAI-PROT-173": "required render evidence bundle is missing.",
-  "QFAI-PROT-174": "required browser QA bundle is missing.",
-  "QFAI-PROT-175":
-    "non-UI prototyping surface but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
-  "QFAI-PROT-176": "ui-bearing full-harness mode requires uiFidelity.",
-  "QFAI-PROT-177": "ui-bearing full-harness mode requires runtimeGate.",
-  "QFAI-PROT-111":
-    "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
-  "QFAI-PROT-112":
-    "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
-  "QFAI-PROT-153":
-    "iteration reviewer scores are malformed; every evaluation reviewer must score every axis with 0..100 and evidence refs.",
-  "QFAI-PROT-154": "iteration count exceeds the configured maximum for the effective mode.",
-  "QFAI-PROT-155":
-    "iteration stopReason is invalid; must be threshold-reached|max-iterations|manual-stop.",
-  "QFAI-PROT-156": "allReviewerAxesPerfect100 must be true when stopReason is threshold-reached.",
-  "QFAI-PROT-234": "unused legacy prototyping recommendation fields are not supported.",
-  "QFAI-PROT-235":
-    "legacy discussion recommendation fields are not supported in prototyping evidence.",
-  "QFAI-PROT-236": "explicit requested mode is invalid.",
-  "QFAI-PROT-237":
-    "interactive uiFidelity requires observed mockPaths issue ledger entries (fail|finding).",
-  "QFAI-PROT-238":
-    "uiFidelity does not satisfy UI contract coverage (screens empty or contract mismatch).",
-  "QFAI-PROT-241":
-    "uiFidelity screens must have no missing labels when expected.labels is present.",
-  "QFAI-PROT-242":
-    "uiFidelity screens must have no missing markers when expected.elements > 0 and markers are tracked.",
-  "QFAI-PROT-243":
-    "Placeholder/single-text pages are detected when expected elements > 2, observed <= 1, and found.labels <= 1.",
   "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
-  "QFAI-PROT-245":
-    "render coverage is incomplete for required default viewports or all renders are skipped.",
   "QFAI-PROT-251":
     "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
   "QFAI-PROT-252":
     "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
   "QFAI-PROT-253":
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
-  "QFAI-PROT-255": "captured render evidence screen references a file that does not exist on disk.",
-  "QFAI-PROT-256": "skipped/failed render evidence screen is missing required reason/error field.",
-  "QFAI-PROT-262":
-    "browser QA completed status without usable evidence (no summary and no findings).",
-  "QFAI-PROT-263":
-    "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
-  "QFAI-PROT-265": "full-harness calibration pack could not be resolved from packPath.",
-  "QFAI-PROT-266": "full-harness evidence exists but iteration reviewer scores are empty.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
   "QFAI-PROT-274":
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-270": "uiFidelity is required for full-harness UI prototyping but is absent.",
-  "QFAI-PROT-271": "uiFidelity.mode='skeleton' is not allowed in full-harness UI prototyping.",
-  "QFAI-PROT-272":
-    "uiFidelity screen is missing required fields (uiContractId, route, expected, observed).",
-  "QFAI-PROT-284": "emoji characters (U+1F000–U+1FAFF) are forbidden in full-harness output.",
-  "QFAI-PROT-285": "prototyping phase state machine is invalid for completion.",
-  "QFAI-PROT-286": "post-selection polish iteration evidence is missing for completion.",
-  "QFAI-PROT-287": "completion requires every reviewer axis score to be 100.",
-  "QFAI-PROT-288": "legacy 95-point completion marker is not a valid completion border.",
-  "QFAI-PROT-289": "completionCertificate is required when completion is claimed.",
-  "QFAI-PROT-292":
-    "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
   "QFAI-PROT-311":
     "executionPlan.delegationMap is present but is not an object, or one of its entries assigns a category to a role outside the SKILL.md Delegation Scope Table.",
-  "QFAI-PROT-318":
-    "runtimeGate/specCoverage evidenceRefs contain a non-concrete artifact reference.",
-  "QFAI-PROT-326": "runtimeGate.ui[].declaredRef must use the canonical screen contract sourceRef.",
-  "QFAI-PROT-327":
-    "fullHarness.iterations[].evidenceRefs.screenContract must use canonical screen contract refs.",
-  "QFAI-PROT-328":
-    "specs[].coverageRefs[].declaredRef must point to a spec declaration under .qfai/specs/.",
-  "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
-  "QFAI-PROT-330":
-    "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
-  "QFAI-PROT-331":
-    "fullHarness.scoringTrace[<n>].screenshotDir is missing or empty; full-harness requires screenshot evidence per iteration.",
-  "QFAI-PROT-332":
-    "Lighthouse gate is required for full-harness + web surface but no lighthouse report is present in prototyping.json.",
-  "QFAI-PROT-333":
-    "fullHarness.iterations: minimum 2 iterations required before convergence; iteration 1 cannot be marked converged.",
-  "QFAI-PROT-334":
-    "scoringTrace.designSystemCompliance is below the 0.75 threshold while 12_design_system.md is present in the calibration pack; immediate fix required for next iteration.",
   "QFAI-PROT-335":
     ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
-  "QFAI-PROT-277":
-    "prototyping.json rounds[].commitSha / polishCycles[].commitSha must contain a 40-character git commit SHA.",
-  "QFAI-PROT-278":
-    "prototyping.json must use a distinct commitSha for each prototyping round and polish cycle.",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primarySpecId points to a spec ID that does not exist under the configured specs directory.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":
     "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
-  "QFAI-PROT-REF-001":
-    "An xxxRef string in prototyping.json / review-bundle.json / breakthrough.json points to a file that does not exist on disk.",
-  "QFAI-PROT-LINK-001":
-    "prototyping.json.specs[].specId references a spec that does not exist under .qfai/specs/.",
-  "QFAI-PROT-LINK-002":
-    "review-bundle.json.spec references a spec that does not exist under .qfai/specs/.",
-  "QFAI-PROT-LINK-003":
-    "prototyping.json.rounds[].candidates[].candidateId has no corresponding artifact directory under .qfai/evidence/prototyping/rounds/<rN>/candidates/.",
-  "QFAI-PROT-LINK-004":
-    "prototyping.json.polishCycles[].cycle has no corresponding iteration directory under .qfai/evidence/prototyping/iterations/.",
-  "QFAI-PROT-AXIS-FLOOR-001":
-    "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
-  "QFAI-PROT-CONCEPT-001":
-    "Every active prototyping candidate must have a complete concept.json with differentiated design thesis and template-risk constraints.",
   "QFAI-UIE-001":
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":
@@ -1143,16 +1045,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
-  "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
-  "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
-  "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
-  "QFAI-BREAK-004": "breakthrough.json.triggerResult must be a boolean.",
-  "QFAI-BREAK-005": "breakthrough.json.triggerReasons must be an array of strings.",
-  "QFAI-BREAK-006": "breakthrough.json.avgScoreDeltas must be an array of numbers.",
-  "QFAI-BREAK-007": "breakthrough.json.diffLines must be a non-negative number.",
-  "QFAI-BREAK-008":
-    "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
-  "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so each carries a promotion window
   // (`core/sunset.ts`) and reaches `error` only at its pinned release. The
