@@ -23,6 +23,7 @@ import {
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
+import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
 // The short form carries `(?!-)`; the long form does not.
 //
@@ -49,6 +50,43 @@ import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 // annotation (`TC-0001-0002-foo`) still matches and is still reported as an
 // unknown reference. Trading a false report for a silent miss is the worse
 // direction in a validator.
+/**
+ * Extensions whose literals {@link maskTestSource} can blank.
+ *
+ * The scan walks whatever a project puts under its test roots. A JS lexer over
+ * a `.py` or `.rb` file would blank spans by JS's rules, and over-blanking here
+ * hides a real annotation — the one failure this must not introduce.
+ */
+const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+]);
+
+/**
+ * A test file's text with its string, template and regex literals blanked.
+ *
+ * Comments are kept, because an annotation is written in one. Without this the
+ * scanner could not tell a reference from an id a fixture holds as DATA — a
+ * generator suite, or a self-validating deferral ledger quoting the id it is
+ * about — and reported `QFAI-ATDD-101` / `-102` (`error`) against a file that
+ * never claimed the reference (#1141).
+ *
+ * `maskJsNonCode` replaces one character for one, so a match offset and the
+ * line a finding names are unchanged.
+ */
+function maskTestSource(file: string, text: string): string {
+  if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+    return text;
+  }
+  return maskJsNonCode(text, { comments: false });
+}
+
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
@@ -313,7 +351,7 @@ export async function evaluateAtddCodeTraceability(
       continue;
     }
 
-    const text = await readSafe(file);
+    const text = maskTestSource(file, await readSafe(file));
     const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
     const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
     const apiAnnotations = extractApiContractAnnotations(text);
@@ -534,7 +572,7 @@ async function collectUncountedTestFiles(
   }
   const annotated: string[] = [];
   for (const file of files) {
-    const text = await readSafe(file);
+    const text = maskTestSource(file, await readSafe(file));
     if (!ANY_QFAI_ANNOTATION.test(text)) continue;
     if (carriesOnlyExcludedAnnotations(text, tcLevels)) continue;
     annotated.push(toPosixPath(path.relative(root, file)));
