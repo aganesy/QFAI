@@ -22,10 +22,40 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { changedFilesSince } from "../../src/core/gitChanges.js";
-import { staleEvidenceFiles } from "../../src/core/validators/tddList.js";
+// The module is imported dynamically below so the mock applies, but its TYPE
+// comes from a static namespace import: `consistent-type-imports` forbids the
+// inline form, and a namespace is not itself a type, so `typeof` makes one.
+import type * as ChildProcessModule from "node:child_process";
+
+type ChildProcess = typeof ChildProcessModule;
+
+// Passed through, not stubbed: the fixtures build real repositories with it,
+// and the cache row counts the `git diff` invocations that reach it — which is
+// the property the cache exists for. `cache.size` is not: it is 1 after three
+// same-revision calls whether or not `cache.get` is consulted, so a row
+// asserting the size passed a cache that was written and never read.
+//
+// `vi.mock` rather than `vi.spyOn`: an ESM namespace export cannot be
+// redefined (`Cannot redefine property: execFileSync`).
+const { gitDiffArgs } = vi.hoisted(() => ({ gitDiffArgs: [] as string[][] }));
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<ChildProcess>();
+  return {
+    ...actual,
+    execFileSync: (...args: unknown[]) => {
+      if (args[0] === "git" && Array.isArray(args[1]) && args[1][0] === "diff") {
+        gitDiffArgs.push(args[1] as string[]);
+      }
+      return (actual.execFileSync as unknown as (...a: unknown[]) => unknown)(...args);
+    },
+  };
+});
+
+const { changedFilesSince } = await import("../../src/core/gitChanges.js");
+const { staleEvidenceFiles } = await import("../../src/core/validators/tddList.js");
 
 const dirs: string[] = [];
 
@@ -243,6 +273,73 @@ describe("staleEvidenceFiles", () => {
         "tests/integration/lease.test.ts",
       ),
     ).toEqual(["src/lease.ts"]);
+  });
+
+  it("asks git once per revision, not once per row", async () => {
+    // Two git processes per ledger row cost ~200 ms each here — 104 invocations
+    // for 52 rows, ~10.5 s — and rows share revisions, because an observation
+    // revision is per spec and per round rather than per row. Without this a
+    // 500-row project would add ~100 s to the completion gate.
+    //
+    // Counted at `execFileSync`, because that is the cost. An earlier version of
+    // this row asserted `cache.size`, which is 1 after three same-revision calls
+    // whether or not `cache.get` is consulted — it passed a cache that was
+    // written and never read.
+    const { root, head } = await repoAtOneCommit();
+    await commit(root, "src/lease.ts", "export const rate = 2;\n");
+    const cache = new Map<string, ReturnType<typeof changedFilesSince>>();
+
+    gitDiffArgs.length = 0;
+    for (const testFile of ["a.test.ts", "b.test.ts", "c.test.ts"]) {
+      staleEvidenceFiles(root, "src", section(head), `tests/integration/${testFile}`, cache);
+    }
+
+    expect(gitDiffArgs).toHaveLength(1);
+    expect(cache.size).toBe(1);
+  });
+
+  it("keeps a second revision separate", async () => {
+    // The direction a cache keyed on nothing would break: two revisions must
+    // not share an answer.
+    const { root, head } = await repoAtOneCommit();
+    await commit(root, "src/lease.ts", "export const rate = 2;\n");
+    const second = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    }).trim();
+    const cache = new Map<string, ReturnType<typeof changedFilesSince>>();
+
+    expect(
+      staleEvidenceFiles(root, "src", section(head), "tests/integration/a.test.ts", cache),
+    ).toEqual(["src/lease.ts"]);
+    expect(
+      staleEvidenceFiles(root, "src", section(second), "tests/integration/a.test.ts", cache),
+    ).toBeNull();
+    expect(cache.size).toBe(2);
+  });
+
+  it("reports a source file under the configured directory, not just any path", async () => {
+    // Filtering moved from git's pathspec into memory when the diff became
+    // whole-tree, so this is where a mistake now lives: `docs/` changed too and
+    // must stay out, while `src/` must come through.
+    const { root, head } = await repoAtOneCommit();
+    await commit(root, "docs/notes.md", "more\n");
+    await commit(root, "src/lease.ts", "export const rate = 2;\n");
+
+    expect(
+      staleEvidenceFiles(root, "src", section(head), "tests/integration/lease.test.ts"),
+    ).toEqual(["src/lease.ts"]);
+  });
+
+  it("does not treat a sibling directory as the source directory", async () => {
+    // `srcRelDir` is matched as a path PREFIX, so `src` must not swallow
+    // `srcgen/`. A `startsWith(srcRelDir)` without the separator would.
+    const { root, head } = await repoAtOneCommit();
+    await commit(root, "srcgen/generated.ts", "export const x = 1;\n");
+
+    expect(
+      staleEvidenceFiles(root, "src", section(head), "tests/integration/lease.test.ts"),
+    ).toBeNull();
   });
 
   it("stays silent when a commit touched neither the test nor the source", async () => {

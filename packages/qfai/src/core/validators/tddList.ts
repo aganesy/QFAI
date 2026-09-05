@@ -6,6 +6,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import type { ChangedSince } from "../gitChanges.js";
 import { changedFilesSince } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import {
@@ -2830,6 +2831,7 @@ export function staleEvidenceFiles(
   srcRelDir: string,
   section: string,
   testFile: string,
+  cache: Map<string, ChangedSince> = new Map(),
 ): readonly string[] | null {
   const revision = observationRevision(section);
   // The shape test is a COST guard, not a correctness one, and no row can
@@ -2841,12 +2843,30 @@ export function staleEvidenceFiles(
   if (revision === null || !/^[0-9a-f]{7,64}$/i.test(revision)) {
     return null;
   }
-  const paths = [testFile, srcRelDir].filter((p) => p.length > 0);
-  if (paths.length === 0) {
+  if (testFile.length === 0 && srcRelDir.length === 0) {
     return null;
   }
-  const changed = changedFilesSince(root, revision, paths);
-  return changed.kind === "changed" ? changed.files : null;
+
+  // ONE diff per distinct revision, over the whole tree, filtered per row in
+  // memory. Two git processes per row cost ~200 ms each on this repository —
+  // 104 invocations for 52 rows, ~10.5 s — and rows share revisions, because an
+  // observation revision is per spec and per round rather than per row. A
+  // project with 500 rows would otherwise add ~100 s to `validate --profile
+  // tdd`, the completion gate `qfai-implement` runs.
+  let changed = cache.get(revision);
+  if (changed === undefined) {
+    changed = changedFilesSince(root, revision, []);
+    cache.set(revision, changed);
+  }
+  if (changed.kind !== "changed") {
+    return null;
+  }
+
+  const prefix = srcRelDir.length > 0 ? `${srcRelDir}/` : null;
+  const covered = changed.files.filter(
+    (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
+  );
+  return covered.length > 0 ? covered : null;
 }
 
 async function validateSpecTddList(
@@ -3595,6 +3615,10 @@ async function validateSpecTddList(
   const revisionStalePromotion = RULE_PROMOTIONS.tddListEvidenceRevisionStale.promoteAt;
   const revisionStaleSeverity = newRuleSeverity(resolvedToolVersion, revisionStalePromotion);
   const revisionStaleWindowNote = windowNoteFor(revisionStaleSeverity, revisionStalePromotion);
+  // One whole-tree diff per distinct `Revision`, shared by every row that names
+  // it. Scoped to this run rather than to the module: a cache that outlived a
+  // run would answer a later one from an earlier tree.
+  const revisionDiffCache = new Map<string, ChangedSince>();
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
@@ -3733,6 +3757,7 @@ async function validateSpecTddList(
         srcRelDir,
         lastResolvedSection,
         cell(ref, "Test file"),
+        revisionDiffCache,
       );
       if (staleFiles !== null) {
         const revision = observationRevision(lastResolvedSection) ?? "";
