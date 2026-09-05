@@ -18,13 +18,15 @@ This file defines the canonical stages and delegation expectations.
 
 At the start of any work, classify the change and record it in:
 
-- `09_delta.md` Change Log (latest CL entry)
+- `09_delta.md` `## Change Summary` (latest `DELTA-NNNN` entry)
 - PR description (Change Type section)
 
 Allowed values:
 
 - Primary: `Initial | Behavior | Structural | Ops`
-- Tags (optional): `@ui @api @db @nfr @docs @test`
+- Tags (optional): `@api @db @nfr @docs @test`
+
+These values are restated from `.qfai/assistant/constitution/change-classification.md` (SSOT). See `change-classification.md#2-tags-multi-select` for each tag's trigger condition and examples; a tag not listed there is dropped by every consumer.
 
 Do not proceed without a declared Change Type.
 

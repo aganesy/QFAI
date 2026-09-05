@@ -77,6 +77,35 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
     only in `Notes` are untraced.
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
+
+### Citing an ID another spec owns
+
+Layered specs share entities, so "this spec's rule defers to the owner's rule"
+is a real relationship. It has one supported form, and it is not the obvious
+one.
+
+- **Cite the owning spec's contract id** (`CON-DB-*` / `CON-API-*` /
+  `CON-UI-*`), not its `BR-*` / `US-*` / `AC-*`. The owning spec is identifiable
+  from the Contracts table of the spec that reads the entity.
+- A foreign-namespace layer ID is an `error` from two rules at once —
+  `QFAI-SPACK-101` (namespace) and `TRACE_DOWNSTREAM_REF` (reference direction).
+  Writing _"per BR-0017-0004"_ in `04_Business-Rules.md` trips both.
+
+**Which files the namespace check covers**, measured against
+`validateLayeredNamespace`:
+
+| file                        | checked | IDs                                                                   |
+| --------------------------- | ------- | --------------------------------------------------------------------- |
+| `02_User-stories.md`        | yes     | `US`                                                                  |
+| `03_Acceptance-Criteria.md` | yes     | `AC`                                                                  |
+| `04_Business-Rules.md`      | yes     | `BR`                                                                  |
+| `05_Examples.md`            | yes     | `EX` / `SC`                                                           |
+| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                         |
+| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs           |
+| `10_Plan.md`                | **no**  | not covered today — see #1101 for whether that is a decision or a gap |
+
+## ID and Parent Rules (continued)
+
 - `_policies/**` must not **define or own** lower-layer items. Concretely: no
   traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
   `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
@@ -143,8 +172,13 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
-  `blocked` row is waiting on and is required on those rows.
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`. `Blocked-By`
+  names what a `blocked` row is waiting on and is required on those rows.
+  `Owning module` declares the production module the row will write, is filled at
+  Phase 2b alongside the row itself, and is what the parallel-dispatch gate is evaluated
+  against before RED: a ledger with no `Owning module` column supports parallel dispatch
+  only for seams that already exist
+  (`qfai-implement/references/execution-ledger.md`, `parallelization-policy.md`).
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
@@ -354,9 +388,21 @@ Optional per-spec artifact linking `BR-*` / `AC-*` to the implementation file th
 Template: `templates/specs/spec/16_Traceability-ledger.md`.
 
 - It is **optional**. Without it `npx qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
-  implementation-integrity check; the spec is still valid.
+  implementation-integrity check; the spec is still valid. Presence is a property of the working
+  tree, so this is checked for every **layered** spec on every run — it does not depend on the branch
+  diff. Both `--profile sdd` and `--profile tdd` evaluate it.
 - With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
-  `04_Business-Rules.md` changed on the branch but a linked implementation file did not.
+  `04_Business-Rules.md` changed on the branch but a linked implementation file did not. Only
+  `--profile tdd` / `full` evaluate it: `/qfai-sdd` hands implementation to `/qfai-implement`, so at
+  the `--profile sdd` gate the linked code is untouched by design.
+- `QFAI-TRACE-001` needs the branch diff. When git cannot produce one (base ref absent, shallow CI
+  clone, not a repository) `QFAI-TRACE-003` (`info`) says so and that check is skipped for every
+  spec; fetch the base ref or set `baseBranch` at the **top level** of `qfai.config.yaml` (it is not
+  read from under `validation`). `QFAI-TRACE-003` also fires per spec when the diff carries BR/AC
+  changes for a spec the working tree no longer holds as layered (whole-spec `DELETE`, rename,
+  conversion): the ledger went with it, so the check is un-runnable rather than passing.
+- A ledger path that is not a regular file (FIFO, socket, device, directory) is never opened: it is
+  reported as `QFAI-TRACE-002` and that spec's integrity check is skipped.
 - Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
   columns, one named `Implementation File`:
 
@@ -370,7 +416,8 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
 - The legacy **spec-pack** layout uses the same filename with a different schema
   (`trace_id, obj_id, init_id, cap_id, flow_id, us_id, ac_id, ex_ids, tc_ids`, checked by
   `QFAI-LEDGER-001`). That check runs only on spec-pack layouts — the two schemas never apply to the
-  same file. Do not merge them.
+  same file. Do not merge them. `QFAI-TRACE-001` / `-002` are the mirror image: they enumerate
+  layered specs only, so a spec-pack ledger is never judged against the layered schema.
 - Authored and refreshed by `/qfai-sdd` in the same change as the BR/AC it links. It is upstream
   SSOT; downstream skills must not edit it.
 

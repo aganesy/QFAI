@@ -13,7 +13,12 @@ Upstream artifacts include, at minimum:
 - `10_Plan.md` and other owner-phase planning outputs
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
-- outputs of discussion/sdd/review stages
+- outputs of the sdd and review stages. A **discussion pack is NOT upstream
+  SSOT** — it is non-normative discovery material, and `.qfai/specs/**` is the
+  behaviour and design SSOT it feeds. A defect found in one downstream is fixed
+  in the SDD-owned artifact, the discrepancy recorded in delta/evidence. This
+  reclassifies ONLY the pack: genuine upstream is still repaired upstream-first.
+
 - **test or production artifacts another spec's completed implement run
   certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
   on a `done` row. Changing one is not forbidden (the codebase is not
@@ -61,8 +66,8 @@ case required reading the agent roster and reasoning backwards from it.
 
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
-  anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
-  Decision Record ID scheme in the spec's `07_Decisions.md`)
+  anomaly Decision Record — `DR-NNNN-MMMM-<slug>.md` declared in that spec's `07_Decisions.md`,
+  or `DR-NNNN-<slug>.md` declared in `_policies/08_Decisions.md`; never the CR's date form
 
 Any exception beyond this list requires explicit user approval.
 
@@ -71,7 +76,7 @@ Any exception beyond this list requires explicit user approval.
 `/qfai-implement` must write `tdd/test-list.md` after every phase transition,
 and the file lives inside `.qfai/specs/**`. The protocol never classified it in
 either direction, but `#core-rule`'s list is explicitly open-ended ("at minimum")
-and sweeps in "outputs of discussion/sdd/review stages" — and the ledger's schema
+and sweeps in "outputs of the sdd and review stages" — and the ledger's schema
 is documented in `skills/qfai-sdd/references/spec-traceability-rules.md`, an
 SDD-stage reference. On the natural reading the ledger _is_ an sdd-stage output,
 so "Downstream skills must not patch upstream SSOT directly" applied to it.
@@ -468,8 +473,12 @@ defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 
-- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
-  run logs, reports. Reproducible by rerunning the owner skill; not committed.
+- **Durable per-item TDD evidence** — `.qfai/evidence/implement-<spec-id>.md`
+  and `.qfai/evidence/atdd-<spec-id>.md`. Ledger `Evidence` cells point to
+  anchors in these files, and validation resolves those anchors on a fresh
+  clone, so the managed `.gitignore` block re-includes and commits them.
+- **Regenerable** — other stage logs, run logs, and reports. Reproducible by
+  rerunning the owner skill; not committed.
 - **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
   durable decision records (`.qfai/evidence/decisions/*.json`). They carry
   user approval and cannot be regenerated, so they are committed. The managed
@@ -483,8 +492,8 @@ defect is gone with it. The drain is what pays for dropping the round.
   — diffs the branch against `baseBranch` and emits `QFAI-DRIFT-001` (`error`)
   for every changed file under `paths.contractsDir`, under `_policies/`, or
   matching a protected spec-pack filename. A Change Request at `Status:
-approved` that **names the changed path** silences it; an `open` CR does not,
-  because an open CR authorises nothing. The check does not run in the `sdd`
+approved` whose **`## Impact scope` names the changed path** silences it — not
+  a path named elsewhere in it, not a contract ID, and never an `open` CR. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set**
