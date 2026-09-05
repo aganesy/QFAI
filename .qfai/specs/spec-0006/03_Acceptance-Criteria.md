@@ -78,7 +78,7 @@ Scenario: --out ファイル出力
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                                                   | Notes              | Priority |
+| AC-ID        | Title                                                   | Notes              | Priority |
 | ------------ | ------------------------------------------------------- | ------------------ | -------- |
 | AC-0006-0001 | config found                                            | REQ-0030           | P1       |
 | AC-0006-0002 | config missing                                          | REQ-0030           | P1       |

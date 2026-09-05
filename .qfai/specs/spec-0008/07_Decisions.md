@@ -2,6 +2,8 @@
 
 2 items (IDs: DR-0008-0001, DR-0008-0003; DR-0008-0002 is reserved by the v1.7.15 backfill exception referenced in `tdd/test-list.md` for TDD-0011/0012).
 
+## Decisions
+
 ### DR-0008-0001: TDD Ledger Backfill from Migrated Coverage (v1.7.15)
 
 - Decision: TDD-0001..0008 のテストは既存実装 (v1.7.x) に対する backfill として Exception パターンで確定する

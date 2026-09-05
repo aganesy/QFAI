@@ -4,6 +4,10 @@
 
 No open questions at this time.
 
+## Open Questions
+
+0 open questions in this spec.
+
 ## Resolved (v1.9.2 Second-Wave)
 
 - OQ-0157 (active discussion session pointer surface): RESOLVED by \_policies DR-0266 → option B (`state.json#discussion.currentId` SSOT, single reader helper). See DR-0013-0002 / REQ-0155 reader side.

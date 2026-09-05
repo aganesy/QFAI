@@ -153,7 +153,7 @@ Scenario: レガシー管理ブロックからの自動移行
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                             | Notes      | Priority |
+| AC-ID        | Title                             | Notes      | Priority |
 | ------------ | --------------------------------- | ---------- | -------- |
 | AC-0003-0001 | 空ディレクトリ初期化              | Happy path | P1       |
 | AC-0003-0002 | 冪等な初期化                      | NFR-0012   | P1       |

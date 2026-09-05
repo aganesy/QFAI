@@ -1,4 +1,4 @@
-# 03 Acceptance-Criteria
+# 03 Acceptance Criteria
 
 ## AC-0010-0001
 

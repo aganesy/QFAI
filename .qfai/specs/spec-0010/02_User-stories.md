@@ -1,5 +1,20 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0010-0001: Exploration Brief Authoring
+- US-0010-0002: Reference Pool Authoring
+- US-0010-0003: Design Anti-Goals
+- US-0010-0004: Exploration Rubric
+- US-0010-0005: Evaluator Calibration
+- US-0010-0006: Screen Contracts
+- US-0010-0007: Review Input Bundle
+- US-0010-0008: No Early Winner
+- US-0010-0009: DESIGN.md Draft Authoring
+- US-0010-0010: Legacy Sidecar Drop
+- US-0010-0011: Mock template emits anchor-form hrefs by default
+- US-0010-0012: Discussion writes the active session pointer
+
 ## US-0010-0001: Exploration Brief Authoring
 
 As a discussion facilitator, I want `30_exploration_brief.md` to define product intent, must-keep interactions, brand signals, and differentiation targets, so that prototyping starts from explicit exploration constraints.

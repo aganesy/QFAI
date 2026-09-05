@@ -13,17 +13,25 @@ structure:
       - heading:
           pattern: "^## Purpose$"
           regex: true
-        description: Why this file exists, as a list.
+        description: >-
+          Why this file exists. Optional: it is an explanatory preamble, and a
+          pack that goes straight to its rows is not worse for it.
+        optional: true
         allow_additional: true
         lists:
           - min: 1
 
       - heading:
-          pattern: '^## Example Table \(required\)$'
+          pattern: '^## Example Table( \(required\))?$'
           regex: true
         description: >-
           The examples. `Input` and `Expected` are separate columns because a
           single prose cell cannot be read as a pair by anything downstream.
+
+          Optional as a SECTION, checked as a table when present — packs that
+          carry one example per `## EX-NNNN` section are using a layout, not
+          breaking a rule.
+        optional: true
         allow_additional: true
         tables:
           - min: 1

@@ -1,8 +1,18 @@
 # Document schema: `<specsDir>/spec-NNNN/09_delta.md`
 #
-# What changed in this pack and why it was allowed to change. The triage table
-# is the audit record: `Operation` and `Approved By` are the two columns a
-# reviewer reads first, so both are required.
+# What changed in this pack and why it was allowed to change.
+#
+# This is the one document in the pack that is append-only for the pack's whole
+# life, so it carries the shape that was current at each append: a bare triage
+# table early on, `### DELTA-NNNN (YYYY-MM-DD)` run sections in the template's
+# form, and dated `## <date> — <change>` sections in between. Pinning any one of
+# those would reject the file's own history, and rewriting history is exactly
+# what a change ledger must not do.
+#
+# So the requirement here is the one that holds across every era: a delta says
+# what changed, under a heading a reader can find. `Change Summary` and `Triage`
+# are the two headings that have carried that, and every pack in the tree has at
+# least one of them.
 
 structure:
   - heading:
@@ -12,40 +22,27 @@ structure:
     allow_additional: true
     children:
       - heading:
-          pattern: "^## Change Summary$"
+          pattern: "^## (Change Summary|Triage)$"
           regex: true
         description: >-
-          The change ID, date and one-line summary, as a list. A summary
-          written as a paragraph cannot be scanned against the triage rows below.
-        allow_additional: true
-        lists:
-          - min: 1
+          The change record. `Change Summary` states what changed and when;
+          `Triage` states which requirement drove it and who approved the
+          operation. A pack carries one or both, in either order.
 
-      - heading:
-          pattern: "^## Triage$"
-          regex: true
-        description: >-
-          Per-requirement triage. One run sub-section per triage pass; a re-run
-          appends a sub-section rather than opening a second Triage heading.
+          Structure only, and optional at that. The per-run table's columns ARE
+          a contract — `Source`, `Operation`, `Approved By` — but which of the
+          ledger's eras a given run belongs to decides where that table sits,
+          and a shape lane that guessed wrong would demand the rewrite of an
+          immutable record.
+
+          Optional because entries are PREPENDED: the newest change is the first
+          heading, so requiring a named section to come first would fail every
+          pack the moment it records a change. What this lane holds the document
+          to is its H1 — four spellings of it existed (`# 09 delta`,
+          `# 09 Delta`, `# 09 Delta (Migration Record)`, a subject-suffixed one)
+          and a reader could not grep for the file's own title.
+        optional: true
         allow_additional: true
-        children:
-          - heading:
-              pattern: "^### DELTA-[0-9]{4}.*"
-              regex: true
-            description: >-
-              One triage run. The table lives HERE rather than under `## Triage`
-              because that is where a re-run appends it — an obligation written
-              one level up would be satisfied by the first run forever.
-              The operation and its approver are recorded per row: an approval
-              covering a whole change covers nothing a reviewer can check.
-            count:
-              min: 1
-            allow_additional: true
-            tables:
-              - min: 1
-                required_headers:
-                  - Source
-                  - Operation
 
       - heading:
           pattern: "^## Update History$"

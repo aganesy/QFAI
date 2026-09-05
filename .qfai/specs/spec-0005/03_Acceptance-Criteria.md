@@ -91,7 +91,7 @@ Scenario: Prototyping セクション — evidence なし
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                     | Notes    | Priority |
+| AC-ID        | Title                     | Notes    | Priority |
 | ------------ | ------------------------- | -------- | -------- |
 | AC-0005-0001 | Markdown レポート         | REQ-0020 | P1       |
 | AC-0005-0002 | JSON レポート             | REQ-0021 | P1       |

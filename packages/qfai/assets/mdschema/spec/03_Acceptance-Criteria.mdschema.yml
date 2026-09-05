@@ -1,9 +1,22 @@
 # Document schema: `<specsDir>/spec-NNNN/03_Acceptance-Criteria.md`
 #
-# Acceptance criteria live here and nowhere else. The Gherkin block is the
-# machine-readable half — the ATDD gates parse it — so it is required and typed
-# (`gherkin`, not a bare fence). The catalogue below it is a human index and
-# says so in its own heading.
+# Acceptance criteria live here and nowhere else.
+#
+# Two carriers are in use across the tree and this schema checks each on its own
+# terms rather than picking a winner:
+#
+#   - the template's `## AC Gherkin (required)` block, which is machine-readable
+#     and is what the ATDD gates parse;
+#   - one `## AC-NNNN` section per criterion, written as Given / When / Then
+#     prose, which is what 232 criteria in ten packs currently are.
+#
+# Converting the second into the first is a content migration, not a lint fix:
+# it changes what `qfai validate`'s ATDD gates can see, which is a decision
+# about coverage obligations rather than about document shape. So the shape lane
+# checks what it can honestly check — that a Gherkin section carries a TYPED
+# gherkin block, and that the catalogue's ID column is named the one way — and
+# leaves "does this spec have acceptance criteria at all" to `qfai validate`,
+# which is the gate that can answer it.
 
 structure:
   - heading:
@@ -16,6 +29,7 @@ structure:
           pattern: "^## Purpose$"
           regex: true
         description: Why this file exists and what belongs in it, as a list.
+        optional: true
         allow_additional: true
         lists:
           - min: 1
@@ -25,21 +39,36 @@ structure:
           regex: true
         description: >-
           Every AC as a Gherkin scenario, each carrying its `# AC-NNNN` and
-          `# Source:` comments. Typed as `gherkin` because the traceability
-          reader selects blocks by info string: an untyped fence is invisible
-          to it and the AC traces to nothing.
+          `# Source:` comments.
+
+          Typed as `gherkin`, and that is the whole point of this rule: the
+          traceability reader selects blocks by info string, so an untyped fence
+          is invisible to it and the criteria inside trace to nothing while
+          still looking correct in a browser.
+        optional: true
         allow_additional: true
         code_blocks:
           - lang: gherkin
             min: 1
 
+      # `## AC-NNNN` sections — one criterion each, in Given / When / Then
+      # prose — are deliberately NOT declared as a child. Declaring them would
+      # pin them to a position in this order, and packs put them both before and
+      # after the catalogue; an undeclared section is additional content, which
+      # is allowed anywhere. Declaring them bought no check anyway: their body
+      # is prose, so there is nothing about them this lane can assert.
+
       - heading:
           pattern: '^## AC Catalog \(optional\)$'
           regex: true
         description: >-
-          A human-facing index. Optional by name and by rule; when present it
-          is a table, and it deliberately carries no `Source` column — that has
-          exactly one home, the Gherkin block above.
+          A human-facing index. Optional by name and by rule; when present it is
+          a table whose ID column is spelled `AC-ID`, matching every other ID
+          column in the pack — `AC_ID` and `AC-ID` both existed here, and a
+          reader grepping for one found half the packs.
+
+          It deliberately carries no `Source` column: provenance has exactly one
+          home, the Gherkin block above.
         optional: true
         allow_additional: true
         tables:

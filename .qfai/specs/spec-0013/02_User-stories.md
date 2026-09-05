@@ -1,5 +1,22 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0013-0001: Unified SDD Workflow
+- US-0013-0002: Contract-First Phase
+- US-0013-0003: Discussion-Pack Preflight
+- US-0013-0004: Batch Mode Processing
+- US-0013-0005: Required Edge Enforcement
+- US-0013-0006: Validate Gate Integration
+- US-0013-0007: Delta Phase with Rejected Guardrails
+- US-0013-0008: Discussion Markdown-Only Preflight
+- US-0013-0009: DESIGN.md sha256 Lock at Phase 0
+- US-0013-0010: Active Design Contract Surface Reduction
+- US-0013-0011: UI contract `primary_tasks` slot per screen
+- US-0013-0012: Resolve active discussion pack via single helper
+- US-0013-0013: Auto-populate `surface_type: ui-bearing` frontmatter
+- US-0013-0014: `primary_tasks` count band + accepted shape documented
+
 ## US-0013-0001: Unified SDD Workflow
 
 As a QFAI user, I want a single `/qfai-sdd` command to produce layered spec artifacts (policies + spec-XXXX) from a discussion pack, so that downstream execution skills have complete specifications.

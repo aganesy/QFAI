@@ -344,4 +344,21 @@ async function main() {
   return 0;
 }
 
-process.exit(await main());
+/**
+ * Run only when invoked as a program.
+ *
+ * The two pure helpers above are imported by the guard's own tests, and an
+ * unguarded top-level `process.exit` turns that import into a process exit
+ * during test collection.
+ */
+function isEntrypoint() {
+  const invoked = process.argv[1];
+  if (invoked === undefined) {
+    return false;
+  }
+  return path.resolve(invoked) === fileURLToPath(import.meta.url);
+}
+
+if (isEntrypoint()) {
+  process.exit(await main());
+}

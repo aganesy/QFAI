@@ -1,5 +1,16 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0011-0001: TDD Micro-Cycle Execution
+- US-0011-0002: Forward-Only Status Lifecycle
+- US-0011-0003: QA Gatekeeper Confirmation
+- US-0011-0004: Exception Handling with DR-ID
+- US-0011-0005: Parallel Slice Dispatch
+- US-0011-0006: Item Completion Gate
+- US-0011-0007: Simplified Handoff Schema
+- US-0011-0008: Design System As Input
+
 ## US-0011-0001: TDD Micro-Cycle Execution
 
 As a developer, I want `/qfai-implement` to execute the full TDD micro-cycle (Red -> Green -> Refactor -> Done) one test at a time from `test-list.md`, so that production code is test-driven and traceable.

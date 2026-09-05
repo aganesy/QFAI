@@ -1,6 +1,8 @@
 # 07 Decisions
 
-## DR-0010-0001: Discussion-side design authoring is planner-first
+## Decisions
+
+### DR-0010-0001: Discussion-side design authoring is planner-first
 
 - Date: 2026-04-22
 - Status: Adopted
@@ -15,7 +17,7 @@ Rejected:
   - Temptation: downstream ambiguity を早く消したい。
   - Reason: exploration-first prototyping と衝突し、breakthrough を阻害する。
 
-## DR-0010-0002: Canonical discussion-side UI family is exploration-first
+### DR-0010-0002: Canonical discussion-side UI family is exploration-first
 
 - Date: 2026-04-22
 - Status: Adopted
@@ -38,7 +40,7 @@ Rejected:
   - Temptation: discussion 時点で比較と収束を完了したい。
   - Reason: 実装 SSOT は planner-first handoff を採用している。
 
-## DR-0010-0003: Reference research stays in discussion and feeds downstream contracts
+### DR-0010-0003: Reference research stays in discussion and feeds downstream contracts
 
 - Date: 2026-04-22
 - Status: Adopted
@@ -47,7 +49,7 @@ Decision: Trend Scan / guideline research / competitive references は discussio
 
 Rationale: research provenance を upstream に残したまま、downstream では contract-first に評価できるため。
 
-## DR-0010-0004: Evaluator calibration is mandatory discussion output
+### DR-0010-0004: Evaluator calibration is mandatory discussion output
 
 - Date: 2026-04-22
 - Status: Adopted
@@ -56,7 +58,7 @@ Decision: discussion は `34_evaluator_calibration.md` を必須出力とし、g
 
 Rationale: 現行 prototyping は generator と evaluator を分離し、calibration artifact を current-active input として読むため。
 
-## DR-0010-0005: `QFAI-MOCK-010` direction — anchor-form template default (cites \_policies DR-0265)
+### DR-0010-0005: `QFAI-MOCK-010` direction — anchor-form template default (cites \_policies DR-0265)
 
 - Date: 2026-05-27
 - Status: Adopted
@@ -69,7 +71,7 @@ Rejected:
   - Temptation: web-URL に慣れた author には最も自然。
   - Reason: deterministic gate を緩め、prototype が serve できない route を mock が encode する drift を再導入する（DR-0265）。
 
-## DR-0010-0006: Active discussion session pointer — `state.json#discussion.currentId` SSOT (cites \_policies DR-0266)
+### DR-0010-0006: Active discussion session pointer — `state.json#discussion.currentId` SSOT (cites \_policies DR-0266)
 
 - Date: 2026-05-27
 - Status: Adopted

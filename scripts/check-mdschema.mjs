@@ -38,6 +38,7 @@
  *   node scripts/check-mdschema.mjs --scope all --summary
  *   node scripts/check-mdschema.mjs --base <ref>         # ratchet against <ref>
  *   node scripts/check-mdschema.mjs --scope files a.md b.md
+ *   node scripts/check-mdschema.mjs --root <dir> --scope all   # another tree
  *
  * Exit codes:
  *   0  every checked document conforms (or none was in scope)
@@ -50,16 +51,21 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SCHEMA_ROOT = path.join(REPO_ROOT, "packages", "qfai", "assets", "mdschema");
+/**
+ * Where the schemas live: beside the script, always.
+ *
+ * The schemas are the package's, not the checked tree's — `--root` moves the
+ * DOCUMENTS being checked, never the contract they are checked against.
+ */
+const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const SCHEMA_ROOT = path.join(SCRIPT_ROOT, "packages", "qfai", "assets", "mdschema");
 const MANIFEST = path.join(SCHEMA_ROOT, "manifest.yml");
-const CONFIG = path.join(REPO_ROOT, "qfai.config.yaml");
 
 /** The default base for the ratchet, overridable with `--base`. */
 const DEFAULT_BASE = "origin/main";
 
 /** Where the packaged mdschema binary is reachable from. */
-const MDSCHEMA_BIN = path.join(REPO_ROOT, "node_modules", ".bin", "mdschema");
+const MDSCHEMA_BIN = path.join(SCRIPT_ROOT, "node_modules", ".bin", "mdschema");
 
 /**
  * Reads `paths.specsDir` out of `qfai.config.yaml`.
@@ -71,14 +77,15 @@ const MDSCHEMA_BIN = path.join(REPO_ROOT, "node_modules", ".bin", "mdschema");
  *
  * @returns {string} Repository-root-relative specs directory.
  */
-function readSpecsDir() {
+function readSpecsDir(root) {
   const fallback = ".qfai/specs";
-  if (!existsSync(CONFIG)) {
+  const config = path.join(root, "qfai.config.yaml");
+  if (!existsSync(config)) {
     return fallback;
   }
   let text;
   try {
-    text = readFileSync(CONFIG, "utf-8");
+    text = readFileSync(config, "utf-8");
   } catch {
     return fallback;
   }
@@ -169,9 +176,10 @@ export function patternToRegExp(pattern) {
  * Every file under `dir`, repository-root-relative and forward-slashed.
  *
  * @param {string} dir Absolute directory to walk.
+ * @param {string} root The tree the returned paths are relative to.
  * @returns {string[]}
  */
-function walk(dir) {
+function walk(dir, root) {
   const out = [];
   const pending = [dir];
   while (pending.length > 0) {
@@ -191,7 +199,7 @@ function walk(dir) {
         continue;
       }
       if (entry.isFile()) {
-        out.push(path.relative(REPO_ROOT, full).split(path.sep).join("/"));
+        out.push(path.relative(root, full).split(path.sep).join("/"));
       }
     }
   }
@@ -207,9 +215,9 @@ function walk(dir) {
  * @param {string} base
  * @returns {string[] | null}
  */
-function changedFiles(base) {
+function changedFiles(base, root) {
   const rev = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${base}^{commit}`], {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: "utf-8",
   });
   if (rev.status !== 0) {
@@ -218,14 +226,14 @@ function changedFiles(base) {
   // `A...HEAD` is the merge base, which is what "what this branch changed"
   // means; a plain two-dot diff also reports everything the base gained.
   const diff = spawnSync("git", ["diff", "--name-only", "--no-renames", `${base}...HEAD`], {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: "utf-8",
   });
   if (diff.status !== 0) {
     return null;
   }
   const staged = spawnSync("git", ["diff", "--name-only", "--no-renames", "HEAD"], {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: "utf-8",
   });
   const lines = `${diff.stdout}\n${staged.status === 0 ? staged.stdout : ""}`
@@ -239,12 +247,13 @@ function changedFiles(base) {
  * Runs `mdschema check` for one manifest entry.
  *
  * @param {string} schemaPath Absolute path to the schema.
- * @param {string[]} files Repository-root-relative document paths.
+ * @param {string[]} files Tree-relative document paths.
+ * @param {string} root The tree they are relative to.
  * @returns {{ ok: boolean, output: string, spawnFailed: boolean }}
  */
-function runMdschema(schemaPath, files) {
+function runMdschema(schemaPath, files, root) {
   const result = spawnSync(MDSCHEMA_BIN, ["check", "--schema", schemaPath, ...files], {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: "utf-8",
   });
   if (result.error !== undefined || result.status === null) {
@@ -266,6 +275,7 @@ function main() {
   let scope = "changed";
   let base = DEFAULT_BASE;
   let summary = false;
+  let root = SCRIPT_ROOT;
   const positional = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -276,6 +286,10 @@ function main() {
     }
     if (arg === "--base") {
       base = argv[++i] ?? "";
+      continue;
+    }
+    if (arg === "--root") {
+      root = argv[++i] ?? "";
       continue;
     }
     if (arg === "--summary") {
@@ -297,8 +311,17 @@ function main() {
     console.error("check-mdschema: --base needs a git ref");
     return 2;
   }
+  if (root === "") {
+    console.error("check-mdschema: --root needs a directory");
+    return 2;
+  }
+  root = path.resolve(root);
+  if (!existsSync(root) || !statSync(root).isDirectory()) {
+    console.error(`check-mdschema: --root is not a directory: ${root}`);
+    return 2;
+  }
   if (!existsSync(MANIFEST)) {
-    console.error(`check-mdschema: manifest not found at ${path.relative(REPO_ROOT, MANIFEST)}`);
+    console.error(`check-mdschema: manifest not found at ${MANIFEST}`);
     return 2;
   }
   if (!existsSync(MDSCHEMA_BIN)) {
@@ -308,7 +331,7 @@ function main() {
     return 2;
   }
 
-  const specsDir = readSpecsDir();
+  const specsDir = readSpecsDir(root);
   const entries = readManifest();
   if (entries.length === 0) {
     console.error("check-mdschema: the manifest declares no documents");
@@ -318,8 +341,9 @@ function main() {
   // The candidate universe, computed once: the manifest patterns are all rooted
   // at the specs directory, so the walk is bounded by it rather than by the
   // repository.
-  const specsAbs = path.join(REPO_ROOT, specsDir);
-  const universe = existsSync(specsAbs) && statSync(specsAbs).isDirectory() ? walk(specsAbs) : [];
+  const specsAbs = path.join(root, specsDir);
+  const universe =
+    existsSync(specsAbs) && statSync(specsAbs).isDirectory() ? walk(specsAbs, root) : [];
 
   /** @type {string[] | null} */
   let restrictTo = null;
@@ -329,10 +353,10 @@ function main() {
       return 2;
     }
     restrictTo = positional.map((p) =>
-      path.relative(REPO_ROOT, path.resolve(REPO_ROOT, p)).split(path.sep).join("/"),
+      path.relative(root, path.resolve(root, p)).split(path.sep).join("/"),
     );
   } else if (scope === "changed") {
-    const changed = changedFiles(base);
+    const changed = changedFiles(base, root);
     if (changed === null) {
       console.warn(
         `check-mdschema: cannot diff against ${base} (unreachable ref, shallow clone or failed diff) - checking every document instead (fail open)`,
@@ -364,7 +388,7 @@ function main() {
       continue;
     }
     checked += matched.length;
-    const result = runMdschema(schemaPath, matched);
+    const result = runMdschema(schemaPath, matched, root);
     if (result.spawnFailed) {
       console.error(`check-mdschema: could not run mdschema: ${result.output}`);
       return 2;
@@ -403,4 +427,21 @@ function main() {
   return 0;
 }
 
-process.exit(main());
+/**
+ * Run only when invoked as a program.
+ *
+ * The two pure helpers above are imported by the guard's own tests, and an
+ * unguarded top-level `process.exit` turns that import into a process exit
+ * during test collection.
+ */
+function isEntrypoint() {
+  const invoked = process.argv[1];
+  if (invoked === undefined) {
+    return false;
+  }
+  return path.resolve(invoked) === fileURLToPath(import.meta.url);
+}
+
+if (isEntrypoint()) {
+  process.exit(main());
+}

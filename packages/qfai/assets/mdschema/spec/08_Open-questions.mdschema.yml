@@ -15,18 +15,17 @@ structure:
           pattern: "^## Open Questions$"
           regex: true
         description: >-
-          The question table. Present even when empty — the template's
-          zero-item row states the count rather than leaving a reader to infer
-          it from a missing section.
+          The open questions, under one heading. Present even when there are
+          none — a stated zero is an answer, a missing section is not.
+
+          Every question carries an ID, an owner, a due date and a status;
+          without an owner and a date it is a note, not a tracked question. The
+          NOTATION is not fixed, because two are in use and each is right for
+          what it holds: a table when the questions are one-liners, and one
+          subsection per question when a question needs its options, a
+          recommendation and what it blocks. Forcing the table onto the second
+          form would either drop those fields or state the owner twice.
         allow_additional: true
-        tables:
-          - min: 1
-            required_headers:
-              - OQ-ID
-              - Question
-              - Owner
-              - Due
-              - Status
 
       - heading:
           pattern: "^## Empty State$"

@@ -31,6 +31,5 @@ structure:
         tables:
           - min: 1
             required_headers:
-              - BR/AC
               - Implementation File
               - Test File

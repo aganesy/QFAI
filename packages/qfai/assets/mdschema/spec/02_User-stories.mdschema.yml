@@ -28,14 +28,17 @@ structure:
           - min: 1
 
       - heading:
-          pattern: "^## US-[0-9]{4}(-[0-9]{4})?:.*"
+          pattern: "^## US-[0-9]{4}(-[0-9]{4})?\\b.*"
           regex: true
         description: >-
-          One story. The body carries `Parent`, `Source`, `Goal` and
-          `Non-goals` as a list — `Source` is the only machine-checkable trace
-          back to the discussion pack, so a story written as prose loses it.
+          One story, under a heading carrying its ID.
+
+          Two bodies are in use and both are stories: the template's field list
+          (`Parent`, `Source`, `Goal`, `Non-goals`) and the narrative form
+          ("As a … I want … so that …"). Neither is imposed here. What the ID in
+          the heading buys is the thing this lane can actually check — that a
+          story is addressable — and the `Source` trace back to the discussion
+          pack is `qfai validate`'s obligation, not a question about shape.
         count:
           min: 1
         allow_additional: true
-        lists:
-          - min: 1

@@ -14,18 +14,27 @@ structure:
       - heading:
           pattern: "^## Purpose$"
           regex: true
-        description: Why this file exists, as a list.
+        description: >-
+          Why this file exists. Optional: it is an explanatory preamble, and a
+          pack that goes straight to its rows is not worse for it.
+        optional: true
         allow_additional: true
         lists:
           - min: 1
 
       - heading:
-          pattern: '^## Granularity \(required\)$'
+          pattern: '^## Granularity( \(required\))?$'
           regex: true
         description: >-
-          The splitting rule, as a list. It is a section rather than a sentence
-          in Purpose because `05_Examples.md` pins EX to BR one-to-one: a BR
-          split late is a table of examples rewritten.
+          The splitting rule. It is a section rather than a sentence in Purpose
+          because `05_Examples.md` pins EX to BR one-to-one: a BR split late is
+          a table of examples rewritten.
+
+          Optional, because the rule it states is a property of the pack's rows
+          rather than of this document, and restating it in seventeen packs
+          gives it seventeen wordings to drift between. The template carries it
+          for a pack being written from scratch.
+        optional: true
         allow_additional: true
         lists:
           - min: 1
@@ -40,12 +49,19 @@ structure:
           - min: 1
 
       - heading:
-          pattern: '^## Rule Table \(required\)$'
+          pattern: '^## Rule Table( \(required\))?$'
           regex: true
         description: >-
           The rules themselves. A table rather than prose because every column
           is read by something: `AC-Refs` by the traceability walker,
           `Contract-Refs` by the contract binder.
+
+          Optional as a SECTION, checked as a table when present. Ten packs
+          carry one rule per `## BR-NNNN` section instead, which is a content
+          layout rather than a shape defect — converting it is a migration that
+          changes what the traceability walker can see, and that is a decision
+          about coverage, not about headings.
+        optional: true
         allow_additional: true
         tables:
           - min: 1
