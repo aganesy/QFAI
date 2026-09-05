@@ -134,7 +134,9 @@ satisfied by a file that cannot run.
   what exercises head-advance and expected-version guards; a single pass proves
   the first insert and nothing after it. Defects that appear only on traversal
   two are a normal share of the total, not an exotic case.
-- **Record it** in `.qfai/evidence/sdd-<spec-id>.md` as a line of the form:
+- **Record it** in `.qfai/evidence/sdd-<spec-id>.md`, under the
+  `## Contract executability` heading of `templates/evidence/sdd-spec.md`, as a
+  line of the form:
 
   ```
   - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
