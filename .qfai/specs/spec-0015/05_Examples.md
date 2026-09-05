@@ -61,7 +61,7 @@
 - BR-Ref: BR-0015-0008
 - Given a PR that adds, in the certify code path, a read of `.qfai/report/verify.json` whose profile requires `/qfai-implement` artifacts (reintroducing the prototyping-phase cycle)
 - When the Reviewer Gate runs against the PR
-- Then it emits `R-CERTIFY-VERIFY-CIRCULAR` at severity error; `justification:` names the certify code path, the offending `verify.json` profile, and the option-B contract clause violated
+- Then it emits `R-CERTIFY-VERIFY-CIRCULAR` at severity **info** and names the way out (close the loop, re-run `/qfai-verify` for Work Order H so the file records `scope: "prototyping"`); `qfai prototyping certify` refuses the verdict with exit 2. `justification:` names the certify code path, the offending `verify.json` profile, and the option-B contract clause violated
 - A control PR that adds only a prototyping-phase scoped validate read (no `/qfai-atdd` / `/qfai-implement` artifact requirement) passes without `R-CERTIFY-VERIFY-CIRCULAR`
 
 ## EX-0015-0010: Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with 3-part justification
