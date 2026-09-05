@@ -6,6 +6,32 @@
 
 ### Fixed
 
+- **JS リテラルを消す tokenizer が 1 つになった。** `atddTraceability.ts` は
+  2 つの独立した実装でリテラルを blank していた — annotation scan は
+  `validators/jsSourceMask.ts` の `maskJsNonCode`、carrier 判定はこのファイル
+  ローカルの `stripCommentsAndLiterals` である。そして **`if (x) /re/` の `/`
+  が正規表現であることを知っているのは後者だけだった** (#1154)。
+
+  前者は `/` の直前の有意文字だけを見て判定するため、制御構文のヘッダを閉じる
+  `)` を「値の終わり」と読む。すると `/^\s*```/` は除算として読まれ、中の
+  backtick が template literal を開いて次の backtick までの全行を blank する。
+  実際、緑の branch 2 本を統合した時点で **live な `it(` を持つファイルが
+  annotation only の carrier として報告された**。
+
+  制御構文ヘッダの規則を `maskJsNonCode` 側に移し、ローカル実装 (184 行) を
+  削除した。判定は後方走査ではなく `(` ごとのスタックにしてある — 走査時点で
+  文字列とコメントは既にスキップ済みなので、その中の括弧を数えてしまうことが
+  なく、lookback の上限も要らない。正規表現リテラルの flag も literal の一部
+  として消費する。
+
+  **統合は「`comments` option の有無だけ」ではなかった。** ローカル実装は
+  多言語 (Python / Ruby / Gherkin の `#` コメント、docstring の三重引用符) を
+  扱っており、`maskJsNonCode` は JS 専用である。`#` を無条件に コメントとして
+  扱うと JS の private field (`this.#count`) が行末まで消える。そこで言語側の
+  span は option (`hashComments` / `tripleQuoted`) にした。Rust の `#[test]`
+  は carrier 検出パターンそのものなので、`#` 規則が食べないことをテストで
+  固定している。
+
 - **`--format github` の annotation 上限が GitHub の実際の上限と一致するように
   なり、summary が「全件出した」と誤読されなくなった。** 上限は 100 件・run 全体
   で持っていたが、GitHub の上限は **level ごと 10 件 / step** であり、
