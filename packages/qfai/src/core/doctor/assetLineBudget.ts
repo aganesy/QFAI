@@ -19,11 +19,17 @@ import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
  *
  * Raised from 500 once, on measurement rather than on the "this file is long"
  * claim this number exists to refuse. Three skill bodies had converged on the
- * old ceiling at 498 / 498 / 500 lines with 61 open changes queued behind them;
- * merged together those changes need 755 / 774 / 677. Splitting does not close
- * that gap. What those bodies still carry is held there by asset tests that
- * require an agent to read a rule where the rule acts, so the movable residue
- * is a few dozen lines against a shortfall near 275.
+ * old ceiling at 498 / 498 / 500 lines, with 33 / 22 / 16 open changes in
+ * flight against them. Two of the three are net neutral, but the middle one is
+ * not: eleven of its open changes each carry it past the old ceiling on their
+ * own, the widest to 549, and their intended edits together add 161 lines to a
+ * body that starts at 498.
+ *
+ * Splitting does not absorb that. What those bodies still carry is held there
+ * by asset tests that require an agent to read a rule where the rule acts, so
+ * the movable residue is a few dozen lines. Nor is a net-neutral queue safe at
+ * zero headroom: changes land one at a time, and a body at 498 fails on the
+ * first one that adds four lines whether or not a later one takes them back.
  *
  * Converging on the limit was itself the signal: a body at the ceiling stops
  * shedding topics and starts packing them into longer lines, and by then the

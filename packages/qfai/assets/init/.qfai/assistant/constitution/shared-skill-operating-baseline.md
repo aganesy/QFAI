@@ -35,11 +35,13 @@ section out, not to raise the number.
 
 It was raised from 500 once, and on measurement rather than on the "this file is
 long" claim the number exists to refuse: three skill bodies had converged on that
-ceiling with dozens of queued changes that together needed roughly 275 more
-lines, and the detail those bodies carry is required to sit in the body rather
-than behind a pointer. Converging on the limit was itself the signal — a body at
-the ceiling stops shedding topics and starts packing them into longer lines, and
-a line count cannot see that. Raise it again only against evidence of that kind.
+ceiling, and the changes in flight against one of them added 161 lines to a body
+already at 498 — eleven of them crossing the ceiling on their own. The detail
+those bodies carry is required to sit in the body rather than behind a pointer,
+so splitting could not absorb it. Converging on the limit was itself the signal —
+a body at the ceiling stops shedding topics and starts packing them into longer
+lines, and a line count cannot see that. Raise it again only against evidence of
+that kind.
 
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
