@@ -26,7 +26,14 @@
   (上限付き)。stderr である理由は、GitHub が workflow command を stdout
   からしか読まないため、報告自身が command になれないようにするため。
 
-### Fixed
+  child process で走らせる 3 行は Node の `--experimental-strip-types` に
+  依存していたが、このフラグは Node 22.6 で入ったもので `engines.node` は
+  `>=20.19.0` である。floor lane では child が **コマンドラインの時点で
+  status 9 で死に**、setup が読み込まれる前に落ちていた — フィルタの挙動
+  ではなくフラグの有無を報告していたことになる。version 判定で skip する案は
+  取らなかった: package が約束している版を実際に走らせる唯一の lane で、
+  フィルタが一度も動かなくなる。型除去は devDependency の `typescript`
+  (`transpileModule`) で行い、child は素の `node` で走る。
 
 - **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
   git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
