@@ -170,6 +170,15 @@ and every reviewer response must carry its `Authored/edited under review:` attes
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
+### Routing Phase Crosswalk (pointer)
+
+`agent-routing.yml` names three phases for this skill; `## Stage and Phase Order (Fixed)` names
+nine stages and phases. They are one sequence in two vocabularies, and the mapping between them —
+which fixed-order entries each routing phase spans, and the two exceptions that bound the table —
+is normative and lives in `references/sdd-routing-phase-crosswalk.md`. Honour the spans there:
+a routing phase's mandatory agents run inside its span, and its blocking agents MUST return `PASS`
+before the span's last entry is left.
+
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
@@ -468,6 +477,7 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md`, one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. That precondition is project-wide, so a run that adds the project's first surface signal or removes its last re-runs the E2E-row delta over every spec's ledger, not the target's alone. A seeded E2E/API row carries `-` in Test file and Selector — the test does not exist yet, `/qfai-atdd` never writes this ledger, and `/qfai-implement` Phase Red step 3b writes both cells from that stage's handoff entry when it advances the row. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync; that route runs Phase 2c itself for a contract it activates with no owner, and leaves the contract at `x-qfai-status: planned` when even that names none, rather than shipping a gate no ledger can clear. The same pass migrates an eight-column ledger: add `US-Refs` / `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.

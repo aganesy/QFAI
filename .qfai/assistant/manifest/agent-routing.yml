@@ -26,6 +26,18 @@ routing:
         rerun_policy: changed-scope-dependents
     review_profile: requirements-heavy
 
+  # The phase IDs below are spans over the nine stages and phases
+  # `skills/qfai-sdd/SKILL.md` `## Stage and Phase Order (Fixed)` declares — the
+  # two documents use different vocabularies on purpose. The mapping is
+  # normative and lives in `skills/qfai-sdd/SKILL.md`
+  # `### Routing Phase Crosswalk (Normative)`, together with the two exceptions
+  # that bound it (contract-scoped runs, no-argument batch fan-out). Without it
+  # an orchestrator cannot tell which of the nine phases a blocking agent gates,
+  # and two conforming runs can place the same blocking reviewer at different
+  # points. The spans scope blocking, not rerun: `rerun_policy` keeps the
+  # vocabulary defined at the bottom of this file, so a changed artifact re-runs
+  # its dependents in any span. Keep both sides in sync; the drift guard is
+  # `tests/assets/sddRoutingPhaseCrosswalk.test.ts`.
   - skill: qfai-sdd
     phases:
       - id: slice-and-scope
@@ -33,9 +45,18 @@ routing:
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner]
-        rerun_policy: failed-agents-only
+        # `requirements-analyst` writes the Triage table this phase's blocking
+        # planner judges, so a `REVISE` has to reach the author: under
+        # `failed-agents-only` only the planner would re-run, re-reading an
+        # unchanged table and returning the same verdict.
+        rerun_policy: changed-scope-dependents
       - id: design
-        mandatory_agents: [solution-architect, test-design-analyst]
+        # `requirements-analyst` is mandatory here as well as in
+        # `slice-and-scope`: `skills/qfai-sdd/SKILL.md` `Stage minimum roles`
+        # makes it the drafter of requirement-aligned spec content, which is
+        # Phase 2 Slice work inside this span, after Phase 0 froze the
+        # contracts. Span membership is a floor, not an exclusive assignment.
+        mandatory_agents: [solution-architect, test-design-analyst, requirements-analyst]
         conditional_agents: [qa-strategist, product-experience-architect]
         parallel_groups: []
         blocking_agents: [solution-architect]

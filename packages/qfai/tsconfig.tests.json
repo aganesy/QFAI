@@ -46,6 +46,7 @@
     "tests/assets/openQuestionRouting.test.ts",
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
+    "tests/assets/sddRoutingPhaseCrosswalk.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
