@@ -243,7 +243,7 @@ export const RULE_PROMOTIONS = {
    * re-take; a row at rest is making a claim.
    */
   tddListEvidenceRevisionStale: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
-   /**
+  /**
    * `QFAI-ASSETS-003` — a Stage 0 steering catalog file still holding the
    * angle-bracket slots and bare to-do keywords it shipped with. `qfai init`
    * copies those four templates verbatim, so on the release that adds the
