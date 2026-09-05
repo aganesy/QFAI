@@ -36,6 +36,8 @@ const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
+const DRIFT = "assistant/constitution/drift-protocol.md";
+const DEPTH = "assistant/skills/qfai-atdd/references/test-case-depth-checklist.md";
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
@@ -56,6 +58,27 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**This skill does not write the ledger.**");
     expect(atdd).toContain("references/execution-ledger.md#allowed-transitions");
+  });
+
+  it("commits the per-item evidence that fresh-clone ledger anchors resolve", async () => {
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "The per-item evidence file `.qfai/evidence/atdd-<spec-id>.md` is required and committed",
+    );
+    expect(atdd).toContain("validation must resolve them on a fresh clone");
+
+    const drift = flat(await read(tree, DRIFT));
+    expect(drift).toContain("**Durable per-item TDD evidence**");
+    expect(drift).toContain("`.qfai/evidence/implement-<spec-id>.md`");
+    expect(drift).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+
+    const depth = flat(await read(tree, DEPTH));
+    expect(depth).toContain("The per-item `atdd-<spec-id>.md` is committed too");
+    expect(depth).not.toContain("`atdd-<spec-id>.md` is deleted from history");
+
+    const catalog = flat(await read(tree, CATALOG));
+    expect(catalog).toContain("live in a committed per-item evidence file");
+    expect(catalog).not.toContain("live in an evidence file that is normally ignored");
   });
 
   it("points at the reference and names the three branches in order", async () => {
@@ -134,11 +157,10 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
   const DRIFT = "assistant/constitution/drift-protocol.md";
 
   it("does not claim the ledger carve-out for a second writer", async () => {
-    // The transfer this PR first attempted needs machinery the package does
-    // not have — Phase 2b does not seed E2E/API rows and the ledger header has
-    // no `US-Refs` / `CON-API-Refs` column — so it is out of scope here.
-    // `/qfai-implement` keeps the single carve-out; this stage produces the
-    // evidence its cells point at.
+    // Phase 2b now seeds the E2E/API rows and the shipped ledger header
+    // carries `US-Refs` / `CON-API-Refs`, but the ledger stays a
+    // single-writer artifact: `/qfai-implement` keeps the single carve-out and
+    // this stage produces the evidence its cells point at.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**This skill does not write the ledger.**");
     const drift = flat(await read(tree, DRIFT));
@@ -443,9 +465,9 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     // Generalised: the exemption is item 3 on every row, because a RED always
     // precedes the code that makes it pass.
-    expect(implement).toContain("**except item 3**");
+    expect(implement).toContain("**Item 3** cannot be taken against the final tree on any row");
     expect(implement).toContain("a RED precedes the code that makes it pass");
-    expect(implement).toContain("items 5, 7 and 8 agree among themselves");
+    expect(implement).toContain("items 6, 7 and 8 agree among themselves");
   });
 
   it("keeps the whole per-item record in the file the gate reads", async () => {
@@ -611,13 +633,15 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // RED is one of the two.
     expect(revision).toContain("**Every RED is one.**");
     expect(revision).toContain("A RED `/qfai-atdd` handed over is taken before the production");
-    expect(revision).toContain("leaves `Revision` for the GREEN and the two reviews");
+    expect(revision).toContain("leaves `Refactor verify revision` for item 6 and the two reviews");
   });
 
   it("takes branch-1 rows through P1c one at a time", async () => {
-    // Every row's checkpoint runs the full suite, so a second deliberate RED
-    // left open elsewhere fails the first row's checkpoint — and that row is
-    // then stranded at `refactor`, which Phase Red does not re-select.
+    // A deliberate RED left open elsewhere fails any checkpoint that runs the
+    // full suite — at the latest the spec-level one — and the row whose
+    // checkpoint it fails is then stranded at `refactor`, which Phase Red does
+    // not re-select. How often that happens is `relevant-test-suite.md`'s to
+    // define, not this file's.
     expect(flat(await read(tree, PROVENANCE))).toContain(
       "P1c — discharge branch 1, one row at a time",
     );
@@ -895,6 +919,8 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
     expect(implement).toContain("its implement anchor is accepted");
+    expect(implement).toContain("historical completed-artifact contract");
+    expect(implement).toContain("do not retroactively require the ATDD-only");
   });
 
   it("tells a project whose manifest predates the red phase what to do", async () => {
@@ -1214,7 +1240,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Audited evidence hash` is **recomputed** here");
     expect(implement).toContain(
-      "completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`",
+      "`Spec reviewed revision`, `Spec audited evidence hash`, `Spec review pack`, and `Spec review pack seal`",
+    );
+    expect(implement).toContain(
+      "gate item 10 recomputes both the evidence hash and the whole-pack seal",
     );
   });
 
@@ -1456,13 +1485,15 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("**its spec and `TDD-ID` together**");
   });
 
-  it("states the same-revision exemption once, for item 3", async () => {
+  it("states the same-revision exemption once, for items 3 and 5", async () => {
     // The consequences section still listed two special cases, so a reviewer
-    // applying it rejected the very cycle the section above permits.
+    // applying it rejected the very cycle the section above permits. Item 5
+    // joined it once the refactor between the GREEN and the reviews was
+    // recognised as moving the address by construction.
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(revision).toContain("**The exception is item 3, on every row");
+    expect(revision).toContain("**The exceptions are items 3 and 5, on every row");
     expect(revision).not.toContain("**Two exceptions, both structural");
   });
 
@@ -1734,9 +1765,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("takes Round 1: Revision from the restored tree, not the mutated one", async () => {
-    // `Revision` is the address items 5, 7 and 8 share, and the revert moves it
-    // by construction on an uncommitted tree — the mutated tree has its own
-    // field.
+    // `Round 1: Revision` is the address item 5's GREEN names, and the revert
+    // moves it by construction on an uncommitted tree — the mutated tree has
+    // its own field.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Round 1: Revision` is written from **that** run");
     expect(implement).toContain("The mutated tree has its own field.");
@@ -1747,6 +1778,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // construction, and a `done` row cannot take a fresh RED.
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("**And the consumer has to accept that pairing.**");
+    expect(shared).toContain("**The machine-readable form is fixed.**");
+    expect(shared).toContain("`Restored GREEN result`, `RED test manifest`, and `RED test hash`");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
       "**unless a `Shared-artifact re-verify` entry names this row — its spec and `TDD-ID` together —",
@@ -2104,7 +2137,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`Falsifiability revision` — **required on a `falsifiability` row**",
     );
-    expect(implement).toContain("**except item 3**");
+    expect(implement).toContain("**Item 3** cannot be taken against the final tree on any row");
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
@@ -2227,16 +2260,23 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("When this stage has no row of its own, the record is stage-level");
     expect(shared).toContain("`## Shared-artifact re-verify` in the stage evidence file");
-    // And it names that file, not the Coverage Depth Matrix: the matrix is a
-    // separate committed artifact the stage evidence only links to, it holds no
-    // `## Final status`, and gate item 10 in `/qfai-implement` reads the stage
-    // evidence file — a block written into the matrix would never be consulted.
+    // And it names the file the validator actually reads. The write instruction
+    // and the read rule sat two sentences apart naming different files — the
+    // author was sent to `atdd-<spec-id>.md` while `STAGE_EVIDENCE_FILE_NAME` in
+    // `validators/tddList.ts` matches `coverage-depth-spec-NNNN.md` alone — so a
+    // stage record written exactly as instructed was never consulted and the
+    // consumer rows it exists to clear stayed unresolvable. Both halves are
+    // pinned together here so they cannot drift apart again.
     expect(shared).toContain(
-      "in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`, beside `## Final status`)",
+      "in the stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`, " +
+        "beside `## Final status`)",
     );
-    expect(shared).not.toContain(
-      "stage evidence file (`.qfai/evidence/coverage-depth-<spec-id>.md`",
+    expect(shared).toContain(
+      "A stage block is read only from `.qfai/evidence/coverage-depth-<spec-id>.md`",
     );
+    // `atdd-<spec-id>.md` is where an *editing row's* own entry lives; it is not
+    // the home of the stage block.
+    expect(shared).not.toContain("in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`");
     // And a consumer is told to read both places, or the block would be written
     // and never consulted.
     expect(shared).toContain("A consumer clearing a mismatch reads **both** places");
@@ -2312,9 +2352,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("says what a seal catches and what it does not", async () => {
-    // Three homes for the expected value each fell to the same move, and a
-    // committed copy is not available either: stage evidence is regenerable and
-    // deliberately not committed, so requiring one would stop every completion.
+    // A committed per-item record still cannot make its own seal authoritative:
+    // the same authority can edit the record and its seal before the next commit.
+    // A fourth seal location would therefore repeat the same trust-boundary flaw.
     const evidence = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
@@ -2341,6 +2381,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
     );
     expect(layout).toContain('**`revision_form: "content-hash"`** and **`revision`**');
+    expect(layout).toContain("Review packs are local-only by default");
+    expect(layout).toContain("when the exact directory is absent");
     const playbook = flat(
       await read(tree, "assistant/skills/qfai-sdd/references/review-cycle-playbook.md"),
     );
@@ -2381,6 +2423,78 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(layout).toContain("**omitting either is a current-contract violation**");
     expect(layout).toContain(".qfai/review/.legacy-packs");
+  });
+
+  it("lets one pack cover a whole T1 coherent group", async () => {
+    // The pack rule read "One pack per review round for one `TDD-ID`" while
+    // `volume-policy.md#batched-review` makes a T1 group one review round over
+    // several rows, so the batched round had no legal artifact: one pack per
+    // member asserts rounds that never happened, one pack naming every member
+    // contradicted the layout as written. The round is one turn *per required
+    // reviewer*, not one turn in total — reading it as a single agent call
+    // leaves gate items 3/5/7/8 without their verdicts.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "One pack per review round. A round covers one `TDD-ID`, or the members of one T1 coherent group (`volume-policy.md#batched-review`).",
+    );
+    expect(layout).toContain("name the round's `TDD-ID`s in `review_request.md` as a **list**");
+    expect(layout).toContain(
+      "A T1 group review is **one round**, not one turn per member — and not one turn in total.",
+    );
+    expect(layout).toContain(
+      "Each reviewer this pack carries (`completion-reviewer`, `implementation-reviewer`, and `product-surface-reviewer` where item 9 applies) takes **one** turn over the whole group",
+    );
+    // The pack is items 7-9. Naming `qa-gatekeeper` here is what put an
+    // observation into an artifact that cannot hold one.
+    expect(layout).not.toContain("required reviewer (`qa-gatekeeper`");
+    expect(layout).toContain(
+      "Those turns share **one** pack: one `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in `summary.json`.",
+    );
+    expect(layout).toContain(
+      "Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the same `review-<timestamp>/` directory **for that round**.",
+    );
+    expect(layout).not.toContain("One pack per review round for one `TDD-ID`");
+    // A group round is not a single agent call.
+    expect(layout).not.toContain("is **one** reviewer turn");
+  });
+
+  it("keeps the group's RED and GREEN observations out of the review pack", async () => {
+    // The T1 bullet claimed the pack carried "gate items 3, 5, 7 and 8", so one
+    // `qa-gatekeeper` turn had to hold both the RED and the GREEN — two
+    // observations at two revisions (item 3 names `RED revision`, items 5/7/8
+    // name `Revision`) in an artifact declaring a single top-level `revision`
+    // (`src/core/validators/reviewArtifacts.ts`). Sealing the RED into a pack of
+    // its own does not fix it either: a serial T1 group reaches RED on a
+    // different tree per member, and a row carries one `Round N: Review pack
+    // seal`. The pack is items 7-9 (line 1 of this file); the observations are
+    // phase-authored fields of each member row's evidence entry, which is
+    // per-row and per-round by construction.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "**`qa-gatekeeper` is not in the pack, and gate items 3 and 5 are not pack verdicts.**",
+    );
+    expect(layout).toContain("This layout covers items 7-9");
+    // Where the two observations actually live, per member row.
+    expect(layout).toContain(
+      "records them as **phase-authored fields of each member row's own entry** — `Round N: RED revision`",
+    );
+    expect(layout).toContain(
+      "distinct fields at distinct revisions **on the row that was observed**",
+    );
+    expect(layout).toContain(
+      "a group whose members reach RED on different trees records each one truthfully and neither can overwrite the other",
+    );
+    // Batching the gatekeeping does not batch the record.
+    expect(layout).toContain(
+      "a batched confirmation still writes one RED and one GREEN record per member row",
+    );
+    // And the shape this must not become.
+    expect(layout).toContain("Do not seal a RED into a `review-<timestamp>/`");
+    expect(layout).not.toContain("the group's RED confirmation is sealed in its own");
   });
 
   it("gives the implementation reviewer the subject it hashes", async () => {
