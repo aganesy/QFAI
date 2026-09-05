@@ -59,13 +59,20 @@ const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
 const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\d{3})$/;
 
 /**
- * Rules whose findings are per-row, not per-file.
+ * Rules whose findings are *always* per-row, so the waiver is rejected outright
+ * without `match.dl_ids`.
  *
  * Every row of one `tdd/test-list.md` produces `TDDLIST_EXCEPTION_PARKED` with
  * the same rule and the same `file`, so a waiver matched on `rule` +
- * `scope.paths` alone suppresses the unapproved rows next to the approved one.
- * For these rules the waiver must also name the row(s) in `match.dl_ids` — the
- * only per-finding key {@link matchesWaiver} compares.
+ * `scope.paths` alone would suppress the unapproved rows next to the approved
+ * one. Not one finding of these rules is file-wide, so refusing the waiver at
+ * load time costs the operator nothing and says why.
+ *
+ * A rule whose findings are *mixed* — some naming a row, some naming the whole
+ * file — must not be listed here: blocking the waiver would also take away the
+ * file-wide finding's only way to be accepted. Those are handled per finding
+ * instead, by {@link matchesWaiver}: a waiver that names no `dl_ids` reaches
+ * only the findings that name no row.
  *
  * Both spellings {@link resolveRuleKeys} accepts are listed. Holding only the
  * rule id would let the code spelling — the one operators are told to write —
@@ -96,10 +103,7 @@ export async function applyWaivers(
   root: string,
   findings: Issue[],
 ): Promise<{ issues: Issue[]; waivers: ValidationWaivers }> {
-  const resolvedRoot = path.resolve(root);
-  const ruleSeverityIndex = buildRuleSeverityIndex(findings);
-  const loaded = await loadWaivers(resolvedRoot, ruleSeverityIndex);
-  const applied = applyWaiversToFindings(resolvedRoot, findings, loaded.applicableWaivers);
+  const { applied, loaded } = await runWaiverPass(root, findings);
 
   return {
     issues: [...applied.issues, ...loaded.validationIssues],
@@ -107,6 +111,46 @@ export async function applyWaivers(
       active: loaded.activeWaivers,
       suppressed: applied.suppressed,
     },
+  };
+}
+
+/**
+ * Runs the same waiver pass over findings raised outside `validateProject`.
+ *
+ * `report` adds findings of its own (the uncounted-delta scan) after
+ * `validateProject` has already applied waivers, so without this pass they are
+ * structurally unwaivable: no `suppress` and no `downgrade_to` could ever reach
+ * them, and a project that deliberately keeps an unfilled delta would be stuck
+ * with a warning it has no way to accept.
+ *
+ * The waiver file's own findings (`QFAI-WAIVER-00x`) are deliberately dropped:
+ * `validateProject` already reported them for this same file, and returning
+ * them again would double-count every parse error.
+ *
+ * The waivers this pass found applicable do come back, in `active`. The caller
+ * cannot assume its own `ValidationResult` already lists them — a result read
+ * back from a stored `validate.json` may carry no `waivers` block at all — and
+ * a report that prints `active 0 / suppressed 1` names no waiver for the
+ * suppression it just performed.
+ */
+export async function applyWaiversToExtraFindings(
+  root: string,
+  findings: Issue[],
+): Promise<ExtraFindingsWaiverResult> {
+  const { applied, loaded } = await runWaiverPass(root, findings);
+  return { ...applied, active: loaded.activeWaivers };
+}
+
+async function runWaiverPass(
+  root: string,
+  findings: Issue[],
+): Promise<{ applied: AppliedWaiverResult; loaded: LoadWaiversResult }> {
+  const resolvedRoot = path.resolve(root);
+  const ruleSeverityIndex = buildRuleSeverityIndex(findings);
+  const loaded = await loadWaivers(resolvedRoot, ruleSeverityIndex);
+  return {
+    applied: applyWaiversToFindings(resolvedRoot, findings, loaded.applicableWaivers),
+    loaded,
   };
 }
 
@@ -576,6 +620,15 @@ type AppliedWaiverResult = {
   suppressed: ValidationWaivers["suppressed"];
 };
 
+/** What {@link applyWaiversToExtraFindings} hands back to its caller. */
+export type ExtraFindingsWaiverResult = AppliedWaiverResult & {
+  /**
+   * The waivers this pass loaded and could apply, so the caller can fold them
+   * into whatever active list it publishes.
+   */
+  active: ValidationWaiverEntry[];
+};
+
 function applyWaiversToFindings(
   root: string,
   findings: Issue[],
@@ -636,20 +689,31 @@ function matchesWaiver(root: string, finding: Issue, waiver: ParsedWaiver): bool
     return false;
   }
 
-  if (!match || !hasMatchScope(match)) {
-    return true;
+  const dlIds = match?.dl_ids ?? [];
+
+  // `dl_id` is the finding's way of saying "I am one row of this file, not the
+  // file". A waiver that names no `dl_ids` is therefore a file-wide waiver, and
+  // letting it through here would suppress every row the operator never
+  // approved — including rows added to the file long after the waiver was
+  // written. A file-wide waiver reaches the file-wide findings only.
+  if (dlIds.length === 0) {
+    if (finding.dl_id !== undefined) {
+      return false;
+    }
+    if (!match || !hasMatchScope(match)) {
+      return true;
+    }
+    return (
+      pathMatchers.length === 0 || matchFindingPath(root, finding.file, pathMatchers, repoWideScope)
+    );
   }
 
-  const hasDlIds = Array.isArray(match.dl_ids) && match.dl_ids.length > 0;
-  const hasPaths = pathMatchers.length > 0;
-
-  const dlMatched =
-    hasDlIds && match.dl_ids ? match.dl_ids.includes(finding.dl_id ?? "") : !hasDlIds;
-  const pathMatched = hasPaths
-    ? matchFindingPath(root, finding.file, pathMatchers, repoWideScope)
-    : true;
-
-  return dlMatched && pathMatched;
+  if (!dlIds.includes(finding.dl_id ?? "")) {
+    return false;
+  }
+  return (
+    pathMatchers.length === 0 || matchFindingPath(root, finding.file, pathMatchers, repoWideScope)
+  );
 }
 
 function matchFindingPath(

@@ -310,8 +310,11 @@ export async function runReport(options: ReportOptions): Promise<void> {
       "report: CI で full-scan ではない profile を実行しました。stage gate としては有効ですが、完了宣言の前に --profile full（または --profile 指定なし）で full-scan を実行してください。",
     );
   }
+  // `data.summary.counts`, not `validation.counts`: the report adds findings of
+  // its own (uncounted delta files), and a line that omitted them would print
+  // `warning=0` above a report body that lists warnings.
   info(
-    `report: info=${validation.counts.info} warning=${validation.counts.warning} error=${validation.counts.error}`,
+    `report: info=${data.summary.counts.info} warning=${data.summary.counts.warning} error=${data.summary.counts.error}`,
   );
   info(`wrote report: ${outPath}`);
 }

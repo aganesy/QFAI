@@ -1072,6 +1072,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const deltaTemplate = await readFile(deltaTemplatePath, "utf-8");
     expect(deltaTemplate).toContain("# 09 Delta");
     expect(deltaTemplate).toContain("## Change Summary");
+    // The sections `parseDeltaV1` reads. Without them the file is invisible to
+    // `qfai report`, which then prints zeros as if the run were clean (#545).
+    // The parse itself is pinned in tests/assets/deltaTemplateParses.test.ts.
+    expect(deltaTemplate).toContain("## Update History");
+    expect(deltaTemplate).toContain("## Decision Log");
+    expect(deltaTemplate).toContain("### DL-0001");
+    expect(deltaTemplate).toContain("#### Meta");
+    expect(deltaTemplate).toContain("#### Verification");
     expect(deltaTemplate).toContain("## Rationale");
     expect(deltaTemplate).toContain("## Candidates Considered");
     expect(deltaTemplate).toContain("## Adopted");

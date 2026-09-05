@@ -604,6 +604,37 @@ describe("applyWaivers", () => {
     }
   });
 
+  // `QFAI-CTYPE-004` is raised by `report`, never by `validate`. Without a
+  // static entry every `qfai validate` run would call the waiver an unknown
+  // rule, even though `qfai report` applies it on the very same tree.
+  it("accepts a waiver for a rule only the report emits", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-01",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "delta is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
   // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
   // no finding. Without a static entry a legitimate global waiver for a
@@ -1033,6 +1064,103 @@ describe("applyWaivers", () => {
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-005")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `ROW_SCOPED_RULES` can only speak for a rule whose findings are *all* rows.
+  // A rule that raises both — `QFAI-CTYPE-004` names one `### DL-` entry when
+  // there is one and the whole file when there is not — has to be separated
+  // per finding, or a `scope.paths` waiver written for the file-wide one takes
+  // every row in that file with it, this run's and every later run's.
+  it("keeps a paths-only waiver away from the findings that name a row", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-02",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "delta is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "09_delta.md"',
+          "",
+        ].join("\n"),
+      );
+
+      const deltaFile = path.join(root, ".qfai", "specs", "spec-0001", "09_delta.md");
+      const findings: Issue[] = [
+        buildIssue({ code: "QFAI-CTYPE-004", rule: "CTYPE-004", file: deltaFile }),
+        buildIssue({
+          code: "QFAI-CTYPE-004",
+          rule: "CTYPE-004",
+          dlId: "DL-0002",
+          file: deltaFile,
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+      const kept = result.issues.filter((item) => item.code === "QFAI-CTYPE-004");
+
+      // The file-wide finding is the one this waiver names, and the only one it
+      // may reach.
+      expect(kept.map((item) => [item.dl_id, item.suppressed ?? false])).toEqual([
+        [undefined, true],
+        ["DL-0002", false],
+      ]);
+      expect(result.waivers.suppressed.total).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reaches a row the waiver named in match.dl_ids", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-03",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          "    match:",
+          '      dl_ids: ["DL-0002"]',
+          '    reason: "delta entry is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "09_delta.md#DL-0002"',
+          "",
+        ].join("\n"),
+      );
+
+      const deltaFile = path.join(root, ".qfai", "specs", "spec-0001", "09_delta.md");
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-CTYPE-004",
+          rule: "CTYPE-004",
+          dlId: "DL-0002",
+          file: deltaFile,
+        }),
+        buildIssue({
+          code: "QFAI-CTYPE-004",
+          rule: "CTYPE-004",
+          dlId: "DL-0003",
+          file: deltaFile,
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+      const kept = result.issues.filter((item) => item.code === "QFAI-CTYPE-004");
+
+      expect(kept.map((item) => [item.dl_id, item.suppressed ?? false])).toEqual([
+        ["DL-0002", true],
+        ["DL-0003", false],
+      ]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

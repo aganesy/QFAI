@@ -39,6 +39,68 @@
 | -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
 | REQ-XXXX | <one-liner> | spec-0001     | UPDATE    | APPEND | -           | <why>     |
 
+## Update History
+
+| Date       | DL      | Summary        |
+| ---------- | ------- | -------------- |
+| YYYY-MM-DD | DL-0001 | <what changed> |
+
+## Decision Log
+
+> This is the only section `npx qfai report` reads for Change Type metrics.
+> One `### DL-NNNN` entry per decision, each carrying a `#### Meta` YAML block
+> with all seven keys. A delta recorded anywhere else is invisible to the
+> tooling and reports as zero decision entries.
+> The entry below is a skeleton, not a decision: while `date`, `scope` and
+> `notes` still hold their placeholders the report skips it and names this file
+> as uncounted, rather than publishing a change nobody made.
+
+### DL-0001
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: YYYY-MM-DD
+# Initial | Behavior | Structural | Ops (exactly one)
+primary: Initial
+# @api | @db | @nfr | @docs | @test (zero or more)
+tags: ["@docs"]
+# Compatibility | Improvement | Change | Bug-for-bug
+compat: Improvement
+scope:
+  - <file / module / contract this decision touches>
+notes: <one line of context>
+```
+
+#### Migration / Follow-ups
+
+- <migration step, or "No migration required.">
+
+#### Rejected
+
+- option: <candidate name>
+  reason: <why rejected>
+  do_not: <must not reintroduce>
+  temptation: <why people may accidentally choose it again>
+
+#### Verification
+
+> Required when `compat: Change`. See `constitution/change-classification.md`.
+
+### Plan
+
+- id: VFY-001
+  # unit | integration | acceptance | manual | migration | rollback
+  level: unit
+  target: <what is verified>
+  method: <how it is verified>
+  # dev | qa | reviewer | ops
+  owner: dev
+  expected: <observable pass condition>
+  links:
+  - <evidence path or issue reference>
+
 ## Rationale
 
 - <why this change is needed>
