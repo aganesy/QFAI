@@ -33,6 +33,7 @@
     "tests/assets/assets.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
+    "tests/assets/completionContractPlaceholderScan.test.ts",
     "tests/assets/coverageDepthMatrix.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
     "tests/assets/finalChecklistGateParity.test.ts",

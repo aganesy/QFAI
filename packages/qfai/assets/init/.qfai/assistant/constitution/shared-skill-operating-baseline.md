@@ -186,5 +186,48 @@ Before declaring completion, you MUST:
 
 - resolve or explicitly defer undefined or ambiguous items with rationale;
 - verify every expected artifact exists and required sections are populated;
-- scan generated artifacts for unresolved placeholders such as `TBD`, `TODO`, `TBA`, `TBC`, `XXX`, `???`, `OQ`, `OPEN QUESTION`, `UNDEFINED`, and `PLACEHOLDER`;
+- scan generated artifacts for unresolved placeholders — `TODO`, `TBA`, `TBC`, `XXX`, `???`, `UNDEFINED`, `PLACEHOLDER`, and **undocumented** `TBD` — under the two rules below;
 - run the smallest applicable smoke check, or state "not applicable" with a short rationale.
+
+### What the placeholder scan does not flag
+
+**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: an
+Open Questions register row carrying its tracking fields — ID, owner, status,
+due — and the `Open Questions` heading, `OQ-ID` table header and empty-state row
+that the required `Open-questions.md` files ship with while recording zero open
+questions. Article II and `workflow.md` both end an unverifiable fact by
+recording an Open Question, so the tracked record they prescribe must never be
+reported as an unresolved placeholder. Everywhere else the two strings are still
+scanned: a bare `OQ` or `OPEN QUESTION` left as a value in generated spec prose
+or a contract field, or a row missing its owner, status or due date, is a hit
+like any other token.
+
+**A documented `TBD` is a compliant record.** `constitution.md` Article II and
+`thinking.md` require writing `TBD` together with a note of what evidence is
+missing, and `thinking.md` requires raising the matching Open Question for the
+same fact. Both halves together are the finished form, not an unfinished one; do
+not report it and do not delete it — deleting it destroys the record of the
+missing evidence, which is the whole point of the marker. A `TBD` missing either
+half — no note, or no Open Question — is a hit.
+
+### What a surviving hit obligates
+
+A hit is **reported, not silently cleared**, and **cleared by a re-scan, not by
+assertion**. Fix what you can, then run the scan again over the same artifacts:
+_resolved_ is the verdict for a hit the re-run no longer reports, and that re-run
+is its evidence. It is not available for a hit still present at that file and
+line — a token still readable there is unresolved whatever the report calls it.
+List every hit the re-scan still finds alongside the completion claim — file,
+line, token — and state for each one whether it is deferred with rationale or
+recorded as an Open Question. A completion claim that omits a surviving hit is
+invalid evidence under the rules above. Completion is blocked while a surviving
+hit is neither of the two.
+
+**Severity floor on the verdict.** _Deferred with rationale_ and _recorded as an
+Open Question_ are NOT available for a hit that stands in for a concrete
+security defect, data loss or corruption, or a correctness defect that would
+break a released contract. Such a hit is cleared only by a named fix or by
+dropping the item from scope; recording it and declaring completion anyway is
+prohibited, exactly as `shared-skill-delegation-baseline.md` withholds that same
+exit for that same class. While neither of the two remaining verdicts applies,
+completion stays blocked.
