@@ -154,10 +154,15 @@ describe("issue code uniqueness", () => {
     expect(missingDescriptions).toEqual([]);
   });
 
-  it("validate.ts may describe additional reserved prototyping codes beyond current active usage", async () => {
+  it("validate.ts does not reserve prototyping codes no validator emits", async () => {
+    // The catalog used to carry "reserved" prototyping codes ahead of their
+    // emitters. An entry no validator can produce describes a gate that cannot
+    // fire, so the reservation itself is the defect; the per-key emitter check
+    // lives in tests/unit/issueCatalogHasEmitters.test.ts.
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
-    expect(validateContent).toContain("QFAI-PROT-150");
+    expect(validateContent).not.toContain("QFAI-PROT-150");
+    expect(validateContent).not.toContain("QFAI-BREAK-");
   });
 });
 
@@ -344,7 +349,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-WAIVER-002",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
-  "R-CERTIFY-VERIFY-CIRCULAR",
   "R-EVIDENCE-MUTATION-UNLOGGED",
   "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-INCOMPLETE",
@@ -545,7 +549,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-WAIVER-002",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
-  "R-CERTIFY-VERIFY-CIRCULAR",
   "R-EVIDENCE-MUTATION-UNLOGGED",
   "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-INCOMPLETE",
@@ -561,7 +564,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "TDDLIST_TABLE_MISSING",
   "TDDLIST_TC_NOT_COVERED",
   "TDDLIST_TEST_FILE_MISSING",
-  "TRACE_DOWNSTREAM_REF",
   "TRACE_SHARED_SCOPE_VIOLATION",
   "W-SKILL-DOC-BROKEN-REF",
   "W-STALE-REFERENCE",
