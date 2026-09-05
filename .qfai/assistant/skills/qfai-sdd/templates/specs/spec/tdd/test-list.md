@@ -6,14 +6,60 @@ Red/Green/Refactor cycle one row at a time.
 
 ## Producer
 
-Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**.
-`/qfai-sdd` seeds them at Phase 2b. An empty table below is valid — it means
-the spec has no coverage-target TC yet, not that the ledger is missing.
+`/qfai-sdd` seeds the rows at Phase 2b, in **three groups**:
 
-`US-*` and `CON-API-*` are **not** rows here. They are ATDD obligations,
-traced by `QFAI:` annotations in the test tree per
-`.qfai/assistant/catalog/test-layers.md`, and `/qfai-atdd` does not write to
+- **one row per coverage-target TC** from `06_Test-Cases.md` — `Layer` from the
+  TC's declared `Level`, obligation in `TC-Refs`;
+- **one `Layer = E2E` row per active `US-*`** from `02_User-stories.md` —
+  obligation in `US-Refs`, `TC-Refs` is `-`;
+- **one `Layer = API` row per active `CON-API-*`** the spec **owns** —
+  obligation in `CON-API-Refs`, `TC-Refs` is `-`.
+
+Without the last two the ledger has nowhere to hold a `US-*` / `CON-API-*`
+obligation, so an all-`done` ledger can sit beside a `QFAI-ATDD-111` /
+`QFAI-ATDD-113` gate at 0% and still report itself complete.
+
+**Active** is the exemption `.qfai/assistant/catalog/test-layers.md` already
+defines: a spec that declares no user-facing surface owes no E2E reference for
+its `US-*` (`QFAI-ATDD-111` does not fire for it), and a contract declaring
+`x-qfai-status: planned` is excluded from `QFAI-ATDD-113`. Seeding an exempt
+obligation would park a completion-prohibiting `todo` row on a test that must
+not be written.
+
+**The surface exemption applies only where surface typing is in use.**
+`test-layers.md` scopes `QFAI-ATDD-111` by surface type only when at least one
+spec in this project declares a UI-bearing surface. A project that has never
+declared one has not opted in, the obligation stays project-wide, and **every**
+`US-*` is therefore active — applying the exemption there drops every E2E row
+and leaves a gate that never clears.
+
+**Which ledger an API row goes in.** `.qfai/contracts/**` has no spec owner in
+the model, so ownership is mechanical: a spec **owns** a `CON-API-*` that its
+own `spec-*/01..10` or `16_*` files name, and when several name it the
+**lowest-numbered** owning spec holds the single row while the others record it
+as a cross-spec obligation. Never write the same `CON-API-*` row into two
+ledgers. A `CON-API-*` no spec names has no owner and gets no row until
+Phase 2c gives it one.
+
+An empty table below is valid — it means the spec has no coverage-target TC and
+no active `US-*` / `CON-API-*` yet, not that the ledger is missing.
+
+The E2E and API rows are **tracked** here, not authored here. Their acceptance
+tests are written by `/qfai-atdd` and their `Status` / `DR-ID` / `Evidence` are
+advanced by `/qfai-implement`; the production behaviour a journey exercises is
+normally delivered by this spec's own TC rows, so an E2E/API row is a coverage
+obligation rather than the sole carrier of a feature. `/qfai-atdd` does not write to
 this ledger.
+
+**A seeded E2E/API row's `Test file` and `Selector` start at `-`, and
+`/qfai-implement` fills them.** The acceptance test does not exist when Phase 2b
+runs, so that phase invents no path for it. `/qfai-atdd` writes the test and
+records its path and selector as the row identity in its handoff entry — the one
+place they exist before this ledger has them — and `/qfai-implement` Phase Red
+step 3b copies both into the row in the same edit that moves it out of `todo`.
+Naming no writer for the two cells left them at `-` for the row's whole life:
+the `green` existence check has no test to run, and the reviewer's identity
+check has nothing to compare.
 
 Reseeding is a **delta**, never a regeneration: an unchanged TC's row keeps its
 `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`, and TCs
@@ -27,6 +73,12 @@ coverage target, has its row retired the same way. Leaving a stale `done` row
 hides re-implementation work, and leaving a `todo` row for a deleted TC feeds
 `/qfai-implement` an obligation that no longer exists.
 
+The `US-*` and `CON-API-*` rows follow the same rule, with one extra trigger:
+an obligation that **became exempt** — the spec stopped declaring a user-facing
+surface, or its contract went back to `x-qfai-status: planned` — has its row
+retired exactly like a deleted one, and an obligation that became active is
+appended at `todo`.
+
 ## Ledger
 
 The **first** markdown table in this file is the ledger — `validateTddList`
@@ -34,12 +86,12 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs |
+| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ |
 
 ## Schema
 
-Required columns, in the order used above:
+Required columns, in the order they lead the header above:
 
 | Column    | Description                                                  |
 | --------- | ------------------------------------------------------------ |
@@ -51,6 +103,25 @@ Required columns, in the order used above:
 | Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
 | DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+
+The two trailing columns are optional in the schema and **required by layer**.
+They ship in the header above so a seeded E2E/API row's obligation always has a
+home — a row of that layer with nowhere to record its `US-*` / `CON-API-*` is
+unverifiable, which is the state the header used to leave it in:
+
+| Column       | Description                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| US-Refs      | `US-NNNN` this row implements. Legal **only** on — and required on — a `Layer = E2E` row      |
+| CON-API-Refs | `CON-API-NNNN` this row implements. Legal **only** on — and required on — a `Layer = API` row |
+
+`.qfai/assistant/catalog/test-layers.md` forbids `TC-*` annotations in
+`tests/e2e/**` and `tests/api/**`, so those rows carry `-` in `TC-Refs`;
+`TDDLIST_OBLIGATION_LAYER_MISMATCH` enforces the binding in both directions.
+The required direction is conditioned on the column being in the header, which
+it is here: on this template an `E2E` row that leaves `US-Refs` at `-` (or an
+`API` row that leaves `CON-API-Refs` at `-`) is a row with no obligation in any
+column, and the validator errors on it rather than letting it reach `done`.
+A ledger predating these columns is untouched by that rule.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

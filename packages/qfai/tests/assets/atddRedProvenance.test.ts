@@ -157,11 +157,10 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
   const DRIFT = "assistant/constitution/drift-protocol.md";
 
   it("does not claim the ledger carve-out for a second writer", async () => {
-    // The transfer this PR first attempted needs machinery the package does
-    // not have — Phase 2b does not seed E2E/API rows and the ledger header has
-    // no `US-Refs` / `CON-API-Refs` column — so it is out of scope here.
-    // `/qfai-implement` keeps the single carve-out; this stage produces the
-    // evidence its cells point at.
+    // Phase 2b now seeds the E2E/API rows and the shipped ledger header
+    // carries `US-Refs` / `CON-API-Refs`, but the ledger stays a
+    // single-writer artifact: `/qfai-implement` keeps the single carve-out and
+    // this stage produces the evidence its cells point at.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**This skill does not write the ledger.**");
     const drift = flat(await read(tree, DRIFT));

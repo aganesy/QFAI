@@ -3159,6 +3159,12 @@ async function validateSpecTddList(
   // obligation has nowhere to live in the eight-column schema. `US-Refs` and
   // `CON-API-Refs` are the optional homes for those; when present their tokens
   // must be well-formed, otherwise an all-`done` ledger silently misreports.
+  //
+  // The binding runs both ways. Shape-and-layer alone still let a
+  // `Layer = E2E` row leave `US-Refs` at `-` on a ledger that ships the
+  // column — a row with no obligation in any column, and so nothing for a
+  // handoff to audit. `validateObligationColumn` requires the cell on the
+  // layer that owns it whenever the column is in the header.
   issues.push(
     ...validateObligationColumn(ledgerRows(), {
       column: "US-Refs",
@@ -3968,14 +3974,25 @@ type ObligationColumnSpec = {
 };
 
 /**
- * Validates an optional obligation column: token shape AND the row `Layer` the
- * obligation is legal on.
+ * Validates an optional obligation column in **both** directions: the token
+ * shape and the row `Layer` an obligation is legal on, and — the reverse — the
+ * obligation a row of that `Layer` owes.
  *
- * Absent column, empty cell and `-` are all fine — the column is optional and
- * only rows carrying that obligation fill it. Checking the shape alone let a
- * `Layer = Unit` row claim a `US-*` obligation, which the ATDD gates route to
- * `tests/e2e/**`: the ledger would record a layer-scoped obligation the
- * completion gate reads at the wrong layer.
+ * An absent column is fine: the column is optional in the schema, and a ledger
+ * written before it shipped records what it can in `TC-Refs`. Checking the
+ * shape alone let a `Layer = Unit` row claim a `US-*` obligation, which the
+ * ATDD gates route to `tests/e2e/**`: the ledger would record a layer-scoped
+ * obligation the completion gate reads at the wrong layer.
+ *
+ * An empty cell or `-` is fine **except on the layer that owns the column**.
+ * Once the column is in the header the obligation has a home, so a
+ * `Layer = E2E` row with no `US-*` (or a `Layer = API` row with no
+ * `CON-API-*`) is a row with no obligation at all: `TC-Refs` is forbidden
+ * there by `catalog/test-layers.md`, so nothing else on the row says what it
+ * covers, and it could reach `done` with no auditable target. This is
+ * conditioned on the column being present precisely so that it stays a gate on
+ * the new ten-column ledger and never a migration demand on an eight-column
+ * one.
  */
 function validateObligationColumn(
   rows: Iterable<LedgerRowRef>,
@@ -3988,6 +4005,20 @@ function validateObligationColumn(
     if (ref.scan.headers.indexOf(spec.column) < 0) continue;
     const value = cell(ref, spec.column);
     if (value.length === 0 || value === "-") {
+      if (cell(ref, "Layer").toLowerCase() === spec.layer) {
+        issues.push(
+          issue(
+            "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+            `${spec.column} is required on a Layer=${spec.layer.toUpperCase()} row, but spec-${spec.specNumber} (${ref.label}) leaves it empty`,
+            "error",
+            spec.relPath,
+            `${spec.rule}Required`,
+            [spec.column, spec.layer.toUpperCase()],
+            "change",
+            `Record the ${spec.expected} this row covers in ${spec.column}, or remove the row: a Layer=${spec.layer.toUpperCase()} row cannot record its obligation in TC-Refs.`,
+          ),
+        );
+      }
       continue;
     }
     for (const token of value.split(/[,;\s]+/).filter((entry) => entry.length > 0)) {

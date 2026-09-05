@@ -272,6 +272,16 @@ Every branch carries the row identity and the obligation reference: the audit
 subject hashes them and the gatekeeper judges before `/qfai-implement` can add
 anything, so recorded later they move a stored hash and left out they can be repointed.
 
+**On a Phase 2b-seeded row the identity comes from the authored test, not from
+the ledger.** That row was seeded before any test existed, so its `Test file`
+and `Selector` cells are `-`; record the path and selector of the test this
+stage wrote, which is the only place they exist yet. `/qfai-implement` Phase Red
+step 3b writes both from this entry into the ledger in the same edit that
+advances the row, so gate item 10 then compares two equal values. Copying the
+`-` instead leaves the row with no writer for those cells at all — nothing later
+in the chain authors the test, and the `green` existence check has no path to
+check.
+
 **Where each form lives.** The `## Ledger rows advanced` table is an index: one
 row per `TDD-*`, holding the branch and an anchor. The commands and their output
 go in that row's own `### TDD-NNNN` section, in fenced blocks. They cannot go in
@@ -322,21 +332,42 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 
 ## A spec with no ATDD-owned rows
 
-`/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*`, which
-excludes `L4` / `L5`; `US-*` and `CON-API-*` are not row-producing
-obligations there. A first run therefore finds **zero** `Layer = E2E` /
-`Layer = API` rows, legitimately, and this stage cannot create them — it is
-not the ledger's writer under any circumstance.
+`/qfai-sdd` Phase 2b seeds a `Layer = E2E` row per **active** `US-*` and a
+`Layer = API` row per **active** `CON-API-*` **the spec owns** — ownership being
+the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files name that
+contract — alongside its rows for
+coverage-target `TC-*`. A spec that merely references a `CON-API-*` another spec
+owns therefore carries no row for it, and that absence is correct, not an
+incomplete Phase 2b: the row exists once, in the owner's ledger.
+Both obligations are exempt in cases
+`catalog/test-layers.md` names: a spec that declares no user-facing surface
+owes no E2E reference for its `US-*`, and a contract at `x-qfai-status: planned`
+is excluded from `QFAI-ATDD-113`. The surface exemption is itself conditional —
+`QFAI-ATDD-111` is scoped by surface type **only in a project that declares at
+least one UI-bearing spec**, so in a project that never declared one the
+obligation stays project-wide and every `US-*` is active. A spec whose
+obligations are all exempt therefore finds **zero** `Layer = E2E` /
+`Layer = API` rows, legitimately, and this stage cannot create them — it is not
+the ledger's writer under any circumstance — and so does a spec whose only
+active `CON-API-*` belong to other specs. A spec with an **active** obligation
+**it owns** finds a row, and this stage's primary procedure enumerates it and
+builds the handoff from it.
 
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
 reason and carry on with the obligations.
 
-**Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds one row
-per coverage-target `TC-*`, and the ledger template says in as many words that
-`US-*` and `CON-API-*` are not rows there — so the request returns nothing and
-the spec is handed back and forth for rows no skill may write. Writing them
+**Do not raise it as a request for rows.** Check the exemption and ownership
+first: a spec
+with no user-facing surface signal — in a project where some spec does declare
+one — and no owned `CON-API-*` outside
+`x-qfai-status: planned`, is _supposed_ to have none — so the request returns
+nothing and the spec is handed back and forth for rows Phase 2b is right not to
+seed. A genuinely missing row for an **active** obligation **this spec owns** is
+an incomplete
+Phase 2b: record it in this stage's report and carry on; it does not become
+writable here. Writing them
 here is not the alternative either: that would make this stage a second writer
 of a single-writer artifact. What the completion gate actually requires is
 `QFAI-ATDD-111` / `QFAI-ATDD-113` clean, which the annotations discharge and
