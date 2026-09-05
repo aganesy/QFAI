@@ -1270,15 +1270,27 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
-  // Re-pinned when this branch's `*.qfai-state.tmp` entry met main's Article XI `/tmp/` entry: the
-  // managed block now carries both, so neither side's digest describes the block that ships. Derived
-  // by running init and checking the result against both predecessors rather than copied from a
-  // failure — dropping `/tmp/` from it reproduces this branch's previous digest byte for byte, and
-  // dropping `*.qfai-state.tmp` reproduces main's, which is what shows the block gained two lines and
-  // lost none.
-  [".gitignore", "56a861e4b587a157a3762225f66eab5aae01eb12dd7ea9e85ede32274db0e290"],
+  // Re-derived for the MERGED managed block, which carries both sides' additions:
+  // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
+  // (`implement-*.md`, `atdd-*.md`) that arrived with it. Neither predecessor's
+  // digest describes the block that now ships, so this is one pin rather than
+  // two — the map is keyed by file name and cannot hold both.
+  //
+  // Derived by running `qfai init` into the E2E's temp root and reading what it
+  // wrote, which is how both predecessors were derived. Not copied from a
+  // failure message: the point of the pin is that somebody looked at the block.
+  [".gitignore", "e56620ef701cc655a4a52e7ef437f2beee6b06a587f9b4011d6c591fc1cbdfac"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
+  [
+    // Re-pinned when the `forbidTestTodoStubs` comment stopped calling the opt-out's waiver a
+    // requirement. `validateTestTodoStubs` returns `[]` the moment the flag is false and no field
+    // on `QfaiValidationConfig` carries a DR-ID, so the shipped file promised an enforcement that
+    // does not exist; it now says the waiver is a governance step the gate will not catch. Comment
+    // lines only — the key set this file ships is unchanged, which
+    // `initAssetsRootMirror.test.ts` asserts separately against the loader.
+    "qfai.config.yaml",
+    "d8ac45bb3c24c74bd140e29fe6ae44d79ec552e25675e1c09b3b9c583afeac80",
+  ],
 ]);
 
 /**
