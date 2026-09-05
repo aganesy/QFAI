@@ -15,10 +15,26 @@ import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
  * The ceiling is a backstop, not the design rule. The design rule is that a
  * skill body stays thin: it states the contract and points at the topic file
  * that carries the detail, under the skill's own `references/`, `templates/` or
- * `examples/` directory. A file approaching this number is a signal to move a
- * section out, not to raise it.
+ * `examples/` directory.
+ *
+ * Raised from 500 once, on measurement rather than on the "this file is long"
+ * claim this number exists to refuse. Three skill bodies had converged on the
+ * old ceiling at 498 / 498 / 500 lines with 61 open changes queued behind them;
+ * merged together those changes need 755 / 774 / 677. Splitting does not close
+ * that gap. What those bodies still carry is held there by asset tests that
+ * require an agent to read a rule where the rule acts, so the movable residue
+ * is a few dozen lines against a shortfall near 275.
+ *
+ * Converging on the limit was itself the signal: a body at the ceiling stops
+ * shedding topics and starts packing them into longer lines, and by then the
+ * widest line in one of those files ran 6192 characters — so the count had
+ * stopped bounding what an agent must read. A line ceiling cannot see that;
+ * only a reader can.
+ *
+ * A file approaching this number is still a signal to move a section out.
+ * Raise it again only against evidence of the same kind.
  */
-export const ASSISTANT_ASSET_MAX_LINES = 500;
+export const ASSISTANT_ASSET_MAX_LINES = 800;
 
 /** File extensions that count as an authored assistant asset. */
 export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".yaml"];

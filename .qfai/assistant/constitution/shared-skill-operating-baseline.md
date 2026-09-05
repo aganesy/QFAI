@@ -26,12 +26,20 @@ It is not where the detail lives.
   the file (and anchor, when the file covers more than one topic) so the reader
   is never left guessing where the rule went.
 
-A hard line ceiling backs this up: **500 lines per assistant asset file**, for
+A hard line ceiling backs this up: **800 lines per assistant asset file**, for
 every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as
 `content.split(/\r?\n/).length` — blank lines included. `npx qfai doctor`
 measures it and reports every file over the ceiling as `assets.lineBudget`. The
 ceiling is a backstop, not the rule: a file approaching it is a signal to move a
 section out, not to raise the number.
+
+It was raised from 500 once, and on measurement rather than on the "this file is
+long" claim the number exists to refuse: three skill bodies had converged on that
+ceiling with dozens of queued changes that together needed roughly 275 more
+lines, and the detail those bodies carry is required to sit in the body rather
+than behind a pointer. Converging on the limit was itself the signal — a body at
+the ceiling stops shedding topics and starts packing them into longer lines, and
+a line count cannot see that. Raise it again only against evidence of that kind.
 
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
