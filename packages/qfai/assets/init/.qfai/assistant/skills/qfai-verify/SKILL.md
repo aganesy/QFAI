@@ -299,8 +299,8 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
    only), **populate them by analyzing the current repository**:
 
 - derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints from package.json, CI config, lockfiles (tech.md)
-- derive repo layout + key directories + gate commands from the file tree and scripts (structure.md)
+- derive runtime/tooling versions + constraints + standard gate commands from the task-runner manifest (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, …), then CI config, then lockfiles — same order as `constitution/quality.md` (tech.md#standard-commands-copy-paste)
+- derive repo layout + key directories from the file tree and scripts (structure.md)
 
 1. Do **not** invent facts. If something cannot be verified, write it as:
 
@@ -310,18 +310,22 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
 ### Steering refresh checklist
 
 - [ ] product.md: what we build / users / success / non-goals / release posture
-- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
-- [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
+- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints, plus the standard gate commands under `tech.md#standard-commands-copy-paste` — the section `/qfai-implement` reads
+- [ ] structure.md: repo layout, key packages, entrypoints, how to run locally (setup + launcher only — gate commands stay in tech.md)
 
 ## Step 1 — Discover project gate commands (DevOps/CI Engineer)
 
-Prefer existing scripts:
+Prefer existing scripts, in this order:
 
-- package.json scripts
-- Makefile / task runner
+- task-runner manifest: `package.json` scripts, `Makefile`, `justfile`,
+  `pyproject.toml`, `Cargo.toml`, …
 - CI config
+- the project's own contributing docs
 
-If unknown, propose defaults and mark assumptions.
+Write what you discover back into
+`.qfai/assistant/catalog/tech.md#standard-commands-copy-paste` — that is the
+section `/qfai-implement` reads, and a capability left without an entry there is
+UNRUN. If unknown, propose defaults and mark assumptions.
 
 ## Step 2 — Run QFAI gates
 
