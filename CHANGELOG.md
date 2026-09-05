@@ -18,6 +18,12 @@
   出荷アセット側 (`qfai-tests.yml` / `qfai-validate.yml`) も同時に上げている
   ため、`qfai init` が書く workflow も同じ警告を出さなくなる。
 
+  出荷 action の pin は 1 箇所ではなく 4 箇所に登録されている: `uses:` 行、
+  version を含む step の `name:` ラベル、`ALLOWED_ACTION_COMMITS` と
+  `ALLOWED_STEP_SHAPE`、そして `ALLOWED_WORKFLOW_FILES` の byte digest。
+  `uses:` だけ書き換えると label が古い版を指したまま残り、e2e の
+  scaffold gate が落ちる。4 箇所すべてを更新済み。
+
 ### Fixed
 
 - **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
