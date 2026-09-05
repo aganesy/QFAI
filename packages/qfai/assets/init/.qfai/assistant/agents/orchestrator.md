@@ -32,7 +32,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Work Orders for each subagent (scope, inputs, outputs, gates)
 - Stage Gates plan + current status
 - Completion report (DoD checklist + evidence links)
-- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
+- Evidence summary for `.qfai/evidence/` (commit only paths re-included by the managed block)
 
 ## Stop conditions
 
@@ -45,7 +45,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Sign-off
 
 - [ ] Deliverables are complete
-- [ ] Evidence is present (gitignored)
+- [ ] Evidence is present under the managed tracking policy
 - [ ] Stage gates are PASS
 - [ ] Reviewer sign-off recorded
 
