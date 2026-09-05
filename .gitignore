@@ -71,6 +71,8 @@ coverage/
 !.qfai/evidence/decisions/**
 !.qfai/evidence/change-request-*.md
 !.qfai/evidence/decision-*.md
+!.qfai/evidence/implement-*.md
+!.qfai/evidence/atdd-*.md
 !.qfai/evidence/coverage-depth-*.md
 !.qfai/review/
 !.qfai/review/.legacy-packs
