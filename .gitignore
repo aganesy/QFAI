@@ -63,6 +63,7 @@ coverage/
 .qfai/discussion/*
 .qfai/review/*
 .qfai/state.json
+*.qfai-state.tmp
 !.qfai/
 !.qfai/evidence/
 !.qfai/decisions/
