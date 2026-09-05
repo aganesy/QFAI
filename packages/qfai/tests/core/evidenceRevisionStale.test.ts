@@ -342,6 +342,37 @@ describe("staleEvidenceFiles", () => {
     ).toBeNull();
   });
 
+  it("reports an observation taken on a line the branch has since abandoned", async () => {
+    // Two-dot and three-dot agree on a straight line, so every other row here
+    // would pass either way. They differ when the recorded revision is not an
+    // ancestor of HEAD — which is what a rebase leaves behind, and routine in
+    // this workflow (#1149).
+    //
+    // Two-dot compares the trees: the one the observation ran against is not
+    // this one, so it is stale. Three-dot would compare from the merge base
+    // forward and miss a change that existed only on the abandoned line — an
+    // under-report, and a silent one.
+    const { root, head } = await repoAtOneCommit();
+
+    // The observation is taken on a commit that changes the source...
+    await commit(root, "src/lease.ts", "export const rate = 2;\n");
+    const observedOn = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    }).trim();
+
+    // ...and the branch is then rebuilt without it.
+    execFileSync("git", ["reset", "--hard", head], {
+      cwd: root,
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+    await commit(root, "docs/notes.md", "a different line\n");
+
+    expect(
+      staleEvidenceFiles(root, "src", section(observedOn), "tests/integration/lease.test.ts"),
+    ).toEqual(["src/lease.ts"]);
+  });
+
   it("stays silent when a commit touched neither the test nor the source", async () => {
     const { root, head } = await repoAtOneCommit();
     await commit(root, "docs/notes.md", "more notes\n");
