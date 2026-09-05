@@ -131,8 +131,8 @@ Stage 1 collects each approval through AskUserQuestion as usual.
 ## Inputs Priority
 
 1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest) — **reference and provenance input, not normative**. Cite it as `Source: <pack>#<id>`; citing it does not make the cited text binding. Where it conflicts with a lower-priority input, resolve the conflict INTO the SDD artifact with explicit rationale (and a user decision when the choice is a product one) rather than by amending the pack. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
-2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
-3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
+2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/instructions/*`)
+3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/steering/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`

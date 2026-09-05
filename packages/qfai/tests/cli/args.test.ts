@@ -332,6 +332,31 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  it("parses --verbose for init and defaults it off", () => {
+    const cwd = process.cwd();
+    const withFlag = parseArgs(["init", "--dir", ".", "--verbose"], cwd);
+    expect(withFlag.invalid).toBe(false);
+    expect(withFlag.options.verbose).toBe(true);
+
+    const without = parseArgs(["init", "--dir", "."], cwd);
+    expect(without.invalid).toBe(false);
+    expect(without.options.verbose).toBe(false);
+  });
+
+  // --verbose is published in the help text as an init-only option, so a
+  // misuse must surface rather than be silently dropped: automation that
+  // asked for the expanded list would otherwise get a success exit code and
+  // no detail.
+  it("rejects --verbose on commands other than init", () => {
+    const cwd = process.cwd();
+    for (const command of ["validate", "doctor", "report"]) {
+      const parsed = parseArgs([command, "--verbose"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.verbose).toBe(false);
+    }
+  });
+
   // Pin the unified value-taking-flag contract (see args.ts contract
   // block): when --spec / --scope / --upgrade-scope / --operator /
   // --clause are used on a subcommand that does NOT accept the flag,

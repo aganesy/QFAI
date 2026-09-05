@@ -137,6 +137,13 @@ export type InitOptions = {
   yes: boolean;
   upgradeAssistantTree?: boolean;
   /**
+   * `--verbose`: expand the `skipped` list in the run report. Off by default —
+   * a no-op re-run skips every shipped asset, and that list is the "nothing to
+   * do here" case, so the report names its count and points at this flag
+   * instead of printing several hundred paths.
+   */
+  verbose?: boolean;
+  /**
    * Overrides the running tool version for the deprecation-severity decision.
    * Tests need it to exercise both sides of a sunset; without it the only
    * observable behaviour is whatever side the shipped version happens to sit
@@ -159,7 +166,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // `qfai init` では宛先が暗黙になり、誤ったターミナルタブからの実行が
   // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
   // 中断・失敗した実行でも対象がスクロールバックに残る。
-  info(`qfai init: dest=${destRoot}`);
+  info(`qfai init: dest=${formatReportPath(destRoot)}`);
 
   if (options.force) {
     info(
@@ -504,6 +511,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     options.dryRun,
     "init",
     destRoot,
+    options.verbose ?? false,
   );
 
   for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
@@ -2451,6 +2459,127 @@ function removeManagedBlock(content: string): { stripped: string; blockAt: numbe
   };
 }
 
+/**
+ * C0, DEL and C1 — the ranges a terminal reads as commands, not as text.
+ *
+ * A predicate rather than a character-class regex: the class is a
+ * `no-control-regex` violation, and spelling the ranges as numbers keeps them
+ * readable without an eslint suppression.
+ */
+function isControlChar(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return code < 0x20 || (code >= 0x7f && code <= 0x9f);
+}
+
+/**
+ * Renders one relative path for stdout.
+ *
+ * A path only reaches here from the filesystem, and on
+ * `--upgrade-assistant-tree` that includes names an untrusted repository chose:
+ * a legacy `instructions/` entry whose name carries a newline or an ANSI escape
+ * is carried through the migration into `copied` and printed verbatim, which is
+ * enough to forge the report's own headings or drive the terminal. A report
+ * whose purpose is reviewing changes before they happen must not be
+ * counterfeitable by the thing it reports on.
+ *
+ * Ordinary paths are returned untouched — quoting every line would churn the
+ * output for the case that is not a threat. Only a name that actually carries a
+ * control character is escaped, and then it is quoted so the escapes are read
+ * as one token.
+ */
+function formatReportPath(relative: string): string {
+  let escaped = "";
+  let sawControl = false;
+  for (const char of relative) {
+    if (isControlChar(char)) {
+      sawControl = true;
+      escaped += `\\x${(char.codePointAt(0) ?? 0).toString(16).padStart(2, "0")}`;
+    } else if (char === "\\" || char === '"') {
+      escaped += `\\${char}`;
+    } else {
+      escaped += char;
+    }
+  }
+  return sawControl ? `"${escaped}"` : relative;
+}
+
+/**
+ * Absolute paths as report-ready relative ones: deduplicated and sorted.
+ *
+ * `collectTemplateFiles()` accumulates `readdir()` results, whose order no
+ * filesystem guarantees, so two runs over the same tree could list the same
+ * write set in different orders — leaving a `--dry-run` preview that cannot be
+ * diffed against another checkout and snapshots that churn with no change in
+ * content. Sorting the relative form rather than the absolute one keeps the
+ * order the reader sees the order that is sorted.
+ *
+ * The relative form comes from `toRelativePath()` rather than `path.relative()`
+ * so a Windows run reports `.qfai/assistant/...` and not
+ * `.qfai\\assistant\\...`: the report is copied into issues and diffed between
+ * checkouts, so one separator on every platform is the only comparable form.
+ */
+function toReportPaths(paths: string[], baseDir: string): string[] {
+  return [...new Set(paths.map((absolute) => toRelativePath(baseDir, absolute)))].sort();
+}
+
+/**
+ * The skip set with everything the run wrote taken out of it.
+ *
+ * De-duplicating each list on its own only settles repeats *within* a list; the
+ * two lists can still name the same path. On a real `--upgrade-assistant-tree`
+ * run the migration writes its destination and books it into `copied`, and the
+ * template copy that follows finds that destination present and books the same
+ * path into `skipped` — so one path was reported as both written and skipped,
+ * and the skip count (the number shown when `--verbose` is off, and therefore
+ * the only thing most operators see) was too high by one per migrated file.
+ *
+ * A write beats a skip: some producer did act on the path, so the categories
+ * are resolved in the writer's favour rather than reported twice. `written` is
+ * already relative, deduplicated and sorted, so the survivors keep their order.
+ */
+function excludeWritten(skippedPaths: string[], writtenPaths: string[]): string[] {
+  const written = new Set(writtenPaths);
+  return skippedPaths.filter((relative) => !written.has(relative));
+}
+
+function listReportPaths(relativePaths: string[]): void {
+  for (const relative of relativePaths) {
+    info(`    - ${formatReportPath(relative)}`);
+  }
+}
+
+/**
+ * 実行レポート。詳細を出す価値があるのは `copied` の側である。
+ *
+ * `--dry-run` は「これから何に触れるのか」に答えるための機能なので、
+ * `copied` は `removed` と同じく全件列挙し、見出しも dryRun で言い分ける。
+ * 逆に `skipped` は「ここは何もすることがない」ケースであり、初期化済み
+ * ディレクトリへの no-op 再実行では同梱アセット全件がここに入る。既定は
+ * カウントのみに畳み、一覧は `--verbose` の背後に置く。
+ *
+ * 見出しが `written` / `would write` なのは、`copied` が新規作成だけの集合
+ * ではないため。`--force` の skills/agents 再生成や `.gitignore` の managed
+ * block 追記は既存ファイルの更新であり、`created` と呼ぶと dry-run の
+ * プレビューが破壊的な上書きを新規作成に見せてしまう。
+ *
+ * 各リストは列挙前に重複排除し、さらにソートする (`toReportPaths`)。例えば
+ * `--upgrade-assistant-tree --dry-run` では、移行処理が書き込みを抑止したまま
+ * 移行先を `copied` に積み、その移行先がまだ存在しないので後続のテンプレート
+ * コピーも同じパスを `copied` に積む。重複したまま出すと件数が実際の実行と
+ * ずれる。順序は `readdir()` 由来でどのファイルシステムも保証しないため、
+ * ソートしないと同じ書き込み集合でも一覧の並びが変わり、プレビューを別
+ * チェックアウトと差分比較できない。
+ *
+ * リスト内の重複排除だけではカテゴリ間の重複は残る。実行時の
+ * `--upgrade-assistant-tree` では移行処理が移行先を書いて `copied` に積み、
+ * 後続のテンプレートコピーがその移行先を既存とみなして `skipped` に積むため、
+ * 同一パスが written と skipped の両方に出て skipped 件数も膨らむ。書き込まれた
+ * パスは skip ではないので、`excludeWritten` で skipped から除外する。
+ *
+ * この 3 リストは `baseDir` 配下のパスだけを扱う。working tree 外への変更
+ * (`configureGitSymlinks` の `core.symlinks`) はここには入らないので、その
+ * 開示はその書き込み自身が行う。
+ */
 function report(
   copied: string[],
   skipped: string[],
@@ -2458,26 +2587,38 @@ function report(
   dryRun: boolean,
   label: string,
   baseDir: string,
+  verbose: boolean,
 ): void {
+  const writtenPaths = toReportPaths(copied, baseDir);
+  const skippedPaths = excludeWritten(toReportPaths(skipped, baseDir), writtenPaths);
+  const removedPaths = toReportPaths(removed, baseDir);
+
   // 宛先を必ず名指しする。相対パスだと素の実行で "." になり何も
   // 開示しないため、`doctor` の root= とは違い絶対パスを出す。
-  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${baseDir})`);
-  if (copied.length > 0) {
-    info(`  created: ${copied.length}`);
+  // Escaped like every path below it. `--dir` is operator-supplied and echoed
+  // verbatim here, so a destination carrying a newline or an ANSI sequence could
+  // forge report lines in the very report the escaping exists to make trustworthy.
+  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${formatReportPath(baseDir)})`);
+  if (writtenPaths.length > 0) {
+    info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
+    info(dryRun ? "  would write paths:" : "  written paths:");
+    listReportPaths(writtenPaths);
   }
-  if (skipped.length > 0) {
-    info(`  skipped: ${skipped.length}`);
-    info("  skipped paths:");
-    for (const skippedPath of skipped) {
-      info(`    - ${toRelativePath(baseDir, skippedPath)}`);
+  if (skippedPaths.length > 0) {
+    info(`  skipped: ${skippedPaths.length}`);
+    if (verbose) {
+      info("  skipped paths:");
+      listReportPaths(skippedPaths);
+    } else {
+      info("  (re-run with --verbose to list the skipped paths)");
     }
   }
-  if (removed.length > 0) {
-    info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
+  if (removedPaths.length > 0) {
+    info(
+      `  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removedPaths.length}`,
+    );
     info(dryRun ? "  would remove paths:" : "  removed paths:");
-    for (const removedPath of removed) {
-      info(`    - ${toRelativePath(baseDir, removedPath)}`);
-    }
+    listReportPaths(removedPaths);
   }
 }
 

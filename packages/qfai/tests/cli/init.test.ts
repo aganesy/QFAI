@@ -126,6 +126,31 @@ function reportedPaths(output: string): string[] {
     .map((line) => line.slice(bulletPrefix.length).trim());
 }
 
+/**
+ * The bullet paths of one run-report section, named by its header line.
+ *
+ * `reportedPaths` above reads every bullet in the output, which stopped
+ * separating the sections once the report began enumerating written paths
+ * beside skipped ones. A claim about what a run *skipped* has to read the
+ * skipped list alone, or a path disclosed as written satisfies it too.
+ */
+function sectionPaths(output: string, header: string): string[] {
+  const lines = output.split("\n");
+  const start = lines.indexOf(header);
+  if (start === -1) {
+    return [];
+  }
+  const bulletPrefix = "    - ";
+  const paths: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (!line.startsWith(bulletPrefix)) {
+      break;
+    }
+    paths.push(line.slice(bulletPrefix.length).trim());
+  }
+  return paths;
+}
+
 async function expectSymlinkTarget(linkPath: string, expectedFragment: string): Promise<void> {
   const target = await readlink(linkPath);
   const normalized = target.replace(/\\/g, "/");
@@ -2405,8 +2430,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
       await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
 
+      // --verbose expands the skipped list; the default report is counts only.
       const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
 
       // Both files retain their original custom content
@@ -2704,13 +2730,14 @@ describe("qfai init", { timeout: 60000 }, () => {
       const output = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
-      expect(output).toContain("created:");
-      // Activation guidance proves instructions were included in created
+      expect(output).toContain("written:");
+      // Activation guidance proves instructions were included in the written set
       expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
 
       // Case B: Both files exist — re-run
+      // The skipped list is behind --verbose; the counts alone cannot name a file.
       const output2 = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
       expect(output2).toContain("code-review.instructions.md");
       expect(output2).toContain("principles.instructions.md");
@@ -3144,10 +3171,13 @@ describe("qfai init", { timeout: 60000 }, () => {
       const firstRun = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
-      expect(firstRun).toMatch(/created:\s*\d+/);
+      // The heading is `written` (the list also carries overwrites), not `created`.
+      expect(firstRun).toMatch(/written:\s*\d+/);
+      expect(firstRun).toContain("DESIGN.md");
 
+      // --verbose expands the skipped list; without it the re-run reports counts only.
       const secondRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
       expect(secondRun).toContain("skipped paths:");
       expect(secondRun).toContain("DESIGN.md");
@@ -3174,8 +3204,10 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       await writeFile(legacyPath, "legacy workflow\n", "utf-8");
 
+      // `--verbose`: the skipped list is collapsed to a count by default, so the
+      // separator assertion below needs the expanded form to have anything to read.
       const skippedRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+        await runInit({ dir: root, force: false, dryRun: true, yes: true, verbose: true });
       });
       const removedRun = await captureStdout(async () => {
         await runInit({ dir: root, force: true, dryRun: true, yes: true });
@@ -4266,12 +4298,18 @@ describe("qfai init", { timeout: 60000 }, () => {
       await mkdir(path.dirname(marker), { recursive: true });
       await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
 
+      // `--verbose`: the skipped list is collapsed to a count by default and
+      // this test's whole subject is what that list contains. The report now
+      // enumerates written paths as well, so "absent from the output" no longer
+      // states the claim — read the skipped section on its own instead.
       const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
 
+      const readmeRelative = ".qfai/assistant/README.md";
       expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
-      expect(output).not.toContain(path.join(".qfai", "assistant", "README.md"));
+      expect(sectionPaths(output, "  skipped paths:")).not.toContain(readmeRelative);
+      expect(sectionPaths(output, "  written paths:")).toContain(readmeRelative);
     } finally {
       await removeTempTree(root);
     }
