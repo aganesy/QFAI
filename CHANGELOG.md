@@ -229,6 +229,22 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   失敗せず **branch を作り直す**。action bump を自動マージするたびに孤児 branch が
   残ることになる。lookup 1 回で通常ケースを塞いだ (force push はしていない)。
 
+- **`.github/renovate.md` のトークン権限に `Workflows` が抜けていたのを直した。**
+  fine-grained token の必要権限として Contents / Pull requests / Issues しか
+  挙げていなかったが、workflow ファイルを含む commit の push は専用権限を要求
+  される。このリポジトリの Renovate は常時それに触る — config は全 GitHub
+  Action を 1 つの PR にまとめて digest pin し、repin job は `ci.yml` を
+  書き換える。
+
+  **症状が原因を名乗らない**のが厄介な点である: 他のパッケージは普通に更新され、
+  actions group の push だけが拒否される。classic token なら `repo` + `workflow`
+  の 2 スコープが等価。`Commit statuses` (Renovate 自身の branch status) と
+  `Dependabot alerts` (`vulnerabilityAlerts` 用) も併せて明記した。
+
+  ドキュメントが黙って古くなるのを防ぐため、`renovateMechanism.test.ts` が
+  「config が workflow ファイルを管理している」ことと「setup 文書が
+  `Workflows` 権限を名指ししている」ことを 1 行で結んでいる。
+
 - **QFAI 利用側リポジトリ向けの Renovate preset を公開した。**
   `.github/renovate-presets/qfai.json` と `qfai-self-hosted.json`。
   `github>aganesy/QFAI//.github/renovate-presets/qfai` の 1 行で extend する。

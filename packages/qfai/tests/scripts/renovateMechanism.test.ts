@@ -398,6 +398,43 @@ describe("automerge is declared together with the check that decides whether any
   });
 });
 
+describe("the token the setup document asks for can do what the config asks of it", () => {
+  it("names the workflow permission, because both the config and the re-pin write workflow files", () => {
+    // The premise, read rather than assumed: the config really does manage workflow files. If a
+    // later edit drops that packageRule, this row should stop demanding the permission rather than
+    // keep asking for one nothing needs.
+    expect(
+      configText(),
+      "this row is about the workflow-file permission; it is written for a config that manages " +
+        "workflow files, and the rule that does so is where that starts",
+    ).toContain(".github/workflows/**");
+
+    // …and the re-pin job writes one too. `pin-guard-bytes.mjs` rewrites the `ci.yml` step that
+    // carries the pinned-bytes digest, so the push at the end of that job is a workflow-file push
+    // whatever the update itself touched.
+    expect(
+      allRunBodies(),
+      "the re-pin runs the program that rewrites the ci.yml step, so its push needs the same " +
+        "permission the config's own updates do",
+    ).toContain("scripts/pin-guard-bytes.mjs");
+
+    // The claim. A GitHub token without the workflow permission is refused AT PUSH TIME, and only
+    // for the commits that touch `.github/workflows/**` — so every other package updates normally
+    // while the actions group alone fails, which is a symptom that does not name its cause. The
+    // setup document is the only place that can prevent it, so it has to say so.
+    const setup = readFileSync(path.join(REPO_ROOT, ".github/renovate.md"), "utf-8");
+    expect(
+      setup,
+      "`.github/renovate.md` must name the fine-grained token's `Workflows` permission: without " +
+        "it the actions group is rejected at push time while everything else succeeds",
+    ).toMatch(/\*\*Workflows:\*\*/);
+    expect(
+      setup,
+      "and the classic-token equivalent, since the document offers that route too",
+    ).toMatch(/`workflow`/);
+  });
+});
+
 describe("the presets other repositories extend still resolve to the files they name", () => {
   /** `owner/repo`, from the manifest rather than restated — the reference below embeds it. */
   const slug = (): string => {

@@ -21,12 +21,38 @@ update.
    <https://github.com/settings/personal-access-tokens/new>, scoped to this repository only, with:
    - **Contents:** read and write — Renovate pushes update branches
    - **Pull requests:** read and write — Renovate opens and updates the pull requests
+   - **Workflows:** read and write — **required here, and the one that is easy to miss.** A token
+     without it cannot push a commit that touches `.github/workflows/**`, and this repository's
+     Renovate touches them constantly: the config groups every GitHub Action into one pull request
+     and pins it by digest, and the re-pin job rewrites `ci.yml` on top of that. The failure is not
+     obvious from the symptom — every other package updates normally while the actions group alone
+     is rejected at push time.
+   - **Commit statuses:** read and write — Renovate writes its own branch status checks
    - **Issues:** read and write — only if the dependency dashboard is wanted (it is on by default)
+   - **Dependabot alerts:** read-only — for the `vulnerabilityAlerts` block, which opens security
+     fixes immediately instead of waiting for Monday
+
+   Using a **classic** token instead? The equivalent is exactly two scopes: `repo` and `workflow`.
+   The same warning applies to `workflow`, for the same reason.
+
 2. Add it at **Settings → Secrets and variables → Actions → New repository secret**, named
-   `RENOVATE_TOKEN`.
-3. Run the workflow once from **Actions → Renovate → Run workflow** with **Resolve every update and
-   open nothing** ticked. That resolves everything and opens nothing, so the log shows what the
-   first real run would do before it does it.
+   `RENOVATE_TOKEN`. With the `gh` CLI:
+
+   ```sh
+   gh secret set RENOVATE_TOKEN --repo aganesy/QFAI
+   ```
+
+3. Rehearse it once. **Actions → Renovate → Run workflow** with **Resolve every update and open
+   nothing** ticked, or:
+
+   ```sh
+   gh workflow run Renovate --repo aganesy/QFAI -f dryRun=true -f logLevel=debug
+   ```
+
+   That resolves everything and opens nothing, so the log shows what the first real run would do
+   before it does it. Three things are worth reading in it: `Repository started` names this
+   repository and no other, `DRY-RUN: Would create PR` appears once per update, and the GitHub
+   Actions updates arrive as one grouped pull request rather than several.
 
 ### 2. Branch protection, which is what makes automerge safe
 
@@ -46,6 +72,11 @@ declaration stand without a declared context beside it
 
 Set it at **Settings → Branches → Branch protection rules → Require status checks to pass before
 merging**, and select **`ci-pass`**.
+
+**Do this one before the first run that can merge anything.** The token can be added at any time —
+without it the run fails loudly and changes nothing. This one is the opposite: with the token in
+place and the check not required, the first scheduled run merges its own pull requests without
+waiting for a lane to start, and nothing reports that it happened.
 
 ### Why not the job token
 
