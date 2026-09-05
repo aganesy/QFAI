@@ -65,7 +65,7 @@
 - BR-Ref: BR-0004-0011
 - Given `iter-03/review.json` contains `{mode: "full-harness", fullHarness: {iterations: [...]}, allReviewerAxesPerfect100: false}` and lacks `pivotDirective`
 - When `qfai validate --fail-on error` runs
-- Then validator emits `QFAI-PROT-002` (schema-v3-violation) at error severity, listing missing required keys (`scores`, `prose`, `pivotDirective`, `layoutAntiPatternsDetected`, `designMdViolations`)
+- Then validator emits `QFAI-PROT-002` (schema-v3-violation) at error severity, listing missing required keys (`scores`, `proseCritique`, `pivotDirective`, `layoutAntiPatternsDetected`, `designMdViolations`)
 
 ## EX-0004-0011
 

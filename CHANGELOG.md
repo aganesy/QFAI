@@ -4,8 +4,653 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
+  git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
+  だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
+  ファイルが消えたように見え、次の commit でリポジトリから削除される。pack は
+  操作者のディスクにだけ残り、しかもその削除は "remediate" という名前の
+  コマンドによる意図的な操作としてレビューに現れる (#1157)。
+
+  条件は **両方**必要である。現在の同梱 `.gitignore` では pack は追跡されない
+  ので、行き先が ignore されていても失うものは無く、そこで拒否すると `--clean`
+  が全プロジェクトで無意味になる。失うのは pack を force-add した
+  プロジェクト — QFAI 自身のリポジトリがそれである。
+
+  拒否した pack は `kept-tracked=N` として数え、pack ごとに理由を出力する。
+  黙って何もしないと `archived=0` が「TTL がまだ切れていない」と読まれる。
+
+## [1.10.2] - 2026-09-05
+
 ### Added
 
+- **`QFAI-TDDLIST-009` — `Revision` を読むだけでなく、木と突き合わせる。**
+  `evidence-revision.md#what-makes-evidence-stale` は staleness を完全に機械的に
+  定義している（「観測が覆ったファイルを変更した commit はそれを無効にする」）
+  のに、それを**計算する仕組みが無かった**。フィールドは手書きで、3 箇所で必須
+  で、何とも比較されていなかった — `QFAI-REVIEW-009` は `summary.json` の
+  フィールドが**存在するか**を見るだけで、**現在のものか**は見ない。
+
+  失敗は沈黙し、かつ自己整合する。stale な `Revision` は fresh なものと
+  見分けがつかない — 記録中のコマンドはすべて実在し、記録の中で矛盾する要素は
+  何も無い。唯一の signal は誰かが観測をやり直して一致しないと気付くことである。
+
+  行ごとに `git diff --name-only <Revision>..HEAD -- <test file> <srcDir>` を
+  計算し、非空なら報告する。promotion window 付き `warning` から始める —
+  これまで誰も計算していなかった以上、どのプロジェクトも**構造的に**蓄積した
+  stale を抱えており、即時 `error` は誰も知らされていない backlog で gate を
+  落とす。
+
+  `changedFilesSince` は **3 値**を返す。`getChangedFilesAgainstBase` が
+  あらゆる失敗を空集合に潰すのは、その呼び手が「検査対象なし」と読むから
+  正しい。ここで同じ潰し方をすると「evidence は fresh」と読まれる —
+  この finding が終わらせようとしている沈黙を、finding の内側で再現する
+  ことになる。
+
+  未解決 revision は emit しない。`actions/checkout` は既定で depth 1 なので
+  window を共有すれば promote 後に shallow clone の CI が全行で error になり、
+  `QFAI-REVIEW-009` が既に同条件を報告している（本リポジトリで 63 件）。
+  「間違っているから解決できない」と「shallow だから解決できない」を区別
+  できない残課題はソースに明記した。
+
+  **git は distinct revision ごとに 1 回だけ呼ぶ。** 行ごとに 2 プロセスを
+  起動する最初の実装は、本リポジトリで実測 104 回・約 10.5 秒（行あたり
+  200ms）だった。observation revision は spec と round の単位で、行の単位では
+  ないので行間で共有される — 500 行のプロジェクトなら
+  `validate --profile tdd`（`qfai-implement` が回す完了 gate）に約 100 秒の
+  上乗せになり、これは費用ではなく回帰である。木全体の diff を revision ごとに
+  1 回取り、行ごとの絞り込みはメモリ内で行う。キャッシュはモジュール状態では
+  なく引数にした — run をまたいで残るキャッシュは、後の run に以前の木の答えを
+  返してしまう。 (#1146)
+
+### Fixed
+
+- **`QFAI-DRIFT-001` が二点比較していたため、`origin/main` 側で変わった
+  ファイルが「このブランチで変更された」と報告されていた。**
+  `git diff <base>..HEAD` は「この 2 つの木はどう違うか」に答える — つまり
+  ブランチが分岐した**後に `base` が得た変更**も全部含む。finding の文面は
+
+  > Upstream SSOT modified **on this branch** without an approved Change Request
+
+  であり、main で変わりブランチが一度も触れていないファイルについて、この文は
+  偽である。実測 (`tmp/1149/probe.mjs`):
+
+  ```text
+  two-dot   (main..HEAD):  [".qfai/contracts/api/other.yaml", ".qfai/contracts/db/owned.sql"]
+  three-dot (main...HEAD): [".qfai/contracts/db/owned.sql"]
+  ```
+
+  これは偽陽性以上の問題だった。gate item 12 の step 4 は
+  `qfai validate --fail-on error` なので、**`origin/main` が進むだけで error 数が
+  増える** — しかもその gate 自身が 2 名のレビュアと `qa-gatekeeper` を各 round
+  に要求してレビューサイクルを遅くしている。報告者のレビュアの診断が的確である:
+  「増加は tree の内容ではなく validate を**いつ**実行したかの関数になっている」。
+
+  `<base>...HEAD` は merge-base 比較で、これが「このブランチが変更した」の意味で
+  ある。消費者は 2 つあり、どちらもその問いを立てている —
+  `upstreamSsotGuard`（downstream フェーズが保護対象を編集したか）と
+  `traceabilityIntegrity`（このブランチが変えた spec pack はどれか）。
+
+  `changedFilesSince` (#1146) の**二点比較はそのまま**にし、意図的である旨を
+  明記した。あちらの `revision` は別ブランチではなくこのブランチの履歴上の
+  **点**であり、問うているのは「その点から今までに木が動いたか」である。
+  三点にすると rebase で捨てられた線の上の観測を取りこぼす —
+  過少報告であり、しかも沈黙する。 (#1149)
+
+- **staleness の規則を「commit の性質」ではなく「計算する区間」として述べた。**
+  `#what-makes-evidence-stale` の書き方だと「自分の**最後の commit** 以降に
+  何か変わったか?」という別の、はるかに弱い問いに手が伸びる。issue が報告した
+  2 件の見落としはどちらもその原因で、2 件目は 1 件目を教訓として書き留めた
+  後に起きている。区間はコマンド 1 つで表せるので、それを書いた:
+  `git diff --name-only <観測が名指す revision>..HEAD -- src tests` (#1146)
+
+- **`qfai prototyping rescope` — loop を捨てずに退役した surface を外す。**
+  cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
+  以降のあらゆる編集は lock drift (exit 2) である。drift ルールとしては正しい。
+  だがそれが**唯一のルール**だったため、正当なケース — loop が開いている間に
+  製品判断が screen を退役させた — も同じ扱いになり、用意されている経路は
+  `iterate --cycle 0 --force` だけだった。これは `iter-00` を退避させ、
+  それまでに支払ったすべての cycle のレビューを捨てる。
+
+  ```bash
+  npx qfai prototyping rescope --remove 0011 --reason DELTA-022
+  ```
+
+  `frozenSurfaceUnion` から surface を外し、captured な
+  `iterate-plan.json#screens` から取り除き、
+  `{surface, reason, cycle, at}` を `prototyping.json#rescopeLog` に記録し、
+  **loop は現在の cycle のまま**にする。`--remove` は repeatable、
+  `--reason` は必須、`--dry-run` は書かずに報告する。
+
+  これが drift ルールの穴にならない理由が 3 つある:
+  1. **すでに到達不能なものしか外せない。** 除去可能集合は
+     `frozenScope.missing` — `QFAI-PROT-011` が報告するのと同じ集合 — なので、
+     spec がまだ UI marker を宣言している surface は**拒否**される。
+     `--add` は存在せず、拡大は表現できない。finding と操作は
+     `core/prototyping/frozenScope.ts` という**単一の reader** を読むので、
+     この一致は文書ではなく構造で保たれる。
+  2. **`--reason` を要求する。** 記録済みの delta / decision id が、
+     「適用された判断」と「exit-2 ルールが止めるべき黙った変更」を分ける唯一の
+     signal であり、audit entry が保存するのもそれである。id らしくない値は
+     **拒否ではなく警告**にした — id の解決には delta / decision が置かれうる
+     全ての場所（`.qfai/decisions/`、spec の `09_delta.md`、
+     `_policies/10_delta.md`、および利用側プロジェクト独自の場所）が必要で、
+     取りこぼす resolver は**正当な**縮小を拒否してしまう。これはこの操作が
+     存在する理由そのものを塞ぐため、弱いフィールドより悪い。実際の制御は
+     audit entry であり、警告は「後で log を読む reviewer」ではなく
+     「その場の操作者」に伝えるためにある。
+  3. **critique を書き換えない。** reviewer が cycle N に見たものは歴史的事実で
+     ある。該当する `iter-NN/review.json` には `retiredSurfaces` 注釈を追加し、
+     `proseCritique` は一字も変えない。読者が「古い記述」と「誤った記述」を
+     区別できるのはそのためである。
+
+  sealed loop (`stopReason` あり) も拒否する — 完了した loop の scope は歴史で
+  あり、縮めることはその loop が何を覆ったかの書き換えになる。
+
+  `QFAI-PROT-011` の message / remedy と `qfai-prototyping/SKILL.md` の
+  「Scope reduction has no in-loop path」節も追従した。後者は #1099 の part 4
+  （「(1) が無いうちはそう書け」）で書かれたもので、役目は果たしたが、
+  操作が存在する今はファイル中で最も有害なテキストだった — 読者を破壊的経路へ
+  名指しで送るからである。 (#1099)
+
+- **依存宣言と食い違う qfai の解決を `QFAI-TOOL-002` として分離した。**
+  `QFAI-TOOL-001` は path 比較だけで判定しており、4 つの解決を区別できなかった:
+  worktree ハザード / `_npx` キャッシュ / 意図的なグローバルインストール /
+  monorepo root への hoist。前 2 つはハザード、後 2 つは正常運用なので、
+  1 つの code では両方について真であることを言えない。
+  区別に必要なのは **intent の signal** で、それはプロジェクト自身の依存宣言
+  である。`findDeclaringDir` が root から上方に、`qfai` を任意の dependency
+  field で宣言する最も近い `package.json` を探す。そのディレクトリが
+  「その宣言が入れる copy はどこか」の答なので、内側なら宣言どおり
+  (npm の `node_modules/qfai`、pnpm が解決する `.pnpm/...` を含む)、外側なら
+  **宣言があるのに別の copy が走っている** = ハザードである。
+  判定:
+  宣言あり + 宣言の外の copy → `QFAI-TOOL-002` (`warning`、昇格窓付き) /
+  宣言なし → `QFAI-TOOL-001` (`info`、グローバルか npx 取得しか実行経路が
+  無いので operator の選択) / workspace root への hoist →
+  `QFAI-TOOL-001` (`info`、宣言は honour されている)。
+  つまり**昇格ではなく code の分割**で、これは issue 自身が
+  「that row can be promoted while the rest stays `info`, which means splitting
+  the code rather than promoting it」と述べている形である。
+  `QFAI-TOOL-002` には昇格窓を置いた。ここでは P7 の既定が正しい —
+  この条件は**今日不可視**なので、抱えているプロジェクトは一度も知らされて
+  いない。gate が落ち始める前に気付いて直すための 1 minor が必要である。
+  版番の比較ではなく**包含**で判定する。lockfile が pin した版は実行中の
+  プロセスから読めないが、ディレクトリは読める。
+  `classifyAgainstDeclaration` と `findDeclaringDir` を export した。
+  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
+  動かせず、判定すべき状態に到達できない。最初に書いた行はすべて
+  `declaredElsewhere === false` の assert で、**一度も発火しないルールでも
+  全行通る**状態だった (このリポジトリで 3 度目の one-sided suite)。
+  書き直して 6 positive / 11 negative にし、4 変異 (判定が発火しない / 常に
+  発火する / walk が最初の manifest で止まる / `dependencies` のみを数える)
+  すべてが検出されることを確認した。
+  (#1108)
+- **waiver 処理後に追加される finding を「未知の rule」と呼ばないようにした。**
+  `isPostWaiverSource` は `src/cli/` を `EMITTED_RULE_CODES` から意図的に除外
+  している。これは正しい — `applyWaivers` は `core/validate.ts` の中で走るので、
+  `src/cli/` が追加する finding は waiver で抑制できず、登録すると
+  「一致し得ない waiver が active と報告される」ことになる。
+  しかし帰結が operator には**偽の文**として届いていた。`QFAI-WAIVER-004` は
+  「未知の rule '<id>' が指定されています」と言うが、真実は「rule は存在するが、
+  waiver 処理の後に追加されるのでどの waiver とも一致しない」である。
+  `waivers.ts:471-475` は隣接する区別 (「何も emit していない」対「この実行では
+  黙っていた」) を既に書いているが、3 番目の状態 —
+  **emit されているが構造上 waivable でない** — に名前が無かった。
+  「未知の rule」と言われた operator は存在しない typo を探しに行く。remedy も
+  異なる: typo は訂正するもので、これは削除するものである。
+  生成器が 4 つ目の export `POST_WAIVER_RULE_CODES` を出すようにした。除外した
+  code を**登録せずに名指しする**ためのリストで、`EMITTED_RULE_CODES` は不変
+  (waiver が一致するかという問いに対しては、これらは依然 known ではない)。
+  実装中に生成器側の同じ盲点も 1 つ直した: `constants` / `factories` の map は
+  登録対象ソースのみから構築されていたため、post-waiver ファイルが
+  `code: TRUNCATED_SCAN_CODE` のように module-level `const` 経由で code を
+  名指す場合を解決できず、最初は literal で書かれた 1 件しか収集できなかった。
+  両ソース集合から構築するようにして `QFAI-SCAN-001` / `QFAI-SCAN-002` が
+  収集されるようになった。
+  変異検査: post-waiver 分岐を無効化すると 1 行落ちる。negative control
+  (「本当に未知の rule は依然 未知 と言う」) も追加した。
+  (#1110)
+
+- **P7 に「初日から error」を表現する 4 番目の答を追加した
+  (`ERROR_FROM_INTRODUCTION`)。** それまで post-baseline な code に対する答は
+  3 つしかなかった: 昇格窓 (`RULE_PROMOTIONS`) / ラダー外の `info`
+  (`INFO_ONLY_SINCE_BASELINE`) / 政策より前 (frozen baseline)。どれも
+  **「即座に error で、それは退行ではない」**を言えない。ガードは正しくそれを
+  弾く — 登録した entry は `newRuleSeverity` で severity を決めねばならず、
+  導入リリース以前の pin は「P7 が書かれた原因そのものの退行」として拒否される。
+  `QFAI-SCAN-002` はその 4 番目を必要とする。「実行が完走しなかった」という
+  意味で、この code が無かった時点でその条件は stderr 1 行と非 0 exit で
+  プロセスを終わらせていた。窓を付けると 2 minor のあいだ結果が反転する —
+  finding は `warning` になり、既定の `--fail-on error` では exit 0 なので、
+  **クラッシュをより良く報告する変更がクラッシュを pass に変える**。窓の
+  存在理由も無い: 新たに落ちるプロジェクトの backlog を吸収するためのものだが、
+  この状態で通っているプロジェクトは存在しない (クラッシュするので)。
+  判定基準は 1 つで、レビュー時に検証可能: **その条件は今日すでに実行を
+  落としている**。各 entry は理由を必須とし、ガードは (a) 理由が空でない、
+  (b) 全 site で `"error"`、(c) 何かが実際に emit している、(d) frozen
+  baseline が既にカバーしていない、の 4 点を検査する。**理由が真かはガードでは
+  検査できない** — 読者は「この code が無かった時ツリーはどうなったか」を問うて
+  検証する。だからリストは短く保つ。
+  あわせて ratchet の object-literal 抽出を広げた。`OBJECT_CODE_RE` は
+  `code: "リテラル"` を要求しており、`cli/lib/warnings.ts` は
+  `code: TRUNCATED_SCAN_CODE` と書くので、この形の post-P7 code は
+  **一度も答を問われていなかった**。解決機構は 3 行上に既にあり
+  (`issue(...)` 側の `resolveArg`)、それを使うだけだった。同じ盲点は
+  `severityExpressionsFor` の object-literal 半分にもあり、そちらも定数
+  エイリアスを解決するようにした — さもないと「全 site で error」を検査する
+  新ガード自身が、検査したい severity を見られない。
+  広げた結果 `QFAI-SCAN-001` が初めて ratchet に見えるようになった。導入時期を
+  調べると P7 と同日に別ブランチで併行開発され、main へは先に到達している
+  (`97abcbfe8` 2026-08-30T23:45:11Z vs `56c59f7fa` 2026-08-31T00:43:00Z)。
+  固定 `warning` で `--fail-on error` を落とさないので、baseline リストの
+  docblock が認めている例外 (「抽出器を広げると P7 以前の code が現れる」) に
+  該当する。receipt をコメントに残して追加した。
+  P7 の節にも 3 つの免除とそれぞれの判定基準を記述した。
+  (#1111, #1110)
+- **`validate.json` を public サーフェスとして文書化し、4 つの矛盾を 1 つの話に
+  そろえた。** それまでこのファイルは同時に 4 つのことだった:
+  **読むことを MUST とされ** (`qfai-verify/SKILL.md:152`、
+  `shared-skill-operating-baseline.md:130`)、**`@api` と宣言され**
+  (`change-classification.md:54`)、**internal で安定契約でないと宣言され**
+  (`README.md:328`)、そして**キーが 1 つも文書化されていなかった**。
+  結果は予測どおりで、findings 配列を探したエージェントは `findings` に手を
+  伸ばし、配列名が `issues` のファイルから `undefined` を得た。
+  public として解決した — skill がエージェントに読ませている以上、README が
+  何と書いていても実質的にサーフェスである。
+  `qfai-verify/references/validate-json-schema.md` を新設し、top level
+  (`toolVersion` / `generatedAt` / `profile` / `issues` / `counts` /
+  `traceability` / `waivers`) と `issues[]` の全キーを、必須と任意を区別して
+  記載した。**何が安定で何が安定でないか**も明記した: キー名・`counts` の形・
+  3 つの severity 値・配列名が `issues` であることは `@api` 経路の対象で、
+  `message` の文面・`issues` の順序・どの任意キーが埋まるかは対象外。
+  `message` で match する consumer は壊れるので `code` で match する。
+  README の internal 宣言は `report.json` / `doctor.json` / `run-*` を残し、
+  `validate.json` を外してスキーマ文書を指すようにした (両 README を整合)。
+  2 つの命令元にはエージェントが探しに行くキーを明記した — waiver の `rule:`
+  は `issues[].code`、判定は `counts`、そして**配列は `findings` ではなく
+  `issues`** であること。
+  提案 (3) の `findings` alias と (4) の `qfai report --format json` 安定
+  クエリ面は入れていない。前者はまさに public にしようとしているサーフェスの
+  スキーマ変更で、後者は新規 CLI 契約である。「どちらなのか」に答えが出た
+  今、両方とも issue 側の判断に残す。
+  (#1102)
+- **他 spec が所有する ID を参照する正しい形を、finding と参照文書に書いた。**
+  2 つのルールが「他 spec 所有の ID を名指すこと」を `error` にしている
+  (`QFAI-SPACK-101` = namespace、`TRACE_DOWNSTREAM_REF` = 参照方向)。個別には
+  妥当だが、両者が揃うと**よくある状況に表現形が無くなる**。レイヤード spec は
+  entity を共有するので「この spec のルールは所有者のルールに従う」は実在する
+  関係で、素直に「per BR-0017-0004」と書くと `error=0` が `error=2` になる。
+  通る形は所有 spec の **contract id** (`CON-DB-*` / `CON-API-*` /
+  `CON-UI-*`) を引用することだが、それを述べる箇所がどこにも無かった。
+  `QFAI-SPACK-101` の remedy は「ID をこの spec に合わせて修正してください」で、
+  これは**著者にできない唯一のこと**である — その ID は他 spec のものだから。
+  `TRACE_DOWNSTREAM_REF` には remedy が無かった。両方に正しい形を書いた。
+  あわせて `spec-traceability-rules.md` に
+  `### Citing an ID another spec owns` を追加し、namespace 検査が
+  **どのファイルを対象にするか**を実測値で表にした:
+  `02` / `03` / `04` / `05` / `06` は対象、`09_delta.md` は対象外
+  (delta は起きたことを記録するので他 spec の ID を載せられる)、
+  `10_Plan.md` は**現在対象外**。後者は issue が「? 」として保留していた問いで、
+  意図的な決定か抜けかは #1101 に残した。
+  提案 (3) の `[owner:BR-…]` という認可された引用形は実装していない — 2 つの
+  validator・traceability graph・参照文書にまたがる新しい ID 文法で、その関係を
+  first-class にするかどうかの判断を伴う。
+  (#1101)
+
+- **loop 中に退役した surface を検出するようにした (`QFAI-PROT-011`)。**
+  cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
+  以降の編集は lock drift として `iterate` が exit 2 で止める。drift ルールと
+  しては正しい — 誰も凍結範囲を黙って広げてはならない。しかしそれが唯一の
+  ルールで、**製品判断で screen を 1 つ退役させた**正当なケースも同じ扱いに
+  なっていた。しかも `iterate` の hard-stop は **UI-bearing spec が全て**
+  消えたときにしか発火しない (`prototypingIterate.ts:529-573`) ため、部分的な
+  縮小は precheck の「zero UI-bearing specs resolved」条件を満たさず、
+  `validate` は存在しない screen を記述した loop に対して `error=0` を出して
+  いた。operator が気付くのは次の `iterate` — 唯一の道が
+  `--cycle 0 --force` (= `iter-00` を退避し、支払い済みのレビューを全部捨てる)
+  になる、後戻りできない地点である。
+  新 validator は `frozenSurfaceUnion` と現在 UI-bearing に解決される spec を
+  比較する。silent にするのは 4 ケース: loop が無い / 読めない
+  `prototyping.json` (それは `certify` が拒否する) / `frozenSurfaceUnion` が
+  無い / **loop が閉じている** (閉じた loop は履歴であって現在の主張ではない)。
+  さらに「全 marker 消滅」も silent — `iterate` の hard-stop が既に凍結 union を
+  名指しして別の remedy を出しており、1 つの状態に 2 つの finding は自動修復を
+  2 経路に分岐させる。
+  severity は promotion window から取る (`sunsetLedger` のガードが、登録した
+  entry は `newRuleSeverity` で severity を決めることを要求する)。窓には実務上の
+  意味がある — in-loop の逃げ道 (`rescope` 操作) がまだ存在しないので、
+  `error` にすると「remedy が支払い済みレビューの破棄しかない」条件で gate を
+  落とすことになり、置き換えた沈黙より悪くなる。
+  あわせて `qfai-prototyping/SKILL.md` に `### Scope reduction has no in-loop
+path` を追加した。drift ルールは対称だが縮小は非対称であること、reset が何を
+  捨てるか、finding が「後戻りできない地点の前に」見えること、そして 2 つの
+  出口 (restore / 意図的な reset) を明記した。
+  issue が提案する `rescope` サブコマンド (1) と critique の supersede 注記 (2)
+  は本 PR には含めない — 新規 CLI サーフェスと audit schema を伴う製品判断で、
+  (2) は (1) の設計制約である。
+  変異検査: 3 つの保護 (何も報告しない / 閉じた loop を無視する /
+  全 marker 消滅を二重報告する) すべてが検出される。
+  (#1099)
+- **`QFAI-CONTRACT-040` を、DB 側が ENUM のとき `error` に上げた。**
+  このルールは API 契約が要求する status/state 値を、同名フィールドを宣言する
+  DB 契約が保持できないときに発火する。固定 `warning` だったが、qfai が指示する
+  gate はすべて `--fail-on error` なので何もブロックせず、実プロジェクトでは
+  95 件規模の warning バケットに埋もれ、**制約違反を先に見つけるのは Postgres**
+  だった。
+  issue は「(1) `error` に上げる / (2) どうしても `warning` なら ENUM のときだけ
+  昇格させる」を提案していた。収集器を読んだ結果 **(2) が代替案ではなく本筋**
+  だと判断した。DB 側の domain 収集は 3 形を読む:
+  `CHECK_IN_PATTERN` / `CREATE_TYPE_ENUM_PATTERN` / `INLINE_ENUM_PATTERN`。
+  後 2 者は Postgres ENUM で、domain 外の値は insert 時に拒絶される — つまり
+  両契約を満たす実装は存在せず、これは issue が言うとおり定義上 error である。
+  一方 `CHECK (col IN (...))` は列の物理形ではなく DB が**現在**主張している
+  境界で、drop / 再定義 / `NOT VALID` で外せる。無条件に上げると issue 自身が
+  「soft なケースは soft に保つ」と書いた区別を失う。
+  `DbDomain` はどの形由来かを保持していなかったので `enumBacked` を追加した。
+  1 つのフィールドが両形で束縛されている場合は enum が勝つ — 実装が満たさねば
+  ならないのは最も厳しい制約であり、ENUM 列に冗長な CHECK が付いていても
+  違反は不可能なままである。
+  `collectSqlEnumDomains` の export シグネチャは変えず、形は
+  `collectSqlDomainBounds` という 2 つ目の export で返す。値だけが必要な呼び出し
+  側は無変更。
+  提案 (3) も実装した。remedy は「DB 契約に値を追加するか、API 側の terminal
+  semantics を訂正してください」と**両方向を対称に**提示していて、これは
+  事例で実際に判断を要した点そのものだった。`dbFileList` は既に手元にあるので、
+  ENUM 由来なら「その DB 契約が正」と名指しし、CHECK 由来なら両方向が取れる旨と
+  「所有 spec の Contracts 表で判断する」ことを述べる。message には制約形も
+  載せた — severity がそこで決まるので、`error` と `warning` を見比べた読者が
+  SQL を開かずに理由を知れるようにするため。
+  (#1100)
+- **`R-CERTIFY-VERIFY-CIRCULAR` を `validate` では `info` にし、強制は
+  `certify` に残した (`CR-20260904-0004`)。** `error` のままでは
+  `/qfai-verify` の Completion Contract が Work Order H 外で満たせなかった。
+  skill は `verify.json` を MUST とし、その `scope` は「実際に実行した stage を
+  名指しし、実行していない stage は決して書かない」(`SKILL.md:148` / `:173` /
+  `:72-73`)。したがって通常の full プロファイル実行は `scope: "full"` を書く
+  しかなく、prototyping loop が開いている間、このルールがまさにそれで発火した。
+  実測: `error=0` → ファイル作成 → `error=1` → 削除 → `error=0`。waiver は
+  `warning` / `info` に限られる (`:151`) ので逃げ道が 1 つも無かった。
+  `SKILL.md:65` の carve-out は Work Order H に明示的に限定されており、
+  実プロジェクトでは loop が数週間開いたまま他の stage が走るため、この状態は
+  例外ではなく通常である。
+  強制点は変えていない — `prototypingCertify.ts:374-383` が既に非 prototyping
+  scope を exit 2 で拒否しており、そのコメント自身が、この finding は
+  「keeps the certify command self-contained instead of relying on a downstream
+  validate pass to surface the same condition」と述べている。
+  `scope: "full"` の verdict がディスク上にあること自体は damage ではない —
+  それを `certify` が **consume** することが damage で、`certify` は拒否する。
+  finding のメッセージには逃げ道を追加した (loop を閉じ、Work Order H として
+  `/qfai-verify` を再実行して `scope: "prototyping"` を記録する)。従来は
+  ルールと contract 条項だけを述べ、代わりに何を書けばよいかは述べていなかった。
+  severity は `REQ-0015-0013` / `US-0015-0007` / `AC-0015-0013` /
+  `EX-0015-0009` に規定された upstream SSOT なので Change Request を伴う。
+  4 箇所すべてに新 severity と **その理由** を記録した — 「CIRCULAR」という名前の
+  ルールに `info` を見た読者が、強制が無くなったと誤解しないため。
+  issue の案 (2) (`prototypingLoop: "open"` の追加) と (3) (SKILL.md に例外を
+  明記) はコストではなく中身で却下した: (2) は `prototyping.json` が既に持つ
+  情報を schema field に二重化し、どちらが正かを両 reader で合わせる必要が
+  生じる。(3) は skill が artifact を MUST としつつ「書かない条件」も述べる形に
+  なり、実際の error を捕らえるのは依然 `certify` なので、発火しない gate の
+  ための文書になる。
+  (#1097)
+
+- **`discussion` profile が root DESIGN.md の parse を見られるようにした。**
+  `qfai-discussion` は parsable な root DESIGN.md を MUST とし、gate として
+  `--profile discussion` を指定している。しかしその profile が走らせる 5 つの
+  validator (mermaid / pack readiness / visuals / research summary /
+  review artifacts) はどれも DESIGN.md を読まず、`QFAI-DCON-033` は sdd か
+  prototyping の readiness gate からしか実行に載らなかった。つまり
+  **ファイルを author する stage が、そのファイルが parse するかだけ検査されて
+  いなかった** — malformed なファイルは author 時の gate を通り、レビュー 1 巡
+  あとに別の skill の下で表面化していた。
+  parse と lock を分離した。`validateRootDesignMdParse` は parse 半分だけで、
+  lock 比較は入れていない — それは `/qfai-sdd` Phase 0 が解消するもので、
+  discussion 実行を「その stage では直せない理由」で落とすことになる。
+  「ファイルが malformed」と「ファイルが凍結 hash と一致しない」は
+  owner の異なる別の失敗である。
+  `QFAI-DCON-033` の生成は 1 つの builder に集約した。emitter が 2 つになるので、
+  message / rule / remedy が食い違えば自動修復が 1 つの defect に 2 経路を取る。
+  あわせて `design-md-spec.md` に `## accessibility allowed keys` を追加し、
+  `contrast_ratio_min` と `motion` のみで list が **closed** であること、
+  なぜ ignore ではなく reject なのか (dropped directive が lock に hash され、
+  iterate / certify が読む parsed tokens には現れない)、新しい accessibility
+  義務はどこに書くのか (`# Brand Philosophy` 本文 / screen contract の
+  `observable_outcome`) を明記した。
+  issue の提案のうち「失敗を比例的にする」(未知 leaf 1 つで document 全体を
+  落とさない) は **実装しなかった**。`designMd.ts:405-425` が記録している
+  理由が反対に働く — document を parse させて key ごとの finding にすると、
+  lock は parsed tokens が持たない key を凍結し、document と lock は一致するのに
+  どちらも author されたものと一致しない。判断が必要なので issue に報告した。
+  「許可キーをメッセージに載せる」提案は既に満たされていた
+  (`rejectUnknownKeys` が全 scope 共通で `Allowed: <list>.` を出す)。
+  (#1098)
+- **`certify` が封印する evidence と保存済み `validate.json` を関係づけるようにした。**
+  それまで `certify` はその file について 3 点しか検査していなかった — 存在、
+  `profile` が `prototyping`、`counts.error` が 0
+  (`prototypingCertify.ts:286-319`) — そして結果とツリーを結ぶものが何も無かった。
+  そのため flat な `review.json` があった時点で記録された成功のまま、flat を
+  削除して per-spec を書いた状態を封印でき、現在の `validate` が reject する
+  ツリーに証明書が出ていた。
+  さらに証明書は `validateRun.ranAt` に **certify 実行時刻** を書いていた
+  (`:937` の `new Date()`)。「fresh な run に対して封印されたか」を監査しようと
+  した人が読んでいたのは、その問いが答えられなくなった瞬間に作られた
+  timestamp だった。
+  `ValidationResult` に `generatedAt` を追加し、`certify` は (a) evidence の
+  いずれかが run より新しければ refuse し、対象ファイルを名指しする、
+  (b) 証明書に run 自身の時刻を記録する。
+  `generatedAt` が **無い** 場合は「古い writer」であって検査失敗ではないので、
+  refuse せず note を出して続行する。issue が求めているのは「evidence が新しい
+  ときに refuse」であり、時刻を持たない結果を拒否すると、その条件を表現できない
+  すべての既存 `validate.json` を弾くことになる。このバージョンで `validate` を
+  走らせれば必ず刻まれるので、窓は stale な 1 ファイル分で、次の run が閉じる。
+  mtime の限界 (同一秒の書き込みは「新しくない」と見える / 改竄耐性が無い) は
+  兄弟の check (`:1216-1294`) が既に記録しているものをそのまま引き継いだ。
+  証明書と run を content digest で結ぶ形 (case B) が強い版で、別判断を要する。
+  変異検査: 鮮度 gate を無効化すると 1 行、`ranAt` を certify 時刻に戻すと
+  1 行が落ちる。
+  (#1107)
+- **spec-0004 の `review.json` スキーマを出荷バリデータに合わせた
+  (`CR-20260904-0003`)。** 3 箇所で乖離しており、いずれも実装を canonical と
+  する判断（ユーザ）。
+  `AC-0004-0012` は `lap-*` の 8 ID を navigation / interaction の欠陥
+  (orphan-page, deadend-flow, input-trap ...) として列挙していたが、
+  `loadKnownLapIds` が解決する `assets/validators/layoutAntiPatterns.json` は
+  **layout archetype** (saas-dashboard, bento-grid ... 6 件 `layout`、2 件
+  `semantic`) を列挙している。8 件中 7 件に対応が無く、criterion が挙げた ID は
+  `lap-008-no-back-affordance` を除きすべて出荷 gate に reject され、gate が
+  受け付ける ID は同じ 1 件を除きすべて criterion 違反だった。**同じ種類の
+  ものですらない**ため「コードを spec に合わせる」は取れない — 動作している
+  detector 8 件を散文のために消すことになる。criterion をレジストリ参照に変え、
+  撤回した 8 ID を criterion 内に記録した。
+  `AC-0004-0013` の `designMdViolations` は
+  `{category, expected, found, location}` で「余分な field でも reject」と
+  していたが、`prototypingEvidence.ts:79-87` は `{kind, found}` だけを検査し
+  残りは無視する。enum (color/font/radius/shadow) は元から一致していた。
+  `04_Business-Rules.md` / `05_Examples.md` の `prose` は
+  `proseCritique` へ。実装には 17 箇所あり `REVIEW_KNOWN_KEYS` にも入っている
+  ため、spec どおりに書いた payload は **2 回** reject されていた（未知キーと
+  必須キー欠落）。
+  DERIVED 側とテストは無変更 — `06_Test-Cases.md` は criterion を ID で参照し、
+  テストは既に実装の形を assert している（それを canonical にした）。
+  **未決の 2 件**は `08_Open-questions.md` に `OQ-0168` / `OQ-0169` として
+  記録した: navigation 系欠陥の族を別途検出すべきか（撤回した 7 ID には現在
+  detector が無く、意図的に retire されたわけでもない）、reviewer に
+  `expected` / `location` を要求すべきか（gate は両方を落とすので、違反は
+  位置情報なしで報告される）。canonical の選択は「今 gate が何を要求するか」を
+  決めるだけで、「gate が何を要求すべきか」は決めない。
+  (#1105)
+
+- **validate が完走できなかったときに判定を出すようにした (`QFAI-SCAN-002`)。**
+  `runValidate` は `validateProject` を try 無しで await していたため、どの
+  validator の fs エラーでも `cli/index.ts` に届いて stderr 1 行になり、
+  `counts:` も `run-log:` も `validate.json` も出なかった。出荷 skill はすべて
+  validate を `| tail` に通すので、エージェントには gate の判定があるべき場所に
+  その 1 行だけが見えていた。Windows の `git worktree` は
+  `.claude/skills/*` を directory を指す FILE symlink にし、`stat` が毎回
+  `EPERM` を返すので、この経路には実運用で到達する。
+  先例は `QFAI-SCAN-001` で、`cli/lib/warnings.ts` が理由まで書いている —
+  不完全な scan は finding でなければならない、「stdout への echo だけでは
+  `--fail-on` / `--strict`、GitHub annotation stream、run-log のいずれからも
+  到達できない」から。クラッシュした実行は同じ条件のより厳しい版である。
+  finding は errno とパスを載せ、`validate.json` には finding と 0 埋めの
+  coverage を書く。counts は **finding の severity から導出** する
+  (固定値で書くと severity と乖離し、`counts.error: 1` なのに error severity の
+  issue が無い `validate.json` になる — 変異検査で実際にその状態を作った)。
+  severity は `error` 固定で promotion window を置かない。`sunsetLedger` の
+  ガードは「登録した entry は `newRuleSeverity` で severity を決めること」を
+  要求するので、登録すると 1.12.0 まで `warning` になる。`warning` は既定の
+  `--fail-on error` で exit 0 なので、**クラッシュを pass に変える** — 置き換える
+  前の stderr 1 行すら exit 1 だったので、それより悪い。窓が吸収すべき backlog も
+  無い (今日この条件は必ずクラッシュするので、この状態で通っているプロジェクトは
+  存在しない)。P7 が「初日から error」を表現できないことは政策側のギャップとして
+  #1111 に、そもそも `QFAI-SCAN-001/-002` が `EMITTED_RULE_CODES` から見えず
+  waiver が「存在しない rule」と報告される問題は #1110 に起票した。
+  あわせて `cli/lib/fs.ts` の無防備な `stat` を、判定できなかったパスを名指しする
+  エラーに変えた。2 行上の `exists()` は `lstat` を使い、OS が follow しない
+  reparse type の symlink でも **成功する** ので、entry は存在すると判定された
+  直後に `stat` が無防備に throw していた。飲み込まない — 同モジュールのコメントは
+  `catch(() => false)` と `catch(() => [])` がいずれも「失敗している filesystem を
+  自信ありげな clean report に変える」として **削除された** ことを記録している。
+  残り 10 箇所の `stat` サイトは issue の分割どおり後続に残した (各々が個別の
+  判断を要し、この変更でミスがクラッシュではなく degrade になる)。
+  (#1104)
+- **temporary-files ルールの適用範囲を明文化した。** ルールは
+  「一時ファイルはリポジトリルート `tmp/` に置く」と述べ、Rule 5 は例外なしに
+  「`tmp/` の外に見つかったら defect として移動または削除する」と書いていた。
+  一方でテストスイートは 643 箇所 (252 ファイル) で
+  `mkdtemp(path.join(os.tmpdir(), …))` を使っている。つまり 2 つの読みが同時に
+  成立していて、それ自体が問題だった — レビューは新規テスト 1 件を個別に
+  指摘するが、著者は「同じファイルの他のケースと同じヘルパーを呼んでいる」と
+  正直に答えられてしまう。
+  適用範囲を「**ワーキングツリーに書かれるファイル**」に限定した。scratch
+  スクリプト・中間成果物・ダウンロードした fixture・メモは対象。テストが
+  `os.tmpdir()` 配下に `mkdtemp` で作るサンドボックスは非対象。これは Rule 1 の
+  禁止事項からの帰結であって例外ではない — Rule 1 が挙げるのはリポジトリ
+  ルート・`src/`・`.qfai/specs/` などの production/artifact ディレクトリで、
+  リポジトリ外の `mkdtemp` root はそのいずれにもファイルを置けず、作った
+  テストが自分で削除する (Rule 4 が求めていること)。
+  代替案 (`tmp/` 配下に共通ヘルパーを作り 643 箇所を移行) は却下した。
+  テスト I/O がリポジトリ内に入り、file-watcher とツリーを歩く guard すべての
+  視界に入る。
+  同じ scope を憲法 Article XI (配布 asset) と `CLAUDE.md` にも反映した。
+  あわせて `## Reference` の参照先を修正した:
+  `.qfai/assistant/instructions/constitution.md` は存在せず、Article XI の実体は
+  `.qfai/assistant/constitution/constitution.md` — ルールから典拠を辿った読者は
+  何も見つけられなかった。
+  (#1094)
+- **どの qfai が走ったのかを毎回出力し、プロジェクト外から解決された場合は finding にする。**
+  出荷 skill はすべて bare `npx qfai …` を指示しているが、`npx` は bare name を
+  **親ディレクトリ方向** に `node_modules/.bin` を探して解決する。Claude Code の
+  worktree はメインチェックアウトの 3 階層下にあるため、自前の依存を持たない
+  worktree では囲んでいるチェックアウトのバイナリ (別ブランチ・別 lockfile) が
+  走り、実行結果には何も現れなかった。版番は `validate.json` の内部にしか無く、
+  README はそれを internal と呼んでいるので、gate も貼り付けた evidence も 2 つの
+  実行を区別できなかった。`run-log:` の隣に `qfai: <version> (<package dir>)` を
+  出力し、走っている package が **プロジェクト root の外にある installed copy** の
+  場合は `QFAI-TOOL-001` を出す (`--fail-on` から assert できる)。`RULE_PROMOTIONS`
+  で 1.12.0 まで `warning` に固定。
+  issue の提案からは 2 点を訂正した。`process.argv[1]` ではなく package
+  ディレクトリを比較対象にする — 実インストールでは前者は npm が `.bin` に書く
+  shim で、転送先の package とは別パスであり、報告された版番の持ち主でもない。
+  また issue は「worktree のケースだけを捉える」としているが、そうではない:
+  意図的なグローバルインストールと monorepo root への hoist はどちらも正当に
+  root 外へ落ちる。どちらも defect と呼ばずメッセージと docblock に明記した。
+  `outside` は `node_modules` セグメントを併せて要求する。`npx` が親探索で到達
+  できるのはそこだけ (別チェックアウトのコピー / hoist されたコピー /
+  グローバル prefix / 親に無いとき `npx` が黙って作る `_npx` キャッシュ) で、
+  この条件が無いと直接実行したソースチェックアウトでも発火し、実際に
+  `surfaceShortCircuitScope` と `skillsIntegrity` が落ちた — スイートの temp root は
+  構造上すべてソースツリーの外にある。
+  `classifyToolLocation` を純粋関数として切り出して export した。
+  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
+  動かせず、ルールが検出すべき状態に到達できない。最初に書いた 5 行はすべて
+  `outside === false` の assert で、**一度も発火しないルールでも全行通る**。
+  この継ぎ目で到達する 4 行を追加し、両方向を変異検査した (強制 off で
+  positive 4 行が、強制 on で 7 行が落ちる)。
+  provenance 行は **検証開始前** に、かつ **両 format** で出力する。`run-log:` の
+  隣に置くと `--format github` では一切出力されず、出荷 SDD skill と evidence
+  テンプレート (`skills/qfai-sdd/SKILL.md`、`templates/evidence/sdd-spec.md`) は
+  その形式を指定しているため、製品が実際に走る経路で答えが欠けていた。また
+  `validateProject` の後に出力すると、最も必要な実行 — 外部解決された古い qfai が
+  新しいプロジェクト構造で例外を投げる場合 — で stack trace だけが残った。
+  package directory の解決は固定深度 (`../../package.json`) から **上方探索** に
+  変えた。tsup は公開 API を `dist/index.mjs`、CLI を `dist/cli/index.mjs` に
+  別々に bundle するので、前者から 2 階層上は package の **1 つ上**
+  (`/project/node_modules/package.json`) で、報告される版番もディレクトリも
+  別物になる。`resolveToolVersion` に元からあった欠陥で、`src/core/` からも
+  `dist/cli/` からも偶然正しくなるため気付かれていなかった。探索は `name` が
+  `qfai` の manifest で止まるので、`node_modules/` の 1 つ上にある利用側
+  プロジェクトの manifest を取り違えない。
+  severity は `warning` + 昇格窓ではなく **`info` 固定** にした。同じ path 判定は
+  意図的なグローバルインストールと monorepo root への hoist を捉え、どちらも
+  正常運用なので、`error` へ昇格すると何も誤っていないプロジェクトで
+  `--fail-on error` が必ず失敗し、しかも `applyWaivers` は error finding に対する
+  waiver を `QFAI-WAIVER-002` で拒否するため逃げ道が無い。恒久的な `warning` は
+  表現できない (ratchet は post-baseline code に parseable な `promoteAt` を要求
+  するので、登録＝昇格の予約になる)。`INFO_ONLY_SINCE_BASELINE` が
+  まさにこの形のための category で、既存メンバー `QFAI-REVIEW-010` の説明
+  「ツリーが誤っていると主張しない、閉じるべき gate でもない」がそのまま当てはまる。
+  昇格には依存宣言から意図を判別する仕組みが必要で、その要件は #1108 に記録した。
+  `qfai --version` (#786) と skill 側の worktree ガイダンスも別 issue に残した。
+  前者は独立した既知 defect、後者はどの解決形を規定するかという判断を伴う。
+  (#1096)
+
+- **ツリーから導出される事実をリテラルで pin しているガードに、再導出ツールを同梱した。**
+  `stageEvidenceCounts.test.ts` は e2e callsite 数をツリーから計算し、隣にコミットされた
+  リテラルと突き合わせる。導出は出荷されていなかったので、このガードで赤くなった寄稿者は
+  全員がガードの散文から walk を再実装するしかなかった — #1065 は 1 回の巡回で 8 体の
+  エージェントが独立に同じことをしたと記録している。しかもコンフリクトを人間が見ると
+  「もっともらしい整数が 2 つ」並ぶだけで、**正解がそのどちらでもない** ことを示す手がかりが
+  無い。正解は常に新しい導出である。
+  `scripts/derive-e2e-callsites.mjs` が導出を 1 箇所に持ち、
+  `scripts/pin-stage-evidence-counts.mjs` がそれを record に書く (`--check` で書かずに報告)。
+  ガードも同じモジュールを import する — 2 実装は食い違いうるし、そうなるとガードは
+  ツリーではなく再 pin ツールを測ることになる。ガードが検査するのは **コミットされた
+  リテラル** 対ツリーなので、導出を共有しても self-referential にはならない。
+  ガードの失敗メッセージはツールのコマンド名と per-root の内訳を出すので、寄稿者が
+  数え方を再実装する必要はない。`vitest.workspace.ts` から `e2e` project の include を読む
+  部分も共有側に移した — 「e2e project の callsite」を測ると称してディレクトリを自分で
+  書いているガードは、include が 1 つ増えた瞬間に別のものを測る。parse できない include は
+  黙って落とさず throw する。
+  **suite の 2 つの total は対象外**。テストの中からスイートを走らせない限り導出できず、
+  record 自身がそう述べている。このツールが動かすのはその total を無効化する 1 つの数だけで、
+  total は「妥当性条件が明示された人間の主張」のまま残る。
+- **`atddCredentialReuseGuidance.test.ts` には再導出コマンドを文書化し、自動書き込みは
+  意図的に付けなかった。** この baseline は「数」ではなく **列挙** であり、それは
+  「1 つ失って 1 つ得た集合はサイズが変わらない」という swap を捕まえるためにそうなっている。
+  自動書き込みは swap を黙って吸収してしまい、レビュアーがそれを見る機会を消す。
+  導出コマンドは出力するだけで、編集は人間が行う。#1065 の提案 3 は「ガードごとに再 pin
+  script」だが、**導出された数**と**意図的に凍結された集合**では正しい道具が違う。
+- **`tsconfig.tests.json#include` の test エントリはソート順になった** (#1066 で実施)。
+  #1065 の提案 4 で、append が最終行に集中しなくなる。
+- **Round 2b が正しく検出した重大欠陥を「修正して要件を維持する」経路が存在しなかった
+  deadlock に、1 回限りの corrective review という出口を定義した。** 既存規則の交点が行き止まりで
+  あることは構造的に到達可能である: named fix が **導入または露出** した欠陥を Round 2b が
+  報告すると 2 度目の escalation になり、そこで 2b cap が _apply a named fix_ を、severity floor が
+  _accept as Open Question_ を封じる — security / data-loss / released-contract correctness の
+  finding では残るのが _drop the item from scope_ だけになる。欠陥を直して要件を保つ選択には
+  検証経路が無く、artifact は永久に `REVISE` に留まる。Round 2b が仕事をしたことがこの状態を
+  作る。
+  そのユーザーが drop ではなく修正を選んだ場合に限り、**corrective review artifact を 1 つ**
+  開ける。third round でも budget reset でもなく、round より狭い remit を持つ別 artifact であり、
+  同じ 2 規則がこれを通して再合成できないよう境界を持つ: 元 artifact と Round 2b finding の
+  逐語、ユーザー決定、修正内容、および触れた全 artifact の before/after revision を digest として
+  記録する義務。remit は finding と named fix のみ、独立 review は 1 回のみ (`Round: corrective`
+  — 番号は後継を招くので使わない)、`PASS` は当該 finding を supersede して未通過の review gate に
+  戻すのみ、`REVISE` は terminal で追加 artifact も追加 review も無い。severity floor と
+  Open Question 禁止は弱まらない。
+- **2b cap の一文が事実と違っていたのを直した。** 「floor が両方を封じるなら」と書かれていたが、
+  floor が封じるのは _accept as Open Question_ の 1 つだけである。`drop` だけが残るのは floor
+  単独ではなく **cap と floor の交点** であり、そう述べ直した。
+- **review 終了規則を `constitution/review-convergence.md` に分離した。**
+  `shared-skill-delegation-baseline.md` は 500 行の shipped-asset 上限に対して 499 行であり、
+  1 行の追加すら `assets guardrails > keeps every shipped assistant asset inside the line ceiling`
+  を落とす。その guard 自身のメッセージが処方する remedy が "move a topic into references/" で
+  あり、`Round budget` と `Convergence` は「review がどう終わるか」という 1 つの topic で
+  delegation とは別なので、`drift-protocol.md` が既に確立している sibling constitution file の
+  慣習に従った。規則の内容は移動によって変わっていない (baseline 439 行 / 新ファイル 121 行)。
 - **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
   `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
   `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を
@@ -42,6 +687,758 @@
 
 ### Fixed
 
+- **`--force` / `--yes` / `--dry-run` も、読まないコマンドで受理されていた。**
+  #1143 の残りである。`validate --dry-run` は exit 0 で**実際の実行**を行い
+  `.qfai/report/validate.json` と run-log を書いていた — リハーサルのつもりの
+  操作者が本番を得る。
+
+  ```console
+  $ npx qfai validate --force    --root .   # exit 0、フラグは無視
+  $ npx qfai validate --yes      --root .   # exit 0、フラグは無視
+  $ npx qfai validate --dry-run  --root .   # exit 0、フラグは無視
+  ```
+
+  所有リストは推測ではなく `main.ts` の読み取り位置を `case` アームに対応
+  づけて導出した:
+
+  | field                         | 読むアーム                                 |
+  | ----------------------------- | ------------------------------------------ |
+  | `force`                       | `init`, `handoff`, `prototyping`           |
+  | `yes`                         | `init`, `doctor`                           |
+  | `dryRun`                      | `init`, `doctor`, `handoff`, `prototyping` |
+  | `dir`, `upgradeAssistantTree` | `init` (#1143)                             |
+
+  #1143 で入れた `ownedByInit()` は `ownedBy(...commands)` に一般化し、5 つの
+  フラグすべてを 1 つの述語に通した。ほぼ同じ意味の述語が 2 つあると、歩調を
+  合わせるべき契約が 2 つになる。
+
+  **配布物との照合を先に行った**: これらのフラグをコマンドと組で書いている
+  配布例は `qfai init --force` と `qfai prototyping iterate … --force` の
+  2 つだけで、どちらも所有リスト内。README 2 つは 5 つとも `npx qfai init` の
+  下でのみ文書化している。配布された手順が失敗し始めることはない。
+
+  拒否時に出る usage banner が**所有先の唯一の答え**になるので、過小に述べて
+  いた 2 行も直した: `--force` は `prototyping iterate`（配布 SKILL.md の
+  破壊的リセット手順そのもの）を挙げておらず、`--yes` は `doctor` を挙げて
+  いなかった。`--yes` の doctor 側の説明は `doctor.ts` 自身の docblock
+  (`skip interactive confirmation (autoremediate)`) から取った。
+
+  **アップグレード時の注意:** `validate --dry-run` のようなスクリプトは失敗する
+  ようになる。以前からリハーサルではなく本番を実行していたので、失敗する方が
+  厳密に良い。 (#1144)
+
+- **`--dir` が `init` 以外でも受理され、黙って無視されていた。** その結果
+  `validate --dir <path>` は**現在のディレクトリ**について判定を返し、
+  `report --dir <path>` は現在のディレクトリの `report.md` を**上書き**していた。
+
+  ```console
+  $ npx qfai validate --dir "C:/nope/does/not/exist"
+  counts: info=6 warning=950 error=0        # <- 現在のリポジトリの結果
+
+  $ npx qfai validate --dir /tmp/empty-dir  # 存在する空ディレクトリでも
+  counts: info=6 warning=950 error=0        # <- やはり現在のリポジトリ
+
+  $ npx qfai report --dir "C:/nope/does/not/exist"
+  wrote report: C:\Users\...\QFAI\.qfai\report\report.md   # <- 名指ししていない木に書く
+  ```
+
+  機構: `--dir` は `options.dir` を設定し、`resolveRoot` が読むのは
+  `options.root` / `options.rootExplicit`（`--root` だけが設定する）。
+  `options.dir` の読み手は dispatch の `init` アームただ 1 箇所である。
+
+  これは文書化された制約ではなく欠陥である。`lib/args.ts` は「所有していない
+  コマンドで使われたフラグは引数エラー」を **80 箇所**で実装しており
+  (`--target-url`、`--spec`、`--remove`、`--reason` …)、`--dir` だけが例外
+  だった — その `markInvalid()` は**値が無い**場合のみだった。
+
+  `init` 以外では引数エラーにした。usage 行も「init 専用。他コマンドの対象指定は
+  `--root`」と述べる — `markInvalid` は理由を取らず usage を出す方式なので、
+  そこが操作者の学ぶ場所である。判定は `ownedByInit()` という名前付き述語に
+  した (`ownedByPrototyping` / `ownedByGuardrails` に倣う) ので、次の
+  init 専用フラグは誰もこの issue を覚えていなくても正しくなる。
+
+  **同じ形の 2 例目**として `--upgrade-assistant-tree` も塞いだ。こちらは
+  ある意味より悪く、`validate --upgrade-assistant-tree` は exit 0 で**何も
+  更新せず**、操作者は assistant tree が更新されたと信じたまま古い tree を
+  読み続けていた。
+
+  本リポジトリ自身のスイートにもこの取り違えがあった:
+  `validateRunIncomplete.test.ts` の 3 行が `report --dir` を使っており、
+  修正後に落ちた（`--dir` が引数エラーになり dispatch に届かなくなったため）。
+  `--root` に直した — これは修正が効いている証拠である。
+
+  **アップグレード時の注意:** `validate --dir X` のようなスクリプトは失敗する
+  ようになる。それらは以前から意図した動作をしておらず（別の木について答えて
+  いた）、失敗する方が厳密に良い。`--root` に置き換えること。 (#1143)
+
+- **注釈スキャナが、文字列 / template / 正規表現リテラルの中の**完全な** TC / US
+  id を今も参照として読んでいた。** #1123 は**切り詰められた** id が
+  `/^…TC-0001-\d{4}$/` から取り出されるのを止めたが、同 issue が述べていた
+  構造的問題 —「正規表現の中の文字列、文字列リテラル、コメント、本物の注釈は
+  同じテキストである」— には触れていなかった。実測:
+
+  ```text
+  as designed  コメント内の本物の注釈:              matched=true  want=true
+  DEFECT       正規表現リテラル内の完全な id:        matched=true  want=false
+  DEFECT       文字列リテラル内の完全な id:          matched=true  want=false
+  DEFECT       template リテラル内の完全な id:       matched=true  want=false
+  as designed  #1123 が閉じた切り詰め形:             matched=false want=false
+  ```
+
+  つまり id を**データとして**保持する fixture が、それを参照していると報告
+  されていた。#1123 はその両方（コンストラクトをデータとして持つ generator /
+  parser スイート、および対象の id を引用する自己検査型 deferral ledger）を
+  日常的な形として挙げている。finding は `QFAI-ATDD-101` / `-102` = `error`
+  である。
+
+  必要なレキサーは**同じディレクトリに既にあった** —
+  `validators/jsSourceMask.ts#maskJsNonCode` は該当スパンを正確に知っており、
+  難所（`a / b` は除算、`= /re/` は違う）も扱っている。ただし**コメントも
+  消す**ため、注釈がコメントに書かれるこの用途にはそのまま使えなかった。
+  そこで `comments` オプションを足し（既定は `true`、既存の消費者は不変）、
+  注釈スキャンはリテラルだけを消すようにした。
+
+  拡張子でゲートしている。`.md` / `.feature` は
+  `DEFAULT_TEST_FILE_GLOB` に含まれる注釈キャリアで、Markdown に JS レキサーを
+  当てると散文中のアポストロフィが行末までの文字列開始として読まれ、その後の
+  注釈が**消える** — over-blanking は本物の注釈を隠すので、この方向だけは
+  導入してはならない。 (#1141)
+
+- **CR の免除が `## Impact scope` を 1 つしか読まず、しかも code fence の中まで
+  読んでいたため、書式例がそのパスを承認していた。** どちらも本リポジトリが
+  `## Triage` に対して**既に発見・修正済み**の欠陥である
+  (`specPack.ts#collectTriageSections`)。
+  1. **最初のセクションしか読まない。** 兄弟実装の docblock がその修正を
+     記録している —「以前は最初の 1 つだけを読んでいたため、skill 再実行で
+     2 つ目以降のセクションに積まれた行が…丸ごと外れていた」。
+     `QFAI-TRIAGE-008` の remedy は作者に対して
+     「`## Triage` を複数置けば全セクションが検査されます」と明示しており、
+     **再実行のたびに H2 を追記するのはこのシステムの確立された作法**である。
+     それに倣った CR は後半の宣言が黙殺され、**申告済みの編集**に対して
+     `QFAI-DRIFT-001` が出ていた。
+  2. **fence の中を読む。** 兄弟実装は `maskNonSpecRegions` を先に通しており、
+     理由も書かれている（書式例として fence 内に置かれた見出しが 2 つ目の
+     セクションとして収集される）。Triage では偽陽性の方向だが、**免除では
+     向きが逆で、はるかに悪い** — 書式を fence で説明した CR が、その
+     **例が名指すパス**の免除を与える。#1121 の見出しそのもの
+     （「禁止が許可になる」）が、別経路で再び開いていた。HTML コメントも
+     同じ形で、CR テンプレートは説明用の HTML コメントだらけである。
+
+  兄弟実装がすでに持っていたもの（全セクション収集 + `maskNonSpecRegions`）を
+  そのまま採用した。
+
+  検証で見つかった 2 つの「テスト不能コード」も処理した: `lastIndex` の
+  リセットは `matchAll` で**状態ごと設計から消し**（`exec` ループと違い
+  pattern の `lastIndex` を変えない）、section の join separator は
+  `slice(0, next.index)` が次の見出しの `^##` で切るため非最終セクションは
+  必ず改行で終わる旨を**証明として書いた**上で残した。 (#1139)
+
+- **`prototyping rescope` の書き込み順序が「クラッシュしても再実行で回復できる」
+  ことを決めていたが、コードにそう書かれておらず、テストも無かった。**
+  派生成果物 (`iterate-plan.json` / `review.json`) を先に、正の記録
+  (`prototyping.json`) を最後に書いている。これは直感と**逆**であり、逆の方が
+  正しい: `rescope` は `frozenSurfaceUnion` に無い surface を拒否するので、
+  2 群の書き込みの間で死んだプロセスが残す状態は
+
+  | クラッシュ位置     | `frozenSurfaceUnion` | 再実行                                | 結果                                                                        |
+  | ------------------ | -------------------- | ------------------------------------- | --------------------------------------------------------------------------- |
+  | 現行順（派生が先） | まだ surface を含む  | **受理**（id はまだ `missing`）       | 注釈は既存でスキップ、plan 削除は no-op、最後の書き込みが完了。**収束する** |
+  | 逆順（正が先）     | もう含まない         | **拒否**「not in frozenSurfaceUnion」 | 古い plan と未注釈の review をこのコマンドで直す手段が無い                  |
+
+  journal 無しでどちらの順序も crash-safe ではない。現行が回復可能な方である。
+  問題は (1) その理由がコードに無く、順序が偶然に見えること、(2) 2 行を入れ替え
+  ても**全行が通る**こと — どの行もクラッシュ窓に入らないため。この
+  「成り立っていて、重要で、何も守っていない性質」は本リポジトリが繰り返し
+  見つけている形である。
+
+  不変条件を書き込み地点に明記し、`tests/cli/prototypingRescopeCrashWindow.test.ts`
+  が意図的にその窓に入る行を持つようにした。
+
+  検証自体の誤りも 1 つ潰した: 最初の mutation は 2 ブロックを文字列で入れ替えた
+  ため、正の書き込みが参照する宣言より上に移動して **`tsc` が落ちる**コードに
+  なっていた。行は「壊れたビルド」で失敗しており、順序について何も証明せずに
+  "detected" と表示されていた。手書きの逆順版（`tsc` exit 0）に差し替え、
+  verdict を信じる前に型チェックするようにした。 (#1137)
+
+- **Windows ツリーでは必ず赤く CI では緑になる 2 行を、理由を明記した skip に
+  した。** どちらも POSIX 固有のファイルシステム性質に依存していた。赤い行が
+  2 つあること自体より悪いのは、開発者が作業するプラットフォームで恒常的に
+  赤いスイートは「失敗はノイズ」と読むよう訓練してしまう点である — 実際そう
+  なった（本セッションはこれらと #1130 を数時間「既知の先行失敗」に分類して
+  いた。それは**本物の回帰が見えなくなる**状態である）。
+  1. `tddListDecisionRecord` の `DR-0270-<slug>.md` は Windows では
+     **作成できない**（`<` と `>` はファイル名に使えない）ので、
+     `writeFile` が assertion に到達する前に `ENOENT` を返す。二次的な事実が
+     修正の形を決める: 対象のハザード（未置換の `<slug>` が記録ファイル名に
+     残ること）自体も同じ理由で Windows では**起こり得ない**。`tddList.ts` は
+     その綴り (`DR-<id>-<slug>.md`) をテンプレートとして文書化しているので、
+     広げるべきギャップは無い — ルールがそのプラットフォームで到達不能
+     なのであり、skip は事実を述べている。兄弟フィクスチャ
+     (`DR-0270-.md` / `DR-0270--.md`) は作成可能で全環境で走る。
+  2. `tddListEvidence` の `chmod(file, 0o755)` 後に RED hash が stale に
+     なることを期待する行。Windows の `fs.chmod` は read-only 属性しか
+     切り替えず実行ビットは存在しないので、hash の入力が変わらない。
+  3. `initRoutingMergeRaces` の 2 行。当初「並行性の問題でこのクラスでは
+     ない」と切り分けたが、測ったら同じクラスだった:
+     `restoreOwnership` は `if (process.platform === "win32") return true`
+     で即座に戻る（`init.ts` 自身が「Windows に意味のある `fchown` は無い」と
+     書いている）ので `handle.chown` が呼ばれず、テストが仕込む `EPERM` は
+     起こり得ない。decline が発火せず merge が進む。
+     **うち 1 行はこのクラスで最悪の形**だった —
+     `leaves no staging file behind when it declines` は Windows で
+     **PASS しながら何も検証していなかった**（decline が起きても起きなくても
+     `.tmp` は残らない）。何も証明しない green には、気付くべき失敗が無い。
+
+  機構はリポジトリに既にあった —
+  `it.skipIf(process.platform === "win32")` は `integrationSurface` /
+  `atddCoverageDepth` / `businessFlow` で十数箇所使われている。2 行はそれに
+  倣い、理由がファイル内に書かれるようにした（「どの失敗を無視するか」の
+  記憶ではなく）。
+
+  skip が壊れた行を隠していないことも確認した: 各 skip を強制的に off に
+  すると、失敗理由は**プラットフォーム由来のもの**
+  (`ENOENT` / `expected false to be true` / manifest 内容の不一致) だけである。
+  3 番目の強制実行は、この確認自体の価値も示した —
+  `leaves no staging file behind` は強制実行でも PASS する。 (#1133)
+
+- **finding code の family カバレッジ証明が Windows では一度も走っていなかった
+  （CI は green のまま）。** `codesInFile` は解析済みソースをパスで引く:
+  `scan.sources.find((c) => c.fileName === file)`。`ts.createSourceFile` は
+  渡された名前を**スラッシュに正規化**し、`file` は `path.resolve` の結果である。
+  POSIX では同一文字列なので一致するが、win32 では
+
+  ```text
+  C:/Users/.../src/core/validators/testTodoStubs.ts     (fileName)
+  C:\Users\...\src\core\validators\testTodoStubs.ts     (file)
+  ```
+
+  となり、lookup は常に外して行は `not scanned:` で throw していた。
+
+  この行が実装している保証は「gate が emit するコードはすべて**family**
+  エントリで覆われる（bare code ではなく）」であり、gate が 2 つ目のコードを
+  得たときに `QFAI-PROFILE-001` の notice から黙って抜け落ちるのを防ぐもの。
+  `validateTestTodoStubs` は `runTddValidators` の中、つまり
+  `qfai-implement` が gate にする profile で走るので、覆われていることを
+  確認できていなかったのはそこのコードである。
+
+  さらに悪いのは、Windows ツリーでは常に赤く CI では緑になるため、
+  開発者がこの行をノイズとして読むよう訓練される点である（実際そうなった —
+  本セッションは数時間これを「既知の先行失敗」に分類していた）。
+
+  比較の両辺を同じ key 関数に通した。正規化は `path.sep` ではなく `\` を
+  無条件に畳む — `path.sep` を使うと POSIX ではこの関数が恒等写像になり、
+  Linux 上では正規化を外しても全行が緑のままになる。**この欠陥を生かした
+  片側プラットフォーム盲点そのもの**なので、win32 形式の key を使う回帰行を
+  追加し、両プラットフォームで落ちるようにした。 (#1130)
+
+- **網羅を主張する profile が drift gate を走らせておらず、しかもそれを
+  「未評価」として報告することもできなかった。** `QFAI-DRIFT-001` は
+  downstream フェーズが upstream SSOT を直接書き換えたことを検出する唯一の
+  gate で、`drift-protocol.md#non-negotiable-constraints` はその禁止について
+  **「これは検出される」**と書いている。実際に emit するのは `--profile tdd`
+  だけである。それでも `PROFILE_GATE_GROUPS.full = ALL_GATE_GROUPS` であり、
+  さらに `QFAI-DRIFT-*` は `GATE_GROUP_FAMILIES` の**どのエントリにも無い**ため
+  `unevaluatedFamilies()` が名指すこともできなかった。`QFAI-PROFILE-001` 自身の
+  助言（「完了宣言の前に `qfai validate --fail-on error` (full profile) を
+  実行せよ」）に従った作業者は、一度も見ていない実行から PASS を受け取り、
+  そのことを一切知らされない。
+
+  issue が挙げる 2 案のうち後者を採った。opt-out の理由は精査に耐える —
+  `/qfai-sdd` はこれらのファイルの**所有者**で、CR なしに編集するのが設計で
+  あり、その作者も完了前に full profile を実行するよう言われている。`full` に
+  emit させれば、正当な authoring 編集をすべて flag することになり、opt-out が
+  避けている失敗そのものになる。
+
+  そこで `full` は網羅の主張をやめた。`drift` を gate group として追加し、
+  `tdd` だけがそれを評価する profile であることを map に書き、notice が
+  それを名指すようにした。これは defect (2) と同じ欠落エントリなので、
+  1 つの変更で両方が閉じる。
+
+  notice の文言は狭い profile では従来どおり（`tdd` / `sdd` / `discussion` /
+  `atdd` / `saas-package` は実際に partial なので原文が正しい）。`full` /
+  `verify` には専用の文を与えた — 「partial profile」と呼ぶと逆方向に
+  言い過ぎで、読者は残りを探しに行く。また full 実行に対して「full profile を
+  実行せよ」と助言するのは循環なので、その文は落とした。drift には
+  「`npx qfai validate --profile tdd` だけが評価する — どの wide profile も
+  wire しないので `--fail-on error` だけでは決して検査されない」という
+  独自の 1 文を付けた。 (#1122)
+
+- **`QFAI-DRIFT-001` の免除が承認済み CR 全文への substring 一致だったため、
+  禁止文が許可として働いていた。** `readApprovedCrText` は `Status: approved`
+  の CR **本文全体**を連結し、変更されたパスがその中に現れるかだけを見ていた。
+  帰結が 3 つある:
+  1. **禁止が許可になる。** 「`.qfai/contracts/db/db-0022.sql` を編集するな」と
+     書いた CR は、`Status` が `approved` に達した瞬間にそのパスの免除を
+     **与える**。`## Rejected` 行も同様であり、`#when-drift-is-detected` step 2 が
+     defect クラス CR に**必須**としている `## Reproduction` ブロックも同様 —
+     報告対象のパスを引用した再現手順が、その編集を承認していた。
+  2. **承認済み CR は、たまたま言及したどのパスも免除する。** blob はリポジトリ
+     全体なので、`spec-0007` の CR が無関係な contract を引用するとその
+     contract の finding も黙る。
+  3. **contract を名指す自然な 2 つの書き方が両方黙って失敗する。**
+     テンプレートの `## Impact scope` は `Contracts: <CON-*>` を求めるのに、
+     ガードは相対パスに一致する。ID 形式もベース名形式も効かない。
+
+  免除を**宣言されたフィールド**に移した。承認済み CR の `## Impact scope`
+  セクション（かつそこだけ）が権限の所在であり、`## Context` や
+  `## Reproduction`、却下された選択肢の散文は何も承認しない。セクション内では
+  **リポジトリ相対パス**と**ベース名**の両方を受け付ける（contract ID は
+  受け付けない — ファイル内の宣言を指す名前であって、ファイルを指す名前では
+  ないため）。一致はトークン境界付きなので、隣接アーティファクト
+  (`<path>.bak` / `<path>2`) の名前がそのファイルを承認することはない。
+  finding の remedy はセクション名と受け付ける綴りを述べる — 従来の文言は
+  4 通りの綴りで満たされ、効くのはそのうち 1 つだけだった。
+
+  promotion window も新コードも使わない。これは条件の追加ではなく、
+  **得られていなかった免除の撤回**であり、通す finding は同じ編集が未申告
+  だった場合すでに `error` である。禁止が許可を与えていたために通っていた
+  リポジトリは失敗するようになるべきで、remedy は何を書けばよいかを正確に
+  述べる。CR テンプレートと `drift-protocol.md#non-negotiable-constraints` も
+  追従した。 (#1121)
+
+- **注釈スキャナが切り詰めた TC / US id を一致させ、それを「未定義参照」として
+  報告していた。** 注釈の正規表現は後半を optional (`(?:-\d{4})?`) にしていた
+  ため、自分の注釈を検証するテスト — 自己検査型の deferral ledger が素直に書く形
+  — が**自分自身の 4 桁短い prefix として一致**した。optional 側は `-\d` を
+  消費できず、短形式が成立し、`-` は word 文字でないので `\b` も満たされる。
+  結果 `QFAI-ATDD-102` が、切り詰めが**発明した**ために構造的に未登録な TC id を
+  報告していた。短形式に `(?!-)` を付けた。両方の長さは引き続き正当 —
+  `TC-0001` も `TC-0001-0002` も `TC_ID_RE` / `TC_REF_SHAPE` / `TC_ID_TOKEN` が
+  受け入れるので、8 桁必須にすると実在の注釈を取り落とす。正当でないのは
+  「短形式のあとに `-` が続く」形だけである (実在の短形式注釈の次に来るのは
+  空白・引用符・`)`・行末で、ハイフンではない)。
+  ガードは**短形式側のみ**に置いた。完全だが不正な注釈
+  (`TC-0001-0002-draft`) は引き続き一致し、未定義参照として報告される —
+  誤報を黙った取り落としに変えるのは、バリデータでは悪い方向である。
+  `US-` は同一の形で同一の欠陥を持つため同時に修正した。 (#1123)
+- **`validate` 以外のコマンドが、ファイルシステム障害でどのコマンドが落ちたかも
+  分からない 1 行を残していた。** #1112 で `validateProject` を包んだので
+  `validate` は `QFAI-SCAN-002` という判定に降格する。他のコマンドは libuv の
+  エラーをそのまま `cli/index.ts` に届け、そこは `err.message` を書いて exit 1
+  する — errno とパスは名乗るが**コマンド名を名乗らず**、その実行が
+  「問題なし」ではなく「未判定」であることも言わない。これが #1104 が
+  最初に挙げている苦情そのものである。`run` に境界を 1 つ置き、`validate` が
+  既に持っている帰属を全コマンドに与えた。書き換えるのは `code` と `syscall`
+  の**両方**を持つ未加工の libuv エラーだけ — 意図的な拒否はどちらも持たない
+  ので、著者が書いたメッセージのまま通る。再 throw であり、握り潰さない。
+  (#1104)
+
+  残る `stat` サイトの掃き出しは**行わない**。分類を現在のツリーから再導出した
+  結果、issue の「残り 10 箇所」は 3 つの理由で数え過ぎだった:
+  `lstat` はこのクラスに**該当しない** (#1095 の条件は `lstat` が成功し `stat`
+  が拒否すること)、`handle.stat()` は解決済み handle への fstat、そして
+  path 追従 `stat` 48 箇所のうち 40 箇所は囲みの `catch` が全部飲むので errno
+  は逃げない。逃げるのは 8 箇所で、うち `integrationSurface.ts` の 2 箇所は
+  #1103 で `EPERM` を finding に narrow 済み、`cli/lib/fs.ts` は #1112 で
+  パスを名乗るメッセージに包み済み、`prototypingIterate.ts` の `dirExists` は
+  **伝播が安全性そのもの** (破壊的な `--force` 再実行の gate なので `EPERM` を
+  「無い」と読んだら再実行が通る)、`prototypingCertify.ts` は gate なので
+  拒否が正しい出力である。
+
+- **Windows の git worktree で `qfai validate` が判定を一切出さずに落ちる問題を直した** (#1095)。
+  `git worktree add` は `.claude/skills/*` のリンクを **file symlink**（ターゲットは
+  ディレクトリ）として作る — リンクを書く時点でターゲットが新 worktree に存在せず、
+  reftype のヒントが無いため。Windows はこれを追跡できず `fs.stat` が `EPERM` を投げる。
+  `readlink` は正しいターゲットを返し `lstat` は symlink と答えるので、
+  lstat ベースの検査はツリーを健全と報告する一方、同じパスの `stat` が落ちる。
+  `integrationSurface.ts` はまさにその wrapper を `stat` しており、catch は
+  `ELOOP` / `ENOTDIR` を「検査対象自身の構造的破損」として finding にしつつ
+  それ以外を伝播していた。結果 `EPERM` はそのまま最上位まで抜け、`cli/index.ts` が
+  `err.message` だけを出して exit 1 — **finding code なし・`counts:` 行なし・
+  `validate.json` なし**。判定の無いゲートである。
+  EPERM は既存 2 つと同じクラスで、その 2 つの catch コメントには「伝播させた結果
+  run が終わった / スタックトレースで終了した」という同型の履歴が残っている。
+  module が既に `cycle` / `not-a-directory` を通している 4 箇所（`PathState`、
+  `canonicalState`、`statOrNull`、`describeDamage`）に `unfollowable` として通し、
+  新しい機構は作っていない。wrapper 側は
+  `resolves through a symlink the OS will not follow -> <target>` を伴う
+  `QFAI-LINK-001` になる。
+  `core/fs/errno.ts` に `isEperm` を追加した（同ファイルの docblock が
+  「`EACCES` / `EBUSY` / `EPERM` … はこの module を拡張せよ」と指示している）。
+  テストは同ファイル既存の手法（`stat` spy に合成 errno を reject させる）に従うので
+  Windows 以外でも検証できる。修正を外すと赤くなることを確認済み。
+  **負のコントロール**も追加した: この rule が検査しないパスからの EPERM
+  （skills ディレクトリ自体の `readdir`）は引き続き伝播する — 「失敗している
+  filesystem が健全な surface として読まれてはならない」という module の規約を守るため。
+  Codex レビューで 2 件の実在欠陥が出たので併せて直した。
+  1 件目は深刻で、**この finding が印字する修復手順が finding を解消しない**という指摘。
+  `suggested_action` は「`qfai init` を再実行、`--force` は不要」と案内するが、
+  `ensureSymlink` は「entry が symlink かつ `readlink` が一致」なら `--force` 無しで
+  `skipped` を返す — まさにこの wrong-reparse-type がその条件を満たす。
+  Windows worktree の利用者は案内どおりにしてもゲートが赤のままになる。
+  `qfai init` 側を自己修復させた（同じ形の過去事例が flattened link で既に修正済みで、
+  そのコメントが「`skipped` を返したことで修復できず、`--force` が必要なことを誰も
+  操作者に伝えなかった」と記録している）。
+  2 件目は EPERM 変換が広すぎた点。`statOrNull` は通常の canonical `SKILL.md` も検査するため、
+  そのファイルや祖先の権限・filesystem 起因 EPERM まで「OS が追跡できない symlink」に
+  誤変換していた。`lstat` で symlink を確認してから変換するようにし、`lstat` catch 側の
+  変換は削除した（wrong-type symlink では `lstat` は成功するので不要であり、
+  誤診の範囲だけを広げていた）。
+  なお追加テストが**私の修正の別の欠陥**を捕まえた: 修復に `recreateFlattenedLink` を
+  再利用したのは誤りで、あれは「内容がリンク先文字列の通常ファイル」用に hard link と
+  4096 bytes 上限で退避する実装のため symlink には使えない（`link()` が EPERM）。
+  `rm` → `symlink` の既存経路に合流させた。
+- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
+  canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
+  いずれも無変更で、変更は記録のみ。
+  記録した到達条件は 10 巡のレビューを経て確定した。`validate` は記録済み非 seed
+  iteration すべてに flat `iter-NN/review.json` を要求する。`certify` が layout 分岐に
+  到達するのは `validate.json` を読み `frozenSpecsCovered` を検証した後だが、
+  **well-formed な single-spec frozen set はそこを通過して layout 分岐に達する** —
+  したがって single-spec 凍結は緩和策にならない。よって矛盾は
+  **「`validate` が監査する記録済み非 seed iteration が per-spec 成果物を持ち、flat を
+  持たない」**瞬間に live になる。
+  当初の枠組み 2 点は誤りだったので明記する: (1) 矛盾は **multi-spec frozen set を
+  必要としない**（したがって single-spec 凍結と `TC-0012-0388` は緩和策にならない）。
+  (2) 2 つのレイアウトは**常に排他ではない** — flat を残して per-spec も書く dual-write は
+  両ゲートを満たすので、wire-in は canonical を決めずに dual-write で land できる。
+  排他なのは per-spec **のみ**の状態だけである。
+- **「trigger を守るガードを追加する」という scope 拡張は本 PR では出荷せず、
+  要件仕様として #1093 に分離した。**
+  **守る対象の実装が存在しない状態では、正しいガードは書けない。**
+  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の `OQ-0012-0007`。
+  9 巡で 7 稿を試し、いずれも反証された — どれも「まだ書かれていないコードの形」への
+  推測だったため。反証された 7 稿と、正しいガードが満たすべき要件を #1093 に記録した。
+  なお `iterationReviewPathPerSpec` / `dispatchReviewerToPair` の caller が 0 であることは
+  **到達不能の根拠にならない** — `prototypingCertify.ts` は per-spec パスをテンプレート
+  文字列で組み立て、どちらの helper も import していない。
+- **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
+  (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
+  `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
+  4 実装はいずれも**別々の間違い方**をしていた。故障は「ケースの抜け」ではなく
+  構造的で、**この種のスキャンが探す区切り文字はすべて別の構文の内側にも現れうる**
+  ため、構文 X を追跡しないスキャンは X の中身を自分の構文として読む:
+  - 2 パス `replace`: コメント区切りがコメント内にある場合に破綻
+  - コメントのみ追跡: 文字列内の `//` がコメントを開く
+  - 文字列と template を追跡: **正規表現内の backtick** が phantom template を開く
+    計測値（統合前 → 統合後）:
+    | ガード | 症状 | 変化 |
+    | --- | --- | --- |
+    | `unit/validators-are-wired` | (file, validator) 対の誤判定 | 5 → 0 (#1061 で既に修正) |
+    | `validators/ruleCodeUniqueness` | コメント散文がコードとして漏れる | 8/264 → **0/264** |
+    | `helpers/prototypingGateSurface` | 同上 | 8/264 → **0/264** |
+    | `core/prototyping/reviewerDispatch` | **コメントでないテキストの過剰削除** | 11,381 文字・識別子 91 個 → **0 文字・0 個** |
+    `reviewerDispatch` の故障方向が特に危険だった。走査対象は
+    `prototypingIterate.ts` 1 ファイルのみで、アサーションが
+    `not.toMatch(/captureScreenshots/)` という **否定**なので、過剰削除は
+    アサーションを通りやすくする。消えた識別子の 1 つは
+    `resolvedCaptureScreens` — まさに禁止対象の隣だった。つまりこのガードは
+    一度も赤くならずに黙って空回りしうる状態だった。
+    統合により消費側から 217 行を削除し、44 行を追加した。
+    `tests/unit/sourceReduction.test.ts` が共有側の契約を 12 ケースで固定する —
+    各世代を壊した入力そのものを行にしてあるので、5 世代目の手書き実装は
+    散文を読むのではなく、失敗するテストに突き当たる。
+- **同じ欠陥を持つ `TDD-0012` / `TDD-0013` / `REQ-0020` も付け替えた**
+  (`CR-20260904-0001` の scope 拡張、別途承認)。3 件とも
+  `tests/core/prototypingEvidence.negative.test.ts` を引いており、
+  そのファイルの `QFAI-PROT-002` は **0 件**。ledger 側 2 行は `done` だった。
+  対象挙動は両方 `tests/validators/prototypingEvidence.test.ts` に既存なので
+  **テストは追加していない** — ポインタ 3 箇所の付け替えのみ。
+  なお `TDD-0012` の `Selector` は backtick で囲んだ。prettier が markdown
+  テーブル内の裸の `*` を `\*` にエスケープするため、そのままでは verbatim
+  一致が壊れ、`selectorResolves` の末尾トークン fallback（"declares" という
+  ありふれた語）でしか通らなくなる。これはこの CR が消そうとしている
+  「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
+  backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
+  確認済み。
+- **`TDD-0011` が `QFAI-PROT-002` のテストを 1 件も持たないファイルに対して `done`
+  だったのを正した** (#1079, `CR-20260904-0001`)。`Test file` セルは
+  `tests/core/prototypingEvidence.negative.test.ts` を指していたが、このファイルの
+  中身は別 spec の `TC-0012-0238..0248` で、`QFAI-PROT-002` のアサーションは **0 件**。
+  つまり CLAUDE.md が要求する REQ -> Spec -> Code -> Test の鎖が `TC-0004-0011` に
+  ついて閉じていないのに、ledger は閉じていると述べていた。
+  `tests/validators/prototypingEvidence.test.ts` に付け替え、`EX-0004-0010` の
+  payload をそのまま食わせて欠落 required keys を列挙させるテストを 1 件追加し、
+  `Selector` をそのテスト名にした。`Status: done` は変更していない — **真になる**ため。
+  変異テストで空回りでないことを確認済み: unknown-key 報告を止めると失敗、
+  `pivotDirective` 欠落の報告を止めると失敗、復元すると成功。
+- **#1079 の当初の前提 2 点は誤りだったので、issue 側に訂正を投稿した。**
+  (1) `schema v3` は「どこにも定義がない形状」ではなく、`03_Acceptance-Criteria.md:48`
+  と `04_Business-Rules.md:60` が 4 UX axes / ordinal 尺度 / 200..500 語 /
+  `pivotDirective` enum を列挙して定義している (ハイフン付き `schema-v3` だけを
+  grep してスペース版を見落とした — #1076 で犯したのと同じ種類の見落としを、
+  それを報告する issue で繰り返した)。
+  (2) `TC-0004-0011` の「v1.x-shaped」は版判定ではない。`EX-0004-0010` が入力を
+  「旧キーを持ち `pivotDirective` を欠く payload」と定義しており、版フィールドは
+  不要で `.agents/rules/distributed-surface.md` と矛盾しない。
+  したがって upstream (`03` / `04` / `05` / `06`) は正しいので一切変更していない。
+- **validator 結線ガードの reduction を TypeScript パーサに置き換えた。**
+  `validators-are-wired.test.ts` の `codeOnly` / `stripComments` は、コメントと
+  リテラルを手書きスキャンで除去していた。この故障は「ケースの抜け」ではなく構造的で、
+  **このヘルパが探す区切り文字はすべて別の構文の内側にも現れうる**ため、構文 X を
+  追跡しないスキャンは X の中身を自分の構文として読む。世代ごとに 1 つ追跡対象を
+  増やしてきたが、毎回「次の 1 つ」で間違っていた:
+  - 2 パス `replace`: glob を引用した行コメントがブロックコメントの opener を運び、
+    ブロック側が 27 行先の本物の closer まで走って途中の
+    `validateStaleReferences(...)` 呼び出しを飲み込んだ (#1061 の見出し。単一パス化で
+    修正済み)
+  - コメントのみ追跡するスキャン: 文字列内の `//` がまだコメントを開いた
+  - 文字列と template を追跡するスキャン: **正規表現リテラル内の backtick** がまだ
+    phantom template を開いた。`core/specPackParsers.ts` は CommonMark の
+    コードフェンス照合器を持つので regex の中に backtick の連続が入っており、
+    そこから開いた phantom が **46 行先の JSDoc** まで走ってその JSDoc 自身の
+    opener を飲み込む。以降は解釈が反転し、doc の backtick 間の散文がコードとして、
+    実際のコードが文字列データとして読まれた。
+    パーサ真値と突き合わせると、`main` は **5 つの (file, validator) 対で誤答**しており、
+    しかも両方向に誤っていた — 1 つは JSDoc に名前が出ているだけで「結線済み」、
+    4 つは自分自身の宣言が消えていた。ガードが緑だったのは「どれか 1 ファイルで
+    参照されていれば結線済み」と集約されるためで、集約の偶然に守られていただけである。
+    `ts.createSourceFile` に置き換えた結果、この 5 件は 0 件になった。パーサは
+    「4 世代目の手書きスキャンが見落としたはずの構文」も知っている。加えて、
+    ここのどのスキャンも引けなかった区別を引く: template の `${...}` は実行される
+    コードなので `count=${validateX(root)}` は呼び出し箇所であり、その周囲の
+    literal 部分はそうではない。呼び出しは (module, validator) 対ごとに問われるため、
+    reduction はソーステキストで memo 化した (実行時間は 3.67s -> 3.61s で不変)。
+- **同種の reduction を持つ他 3 ガードは本 PR の対象外**。`ruleCodeUniqueness.test.ts`
+  は 264 ファイル中 8 件でコメント散文が漏れており (対象ガードは 5 件)、
+  `reviewerDispatch.test.ts` は 2 パス `replace` のまま (漏れではなく過剰削除側の故障)、
+  `helpers/prototypingGateSurface.ts` も regex を追跡していない。#1061 の本文が
+  `validators-are-wired.test.ts` に限定して書かれているため、計測値を添えて別 issue に
+  切り出した。
+- **条件式で emit された finding code が、code 抽出を行う 2 つのガードの双方から見えていなかった
+  構造的な穴を塞いだ。** `sunsetLedger.test.ts` の `ISSUE_ARG_RE` と
+  `ruleCodeUniqueness.test.ts` の `ISSUE_FIRST_ARG` はどちらも「リテラル or 識別子」しか
+  受けない。`issue(cond ? "A" : "B", …)` は識別子側で `cond` に一致した直後にカンマを要求される
+  ため **一致自体が起きず**、その呼び出し地点は P7 promotion window の検査 (severity が
+  `newRuleSeverity` を通っているかどうか) も ownership の帰属も受けない。
+  `design-principles.md` の「新しい code は warning で出荷し、最低 1 minor 先の promotion
+  release に pin する」という規律が、この経路では強制されない。
+  両方の抽出器が条件式の **両分岐** を辿るようにした。どちらの分岐も利用者に届く code に
+  なりうるので、片方だけ帰属させるのは死角を半死角に替えるだけである。解決できない分岐は
+  プレーンな引数と同様にファイルを opaque 扱いにする。`severityExpressionsFor` は
+  `firstArgNames` 経由で、直接 / file-local alias / 条件式のいずれかで code を名指す
+  first argument を認識する。
+  **今日隠れているものは無く、それは設計ではなく偶然である**: `src/` にある条件式 emission は
+  `validators/reviewArtifacts.ts` の 2 箇所だけで、名指す `QFAI-REVIEW-007` /
+  `QFAI-REVIEW-009` は両方 baseline code であり、しかも同じファイル内の別の呼び出しで
+  リテラルとしても emit されている。issue の指摘どおり、問題は構造 — 条件式で出す新しい
+  hard error は、ハウススタイルに従ったまま登録も所有もされずに利用者に届く。
+  検証は `src/` ではなく合成 body に対して行う。実ツリーは上記 2 つの偶然で穴を隠すので、
+  `src/` を見るテストは今日通り、抽出器が退行しても通り続ける。旧パターンが何も見ないことも
+  同じケースで明示的に assert した。あわせて「条件式 emission に post-baseline code は
+  無い」という測定を 1 行のテストにして、なぜ今 registration が不要なのかを読者が
+  再導出しなくても済むようにした。
+- **README が `qfai init` の実挙動と逆のことを書いていた誤りを直し、alignment gate に実挙動と
+  紐づく 2 本目の oracle を足した。** 両 README が `It does not generate GitHub Actions workflows.`
+  と述べていたが、`qfai init` はまさに 2 本の workflow を書き出す
+  (`src/shared/shippedWorkflowNames.ts#SHIPPED_WORKFLOW_NAMES` = `qfai-validate.yml` /
+  `qfai-tests.yml`、`cli/commands/init.ts` が利用者の `.github/workflows/` へコピー、出荷ファイル
+  自身が `# Generated by \`qfai init\``で始まる)。しかも**同じ段落の直前の文**が
+「QFAI generates integration wrappers under …`.github/**`…」と述べており自己矛盾していた。`scripts/check-readme-alignment.mjs` の oracle は 2 つの README の行単位一致だけだったので、
+  **同じ内容で両方とも間違っていれば "aligned"** になる。ガードは仕様どおり動いていたが、
+  "aligned" が "correct" と読まれていた。
+  2 本目の oracle は他方の README ではなく **binary 内の write set** と突き合わせる:
+  `SHIPPED_WORKFLOW_NAMES` の各名が CI セクションに現れることを要求し、
+  `RETIRED_WORKFLOW_NAMES` の名が現れないことを要求し、`does not generate GitHub Actions
+workflows` という文自体も明示的に拒否する (正しいファイル名を両方書いた上でこの文が残ると、
+  名前一覧の検査だけでは通ってしまう自己矛盾 README になるため)。
+  parse できない宣言形は **黙って skip せず報告する** — 実際これが初稿の穴を捕まえた:
+  `new Set<string>([...])` だけを想定していたため、空宣言の `RETIRED_WORKFLOW_NAMES`
+  (`new Set<string>()`) を unparseable として報告した。両形を受けるよう直した。
+  適用範囲は「CI セクションを持つ README」に限る。CI セクションの無い README は workflow に
+  ついて何も主張していないので判定対象外 — oracle 1 の fixture がこれに当たる。ただし
+  **既定パスを検査しているときにセクションが無ければ error\*\* にする: 主張が消えたことで
+  oracle が通るのは、この oracle が答えるために存在する失敗そのものだから。
+- **500 行上限を守らせている `assets.test.ts` 自身が型検査対象外で、潜在的な `TS2345` を
+  抱えていた欠陥を塞いだ。** `tsconfig.tests.json#include` は glob ではなく列挙であり、
+  そのファイル自身の `$comment` が方針を「この変更が持つ責任範囲の境界」と述べているのに、
+  出荷アセットの行上限を強制している当のガードがその列挙から漏れていた。列挙外のテストは
+  何によっても型検査されない (vitest は型エラーを無視してトランスパイルする) ため、
+  `validate.issues.map((i) => i.file).filter(Boolean)` の結果が `(string | undefined)[]` の
+  まま `path.isAbsolute` に渡され続けていた。`.filter(Boolean)` は実行時に `undefined` を
+  落とすが型を絞らない。型述語 (`(file): file is string => file !== undefined`) で narrowing
+  した — bare `as` は同じことを検査せずに主張するだけなので使わない。
+  列挙への追加は無料ではなく、`eslint.config.js` が同じリストを `TYPED_TEST_FILES` として
+  読んで promise 系 4 ルールを有効化する。露出した `require-await` 6 件 (`await` を持たない
+  `async` の `it` コールバック) は `async` を外して解消した。
+- **同じ形の再発を構造的に塞いだ。** `testTypeCheckEnumeration.test.ts` に「出荷アセットの
+  予算を強制する suite は、それ自身が型検査対象でなければならない」という行を追加した。
+  budget helper を import している suite は予算を強制している suite であり、これはツリーから
+  決定できる — 490 ファイルの census (同ファイルの docstring が実測に基づいて却下している)
+  を持ち込まずに済む。この行は追加した時点で `assets.test.ts` 以外に **3 件**
+  (`implementCheckpointVerification.test.ts` / `sddSkillTriagePhase.test.ts` /
+  `assetLineBudget.test.ts`) を検出し、いずれも型エラー 0 件・lint エラー 0 件で列挙できた。
+- **`include` の test エントリをソート順にした。** #1065 の 4 番目の提案。append が
+  最終行に集中せず collating position に落ちるので、併走 PR 間の衝突面が縮む。
+- **`prototyping iterate` が `--dry-run` を無視して、preview を求めた実行そのもので cycle-0 の
+  破壊的リセットを行っていた欠陥を塞いだ。** `--dry-run` は `変更を行わず表示のみ` と文書化され
+  引数パーサでは解釈されていたが、`runPrototypingIterate` へ渡されていなかった (`init` と `doctor`
+  にしか結線されていなかった)。実測では 27 ファイル / 1,475,551 バイトの iteration evidence が
+  `iter-00.backup-<ISO>` へ移動し、`iterate-plan.json` は `screens: []` で書き直され、
+  `mutation-log.jsonl` は 27 件すべてを `"action":"move"` の実書き込みとして記録した
+  — dry-run を示す印は 1 件も付かない。しかも直後の非 dry-run 実行はもう動かすものが残っておらず
+  1 件しか記録しなかった。
+  cycle-0 の破壊的再実行ゲートは `--force` なしでの上書きを既に拒否しており、その outcome を
+  「意図的な選択」にするために存在する。`--dry-run` はそのゲートが守ろうとしている結果を
+  そのまま素通りしていた。
+  preview は `handoffUpgrade` が #515 で採った形に合わせ、**あらゆる書き込みの直前** で止まる
+  — 最初の mutation は cycle-0 リセット内の mutation-log 書き込みなので、その手前。読み取り
+  専用のゲート (zero-UI-bearing precheck、DESIGN.md の読み取りと hash、lock ゲート、収束ループ
+  拒否、`--primary-spec-id` 正規化、cycle 範囲ゲート、そして破壊的再実行の拒否) はすべて
+  preview より前に走るので、**preview は実行が返すのと同じ exit code を返す**: 既存の `iter-00`
+  に対して `--force` なしの `--cycle 0 --dry-run` は実行と同じく 2 で拒否する。preview が
+  0 を返して素通りするなら、それは同じ欠陥を場所を変えて作り直すことになる。
+  preview が主張しないことも明示した: capture / license-verify / validate はこの地点より後に
+  あるので、preview が覆うのは「この command が行う書き込み」であって「実行の結末」ではない。
+  `--help` の `--dry-run` 行にも `prototyping iterate` を加えた。
+- **直前に入れた reviewer-deliverable gate が、既定の運用経路では no-op だった欠陥を塞いだ。** seed 除外を
+  `reviewerId === "iterate-seed"` だけで判定していたが、これはどちらの向きにも load-bearing ではなかった。
+  (a) **解除されない** — `reviewerId` は `Iteration` 型に宣言が無く、書き手は `buildSeedIterations` だけで、
+  同じレコードを in-place で更新する transcription で上書きせよという指示は出荷物のどこにも無かった。
+  したがって review 済みの `iterations[0]` は seed の刻印を保持したまま、loop の寿命いっぱい除外され続ける
+  — cycle 0 で収束する loop では、それが certify が封印する当のイテレーションである。
+  (b) **どの index でも効いた** — gate が信用しないと宣言しているファイルに 1 語書けば、その行の義務
+  (presence / schema / mirror) がすべて消える。しかも `reviewerId` は mirror 比較対象に入っていなかったので、
+  bypass の原因となった不一致それ自体が報告不能だった。修正前の実測: iteration 3 件すべて 4 軸
+  `exceptional`、`stopReason: "axes-exceptional"`、`review.json` はディスク上に 1 件も無い状態で
+  `validate` は finding 0 件を返した。
+  判定は `isUntouchedCycleZeroSeed` に集約し、構造と内容の両方を要求する: iteration がちょうど 1 件で
+  index 0、`reviewerId` と `commitSha` が seed のもの、かつ `proseCritique` が placeholder と 1 バイト一致。
+  最後の条件が self-clearing にしている — review は critique を 200-500 語の本文に置き換えるので、
+  `reviewerId` を直し忘れても除外は自動的に外れる。`reviewerId` は mirror 比較対象にも加えた。
+- **cap 違反の `review.json` が、どの編集でも満たせない finding の対を出していた問題を直した。**
+  `layoutAntiPatternsDetected[]` が非空なら `informationArchitecture` を `acceptable` 以下に抑える規則は
+  mirror 側だけで検査されていたため、違反は「忠実な転記」を通してしか報告されなかった。結果として
+  cap 検査は `prototyping.json` の IA を下げろと要求し、mirror 検査は `review.json` に一致させろと要求する
+  — どちらの finding も欠陥が実在するファイルを名指さない。review 側でも cap を検査し、
+  そのファイルを修正して再転記せよと述べる。
+- **`lap-*` registry の空集合を「読めた」と扱っていた fail-soft を直した。**
+  `loadLayoutAntiPatterns` は throw しない劣化経路を 2 つ持つ — JSON が配列でなければ `[]` を返し、
+  shape 検査に落ちた entry を黙って捨てる。どちらも `undefined` ではなく空 / 部分集合を生むので、
+  registry 側が壊れているときに、適合した `review.json` の妥当な `lap-*` id すべてが
+  「registry が宣言していない code」として error になった — fail-soft の doc が名指しで防ぐと書いていた
+  反転そのもの。空集合は読めなかったのと区別できないので、同じ扱いにした。
+- **mismatch message が長い値の先頭 120 文字を残していたため、両側が同一に見えていた。**
+  `proseCritique` は 200-500 語で、転記時の言い換えが先頭 120 文字に入ることはほぼ無い。同長の置換
+  (片方だけ typo を直した等) では 2 つのレンダリングが文字列として完全に一致し、operator には
+  validator の不具合と区別できなかった。最初に食い違う位置を中心に窓を取り、切り出しは UTF-16 単位では
+  なく code point で行う (critique band は日本語 / 中国語を受けるので、surrogate pair の中間で切ると
+  lone surrogate が `Issue.message` と `validate.json` に混入する)。
+- **`designMdViolations` の canonical 化を、宣言済み 2 key への射影から key の再帰ソートに変えた。**
+  射影は 2 つのケースを隠していた: (1) 3 つ目の key を持つ entry と持たない entry が equal になり、
+  mirror 義務が捕まえると謳っている「転記が field を落とす」ケースがまさに不可視だった。
+  (2) 射影が `kind` の enum 適合を条件にしていたため、enum 外の `kind` では両側が raw stringify 経路に
+  落ちて、忠実な `{found, kind}` 転記が enum finding の上に mirror mismatch として報告された
+  — 1 つの欠陥に 3 件、うち 1 件は誤り。配列順は従来どおり比較対象 (順序は evidence である)。
+- **`review.json` の unknown top-level key を拒否するようにした。** reviewer には前 cycle の
+  `review.json` が入力として与えられるので、それを編集する際の key の綴り間違い
+  (`pivotDirectiv` を足して古い `pivotDirective` が残る) は、完全で enum 内、忠実に転記され、mirror とも
+  一致する payload を残す — そして loop は前 cycle の directive で動く。同じ理由で closed になっている
+  per-screen payload と揃えた。
+- **BOM 付き `review.json` を unparseable と報告していた。** PowerShell の `Set-Content -Encoding UTF8` /
+  `Out-File`、および "UTF-8 with signature" を既定とする Windows のエディタは先頭に U+FEFF を出す。
+  payload は妥当なので、reviewer の再実行を促すのは誤誘導だった。
+- **unreadable finding が絶対パスを漏らしていた。** `EACCES` / `EPERM` 等で Node のメッセージには
+  絶対パスが入るため、operator のホームディレクトリとユーザ名が `validate.json` / `validate.log` / CI ログに
+  乗り、finding がマシンとチェックアウト位置ごとに変わっていた。errno code だけを載せる
+  (ファイル名は repo-relative POSIX 形式の `rel` が既に名指している)。
+- **配列位置と `index` が食い違うレコードで、作られていないディレクトリを名指していた。** review path は
+  配列位置から導出されるので、`index` がずれたレコードでは存在しない `iter-NN/review.json` の不在を
+  報告し、reviewer の実ファイルは読まれないままだった。ずれ自体は QFAI-PROT-004 が報告するので、
+  その修正を待つ。
+- **軸リストの 3 つ目の複製をやめた。** `evaluatorReview.ts` が `ORDINAL_AXES` を export し `OrdinalAxis` を
+  そこから導出しており、`validators/uix/` の 2 モジュールがそれを SSOT と明記している。ローカルの複製は
+  「5 番目の軸が追加されたらこの validator だけ 4 軸を検査し続ける」という、この gate が塞ぐために
+  存在する形の穴だった。
+- **`validateReviewArtifacts` を `validateIterationReviewArtifacts` に改名した。**
+  `validators/reviewArtifacts.ts` が同名を export し barrel 経由で公開しているため、
+  `prototyping/iterationPaths.ts` が `iterationDir` → `iterationDirPerSpec` の改名で回避したのと同じ
+  「IDE の autoimport が別のシンボルを黙って選ぶ」経路に乗っていた。
+- **出荷される transcription 指示を実際の義務に合わせた。** `qfai-prototyping/SKILL.md` の cycle 表は
+  「`prototyping.json#iterations[]` を update」としか述べず、転記対象の列挙に `reviewerId` と
+  `evidenceRefs` が入っていなかった — 両方が hard gate の前提になっているのに、出荷物のどこにも
+  上書きせよと書かれていなかった。C0 行の "Append entry" も、`iterate --cycle 0` が既に seed を
+  書いている以上そのまま append すると index 0 が 2 件になり QFAI-PROT-004 に落ちる。
+  "Transcription" 節を追加して 7 field と 2 つの落とし穴を明示した。あわせて
+  `references/reviewer-prompt.md` の Inputs が screenshot を full path、HTML snapshot を短縮形で
+  並べていた不整合を直した — その 2 行をそのまま `evidenceRefs` に書くと mirror 不一致になる。
+
+- **cycle-0 seed が「何も書かないファイル」を evidence として引用し、`iterate` と `review` の間で
+  自分の gate を落としていた欠陥を塞いだ。** `prototyping iterate --cycle 0` が書く seed iteration の
+  `evidenceRefs` は、宣言済み screen が無いとき `iter-NN/index.png` / `iter-NN/index.html` に
+  fallback していた。この 2 パスは loop のどこにも writer が存在しない — 同じ invocation が書く
+  `iterate-plan.json` 自身が `paths.screenshotTemplate` を `iter-NN/{screen}.png` と宣言しており、
+  capture はその template に従うので `index.png` はどの時点でも生成されない。結果として
+  `validatePrototypingArtifactRefIntegrity` が `QFAI-PROT-009` を 2 件出し、`iterate` 完了直後から
+  reviewer の結果が mirror されるまでの窓 (capture と reviewer pass 全体を含む) でプロジェクトは
+  自分の gate を通れなかった。しかも finding は「missing artifact」を名指すので「capture が
+  走っていない」と読め、自然な対処である capture 再実行は per-screen ファイルしか書かないため
+  救いにならない。screen が宣言されていても窓は消えない: seed は capture より **前** に書かれるので、
+  最初の screen のパスもその時点では存在しない。
+  seed は `evidenceRefs` を持たなくなり、`QFAI-PROT-009` は `reviewerId` が seed のものである
+  iteration を skip する。2 つは 1 つの変更である — 除外なしに field を落とすと、missing-artifact
+  error 2 件が empty-field error 2 件に置き換わるだけになる。除外は default ではなく positive claim
+  なので、`reviewerId` を省いた iteration も別の reviewer を名乗る iteration も従来どおり両方の ref を
+  要求される。`SeedMetadata.declaredScreens` はこの `evidenceRefs` を組むためだけに存在していたので、
+  reader を失った field として併せて削除した。
+- **上の欠陥を green のまま出荷させていたテストを、自分で作った postcondition を検証しないよう
+  直した。** `prototypingIterate.validateConformant.test.ts` の「no declared screens で
+  ref-integrity が error 0 件」を主張するケースは、その主張の直前に `iter-00/index.png` と
+  `iter-00/index.html` を **自分で書いていた**。根拠として添えられたコメントは
+  「seed は `--capture` 経由で暗黙にこれを行う。`--capture` なしなら operator の workflow が
+  最初の validate 前に書く」だが、両方とも事実ではない: capture が書くのは plan の
+  `screenshotTemplate` どおりの `iter-NN/<screen>.{png,html}` で `index.*` ではなく、`index.*` を
+  operator に書かせる記述も出荷物のどこにも無い。fixture が結論を製造していたため、実運用が
+  `QFAI-PROT-009` を 2 件出している間もこのテストは通り続けていた。現在は何も書かず、
+  `iterate --cycle 0` が実際に残すツリーだけを観測する。
+- **`iter-NN/review.json` を一度も読まずに「schema gate がある」と宣言していた
+  reviewer-deliverable gate を実装した。** `qfai-prototyping/SKILL.md` は「review.json の
+  shape だけが受理される。未知の layoutAntiPatterns code や enum 外の designMdViolations は
+  QFAI-PROT-002 で validate を落とす」と書いていたが、その gate は存在しなかった。
+  `validate --profile prototyping` が読んでいたのは `prototyping.json#iterations[]` —
+  reviewer のファイルを orchestrator が転記した **mirror** のほうだけで、reviewer 側は
+  丸ごと素通りだった。実測では、未知の `lap-999-not-a-real-code`、`pivotDirective: "stop"`、
+  `scores.usability: "catastrophic"`、そして `review.json` の削除まで、いずれも `error=0` を
+  返した。reviewer が走ったことを保証するはずの gate が、reviewer が走ったかどうかを
+  判定できていなかった。`validatePrototypingEvidence` が 3 つの義務を QFAI-PROT-002 で
+  報告する: (1) presence — review を記録した iteration には parse 可能な `review.json` が
+  ある (不在と「あるが読めない」は別 finding — `EACCES` / `EISDIR` を「missing」と報告すると、
+  ディスク上にあるファイルの上書きへ操作者を誘導してしまう)、(2) schema — payload が `references/reviewer-prompt.md` の shape に一致し、
+  `layoutAntiPatternsDetected[]` は任意の文字列ではなく registry 照合を受ける、
+  (3) mirror — 転記された `iterations[N]` が reviewer のファイルと一致する。(3) はどちらの
+  surface も単独では捕まえられなかったもので、field を落とす・並べ替える・言い換える転記は
+  「内部的には整合した 2 つのファイルが互いに食い違う」状態を作り、各ファイルは自分の検査を
+  通ってしまう。code は QFAI-PROT-002 のまま — SKILL.md が既に約束している code であり、
+  `ruleCodeUniqueness` が 1 code に owner module 1 つを要求するので、検査は sibling
+  validator ではなく `prototypingEvidence.ts` に置いた。cycle-0 seed
+  (`reviewerId: iterate-seed`) は 3 つすべてから除外される — reviewer がまだ走っていない
+  ことがその存在理由なので、義務を課せば `iterate` と最初の review の間の window で全
+  プロジェクトが落ちる。除外は default ではなく positive claim であり、`reviewerId` を
+  省いた iteration も別の reviewer を名乗る iteration も義務を負う。SKILL.md の該当行は、
+  定義がツリーのどこにも存在しない schema 名を挙げるのをやめて実挙動に合わせた。
+- **publish に成功した `rename` を「まだ publish していない」ものとして retry していた
+  install-provenance lock の欠陥を塞いだ。** `acquireRecordLock` の待機ループは、成功した
+  `rename(staging, lockDir)` のあとに行う marker の stamp と identity 照合まで同じ `try` に
+  抱えており、その `catch` は「宛先が publish できなかった、もう一度」を意味する腕だった。
+  しかし成功した `rename` は `staging` を消費する — 以降の試行はすべて存在しない source を
+  rename する `ENOENT` であり、writer は残りの patience まるごとを確実に失敗する no-op に
+  費やしたうえで `another process is writing the record` を報告した。その時点でそれは偽で、
+  原因を取り違えている。さらに publish 済みの lock は heartbeat を止めたまま残るため、同じ
+  tree の他の writer は全員 `LOCK_STALE_MS` を待たされた。負荷をかけた実測 (fault 注入なし):
+  `lock was replaced` の throw が 1 回、それを move して restore した reclaimer が 1 回、
+  そのあと 178 回の `ENOENT` rename と entry 1 件の喪失。待機は `publishLock` に切り出して
+  rename だけを retry させ、publish 後の処理は 1 回だけ走る — 呼び出し側にはもう loop が
+  無い。GitHub Actions 上で無関係の PR を赤くしていた
+  `keeps every entry under heavy concurrency` の flake は、この欠陥そのものだった。
+- **一瞬 quarantine された lock を「奪われた」と読まないようにした。** reclaimer は lock を
+  stale と判定してから MOVE するが、その 2 つは別の syscall である — 直前の holder の marker
+  を abandoned と読み、その `rename` が「その直後に publish された lock」に着地しうる。
+  `clearAbandonedLock` は move した object に fresh な marker を見つけて restore するので
+  lock は同じ inode のまま戻ってくるが、その window の中で名前を 1 回だけ読んだ holder は
+  起きていない置き換えを報告していた。publish 直後の identity 読み取りは `LOCK_CONFIRM_MS`
+  (1s、ceiling の十分内側) を上限に再読する。受け入れるのは `dev`/`ino` が staging のものと
+  一致する object だけなので、1 回読みが通さないものは何も通さない。
+- **待機の忍耐を反復回数ではなく持続時間で表した。** `LOCK_ATTEMPTS` (200) と `LOCK_POLL_MS`
+  の積は公称 sleep でしか実際の待ち時間にならず、`LOCK_STALE_MS` を上回るという不変条件は
+  どちらかが動くたびに書き直され、過去に 2 回とも誤った。`LOCK_PATIENCE_MS` (15s) 1 つと
+  なったことで ceiling との比較は直接になり、poll が重くなったときの対処が patience を黙って
+  削ることにもならない。`LOCK_POLL_MS` は読んで字のとおり「どれだけの頻度で見るか」になった。
+- **失敗した acquisition が lock を置き去りにしないようにした。** identity 照合が通らなかった
+  ときは、standing な lock がこの holder の object であるときに限って `release` に返させる
+  (link になった名前は拒否し、marker は名前指定で 1 つだけ unlink する — どのガードも review
+  finding が買ったものなので、失敗しかけの acquisition が即興で書き直さない)。あわせて、
+  `staging` を open できなかった経路が関数末尾の `clearInterval` を飛び越して `unref` 済み
+  timer を残していた漏れも塞いだ — heartbeat の停止は 1 箇所に集約した。
 - **昇格 window を持たない 9 個の finding code を、ガードの母集団を狭めるのではなく登録して塞いだ。**
   56 本の PR をまとめて取り込んだ後、`RULE_PROMOTIONS` に登録の無い code が 9 個残っていた。
   最初の修正はガードの母集団を `errorCapable` な code に絞るものだったが、これは誤りだった —
@@ -91,6 +1488,13 @@
   `QFAI-REVIEW-007` / `-009` and `error` / `warning` off one flag; reading the
   two independently left both severities unknown and withdrew the
   `QFAI-WAIVER-002` refusal from a rule that only ever fails hard.
+- **Per-item TDD evidence survives `qfai init` and is checked on a fresh clone.**
+  The managed `.gitignore` block now re-includes
+  `.qfai/evidence/implement-*.md` and `.qfai/evidence/atdd-*.md`, so the files
+  required by gate item 10 are committed instead of existing only on the
+  machine that ran the test. `QFAI-TDDLIST-008` (warning, then error) also
+  rejects an `evidence at` pointer when it names the wrong layer-owned file or
+  TDD item, or when the referenced file or Markdown heading is absent.
 
 ## [1.10.1] - 2026-08-31
 
@@ -160,6 +1564,34 @@
 
 ### Changed
 
+- **`/qfai-sdd` にとって discussion pack は上流 SSOT ではなく、非規範的な参照資料であると
+  分類し直した。** Stage 0 が「最新 pack が欠落・不完全・blocking OQ を持つなら停止」と
+  hard stop していたため、SDD が矛盾や考慮漏れや未解決の問いを見つけた場合、実際に振る舞いを
+  規定する artifact を書く前に、過渡的な discovery pack を修復して review cycle を回し直す
+  ことを求められていた。これは所有境界の逆転である — `.qfai/specs/**` が詳細な振る舞い /
+  設計の SSOT であり、pack は来歴と参照材料であるべきなのに、低忠実度の artifact が実際の
+  SSOT を上書きする圧力になっていた。
+  Stage 0 は source inventory / reference-quality の確認になった: pack は任意であり、
+  不完全でも矛盾していても blocking OQ を持っていても、それ単独ではこの stage を止めない。
+  自分の gate を通すために pack を編集・修復・再実行することは禁止で、そこから導かれる訂正は
+  SDD 所有の spec / policy / contract に入れ、来歴の食い違いは delta/evidence に記録する。
+  停止するのは「使える source が 1 つも無い」場合 (pack も import-lite input も明示的な
+  user requirement も無い) のみ。安全に推論できない product decision は従来どおり user に
+  確認し、その答えは pack に書き戻さず SDD artifact に記録する。
+  Inputs Priority も normative な優先順位ではなく reference / provenance 入力という語に改めた
+  — `Source: <pack>#<id>` の引用は従来どおり支持されるが、引用された文が拘束力を持つことは
+  意味しない。矛盾は pack を書き換えるのではなく、明示的な rationale (product な選択なら
+  user decision) とともに SDD artifact の中で解決する。
+  併せて `drift-protocol.md` の上流 artifact 一覧から discussion 出力を外し、
+  `contract-artifact-rules.md` の「Discussion UI/UX files are upstream discovery artifacts」を
+  非規範的な discovery / reference artifact に改め、`sdd-execution-playbook.md` の Stage 0 手順と
+  `sdd-triage.md` の Inputs も追従させた。
+  **この再分類は pack だけを対象とする**: 本物の上流 artifact は従来どおり上流優先で修復し、
+  dependent な spec 内容を書いている最中に見つけた contract 欠陥は contract-first で直す。
+  なお validator 側は既にこの形だった — `runSddValidators` は discussion pack validator を
+  1 つも実行していない (`validateDiscussionPackReadiness` は `discussion` profile 専用) ので、
+  sdd profile が pack の完全性を gate したことはコード上は無く、hard stop は出荷 prose だけに
+  存在していた。
 - **A validation issue can now carry the CI job its producer reported (`job`).** The
   reviewer-justification gate ingests the workflow-set lint lanes' findings, and those lanes
   report a site as `file` + `job` + `rule`. The gate previously overwrote `file` with the path
