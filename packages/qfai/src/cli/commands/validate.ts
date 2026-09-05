@@ -1217,6 +1217,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
   "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
+  "QFAI-TDDLIST-009":
+    "Every row's recorded `Revision` still names the tree its observation ran against: nothing the observation covered — the test file it names, or the source under test — has changed since. A stale Revision looks exactly like a fresh one, so this is computed rather than read.",
   "QFAI-TDDLIST-008":
     "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
 };

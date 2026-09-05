@@ -20,6 +20,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { chmod, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -1009,6 +1010,88 @@ describe("QFAI-TDDLIST-008", () => {
       });
     });
   }
+
+  /** A repo whose first commit exists before anything is seeded into it. */
+  async function repoWithRevision(root: string): Promise<string> {
+    const git = (...args: string[]): void => {
+      execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+    };
+    git("init", "--initial-branch=main");
+    git("config", "user.email", "test@example.com");
+    git("config", "user.name", "test");
+    git("commit", "--allow-empty", "-m", "observed");
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf-8" }).trim();
+  }
+
+  const commitAll = (root: string, message: string): void => {
+    execFileSync("git", ["add", "-A"], { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+    execFileSync("git", ["commit", "-m", message], {
+      cwd: root,
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+  };
+
+  it("emits QFAI-TDDLIST-009 when the tree moved under the recorded Revision", async () => {
+    // The wiring row. `evidenceRevisionStale.test.ts` covers the decision and
+    // the git question as seams; nothing there proves `validateSpecTddList`
+    // calls them, and a dead call site would leave every one of those rows
+    // green (#1146). It found exactly that on its first run.
+    //
+    // The revision is seeded, not rewritten afterwards: `materializeEvidence`
+    // computes an audit hash over the evidence text, so a later edit breaks the
+    // completed-evidence check, sets `anchorFailure`, and skips this finding —
+    // which only runs on a row whose evidence is otherwise valid.
+    await withProject(async (root) => {
+      const observed = await repoWithRevision(root);
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replaceAll(
+            DEFAULT_REVISION,
+            observed,
+          ),
+        },
+        // The review packs take their revision from here, and the evidence's
+        // `reviewed revision` must match them. Swapping only the evidence left
+        // the two disagreeing, the completed-evidence check failed, and this
+        // finding was skipped — which the first run of this row measured.
+        { revision: observed },
+      );
+      // The test the observation covered moves after the revision it names.
+      commitAll(root, "move the tree");
+
+      const issues = await validateTddList(root, defaultConfig);
+      const stale = issues.filter((i) => i.code === "QFAI-TDDLIST-009");
+      expect(stale).toHaveLength(1);
+      expect(stale[0]?.message).toContain(TEST_FILE);
+    });
+  });
+
+  it("stays silent when nothing moved under the recorded Revision", async () => {
+    // The other direction through the same call site: a check that always fired
+    // would pass the row above and be useless. Nothing is committed after the
+    // seed, so `HEAD` is still the revision the evidence names.
+    await withProject(async (root) => {
+      const observed = await repoWithRevision(root);
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replaceAll(
+            DEFAULT_REVISION,
+            observed,
+          ),
+        },
+        { revision: observed },
+      );
+
+      const issues = await validateTddList(root, defaultConfig);
+      expect(issues.filter((i) => i.code === "QFAI-TDDLIST-009")).toEqual([]);
+    });
+  });
 
   it("accepts an anchor that resolves to the row's evidence heading", async () => {
     await withProject(async (root) => {

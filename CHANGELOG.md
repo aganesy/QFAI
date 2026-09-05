@@ -6,6 +6,44 @@
 
 ### Added
 
+- **`QFAI-TDDLIST-009` — `Revision` を読むだけでなく、木と突き合わせる。**
+  `evidence-revision.md#what-makes-evidence-stale` は staleness を完全に機械的に
+  定義している（「観測が覆ったファイルを変更した commit はそれを無効にする」）
+  のに、それを**計算する仕組みが無かった**。フィールドは手書きで、3 箇所で必須
+  で、何とも比較されていなかった — `QFAI-REVIEW-009` は `summary.json` の
+  フィールドが**存在するか**を見るだけで、**現在のものか**は見ない。
+
+  失敗は沈黙し、かつ自己整合する。stale な `Revision` は fresh なものと
+  見分けがつかない — 記録中のコマンドはすべて実在し、記録の中で矛盾する要素は
+  何も無い。唯一の signal は誰かが観測をやり直して一致しないと気付くことである。
+
+  行ごとに `git diff --name-only <Revision>..HEAD -- <test file> <srcDir>` を
+  計算し、非空なら報告する。promotion window 付き `warning` から始める —
+  これまで誰も計算していなかった以上、どのプロジェクトも**構造的に**蓄積した
+  stale を抱えており、即時 `error` は誰も知らされていない backlog で gate を
+  落とす。
+
+  `changedFilesSince` は **3 値**を返す。`getChangedFilesAgainstBase` が
+  あらゆる失敗を空集合に潰すのは、その呼び手が「検査対象なし」と読むから
+  正しい。ここで同じ潰し方をすると「evidence は fresh」と読まれる —
+  この finding が終わらせようとしている沈黙を、finding の内側で再現する
+  ことになる。
+
+  未解決 revision は emit しない。`actions/checkout` は既定で depth 1 なので
+  window を共有すれば promote 後に shallow clone の CI が全行で error になり、
+  `QFAI-REVIEW-009` が既に同条件を報告している（本リポジトリで 63 件）。
+  「間違っているから解決できない」と「shallow だから解決できない」を区別
+  できない残課題はソースに明記した。 (#1146)
+
+### Fixed
+
+- **staleness の規則を「commit の性質」ではなく「計算する区間」として述べた。**
+  `#what-makes-evidence-stale` の書き方だと「自分の**最後の commit** 以降に
+  何か変わったか?」という別の、はるかに弱い問いに手が伸びる。issue が報告した
+  2 件の見落としはどちらもその原因で、2 件目は 1 件目を教訓として書き留めた
+  後に起きている。区間はコマンド 1 つで表せるので、それを書いた:
+  `git diff --name-only <観測が名指す revision>..HEAD -- src tests` (#1146)
+
 - **`qfai prototyping rescope` — loop を捨てずに退役した surface を外す。**
   cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
   以降のあらゆる編集は lock drift (exit 2) である。drift ルールとしては正しい。

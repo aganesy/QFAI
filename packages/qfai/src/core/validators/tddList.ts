@@ -6,6 +6,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { changedFilesSince } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import {
   maskNonSpecRegions,
@@ -2556,6 +2557,23 @@ export const EVIDENCE_ANCHOR_MISSING_CODE = "QFAI-TDDLIST-007";
 export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
 
 /**
+ * `Revision` names a tree that files the observation covered have moved past.
+ *
+ * `evidence-revision.md#what-makes-evidence-stale` defines staleness
+ * mechanically — "a commit that changes any file the observation covered
+ * invalidates it" — and nothing computed it. The field was hand-written,
+ * required in three places, and compared against nothing: `QFAI-REVIEW-009`
+ * checks that `summary.json`'s field is PRESENT, never that it is CURRENT
+ * (#1146).
+ *
+ * That failure is silent and self-consistent: a stale `Revision` looks exactly
+ * like a fresh one, every command in the record is real, and nothing in the
+ * record contradicts anything else. The only signal is someone re-running the
+ * observation and noticing it no longer matches.
+ */
+export const EVIDENCE_REVISION_STALE_CODE = "QFAI-TDDLIST-009";
+
+/**
  * Read a ledger row's `Test file` cell, or `null` when it names nothing this
  * validator may read.
  *
@@ -2726,6 +2744,10 @@ function tcNotCoveredWithoutLedger(
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
+  // Repo-relative, for a `git diff` pathspec. `QFAI-TDDLIST-009` asks whether
+  // anything the observation covered has moved, and the code under test is
+  // half of that.
+  const srcRelDir = config.paths.srcDir;
   const entries = await collectSpecEntries(specsRoot);
   // `.qfai/decisions/` is one shared directory, so it is read once here and
   // handed to each spec rather than re-scanned per spec.
@@ -2739,11 +2761,92 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
       entry.specNumber,
       specsRoot,
       recordIds,
+      srcRelDir,
     );
     issues.push(...specIssues);
   }
 
   return issues;
+}
+
+/**
+ * The revision the row's newest observation names.
+ *
+ * Completed evidence records the field per round (`- Round 1: Revision: <sha>`),
+ * and `rowEvidenceFieldValue` filters `round === null` — it reads only a BARE
+ * `- Revision:`. Reading it that way made the staleness check a SILENT NO-OP on
+ * every real evidence file, which is the failure class #1146 is about
+ * reproduced inside the check written to end it (a silent no-op and a clean run
+ * look the same).
+ *
+ * The last round is the right one: a re-verify round re-takes the observation,
+ * so the interval runs from what the newest round names. The bare form is still
+ * accepted, because a row may record one.
+ */
+function observationRevision(section: string): string | null {
+  const rounds = evidenceRoundNumbers(section);
+  for (const round of [...rounds].sort((a, b) => b - a)) {
+    const value = roundEvidenceFieldValue(section, round, "Revision");
+    if (value !== null && value.length > 0) return value;
+  }
+  return rowEvidenceFieldValue(section, "Revision");
+}
+
+/** Statuses at which a row's `Revision` is a claim rather than work in flight. */
+const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
+
+/**
+ * Files the observation covered that have changed since the revision it names,
+ * or `null` when there is nothing to report.
+ *
+ * A pure decision, with the finding built at the call site where the pin's
+ * severity is in scope — `sunsetLedger`'s ratchet is right that a severity
+ * decided beside the call is a window that never opens.
+ *
+ * Exported for its own rows: the four `null` states below are what a suite has
+ * to separate, and reaching them through a whole ledger fixture would test the
+ * fixture.
+ *
+ * `null` covers four states:
+ *
+ * - the row records no `Revision`. That absence belongs to
+ *   `QFAI-TDDLIST-008`'s completed-evidence field list; two findings on one
+ *   state with two remedies help nobody.
+ * - the value is a content address (`working-tree+<hash>`), which names no
+ *   commit, so there is no interval to compute. `QFAI-REVIEW-007` / `-009` own
+ *   that shape.
+ * - nothing under the pathspec moved. The observation is current.
+ * - the revision cannot be RESOLVED here. It cannot share this code's window,
+ *   because `actions/checkout` is depth-1 by default and every CI run on a
+ *   shallow clone would then error on every row; and `QFAI-REVIEW-009` already
+ *   reports an unresolvable revision, so a per-row copy would be noise on top
+ *   of a signal that exists. The residual is real and stated here rather than
+ *   hidden: a revision unresolvable because it is WRONG is not told apart from
+ *   one unresolvable because the clone is shallow, and telling them apart needs
+ *   a signal this check does not have.
+ */
+export function staleEvidenceFiles(
+  root: string,
+  srcRelDir: string,
+  section: string,
+  testFile: string,
+): readonly string[] | null {
+  const revision = observationRevision(section);
+  // The shape test is a COST guard, not a correctness one, and no row can
+  // distinguish it: without it a `working-tree+<hash>` reaches
+  // `changedFilesSince`, `rev-parse` fails, and the answer is `null` either
+  // way. It is kept because this runs per ledger row, and a project on content
+  // addresses would spawn a git process for every one of them to reach a
+  // guaranteed null.
+  if (revision === null || !/^[0-9a-f]{7,64}$/i.test(revision)) {
+    return null;
+  }
+  const paths = [testFile, srcRelDir].filter((p) => p.length > 0);
+  if (paths.length === 0) {
+    return null;
+  }
+  const changed = changedFilesSince(root, revision, paths);
+  return changed.kind === "changed" ? changed.files : null;
 }
 
 async function validateSpecTddList(
@@ -2752,6 +2855,7 @@ async function validateSpecTddList(
   specNumber: string,
   specsRoot: string,
   recordIds: ReadonlySet<string>,
+  srcRelDir: string,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -3488,6 +3592,9 @@ async function validateSpecTddList(
     anchorUnresolvedSeverity,
     anchorUnresolvedPromotion,
   );
+  const revisionStalePromotion = RULE_PROMOTIONS.tddListEvidenceRevisionStale.promoteAt;
+  const revisionStaleSeverity = newRuleSeverity(resolvedToolVersion, revisionStalePromotion);
+  const revisionStaleWindowNote = windowNoteFor(revisionStaleSeverity, revisionStalePromotion);
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
@@ -3547,6 +3654,7 @@ async function validateSpecTddList(
       );
     }
 
+    let lastResolvedSection = "";
     for (const anchor of anchors) {
       relatedFile = anchor.file;
       if (anchor.file !== expectedFile) {
@@ -3589,6 +3697,10 @@ async function validateSpecTddList(
               ? "CON-API-Refs"
               : "TC-Refs";
         const section = evidenceIndex.sections.get(anchor.fragment) ?? "";
+        // Kept for the staleness check below, which needs the section this row
+        // actually resolved to rather than the last one the loop happened to
+        // look at.
+        lastResolvedSection = section;
         const expectation = {
           specNumber,
           tddId,
@@ -3612,6 +3724,43 @@ async function validateSpecTddList(
           anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;
           break;
         }
+      }
+    }
+
+    if (anchorFailure.length === 0) {
+      const staleFiles = staleEvidenceFiles(
+        root,
+        srcRelDir,
+        lastResolvedSection,
+        cell(ref, "Test file"),
+      );
+      if (staleFiles !== null) {
+        const revision = observationRevision(lastResolvedSection) ?? "";
+        const shown = staleFiles.slice(0, 5);
+        const more =
+          staleFiles.length > shown.length ? ` (+${staleFiles.length - shown.length})` : "";
+        const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+        issues.push(
+          issue(
+            EVIDENCE_REVISION_STALE_CODE,
+            `spec-${specNumber} ${rowLabel}: the observation names Revision \`${revision}\`, and ` +
+              `${staleFiles.length} file(s) it covered have changed since: ${shown.join(", ")}${more}. ` +
+              `Status=${status}${atRest ? " (at rest — this row is making a claim)" : ""}. ` +
+              "A stale Revision looks exactly like a fresh one — every command in the record is " +
+              "real and nothing contradicts anything else — which is why it is computed rather " +
+              `than read.${revisionStaleWindowNote}`,
+            revisionStaleSeverity,
+            relPath,
+            "tddList.evidenceRevisionStale",
+            [revision, ...shown],
+            "canonical",
+            "Re-take the observation and record the revision it was taken at. The interval is " +
+              "from the revision the observation NAMES to now — " +
+              "`git diff --name-only <revision>..HEAD -- <test file> <srcDir>` — not from your " +
+              "last commit, which is a different and much weaker question " +
+              "(`references/evidence-revision.md#what-makes-evidence-stale`).",
+          ),
+        );
       }
     }
 
