@@ -31,6 +31,7 @@
   "include": [
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/assets.test.ts",
+    "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
     "tests/assets/capabilitySpecMapping.test.ts",
