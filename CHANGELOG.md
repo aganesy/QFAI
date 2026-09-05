@@ -588,6 +588,39 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
+- **注釈スキャナが、文字列 / template / 正規表現リテラルの中の**完全な** TC / US
+  id を今も参照として読んでいた。** #1123 は**切り詰められた** id が
+  `/^…TC-0001-\d{4}$/` から取り出されるのを止めたが、同 issue が述べていた
+  構造的問題 —「正規表現の中の文字列、文字列リテラル、コメント、本物の注釈は
+  同じテキストである」— には触れていなかった。実測:
+
+  ```text
+  as designed  コメント内の本物の注釈:              matched=true  want=true
+  DEFECT       正規表現リテラル内の完全な id:        matched=true  want=false
+  DEFECT       文字列リテラル内の完全な id:          matched=true  want=false
+  DEFECT       template リテラル内の完全な id:       matched=true  want=false
+  as designed  #1123 が閉じた切り詰め形:             matched=false want=false
+  ```
+
+  つまり id を**データとして**保持する fixture が、それを参照していると報告
+  されていた。#1123 はその両方（コンストラクトをデータとして持つ generator /
+  parser スイート、および対象の id を引用する自己検査型 deferral ledger）を
+  日常的な形として挙げている。finding は `QFAI-ATDD-101` / `-102` = `error`
+  である。
+
+  必要なレキサーは**同じディレクトリに既にあった** —
+  `validators/jsSourceMask.ts#maskJsNonCode` は該当スパンを正確に知っており、
+  難所（`a / b` は除算、`= /re/` は違う）も扱っている。ただし**コメントも
+  消す**ため、注釈がコメントに書かれるこの用途にはそのまま使えなかった。
+  そこで `comments` オプションを足し（既定は `true`、既存の消費者は不変）、
+  注釈スキャンはリテラルだけを消すようにした。
+
+  拡張子でゲートしている。`.md` / `.feature` は
+  `DEFAULT_TEST_FILE_GLOB` に含まれる注釈キャリアで、Markdown に JS レキサーを
+  当てると散文中のアポストロフィが行末までの文字列開始として読まれ、その後の
+  注釈が**消える** — over-blanking は本物の注釈を隠すので、この方向だけは
+  導入してはならない。 (#1141)
+
 - **CR の免除が `## Impact scope` を 1 つしか読まず、しかも code fence の中まで
   読んでいたため、書式例がそのパスを承認していた。** どちらも本リポジトリが
   `## Triage` に対して**既に発見・修正済み**の欠陥である
