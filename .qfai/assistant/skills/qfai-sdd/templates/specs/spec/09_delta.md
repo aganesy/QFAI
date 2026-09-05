@@ -29,12 +29,15 @@
 > Operation: CREATE | UPDATE | DELETE | SPLIT | MERGE | SUPERSEDE.
 > Sub-op (UPDATE only): APPEND | MODIFY | REMOVE.
 > Approved By: required for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE.
+> Existing Spec takes a REAL target, never a placeholder: `spec-NNNN` (`+`-joined for
+> MERGE), `_policies` on an UPDATE row, or `-` on a CREATE row. `QFAI-TRIAGE-009`
+> grades the whole cell, so an unfilled one fails the gate rather than being ignored.
 
 ### DELTA-0001 (YYYY-MM-DD)
 
 | Source   | Subject     | Existing Spec | Operation | Sub-op | Approved By | Rationale |
 | -------- | ----------- | ------------- | --------- | ------ | ----------- | --------- |
-| REQ-XXXX | <one-liner> | <spec-NNNN>   | UPDATE    | APPEND | -           | <why>     |
+| REQ-XXXX | <one-liner> | spec-0001     | UPDATE    | APPEND | -           | <why>     |
 
 ## Update History
 
