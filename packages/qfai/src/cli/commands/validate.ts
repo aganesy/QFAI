@@ -1225,6 +1225,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every row's recorded `Revision` still names the tree its observation ran against: nothing the observation covered — the test file it names, or the source under test — has changed since. A stale Revision looks exactly like a fresh one, so this is computed rather than read.",
   "QFAI-TDDLIST-008":
     "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
+  "QFAI-CTYPE-004":
+    "Every `### DL-` entry in a delta file carries the seven `#### Meta` keys `parseDeltaV1` reads, so the Change Type counters see it. An entry the parser skips is counted for nothing and leaves the summary describing less change than the file records.",
 };
 
 /**
