@@ -117,7 +117,12 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(ledger).toContain("**Who writes the production code for an E2E/API row.**");
       expect(ledger).toContain("delivered by the same\nspec's `TC-*` rows");
-      expect(ledger).toContain("**Both columns are seeded, not hand-added.**");
+      // The seeding rule moved with the obligation-column topic; the ledger points at it.
+      const columns = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/obligation-columns.md",
+      );
+      expect(columns).toContain("**Both columns are seeded, not hand-added.**");
 
       // The reference the ATDD stage reads must agree: zero rows is the
       // exemption case, not "these are never rows".
@@ -156,7 +161,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         // means. An unqualified exemption here has the consumer treat a
         // missing E2E row as legitimate in a project that never opted in, so
         // the ATDD gate fails with nothing left to restore the row.
-        "assistant/skills/qfai-implement/references/execution-ledger.md",
+        "assistant/skills/qfai-implement/references/obligation-columns.md",
       ]) {
         const text = await read(tree, surface);
         expect(text, surface).toMatch(/at least one[\s\S]{0,40}UI-bearing|some spec does declare/);
@@ -172,7 +177,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       for (const surface of [
         "assistant/skills/qfai-atdd/SKILL.md",
         "assistant/skills/qfai-atdd/references/red-provenance.md",
-        "assistant/skills/qfai-implement/references/execution-ledger.md",
+        "assistant/skills/qfai-implement/references/obligation-columns.md",
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       ]) {
         const text = await read(tree, surface);
@@ -309,7 +314,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const ledger = await read(
         tree,
-        "assistant/skills/qfai-implement/references/execution-ledger.md",
+        "assistant/skills/qfai-implement/references/obligation-columns.md",
       );
       expect(ledger).toMatch(/re-runs\s+the E2E-row delta over every spec's ledger/);
     });
@@ -364,7 +369,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const ledger = await read(
         tree,
-        "assistant/skills/qfai-implement/references/execution-ledger.md",
+        "assistant/skills/qfai-implement/references/obligation-columns.md",
       );
       expect(ledger).toMatch(
         /\*\*A seeded acceptance row's `Test file` and `Selector` are `-` until Phase Red\s+step 3b writes them\.\*\*/,
@@ -396,7 +401,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const ledger = await read(
         tree,
-        "assistant/skills/qfai-implement/references/execution-ledger.md",
+        "assistant/skills/qfai-implement/references/obligation-columns.md",
       );
       expect(ledger).toContain("**A legacy ledger needs a reader rule, not only that waiver.**");
       expect(ledger).toMatch(/read a non-`TC-\*` obligation token in\s+`TC-Refs`/);
