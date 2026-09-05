@@ -10,12 +10,12 @@ _why_ an uncoverable obligation was accepted, and that judgement is what
 discharges the "no unjustified `❌`" gate — so the matrix is a **governance
 record**, not a regenerable log.
 
-Written only into the stage evidence file it would never reach a commit (stage
-evidence is regenerable and uncommitted), and a later reviewer could not tell a
-justified `❌` from an unjustified one. Write the matrix and one justification
-per `❌` to `.qfai/evidence/coverage-depth-<spec-id>.md`, which the managed
-`.gitignore` block negates for exactly this reason. The stage evidence file
-links to it rather than restating it.
+The per-item ATDD evidence is committed because ledger anchors resolve into it,
+but the matrix remains a separate governance artifact with its own validation
+contract and lifecycle. Embedding it in a ledger-evidence entry would not
+satisfy that contract. Write the matrix and one justification per `❌` to
+`.qfai/evidence/coverage-depth-<spec-id>.md`; the stage evidence file links to
+it rather than restating it.
 
 ## 1. Equivalence Partitioning (同値分割)
 
@@ -111,10 +111,10 @@ decoration in a document the completion gate reads cell by cell.
 
 **Home: `.qfai/evidence/coverage-depth-<spec-id>.md`.** That path is negated in
 the managed `.gitignore` block, so the matrix and the justifications below it
-are committed. The rest of `.qfai/evidence/**` is not: a matrix written into
-`atdd-<spec-id>.md` is deleted from history by the ignore rule, and with it
-every reason a `❌` was accepted — which is the input the PASS/REVISE criteria
-below read. Write it once, in its own file, and link it from the stage evidence.
+are committed. The per-item `atdd-<spec-id>.md` is committed too, but it is the
+ledger's evidence payload, not the matrix artifact that the PASS/REVISE criteria
+below read. Write the matrix once, in its own file, and link it from the stage
+evidence.
 
 | US/TC ID | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
 | -------- | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
@@ -160,7 +160,8 @@ an unjustified ❌ here is the same REVISE.
   `.qfai/evidence/coverage-depth-<spec-id>.md`, naming the cell, why the
   obligation is not coverable at this layer, and the `DR-*` or `CR-*` that
   carries the decision when one exists. A justification recorded anywhere else
-  under `.qfai/evidence/**` is ignored by Git and cannot be read at review time.
+  under `.qfai/evidence/**` does not satisfy the matrix's dedicated artifact
+  contract and cannot discharge this gate.
 
 ### Usage
 
@@ -172,7 +173,7 @@ an unjustified ❌ here is the same REVISE.
   `04_Business-Rules.md` and reconcile: every active `BR-ID` owns a row, and a
   table of ✅ rows that silently drops a declared rule is a REVISE. Read
   `.qfai/evidence/coverage-depth-<spec-id>.md`; a matrix that exists only in an
-  uncommitted stage-evidence file is a missing matrix.
+  ATDD per-item evidence file is a missing matrix.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.
 - `npx qfai validate --profile atdd` reports the three file-level facts the readings
   above assume: `QFAI-ATDD-131` when a spec with ATDD-owned tests has no matrix,

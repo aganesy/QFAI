@@ -205,3 +205,84 @@ describe("README content the guard now keeps in sync", () => {
     }
   });
 });
+
+/**
+ * The second oracle (#1063).
+ *
+ * Line-identity cannot fail on a statement that is wrong in both files, and it
+ * did not: both READMEs said "It does not generate GitHub Actions workflows"
+ * while `qfai init` wrote two, and the gate reported "aligned" over it for as
+ * long as that stood. These cases drive the script against fixture READMEs, so
+ * they check the oracle rather than the current state of the real files.
+ */
+describe("check-readme-alignment: the CI section's workflow claim", () => {
+  /** A minimal pair of aligned READMEs whose CI text the case controls. */
+  async function writePair(dir: string, ciText: string): Promise<{ root: string; pkg: string }> {
+    const body = ["# Title", "", "## Continuous integration", "", ciText, ""].join("\n");
+    const root = path.join(dir, "README.md");
+    const pkg = path.join(dir, "package-README.md");
+    await writeFile(root, body, "utf-8");
+    await writeFile(pkg, body, "utf-8");
+    return { root, pkg };
+  }
+
+  it("passes when the CI section names every shipped workflow", async () => {
+    const dir = await newTempDir();
+    const { root, pkg } = await writePair(
+      dir,
+      "Into `.github/workflows/` it writes `qfai-validate.yml` and `qfai-tests.yml`.",
+    );
+
+    const result = runGuard(["--root", root, "--package", pkg]);
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  // The sentence the issue was filed about. Both files carry it, so oracle 1 is
+  // satisfied; only a behaviour-tied oracle can reject it.
+  it("fails on the does-not-generate claim even though both files agree", async () => {
+    const dir = await newTempDir();
+    const { root, pkg } = await writePair(
+      dir,
+      "It does not generate GitHub Actions workflows. Configure CI in your own platform.",
+    );
+
+    const result = runGuard(["--root", root, "--package", pkg]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("does not generate GitHub Actions workflows");
+    // And it says why the other README is no help here.
+    expect(result.stderr).toContain("two files wrong in the same way are aligned");
+  });
+
+  it("fails when a shipped workflow is not named", async () => {
+    const dir = await newTempDir();
+    const { root, pkg } = await writePair(
+      dir,
+      "Into `.github/workflows/` it writes `qfai-validate.yml`.",
+    );
+
+    const result = runGuard(["--root", root, "--package", pkg]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("qfai-tests.yml");
+  });
+
+  // Oracle 1 must keep biting: adding a second oracle should not turn the
+  // first into a no-op for files that disagree.
+  it("still reports line divergence alongside the CI oracle", async () => {
+    const dir = await newTempDir();
+    const shared = "Into `.github/workflows/` it writes `qfai-validate.yml` and `qfai-tests.yml`.";
+    const root = path.join(dir, "README.md");
+    const pkg = path.join(dir, "package-README.md");
+    await writeFile(root, `# Title\n\n${shared}\n`, "utf-8");
+    await writeFile(pkg, `# Different\n\n${shared}\n`, "utf-8");
+
+    const result = runGuard(["--root", root, "--package", pkg]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("have diverged");
+  });
+
+  // The real files, which is the assertion that would have caught #1063.
+  it("passes over the repository's own READMEs", () => {
+    const result = runGuard([]);
+    expect(result.status, result.stderr).toBe(0);
+  });
+});

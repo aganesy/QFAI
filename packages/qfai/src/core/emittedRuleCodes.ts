@@ -55,6 +55,8 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-ATDD-115",
   "QFAI-ATDD-116",
   "QFAI-ATDD-117",
+  "QFAI-ATDD-118",
+  "QFAI-ATDD-119",
   "QFAI-ATDD-121",
   "QFAI-ATDD-122",
   "QFAI-ATDD-123",
@@ -121,6 +123,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-CRIT-008",
   "QFAI-CRIT-009",
   "QFAI-CRIT-010",
+  "QFAI-CTYPE-004",
   "QFAI-DB-001",
   "QFAI-DB-002",
   "QFAI-DCON-001",
@@ -247,6 +250,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-PROT-008",
   "QFAI-PROT-009",
   "QFAI-PROT-010",
+  "QFAI-PROT-011",
   "QFAI-PROT-251",
   "QFAI-PROT-252",
   "QFAI-PROT-253",
@@ -296,6 +300,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-SPLIT-103",
   "QFAI-SPLIT-104",
   "QFAI-SPLIT-105",
+  "QFAI-SPLIT-106",
   "QFAI-STATUS-001",
   "QFAI-STATUS-002",
   "QFAI-STATUS-003",
@@ -305,9 +310,14 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-STATUSLEAK-001",
   "QFAI-TABLE-001",
   "QFAI-TC-001",
+  "QFAI-TDDLIST-007",
+  "QFAI-TDDLIST-008",
+  "QFAI-TDDLIST-009",
   "QFAI-TEST-001",
   "QFAI-TEST-002",
   "QFAI-TEST-003",
+  "QFAI-TOOL-001",
+  "QFAI-TOOL-002",
   "QFAI-TRACE-001",
   "QFAI-TRACE-002",
   "QFAI-TRACE-100",
@@ -343,6 +353,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-TRIAGE-006",
   "QFAI-TRIAGE-007",
   "QFAI-TRIAGE-008",
+  "QFAI-TRIAGE-009",
   "QFAI-UIE-001",
   "QFAI-UIE-002",
   "QFAI-UIE-003",
@@ -698,7 +709,6 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [
   "QFAI-WAIVER-001",
   "QFAI-WAIVER-002",
   "R-AUTOPILOT-POLICY-MISSING",
-  "R-CERTIFY-VERIFY-CIRCULAR",
   "R-EVIDENCE-MUTATION-UNLOGGED",
   "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-INCOMPLETE",
@@ -780,4 +790,20 @@ export const RULE_ID_ALIASES: readonly string[] = [
   "WAIVER-003",
   "WAIVER-004",
   "WAIVER-005",
+];
+
+/**
+ * Codes emitted from `src/cli/`, after `applyWaivers` has run.
+ *
+ * They are deliberately NOT in {@link EMITTED_RULE_CODES}: a waiver naming one
+ * can never match a finding, and registering them would let an unmatchable
+ * waiver be reported as `active`. But they DO exist, and calling them unknown
+ * rules sent an operator looking for a typo — so `applyWaivers` uses this list
+ * to say the true thing instead: the rule exists and no waiver can suppress it,
+ * because it is appended after waiver processing.
+ */
+export const POST_WAIVER_RULE_CODES: readonly string[] = [
+  "QFAI-PROFILE-001",
+  "QFAI-SCAN-001",
+  "QFAI-SCAN-002",
 ];

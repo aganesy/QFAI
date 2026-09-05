@@ -235,10 +235,10 @@ The generator MUST express every styled surface as one of:
 There are two directory trees and they are NOT interchangeable. The
 generator writes to exactly one of them.
 
-| Tree                                  | Shape                                                    | Written by                               | Read by                                         |
-| ------------------------------------- | -------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
-| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)                  | `--auto-serve`, the operator, `/qfai-implement` |
-| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `npx qfai prototyping iterate --capture` | `npx qfai prototyping certify`, the reviewer    |
+| Tree                                  | Shape                                                    | Written by                                                                                                                                                | Read by                                         |
+| ------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)                                                                                                                                   | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `npx qfai prototyping iterate --capture` (browser snapshots) and `npx qfai prototyping iterate --cycle 0 --emit-skeletons` (placeholder seeds, HTML only) | `npx qfai prototyping certify`, the reviewer    |
 
 **The generator never writes the evidence tree.** The `--capture` step
 performs the fan-out: it drives a browser to each declared screen's
@@ -246,6 +246,16 @@ contract `route`, and writes one HTML snapshot plus one screenshot per
 screen into `.qfai/evidence/prototyping/iter-NN/`. `certify` reads only
 that tree and hard-fails with "missing HTML for N declared screen(s)"
 when a declared screen has no snapshot there.
+
+**Two CLI writers share that tree, and their provenance is not the
+same.** `--capture` writes HTML fetched from a running prototype;
+`--emit-skeletons` (cycle 0 only) writes placeholder HTML that was
+never rendered, served or reviewed. Both land as
+`iter-NN/<screenId>.html`, and `designMdViolations.ts` scans them
+alike — so the presence of a `<screenId>.html` does not by itself prove
+a capture happened. A cycle-0 file with no sibling `<screenId>.png` is
+a seed, not evidence: overwrite it with a real `--capture` before
+reading the tree as a review artifact or sealing a certificate.
 
 ### N declared screens, one file
 
@@ -277,15 +287,21 @@ target server does with that URL therefore decides the routing shape:
   `.png`, `fetch()`) carry no `text/html` in `Accept`, so a genuinely
   missing asset still 404s instead of receiving an HTML body, and the
   path-traversal 403 guard runs ahead of the fallback.
-- The fallback needs an `index.html` to fall back _to_. Per-screen files
-  (`--emit-skeletons`, below) write `<screenId>.html` and no
-  `index.html`, and the static server resolves a URL to a literal path
-  before it falls back — it does not append `.html`. So in a
-  skeleton-only cycle-0 tree `/settings.html` serves that screen's
-  skeleton while `/settings` still **404s** and loses that screen's
-  evidence; `/settings` only reaches the fallback once you author an
-  `index.html` alongside the skeletons. `htmlSourceCopy` changes nothing
-  here: it runs after the capture has already navigated successfully.
+- The fallback needs an `index.html` to fall back _to_, and it has to
+  sit in the SERVED tree: `--auto-serve` serves
+  `.qfai/prototypes/iter-NN/` and nothing else. `--emit-skeletons` does
+  not write there — it writes `<screenId>.html` into the evidence tree
+  (`.qfai/evidence/prototyping/iter-00/`, below) — so a
+  skeleton-only cycle-0 tree has neither an `index.html` to fall back
+  to nor any per-screen file, and `/settings` still **404s** and loses
+  that screen's evidence. Author (or copy) the per-screen files under
+  `.qfai/prototypes/iter-NN/` and an `index.html` alongside them: the
+  static server resolves a URL to a literal path before it falls back
+  and does not append `.html`, so `/settings.html` then serves that file
+  while `/settings` reaches the fallback. `htmlSourceCopy` changes
+  nothing here: it runs after the capture has already navigated
+  successfully, so it cannot rescue a route the server could not
+  resolve.
 
 Keep the contract `route` values as the product needs them. Against a
 server other than `--auto-serve`, match the routing shape to what that
@@ -293,9 +309,12 @@ server does with an unknown path.
 
 Opt-in **seed aid**, not an alternative output shape:
 `npx qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
-placeholder `.qfai/prototypes/iter-00/<screenId>.html` per declared
-screen, and the `htmlSourceCopy` capture option likewise operates on
-per-screen files. Neither writes an `index.html`.
+placeholder `.qfai/evidence/prototyping/iter-00/<screenId>.html` per
+declared screen — the cycle's `iterationDir(0)`, i.e. the evidence tree,
+not `.qfai/prototypes/`. Do not serve or look for them under
+`prototypes/`. The `htmlSourceCopy` capture option likewise operates on
+per-screen files, but reads them from `.qfai/prototypes/iter-NN/`.
+Neither writes an `index.html`.
 
 An accepted iteration must still carry `iter-NN/index.html`: Handoff
 below copies it to `.qfai/prototypes/final/index.html`, and without it
