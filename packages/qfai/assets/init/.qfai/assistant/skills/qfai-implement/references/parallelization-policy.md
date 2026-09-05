@@ -257,6 +257,58 @@ passes**:
    overlapping modules to be re-read for duplicated behaviour, and the finding
    to be recorded before `delivery-planner` authorizes another parallel run.
 
+## Re-verify each merged item on the integrated tree
+
+Worktree separation puts item 6's post-refactor re-run and the items 7 / 8
+reviews inside the worker's own worktree, so all three name **that** tree's
+address. The merge then adds every other slice's change, and the tree the item
+is delivered on is no longer the tree those three observations describe. Gate
+item 10 reads `Refactor verify revision` and the two `Reviewed revision` values
+as the final tree's address (`references/evidence-revision.md`), so without a
+re-take a merged item either cannot satisfy that rule honestly or carries a PASS
+taken on a tree that no longer exists. The integration verify above does not
+stand in for it: it re-runs the suite, not each item's gate, and it writes
+nothing back into the item's evidence.
+
+So after the merge and its integration verify, and **before any merged item goes
+`done`** — which is reachable only because the reconciliation write holds a
+worker's returned `done` at `refactor` until these steps pass
+(`#ledger-ownership`):
+
+1. Re-run each merged item's relevant test suite once on the integrated tree and
+   refresh all three of its `Refactor verify` fields — `command`, `result` and
+   `revision` (`references/round-evidence.md`). One narrow run per item; the
+   integration verify is what covers them jointly.
+2. Re-request `completion-reviewer` and `implementation-reviewer` for that item
+   against the same tree, so items 7 and 8 name the address item 6 now carries.
+   **A UI-affecting item re-requests `product-surface-reviewer` there too**, so
+   item 9's PASS names it as well — prototype parity on a visual-prototyping
+   target, and on a cli-only target the captured-output surface review item 9
+   puts in parity's place, since `/qfai-prototyping` rejects `cli` and leaves no
+   prototype to compare against. That verdict is a reading of reviewed output,
+   and the worker took it before any other slice was in the
+   tree: a merged sibling's stylesheet, layout container or shared component can
+   change what this item renders without moving its own suite off GREEN, so the
+   two code reviews above do not stand in for it. Gate item 9 admits a UI item
+   to `done` only on that PASS
+   (`../SKILL.md#item-completion-checklist-12-point-gate`),
+   and a pre-merge one is evidence about a tree the item does not ship on.
+3. An item whose `Refactor verify revision` already resolves to the integrated
+   tree — nothing landed after its slice — is current as recorded and needs
+   neither step. Record which check was made; do not assume it.
+4. A re-verify that is not GREEN, or any of those re-reviews returning `REVISE`,
+   keeps that item out of `done`: classify it as a failed integration verify
+   (`#failed-integration-verify`) and leave the row at the `refactor` the
+   reconciliation write held it at, or move it `refactor -> review-fix`. Both
+   are listed edges (`execution-ledger.md#allowed-transitions`) **because the
+   row was never written `done`** — the same remedy applied to a row already at
+   `done` would need `done -> refactor` or `done -> review-fix`, neither of
+   which that list carries. It does not by itself invalidate the other slices.
+
+This is the same re-take a T1 group close performs, for the same reason
+(`volume-policy.md#group-formation-states-and-transitions`): the address was
+taken before the tree the item ships on existed.
+
 ## Coordinated parallel mode (ledger ownership)
 
 When parallel dispatch is authorized, the ledger has one writer:
@@ -292,11 +344,48 @@ So:
   `Evidence` payload in the per-item evidence contract's form.
 - The orchestrator writes those rows into the trunk ledger during
   `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
+- **The reconciliation write replays the row's own path, one listed edge at a
+  time.** A dispatched row is still `todo` in the trunk — workers never edited
+  it — so assigning the returned status directly is a single unlisted jump:
+  `todo -> refactor` and `todo -> done` are both absent from
+  `execution-ledger.md#allowed-transitions`, whose enumeration is complete, so
+  the write that records a wholly _successful_ parallel run would be the
+  lifecycle violation. Walk the edges the worker actually traversed instead —
+  `todo -> red` on its RED, `red -> green` on its GREEN, `green -> refactor` on
+  its refactor-verify — recording that phase's returned evidence at the step
+  that produced it. The intermediate states are the worker's, restored in the
+  trunk rather than invented: the orchestrator has each phase's command, result
+  and revision in the returned block, and a block missing one cannot be replayed
+  past it, which is the same defect as a missing contract field above.
+- **A returned `done` is written as `refactor`, not as `done`.** The replay
+  stops one edge short of it. That write happens _before_ the integration verify
+  and before the post-merge re-take above, so taking the last step too would
+  settle the completion decision ahead of both
+  gates that still have to pass on the integrated tree — and settle it
+  irreversibly: `done -> refactor` and `done -> review-fix` are not in that list
+  either, so a re-verify that then failed could not be recorded at all.
+  `refactor` is the review-ready state a T1 row already parks in, so the hold
+  loses no evidence and adds no status value.
+- Every other returned status is reached by continuing the same replay to it,
+  never by jumping: `refactor -> review-fix` for a returned `review-fix`, the
+  active-status edge to `exception` for a returned `exception`, `todo -> blocked`
+  for a row the worker could not start. A returned status with no listed path
+  from `todo` is not written at all — report it as a reconciliation failure and
+  leave the row where the replay stopped, because inventing the edge is what
+  this rule exists to prevent.
+- The orchestrator writes `refactor -> done` only once the integration verify,
+  that item's re-verify and **every re-review it owes** have returned PASS on
+  the merged tree — `completion-reviewer` and `implementation-reviewer` on every
+  item, and `product-surface-reviewer` as well on a UI-affecting one. That is
+  the ledger write gate item 10 reads, and it is now the first time the row's
+  status asserts anything about the integrated tree.
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 
-In serial mode the same rule holds with no merge step: the implementation agent
-returns Status + Evidence, the orchestrator writes them.
+In serial mode the same rule holds with no merge step, and the replay has
+nothing to reconstruct: the implementation agent returns Status + Evidence after
+each phase and the orchestrator writes them then, so the row walks those same
+edges as they happen rather than afterwards.
 
 ## Failed integration verify
 
