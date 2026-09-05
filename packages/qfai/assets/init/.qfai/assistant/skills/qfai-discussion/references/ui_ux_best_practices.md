@@ -105,10 +105,12 @@ packs it resolves through:
 - review handoff: `uiux/50_review_input_bundle.md`
 
 Those three are the entire canonical sidecar family. Evaluation axes are global constants
-(4-step ordinal: weak / acceptable / strong / exceptional, in
-`core/prototyping/evaluatorReview.ts#ORDINAL_AXES`) and are not authored as discussion
-sidecars. Discussion is planner-first: it carries exploration directions unranked and does
-not select a single visual winner, so there is no strategy, taste-interview, scoring,
+(4-step ordinal: weak / acceptable / strong / exceptional) fixed by the review validation the
+QFAI CLI applies — not by any file in this tree. The shipped
+`.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md` restates that axis set
+for the reviewer prompt; editing it does not change the set the CLI accepts. Axes are not
+authored as discussion sidecars. Discussion is planner-first: it carries exploration directions
+unranked and does not select a single visual winner, so there is no strategy, taste-interview, scoring,
 override, option-comparison or selected-anchor sidecar. Do NOT create
 `10_implementation_strategy.md`, `11_design_taste_interview.md`, the `20-24`
 design-evaluation family, `30_option_comparison.md`, or `31_selected_anchor_screen.md` —

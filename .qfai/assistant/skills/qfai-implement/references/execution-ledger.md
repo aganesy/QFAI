@@ -45,41 +45,12 @@ evidence" asked for exactly what test-first withholds.
 ## Obligation columns (optional, required by layer)
 
 A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one
-every row has; the other two are optional columns that become required when the
-row's layer cannot host a `TC-*`.
+every row has; `US-Refs` and `CON-API-Refs` become required when the row's layer
+cannot host a `TC-*`, and `Blocked-By` is required on a `blocked` row.
 
-| Column       | Description                                                                       |
-| ------------ | --------------------------------------------------------------------------------- |
-| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
-| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
-| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
-
-`Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
-with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
-(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
-what distinguishes a parked `exception` from a row that never started, and
-overloading it would merge the two states the `blocked` status exists to
-separate.
-
-`test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
-so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
-`TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
-
-The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
-`TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
-so a forbidden placement cannot close a coverage-target TC.
-`TDDLIST_OBLIGATION_LAYER_MISMATCH` likewise rejects a `US-Refs` /
-`CON-API-Refs` value on a layer that does not own it.
-
-A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
-without a legal `Layer` the row has no obligation column. Coverage counting
-excludes `API` and `E2E` specifically rather than allowlisting the other three,
-so a mistyped layer keeps counting and is reported by that warning, which names
-the real cause; an allowlist would instead drop the row silently and resurface
-as a coverage error about a TC the author did cover.
-
-Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so
-non-TC obligation IDs are inert to it by design.
+Full rule — the column table, what `Blocked-By` accepts, why `DR-ID` is not
+widened to carry it, and who seeds the two layer columns:
+`obligation-columns.md`.
 
 ## Evidence cell contract
 
@@ -137,10 +108,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                          | Severity            |
-| ------------------------------ | ------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning             |
+| Finding                        | Fires when                                                                              | Severity            |
+| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -170,6 +143,13 @@ retained, then point the cell at that entry. The cell stays a pointer — prose
 about a missing run is a payload, and the section above says why a payload in
 the cell corrupts the ledger.
 
+`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
+code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
+check hangs off the anchor, so a `done` row whose cell is only an outcome —
+command-shaped, so the status-only rule passes over it — claimed completion with
+no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
+failing on warnings; one still migrating waives it per path.
+
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
 `TDDLIST_EXCEPTION_MISSING_DR` gates.
@@ -180,15 +160,18 @@ with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
 A pointer cell satisfies these rules: the `evidence at <path>` form carries a
 path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer.
+bare verdict, not a pointer. The pointer is also resolved against the file its
+row `Layer` owns; a file that exists only on the machine that produced it does
+not satisfy the gate on a fresh clone.
 
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
 as a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
-independently observable boundary per selector entry**, with RED observed per entry, and a
+independently observable boundary per row**, with RED observed per selector entry, and a
 matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
-`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
+`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. If you
+cannot name the single boundary that every selector entry on a row observes, split the row. Rules
 and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
@@ -305,7 +288,17 @@ RED question different rather than absent.
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
 no backend or frontend agent. The surface a journey needs is built by this
-skill's Phase Green, from the RED that stage handed over. What makes the RED
+skill's Phase Green, from the RED that stage handed over.
+
+**Who writes the production code for an E2E/API row.** Normally nobody writes
+it _for that row_: the behaviour the journey exercises is delivered by the same
+spec's `TC-*` rows, which this skill executes on their own micro-cycles. The
+E2E/API row is a **coverage obligation** — it asserts that the delivered
+behaviour is reachable end to end, or that the contract is exercised — not the
+sole carrier of a feature. Reading it as the carrier leaves the row with no
+implementer, because `/qfai-atdd` has no production agent. Where the journey
+does reach a gap no TC row covers, Phase Green of **this** row closes it, and
+`red-not-observable.md`'s falsifiability path is what supplies the RED. What makes the RED
 question different there is ordering, not ownership: the work orders that build
 a spec's surfaces often run before the journey is written, and a test written
 after its surface passes on the first run. So:
@@ -373,9 +366,21 @@ When transitioning to `exception`:
 
 ### Where the Decision Record is written
 
-Write it to `.qfai/decisions/DR-<id>-<slug>.md`, beside the Change
-Requests, using the same `DR-*` ID scheme those files declare. Do **not** write
-`07_Decisions.md` or `09_delta.md`.
+Write it beside the Change Requests as
+`.qfai/decisions/DR-NNNN-MMMM-<slug>.md` when the anomaly is spec-scoped, or
+`.qfai/decisions/DR-NNNN-<slug>.md` when it is policy-level — never the CR's
+date form. The two shapes have different declaration homes, and the anomaly's
+scope picks the one it belongs in: a spec-scoped `DR-NNNN-MMMM` is
+declared in that spec's `07_Decisions.md`, and a policy-level `DR-NNNN` is
+declared in `_policies/08_Decisions.md`.
+
+**That split is a convention, not a gate.** `TDDLIST_EXCEPTION_UNRESOLVED_DR`
+reports an id declared in **neither** file: the validator reads both and
+resolves against their union, without checking which shape came from which
+file. A policy-level `DR-NNNN` parked in a spec's `07_Decisions.md` therefore
+resolves clean and nothing reports it. Follow the split because the wrong home
+hides a shared decision inside one spec, not because a validator will catch it.
+Do **not** write `07_Decisions.md` or `09_delta.md`.
 
 Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
 this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either
