@@ -7,7 +7,7 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 | Column    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001). Allocated per `#tdd-id-allocation` — never by guessing the next value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | TC-Refs   | References to test cases from `06_Test-Cases.md`. Belongs on `Layer = Unit` / `Component` / `Integration` rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Test file | Path to the test file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -15,6 +15,48 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | Status    | Current lifecycle status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses. A row swept out of `exception` by `exception -> todo` **keeps** the anomaly's `DR-*` — that is the only record of why it was parked. **A row that enters `exception` again records a new `DR-*` for the new anomaly**, appended, not substituted: the retained one documents an anomaly already resolved, and `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty and its tokens resolvable, so the stale id alone would pass the gate while the current anomaly has no Decision Record at all. Blank otherwise |
 | Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the evidence file this row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row (see "ATDD-owned rows"). **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                    |
+
+## TDD-ID allocation
+
+`TDD-NNNN` is spec-scoped and monotonic, so the next value is `max + 1`
+over every table in the file when authoring serially — including retired,
+`blocked` and `exception` rows — and comes from a block reserved under
+`## TDD-ID reservations` when authors run concurrently. The maximum ranges
+over the upper bound of every reservation bullet as well, and those bullets
+are never deleted: a consumed or abandoned block is closed in place
+(`- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`) so its
+end stays the permanent high-water mark. Drop the bullet and `max + 1` falls
+back into the block's unused tail, reissuing ids the gap was meant to retire
+and colliding with a block still being worked. A deleted row is tombstoned in
+that same section as a single-id bullet
+(`- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <ref>`):
+the Drift Protocol removes such a row rather than resetting it, so without the
+tombstone the id leaves the table and the next allocation reissues it. `<ref>`
+is a `CR-*` on the Drift Protocol path and the `UPDATE:REMOVE` Triage row's
+`Source` (`REQ-XXXX`) on the ordinary `/qfai-sdd` path, which raises no Change
+Request — demanding a `CR-*` there leaves nothing true to write and the
+tombstone gets skipped. An
+empty candidate set has a
+maximum of 0, so a freshly seeded ledger starts at `TDD-0001`; `TDD-9999` is
+the last legal id, because `TDD_ID_FORMAT` accepts exactly four digits — a
+spec that reaches the ceiling rolls over under an approval-required Triage
+row, SPLIT when it owns more than one `CAP-NNNN` and SUPERSEDE when it owns
+exactly one (a count-driven SPLIT of a single-capability spec is rejected at
+`error`), never allocated past. Both exits assume the ceiling came from
+churn; count the still-live rows to tell. Near 9999 they gain nothing — the
+successor reseeds to the same ceiling from the same obligations — and the
+answer is upstream scope, not allocation. Worktree
+separation is
+mandatory for parallel work (`constitution/workflow.md`), so a `max + 1` read
+taken inside one worktree is stale as soon as another appends, and
+`TDDLIST_DUPLICATE_ID` is an `error`: guessing locks out every writer but the
+last. Reserve the block on the shared branch **before** the worktrees split —
+it is a one-line bullet append, so it serializes where a batch of rows cannot.
+Never renumber an id that has already been written outside this ledger (a
+commit message, `.qfai/evidence/implement-*.md`, `.qfai/evidence/atdd-*.md`, a
+`DR-*` cross-reference); a merge does not rewrite those. Full rule, including
+the reservation bullet's shape and why it must not be a markdown table:
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`.
 
 ## Declared seam column (optional, required for parallel dispatch)
 
@@ -65,11 +107,57 @@ separate.
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
 `TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
 
+**Both columns are seeded, not hand-added.** `/qfai-sdd` Phase 2b writes one
+`Layer = E2E` row per active `US-*` and one `Layer = API` row per active
+`CON-API-*` the spec owns, and the shipped ledger template carries the two
+columns in its header for exactly that reason — a row of that layer with nowhere
+to record its obligation is unverifiable, and `validateObligationColumn` reads an
+absent column as "this row carries no such obligation". "Active" is the
+`test-layers.md` exemption: a spec with no user-facing surface owes no `US-*`
+row and a contract at `x-qfai-status: planned` owes no API row, so seeding
+either would park a completion-prohibiting row on a test that must not be
+written. **The surface half is itself conditional**: `QFAI-ATDD-111` is scoped
+by surface type **only in a project that declares at least one UI-bearing
+spec**. Where surface typing is unused the obligation stays project-wide, so
+every `US-*` is active and owes a row — reading that exemption unconditionally
+in such a project drops every E2E row and leaves the gate with nothing to
+clear it. And because that condition is a property of the **project**, a
+`/qfai-sdd` run that adds its first surface signal or removes its last re-runs
+the E2E-row delta over every spec's ledger, not only the spec it targeted.
+
+**A seeded acceptance row's `Test file` and `Selector` are `-` until Phase Red
+step 3b writes them.** Phase 2b seeds the row before the acceptance test exists
+and invents no path for it, and `/qfai-atdd` — which authors the test — never
+writes this ledger; so the path and selector first exist in that stage's handoff
+entry, as the row identity, and this skill copies both into the row in the same
+edit that moves it out of `todo`. That is why the `Test file` existence check
+below starts at `green` and not at `todo`: a seeded row legitimately has no test
+file yet. Naming no writer for the two cells left them at `-` for the row's
+whole life, so the row could be selected, handed over and never run.
+
 The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
 so a forbidden placement cannot close a coverage-target TC.
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` likewise rejects a `US-Refs` /
-`CON-API-Refs` value on a layer that does not own it.
+`CON-API-Refs` value on a layer that does not own it, and — on a ledger whose
+header carries the column — an `E2E` / `API` row that leaves it empty or `-`.
+That last direction is what stops a seeded obligation row from reaching `done`
+with nothing recorded: `TC-Refs` is forbidden on it, so an empty obligation
+cell leaves the row with no auditable target at all. It fires only where the
+column exists, so an eight-column ledger written before these columns shipped is
+a legacy shape, not an error.
+
+**A legacy ledger needs a reader rule, not only that waiver.** Its `E2E` / `API`
+rows recorded their `US-*` / `CON-API-*` in `TC-Refs`, the only cell they had;
+waiving the validator alone leaves such a row selectable but with nothing in the
+column Phase Red step 3 and the per-item evidence contract read, so it stops at
+the handoff. Until the columns exist, read a non-`TC-*` obligation token in
+`TC-Refs` as that row's obligation — the row's `Layer` says which kind it is —
+and record it as the `US-ref` / `CON-API-ref` the evidence contract names. This
+fallback is for reading an existing ledger, never for writing one: the next
+`/qfai-sdd` Phase 2b reseed migrates the ledger, adding both columns and moving
+each token into the one its `Layer` owns as a cell move that keeps `Status`,
+`DR-ID` and `Evidence`.
 
 A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
 without a legal `Layer` the row has no obligation column. Coverage counting
@@ -137,10 +225,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                          | Severity            |
-| ------------------------------ | ------------------------------------------------------------------- | ------------------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | warning, then error |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning             |
+| Finding                        | Fires when                                                                              | Severity            |
+| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
+| `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -170,6 +260,13 @@ retained, then point the cell at that entry. The cell stays a pointer — prose
 about a missing run is a payload, and the section above says why a payload in
 the cell corrupts the ledger.
 
+`QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
+code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
+check hangs off the anchor, so a `done` row whose cell is only an outcome —
+command-shaped, so the status-only rule passes over it — claimed completion with
+no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
+failing on warnings; one still migrating waives it per path.
+
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
 `TDDLIST_EXCEPTION_MISSING_DR` gates.
@@ -180,15 +277,18 @@ with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
 A pointer cell satisfies these rules: the `evidence at <path>` form carries a
 path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer.
+bare verdict, not a pointer. The pointer is also resolved against the file its
+row `Layer` owns; a file that exists only on the machine that produced it does
+not satisfy the gate on a fresh clone.
 
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
 as a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
-independently observable boundary per selector entry**, with RED observed per entry, and a
+independently observable boundary per row**, with RED observed per selector entry, and a
 matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
-`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
+`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. If you
+cannot name the single boundary that every selector entry on a row observes, split the row. Rules
 and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
@@ -305,7 +405,17 @@ RED question different rather than absent.
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
 no backend or frontend agent. The surface a journey needs is built by this
-skill's Phase Green, from the RED that stage handed over. What makes the RED
+skill's Phase Green, from the RED that stage handed over.
+
+**Who writes the production code for an E2E/API row.** Normally nobody writes
+it _for that row_: the behaviour the journey exercises is delivered by the same
+spec's `TC-*` rows, which this skill executes on their own micro-cycles. The
+E2E/API row is a **coverage obligation** — it asserts that the delivered
+behaviour is reachable end to end, or that the contract is exercised — not the
+sole carrier of a feature. Reading it as the carrier leaves the row with no
+implementer, because `/qfai-atdd` has no production agent. Where the journey
+does reach a gap no TC row covers, Phase Green of **this** row closes it, and
+`red-not-observable.md`'s falsifiability path is what supplies the RED. What makes the RED
 question different there is ordering, not ownership: the work orders that build
 a spec's surfaces often run before the journey is written, and a test written
 after its surface passes on the first run. So:
@@ -373,9 +483,21 @@ When transitioning to `exception`:
 
 ### Where the Decision Record is written
 
-Write it to `.qfai/decisions/DR-<id>-<slug>.md`, beside the Change
-Requests, using the same `DR-*` ID scheme those files declare. Do **not** write
-`07_Decisions.md` or `09_delta.md`.
+Write it beside the Change Requests as
+`.qfai/decisions/DR-NNNN-MMMM-<slug>.md` when the anomaly is spec-scoped, or
+`.qfai/decisions/DR-NNNN-<slug>.md` when it is policy-level — never the CR's
+date form. The two shapes have different declaration homes, and the anomaly's
+scope picks the one it belongs in: a spec-scoped `DR-NNNN-MMMM` is
+declared in that spec's `07_Decisions.md`, and a policy-level `DR-NNNN` is
+declared in `_policies/08_Decisions.md`.
+
+**That split is a convention, not a gate.** `TDDLIST_EXCEPTION_UNRESOLVED_DR`
+reports an id declared in **neither** file: the validator reads both and
+resolves against their union, without checking which shape came from which
+file. A policy-level `DR-NNNN` parked in a spec's `07_Decisions.md` therefore
+resolves clean and nothing reports it. Follow the split because the wrong home
+hides a shared decision inside one spec, not because a validator will catch it.
+Do **not** write `07_Decisions.md` or `09_delta.md`.
 
 Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
 this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either
