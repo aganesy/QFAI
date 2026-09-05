@@ -9,6 +9,7 @@ import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
 import { changedFilesSince } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
+import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
   maskNonSpecRegions,
   parseFirstMarkdownTable,
@@ -2743,7 +2744,28 @@ function tcNotCoveredWithoutLedger(
   ];
 }
 
-export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
+/**
+ * Options shared by {@link validateTddList} and {@link validateTddListSeedShape}.
+ */
+export type TddListValidateOptions = {
+  /**
+   * Restricts the walk to the named specs.
+   *
+   * Every finding this validator raises is filed against a path inside the
+   * spec that owns it, so the run-level `--spec` filter already drops the rest
+   * — but only *after* each out-of-scope ledger has been read and each of its
+   * completed rows `stat`-ed. `/qfai-sdd` gates every slice with its own
+   * `--spec` run, so an unscoped walk turns that loop quadratic in spec count.
+   * Narrowing the enumeration keeps the output identical and the I/O linear.
+   */
+  specScope?: SpecScope;
+};
+
+export async function validateTddList(
+  root: string,
+  config: QfaiConfig,
+  options: TddListValidateOptions = {},
+): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   // Repo-relative, for a `git diff` pathspec. `QFAI-TDDLIST-009` asks whether
   // anything the observation covered has moved, and the code under test is
@@ -2756,6 +2778,7 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   const issues: Issue[] = [];
 
   for (const entry of entries) {
+    if (!isSpecInScope(entry.specNumber, options.specScope)) continue;
     const specIssues = await validateSpecTddList(
       root,
       entry.dir,
@@ -2867,6 +2890,136 @@ export function staleEvidenceFiles(
     (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
   );
   return covered.length > 0 ? covered : null;
+}
+
+/**
+ * The codes that describe the ledger's **seed shape** — the state
+ * `/qfai-sdd` Phase 2b leaves behind and can therefore be held to.
+ *
+ * Every other code in this validator describes execution state that only
+ * exists once `/qfai-implement` has driven rows (evidence, test files, stale
+ * status, parked exceptions), so those stay in the `tdd` profile alone: the
+ * SDD stage neither creates nor owns them.
+ */
+export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
+  "TDDLIST_TABLE_MISSING",
+  "TDDLIST_REQUIRED_COLUMN_MISSING",
+  "TDDLIST_DUPLICATE_ID",
+  "TDDLIST_INVALID_ID",
+  "TDDLIST_INVALID_STATUS",
+  "TDDLIST_UNKNOWN_LAYER",
+  "TDDLIST_UNKNOWN_LEVEL",
+  "TDDLIST_TC_NOT_COVERED",
+  // `Owning module` is filled at ledger-authoring time — Phase 2b, from the
+  // TC's parent `BR` (`qfai-implement/references/execution-ledger.md`) — so a
+  // cell naming two modules is damage the seed owns, not execution state.
+  // Leaving it out held the row to the `tdd` profile alone, i.e. the writer
+  // passed its own gate and the reader inherited an `error` it is forbidden to
+  // fix by restructuring the ledger.
+  "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+  // `US-Refs` / `CON-API-Refs` and the `Layer` they have to agree with are all
+  // authored by the same phase: the traceability rules give the SDD stage "the
+  // rows — which obligations exist and what each covers" and leave the
+  // implementing stage `Status`, `DR-ID` and `Evidence` alone. A malformed
+  // obligation ID, or one recorded on a Layer that cannot legally carry it, is
+  // therefore seed damage; and re-scoping a row to repair it is an upstream
+  // change the reader is forbidden to make.
+  "TDDLIST_INVALID_OBLIGATION_REF",
+  "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  // The remaining three read cells the same phase authors, and were missing
+  // for no reason the ownership split supports:
+  //
+  // - `TDDLIST_MISSING` is the absence of the file Phase 2b's first checklist
+  //   line creates. Nothing downstream can create it.
+  // - `TDDLIST_UNKNOWN_REF` is a `TC-Refs` token naming no declared TC.
+  //   `TC-Refs` carries the row's obligation identity, which the traceability
+  //   rules keep upstream: the reader may not re-point it.
+  // - `TDDLIST_COVERAGE_LAYER_MISMATCH` compares a TC's `Level` against the
+  //   `Layer` of the rows citing it. Both sides are seed-authored — `Level` in
+  //   `06_Test-Cases.md`, `Layer` in the row — and reconciling them is a
+  //   re-scope, which is an upstream change.
+  //
+  // All three are `warning`, so they never blocked `--fail-on error`; they did
+  // let a malformed seed through `--strict` on the writer's own gate.
+  "TDDLIST_MISSING",
+  "TDDLIST_UNKNOWN_REF",
+  "TDDLIST_COVERAGE_LAYER_MISMATCH",
+]);
+
+/**
+ * The seed-shape codes that a spec with **no ledger yet** raises anyway.
+ *
+ * The two sides are written by different phases of the same run: the Slice
+ * phase produces the test cases, and only the phase after it seeds a ledger
+ * row per coverage-target TC. A gate placed between them therefore sees TCs
+ * with no row, and no file to hold them, *by construction*. Everything else in
+ * {@link TDD_LIST_SEED_SHAPE_CODES} is a property of the ledger text itself —
+ * an absent ledger raises none of them.
+ */
+export const TDD_LIST_SEED_RECONCILIATION_CODES: ReadonlySet<string> = new Set([
+  "TDDLIST_TC_NOT_COVERED",
+  "TDDLIST_MISSING",
+]);
+
+/** Options for {@link validateTddListSeedShape}. */
+export type TddListSeedShapeOptions = TddListValidateOptions & {
+  /**
+   * Set on a gate the workflow can reach before the ledger has been seeded,
+   * which drops {@link TDD_LIST_SEED_RECONCILIATION_CODES} **for the specs
+   * that have no ledger yet**.
+   *
+   * Without it the SDD profile's own per-spec slice gate — which the skill's
+   * Required Process places one step ahead of the phase that writes
+   * `tdd/test-list.md` — failed with `TDDLIST_TC_NOT_COVERED` (`error`) on
+   * every newly sliced spec that declares a unit or component test case. That
+   * gate has to pass before the seeding phase runs, so the workflow could
+   * never reach the phase that would have cleared it.
+   *
+   * It is deliberately a permission, not a verdict. The caller sets it from
+   * the *position* it might be in, and the per-spec state decides: a spec whose
+   * ledger exists is reconciled whatever this says. Dropping the codes on the
+   * caller's word alone made `--spec` mean "before Phase 2b", so re-checking a
+   * single **seeded** spec passed with rows missing.
+   */
+  beforeLedgerSeed?: boolean;
+};
+
+/**
+ * `validateTddList` restricted to {@link TDD_LIST_SEED_SHAPE_CODES}.
+ *
+ * The phase that writes `tdd/test-list.md` was not the phase that validated
+ * it: `--profile sdd` — the only gate `/qfai-sdd` stops on — ran no
+ * `TDDLIST_*` check at all, so a ledger seeded at Phase 2b with a duplicate
+ * `TDD-ID`, a missing required column, a stray table above the ledger table or
+ * a coverage-target TC with no row exited that stage green and surfaced in
+ * `/qfai-implement`, on the one agent the drift protocol forbids to restructure
+ * the ledger. The whole validator cannot run there — most of it reports
+ * execution state the SDD stage has not reached yet — so the writing stage is
+ * held to the shape it wrote, and nothing more.
+ *
+ * `beforeLedgerSeed` narrows that further for a gate the workflow can reach
+ * before the seed exists, and only for the specs that are actually unseeded;
+ * see {@link TddListSeedShapeOptions}.
+ */
+export async function validateTddListSeedShape(
+  root: string,
+  config: QfaiConfig,
+  options: TddListSeedShapeOptions = {},
+): Promise<Issue[]> {
+  const issues = await validateTddList(root, config, options);
+  // Which specs have no ledger yet, read off the run's own findings:
+  // `TDDLIST_MISSING` is raised on exactly that condition and carries the
+  // ledger path every other code in this validator reports against. Deciding
+  // it here rather than in the caller keeps "is this spec seeded?" a fact
+  // about the tree instead of an inference from the command line.
+  const unseeded = new Set(
+    issues.filter((entry) => entry.code === "TDDLIST_MISSING").map((entry) => entry.file),
+  );
+  return issues.filter((entry) => {
+    if (!TDD_LIST_SEED_SHAPE_CODES.has(entry.code)) return false;
+    if (!TDD_LIST_SEED_RECONCILIATION_CODES.has(entry.code)) return true;
+    return !(options.beforeLedgerSeed === true && unseeded.has(entry.file));
+  });
 }
 
 async function validateSpecTddList(

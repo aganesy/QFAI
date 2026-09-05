@@ -1144,15 +1144,22 @@ function buildProjectSteeringEntryTemplate(): string {
   ]);
   return [
     "---",
-    "id: 2026-MM-DD-kebab-case-id   # required; kebab-case ASCII; matches filename stem",
-    "status: active                 # required; enum: active | handoff | archived",
-    "kind: decision                 # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
-    "created: YYYY-MM-DD            # required; ISO-8601 date",
-    "updated: YYYY-MM-DD            # required; ISO-8601 date; >= created",
-    'scope: global                  # required; "global" or "spec-NNNN"',
-    "blocking: false                # required; boolean",
-    'promote-to: null               # required; "spec-NNNN/07_Decisions.md" or null',
-    "links: []                      # required; array (may be empty)",
+    // ONE space before each `#`, not a padded column. The alignment reads better in
+    // this source and does not survive contact with a formatter: Prettier collapses a
+    // run of spaces before a YAML trailing comment, so the first `prettier --write`
+    // over an adopter's tree rewrites a file the adopter never touched. The seed is
+    // create-only and re-init compares it byte for byte, so from then on every run
+    // reports `_templates/entry.md differs from the seed this qfai release generates`
+    // — a drift notice about the formatter, printed forever, on a file nobody edited.
+    "id: 2026-MM-DD-kebab-case-id # required; kebab-case ASCII; matches filename stem",
+    "status: active # required; enum: active | handoff | archived",
+    "kind: decision # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
+    "created: YYYY-MM-DD # required; ISO-8601 date",
+    "updated: YYYY-MM-DD # required; ISO-8601 date; >= created",
+    'scope: global # required; "global" or "spec-NNNN"',
+    "blocking: false # required; boolean",
+    'promote-to: null # required; "spec-NNNN/07_Decisions.md" or null',
+    "links: [] # required; array (may be empty)",
     "---",
     "",
     "# Title of the entry",
