@@ -495,10 +495,6 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
-  // its canonical spelling. Both are listed because the legacy family is frozen
-  // and every code the gate gains from here on is canonical.
-  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*", "QFAI-TRACE-*"],
   // The downstream-ownership gate, and the only group `full` does NOT run.
   //
   // `/qfai-sdd` owns the protected files and edits them without a Change
@@ -512,7 +508,14 @@ export const GATE_GROUP_FAMILIES = {
   // unevaluated, so a `full` PASS looked drift-checked to an operator following
   // `QFAI-PROFILE-001`'s own advice (#1122).
   drift: ["QFAI-DRIFT-*"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*"],
+  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
+  // its canonical spelling. Both are listed because the legacy family is frozen
+  // and every code the gate gains from here on is canonical.
+  //
+  // `QFAI-TRACE-*` is deliberately NOT here: the three `traceability-*` groups
+  // below split that prefix, and leaving the glob would count every trace code
+  // in two groups at once.
+  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*"],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
@@ -573,10 +576,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // `drift`: `runTddValidators` passes `includeUpstreamGuard = true` here and
   // `runFullValidators` passes `false`, so this is the only profile that
   // evaluates `QFAI-DRIFT-*`.
-  tdd: ["tdd", "atdd-traceability", "drift"],
   tdd: [
     "tdd",
     "atdd-traceability",
+    "drift",
     "traceability-ledger",
     "traceability-impl-drift",
     "traceability-layered",
