@@ -428,9 +428,11 @@ canonical layout for this artifact — copy it, keep every `##` heading in order
 
 Required sections, in order (the template is authoritative if the two ever disagree): Objective,
 Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
-Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
-Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
-`shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
+Decisions made, Work performed, Contract executability, Commands executed, Validate evidence paths,
+Work Orders Summary, Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column
+schema from `shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only
+`PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
+`db/` contract this cycle authored or changed (`QFAI-CONTRACT-031`), or `- none`.
 
 ## Done Declaration
 

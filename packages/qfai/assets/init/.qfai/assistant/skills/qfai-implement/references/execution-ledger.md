@@ -243,9 +243,10 @@ not satisfy the gate on a fresh clone.
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
 as a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
-independently observable boundary per selector entry**, with RED observed per entry, and a
+independently observable boundary per row**, with RED observed per selector entry, and a
 matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
-`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
+`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. If you
+cannot name the single boundary that every selector entry on a row observes, split the row. Rules
 and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
