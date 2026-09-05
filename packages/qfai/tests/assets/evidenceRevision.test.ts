@@ -89,10 +89,10 @@ describe("evidence and verdicts carry a revision", () => {
       );
       expect(skill).not.toContain("once more for the refactor-verify pair");
       expect(skill).toContain(
-        "`Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision`",
+        "`Spec review` — completion-reviewer result (PASS or REVISE), recorded with the unambiguous sibling fields `Spec reviewed revision`, `Spec audited evidence hash`, `Spec review pack`, and `Spec review pack seal`",
       );
       expect(skill).toContain(
-        "`Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision`",
+        "`Code quality review` — implementation-reviewer result (PASS or REVISE), with the parallel sibling fields `Code quality reviewed revision`, `Code quality audited evidence hash`, `Code quality review pack`, and `Code quality review pack seal`",
       );
     });
 
