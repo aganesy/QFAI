@@ -26,11 +26,37 @@
   ドライバ `scripts/check-mdschema.mjs` は `qfai.config.yaml` の
   `paths.specsDir` を読み、`--scope changed|all|files` で適用範囲を切り替える。
 
+- **配布ワークフロー `qfai-docs.yml`。** `qfai init` が adopter の
+  `.github/workflows/` に書く 3 本目。上の 2 レーンを adopter の CI でも走らせる
+  — ドライバもスキーマもインストール済みパッケージから読むので、QFAI 自身が
+  自分の spec に当てているのと同じ規則が動く。specs ディレクトリが無いツリーでは
+  「0 件を検査した」と述べて exit 0 する (何も検査せずに緑を出さない)。
+  `SHIPPED_WORKFLOW_NAMES` / 構造ゲート / lane-command 許可リスト /
+  provenance / init-path 各列挙に登録済み。
+
+### Changed
+
+- **spec / `_policies` の表記揺れを正典へ収束。** `10_Plan.md` は
+  実装戦略・`1. Implementation Strategy`・`Implementation Strategy`・
+  `Implementation approach` の 4 系統が混在していた。`_policies` の
+  3 ファイルは日本語見出しのまま残っていた。見出しリネームとコンテナ節の
+  追加が中心で、`Test approach` / `Risk mitigation` など実際に欠けていた節は
+  各 spec 自身の材料 (証明しているテスト、実在する順序制約) から起こした。
+  `AC_ID` → `AC-ID`、`# 09 delta` → `# 09 Delta` 等の ID・タイトル表記も統一。
+  結果として 185 文書すべてがスキーマに適合する。
+
 ### Fixed
 
 - **`.qfai/specs/spec-0010/01_Spec.md` に欠けていた `## Evidence Summary`
   節を追加。** 新設の spec スキーマが検出したもので、これで 17 本すべての
   `01_Spec.md` がテンプレート構造に適合する。
+
+- **配布テンプレート `09_delta.md` の `### Plan` ブロックが未フェンスの
+  YAML だった問題。** 2 スペース字下げの `# comment` は CommonMark 上は
+  正当な ATX 見出しなので、テンプレートは自身のコメントを GitHub 上で
+  最上位見出しとして描画していた。`parseVerificationPlan` がフェンス付き
+  ブロックを読むようにし (無い場合は従来どおり本文をそのまま読む)、
+  テンプレートをフェンス化した。既存の未フェンス delta は影響を受けない。
 
 - **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
   取り除くようにした。** このマーカーはパッケージ内で出荷アセット 2 本にしか

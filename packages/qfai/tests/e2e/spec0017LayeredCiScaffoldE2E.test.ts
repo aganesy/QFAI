@@ -1227,7 +1227,12 @@ describe(
       const files = (await readdir(dir)).filter((f) => /\.ya?ml$/.test(f)).sort();
       expect
         .soft(files, "layer separation must not arrive as one workflow file per layer")
-        .toEqual([ORCHESTRATOR, "qfai-validate.yml"]);
+        // The whole set, not just the orchestrator: the claim is that no test
+        // LAYER got a file of its own, and only an exhaustive list can say that.
+        // `qfai-docs.yml` is not a layer — it checks document shape and diagram
+        // syntax, runs no test, and declares no lane — so it adds a check name
+        // that an adopter's branch protection sees once rather than five times.
+        .toEqual(["qfai-docs.yml", ORCHESTRATOR, "qfai-validate.yml"]);
     });
   },
 );

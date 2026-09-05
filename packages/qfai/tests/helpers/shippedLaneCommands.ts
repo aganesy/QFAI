@@ -1102,6 +1102,19 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // list is FOR: each shipped use is now written down, and a sixth would fail this list rather than
   // arrive under a program name.
   "git rev-parse",
+  // The document lane's two checkers, named to the FILE rather than allowed as
+  // `node <anything>`.
+  //
+  // `node` alone is on this list for `node -e <payload>` only, because a payload
+  // is opaque to any scan and a bare `node build.mjs` is a real build. These two
+  // are the opposite case: the path is fixed, it points inside the INSTALLED
+  // PACKAGE rather than at anything in the adopter's tree, and the bytes at that
+  // path are this repository's — pinned by `ALLOWED_INIT_SOURCE_ASSETS` on the
+  // way in and by `qfai doctor`'s integrity check afterwards. Writing the two
+  // paths out keeps the general refusal intact: a third checker, or the same
+  // program under a path an adopter controls, still fails this list.
+  "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
+  "node node_modules/qfai/assets/scripts/check-mermaid.mjs",
 ]);
 
 /** Actions a shipped lane may use, and the input keys they may be given. */
@@ -1152,9 +1165,17 @@ export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
     "qfai-validate.yml",
     '{"name":"qfai validate","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
   ],
+  [
+    "qfai-docs.yml",
+    '{"name":"qfai docs","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
+  ],
 ]);
 
 export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"qfai docs (document shape and Mermaid syntax)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":15}',
+  ],
   [
     "qfai-tests.yml#detection",
     '{"name":"change detection","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
@@ -1211,6 +1232,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
   ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
+  ["qfai-docs.yml", "d5c82db4a51e7f5923a930660cbc2805bed62feb4b71104cb9b7e4c92fec3d5d"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1239,6 +1261,7 @@ export function fileDigest(raw: Buffer): string {
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
+  ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
   ".gitignore",
@@ -1403,6 +1426,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.github/workflows/qfai-docs.yml",
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
   "root/DESIGN.md",
@@ -1599,6 +1623,46 @@ export function initMustNotShip(
  * naming the rule rather than a diff of two JSON blobs.
  */
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 40fe24c29a485dc5d462406646b7643a05f5ab2227b9c60a559c9d997b42e7a7>"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)","if":"${{ hashFiles(\'pnpm-lock.yaml\') != \'\' }}","uses":"pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body ef4d36759a58da6e28134d1f67caf0596e88d7509a7d340a1602fa8bb40140d8>"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Choose a package-manager cache setup-node can actually resolve","id":"node-cache","shell":"bash","run":"<body 8531578b6eba24fc357402381471266984ad26a65f864cb15d4a1f17c7054e1f>"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body a01a22aea86949331e27fdf13eef7fcfddeada4edfeda0b10af48c1e674dfd02>"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body e915a4ba1f166d1dca656244dfe099dbbee79e5270730fac595ca9e0136a411f>"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Check SDD document shape","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+  ],
+  [
+    "qfai-docs.yml#docs",
+    '{"name":"Check Mermaid diagram syntax","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
+  ],
   [
     "qfai-tests.yml#detection",
     '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
@@ -1819,6 +1883,25 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * running arbitrary code, via that package's install scripts. `corepack enable` is here for the same
  * reason: with an argument it enables a named package manager version.
  */
+/**
+ * The exact package sets a shipped lane may install as TOOLS OF ITS OWN.
+ *
+ * `TAKES_NO_PACKAGE` refuses `npm install <package>` because that is how an
+ * arbitrary program reaches an adopter's runner. The document lane needs three
+ * named ones, so they are written down here rather than the refusal being
+ * relaxed: `npm install left-pad` still fails, and so does the same lane
+ * fetching a fourth package or a different version of one of these three.
+ *
+ * Keyed by the whole package list, in the order the command writes it, so a
+ * reordering is a change a reviewer reads too — the string is the thing being
+ * approved. Versions are exact for the same reason the file digests are: an
+ * unpinned install fetches whatever the registry calls latest at the moment the
+ * job runs, and these three programs produce the lane's verdict.
+ */
+export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
+  "@jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1",
+]);
+
 const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
   "npm install",
   "npm ci",
@@ -1841,12 +1924,22 @@ const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
 const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["corepack enable", new Set<string>()],
   ["npm ci", new Set<string>()],
-  ["npm install", new Set(["--no-audit", "--no-fund"])],
+  // `--no-save` and `--registry` are the document lane's tool install. `--no-save`
+  // is what makes it a tool install rather than a project one — it records
+  // nothing in the adopter's manifest — and `--registry` names WHERE the pinned
+  // versions come from, which a version alone does not say: npm resolves its
+  // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc` otherwise.
+  ["npm install", new Set(["--no-audit", "--no-fund", "--no-save", "--registry"])],
   ["pnpm install", new Set(["--frozen-lockfile"])],
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
   ["yarn", new Set(["--version"])],
   ["npx qfai", new Set(["--profile", "--fail-on"])],
   ["node", new Set(["-e"])],
+  // The document lane's checkers. `--scope all` is what makes the lane check the
+  // whole tree rather than a diff (an adopter's CI has no ratchet to apply), and
+  // `--summary` prints the per-document-type result the lane's log is read for.
+  ["node node_modules/qfai/assets/scripts/check-mdschema.mjs", new Set(["--scope", "--summary"])],
+  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set<string>()],
   // `--no-renames` joins `--name-only` because the shipped detection lane needs both: with rename
   // detection ON git reports only the DESTINATION of a move, so `src/x.ts` -> `docs/x.md` arrives as
   // one documentation path and the source half selects no lane. It is a reporting flag — it cannot
@@ -2139,18 +2232,39 @@ export function refusals(body: string): string[] {
     if (program === "node") {
       const eval_at = tokens.indexOf("-e");
       if (eval_at === -1) {
-        out.push("node without -e (it would read its program from stdin)");
-        continue;
-      }
-      const payload = tokens.slice(eval_at + 1).join(" ");
-      if (!ALLOWED_NODE_PAYLOADS.has(payloadDigest(payload))) {
-        out.push(`node -e <payload ${payloadDigest(payload).slice(0, 12)}…>`);
-        continue;
+        // …unless the invocation names a FILE the list enumerates. `node` on its
+        // own is the stdin case this refuses; `node <one of the two packaged
+        // checkers>` is a different act with a fixed target, and the two-token
+        // entry that admits it names the path in full. A `node` with any other
+        // argument resolves to an invocation nobody enumerated and is refused
+        // one branch above, before this one runs.
+        if (invocation === "node") {
+          out.push("node without -e (it would read its program from stdin)");
+          continue;
+        }
+        // An enumerated file invocation carries no payload to digest.
+      } else {
+        const payload = tokens.slice(eval_at + 1).join(" ");
+        if (!ALLOWED_NODE_PAYLOADS.has(payloadDigest(payload))) {
+          out.push(`node -e <payload ${payloadDigest(payload).slice(0, 12)}…>`);
+          continue;
+        }
       }
     }
     // The two-token prefix's blind spot, closed where a third token changes the act.
     if (TAKES_NO_PACKAGE.has(invocation) && bareArgumentsOf(command).length > 1) {
-      out.push(`${invocation} + ${bareArgumentsOf(command).slice(1).join(" ")}`);
+      const packages = bareArgumentsOf(command).slice(1).join(" ");
+      // `--no-save` is required as well as the enumerated list, and it is not
+      // redundant: it is what makes the install a TOOL install — nothing is
+      // recorded in the adopter's manifest — so the same package list without
+      // it, which would edit their dependencies, is still refused.
+      const enumeratedToolInstall =
+        invocation === "npm install" &&
+        tokens.includes("--no-save") &&
+        ALLOWED_TOOL_INSTALLS.has(packages);
+      if (!enumeratedToolInstall) {
+        out.push(`${invocation} + ${packages}`);
+      }
     }
   }
   return out;

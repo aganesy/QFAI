@@ -116,8 +116,13 @@ export default [
     ...tseslint.configs.disableTypeChecked,
   },
   // Scripts – allow console
+  //
+  // Both trees, because the guards live in `assets/` and are DELEGATED to from
+  // `scripts/`: the implementation ships so an adopter's CI lane runs the same
+  // file, and a console line is how a CI lane reports. Listing only the root
+  // tree would have made the shipped copy the one place the rule bites.
   {
-    files: ["scripts/**/*.{js,mjs,cjs}"],
+    files: ["scripts/**/*.{js,mjs,cjs}", "packages/qfai/assets/scripts/**/*.mjs"],
     rules: {
       "no-console": "off",
     },

@@ -66,13 +66,24 @@ const SETUP_PNPM_ACTION = "pnpm/action-setup@";
 const INSTALL_RUN_RE = /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/;
 
 /**
- * A validator INVOCATION, i.e. the command that reports a lane result. The
- * runner prefix is required on purpose: the resolution steps below log lines
- * that start with the workflow's own name (`qfai validate: …`), and a bare
- * `qfai validate` substring would match those logs and misidentify a
- * resolution step as the lane result.
+ * An invocation that REPORTS A LANE RESULT — the command whose exit code is the
+ * lane's verdict, as opposed to the resolution and install steps that only
+ * prepare for it.
+ *
+ * The runner prefix on the first alternative is required on purpose: the
+ * resolution steps below log lines that start with the workflow's own name
+ * (`qfai validate: …`), and a bare `qfai validate` substring would match those
+ * logs and misidentify a resolution step as the lane result.
+ *
+ * The second alternative is the document lane. Its verdict comes from the
+ * checkers the package ships rather than from a QFAI subcommand, so a pattern
+ * that only knew `qfai <subcommand>` read that lane as having no result at all
+ * — and every ordering assertion built on this regex would then have run over
+ * nothing while reporting green. Anchored to the packaged path, so a `node`
+ * invocation of some other program is still not a lane result.
  */
-const QFAI_LANE_RE = /^\s*(?:npx|pnpm|yarn|npm)\s+(?:exec\s+|dlx\s+|run\s+)?qfai\s+validate\b/;
+const QFAI_LANE_RE =
+  /^\s*(?:(?:npx|pnpm|yarn|npm)\s+(?:exec\s+|dlx\s+|run\s+)?qfai\s+validate\b|node\s+node_modules\/qfai\/assets\/scripts\/check-[a-z-]+\.mjs\b)/;
 
 /** A bash diagnostic line, i.e. an aborted command rather than a chosen exit. */
 const BASH_DIAGNOSTIC_RE = /: line \d+: |command not found|unexpected|syntax error/;

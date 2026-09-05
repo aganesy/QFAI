@@ -146,6 +146,15 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     ],
     lanes: [{ jobId: "validate", kind: "never-inert" }],
   },
+  {
+    // The document-shape and Mermaid lane. It invokes no QFAI subcommand — the
+    // two checkers it runs are `node` programs out of the installed package, so
+    // dimension 5 has no subject here, which the shape states rather than
+    // inventing a value for.
+    name: "qfai-docs.yml",
+    invocations: [],
+    lanes: [{ jobId: "docs", kind: "never-inert" }],
+  },
 ];
 
 /** Dimension 2: the header rows the contract names, by display label. */

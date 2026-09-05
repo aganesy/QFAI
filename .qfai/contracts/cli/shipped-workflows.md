@@ -204,12 +204,20 @@ call:
    target would turn the referencing workflow into a parse error with no repair
    path under create-only install).
 
-For the one file that ships today, dimension 5 resolves to subcommand
-`validate`, profile `full`, threshold `error`. Those three values are asserted
-today as ad-hoc strings in `packages/qfai/tests/assets/assets.test.ts`
-(`DTC-26`); the gate **subsumes and replaces** those assertions rather than
-running alongside them, and the moved assertions keep their test-case
-annotation.
+Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
+where it resolves to subcommand `validate`, profile `full`, threshold `error`.
+Those three values are asserted today as ad-hoc strings in
+`packages/qfai/tests/assets/assets.test.ts` (`DTC-26`); the gate **subsumes and
+replaces** those assertions rather than running alongside them, and the moved
+assertions keep their test-case annotation.
+
+The other two shipped files invoke no QFAI subcommand — the test orchestrator's
+lanes are placeholders, and the document lane runs the two checkers the package
+ships as `node` programs. For them the declared shape states an EMPTY invocation
+list rather than a value, because "this file has no lane result to pin" is an
+answer to dimension 5 and an omission is not. A file that gained a QFAI
+invocation without gaining an entry would fail the gate, which is the property
+the empty list buys.
 
 Gate placement is part of the contract: the gate runs from `pnpm ci:lint`,
 which pull requests execute. It must not be placed in `pnpm ci:gate`, which
