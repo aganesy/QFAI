@@ -810,10 +810,7 @@ const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
  * a file-wide finding with no `dl_id`; `waivers.ts#matchesWaiver` lets a
  * `scope.paths` waiver reach exactly those.
  */
-function buildDeltaScanIssues(
-  gaps: readonly ReportDeltaScanGap[],
-  toolVersion: string,
-): Issue[] {
+function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[], toolVersion: string): Issue[] {
   // Decided here rather than passed in: the ratchet in `sunsetLedger.test.ts`
   // reads the emission site, and a severity chosen anywhere else is a window
   // that never opens.
