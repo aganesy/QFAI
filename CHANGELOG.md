@@ -22,9 +22,10 @@
 
   ledger は 488 → 413 行になり、次の追加のための余裕ができた。
 
-  移動したテキストを検証していた `tddLedgerTemplate.test.ts` の 6 箇所は、
-  緩めるのではなく**新しい surface に向け直した**。検証内容は変えていないので、
-  その文が出荷ツリーから消えれば従来どおり落ちる。
+  移動したテキストを検証していた 2 つの suite — `tddLedgerTemplate.test.ts` の
+  6 箇所と `tddListObligationColumns.test.ts` の 3 箇所 — は、緩めるのではなく
+  **新しい surface に向け直した**。検証内容は変えていないので、その文が出荷
+  ツリーから消えれば従来どおり落ちる。
 
 ### Fixed
 
