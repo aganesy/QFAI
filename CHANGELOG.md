@@ -32,6 +32,16 @@
   は carrier 検出パターンそのものなので、`#` 規則が食べないことをテストで
   固定している。
 
+- **`.qfai/steering/_templates/entry.md` の seed が formatter を通ると必ず drift
+  するのをやめた。** frontmatter の trailing comment を桁揃えしていたが、Prettier は
+  YAML の `#` 直前の連続スペースを潰す。seed は create-only で、re-init は seed と
+  byte 単位で突き合わせるため、adopter が一度でも `prettier --write` を掛けると
+  **本人が触っていないファイルについて** `_templates/entry.md differs from the seed
+this qfai release generates` が以後ずっと出続ける。毎回出る通知は読み飛ばされる
+  ようになり、本物の seed 変更を伝えるという通知本来の役目が失われる。
+
+  桁揃えをやめ、`#` の前を 1 スペースに統一した。コメントの中身は変えていない。
+
 - **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
   git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
   だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
@@ -46,6 +56,55 @@
 
   拒否した pack は `kept-tracked=N` として数え、pack ごとに理由を出力する。
   黙って何もしないと `archived=0` が「TTL がまだ切れていない」と読まれる。
+
+### Added
+
+- **依存更新 PR を GitHub 上で自動生成する仕組み。** `.github/workflows/renovate.yml`
+  が週次 (Asia/Tokyo の月曜 6 時前) と手動 dispatch で Renovate を回し、
+  `.github/renovate.json5` が何をどうまとめるかを持つ。設定手順は
+  `.github/renovate.md`。
+
+  **Renovate GitHub App ではなく self-hosted。** App の設定は github.com 側に
+  あってリポジトリのレビューを通らない。このリポジトリに書き込む他の仕組みは
+  すべて SHA pin 済みの workflow なので、bot も同じ扱いにした。
+
+  **job が 2 つあるのは #1161 が理由である。** action の SHA を書き換えるだけでは
+  済まない: `.github/actions/setup/action.yml` は `.github/pinned-bytes.txt` に
+  sha256 で pin され、その list の digest は `ci.yml` に、その step の body は
+  `.github/required-status-contexts.json` に入っている。`uses:` を書き換えて
+  終わる bot は、誰かが読む前から赤い PR を開き続けることになる。
+
+  Renovate 設定の `postUpgradeTasks` は使えなかった。action は Renovate を
+  自前の container の中で自前の clone に対して走らせるが、
+  `scripts/pin-verification-bodies.mjs` は `packages/qfai/node_modules` から
+  `yaml` を読む — その container で `pnpm install` は一度も走っていない。
+  そこで再 pin は `renovate/**` への push で動く 2 つ目の job にし、木の他の
+  toolchain job と同じ共有 setup action を使わせた。
+
+  書き込みは job token ではなく `RENOVATE_TOKEN` secret を通す。
+  `GITHUB_TOKEN` による push / PR 作成には workflow event が発生しないため、
+  checks が一度も走らない PR ができてしまう (`prepare-release.yml` と同じ理由)。
+  **この secret は本変更では作成できない** — 手順は `.github/renovate.md`。
+
+### Changed
+
+- **`actions/checkout` と `actions/setup-node` を Node 24 対応版へ。**
+  どちらも `runs.using: node20` を宣言しており、runner が Node 24 で強制実行
+  したうえで全 job に deprecation warning を出していた。GitHub が Node 20 を
+  撤去した時点で checkout が失敗して全 lane が落ちる、予告済みの破壊的変更
+  である (#1161)。
+  - `actions/checkout` → `fbc6f399…` (v5.1.0)
+  - `actions/setup-node` → `a0853c24…` (v5.0.0)
+
+  どちらの SHA も `action.yml` を取得して `using: node24` を実際に確認した。
+  出荷アセット側 (`qfai-tests.yml` / `qfai-validate.yml`) も同時に上げている
+  ため、`qfai init` が書く workflow も同じ警告を出さなくなる。
+
+  出荷 action の pin は 1 箇所ではなく 4 箇所に登録されている: `uses:` 行、
+  version を含む step の `name:` ラベル、`ALLOWED_ACTION_COMMITS` と
+  `ALLOWED_STEP_SHAPE`、そして `ALLOWED_WORKFLOW_FILES` の byte digest。
+  `uses:` だけ書き換えると label が古い版を指したまま残り、e2e の
+  scaffold gate が落ちる。4 箇所すべてを更新済み。
 
 ## [1.10.2] - 2026-09-05
 
