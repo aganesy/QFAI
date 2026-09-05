@@ -29,6 +29,21 @@
 
 ### Fixed
 
+- **`brandCatalogStepAnchor.test.ts` の path 判定を Windows でも成立するように
+  した。** `fast-glob` は `absolute: true` でも**常に `/` 区切り**を返すのに、
+  比較相手が `path.sep` (`\`) 由来だった (#1176)。
+
+  2 つの assertion が**逆方向に**壊れていた:
+  - `startsWith(dir + path.sep)` は `/` 区切りの結果を `\` 区切りの prefix と
+    比べるので**決して真にならず**、誰も触っていない木で行が落ちる
+  - `not.toContain(verifySkillMd)` は `\` 区切りの絶対パスと比べるので
+    **決して一致せず、常に通る** — Windows では何も検証していなかった
+
+  後者のほうが悪い。落ちない行は coverage として報告されるからである。
+  両側を `/` に正規化し、scan が空でないことも主張した。
+
+### Fixed
+
 - **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
   取り除くようにした。** このマーカーはパッケージ内で出荷アセット 2 本にしか
   出現せず、**埋めるコードが 1 行も無かった** (#1167)。1 つ前の版はそこに
