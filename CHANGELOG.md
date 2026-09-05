@@ -6,6 +6,32 @@
 
 ### Fixed
 
+- **`--format github` の annotation 上限が GitHub の実際の上限と一致するように
+  なり、summary が「全件出した」と誤読されなくなった。** 上限は 100 件・run 全体
+  で持っていたが、GitHub の上限は **level ごと 10 件 / step** であり、
+  `error` / `warning` / `notice` は別勘定である。error が 40 件ある run は
+  `annotations=40/40` と表示し、これは「全件 annotation 化した」と読めるが、
+  実際には runner が 10 件だけ表示して 30 件を黙って捨てていた。operator が
+  見るのは summary だけなので、起きたことと逆を表示していた (#1164)。
+  `test (cli)` lane の実測では 3 つの level がすべてちょうど 10 件で、
+  切り捨ては例外ではなく定常状態だった。
+
+  上限を level ごとに適用し、summary の `annotations=` は
+  **このプロセスが実際に書き出した workflow command の数**を報告する。
+  切り捨てが起きた level は `上限省略=error 10/40, warning 10/12` のように
+  level ごとに名指しする — 1 つの数字では per-level の上限を表現できず、
+  「error 5 件 / notice 200 件」の run は片方の level では完全で
+  もう片方では切れている。
+
+  上限判定は severity ではなく **annotation の level** で行う。suppressed な
+  error は `notice` として出力されるため、severity で数えると error の予算を
+  消費したことになり、runner の勘定と食い違う。level の導出は 1 箇所に
+  切り出して emitter と共有している。
+
+  上限を超えて出し続ける案は取らなかった: runner が捨てるので読み手には
+  届かず、ローカル実行では誰も読まない行が増えるだけである。全件は JSON に
+  残る。
+
 - **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
   git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
   だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
