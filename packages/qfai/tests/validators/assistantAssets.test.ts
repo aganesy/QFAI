@@ -80,7 +80,9 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(finding?.file).toContain(path.join("catalog", "tech.md"));
     expect(finding?.refs).toContain("Standard commands (copy-paste)");
     // Every `<...>` slot in the section `qfai-implement` Stage 0 must read.
-    expect(finding?.message).toContain("Standard commands (copy-paste) (5)");
+    // Seven since `<typecheck command>` and `<pack command>` joined the shipped
+    // section; the number tracks the asset, which is what this row is for.
+    expect(finding?.message).toContain("Standard commands (copy-paste) (7)");
     expect(finding?.loc?.line).toBeGreaterThan(0);
   });
 
