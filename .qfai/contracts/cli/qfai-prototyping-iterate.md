@@ -26,6 +26,7 @@
 ```
 qfai prototyping iterate --cycle <0..9> [--target-url <url>]
                          [--force]
+                         [--dry-run]
                          [--capture]
                          [--auto-serve]
                          [--license-patch <file>]

@@ -117,6 +117,10 @@ the help text wins and this section is stale.
   otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears
   stale `iter-NN` directories. Detail:
   `references/iteration-loop.md#sealed-loop`.
+- `--dry-run` — plan the cycle and write nothing. Reports what a real
+  run would create, move or overwrite — including the `iter-00` backup
+  `--force` would take — and exits without touching the tree. Use it to
+  read a destructive cycle-0 re-seed before authorising it.
 - `--license-patch <file>` — apply an add-only patch to the license
   allowlist. Usable at **any** cycle, not only cycle 0: broaden the
   catalog mid-loop instead of discarding progress with
