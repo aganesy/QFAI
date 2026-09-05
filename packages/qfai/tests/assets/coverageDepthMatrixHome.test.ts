@@ -109,6 +109,17 @@ describe.each(TREES)("%s", (tree) => {
     }
   });
 
+  it("does not describe committed item evidence as ignored", async () => {
+    for (const rel of [GATEKEEPER, CATALOG]) {
+      const text = flat(await read(tree, rel));
+      expect(text).toContain(
+        "a committed governance path alongside `implement-<spec-id>.md` and `atdd-<spec-id>.md`",
+      );
+      expect(text).toContain("Only run-scoped evidence remains ignored");
+      expect(text).not.toContain("a committed path, unlike the rest of `.qfai/evidence/**`");
+    }
+  });
+
   it("test-design-analyst writes it there, in both its copies", async () => {
     for (const rel of [ANALYST, CATALOG]) {
       const text = flat(await read(tree, rel));

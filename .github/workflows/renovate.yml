@@ -1,0 +1,212 @@
+name: Renovate
+
+# Opens dependency-update pull requests, and keeps the digest files they invalidate consistent.
+#
+# ## Why self-hosted, and not the Renovate GitHub App
+#
+# The App is installed at github.com, outside this repository, and what it may do is configured
+# there. Everything else that writes to this repository is a workflow whose `uses:` are pinned by
+# SHA and whose changes go through review — so the bot runs here too, as a pinned action, on a
+# schedule this file declares.
+#
+# ## Why there are two jobs
+#
+# `#1161` is the case this exists for: `actions/checkout` and `actions/setup-node` sat on `node20`
+# until every job warned about it, and the fix was a hand edit across 20 references plus two digest
+# files. An action bump in this repository is not a one-line change, because
+# `.github/actions/setup/action.yml` is pinned by sha256 in `.github/pinned-bytes.txt`, that list's
+# digest is pinned in `ci.yml`, and that step's body is pinned in
+# `.github/required-status-contexts.json`. A bot that rewrites a `uses:` and stops there opens a
+# pull request that is red before anyone reads it.
+#
+# `postUpgradeTasks` in the Renovate config was the obvious place to run the two re-pin scripts and
+# is not available: the action runs Renovate inside its own container, against its own clone, and
+# `scripts/pin-verification-bodies.mjs` reads the `yaml` parser out of
+# `packages/qfai/node_modules` — which no `pnpm install` in that container ever created. So the
+# re-pin is a job here instead, on a `push` trigger, with this repository's own toolchain: the
+# same shared setup action every other toolchain job in the tree consumes.
+#
+# ## Why the writes go through a secret rather than the job token
+#
+# The same reason `prepare-release.yml` uses one: GitHub raises no workflow events for anything
+# done with `GITHUB_TOKEN`, so a pull request it opened would sit there with no checks running,
+# and a re-pin commit it pushed would not restart them. `RENOVATE_TOKEN` needs `contents: write`
+# and `pull-requests: write` on this repository and nothing else. **It is not created by this
+# change** — see `.github/renovate.md`.
+#
+# `permissions:` therefore stays at the minimal `{ contents: read }` in both jobs, leaving
+# `BR-0017-0016`'s closed departure set untouched.
+on:
+  schedule:
+    # Weekly, late Sunday UTC. The config narrows it further to `before 6am on monday` in
+    # Asia/Tokyo; this only has to fire inside the window the config declares.
+    - cron: "0 20 * * 0"
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: "Renovate log level"
+        required: false
+        default: "info"
+        type: choice
+        options:
+          - info
+          - debug
+      dryRun:
+        description: "Resolve every update and open nothing"
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches:
+      # Renovate's own branches, and nothing else. A human's branch does not get commits
+      # appended to it by a workflow.
+      - "renovate/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  # Per ref, so a re-pin on one update branch does not cancel one on another, and neither
+  # collides with the scheduled run.
+  group: renovate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ── Open the pull requests ───────────────────────────────────────────────────────────────────
+  renovate:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Refuse without a token rather than opening nothing quietly
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          set -euo pipefail
+          # A missing secret makes the action exit having done nothing, and a green run that
+          # opened no pull request is indistinguishable from one with nothing to update. Say
+          # which it was.
+          if [ -z "${RENOVATE_TOKEN}" ]; then
+            echo "::error::renovate: the RENOVATE_TOKEN secret is not set. This workflow writes branches and opens pull requests, and deliberately does not use the job token for either: GitHub raises no workflow events for anything done with GITHUB_TOKEN, so the pull requests would sit there with no checks running. Add a token with contents:write and pull-requests:write. See .github/renovate.md."
+            exit 1
+          fi
+        shell: bash
+
+      - uses: renovatebot/github-action@39b914146caeff8cd512e61c8992f1d5913af85c # v46.2.5
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          # Pinned, like every other version in this tree. The action's own default is the
+          # floating major tag `44`, which is a different image from one week to the next inside
+          # a job that is otherwise pinned to immutable refs. Renovate has no built-in extractor
+          # for this input, so `customManagers` in `.github/renovate.json5` teaches it to keep
+          # this line updated — the bot bumps itself through the same review as everything else.
+          renovate-version: 44.65.3
+        env:
+          # WITHOUT this, a token that can see other repositories would have Renovate discover
+          # and process them. The scope of the run is stated rather than inherited from whatever
+          # the token happens to reach.
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # The config itself is read from `.github/renovate.json5` in this repository; only what
+          # cannot live there is passed here.
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+          # Renovate skips a falsy environment value, so the empty string a non-dispatch run
+          # produces is the same as not setting this at all.
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun && 'full' || '' }}
+
+  # ── Keep the digest files consistent on the branches it opened ───────────────────────────────
+  repin:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Refuse a branch that rewrote the programs this job runs
+        env:
+          # `github.ref` and nothing derived from the branch's content. The name is data and
+          # reaches git as an argument.
+          BRANCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          # This job executes `scripts/*.mjs` from the branch it checked out, holding a token
+          # that can write to the repository. Renovate never writes anything under `scripts/`,
+          # so a difference there means this is not the plain dependency bump it claims to be.
+          #
+          # What this closes is a branch that arrived carrying a modified guard. What it does
+          # NOT close is a collaborator, who can push to `renovate/**` and can equally edit
+          # `ci.yml`: only people with write access can create a branch in this repository at
+          # all, and GitHub's model already trusts them. The pinned-bytes machinery exists to
+          # make a guard edit visible in review, not to defend against that.
+          #
+          # The repository is public, so an unauthenticated fetch is enough; the checkout above
+          # deliberately kept no credentials. Shallow on both sides — this compares two trees,
+          # which are complete in a shallow clone, and never walks between them.
+          git fetch --depth=1 origin main
+          if ! git diff --quiet FETCH_HEAD HEAD -- scripts; then
+            echo "::error::renovate repin: ${BRANCH_REF} differs from main under scripts/, which Renovate never writes. This job runs those programs with a write-capable token; it refuses rather than running a branch's own copy of them."
+            git --no-pager diff --stat FETCH_HEAD HEAD -- scripts
+            exit 1
+          fi
+        shell: bash
+
+      - uses: ./.github/actions/setup
+
+      - name: Re-pin the digests the update invalidated
+        id: repin
+        run: |
+          set -euo pipefail
+          # ORDER, not preference. The first writes `.github/pinned-bytes.txt` and the `ci.yml`
+          # step that carries that file's digest; the second digests that step's body. Run the
+          # other way round, the second one pins a body the first is about to rewrite.
+          node scripts/pin-guard-bytes.mjs
+          node scripts/pin-verification-bodies.mjs
+
+          # Verified rather than assumed. This is the lane the update would otherwise have
+          # failed, so running it here is what makes the push worth making — and a re-pin that
+          # produced an inconsistent tree fails the job instead of being pushed.
+          node scripts/check-workflow-hygiene.mjs --root .
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "renovate repin: the digests already match this branch; nothing to push"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager diff --stat
+          fi
+        shell: bash
+
+      - name: Push the re-pin
+        if: steps.repin.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          BRANCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::renovate repin: the RENOVATE_TOKEN secret is not set. Pushing with the job token would raise no workflow event, so the update's checks would never re-run and the branch would stay red with the fix already on it."
+            exit 1
+          fi
+
+          # The SAME identity `gitAuthor` declares in `.github/renovate.json5`. Renovate compares
+          # a branch's commits against that identity to decide whether someone else has edited
+          # the branch, and it stops updating a branch it thinks was edited by hand. A re-pin
+          # committed under any other name would freeze the very branches it just fixed.
+          git config user.name "renovate[bot]"
+          git config user.email "29139614+renovate[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(deps): re-pin the digests this update invalidated"
+
+          # The remote is re-pointed at the token, because the checkout deliberately kept no
+          # credentials in the work tree.
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # Never forced. A rejection means Renovate moved the branch while this ran, and its
+          # next run rebuilds the branch from scratch — losing this commit is the correct
+          # outcome, and overwriting Renovate's newer work is not.
+          git push "$remote" "HEAD:${BRANCH_REF}"
+        shell: bash
