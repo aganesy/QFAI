@@ -230,6 +230,10 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-115",
       "QFAI-ATDD-116",
       "QFAI-ATDD-117",
+      // Obligations referenced only from carriers that declare no test. 118 is
+      // taken by the US planned-deferral finding on its own branch, so this one
+      // holds the next free number rather than colliding with it.
+      "QFAI-ATDD-119",
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",

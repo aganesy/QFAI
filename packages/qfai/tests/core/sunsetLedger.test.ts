@@ -129,6 +129,11 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // close. Telling an intended resolution from an ambient one needs the
   // project's dependency declaration, not a path comparison — see #1108.
   "QFAI-TOOL-001",
+  // An obligation referenced only from carriers that declare no test. The
+  // finding reports which partition the obligation landed in so a downstream
+  // gate can read it; a repository is free to leave a placeholder there
+  // deliberately, so there is no release at which this should fail a build.
+  "QFAI-ATDD-119",
 ];
 
 // tests/core/<this file> -> packages/qfai

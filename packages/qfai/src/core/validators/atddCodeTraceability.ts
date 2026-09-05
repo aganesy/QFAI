@@ -117,6 +117,14 @@ function narrowToScope(
       us: result.missing.us.filter(inScope),
       tc: result.missing.tc.filter(inScope),
     },
+    // Same terms as `missing`: the US / TC refs carry their own `SPEC-NNNN`, so
+    // a scoped run must not name a sibling's prose-only obligations, while the
+    // contract refs name no spec and stay repo-wide.
+    coveredByCarrierOnly: {
+      ...result.coveredByCarrierOnly,
+      us: result.coveredByCarrierOnly.us.filter(inScope),
+      tc: result.coveredByCarrierOnly.tc.filter(inScope),
+    },
     // Narrowed on the same terms as `missing.tc`, and for the same reason.
     // `QFAI-ATDD-117` lists the excluded TCs by id, so carrying the repo-wide
     // set through made a `--spec 0002` run report spec-0001's L1/L2 TCs — and
@@ -261,6 +269,26 @@ type AtddTraceabilitySummary = {
     conApi: string[];
     conDb: string[];
   };
+  /**
+   * Owed obligations no carrier declares a runnable test for (`QFAI-ATDD-119`).
+   *
+   * The field downstream readers gate on. `missing` alone says an ID was found
+   * somewhere under the scanned roots; it does not say a test references it,
+   * because the scan reads `.md` and `.feature` too and a `.test.ts` may hold
+   * nothing but the annotation. An obligation listed here is written down and
+   * carried by nothing that declares a test, so "covered by code" is
+   * `missing.<kind>` empty **and** this empty.
+   *
+   * Two limits a gate must read with it, both in `scan` below: the partition is
+   * empty when `truncated` is set (unproven, so suppressed), and a declared but
+   * skipped test still counts as a declaration.
+   */
+  coveredByCarrierOnly: {
+    us: string[];
+    tc: string[];
+    conApi: string[];
+    conDb: string[];
+  };
   /** Missing TC ref -> the test directory its declared `Level` routes to. */
   missingTcHomes: Record<string, string>;
   /**
@@ -395,6 +423,8 @@ export async function validateAtddCodeTraceability(
       ),
     );
   }
+
+  issues.push(...buildCarrierOnlyIssues(result, dirs));
 
   if (result.deferredApiContractIds.size > 0) {
     const deferred = Array.from(result.deferredApiContractIds).sort((left, right) =>
@@ -597,6 +627,52 @@ export async function validateAtddCodeTraceability(
   return issues;
 }
 
+/**
+ * `QFAI-ATDD-119` — obligations discharged by an annotation and nothing else.
+ *
+ * Coverage is decided by a text match over the scanned roots, and the scan
+ * deliberately reads `.md` / `.feature` so an annotation ledger or a Gherkin
+ * feature can carry the ID. That makes a bullet list of IDs clear
+ * `QFAI-ATDD-111` / `-112` / `-113` / `-115` exactly as an executable
+ * acceptance test does, and four empty `missing` arrays cannot tell the two
+ * apart. `info`, not `error`: a markdown ledger is a legitimate carrier and
+ * this names the state rather than banning it — the same treatment
+ * `QFAI-ATDD-117` gives the Unit/Component exclusion one level down.
+ *
+ * States "no test is declared for this ID", which is weaker than "nothing runs
+ * for it": a declared suite that is entirely skipped still counts as declared,
+ * so the wording promises a declaration and not an execution.
+ */
+function buildCarrierOnlyIssues(
+  result: AtddCodeTraceabilityResult,
+  dirs: Record<AtddTestKind, string>,
+): Issue[] {
+  const { us, tc, conApi, conDb } = result.coveredByCarrierOnly;
+  const refs = [...us, ...tc, ...conApi, ...conDb];
+  if (refs.length === 0) {
+    return [];
+  }
+  // Attributed to the specs the US / TC refs name, so a `--spec` run reports it
+  // only when the requested spec owns one. A contract-only finding has no spec
+  // owner and stays at `specsRoot`, on the same terms as `QFAI-ATDD-113`.
+  const attribution = specAttribution([...us, ...tc], result.specsRoot, result.declaredSpecDirs);
+  const shown = refs.slice(0, 10).join(", ");
+  const rest = refs.length > 10 ? ` (他 ${String(refs.length - 10)} 件)` : "";
+  return [
+    issue(
+      "QFAI-ATDD-119",
+      `テスト宣言を持たない注釈 carrier だけでカバーされている obligation があります（${String(refs.length)} 件）: ${shown}${rest}`,
+      "info",
+      attribution.file,
+      "atddCodeTraceability.coverage.carrierOnly",
+      refs,
+      "change",
+      `これらの ID を参照しているファイルは、\`.md\` の散文か、テスト宣言（\`it\` / \`test\` / \`describe\`、Gherkin の \`Scenario:\`、\`def test_\` 等）を含まないファイルだけです。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実際のテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。判定するのは「テストが宣言されているか」までで、skip されているかまでは見ません。`,
+      { relatedFiles: attribution.relatedFiles },
+    ),
+  ];
+}
+
 const MISSING_TC_HOME_ORDER: AtddTestKind[] = ["integration", "api", "e2e"];
 
 /**
@@ -752,6 +828,12 @@ async function writeAtddTraceabilityReport(
       conApi: result.missing.conApi,
       conDb: result.missing.conDb,
     },
+    coveredByCarrierOnly: {
+      us: result.coveredByCarrierOnly.us,
+      tc: result.coveredByCarrierOnly.tc,
+      conApi: result.coveredByCarrierOnly.conApi,
+      conDb: result.coveredByCarrierOnly.conDb,
+    },
     deferred: {
       conApi: Array.from(result.deferredApiContractIds).sort((left, right) =>
         left.localeCompare(right),
@@ -813,6 +895,29 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push(...toList(summary.missing.conApi));
   lines.push("- CON-DB -> Integration");
   lines.push(...toList(summary.missing.conDb));
+  lines.push("");
+  lines.push("## Covered By Annotation Carrier Only");
+  lines.push("");
+  lines.push(
+    "Referenced only from carriers that declare no test — prose (`.md`) or a code file holding nothing but the annotation (QFAI-ATDD-119).",
+  );
+  lines.push("");
+  if (summary.scan.truncated) {
+    // Without this line the four empty lists below read as "nothing is
+    // carrier-only", when the scan simply stopped before it could tell.
+    lines.push(
+      "> Scan truncated at the file limit: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
+    );
+    lines.push("");
+  }
+  lines.push("- US");
+  lines.push(...toList(summary.coveredByCarrierOnly.us));
+  lines.push("- TC");
+  lines.push(...toList(summary.coveredByCarrierOnly.tc));
+  lines.push("- CON-API");
+  lines.push(...toList(summary.coveredByCarrierOnly.conApi));
+  lines.push("- CON-DB");
+  lines.push(...toList(summary.coveredByCarrierOnly.conDb));
   lines.push("");
   lines.push("## Deferred Coverage");
   lines.push("");

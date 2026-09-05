@@ -45,11 +45,10 @@ Rules:
   ID type. A `TC-*` is answered from the directory **its own declared `Level`**
   names, which for a correctly filed row is `<testsDir>/integration/**`; see
   [Annotation routing](#annotation-routing) for the full table and the
-  misplacement rules.
-  L4's goal is `CON-API-*` and L5's is `US-*` (see the layer definitions
-  below), so an oracle that lands at L4 or L5 means the obligation is misfiled:
-  record it as `CON-API-*` or `US-*` rather than leaving a `TC-*` row at a
-  layer whose goal is another ID type.
+  misplacement rules. L4's goal is `CON-API-*` and L5's is `US-*` (see the
+  layer definitions below), so an oracle that lands at L4 or L5 means the
+  obligation is misfiled: record it as `CON-API-*` or `US-*` rather than
+  leaving a `TC-*` row at a layer whose goal is another ID type.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
@@ -336,6 +335,9 @@ and `**Unit and Component owe no ATDD annotation.**` above.
     owes a `tdd/test-list.md` row, and `TDDLIST_TC_NOT_COVERED` (`error`)
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
+
+- **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does, and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so `QFAI-ATDD-119` (`info`) names it — a legitimate placeholder that must not read as
+  coverage. A repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-119` in `validate.spec-<id>.json`, because `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `<testsDir>/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.

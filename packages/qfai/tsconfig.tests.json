@@ -48,6 +48,8 @@
     "tests/cli/prototypingRescope.test.ts",
     "tests/cli/prototypingRescopeCrashWindow.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
+    "tests/core/atddCarrierScanTruncation.test.ts",
+    "tests/core/atddProseCarrierCoverage.test.ts",
     "tests/core/bpApDb.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
     "tests/core/evidenceRevisionStale.test.ts",
