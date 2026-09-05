@@ -80,7 +80,7 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
 - REQ-0010: git config core.symlinks 自動設定 - Git リポジトリ内の場合に自動設定
 - REQ-0011: copilot-instructions.md 生成 - `.github/copilot-instructions.md` を生成する
 - REQ-0012: Copilot review instructions 配布 - `.github/instructions/code-review.instructions.md` と `principles.instructions.md` を create-only で配置する
-- REQ-0013: instructions の --force 無効 - `--force` でも instructions ファイルは上書きしない
+- REQ-0013: instructions の --force 更新 - `--force` 時は shipped テンプレートで instructions ファイルを再生成する（`--force` なしは create-only）
 - REQ-0014: instructions アクティベーション案内 - instructions 新規作成時にアクティベーションガイダンスを表示する
 - REQ-0015: Windows symlink fallback - EPERM 時に Developer Mode 有効化の案内を含むエラーメッセージを表示する
 - REQ-0016: ルート `.gitignore` 管理ブロック追記 (v1.7.18) - `qfai init` は導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*` + `.qfai/evidence/*` + `.qfai/review/*` + `.qfai/discussion/discussion-*/` + README negation）を冪等に追記する。既存ユーザー記述は保護する

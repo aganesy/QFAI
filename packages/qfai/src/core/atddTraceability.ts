@@ -23,9 +23,72 @@ import {
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
+import { maskJsNonCode } from "./validators/jsSourceMask.js";
 
-const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}(?:-\d{4})?)\b/g;
-const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)\b/g;
+// The short form carries `(?!-)`; the long form does not.
+//
+// Written as `(?:-\d{4})?`, the optional half let a test that validates its own
+// annotations — `/^QFAI:SPEC-0001:TC-0001-\d{4}$/`, the shape a self-checking
+// deferral ledger reaches for — match as the FOUR-DIGIT-SHORT prefix of itself:
+// the optional half cannot consume `-\d`, the short form succeeds, and `\b` is
+// satisfied because `-` is not a word character. The scanner then reported a TC
+// id four digits short, unregistered BY CONSTRUCTION because the truncation
+// invented it (#1123).
+//
+// This paragraph deliberately spells no complete short-form id. Naming one
+// would make the comment itself an annotation — the other half of what #1123
+// reports, an explanation of the hazard re-triggering it. The illustration
+// above is safe for the reason the fix turns on: it continues with `-`.
+//
+// Both lengths stay legal: `TC-0001` and `TC-0001-0002` are accepted by
+// `TC_ID_RE`, `TC_REF_SHAPE` and `TC_ID_TOKEN` alike, so requiring eight digits
+// would reject real annotations. What is not legal is a short form the text
+// then continues with `-`, because a real one is followed by whitespace, a
+// quote, `)` or end of line.
+//
+// The guard sits on the short alternative only, so a complete-but-malformed
+// annotation (`TC-0001-0002-foo`) still matches and is still reported as an
+// unknown reference. Trading a false report for a silent miss is the worse
+// direction in a validator.
+/**
+ * Extensions whose literals {@link maskTestSource} can blank.
+ *
+ * The scan walks whatever a project puts under its test roots. A JS lexer over
+ * a `.py` or `.rb` file would blank spans by JS's rules, and over-blanking here
+ * hides a real annotation — the one failure this must not introduce.
+ */
+const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+]);
+
+/**
+ * A test file's text with its string, template and regex literals blanked.
+ *
+ * Comments are kept, because an annotation is written in one. Without this the
+ * scanner could not tell a reference from an id a fixture holds as DATA — a
+ * generator suite, or a self-validating deferral ledger quoting the id it is
+ * about — and reported `QFAI-ATDD-101` / `-102` (`error`) against a file that
+ * never claimed the reference (#1141).
+ *
+ * `maskJsNonCode` replaces one character for one, so a match offset and the
+ * line a finding names are unchanged.
+ */
+function maskTestSource(file: string, text: string): string {
+  if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+    return text;
+  }
+  return maskJsNonCode(text, { comments: false });
+}
+
+const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
+const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 /**
  * `CON-DB-*` annotation, the DB peer of the API form above.
@@ -288,7 +351,7 @@ export async function evaluateAtddCodeTraceability(
       continue;
     }
 
-    const text = await readSafe(file);
+    const text = maskTestSource(file, await readSafe(file));
     const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
     const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
     const apiAnnotations = extractApiContractAnnotations(text);
@@ -509,7 +572,7 @@ async function collectUncountedTestFiles(
   }
   const annotated: string[] = [];
   for (const file of files) {
-    const text = await readSafe(file);
+    const text = maskTestSource(file, await readSafe(file));
     if (!ANY_QFAI_ANNOTATION.test(text)) continue;
     if (carriesOnlyExcludedAnnotations(text, tcLevels)) continue;
     annotated.push(toPosixPath(path.relative(root, file)));
