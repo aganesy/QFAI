@@ -29,8 +29,8 @@ defines the matrix layout nor ships an artifact that holds it, and the tests do 
 
 From the ATDD stage onward:
 
-- For each US/TC, verify that test cases exist for: normal path, error path, boundary values, special values, state transitions, and combinatorial scenarios.
-- Produce the Coverage Depth Matrix as a required deliverable. Flag any ❌ cells as gaps.
+- For each US/TC, verify that test cases exist for: equivalence partitions, normal path, error path, edge cases, boundary values, special values, state transitions, and combinatorial scenarios.
+- Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
 - Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
 
 During SDD:
@@ -40,7 +40,10 @@ During SDD:
 - Do NOT produce the matrix, and do NOT return REVISE solely because the matrix is absent or because
   special / state-transition / combinatorial cases are not yet enumerated.
 
-At both stages: when business rules (BR-\*) exist, verify each BR has at least one positive and one negative test case.
+At both stages: when business rules (BR-\*) exist, verify each BR has at least one positive and one
+negative test case. From the ATDD stage onward that verdict is recorded per BR in the business rule
+coverage table under the Coverage Depth Matrix, which has one row per rule — a `US/TC` row cannot
+carry it.
 
 ## Inputs you must read
 
@@ -59,8 +62,9 @@ At both stages: when business rules (BR-\*) exist, verify each BR has at least o
 - Test-case quality and traceability findings
 - **Coverage Depth Matrix** (per spec, using the template in the depth checklist reference).
   Destination: `.qfai/evidence/coverage-depth-<spec-id>.md` from the ATDD stage onward — its own
-  file, because that path is committed while the rest of `.qfai/evidence/**` is ignored, and the
-  justification behind each `❌` is the input `qa-gatekeeper` reads. During SDD there is
+  file, because it has its own committed governance lifecycle separate from the committed
+  per-item TDD evidence, and the justification behind each `❌` is the input `qa-gatekeeper`
+  reads. During SDD there is
   no evidence artifact that holds it, so report depth gaps as findings instead of producing the
   matrix format.
 - Volume estimate and risk notes

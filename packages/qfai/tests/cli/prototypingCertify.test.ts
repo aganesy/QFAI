@@ -15,6 +15,7 @@ import {
 } from "../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../src/core/design/designMd.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../src/core/prototyping/certificate.js";
+import { reviewPayload } from "../helpers/reviewPayload.js";
 
 function isCertificateWithSpecsCovered(raw: unknown): raw is { specsCovered: string[] } {
   if (raw === null || typeof raw !== "object" || !("specsCovered" in raw)) return false;
@@ -582,8 +583,18 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     // above declare home + settings, so seed both review.jsons.
     const specDir = path.join(acceptedDir, "spec-0012");
     await mkdir(specDir, { recursive: true });
-    await writeFile(path.join(specDir, "home.review.json"), '{"ok":true}\n', "utf-8");
-    await writeFile(path.join(specDir, "settings.review.json"), '{"ok":true}\n', "utf-8");
+    // certify parses each payload against the shipped closed reviewer
+    // schema, so the fixtures must be schema-valid, not merely present.
+    await writeFile(
+      path.join(specDir, "home.review.json"),
+      `${reviewPayload("spec-0012", "home")}\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specDir, "settings.review.json"),
+      `${reviewPayload("spec-0012", "settings")}\n`,
+      "utf-8",
+    );
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 });

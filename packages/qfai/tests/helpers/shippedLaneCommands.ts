@@ -1253,6 +1253,13 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * planted in the shipped `DESIGN.md` was invisible — four of the six were pinned by name only, which
  * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these four are
  * byte-pinned here, and between them every adopter-facing file this tree writes is pinned by content.
+ *
+ * The `.gitignore` digest moved once, deliberately: the atomic `.qfai/state.json` write leaves a
+ * staging directory behind when a run is killed mid-write, and `QFAI_STATE_SCRATCH_IGNORE`
+ * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
+ * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
+ * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
+ * rather than drift.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
@@ -1263,14 +1270,28 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
-  [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
+  // Re-derived for the MERGED managed block, which carries both sides' additions:
+  // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
+  // (`implement-*.md`, `atdd-*.md`) that arrived with it. Neither predecessor's
+  // digest describes the block that now ships, so this is one pin rather than
+  // two — the map is keyed by file name and cannot hold both.
+  //
+  // Derived by running `qfai init` into the E2E's temp root and reading what it
+  // wrote, which is how both predecessors were derived. Not copied from a
+  // failure message: the point of the pin is that somebody looked at the block.
+  [".gitignore", "e56620ef701cc655a4a52e7ef437f2beee6b06a587f9b4011d6c591fc1cbdfac"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  // Re-pinned with the three retired `validation.traceability` knobs removed
-  // (`brMustHaveSc`, `scNoTestSeverity`, `orphanContractsPolicy`). The pin
-  // exists so a content change is a reviewed line rather than a silent one, so
-  // it moves in the same change that moves the file — never afterwards to
-  // chase a red lane.
-  ["qfai.config.yaml", "3dc2919fd3d040ec3d0b0756e989a2eed857f1e63a6733448fb6d136bc87773e"],
+  // Re-derived for the MERGED file, which carries both sides' edits: the three
+  // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
+  // `scNoTestSeverity`, `orphanContractsPolicy`) AND the `forbidTestTodoStubs`
+  // comment no longer calls the opt-out's waiver a requirement. Neither
+  // predecessor's digest describes what ships, and the map is keyed by file
+  // name, so this is one pin rather than two.
+  //
+  // Derived by running `qfai init` into the E2E's temp root and reading what it
+  // wrote, which is how both predecessors were derived — not copied from a
+  // failure message.
+  ["qfai.config.yaml", "6c9016bf3fdc6c4704219b9c57bceb0d37871277ca122b102daa8a72f152bc3a"],
 ]);
 
 /**
