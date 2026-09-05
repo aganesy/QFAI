@@ -36,8 +36,8 @@ export type ReviewerAttemptResult = {
  * Discriminator for the Reviewer dispatch outcome.
  *
  * Mirrors the per-`<screen>.review.json#sessionStatus` enum in the
- * prototyping CLI contract (`.qfai/contracts/cli/qfai-prototyping.md`
- * §Review payload):
+ * shipped reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`):
  *
  *   - `ok`             — Reviewer Playwright session completed.
  *   - `retryExhausted` — every attempt in the bounded retry budget
@@ -103,8 +103,9 @@ export type ReviewerPlaywrightRunner = (
  * failed and returns the number of milliseconds to wait before the
  * next attempt. Returning a non-positive number skips the wait.
  *
- * The contract retry policy (`.qfai/contracts/cli/qfai-prototyping.md`
- * §Hard-stop classes: Reviewer Playwright failure) is `N = 3` with
+ * The retry policy documented in the shipped reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`
+ * §`sessionStatus` and the retry policy) is `N = 3` with
  * exponential backoff. The default backoff
  * ({@link defaultExponentialBackoff}) realises that policy as `base *
  * 2^attemptIndex` ms with `base = 250`.

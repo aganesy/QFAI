@@ -45,21 +45,20 @@ Rules:
   ID type. A `TC-*` is answered from the directory **its own declared `Level`**
   names, which for a correctly filed row is `<testsDir>/integration/**`; see
   [Annotation routing](#annotation-routing) for the full table and the
-  misplacement rules.
-  L4's goal is `CON-API-*` and L5's is `US-*` (see the layer definitions
-  below), so an oracle that lands at L4 or L5 means the obligation is misfiled:
-  record it as `CON-API-*` or `US-*` rather than leaving a `TC-*` row at a
-  layer whose goal is another ID type.
+  misplacement rules. L4's goal is `CON-API-*` and L5's is `US-*` (see the
+  layer definitions below), so an oracle that lands at L4 or L5 means the
+  obligation is misfiled: record it as `CON-API-*` or `US-*` rather than
+  leaving a `TC-*` row at a layer whose goal is another ID type.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
 
 ## How this file is consumed
 
-The layer set below is read by `core/layerPolicy.ts` and is the SSOT for two
-checks: `QFAI-EX-005` on the legacy spec-pack layout, and `QFAI-EX-105` on the
-layered layout `npx qfai init` produces. Until both consumed it, the file was
-read, reported on, and then ignored on every modern project.
+This file is the SSOT for the layer set below: `npx qfai validate` reads the layers
+from here and applies them to two checks — `QFAI-EX-005` on the legacy spec-pack
+layout, and `QFAI-EX-105` on the layered layout `npx qfai init` produces. Until both
+consumed it, the file was read, reported on, and then ignored on every modern project.
 
 - A file that yields no layers raises `QFAI-SPACK-090` (error) rather than
   silently widening to the built-in set.
@@ -288,6 +287,7 @@ and `**Unit and Component owe no ATDD annotation.**` above.
   - Scoping applies only when the project declares at least one UI-bearing
     spec. A project that has never declared a surface has not opted into
     surface typing, so the obligation stays project-wide for it.
+  - **Deferral.** A story whose acceptance cannot be observed at E2E in the current slice defers with a `- x-qfai-status: planned` meta line inside its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) in `02_User-stories.md` — the same token the two contract kinds use. It leaves `QFAI-ATDD-111` and is reported as `QFAI-ATDD-118` (`info`); remove the marker when the slice is implemented. It counts only inside the story block it is written in, so one above the first `US-XXXX` heading defers nothing — one line must not drop the obligation for a whole file. It removes the test obligation, not the declaration. A deferred `US-*` stays a known ID, so an early E2E test is counted, not an unknown reference. This is per story, unlike the surface-type scoping above, a whole-spec property that would erase the siblings too.
   - Do not create an E2E tree whose only purpose is to receive annotations.
     That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
@@ -336,6 +336,8 @@ and `**Unit and Component owe no ATDD annotation.**` above.
     owes a `tdd/test-list.md` row, and `TDDLIST_TC_NOT_COVERED` (`error`)
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
+
+- **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does, and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so `QFAI-ATDD-119` (`info`) names it — a legitimate placeholder that must not read as coverage. A repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-119` in `validate.spec-<id>.json`, because `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `<testsDir>/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.

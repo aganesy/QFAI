@@ -71,6 +71,11 @@ describe("the managed block keeps governance records tracked", () => {
       lines.indexOf("!.qfai/evidence/decisions/"),
     );
   });
+
+  it("re-includes the implementation and ATDD evidence records", () => {
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/implement-*.md");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/atdd-*.md");
+  });
 });
 
 describe("git honours the managed block against a broad pre-existing rule", () => {
@@ -82,6 +87,8 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   /** Governance records that must stay reachable. */
   const stillTracked = [
     ".qfai/evidence/decisions/2026-01-01T00-00-00.000Z.json",
+    ".qfai/evidence/implement-spec-0001.md",
+    ".qfai/evidence/atdd-spec-0001.md",
     ".qfai/decisions/CR-0001.md",
   ];
 
