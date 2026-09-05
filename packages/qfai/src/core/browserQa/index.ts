@@ -48,8 +48,12 @@ export type BrowserQaBundle = {
   repairs?: string[];
 };
 
+/**
+ * Codes this module emits. A `missing bundle` reservation used to sit here
+ * without a call site — nothing read it, so the catalog entry it justified
+ * described a gate that could not fire. Only codes with an emitter belong here.
+ */
 export const BROWSER_QA_ISSUE_CODES = {
-  missing: "QFAI-PROT-174",
   schema: "QFAI-PROT-273",
   contradiction: "QFAI-PROT-274",
   summary: "QFAI-PROT-275",
