@@ -573,7 +573,14 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(evidence).toContain("`Checkpoint verification command`");
       expect(evidence).toContain("`Checkpoint verification result`");
       expect(evidence).toContain("any `## Shared-artifact re-verify` block this boundary wrote");
-      expect(evidence).toContain("together with the `Revision` that run was made against");
+      // The fourth input is the boundary's OWN address, not a round block's
+      // `Revision`: that boundary has no row, so there is no round to take one
+      // from. `evidenceRevision.test.ts` owns the rename; this row owns the
+      // arity, and the two must name the same fourth input or a seal taken
+      // here can never match the recomputation over there (#501).
+      expect(evidence).toContain(
+        "together with a `Checkpoint verification revision` of its own, recorded beside them",
+      );
       expect(evidence).toContain(
         "**Those four inputs are the whole subject, and the recomputation takes the same four.**",
       );

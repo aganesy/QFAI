@@ -70,14 +70,16 @@ releases completion.
       the `Record re-attestation pack seal` recomputes here beside the round's `Review pack seal`,
       each from the pack it names, so a repaired record stays checkable rather than becoming an
       unsealed rewrite of a closed pack (gate item 10).
-- [ ] Each row's remaining observations **agree on the revision the row finally landed at** — the
-      GREEN's `Revision`, the `Reviewed revision` of **every** reviewer response the row required
-      (`completion-reviewer` and `implementation-reviewer`, **plus `product-surface-reviewer` on a
-      UI-affecting row**: the shared reviewer template makes that field required on every response,
-      so the third reviewer is the same rule and not a new one) and the pack's
-      `summary.json.revision`. `RED revision` (or `Falsifiability revision` in its place) is the
-      standing exception among the observations this comparison reaches: that observation is taken
-      before the code that makes it pass exists. Nothing else in this sweep compares what the
+- [ ] Each row's remaining observations **agree on the revision the row finally landed at** — item
+      6's `Refactor verify revision`, the `Reviewed revision` of **every** reviewer response the row
+      required (`completion-reviewer` and `implementation-reviewer`, **plus
+      `product-surface-reviewer` on a UI-affecting row**: the shared reviewer template makes that
+      field required on every response, so the third reviewer is the same rule and not a new one)
+      and the pack's `summary.json.revision`. `RED revision` (or `Falsifiability revision` in its
+      place) and the GREEN's `Revision` are the standing exceptions among the observations this
+      comparison reaches: the RED is taken before the code that makes it pass exists, and the GREEN
+      before Phase: Refactor, so demanding it agree makes this box and item 6 jointly satisfiable
+      only by a refactor that changed nothing. Nothing else in this sweep compares what the
       reviewers read with the tree the row ended on — production or test code changed after a PASS
       leaves anchor, identity copy, pack seal and every `Audited evidence hash` recomputing
       correctly, and the later checkpoint runs green against the new tree, so the spec completes

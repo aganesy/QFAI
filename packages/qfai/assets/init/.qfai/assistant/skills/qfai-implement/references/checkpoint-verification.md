@@ -383,8 +383,8 @@ per-item only, and the full-suite result on a terminal ledger could still be edi
 PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving. Take it the
 same way — the audit hash over the spec-level `Checkpoint verification command`,
 `Checkpoint verification result` and any `## Shared-artifact re-verify` block this boundary wrote
-(_Repairing a per-spec FAIL_), together with a `Checkpoint verification revision` of its own.
-That boundary has no row, so there is no round block to take a `Revision`
+(_Repairing a per-spec FAIL_), together with a `Checkpoint verification revision` of its own,
+recorded beside them. That boundary has no row, so there is no round block to take a `Revision`
 from even in principle; the address is the one this spec-level run was made against and nothing
 else. Record the seal beside them as `Checkpoint verification seal`, and recompute it before
 spec-level completion is
