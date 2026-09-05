@@ -1777,10 +1777,6 @@ const LOCALISED_GHERKIN_RE = /^\s*#\s*language\s*:\s*(?!en\s*$)[A-Za-z]/im;
  * something of the same line shape rather than deleted: collapsing the lines
  * would slide an unrelated declaration up behind a stripped prefix.
  */
-function blankSpan(span: string): string {
-  return span.replace(/[^\n]/g, " ");
-}
-
 /**
  * Removes comments and string literals so a declaration is only read from code.
  *
@@ -1790,175 +1786,32 @@ function blankSpan(span: string): string {
  * to `.test.ts` cleared the obligation with a comment. Comments and literals
  * are therefore blanked first.
  *
- * One tokenizer covers every ecosystem the scan meets: `//` and slash-star are
- * the C family (TS/JS, Java, C#, Go, Rust, Kotlin, Swift, PHP), `#` is the hash
- * family (Python, Ruby, Gherkin) minus Rust's `#[test]` attribute and a
- * shebang, and quoted spans cover the string literals. Single- and
- * double-quoted spans stop at end of line, so an apostrophe in prose costs at
- * most the rest of its own line; triple quotes are matched first so a Python
- * docstring is blanked whole.
+ * ## One tokenizer, and what the options are for
+ *
+ * This used to be a second lexer, local to this file, and #1154 is what that
+ * cost: the two disagreed about whether a `/` after a control statement's
+ * header opens a regex, and only this one knew that it does. Composing two
+ * green branches produced a real miss — a file holding a live `it(` reported as
+ * an annotation-only carrier — because the other reader had the older rule.
+ * The rule now lives in {@link maskJsNonCode} and there is one of it.
+ *
+ * The options are not a compromise between the two: they are the language
+ * dimension the merge had to keep. This scan walks whatever a project puts
+ * under its test roots, so `//` and slash-star are the C family (TS/JS, Java,
+ * C#, Go, Rust, Kotlin, Swift, PHP), `#` is the hash family (Python, Ruby,
+ * Gherkin) minus Rust's `#[test]` attribute and a shebang, and triple quotes
+ * blank a Python docstring whole. The JS-only caller in this file
+ * ({@link maskTestSource}) leaves both off, because `#` is not a comment in
+ * JavaScript — it opens a private field, and `this.#count` under a hash-comment
+ * rule loses the rest of its line.
  *
  * Regex literals are tracked for one reason: a backtick inside one (`/^\s*```/`
  * is real code in this repository) would otherwise open a template literal and
  * blank every line up to the next backtick, taking a genuine declaration with
- * it. Whether a `/` opens a literal or divides is decided by the token before
- * it, which is the standard heuristic.
- *
- * Single pass, and it never slices the tail: {@link NON_CODE_OPENER_RE} jumps
- * straight to the next character that could open a span, and the sticky
- * patterns match in place. Re-reading the remainder of the body at every
- * character made the cost quadratic in file size, on a path that runs over
- * every annotated carrier in the project.
+ * it.
  */
-const NON_CODE_OPENER_RE = /["'`/#]/g;
-const BLOCK_COMMENT_RE = /\/\*[\s\S]*?(?:\*\/|$)/y;
-const LINE_COMMENT_RE = /(?:\/\/|#(?![[!]))[^\n]*/y;
-const TRIPLE_QUOTED_RE = /"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)/y;
-const QUOTED_RE = /"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?/y;
-const REGEX_LITERAL_RE = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[A-Za-z]*/y;
-/** Characters that can end a value, so a `/` after one divides. */
-const VALUE_END_RE = /["'`\w$)\]]/;
-/**
- * Words that end in an identifier character yet still open an expression.
- *
- * `return /^\s*```/;` reads as division on the character test alone, which
- * leaves the backtick inside the literal free to open a template literal and
- * blank the declaration below it — the failure the regex branch exists to
- * prevent, one token further along.
- */
-const EXPRESSION_KEYWORDS: ReadonlySet<string> = new Set([
-  "return",
-  "throw",
-  "typeof",
-  "instanceof",
-  "in",
-  "of",
-  "new",
-  "delete",
-  "void",
-  "case",
-  "do",
-  "else",
-  "yield",
-  "await",
-]);
-
-/** Matches the non-code span opening at `at`, or `null` when none does. */
-function nonCodeSpanAt(text: string, at: number): string | null {
-  for (const pattern of [BLOCK_COMMENT_RE, LINE_COMMENT_RE, TRIPLE_QUOTED_RE, QUOTED_RE]) {
-    pattern.lastIndex = at;
-    const match = pattern.exec(text);
-    if (match && match[0].length > 0) {
-      return match[0];
-    }
-  }
-  if (text.charAt(at) !== "/" || endsValueBefore(text, at)) {
-    return null;
-  }
-  REGEX_LITERAL_RE.lastIndex = at;
-  return REGEX_LITERAL_RE.exec(text)?.[0] ?? null;
-}
-
-/**
- * Keywords whose parenthesised header ends a statement rather than a value.
- *
- * `if (enabled) /^\s*```/.test(value)` is a legal regex literal, but the `)`
- * before it reads as the end of a call on the character test alone — which
- * leaves the backtick inside free to open a template literal and blank the
- * declaration below it, the failure this branch exists to prevent.
- */
-const CONTROL_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
-  "if",
-  "for",
-  "while",
-  "switch",
-  "catch",
-  "with",
-]);
-
-/**
- * Characters walked back to pair a `)` with its `(`.
- *
- * A control-statement header is short; the budget only stops a pathological
- * body from making the walk quadratic on a path that reads every annotated
- * carrier in the project. Exhausting it falls back to "the `)` ended a value",
- * which is the reading before this branch existed.
- */
-const PAREN_LOOKBACK_LIMIT = 2000;
-
-/** The identifier ending immediately before `at`, or `""` when none does. */
-function wordBefore(text: string, at: number): string {
-  let end = at - 1;
-  while (end >= 0 && /\s/.test(text.charAt(end))) {
-    end -= 1;
-  }
-  if (end < 0 || !/[\w$]/.test(text.charAt(end))) {
-    return "";
-  }
-  let start = end;
-  while (start > 0 && /[\w$]/.test(text.charAt(start - 1))) {
-    start -= 1;
-  }
-  return text.slice(start, end + 1);
-}
-
-/** True when the `)` at `at` closes a control statement's header. */
-function closesControlHeader(text: string, at: number): boolean {
-  const stop = Math.max(0, at - PAREN_LOOKBACK_LIMIT);
-  let depth = 0;
-  for (let back = at; back >= stop; back -= 1) {
-    const char = text.charAt(back);
-    if (char === ")") {
-      depth += 1;
-    } else if (char === "(") {
-      depth -= 1;
-      if (depth === 0) {
-        return CONTROL_STATEMENT_KEYWORDS.has(wordBefore(text, back));
-      }
-    }
-  }
-  return false;
-}
-
-/** True when the token before `at` ends a value, so a `/` there divides. */
-function endsValueBefore(text: string, at: number): boolean {
-  let back = at - 1;
-  while (back >= 0 && /\s/.test(text.charAt(back))) {
-    back -= 1;
-  }
-  if (back < 0) {
-    return false;
-  }
-  const char = text.charAt(back);
-  if (!VALUE_END_RE.test(char)) {
-    return false;
-  }
-  if (char === ")") {
-    return !closesControlHeader(text, back);
-  }
-  if (!/[\w$]/.test(char)) {
-    return true;
-  }
-  return !EXPRESSION_KEYWORDS.has(wordBefore(text, back + 1));
-}
-
 function stripCommentsAndLiterals(text: string): string {
-  const parts: string[] = [];
-  let plainFrom = 0;
-  NON_CODE_OPENER_RE.lastIndex = 0;
-  let opener: RegExpExecArray | null;
-  while ((opener = NON_CODE_OPENER_RE.exec(text)) !== null) {
-    const at = opener.index;
-    const span = nonCodeSpanAt(text, at);
-    if (span === null) {
-      continue;
-    }
-    parts.push(text.slice(plainFrom, at), blankSpan(span));
-    plainFrom = at + span.length;
-    NON_CODE_OPENER_RE.lastIndex = plainFrom;
-  }
-  parts.push(text.slice(plainFrom));
-  return parts.join("");
+  return maskJsNonCode(text, { hashComments: true, tripleQuoted: true });
 }
 
 /** True when `file` is a carrier a runner could execute, judged on its body. */
