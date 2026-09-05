@@ -822,22 +822,64 @@ function emitGitHubOutput(
   status: { failOn: FailOn; willFail: boolean; runLogPath: string },
 ): void {
   const deduped = dedupeIssues(result.issues);
-  const omitted = Math.max(deduped.length - GITHUB_ANNOTATION_LIMIT, 0);
   const dropped = Math.max(result.issues.length - deduped.length, 0);
+  const perLevel = capPerLevel(deduped);
 
   emitGitHubSummary(result, {
     total: deduped.length,
-    omitted,
+    emitted: perLevel.emitted.length,
+    levels: perLevel.levels,
     dropped,
     jsonPath,
     root,
     ...status,
   });
 
-  const issues = deduped.slice(0, GITHUB_ANNOTATION_LIMIT);
-  for (const issue of issues) {
+  for (const issue of perLevel.emitted) {
     emitGitHub(issue, status.failOn);
   }
+}
+
+/** What one annotation level looked like: how many exist, and how many were emitted. */
+export interface LevelTally {
+  readonly level: GitHubLevel;
+  readonly total: number;
+  readonly emitted: number;
+}
+
+/**
+ * The issues to emit, capped at GitHub's own limit for each level, plus a tally per level.
+ *
+ * The cap is applied on the level the ANNOTATION carries, not on `issue.severity`, and those are
+ * not the same partition: a suppressed error annotates as `notice`. Capping by severity would
+ * count a suppressed error against the error budget while the runner counted it against the
+ * notice one — so the summary would be wrong in the direction that matters, claiming a level was
+ * complete while the runner truncated it. One derivation, used here and by the emitter.
+ *
+ * Order within a level is preserved, so the first ten of a level are the first ten a reader
+ * would have seen.
+ */
+export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelTally[] } {
+  const buckets = new Map<GitHubLevel, Issue[]>();
+  for (const issue of issues) {
+    const level = gitHubLevel(issue);
+    const bucket = buckets.get(level);
+    if (bucket === undefined) buckets.set(level, [issue]);
+    else bucket.push(issue);
+  }
+
+  const emitted: Issue[] = [];
+  const levels: LevelTally[] = [];
+  // A FIXED order, so the note reads the same way from one run to the next rather than in
+  // whichever order the issues happened to arrive.
+  for (const level of GITHUB_LEVELS) {
+    const bucket = buckets.get(level) ?? [];
+    if (bucket.length === 0) continue;
+    const kept = bucket.slice(0, GITHUB_ANNOTATION_LIMIT_PER_LEVEL);
+    emitted.push(...kept);
+    levels.push({ level, total: bucket.length, emitted: kept.length });
+  }
+  return { emitted, levels };
 }
 
 /**
@@ -854,14 +896,26 @@ function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   return failOn === "warning" && issue.severity === "warning";
 }
 
+/** The three levels GitHub counts separately, in the order the summary reports them. */
+export const GITHUB_LEVELS = ["error", "warning", "notice"] as const;
+
+type GitHubLevel = (typeof GITHUB_LEVELS)[number];
+
+/**
+ * The level an issue annotates as.
+ *
+ * Extracted from `emitGitHub` so the per-level cap and the emitter cannot disagree about which
+ * budget an issue spends. A suppressed issue is a `notice` whatever its severity, and that is
+ * exactly the case a second copy of this expression would get wrong.
+ */
+export function gitHubLevel(issue: Issue): GitHubLevel {
+  if (issue.suppressed) return "notice";
+  if (issue.severity === "error") return "error";
+  return issue.severity === "warning" ? "warning" : "notice";
+}
+
 function emitGitHub(issue: Issue, failOn: FailOn): void {
-  const level = issue.suppressed
-    ? "notice"
-    : issue.severity === "error"
-      ? "error"
-      : issue.severity === "warning"
-        ? "warning"
-        : "notice";
+  const level = gitHubLevel(issue);
   // The location metadata is ESCAPED, and by the property rules rather than the message
   // ones. Review finding [40]: `issue.file` can come from a finding the reviewer gate
   // ingested out of `.qfai/review/**`, which is a directory a pull request writes — so a
@@ -886,7 +940,8 @@ function emitGitHubSummary(
   result: ValidationResult,
   options: {
     total: number;
-    omitted: number;
+    emitted: number;
+    levels: LevelTally[];
     dropped: number;
     jsonPath: string;
     runLogPath: string;
@@ -900,21 +955,32 @@ function emitGitHubSummary(
     `error=${result.counts.error}`,
     `warning=${result.counts.warning}`,
     `info=${result.counts.info}`,
-    `annotations=${Math.min(options.total, GITHUB_ANNOTATION_LIMIT)}/${options.total}`,
+    `annotations=${options.emitted}/${options.total}`,
     `failOn=${options.failOn}`,
     `result=${options.willFail ? "FAIL" : "PASS"}`,
   ].join(" ");
   process.stdout.write(`${summary}\n`);
 
-  if (options.dropped > 0 || options.omitted > 0) {
+  const truncated = options.levels.filter((tally) => tally.emitted < tally.total);
+  if (options.dropped > 0 || truncated.length > 0) {
     const details = [
       "qfai validate note:",
       options.dropped > 0 ? `重複除外=${options.dropped}` : null,
-      options.omitted > 0 ? `上限省略=${options.omitted}` : null,
+      // PER LEVEL, because one number cannot express a per-level cap: a run with 5 errors and
+      // 200 notices is complete on one level and truncated on the other, and a single
+      // `上限省略=195` reads as though something was lost everywhere.
+      truncated.length > 0
+        ? `上限省略=${truncated
+            .map((tally) => `${tally.level} ${tally.emitted}/${tally.total}`)
+            .join(", ")}`
+        : null,
     ]
       .filter(Boolean)
       .join(" ");
     process.stdout.write(`${details}\n`);
+    process.stdout.write(
+      `qfai validate note: GitHub は annotation を level ごと 10 件/step までしか表示しません。省略分は JSON に全件あります。\n`,
+    );
   }
 
   const relative = toRelativePath(options.root, options.jsonPath);
@@ -962,7 +1028,25 @@ function resolveJsonPath(root: string, jsonPath: string): string {
   return path.isAbsolute(jsonPath) ? jsonPath : path.resolve(root, jsonPath);
 }
 
-const GITHUB_ANNOTATION_LIMIT = 100;
+/**
+ * GitHub's own cap on annotations, which is per LEVEL and per STEP.
+ *
+ * This was 100, applied to the whole run, and the summary printed
+ * `annotations=${min(total, 100)}/${total}` — so a run with 40 errors said `annotations=40/40`,
+ * which reads as "every finding was emitted", while the runner displayed ten and dropped thirty
+ * without saying so. The summary is the only thing an operator sees, and it said the opposite of
+ * what happened. Measured on the `test (cli)` lane, all three levels sat at exactly ten, so the
+ * truncation was the steady state rather than an edge case.
+ *
+ * Emitting past the cap was the alternative and buys nothing: the runner drops the extras, and a
+ * local `--format github` run just prints more lines that no reader gets. What is owed is not a
+ * smaller number but an honest report, which is why the per-level tally exists beside this.
+ *
+ * The cap is per STEP, and a step may run `validate` more than once — so this bounds what THIS
+ * invocation emits, not what the step ultimately displays. The note says the rule rather than
+ * promising an outcome this process cannot see.
+ */
+export const GITHUB_ANNOTATION_LIMIT_PER_LEVEL = 10;
 
 /**
  * Human-readable "expected state" per issue code. Exported so a test can assert
