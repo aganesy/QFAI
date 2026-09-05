@@ -65,6 +65,7 @@ import {
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
+  validateTddListSeedShape,
   validateUiDefinitionConsistency,
   validateDesignAudit,
   validateNavigationFlow,
@@ -581,6 +582,10 @@ async function runSddValidators(
   // `full` runs the discussion profile too, which already carries the same
   // validator, so it opts out here to keep every QFAI-REVIEW-* finding once.
   includeReviewArtifacts = true,
+  // `full` also runs the tdd profile, which calls the whole of
+  // `validateTddList`, so it opts out here rather than reporting the
+  // seed-shape codes twice.
+  includeTddListSeedShape = true,
   // `full` is the repo-wide audit and covers the downstream stage too, so it
   // opts into the history-based `QFAI-TRACE-001` here — `runTddValidators`
   // opts out in exchange, so the ledger is still read exactly once.
@@ -588,6 +593,36 @@ async function runSddValidators(
   includeImplementationDrift = false,
 ): Promise<Issue[]> {
   return [
+    // `/qfai-sdd` Phase 2b writes `tdd/test-list.md`, and `--profile sdd` is
+    // the only gate it stops on — so the profile has to be able to read back
+    // the shape it just wrote. Only the seed-shape half: the rest of
+    // `validateTddList` reports execution state that exists after
+    // `/qfai-implement`, which the SDD stage cannot clear.
+    // The scope is passed, not left to the run-level `--spec` filter: every
+    // `/qfai-sdd` slice gate is a `--spec` run, so an unscoped walk would read
+    // and `stat` every sibling ledger once per slice.
+    //
+    // That same equivalence places the gate: a `--spec` run of this profile IS
+    // the Phase 2 slice gate, and the Required Process runs Phase 2b — the
+    // phase that writes the ledger — only after it. Reconciling the ledger
+    // against `06_Test-Cases.md` there asks the writing stage for a file it
+    // has not reached yet, and a new spec declaring a Unit or Component TC got
+    // `TDDLIST_TC_NOT_COVERED` (error) on the very gate that has to pass
+    // before Phase 2b can run. The unscoped stop gate is the post-Phase-2b
+    // one, and it still evaluates the whole seed-shape set.
+    //
+    // The equivalence is one-way, though, and `beforeLedgerSeed` is read as a
+    // permission rather than an assertion for that reason: `--spec` is
+    // documented as a scope filter, so a `--spec` run is *also* how an author
+    // re-checks a single spec after Phase 2b. Treating the flag as the verdict
+    // let that run pass with rows missing. The validator drops the
+    // reconciliation codes only where the ledger really is absent.
+    ...(includeTddListSeedShape
+      ? await validateTddListSeedShape(root, config, {
+          ...(specScope ? { specScope } : {}),
+          beforeLedgerSeed: specScope !== undefined,
+        })
+      : []),
     ...(await validateMermaidEnforcement(root)),
     // Preflight input source: a project that has spec packs must be able to
     // point at what they were derived from — a discussion pack `06_REQ.md` or
@@ -840,12 +875,13 @@ async function runFullValidators(
     // `"all"`: the full scan owns every review pack, not only the discussion
     // ones this runner gates inside its own profile.
     ...(await runDiscussionValidators(root, config, specScope, "all")),
-    // Review artifacts come in with the discussion profile above, so the sdd
-    // profile opts out rather than reporting every QFAI-REVIEW-* twice. The
-    // trailing `true` is the opposite trade: `full` covers the downstream
-    // stage, so it opts INTO the history-based implementation-drift check here
-    // and `runTddValidators` opts out of it below.
-    ...(await runSddValidators(root, config, true, false, specScope, false, true)),
+    // Review artifacts come in with the discussion profile above, and the tdd
+    // profile below carries the whole of `validateTddList`, so the sdd profile
+    // opts out of both rather than reporting QFAI-REVIEW-* and the ledger
+    // seed-shape codes twice. The trailing `true` is the opposite trade:
+    // `full` covers the downstream stage, so it opts INTO the history-based
+    // implementation-drift check here and `runTddValidators` opts out below.
+    ...(await runSddValidators(root, config, true, false, specScope, false, false, true)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false, false, false)),

@@ -18,6 +18,10 @@ import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
+import {
+  TDD_LIST_SEED_RECONCILIATION_CODES,
+  TDD_LIST_SEED_SHAPE_CODES,
+} from "../../core/validators/tddList.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
@@ -197,6 +201,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const normalized = normalizeValidationResult(root, result);
   const partialProfileNotice = buildPartialProfileNotice(
     normalized.profile,
+    scopedSpecIds.length > 0,
     await unevaluatedPackageSelfGovernanceFamilies(root),
   );
   if (partialProfileNotice) {
@@ -463,10 +468,15 @@ function buildDeprecationIssue(args: {
  * Entries are prefix globs wherever a group owns a whole prefix: a gate that
  * gains a second code would otherwise drop out of the notice unannounced.
  * Exported so `tests/core/findingCodeGrammar.test.ts` can prove that for the
- * gates whose emitted codes it scans. A group that is deliberately a *subset*
- * of a prefix — the three `QFAI-TRACE-*` groups below, split because the `sdd`
- * and `tdd` profiles run different halves of it — names its codes instead, and
- * then the split has to partition the prefix rather than sample it.
+ * gates whose emitted codes it scans.
+ *
+ * A group that is deliberately a *subset* of a prefix names its codes instead,
+ * and then the split has to partition the prefix rather than sample it. Two do:
+ * the three `QFAI-TRACE-*` groups below, split because the `sdd` and `tdd`
+ * profiles run different halves of it; and `tdd-ledger-seed`, which spreads the
+ * same constant its validator filters on rather than re-spelling it — the
+ * tighter form of the rule, since a list that IS the gate's own list cannot
+ * drift from what the gate evaluates.
  */
 export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
@@ -499,6 +509,14 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
+  // The half of the ledger validator that describes what `/qfai-sdd` Phase 2b
+  // wrote. Both `sdd` and `tdd` run it, so it is its own group: folding it into
+  // `tdd` would tell an `sdd` reader these codes went unevaluated.
+  //
+  // Read from the same constant `validateTddListSeedShape` filters on rather
+  // than re-spelled here: a code in one list and absent from the other makes
+  // the notice lie in whichever direction the two drifted.
+  "tdd-ledger-seed": [...TDD_LIST_SEED_SHAPE_CODES],
   // The downstream-ownership gate, and the only group `full` does NOT run.
   //
   // `/qfai-sdd` owns the protected files and edits them without a Change
@@ -512,14 +530,15 @@ export const GATE_GROUP_FAMILIES = {
   // unevaluated, so a `full` PASS looked drift-checked to an operator following
   // `QFAI-PROFILE-001`'s own advice (#1122).
   drift: ["QFAI-DRIFT-*"],
-  // `QFAI-TDDLIST-*` is the same gate as `TDDLIST_*` — `validateTddList` — in
-  // its canonical spelling. Both are listed because the legacy family is frozen
-  // and every code the gate gains from here on is canonical.
+  // The remaining `TDDLIST_*` codes report execution state that only exists
+  // after `/qfai-implement` has driven rows, so only its profile evaluates
+  // them. `QFAI-TDDLIST-*` is the canonical spelling of the same gate and every
+  // code it holds today is execution state, so the glob sits here whole.
   //
   // `QFAI-TRACE-*` is deliberately NOT here: the three `traceability-*` groups
   // below split that prefix, and leaving the glob would count every trace code
   // in two groups at once.
-  tdd: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TEST-*"],
+  tdd: ["TDDLIST_* (execution state)", "QFAI-TDDLIST-*", "QFAI-TEST-*"],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
@@ -566,10 +585,13 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // family the run did not evaluate. `runSddValidators` additionally calls
   // `runPackageSelfGovernanceValidators`, so sdd evaluates that group too.
   discussion: ["discussion", "review-artifacts"],
+  // `runSddValidators` also calls `validateTddListSeedShape`: the stage that
+  // seeds the ledger is gated on the shape it seeded.
   sdd: [
     "sdd",
     "package-self-governance",
     "review-artifacts",
+    "tdd-ledger-seed",
     "traceability-ledger",
     "traceability-layered",
   ],
@@ -580,8 +602,12 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // `drift`: `runTddValidators` passes `includeUpstreamGuard = true` here and
   // `runFullValidators` passes `false`, so this is the only profile that
   // evaluates `QFAI-DRIFT-*`.
+  //
+  // `tdd-ledger-seed` as well as `tdd`: this profile runs the WHOLE ledger
+  // validator, so it evaluates the seed shape the `sdd` profile also checks.
   tdd: [
     "tdd",
+    "tdd-ledger-seed",
     "atdd-traceability",
     "drift",
     "traceability-ledger",
@@ -598,6 +624,9 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
 /**
  * Deduped, order-preserving families for the groups a profile does not run.
  *
+ * `scoped` is whether the run carried `--spec`, which narrows what the `sdd`
+ * profile evaluates: see the branch below.
+ *
  * `unevaluatedSelfGovernance` carries the self-governance codes whose own
  * inputs are absent, so those detectors cannot fire whatever the project does
  * and their codes join the list even though the profile wires them in. It is
@@ -607,6 +636,7 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
  */
 function unevaluatedFamilies(
   profile: string,
+  scoped: boolean,
   unevaluatedSelfGovernance: readonly string[],
 ): string[] {
   if (!isKnownProfile(profile)) {
@@ -631,6 +661,19 @@ function unevaluatedFamilies(
     // precondition-gated group there would be the artifact contradicting
     // itself.
     return families;
+  }
+  if (profile === "sdd" && scoped) {
+    // A `--spec` run of this profile is the per-spec slice gate, which the
+    // skill's Required Process places before the phase that seeds the ledger —
+    // so `runSddValidators` drops the codes that reconcile the two. Read from
+    // the same constant it filters on, so the notice cannot claim a gate the
+    // run skipped.
+    //
+    // The drop is per spec — only where the ledger is genuinely absent — so on
+    // a scoped run over seeded specs these codes did in fact run. Listing them
+    // anyway is the conservative half of the error: the notice under-claims
+    // what was evaluated, which is the direction that cannot mislead.
+    for (const family of TDD_LIST_SEED_RECONCILIATION_CODES) push(family);
   }
   if (evaluated.has("package-self-governance")) {
     for (const family of unevaluatedSelfGovernance) push(family);
@@ -657,6 +700,7 @@ function unevaluatedFamilies(
  */
 function buildPartialProfileNotice(
   profile: string | undefined,
+  scoped: boolean,
   unevaluatedSelfGovernance: readonly string[],
 ): Issue | null {
   // `core/validate.ts` resolves `options.profile ?? "full"` before this runs,
@@ -666,7 +710,7 @@ function buildPartialProfileNotice(
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile, unevaluatedSelfGovernance);
+  const unevaluated = unevaluatedFamilies(profile, scoped, unevaluatedSelfGovernance);
   if (unevaluated.length === 0) {
     return null;
   }
