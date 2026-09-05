@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **`actions/checkout` と `actions/setup-node` を Node 24 対応版へ。**
+  どちらも `runs.using: node20` を宣言しており、runner が Node 24 で強制実行
+  したうえで全 job に deprecation warning を出していた。GitHub が Node 20 を
+  撤去した時点で checkout が失敗して全 lane が落ちる、予告済みの破壊的変更
+  である (#1161)。
+  - `actions/checkout` → `fbc6f399…` (v5.1.0)
+  - `actions/setup-node` → `a0853c24…` (v5.0.0)
+
+  どちらの SHA も `action.yml` を取得して `using: node24` を実際に確認した。
+  出荷アセット側 (`qfai-tests.yml` / `qfai-validate.yml`) も同時に上げている
+  ため、`qfai init` が書く workflow も同じ警告を出さなくなる。
+
 ### Fixed
 
 - **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
