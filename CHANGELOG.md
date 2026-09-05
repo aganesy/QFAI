@@ -26,6 +26,17 @@
   (上限付き)。stderr である理由は、GitHub が workflow command を stdout
   からしか読まないため、報告自身が command になれないようにするため。
 
+  setup の宣言場所も動かしている。当初は `vitest.knobs.ts` の `projectKnobs`
+  に入れていたが、**parallelism の E2E はこの object を `mkdtemp` の fixture
+  root へそのまま spread する** (宣言された knob を再現して runner の挙動を
+  測るのがその suite の目的である)。相対パスの `setupFiles` は fixture root
+  から解決されて存在せず、slot 4 ファイルが全部 collect に失敗した。
+  `vitest.knobs.ts` は _parallelism_ の knob 集合であり、`setupFiles` は
+  parallelism の knob ではない。別 export にして `vitest.workspace.ts` 側
+  (fixture が写さない場所) で各 project に渡す。`projectKnobs` に root 相対
+  パスが無いことをテストで固定した — 「setupFiles が無いこと」ではなく
+  「root 相対のものが無いこと」が守るべき不変条件である。
+
   child process で走らせる 3 行は Node の `--experimental-strip-types` に
   依存していたが、このフラグは Node 22.6 で入ったもので `engines.node` は
   `>=20.19.0` である。floor lane では child が **コマンドラインの時点で
