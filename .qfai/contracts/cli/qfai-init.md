@@ -72,15 +72,15 @@ Behavior:
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
-Relocates files from the two pre-recut surfaces the recut actually moved — `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*` — to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table.
+Copies files from the two pre-recut surfaces the recut actually moved — `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*` — into the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table. The pre-recut files stay where they are.
 
 `.qfai/assistant/manifest/*` is **not** walked, even though it is a pre-recut surface: its path is identical before and after the recut, so walking it would re-label freshly seeded canonical files as legacy content and emit spurious `W-USER-EDIT-PRESERVED` notes (`runUpgradeAssistantTree`'s `legacySurfaces`, `packages/qfai/src/cli/commands/init.ts`). The consequence is that a user-authored document sitting in a pre-recut `manifest/` is left exactly where it is — it is not re-classified into `catalog/` — and `qfai-configure` stays the supported entrypoint for that layer. Migrating stale _content_ inside those files is a separate concern and is not handled here.
 
 Behavior:
 
-- For each file in the relocation table, move the existing user-edited content to the new path.
+- For each file in the relocation table, copy the existing user-edited content to the new path. The original is left in place on purpose — see the deprecation-window bullet below and NFR-0002.
 - If a destination already exists with user edits, preserve the user-edited content and surface `W-USER-EDIT-PRESERVED` (REQ-0013).
-- After the move, run the `qfai init` default flow, which seeds a missing README / template and reports drift on an existing one (create-only, as above).
+- After the copy, run `qfai init` default flow, which seeds a missing README / template and reports drift on an existing one (create-only, as above).
 - Old paths are not deleted within the deprecation window (NFR-0002); they remain readable but emit `D-DEPRECATED-PATH` warnings during validate.
 
 Required preconditions:
@@ -158,4 +158,9 @@ The sunset is `SUNSETS.legacyAssistantSteering` in `packages/qfai/src/core/sunse
 
 ## Distributed-surface obligations
 
-The seeded `.qfai/steering/README.md` and `_templates/entry.md` MUST pass `packages/qfai/scripts/check-no-internal-version-leakage.sh` (no `spec-NNNN` for N ≥ 10, no `vN.M[.P]`, no `CAP-0010+`, no `DEC-NNNN-NNNN`, no `DR-NNNN`, no `OQ-NNNN-NNNN`, no `QFAI-PROT2-NNN`, no `schemaVersion`). The work-log surface itself (`.qfai/steering/`) is NOT shipped in `packages/qfai/package.json#files`; only the seeded README + template under `assets/init/.qfai/steering/` ship.
+The seeded `.qfai/steering/README.md` and `_templates/entry.md` MUST pass `packages/qfai/scripts/check-no-internal-version-leakage.sh` (no `spec-NNNN` for N ≥ 10, no `vN.M[.P]`, no `CAP-0010+`, no `DEC-NNNN-NNNN`, no `DR-NNNN`, no `OQ-NNNN-NNNN`, no `QFAI-PROT2-NNN`, no `schemaVersion`). The work-log surface itself (`.qfai/steering/`) is NOT shipped in `packages/qfai/package.json#files`.
+
+Neither seeded body is a static asset. `buildProjectSteeringReadmeBody` and `buildProjectSteeringEntryTemplate` in `packages/qfai/src/cli/commands/init.ts` build them in TypeScript, taking the `kind` enum from `WORKLOG_ENTRY_KINDS`, the `status` enum from `WORKLOG_ENTRY_STATUSES` and the mandatory handoff headings from `HANDOFF_REQUIRED_SECTIONS` (`packages/qfai/src/core/paths/assistantPaths.ts`), so those three lists cannot drift from the validator; the remaining frontmatter prose is illustrative and is not derived. They therefore ship as string literals inside `dist/` rather than as files under `assets/`. Two consequences when auditing the obligation above:
+
+- The leakage guard reaches the two bodies only through `dist/`, so they are covered on the post-build guard run. The lint-only run skips `dist/` by design and says so (`WARN: ... skipped ... that are not on disk yet`), so a green lint-only run is not evidence that the seed was scanned.
+- `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts` runs `qfai init` into a temp directory and scans the emitted tree with the same forbidden-class set, regardless of build state. It belongs to the `integration` vitest project (`packages/qfai/vitest.workspace.ts`), so it covers the seeded bodies only when that project — or the full suite — runs; a green `test:assets` or `e2e` slice alone does not scan the seed.

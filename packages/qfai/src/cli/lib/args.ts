@@ -46,7 +46,11 @@ export type ParsedArgs = {
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
+    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
+    /** `rescope --remove <surface-id>`, repeatable. */
+    rescopeRemove: string[];
+    /** `rescope --reason <delta-id>`: the decision that retired the surface. */
+    rescopeReason?: string;
     prototypingTargetUrl?: string;
     /** Subcommand for `qfai discussion <list|use>`. */
     discussionAction?: "list" | "use";
@@ -154,6 +158,16 @@ export type ParsedArgs = {
     /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
     reportSpecIds: string[];
     help: boolean;
+    /**
+     * Unrecognized `--flag` tokens, in argv order. The CLI prints them
+     * before the usage text so a typo names itself.
+     */
+    unknownFlags: string[];
+    /**
+     * Exit code used when `invalid` is set. CLI-arg errors (unknown
+     * flag, malformed or missing value) exit 2 on every command, per
+     * the exit-code table in the init CLI contract.
+     */
     invalidExitCode: number;
   };
 };
@@ -166,6 +180,7 @@ type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
 
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
+    rescopeRemove: [],
     root: cwd,
     rootExplicit: false,
     dir: cwd,
@@ -182,7 +197,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateSpecIds: [],
     reportSpecIds: [],
     help: false,
-    invalidExitCode: 1,
+    unknownFlags: [],
+    invalidExitCode: 2,
   };
 
   const args = [...argv];
@@ -197,16 +213,48 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const markInvalid = (): void => {
     invalid = true;
     options.help = true;
-    if (command === "guardrails") {
-      options.invalidExitCode = 2;
-    }
   };
+
+  // 先頭トークンが `--` で始まる場合、それはコマンド名ではなく未知
+  // オプションである。`command = args.shift()` で取り除かれるため下の
+  // フラグループには到達せず、ここで捕まえないと main.ts の
+  // unknown-command 分岐に落ちて exit 0 になってしまう
+  // (`qfai --bogus`)。`--help` / `-h` は直前の分岐で null 化済み。
+  if (command !== null && command.startsWith("--")) {
+    options.unknownFlags.push(command);
+    markInvalid();
+    command = null;
+  }
 
   /**
    * Flag-ownership guard (下の flag-handling contract rule 2 用)。
    * `qfai prototyping <action>` のサブコマンドトークンは flag loop より
    * 前に確定するため、ループ内のどの arm からでも安全に呼べる。
    */
+  /**
+   * Whether a flag is on one of the commands that actually reads it.
+   *
+   * A flag accepted where nothing reads it reaches nothing, and the run
+   * proceeds as if it had not been given. `--dir` produced a verdict about the
+   * CURRENT tree and made `report` overwrite its `report.md` (#1143);
+   * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
+   * `--dry-run` let an operator believe a run was a rehearsal (#1144).
+   *
+   * The owner lists are derived from where `main.ts` reads each field, not
+   * guessed:
+   *
+   * - `dir`, `upgradeAssistantTree` — `init`
+   * - `yes` — `init`, `doctor`
+   * - `force` — `init`, `handoff`, `prototyping`
+   * - `dryRun` — `init`, `doctor`, `handoff`, `prototyping`
+   *
+   * One predicate rather than one per flag: two that mean almost the same
+   * thing are two contracts to keep in step, and this is the shape
+   * `ownedByPrototyping` and `ownedByGuardrails` below already use.
+   */
+  const ownedBy = (...commands: string[]): boolean =>
+    command !== null && commands.includes(command);
+
   const ownedByPrototyping = (...actions: PrototypingAction[]): boolean => {
     if (command !== "prototyping") {
       return false;
@@ -250,7 +298,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         candidate === "preflight" ||
         candidate === "iterate" ||
         candidate === "certify" ||
-        candidate === "show-spec"
+        candidate === "show-spec" ||
+        candidate === "rescope"
       ) {
         options.prototypingAction = candidate;
       } else {
@@ -365,20 +414,48 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             markInvalid();
             break;
           }
-          options.dir = next;
+          // `--root` is the flag for pointing another command at a tree, and
+          // the usage text this refusal prints says so.
+          if (ownedBy("init")) {
+            options.dir = next;
+          } else {
+            markInvalid();
+          }
         }
         break;
       case "--force":
-        options.force = true;
+        // Read by the `init`, `handoff` and `prototyping` arms and nowhere else.
+        if (ownedBy("init", "handoff", "prototyping")) {
+          options.force = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--yes":
-        options.yes = true;
+        // Read by the `init` and `doctor` arms and nowhere else.
+        if (ownedBy("init", "doctor")) {
+          options.yes = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--dry-run":
-        options.dryRun = true;
+        // Read by `init`, `doctor`, `handoff` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
+        if (ownedBy("init", "doctor", "handoff", "prototyping")) {
+          options.dryRun = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--upgrade-assistant-tree":
-        options.upgradeAssistantTree = true;
+        // Same shape as `--dir`, and worse in one way: accepted elsewhere it
+        // exited 0 having upgraded nothing, so the operator went on reading an
+        // assistant tree they believed had been refreshed.
+        if (ownedBy("init")) {
+          options.upgradeAssistantTree = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--format": {
         const next = consumeOptionValue();
@@ -593,6 +670,34 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "validate") {
           options.platform = next;
+        } else {
+          markInvalid();
+        }
+        break;
+      }
+      case "--remove": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        // Repeatable: one decision can retire more than one surface, and each
+        // retirement earns its own audit entry.
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeRemove.push(next);
+        } else {
+          markInvalid();
+        }
+        break;
+      }
+      case "--reason": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeReason = next;
         } else {
           markInvalid();
         }
@@ -855,6 +960,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.help = true;
         break;
       default:
+        // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
+        // parse error として markInvalid() する。位置引数
+        // (`discussion use <id>` / `handoff upgrade <legacy>` など) は
+        // 対象外に保つ必要があるため、「switch にマッチしなかった」で
+        // はなく `--` プレフィックスで判定する。
+        if (arg?.startsWith("--")) {
+          options.unknownFlags.push(arg);
+          markInvalid();
+        }
         break;
     }
   }

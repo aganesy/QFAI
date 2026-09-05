@@ -34,6 +34,7 @@ import {
   dispatchReviewerToPair,
   type ReviewerPlaywrightAttempt,
 } from "../../../src/core/prototyping/reviewerDispatch.js";
+import { withoutComments } from "../../helpers/sourceReduction.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(here, "..", "..", "..", "..", "..");
@@ -53,12 +54,21 @@ const PROTOTYPING_ITERATE_SRC = path.join(
  * executable code path. Naive but sufficient for grepping a specific
  * call-site token; we are NOT trying to parse TypeScript.
  */
+/**
+ * Comments blanked, literals kept — the shared reduction (#1089).
+ *
+ * This replaced two independent `replace` passes, which is the original defect:
+ * each delimiter occurs inside the other's body, so whichever regex ran first
+ * read the other's content as its own opener. On this file's ONE subject,
+ * `cli/commands/prototypingIterate.ts`, that removed **11,381 characters of
+ * non-comment text** and lost 91 identifiers — among them
+ * `resolvedCaptureScreens`, adjacent to the very token asserted against below.
+ *
+ * The assertion here is a NEGATIVE, so over-deletion made it easier to pass:
+ * this guard could have gone quiet without ever reddening.
+ */
 function stripComments(source: string): string {
-  // Remove block / JSDoc comments first (non-greedy, multi-line).
-  const withoutBlocks = source.replace(/\/\*[\s\S]*?\*\//g, "");
-  // Then line comments. We keep the newline so line counts stay stable
-  // (helps debugging if an assertion ever fails).
-  return withoutBlocks.replace(/(^|[^:])\/\/.*$/gm, "$1");
+  return withoutComments(source);
 }
 
 /**
