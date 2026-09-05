@@ -56,8 +56,8 @@ current `DESIGN.md` hash does not match the lock.
 ### Step 2-A — Verify Contract Preconditions
 
 - The skill resolves **every UI-bearing spec in one invocation** via
-  `resolveAllUiBearingSpecs()` (`core/prototyping/specResolution.ts`):
-  strict `surface_type: ui-bearing` frontmatter + matching
+  its `resolveAllUiBearingSpecs()` resolver: strict
+  `surface_type: ui-bearing` frontmatter + matching
   `.qfai/contracts/ui/<spec-id>*.yaml`, with legacy title-marker and
   `qfai.config.yaml` `prototyping` pinning folded in. Run
   `npx qfai doctor --profile prototyping` to surface the resolved value.
@@ -156,11 +156,32 @@ the help text wins and this section is stale.
 
 ### Step 2-C — Run the Loop
 
-| Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Output                                   |
-| ----- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| C0    | product-experience-architect                              | `npx qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. Append entry; commit `prototyping: iter-00`.                                                                                                                                                                                                                    | iter-00, prototyping.json#designMdSha256 |
-| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `npx qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
-| H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `npx qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `npx qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                           | DONE                                     |
+| Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Output                                   |
+| ----- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| C0    | product-experience-architect                              | `npx qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. REPLACE the seed `iterations[0]` per "Transcription" below; commit `prototyping: iter-00`.                                                                                                                                                                                                                  | iter-00, prototyping.json#designMdSha256 |
+| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) transcribe it into `prototyping.json#iterations[]` per "Transcription" below, update `progress.md`, commit `prototyping: iter-NN`; (d) `npx qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
+| H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `npx qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `npx qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                                                                       | DONE                                     |
+
+### Transcription (C0, and C1..9 step c)
+
+`prototyping.json#iterations[]` is a MIRROR of `iter-NN/review.json`, and
+`validate` compares them field by field. Copy **all seven** verbatim —
+`reviewerId`, the four `scores`, `proseCritique`, `layoutAntiPatternsDetected[]`,
+`designMdViolations[]`, `pivotDirective`, `evidenceRefs` — including
+`evidenceRefs` in the full repository-relative form the reviewer wrote. A field
+left at its previous value is reported as a mirror disagreement, and the
+reviewer's value is the one to keep.
+
+Two specifics that are easy to get wrong:
+
+- **Cycle 0 REPLACES `iterations[0]`, it does not append.** `iterate --cycle 0`
+  has already written a seed record there, so appending leaves two index-0
+  entries and fails QFAI-PROT-004.
+- **`reviewerId` must be overwritten.** The seed carries `iterate-seed`, and
+  leaving it in place on a reviewed record used to waive the whole
+  reviewer-deliverable gate for that iteration. It no longer does — the
+  exemption now requires the record to still BE the untouched seed — so a
+  stale stamp is reported rather than obeyed, but it is still wrong.
 
 **Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
@@ -173,6 +194,53 @@ hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 (incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
 editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0; also
 covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
+
+### Scope reduction: `prototyping rescope`
+
+The drift rule above is symmetric, and scope **reduction** is not. When a
+product decision retires a screen while the loop is open, the frozen union
+still names it — and editing that union by hand is the exit-2 drift the rule
+exists to catch. `rescope` is the operation that applies such a decision
+without discarding the loop:
+
+```bash
+npx qfai prototyping rescope --remove 0011 --reason DELTA-022
+```
+
+It drops the surface from `frozenSurfaceUnion`, prunes it from any captured
+`iterate-plan.json#screens`, records `{surface, reason, cycle, at}` in
+`prototyping.json#rescopeLog`, and **leaves the loop at its current cycle**.
+`--remove` is repeatable; `--reason` is required and should cite the recorded
+delta or decision that retired the surface. `--dry-run` reports without
+writing.
+
+**Order matters.** Retire the surface upstream first — the spec, its UI
+contract and its route — then run `rescope`. It refuses a surface that still
+resolves as UI-bearing, because dropping one that still exists is exactly the
+drift the frozen union detects. It also refuses a sealed loop (`stopReason`
+set): a completed loop's scope is history.
+
+**It never rewrites a critique.** What a reviewer saw at cycle N is a
+historical fact, so affected `iter-NN/review.json` files get a
+`retiredSurfaces` annotation and their `proseCritique` is left exactly as
+written. A reader can then tell a stale claim from a wrong one.
+
+`npx qfai validate --profile prototyping` reports `QFAI-PROT-011` as soon as
+`frozenSurfaceUnion` names a spec that no longer resolves, so the state is
+visible before the next `iterate` rather than at it. Three ways out:
+
+- **rescope** — the decision was real; apply it and keep every recorded
+  iteration;
+- **restore** the retired spec's UI-bearing marker — the decision was not meant
+  to remove this surface; or
+- **reset** deliberately from cycle 0
+  (`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`), which
+  moves `iter-00` to `iter-00.backup-<ISO>` and discards every cycle of review
+  already paid for. Still available, still destructive.
+
+`iterate` itself only hard-stops when **every** UI-bearing spec has
+disappeared. A partial reduction passes that check, which is why the finding
+exists.
 
 ### License-verify hard-stop (exit 66)
 
@@ -311,5 +379,5 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - Iteration count cap is 10; --cycle is 0-indexed; reaching cycle 9 on a non-converged iteration set exits 65 directly (no cycle-mismatch path).
-- review.json schema-v3 is the only accepted shape; pre-v3 payloads, unknown layoutAntiPatterns codes, or wrong-enum designMdViolations entries fail validate with QFAI-PROT-002.
+- `iter-NN/review.json` is validated directly, against the shape in `references/reviewer-prompt.md`. A missing or unparseable file, an unknown `lap-*` code, a wrong-enum `designMdViolations` entry, an out-of-band `proseCritique`, or a `prototyping.json#iterations[N]` that disagrees with the reviewer's file all fail validate with QFAI-PROT-002. `iterations[]` is a transcription of `review.json`, so on a disagreement the reviewer's value is the one to keep. The cycle-0 seed (`reviewerId: iterate-seed`) is exempt: no reviewer has run yet.
 - DESIGN.md lock sha256 is re-checked every cycle against the live DESIGN.md; mismatch exits 2 and stops the loop.

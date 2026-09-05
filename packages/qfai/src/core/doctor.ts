@@ -810,6 +810,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const matchedCount = scanResult.matchedFileCount;
     const truncated = scanResult.truncated;
 
+    // Globs that are set but collect nothing are `error`, not `warning`: the
+    // SC->Test gate is armed (`scMustHaveTest` with scenario files present) and
+    // matched no file, so it reports success while covering nothing — the
+    // "a gate that cannot run is a gate that silently passes" case. `validate`
+    // already calls this class an error (`QFAI-TRACE-124` /
+    // `traceability.layered.testFileGlobsNoMatch`) under the same precondition,
+    // and the two tools disagreeing meant `--fail-on error` on this one passed
+    // the exact misconfiguration the other fails. Unset globs stay `warning`
+    // here for the same reason `validate` keeps them a warning: a project that
+    // has not configured the gate yet has not broken it.
     const severity: DoctorSeverity =
       globs.length === 0
         ? "warning"
@@ -818,7 +828,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           : scenarioFiles.length > 0 &&
               config.validation.traceability.scMustHaveTest &&
               matchedCount === 0
-            ? "warning"
+            ? "error"
             : "ok";
 
     addCheck(checks, {

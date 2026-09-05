@@ -31,8 +31,6 @@ const stubConfig: QfaiConfig = {
     failOn: "error",
     require: { specSections: [] },
     testStrategy: {
-      requireLayerTags: false,
-      requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
     },

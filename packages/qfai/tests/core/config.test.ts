@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { loadConfig } from "../../src/core/config.js";
+import { loadConfig, type QfaiValidationConfig } from "../../src/core/config.js";
 import { SUNSETS } from "../../src/core/sunset.js";
 
 describe("baseBranch config", () => {
@@ -280,6 +280,75 @@ describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
         issue.message.includes("validation.testStrategy.forbidTestTodoStubs"),
       );
       expect(invalid, "expected invalid type rejection").toBeDefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("testStrategy key surface", () => {
+  // Issue #408: `requireLayerTags` / `requireSizeTags` were declared, defaulted
+  // and parsed here but read by nothing, so flipping either one changed no
+  // outcome. They are off the shipped `qfai.config.yaml` and `evaluateStrategyTags`
+  // is gone, but the keys survive on the public `QfaiValidationConfig` type as a
+  // deprecated compat shim (same treatment as `paths.promptsDir`): a project
+  // that still carries them must keep loading cleanly AND keep resolving the
+  // value it set, not `undefined`.
+  it("still resolves the deprecated requireLayerTags / requireSizeTags keys", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-tags-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "validation:",
+          "  testStrategy:",
+          "    requireLayerTags: true",
+          "    requireSizeTags: true",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(Object.keys(config.validation.testStrategy).sort()).toEqual([
+        "forbidTestTodoStubs",
+        "maxE2eScenarioCount",
+        "maxE2eScenarioRatio",
+        "requireLayerTags",
+        "requireSizeTags",
+      ]);
+      expect(config.validation.testStrategy.requireLayerTags).toBe(true);
+      expect(config.validation.testStrategy.requireSizeTags).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `QfaiValidationConfig` is re-exported from the package root, so a
+  // TypeScript consumer that constructs one of these objects or reads either
+  // key into a `boolean` must keep compiling until the next major. Both stay
+  // required `boolean`, and an absent key still falls back to `false` rather
+  // than to `undefined`.
+  it("keeps the deprecated keys a required boolean on the public type", async () => {
+    const legacy: QfaiValidationConfig["testStrategy"] = {
+      maxE2eScenarioRatio: null,
+      maxE2eScenarioCount: null,
+      forbidTestTodoStubs: true,
+      requireLayerTags: true,
+      requireSizeTags: true,
+    };
+    const enabled: boolean = legacy.requireLayerTags;
+    expect(enabled).toBe(true);
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-legacy-type-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
+
+      const { config } = await loadConfig(root);
+      const resolved: boolean = config.validation.testStrategy.requireSizeTags;
+      expect(resolved).toBe(false);
+      expect(config.validation.testStrategy.requireLayerTags).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
