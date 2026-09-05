@@ -357,12 +357,28 @@ describe("the shipped ledger schema documents all eight required columns", () =>
       ]) {
         expect(required).toContain(column);
       }
-      expect(ledger.indexOf("| US-Refs ")).toBeGreaterThan(optional);
+      // The column table itself moved to `obligation-columns.md` when the ledger hit the
+      // shipped line ceiling; the ledger keeps the heading, a summary and the pointer. What
+      // this row is about — the optional section not being spliced into the required table —
+      // is unchanged, and the assertions follow the text rather than being relaxed.
+      const columns = await readFile(
+        path.join(
+          repoRoot,
+          tree,
+          "assistant/skills/qfai-implement/references/obligation-columns.md",
+        ),
+        "utf-8",
+      );
+      expect(columns).toContain("| US-Refs ");
+      expect(
+        ledger.slice(optional),
+        "the ledger's own section has to reach the file that carries the table",
+      ).toContain("obligation-columns.md");
       // "Required by layer" has to say what the validator does, or the heading
       // is the only place the requirement exists: the reverse direction is
       // enforced, and only where the column is in the header.
-      expect(ledger).toContain("an `E2E` / `API` row that leaves it empty or `-`");
-      expect(ledger).toContain("It fires only where the\ncolumn exists");
+      expect(columns).toContain("an `E2E` / `API` row that leaves it empty or `-`");
+      expect(columns).toContain("It fires only where the\ncolumn exists");
     });
 
     it(`${tree}: the Red phase and the evidence contract branch by Layer`, async () => {
