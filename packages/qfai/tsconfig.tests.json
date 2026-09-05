@@ -148,6 +148,7 @@
     "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
     "tests/unit/config-keys-are-wired.test.ts",
     "tests/unit/core/doctor/assetLineBudget.test.ts",
+    "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
