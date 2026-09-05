@@ -136,10 +136,13 @@ releases completion.
       No `todo`, `red`, `green`, `refactor` or `review-fix` row remains. Accurate statuses are a
       different claim: a run that advanced no row records the ones left mid-cycle correctly and still
       may not declare the spec complete (`SKILL.md#completion-prohibition-conditions`).
-- [ ] No `## Cross-spec obligations` entry in this spec's evidence file is still open — each one's
-      `Resolution` reads `re-reviewed` or names a `CR-*` that is itself resolved. An open entry means
-      another spec's `done` rows still certify a behaviour this run changed and nobody re-verified,
-      which is a completion prohibition however clean the local rows are
+- [ ] No `## Cross-spec obligations` entry of the **code-ownership** kind in this spec's evidence
+      file is still open — each one's `Resolution` reads `re-reviewed` or names a `CR-*` that is
+      itself resolved. An open entry means another spec's `done` rows still certify a behaviour this
+      run changed and nobody re-verified, which is a completion prohibition however clean the local
+      rows are. The **contract-residue** kind a `/qfai-atdd` run records for a sibling spec's
+      uncovered `CON-API` / `CON-DB` is not this box: it is attributed to a named owning spec and
+      closed by that spec's run, so reading it here re-blocks what that stage already discharged
       (`cross-spec-ownership.md#the-evidence-entry`, `SKILL.md#completion-prohibition-conditions`).
 - [ ] Every applicable `TC-*` from `06_Test-Cases.md` is present in `test-list.md`, and
       `QFAI-ATDD-111` / `QFAI-ATDD-113` are clean for this spec.
