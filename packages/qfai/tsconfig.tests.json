@@ -36,6 +36,7 @@
     "tests/assets/changeTypeRecordName.test.ts",
     "tests/assets/clarificationBudget.test.ts",
     "tests/assets/completionContractPlaceholderScan.test.ts",
+    "tests/assets/completionContractSmokeCheck.test.ts",
     "tests/assets/coverageDepthMatrix.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
     "tests/assets/deltaTemplateParses.test.ts",

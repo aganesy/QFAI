@@ -189,7 +189,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the acceptance tests **this run created or changed** — every `tests/e2e/**`, `tests/api/**` and `tests/integration/**` file you wrote or edited, filled-in scaffolds among them — executed with the runner from `catalog/tech.md#standard-commands-copy-paste`, reaching a red/green verdict rather than a collection or import error. Not "the tests you just scaffolded": `scaffold` emits the Integration-owned `TC`s only, so an E2E/API-only run has no scaffold output at all and would have had nothing to execute. A run that wrote no test file still has a target — a spec whose obligations were already satisfied and only re-verified — and it is the spec's existing acceptance suite: the files carrying this spec's `US` / `TC` / `CON-API` annotations, in the directories those obligations route to, run the same way. A run that never reached the assertions is UNRUN, not a pass.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal

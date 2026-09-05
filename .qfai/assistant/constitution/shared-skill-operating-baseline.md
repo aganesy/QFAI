@@ -197,7 +197,25 @@ Before declaring completion, you MUST:
 - resolve or explicitly defer undefined or ambiguous items with rationale;
 - verify every expected artifact exists and required sections are populated;
 - scan generated artifacts for unresolved placeholders — `TODO`, `TBA`, `TBC`, `XXX`, `???`, `UNDEFINED`, `PLACEHOLDER`, and **undocumented** `TBD` — under the two rules below;
-- run the smallest applicable smoke check, or state "not applicable" with a short rationale.
+- run the smallest applicable smoke check and report its outcome. Only PASS satisfies this bullet: FAIL and UNRUN are blockers, so they go in a stop report with the reason, never next to a completion claim.
+
+The first three bullets are self-inspection: they are discharged by rereading
+what you just wrote, so an agent that hallucinated an artifact will confirm its
+own account of that artifact. The smoke check is the only bullet whose result
+can contradict that account, which is why it carries no waiver.
+
+**The smallest applicable smoke check** is the cheapest command that executes
+what this stage just produced and returns a pass/fail you did not author. Each
+skill names its own next to the `Follow` line that cites this section. A skill
+that names none has not been granted an exemption — it has an override left
+unfilled, and that is a finding to report, not a reason to skip the bullet.
+
+UNRUN is the same verdict `.qfai/assistant/constitution/quality.md` gives a gate
+with no discoverable command, and it means the same thing here: **not passed**.
+A smoke check that ran and failed is not passed either. Both stop the run: do
+not declare completion on a FAIL or an UNRUN — report the outcome as a blocker
+with the reason that makes it falsifiable later, and hand back the stop report
+instead of the completion claim.
 
 ### What the placeholder scan does not flag
 

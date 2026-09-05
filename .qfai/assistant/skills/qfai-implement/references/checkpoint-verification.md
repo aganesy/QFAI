@@ -326,8 +326,19 @@ In both, an unconditional "nothing to do" exit would skip the boundary permanent
 re-run could repair it — a re-run finds no `todo` rows to process either. So before that exit: read
 the spec's evidence file for spec-level `Checkpoint verification command` /
 `Checkpoint verification result` entries covering the current ledger state. Run the **per spec**
-command set above and record them when they are absent, or when they predate the last ledger
-change. Only then report "nothing to do".
+command set above and record them when they are absent, when they predate the last ledger change,
+or when the `Revision` recorded beside them is not this tree's. Only then report "nothing to do".
+
+**Ledger state is not tree state.** A terminal ledger stops moving; the production code, the tests
+and the dependencies under it do not. An edit after the last row reached its terminal status leaves
+a recorded PASS that no ledger change postdates, so a freshness rule keyed on the ledger alone reads
+that PASS as current and a re-run reports "nothing to do" against a tree it never executed. The
+recorded `Revision` is what closes that gap, and it is the same mechanical staleness test the rest
+of this contract already uses: compare it to the current tree by the procedure in
+`evidence-revision.md`, and on any mismatch re-run the command set instead of reusing the result.
+Recomputing the `Checkpoint verification seal` is not a substitute — the seal detects a record
+edited after the fact, not code that moved underneath an honest record, so a stale PASS survives it
+intact.
 
 **Which file, for a boundary that has no `Layer`.** The per-item rule below picks the file from the
 row's `Layer`, and this result belongs to no row. The spec-level boundary is written to
