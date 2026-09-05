@@ -453,7 +453,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // These run AFTER copyTemplateTree so they can detect when the
   // asset templates already populated a layer (they fill in only
   // missing .gitkeep / README placeholders).
-  const assistantTreeResult = await seedAssistantLayers(destRoot, options.dryRun);
+  const assistantTreeResult = await seedAssistantLayers(destRoot, assistantAssets, options.dryRun);
   const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
 
   // Activation guidance for newly created instructions files
@@ -498,7 +498,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
     ].filter((entry) => !rewrittenPaths.has(entry)),
-    [...removed, ...upgradeResult.removed],
+    [...removed, ...upgradeResult.removed, ...assistantTreeResult.removed],
     options.dryRun,
     "init",
     destRoot,
@@ -853,31 +853,24 @@ async function readTemplateReadme(filePath: string): Promise<string | null> {
 // 4-layer assistant-tree seed + project-root steering surface seed
 // ---------------------------------------------------------------------------
 
-async function seedAssistantLayers(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
-  const copied: string[] = [];
-  const skipped: string[] = [];
-
-  for (const layer of ASSISTANT_LAYERS) {
-    const layerDir = joinAssistantLayer(destRoot, layer);
-    const gitkeep = path.join(layerDir, ".gitkeep");
-    if (await pathExists(gitkeep)) {
-      skipped.push(gitkeep);
-      continue;
-    }
-    copied.push(gitkeep);
-    if (!dryRun) {
-      await mkdir(layerDir, { recursive: true });
-      await writeFile(gitkeep, assistantLayerGitkeepBody(layer), "utf-8");
-    }
-  }
-
-  return { copied, skipped };
-}
-
-function assistantLayerGitkeepBody(layer: AssistantLayer): string {
+/**
+ * The `.gitkeep` bodies a pre-fix `qfai init` wrote, per layer, as a matcher.
+ *
+ * Every project that ran one of those versions still carries them, and
+ * stopping the write does nothing for those projects: the file is skipped
+ * forever, and its body is a stale directory index. Matching the generator's
+ * output exactly is what makes removing it safe — anything else in that file
+ * is a user edit and is left alone.
+ *
+ * Two generator versions wrote this file. The first named the recut's internal
+ * cross-spec change id inside the parentheses; the second dropped it, because
+ * that id resolves to nothing outside this repository. Both are unedited
+ * generator output and both have to be removable, so the id is matched as an
+ * optional trailing clause rather than spelled out — writing it here would put
+ * an internal id back into the shipped bundle, which is exactly what dropping
+ * it was for.
+ */
+function legacyAssistantLayerGitkeepPattern(layer: AssistantLayer): RegExp {
   const purposes: Record<AssistantLayer, string> = {
     constitution:
       "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
@@ -886,14 +879,210 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
       "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
     process: "Workflow / process docs and migration memos (process/migrations/*).",
   };
-  return [
+  const template = [
     `# .qfai/assistant/${layer}/`,
     "",
     purposes[layer],
     "",
-    "Seeded by qfai init (4-layer assistant-tree recut).",
+    `Seeded by qfai init (4-layer assistant-tree recut${CHANGE_ID_SLOT}).`,
     "",
   ].join("\n");
+  const pattern = template
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(CHANGE_ID_SLOT, "(?:, [A-Z]{2,5}-[0-9]{1,4})?")
+    // A checkout with `core.autocrlf` on holds the same bytes with CRLF
+    // endings, so both line-ending forms count as "unedited".
+    .replace(/\n/g, "\\r?\\n");
+  return new RegExp(`^${pattern}$`);
+}
+
+/**
+ * Placeholder standing in for the optional change-id clause while the template
+ * is escaped. It carries no regex metacharacters, so escaping leaves it intact
+ * and it can be swapped for the real alternation afterwards.
+ */
+const CHANGE_ID_SLOT = "<change-id>";
+
+/**
+ * Ceiling for a `.gitkeep` read. The bodies this migration recognises are the
+ * generator's own five-line template, so anything past a kilobyte cannot be one
+ * and does not need to be in memory to prove it.
+ */
+const MAX_GITKEEP_BYTES = 4096;
+
+/**
+ * True when this `.gitkeep` is an unedited pre-fix `qfai init` placeholder.
+ *
+ * Read through `readBoundedRegularFile` rather than a bare `readFile`: this
+ * path is in a tree the adopter controls, and an unbounded read of a name that
+ * turns out to be a FIFO blocks `qfai init` forever, while a device or a
+ * multi-gigabyte file exhausts its memory — all to answer a question about a
+ * five-line placeholder. The helper refuses anything that is not a regular file
+ * within the ceiling, and every refusal lands on the conservative answer here:
+ * not provably the generator's output, so leave it alone.
+ */
+async function isLegacyGitkeep(gitkeep: string, layer: AssistantLayer): Promise<boolean> {
+  const bytes = await readBoundedRegularFile(gitkeep, MAX_GITKEEP_BYTES);
+  if (bytes === undefined) return false;
+  return legacyAssistantLayerGitkeepPattern(layer).test(bytes.toString("utf-8"));
+}
+
+/**
+ * True when every existing ancestor from `destRoot` down to `layerDir` is a
+ * real directory.
+ *
+ * `readBoundedRegularFile` refuses a `.gitkeep` that is itself a symlink, but
+ * nothing was checking the path ABOVE it. A project whose `.qfai/assistant/` is
+ * a symlink into a shared tree resolves every one of these calls through the
+ * link, and the migration's `rm` would then delete a file outside the
+ * repository — the one operation in this seeding pass that writes anywhere but
+ * the project. A populated link target also makes the preceding copy skip
+ * everything, so the deletion would be the ONLY effect the run had.
+ */
+async function layerPathHasNoSymlinkedAncestor(
+  destRoot: string,
+  layerDir: string,
+): Promise<boolean> {
+  const relative = path.relative(destRoot, layerDir);
+  let at = destRoot;
+  for (const segment of relative.split(path.sep).filter((part) => part.length > 0)) {
+    at = path.join(at, segment);
+    try {
+      const stats = await lstat(at);
+      if (stats.isSymbolicLink()) return false;
+    } catch (err: unknown) {
+      // Absent is fine — nothing to follow, and nothing to delete under it.
+      if (isEnoent(err)) continue;
+      // Anything else leaves the path unproven, which is the refusing side.
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Remove `gitkeep` only if the object being removed is the one whose body was
+ * verified, and report whether it went.
+ *
+ * Verifying a name and then unlinking that name are two resolutions of one
+ * string. An editor saving over the placeholder, or a concurrent `qfai init`,
+ * can replace the file in between, and the unlink then takes a file nothing
+ * checked — breaking the very promise this migration makes, that only an exact
+ * copy of the old generator output is deleted.
+ *
+ * Renaming the object aside first closes that: the rename moves whatever object
+ * holds the name, the name is then free, and anything a concurrent writer puts
+ * there afterwards is a new file this run never touches. The body is re-read
+ * from the quarantined object, so what is measured and what is deleted are the
+ * same inode.
+ *
+ * A rescued object is restored with `link` + `rm`, never `rename`, because
+ * `rename` would silently overwrite a file a concurrent run had already created
+ * at that name. If the name is taken, the newer file wins and the rescued one
+ * is left under its quarantine name rather than destroyed.
+ */
+async function removeLegacyGitkeep(gitkeep: string, layer: AssistantLayer): Promise<boolean> {
+  const quarantine = `${gitkeep}.qfai-legacy-${randomBytes(6).toString("hex")}`;
+  try {
+    await rename(gitkeep, quarantine);
+  } catch {
+    // Already gone, or not movable. Either way this run deletes nothing.
+    return false;
+  }
+  if (await isLegacyGitkeep(quarantine, layer)) {
+    await rm(quarantine, { force: true });
+    return true;
+  }
+  try {
+    await link(quarantine, gitkeep);
+    await rm(quarantine, { force: true });
+  } catch {
+    // The name is occupied again, or the link failed: leave the rescued object
+    // under its quarantine name. Losing a user's bytes is the one outcome this
+    // path must not have.
+  }
+  return false;
+}
+
+async function seedAssistantLayers(
+  destRoot: string,
+  assistantAssets: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+
+  for (const layer of ASSISTANT_LAYERS) {
+    const layerDir = joinAssistantLayer(destRoot, layer);
+    const gitkeep = path.join(layerDir, ".gitkeep");
+    const exists = await pathExists(gitkeep);
+    const isLegacy = exists && (await isLegacyGitkeep(gitkeep, layer));
+    // `.gitkeep` exists to keep an *empty* directory tracked. A layer the
+    // asset templates already filled needs none, so seeding one there only
+    // adds a file every reader is told to ignore. The asset side is checked
+    // as well so `--dry-run` reports what a real run would do: on a fresh
+    // directory copyTemplateTree has not written anything yet.
+    if ((await hasEntries(layerDir)) || (await hasEntries(path.join(assistantAssets, layer)))) {
+      if (!exists) {
+        // A placeholder that was never needed is neither created nor
+        // preserved, and listing its non-existent path under "skipped paths"
+        // would claim init protected a file that is not there.
+        continue;
+      }
+      if (isLegacy && (await layerPathHasNoSymlinkedAncestor(destRoot, layerDir))) {
+        // Populated layer, unedited legacy placeholder: delete it. Leaving it
+        // is what kept the stale body — and its internal change id — in every
+        // project that ever ran a pre-fix init.
+        if (dryRun) {
+          removed.push(gitkeep);
+          continue;
+        }
+        if (await removeLegacyGitkeep(gitkeep, layer)) {
+          removed.push(gitkeep);
+        } else {
+          // The object changed under us between the check and the move, so it
+          // is no longer the generator's output. It stays.
+          skipped.push(gitkeep);
+        }
+        continue;
+      }
+      // Report it as skipped only when an existing file is actually being
+      // left in place.
+      skipped.push(gitkeep);
+      continue;
+    }
+    if (exists && !isLegacy) {
+      // Empty layer, and the placeholder is already there and not the
+      // generator's: it is doing its job, or it is a user edit. Either way,
+      // leave it.
+      skipped.push(gitkeep);
+      continue;
+    }
+    // Written either because nothing is there, or to replace the legacy prose
+    // body with the empty placeholder an empty layer actually needs.
+    copied.push(gitkeep);
+    if (!dryRun) {
+      await mkdir(layerDir, { recursive: true });
+      // Genuinely empty: the file is a git placeholder, not a directory index.
+      await writeFile(gitkeep, "", "utf-8");
+    }
+  }
+
+  return { copied, skipped, removed };
+}
+
+/** True when `dir` exists and holds at least one entry. */
+async function hasEntries(dir: string): Promise<boolean> {
+  try {
+    const entries = await readdir(dir);
+    return entries.length > 0;
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return false;
+    }
+    throw err;
+  }
 }
 
 function buildProjectSteeringReadmeBody(): string {

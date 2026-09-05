@@ -187,10 +187,9 @@ Setup: empty temp dir.
 Action: `runInit({ root })`.
 Verify:
 
-- `.qfai/assistant/constitution/.gitkeep` が存在する
-- `.qfai/assistant/manifest/.gitkeep` が存在する
-- `.qfai/assistant/catalog/.gitkeep` が存在する
-- `.qfai/assistant/process/.gitkeep` が存在する
+- `.qfai/assistant/{constitution,manifest,catalog,process}/` が出荷アセットで満たされている
+- 上記いずれの layer にも `.gitkeep` は書かれない（layer が空のときだけ空の `.gitkeep` を置く）
+- 通常実行と `--dry-run` の双方で、`report()` の "skipped paths" に `.qfai/assistant/<layer>/.gitkeep` が現れない（未配置の placeholder は copied/skipped のどちらにも計上しない）
 - `.qfai/assistant/steering/` ディレクトリは存在しない
 
 ## TC-0003-0022: project-root steering seed

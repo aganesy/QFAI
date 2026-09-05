@@ -198,7 +198,7 @@ Scenario: レガシー管理ブロックからの自動移行
 - US-Refs: US-0003-0016
 - Given クリーンな新規プロジェクトディレクトリ
 - When `qfai init` を実行する
-- Then `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 ディレクトリと初期 `.gitkeep` ファイルが生成される。`.qfai/assistant/steering/` (旧層) は生成されない
+- Then `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 ディレクトリが出荷アセットの内容で生成される。出荷アセットで満たされた layer には `.gitkeep` を書かない（空の layer にのみ空の `.gitkeep` を置く）。`.qfai/assistant/steering/` (旧層) は生成されない
 
 ## AC-0003-0018: project-root steering seed
 

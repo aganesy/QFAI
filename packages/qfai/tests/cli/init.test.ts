@@ -62,6 +62,27 @@ const REQUIRED_SKILLS = [
 const execFile = promisify(execFileCb);
 
 /**
+ * The pre-fix `qfai init` placeholder body for an assistant layer, verbatim.
+ * Only an exact copy of this is removable, so the tests that exercise the
+ * migration have to write the real thing rather than an approximation.
+ */
+function legacyGitkeepBody(layer: "catalog" | "manifest"): string {
+  const purposes = {
+    catalog:
+      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
+    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+  } as const;
+  return [
+    `# .qfai/assistant/${layer}/`,
+    "",
+    purposes[layer],
+    "",
+    "Seeded by qfai init (4-layer assistant-tree recut).",
+    "",
+  ].join("\n");
+}
+
+/**
  * A wrapper body shaped like the ones qfai used to ship: the delegation line
  * pointing at the canonical doc of the same stem is what marks the file as
  * init's own, so prune keys on it rather than on the basename.
@@ -3185,23 +3206,227 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0021 (TDD-0021): 4-layer asset-tree seed
-  it("TC-0003-0021 (TDD-0021): seeds .qfai/assistant/{constitution,manifest,catalog,process}/.gitkeep on fresh init", async () => {
+  it("TC-0003-0021 (TDD-0021): seeds the 4 assistant layers and leaves no .gitkeep in a populated layer", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-"));
+    const dryRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-dry-"));
+    const layers = ["constitution", "manifest", "catalog", "process"];
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      for (const layer of ["constitution", "manifest", "catalog", "process"]) {
-        const gitkeep = path.join(root, ".qfai", "assistant", layer, ".gitkeep");
-        const stat = await lstat(gitkeep);
-        expect(stat.isFile()).toBe(true);
-        const body = await readFile(gitkeep, "utf-8");
-        expect(body).toContain(`.qfai/assistant/${layer}/`);
-        // The seeded body lands in every consuming repo, so it must carry no
-        // QFAI-internal cross-spec change ID (`CHG-NNN`) — that ID resolves
-        // to nothing outside this repository's own `_policies/10_delta.md`.
-        expect(body).not.toMatch(/\bCHG-[0-9]+\b/);
+      const dryRun = await captureStdout(async () => {
+        await runInit({ dir: dryRoot, force: false, dryRun: true, yes: true });
+      });
+      const run = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      for (const layer of layers) {
+        const layerDir = path.join(root, ".qfai", "assistant", layer);
+        const entries = await readdir(layerDir);
+        // The shipped assets populate every layer, so a .gitkeep would keep
+        // nothing alive: init must not write one (and must never write a
+        // prose directory index under that filename).
+        expect(entries.length).toBeGreaterThan(0);
+        expect(entries).not.toContain(".gitkeep");
+
+        // A placeholder that was never needed is not a preserved file:
+        // neither run may report its path under "skipped paths".
+        const reported = path.join(".qfai", "assistant", layer, ".gitkeep");
+        expect(run).not.toContain(reported);
+        expect(dryRun).not.toContain(reported);
       }
     } finally {
       await removeTempTree(root);
+      await removeTempTree(dryRoot);
+    }
+  });
+
+  it("removes a pre-fix prose .gitkeep from a populated layer, and reports it", async () => {
+    // Stopping the write does nothing for a project that already ran an older
+    // init: the prose body — a stale directory index naming an internal change
+    // id — sat there forever, reported only as "skipped".
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const layer = path.join(root, ".qfai", "assistant", "constitution");
+      const gitkeep = path.join(layer, ".gitkeep");
+      const legacyBody = [
+        "# .qfai/assistant/constitution/",
+        "",
+        "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+        "",
+        "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+        "",
+      ].join("\n");
+      await writeFile(gitkeep, legacyBody, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      expect(output).toContain(path.join(".qfai", "assistant", "constitution", ".gitkeep"));
+      expect(output).toMatch(/removed legacy files/);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes the later prose .gitkeep that no longer names the change id", async () => {
+    // Two generator versions wrote this file: the first named the recut's
+    // internal cross-spec change id, the second dropped it. Dropping it only
+    // stopped new writes — a project that ran the in-between version still
+    // carries the body, so both forms have to be recognised as unedited
+    // generator output and removed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-noid-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
+      await writeFile(
+        gitkeep,
+        [
+          "# .qfai/assistant/manifest/",
+          "",
+          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+          "",
+          "Seeded by qfai init (4-layer assistant-tree recut).",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      expect(output).toMatch(/removed legacy files/);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("previews the legacy .gitkeep removal without performing it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-dry-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
+      await writeFile(
+        gitkeep,
+        [
+          "# .qfai/assistant/manifest/",
+          "",
+          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+          "",
+          "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(output).toMatch(/would remove legacy files/);
+      // The dry run reports it and leaves it on disk.
+      await access(gitkeep);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves a user-edited .gitkeep alone", async () => {
+    // Only the generator's exact output is removable. Anything else in that
+    // file is a deliberate edit, and deleting it would be data loss.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-edited-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const gitkeep = path.join(root, ".qfai", "assistant", "catalog", ".gitkeep");
+      await writeFile(gitkeep, "# our own note, do not delete\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(gitkeep, "utf-8")).toBe("# our own note, do not delete\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("does not delete a .gitkeep that is a symlink to a legacy body", async () => {
+    // The decision is about a five-line placeholder, but the read was
+    // unbounded and against a path the adopter controls, so it followed
+    // whatever the name resolved to. A symlink pointing at a legacy body read
+    // as "unedited generator output" and the link itself was then deleted. A
+    // regular-file reader refuses the symlink instead, which is the same
+    // refusal that keeps a FIFO from hanging `qfai init` in `open` and a
+    // multi-gigabyte file from being read into memory to answer a question
+    // about five lines.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-symlink-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
+      const gitkeep = path.join(layerDir, ".gitkeep");
+      const target = path.join(root, "our-placeholder");
+      await writeFile(target, legacyGitkeepBody("catalog"), "utf-8");
+      await rm(gitkeep, { force: true });
+      await symlink(target, gitkeep, "file");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await lstat(gitkeep)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves no quarantine residue behind when it removes a legacy .gitkeep", async () => {
+    // Verifying a name and unlinking that name are two resolutions of one
+    // string, so the removal moves the object aside and re-reads it: what is
+    // measured and what is deleted are then the same inode. The move is an
+    // implementation detail, but a botched one would strand
+    // `.gitkeep.qfai-legacy-*` files in the adopter's tree, so the layer has to
+    // come out holding neither the placeholder nor any residue of moving it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-residue-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
+      const gitkeep = path.join(layerDir, ".gitkeep");
+      await writeFile(gitkeep, legacyGitkeepBody("catalog"), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      const left = await readdir(layerDir);
+      expect(left.filter((name) => name.startsWith(".gitkeep"))).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("refuses the legacy .gitkeep removal when an ancestor is a symlink", async () => {
+    // `.qfai/assistant/` pointing into a shared tree makes every check resolve
+    // through the link, and the removal would then delete a file outside the
+    // project. A populated link target also makes the copy skip everything, so
+    // the deletion would be the only effect the run had.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-symlink-"));
+    const shared = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-shared-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const assistant = path.join(root, ".qfai", "assistant");
+      // Move the real tree out to `shared` and leave a symlink behind.
+      await rename(assistant, path.join(shared, "assistant"));
+      await symlink(path.join(shared, "assistant"), assistant, "junction");
+
+      const outside = path.join(shared, "assistant", "catalog", ".gitkeep");
+      await writeFile(outside, legacyGitkeepBody("catalog"), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Untouched: the file lives outside the repository.
+      expect(await readFile(outside, "utf-8")).toBe(legacyGitkeepBody("catalog"));
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(shared);
     }
   });
 
