@@ -41,27 +41,124 @@ export async function validateContractConsistency(
   return issues;
 }
 
-type DbDomain = {
-  /** Values the DB contract can actually store for this field. */
+/** One contract's bound on a field name, kept separate from every other's. */
+type DbFieldBinding = {
+  /** The contract file that declares it. */
+  file: string;
+  /** Values THAT file can store for the field. */
   values: Set<string>;
-  /** Contract files that declared the domain. */
-  files: Set<string>;
   /**
-   * Whether the bound is a Postgres ENUM rather than a check constraint.
+   * Whether this file's bound is a Postgres ENUM rather than a check
+   * constraint.
    *
-   * This decides the severity of `QFAI-CONTRACT-040`, so the two forms the
-   * collector reads cannot be conflated. An ENUM — `CREATE TYPE … AS ENUM`, or
-   * an inline `col ENUM(…)` — rejects an out-of-domain value at insert time, so
-   * an API contract requiring one describes a pair no implementation can
-   * satisfy. A `CHECK (col IN (…))` is a bound the DB currently asserts: it can
-   * be dropped, replaced, or declared `NOT VALID`, and the column itself still
-   * holds the value.
+   * The two forms the collector reads cannot be conflated. An ENUM — `CREATE
+   * TYPE … AS ENUM`, or an inline `col ENUM(…)` — rejects an out-of-domain
+   * value at insert time, so an API contract requiring one describes a pair no
+   * implementation can satisfy. A `CHECK (col IN (…))` is a bound the DB
+   * currently asserts: it can be dropped, replaced, or declared `NOT VALID`,
+   * and the column itself still holds the value.
    *
-   * Where a field's domain comes from both forms, the enum wins — the strictest
-   * constraint is the one an implementation has to satisfy (#1100).
+   * Within one file the enum wins, which `collectSqlDomainBounds` already
+   * does: an ENUM column carrying a redundant CHECK is still an ENUM column,
+   * and the strictest constraint is the one an implementation has to satisfy
+   * (#1100).
    */
   enumBacked: boolean;
 };
+
+/**
+ * Every contract that declares a given field NAME, one entry each.
+ *
+ * Not merged into a single bound, because the pairing is by normalized field
+ * name across all DB contracts while the severity and the domain are then
+ * attributed to one specific API field. Flattening the two lost that
+ * distinction: `sim_lines.status` is bounded by a `CHECK` in
+ * `db-0003-sim-lines.sql`, and OR-ing `enumBacked` across the eight contracts
+ * that happen to declare a column called `status` made it `error` on the
+ * strength of `call_list_status` — an ENUM on a different table, which rejects
+ * no insert into `sim_lines` at all. The message said so in as many words
+ * (`insert 時に拒絶される物理制約`), of a field that does not have one (#1162).
+ *
+ * #1100's "enum wins" is unaffected: it is about ONE field bound by both
+ * forms, which is a per-file question and is settled per file.
+ */
+type DbDomain = {
+  bindings: DbFieldBinding[];
+};
+
+/** Every value any contributing contract can store. */
+function domainValues(domain: DbDomain): Set<string> {
+  const values = new Set<string>();
+  for (const binding of domain.bindings) {
+    for (const value of binding.values) {
+      values.add(value);
+    }
+  }
+  return values;
+}
+
+function domainFiles(domain: DbDomain): string[] {
+  return domain.bindings.map((binding) => binding.file).sort((a, b) => a.localeCompare(b));
+}
+
+function enumFiles(domain: DbDomain): string[] {
+  return domain.bindings
+    .filter((binding) => binding.enumBacked)
+    .map((binding) => binding.file)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Whether EVERY contract that could be bounding this field is an ENUM.
+ *
+ * The claim `error` makes is that no implementation can satisfy both
+ * contracts, and that only holds when the value is refused whichever of the
+ * candidate bindings is the real one. A single `CHECK` among them means the
+ * value can be stored somewhere the pairing considers a match, so the claim is
+ * not available and the finding stays a `warning` — which is also what the
+ * rule said before #1100 raised the genuinely impossible case.
+ */
+function isEnumOnly(domain: DbDomain): boolean {
+  return domain.bindings.length > 0 && domain.bindings.every((binding) => binding.enumBacked);
+}
+
+/**
+ * The allowed values, broken down per contract once there is more than one.
+ *
+ * A flat union reads as one domain and is not one. The reported list for
+ * `SimLine.status` held `accepted`, `archived`, `sending`, `succeeded` … while
+ * `sim_lines.status` accepts four values — so a value legal only in an
+ * unrelated table counted as representable, and the reader had no way to see
+ * that from the message (#1162). Narrowing the pairing itself needs a
+ * table-to-schema binding this rule does not have; showing which contract
+ * contributed what is what it can do, and is enough to act on.
+ */
+function describeDbDomain(domain: DbDomain): string {
+  const sorted = [...domain.bindings].sort((a, b) => a.file.localeCompare(b.file));
+  const first = sorted[0];
+  if (sorted.length === 1 && first) {
+    return `DB 側の許容値: ${Array.from(first.values).sort().join(", ")}`;
+  }
+  const perFile = sorted
+    .map((binding) => `${binding.file}: ${Array.from(binding.values).sort().join(", ")}`)
+    .join("; ");
+  return `DB 側の許容値 (契約ごと): ${perFile}`;
+}
+
+/** Which form bounds the field, and — when the candidates disagree — whose. */
+function describeDbConstraint(domain: DbDomain): string {
+  if (isEnumOnly(domain)) {
+    return "ENUM (insert 時に拒絶される物理制約)";
+  }
+  const fromEnum = enumFiles(domain);
+  if (fromEnum.length === 0) {
+    return "CHECK (現在の制約。drop / NOT VALID で外せる)";
+  }
+  return (
+    `CHECK と ENUM の混在 — ENUM を宣言するのは ${fromEnum.join(", ")} です。` +
+    "同名列の ENUM は他テーブルの列を束縛するだけで、この API フィールドの insert を拒絶するとは限りません"
+  );
+}
 
 async function validateApiFileAgainstDb(
   file: string,
@@ -82,44 +179,57 @@ async function validateApiFileAgainstDb(
     if (!db) {
       continue;
     }
+    const representable = domainValues(db);
     const unrepresentable = Array.from(api.values)
-      .filter((value) => !db.values.has(value.toLowerCase()))
+      .filter((value) => !representable.has(value.toLowerCase()))
       .sort((a, b) => a.localeCompare(b));
     if (unrepresentable.length === 0) {
       continue;
     }
-    const dbFileList = Array.from(db.files).sort((a, b) => a.localeCompare(b));
-    // `error` when the DB side is an ENUM, because then the two contracts
-    // cannot both be implemented: Postgres rejects the value at insert time.
-    // Every gate qfai prescribes is `--fail-on error`, so at `warning` this
-    // never blocked anything and sat in a bucket ~95 entries deep — the
-    // constraint violation was found by Postgres rather than by the gate that
-    // exists to find it (#1100).
+    const dbFileList = domainFiles(db);
+    const enumOnly = isEnumOnly(db);
+    const enumContributors = enumFiles(db);
+    // `error` only when EVERY candidate binding is an ENUM, because that is
+    // when the two contracts cannot both be implemented whichever binding is
+    // the real one: Postgres rejects the value at insert time. Every gate qfai
+    // prescribes is `--fail-on error`, so at `warning` this never blocked
+    // anything and sat in a bucket ~95 entries deep — the constraint violation
+    // was found by Postgres rather than by the gate that exists to find it
+    // (#1100).
     //
     // A `CHECK` constraint stays `warning`: it is a bound the DB currently
     // asserts rather than the shape of the column, and it can be dropped,
     // replaced or declared `NOT VALID`. Raising both would lose the distinction
     // between "impossible" and "currently disallowed".
-    const severity = db.enumBacked ? "error" : "warning";
+    //
+    // A MIX stays `warning` too, and this is the case #1162 reported: one
+    // `CHECK` among the candidates means the value can be stored in a contract
+    // the pairing considers a match, so "no implementation can satisfy this"
+    // is not a claim this rule is entitled to make from a field name alone.
+    const severity = enumOnly ? "error" : "warning";
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
         `API 契約が要求する ${api.fieldName} の値が、同名フィールドを宣言する DB 契約で表現できません: ` +
-          `${unrepresentable.join(", ")} (DB 側の許容値: ${Array.from(db.values).sort().join(", ")}; ` +
-          `DB 契約: ${dbFileList.join(", ")}; DB 側の制約: ` +
-          `${db.enumBacked ? "ENUM (insert 時に拒絶される物理制約)" : "CHECK (現在の制約。drop / NOT VALID で外せる)"})`,
+          `${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
+          `DB 契約: ${dbFileList.join(", ")}; DB 側の制約: ${describeDbConstraint(db)})`,
         severity,
         file,
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
-        (db.enumBacked
+        (enumOnly
           ? `DB 契約 (${dbFileList.join(", ")}) の ENUM が正です — ` +
             "insert 時に拒絶される物理制約なので、この組み合わせを満たす実装は存在しません。" +
             "ENUM に値を追加するか (マイグレーションを伴います)、API 側の terminal semantics を訂正してください。"
-          : `DB 契約 (${dbFileList.join(", ")}) の CHECK 制約との不一致です — ` +
-            "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
-            "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。") +
+          : enumContributors.length > 0
+            ? `ENUM を宣言しているのは ${enumContributors.join(", ")} で、CHECK で束縛する契約 ` +
+              `(${dbFileList.filter((name) => !enumContributors.includes(name)).join(", ")}) も候補に含まれます — ` +
+              "照合はフィールド名のみなので、この API フィールドを束縛する契約がその ENUM とは限りません。" +
+              "まず、その entity を所有する spec の Contracts 表で、対応する DB 契約を 1 つに絞ってください。"
+            : `DB 契約 (${dbFileList.join(", ")}) の CHECK 制約との不一致です — ` +
+              "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
+              "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。") +
           "照合は明示的なペア宣言でなく、正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
       ),
     );
@@ -322,20 +432,25 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
         continue;
       }
       const normalized = normalizeFieldName(name);
+      const binding: DbFieldBinding = {
+        file,
+        values: new Set(bound.values),
+        enumBacked: bound.enumBacked,
+      };
       const existing = domains.get(normalized);
       if (existing) {
-        bound.values.forEach((value) => existing.values.add(value));
-        existing.files.add(file);
-        // Two contracts bounding one field: enum wins, for the reason on
-        // `DbDomain.enumBacked` — the strictest constraint is the one an
-        // implementation has to satisfy.
-        existing.enumBacked = existing.enumBacked || bound.enumBacked;
+        // Appended, not merged. Two contracts declaring one field NAME are two
+        // candidate bindings, and which of them bounds a given API field is
+        // not something a name match can tell — see {@link DbDomain}.
+        const sameFile = existing.bindings.find((entry) => entry.file === file);
+        if (sameFile) {
+          binding.values.forEach((value) => sameFile.values.add(value));
+          sameFile.enumBacked = sameFile.enumBacked || binding.enumBacked;
+        } else {
+          existing.bindings.push(binding);
+        }
       } else {
-        domains.set(normalized, {
-          values: new Set(bound.values),
-          files: new Set([file]),
-          enumBacked: bound.enumBacked,
-        });
+        domains.set(normalized, { bindings: [binding] });
       }
     }
   }

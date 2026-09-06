@@ -119,9 +119,17 @@ Contracts are validated per file; agreement _between_ contracts is an authoring 
   pairing actually was. A later `/qfai-sdd --contract <CON-ID>` rerun reads that column to decide
   what it has to reconcile.
 
-`QFAI-CONTRACT-040` mechanizes the state/status-domain part of this rule at `warning` severity. It
-is a partial check: error codes, response-status sets, and non-enum domains are still reconciled by
-the author and the reviewer gate.
+`QFAI-CONTRACT-040` mechanizes the state/status-domain part of this rule. It reports `warning`, and
+`error` only when **every** contract declaring that field name bounds it with an ENUM: there the
+value is refused at insert time whichever of them is the real pairing, so no implementation
+satisfies both contracts. One `CHECK (... IN (...))` among the candidates keeps it a `warning` —
+that bound can be dropped or declared `NOT VALID`, and an ENUM on a different table's same-named
+column rejects nothing here. When the candidates disagree, the finding names which contract
+declared the ENUM, and lists the allowed values per contract rather than as one domain; narrowing
+the pairing itself is what the `Reconciled With` column above is for.
+
+It is a partial check either way: error codes, response-status sets, and non-enum domains are still
+reconciled by the author and the reviewer gate.
 
 ## Executability (MUST)
 
