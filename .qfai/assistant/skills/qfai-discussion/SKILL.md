@@ -71,7 +71,7 @@ Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mo
 8. Generate the exploration-first sidecar family for UI-bearing targets.
 9. **Emit root `DESIGN.md` draft** per `references/design-dna-intake.md`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. Fill its required `brand.archetype` field in two phases: **Phase A** picks the closest-fitting archetype from `references/design-md-brand-catalog.md` and takes its `aesthetic_properties` as draft defaults; **Phase B** routes each default to its own home: `color_tendency` / `typography` / `spacing` into the `visual.*` token tree, and the `interaction` default into `accessibility.motion` (`visual.*` accepts only `colors | typography | radius | shadow | spacing`). This fills the draft brand SSOT only — exploration directions stay unranked and the design system is not finalized here.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
-11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields.
+11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
 For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars, and apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
@@ -105,6 +105,8 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
+  required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
 - the UI-bearing sidecar family is complete when the pack is UI-bearing;
 - discussion stayed planner-first and did not choose a single visual winner;
