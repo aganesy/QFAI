@@ -46,6 +46,21 @@ type DbDomain = {
   values: Set<string>;
   /** Contract files that declared the domain. */
   files: Set<string>;
+  /**
+   * Whether the bound is a Postgres ENUM rather than a check constraint.
+   *
+   * This decides the severity of `QFAI-CONTRACT-040`, so the two forms the
+   * collector reads cannot be conflated. An ENUM — `CREATE TYPE … AS ENUM`, or
+   * an inline `col ENUM(…)` — rejects an out-of-domain value at insert time, so
+   * an API contract requiring one describes a pair no implementation can
+   * satisfy. A `CHECK (col IN (…))` is a bound the DB currently asserts: it can
+   * be dropped, replaced, or declared `NOT VALID`, and the column itself still
+   * holds the value.
+   *
+   * Where a field's domain comes from both forms, the enum wins — the strictest
+   * constraint is the one an implementation has to satisfy (#1100).
+   */
+  enumBacked: boolean;
 };
 
 async function validateApiFileAgainstDb(
@@ -74,20 +89,38 @@ async function validateApiFileAgainstDb(
       continue;
     }
     const dbFileList = Array.from(db.files).sort((a, b) => a.localeCompare(b));
+    // `error` when the DB side is an ENUM, because then the two contracts
+    // cannot both be implemented: Postgres rejects the value at insert time.
+    // Every gate qfai prescribes is `--fail-on error`, so at `warning` this
+    // never blocked anything and sat in a bucket ~95 entries deep — the
+    // constraint violation was found by Postgres rather than by the gate that
+    // exists to find it (#1100).
+    //
+    // A `CHECK` constraint stays `warning`: it is a bound the DB currently
+    // asserts rather than the shape of the column, and it can be dropped,
+    // replaced or declared `NOT VALID`. Raising both would lose the distinction
+    // between "impossible" and "currently disallowed".
+    const severity = db.enumBacked ? "error" : "warning";
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
         `API 契約が要求する ${api.fieldName} の値が、同名フィールドを宣言する DB 契約で表現できません: ` +
           `${unrepresentable.join(", ")} (DB 側の許容値: ${Array.from(db.values).sort().join(", ")}; ` +
-          `DB 契約: ${dbFileList.join(", ")})`,
-        "warning",
+          `DB 契約: ${dbFileList.join(", ")}; DB 側の制約: ` +
+          `${db.enumBacked ? "ENUM (insert 時に拒絶される物理制約)" : "CHECK (現在の制約。drop / NOT VALID で外せる)"})`,
+        severity,
         file,
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
-        "API 契約が要求する terminal state / status enum ごとに、同名フィールドを宣言する DB 契約へ表現可能な値を" +
-          "追加するか、API 側の terminal semantics を訂正してください。照合は明示的なペア宣言ではなく、" +
-          "正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
+        (db.enumBacked
+          ? `DB 契約 (${dbFileList.join(", ")}) の ENUM が正です — ` +
+            "insert 時に拒絶される物理制約なので、この組み合わせを満たす実装は存在しません。" +
+            "ENUM に値を追加するか (マイグレーションを伴います)、API 側の terminal semantics を訂正してください。"
+          : `DB 契約 (${dbFileList.join(", ")}) の CHECK 制約との不一致です — ` +
+            "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
+            "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。") +
+          "照合は明示的なペア宣言でなく、正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
       ),
     );
   }
@@ -284,17 +317,25 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
     } catch {
       continue;
     }
-    for (const [name, values] of collectSqlEnumDomains(text).entries()) {
+    for (const [name, bound] of collectSqlDomainBounds(text).entries()) {
       if (!isStateLikeFieldName(name)) {
         continue;
       }
       const normalized = normalizeFieldName(name);
       const existing = domains.get(normalized);
       if (existing) {
-        values.forEach((value) => existing.values.add(value));
+        bound.values.forEach((value) => existing.values.add(value));
         existing.files.add(file);
+        // Two contracts bounding one field: enum wins, for the reason on
+        // `DbDomain.enumBacked` — the strictest constraint is the one an
+        // implementation has to satisfy.
+        existing.enumBacked = existing.enumBacked || bound.enumBacked;
       } else {
-        domains.set(normalized, { values: new Set(values), files: new Set([file]) });
+        domains.set(normalized, {
+          values: new Set(bound.values),
+          files: new Set([file]),
+          enumBacked: bound.enumBacked,
+        });
       }
     }
   }
@@ -306,14 +347,54 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
  * Values are lower-cased; comparison is case-insensitive on both sides.
  */
 export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const [name, bound] of collectSqlDomainBounds(rawText).entries()) {
+    out.set(name, bound.values);
+  }
+  return out;
+}
+
+/** A field's allowed values, and whether the bound is a Postgres ENUM. */
+export type SqlDomainBound = {
+  values: string[];
+  /**
+   * True for `CREATE TYPE … AS ENUM` and inline `col ENUM(…)`; false for
+   * `CHECK (col IN (…))`.
+   *
+   * The distinction decides `QFAI-CONTRACT-040`'s severity: an ENUM rejects an
+   * out-of-domain value at insert time, so an API contract requiring one
+   * describes a pair no implementation can satisfy. A check constraint is a
+   * bound the DB currently asserts and can be dropped, replaced or declared
+   * `NOT VALID` (#1100).
+   */
+  enumBacked: boolean;
+};
+
+/**
+ * As {@link collectSqlEnumDomains}, and it also says which SQL form bound each
+ * field.
+ *
+ * Where both forms bound one field, `enumBacked` is true: the strictest
+ * constraint is the one an implementation has to satisfy, so a column that is
+ * an ENUM *and* carries a redundant `CHECK` is still impossible to violate.
+ */
+export function collectSqlDomainBounds(rawText: string): Map<string, SqlDomainBound> {
   const text = stripSqlComments(rawText);
-  const domains = new Map<string, string[]>();
+  const domains = new Map<string, SqlDomainBound>();
   const patterns = [CHECK_IN_PATTERN, CREATE_TYPE_ENUM_PATTERN, INLINE_ENUM_PATTERN];
   const namedTypes = new Map<string, { name: string; literals: string[] }>();
 
-  const add = (name: string, literals: string[]): void => {
+  const add = (name: string, literals: string[], enumBacked: boolean): void => {
     const existing = domains.get(name);
-    domains.set(name, existing ? Array.from(new Set([...existing, ...literals])) : literals);
+    domains.set(
+      name,
+      existing
+        ? {
+            values: Array.from(new Set([...existing.values, ...literals])),
+            enumBacked: existing.enumBacked || enumBacked,
+          }
+        : { values: literals, enumBacked },
+    );
   };
 
   for (const pattern of patterns) {
@@ -335,7 +416,8 @@ export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
               : literals,
           });
         } else {
-          add(name, literals);
+          // `INLINE_ENUM_PATTERN` is an ENUM column; `CHECK_IN_PATTERN` is not.
+          add(name, literals, pattern === INLINE_ENUM_PATTERN);
         }
       }
       match = scoped.exec(text);
@@ -347,14 +429,15 @@ export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
   // invisible to a reconciliation keyed on the API field name `status`.
   const resolved = resolveNamedTypeColumns(text, namedTypes);
   for (const [column, literals] of resolved.columns.entries()) {
-    add(column, literals);
+    // A column declared with a named enum type IS an enum column.
+    add(column, literals, true);
   }
   // Fall back to the type name only for types whose column usage is not visible here (declared in
   // one contract file, used in another). Publishing it alongside a resolved column would report
   // the same contradiction twice — once as `status`, once as `order_status`.
   for (const [key, entry] of namedTypes.entries()) {
     if (!resolved.usedTypes.has(key)) {
-      add(entry.name, entry.literals);
+      add(entry.name, entry.literals, true);
     }
   }
 

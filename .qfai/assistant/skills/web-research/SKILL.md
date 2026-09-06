@@ -3,7 +3,7 @@ name: web-research
 title: "Web Research Pipeline"
 description: "8-stage web research pipeline with MCP integration, caching, and citation generation."
 argument-hint: "[query] [--max-depth N] [--yolo]"
-allowed-tools: [Read, Glob, Bash, Write, WebSearch, WebFetch]
+allowed-tools: [Read, Glob, Bash, Write, Task, Agent, WebSearch, WebFetch]
 roles: [Researcher, Analyst, FactChecker]
 mode: research-pipeline
 ---
@@ -17,6 +17,15 @@ QFAI Skill Body (SSOT)
 ## /web-research — Web Research Pipeline
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- HITL gate confirmation
+- research scope and depth decisions
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -43,7 +52,7 @@ baseline overlap, the baseline governs.
 ## Work Orders Summary
 
 Every major research artifact MUST include a `## Work Orders Summary` table.
-Use the shared schema from `shared-skill-delegation-baseline.md` — including the
+Use the shared schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` — including the
 `Agent instance` column, without which an author-reviewed-their-own-work
 collision cannot be detected from the evidence afterwards. Typical pipeline
 steps:
@@ -57,15 +66,16 @@ steps:
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be performed by an independent reviewer, as defined
-  normatively in `shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
+  normatively in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
   Being routed as `Reviewer` does not by itself make an agent independent: an agent
   that drafted or edited any artifact under review is disqualified for the whole run,
   and MUST hand the same evidence set to a non-participating reviewer instead of
   returning `PASS`.
 - Reviewer responses use the response template in
-  `shared-skill-delegation-baseline.md#reviewer-response-template`, including the
-  REQUIRED `Authored/edited under review:` line. A response omitting that line is
-  not a valid verdict; anything other than `none` cannot be a `PASS`.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`, including the
+  REQUIRED `Reviewer role:`, `Reviewed artifact:` and `Authored/edited under review:`
+  lines. A response omitting any of them is not a valid verdict; anything other than
+  `none` on the last cannot be a `PASS`.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
 - A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.
@@ -100,7 +110,7 @@ Primary search provider. Connects via **stdio** transport for local execution.
 Also supports **HTTP transport** (streamable HTTP) for remote/hosted deployments
 where HTTP-based MCP endpoints are preferred.
 
-Configuration templates: `assets/mcp-templates/brave-search/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/brave-search/`
 
 ### 2.2 Firecrawl MCP
 
@@ -109,14 +119,14 @@ Content fetching and extraction. Supports two modes:
 - **Local**: `npx` execution via stdio transport.
 - **Hosted**: Remote Firecrawl service via HTTP transport.
 
-Configuration templates: `assets/mcp-templates/firecrawl/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/firecrawl/`
 
 ### 2.3 Playwright MCP
 
 Browser-based fetching for JavaScript-rendered pages.
 Used as fallback when Firecrawl cannot extract content.
 
-Configuration templates: `assets/mcp-templates/playwright/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/playwright/`
 
 ### 2.4 MCP Failure Recovery
 
