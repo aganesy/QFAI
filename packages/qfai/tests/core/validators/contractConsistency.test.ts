@@ -476,6 +476,15 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // which table the API field pairs with.
       const message = issues[0]?.message ?? "";
       expect(message.slice(message.indexOf("DB 側の制約: "))).toContain("CHECK と ENUM の混在");
+
+      // The remedy points at the TABLE, because the contract is already
+      // settled — there is only one. The cross-contract wording would have
+      // named "the contracts that bound it with a CHECK" and had none to list,
+      // so it printed empty brackets at a reader looking for a file name.
+      const remedy = issues[0]?.suggested_action ?? "";
+      expect(remedy).toContain("ENUM と CHECK が同じ契約");
+      expect(remedy).toContain("対象のテーブルと列を 1 つに特定");
+      expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
     it("still raises to error when the redundant CHECK is on the only table", async () => {

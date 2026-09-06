@@ -193,6 +193,49 @@ function describeDbConstraint(domain: DbDomain): string {
   );
 }
 
+/**
+ * What to do about it, which depends on WHERE the disagreement is.
+ *
+ * Three shapes, and the third is the one a single branch got wrong. When the
+ * ENUM and the CHECK are in the same contract — two tables in one file, each
+ * with a `status` column — every candidate is an ENUM contributor, so the
+ * "contracts that bound it with a CHECK" list is EMPTY and the remedy read
+ * `CHECK で束縛する契約 ()`. Empty brackets are not a shorter answer; they are a
+ * reader looking for a file name that is not there. That case has its own
+ * sentence, and it points at the table rather than at another contract, because
+ * the contract is already settled and the column is not.
+ */
+function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
+  if (enumOnly) {
+    return (
+      `DB 契約 (${dbFiles.join(", ")}) の ENUM が正です — ` +
+      "insert 時に拒絶される物理制約なので、この組み合わせを満たす実装は存在しません。" +
+      "ENUM に値を追加するか (マイグレーションを伴います)、API 側の terminal semantics を訂正してください。"
+    );
+  }
+  if (fromEnum.length === 0) {
+    return (
+      `DB 契約 (${dbFiles.join(", ")}) の CHECK 制約との不一致です — ` +
+      "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
+      "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。"
+    );
+  }
+  const fromCheck = dbFiles.filter((name) => !fromEnum.includes(name));
+  if (fromCheck.length === 0) {
+    return (
+      `ENUM と CHECK が同じ契約 (${dbFiles.join(", ")}) の中に現れています — ` +
+      "同名の列が複数のテーブルにある場合、その ENUM が束縛するのは API フィールドの列とは限りません。" +
+      "対象のテーブルと列を 1 つに特定してから、ENUM 側なら値を追加、CHECK 側なら制約を広げるか API を訂正してください。"
+    );
+  }
+  return (
+    `ENUM を宣言しているのは ${fromEnum.join(", ")} で、CHECK で束縛する契約 ` +
+    `(${fromCheck.join(", ")}) も候補に含まれます — ` +
+    "照合はフィールド名のみなので、この API フィールドを束縛する契約がその ENUM とは限りません。" +
+    "まず、その entity を所有する spec の Contracts 表で、対応する DB 契約を 1 つに絞ってください。"
+  );
+}
+
 async function validateApiFileAgainstDb(
   file: string,
   dbDomains: Map<string, DbDomain>,
@@ -250,18 +293,7 @@ async function validateApiFileAgainstDb(
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
-        (enumOnly
-          ? `DB 契約 (${dbFileList.join(", ")}) の ENUM が正です — ` +
-            "insert 時に拒絶される物理制約なので、この組み合わせを満たす実装は存在しません。" +
-            "ENUM に値を追加するか (マイグレーションを伴います)、API 側の terminal semantics を訂正してください。"
-          : enumContributors.length > 0
-            ? `ENUM を宣言しているのは ${enumContributors.join(", ")} で、CHECK で束縛する契約 ` +
-              `(${dbFileList.filter((name) => !enumContributors.includes(name)).join(", ")}) も候補に含まれます — ` +
-              "照合はフィールド名のみなので、この API フィールドを束縛する契約がその ENUM とは限りません。" +
-              "まず、その entity を所有する spec の Contracts 表で、対応する DB 契約を 1 つに絞ってください。"
-            : `DB 契約 (${dbFileList.join(", ")}) の CHECK 制約との不一致です — ` +
-              "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
-              "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。") +
+        mixedRemedy(enumOnly, dbFileList, enumContributors) +
           "照合は明示的なペア宣言でなく、正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
       ),
     );
