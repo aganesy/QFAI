@@ -132,10 +132,17 @@ routing:
           - [frontend-engineer, backend-engineer]
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
+      # `acceptance-test-engineer` is **not** listed here. Acceptance tests are
+      # `/qfai-atdd`'s owned artifact and `qfai-implement/SKILL.md` Non-goals
+      # bar this skill from authoring them, so routing the role into this phase
+      # gave the manifest and the skill opposite instructions about the same
+      # agent — and licensed, one phase after the step 3b handback, exactly the
+      # edit that handback exists to prevent. The role reaches an `E2E` / `API`
+      # / `Integration` row through the `qfai-atdd` route below, never here.
       - id: test
         iteration: per-ledger-item
         mandatory_agents: []
-        conditional_agents: [acceptance-test-engineer, qa-strategist]
+        conditional_agents: [qa-strategist]
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents

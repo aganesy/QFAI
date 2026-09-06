@@ -50,6 +50,11 @@ import {
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
+  AGENT_ENTRY_POINT_FILES,
+  extractManagedRulesSection,
+  needsManagedRulesSection,
+} from "../../core/agentEntryPoints.js";
+import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
@@ -388,6 +393,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.dryRun,
   );
+  // Runs AFTER the create-only root copy: the files it repairs are exactly the
+  // ones that copy skipped because the project already had them.
+  const entryPointRulesResult = await ensureAgentEntryPointRules(
+    rootAssets,
+    destRoot,
+    options.dryRun,
+  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -488,6 +500,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
+      ...entryPointRulesResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
@@ -503,6 +516,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
       ...legacyEvidenceIgnoreResult.skipped,
+      ...entryPointRulesResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
@@ -2308,6 +2322,94 @@ async function ensureLegacyEvidenceIgnoreNegations(
   await writeFile(target, `${existing}${separator}${missing.join("\n")}\n`, "utf-8");
   info(`  updated: ${target} (re-include governance records)`);
   return { copied: [target], skipped: [] };
+}
+
+// ---------------------------------------------------------------------------
+// AGENTS.md / CLAUDE.md — QFAI managed cross-AI rules section
+// ---------------------------------------------------------------------------
+
+/**
+ * Connect an already-present `AGENTS.md` / `CLAUDE.md` to the rule masters this
+ * run just seeded.
+ *
+ * The root templates are copied create-only, so in a repository that already
+ * had either file the copy skips it and `.agents/rules/**` is written with
+ * nothing pointing at it. Codex loads `AGENTS.md` and Claude Code loads
+ * `CLAUDE.md`; neither discovers a directory it is never told about, so the
+ * safety rules — the ones about where an agent may write and who decides a
+ * release version — silently applied to fresh projects only.
+ *
+ * The appended block is read out of the shipped template rather than composed
+ * here, so the file a fresh init receives and the file an existing project
+ * gains cannot word the same rules differently. Nothing outside the markers is
+ * read back or rewritten, and a run that finds the start marker (or the masters
+ * already cited by hand) writes nothing at all.
+ */
+async function ensureAgentEntryPointRules(
+  rootAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const name of AGENT_ENTRY_POINT_FILES) {
+    const target = path.join(destRoot, name);
+    const existing = await readTextFileIfPresent(target);
+    if (existing === null) {
+      // Absent: the create-only copy above owns this case, and on a dry run
+      // nothing has been written yet.
+      skipped.push(target);
+      continue;
+    }
+
+    const template = await readTextFileIfPresent(path.join(rootAssets, name));
+    const section = template === null ? null : extractManagedRulesSection(template);
+    if (section === null) {
+      // The shipped template lost its markers. Appending a guessed region of it
+      // would be worse than saying so: the project keeps a file that cites no
+      // rule, and now knows it.
+      error(
+        `  WARNING: ${name} は既存のため更新していません。テンプレートの managed section が見つからないので、` +
+          `\`.agents/rules/\` への参照を手動で追記してください（未参照のままだと共有ルールが AI のコンテキストに入りません）。`,
+      );
+      skipped.push(target);
+      continue;
+    }
+
+    if (!needsManagedRulesSection(existing, section)) {
+      skipped.push(target);
+      continue;
+    }
+
+    if (dryRun) {
+      info(`  would update: ${target} (append .agents/rules section)`);
+      copied.push(target);
+      continue;
+    }
+
+    // Exactly one blank line between the project's last line and the section,
+    // whatever the file happened to end with.
+    const body = existing.replace(/\s*$/, "");
+    const separator = body.length === 0 ? "" : "\n\n";
+    await writeFile(target, `${body}${separator}${section}\n`, "utf-8");
+    info(`  updated: ${target} (appended .agents/rules section; existing content kept)`);
+    copied.push(target);
+  }
+
+  return { copied, skipped };
+}
+
+/** File contents, or `null` when nothing is there. Other read faults throw. */
+async function readTextFileIfPresent(target: string): Promise<string | null> {
+  try {
+    return await readFile(target, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -6059,15 +6161,16 @@ function buildCodexReadme(): string {
     "## Cross-AI rules (master)",
     "",
     "The authoritative rule set shared across all AI coding agents (Claude",
-    "Code / Codex / Copilot) lives under `.agents/rules/`. These files are",
-    "SSOT; tool-specific mirrors reference them.",
+    "Code / Codex / Copilot) lives under `.agents/rules/`, seeded by",
+    "`qfai init`. These files are SSOT; tool-specific instruction files",
+    "reference them instead of restating them.",
     "",
     "Key rules:",
     "",
     "- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.",
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
-    "- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.",
-    "- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.",
+    "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
+    "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
     "",
   ].join("\n");
 }
@@ -6150,16 +6253,16 @@ function buildCopilotInstructions(): string {
     "## Cross-AI rules (master)",
     "",
     "The authoritative rule set shared across all AI coding agents (Claude",
-    "Code / Codex / Copilot) lives under `.agents/rules/`. Tool-specific",
-    "mirrors (`.claude/rules/`, etc.) reference these masters; the",
-    "`.agents/rules/` files are SSOT.",
+    "Code / Codex / Copilot) lives under `.agents/rules/`, seeded by",
+    "`qfai init`. Tool-specific instruction files reference these masters;",
+    "the `.agents/rules/` files are SSOT.",
     "",
     "Key rules to follow:",
     "",
     "- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.",
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
-    "- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.",
-    "- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.",
+    "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
+    "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
     "",
   ].join("\n");
 }

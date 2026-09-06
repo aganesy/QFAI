@@ -203,6 +203,21 @@ export const RULE_PROMOTIONS = {
    */
   specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CONTRACT-050` — a `- SSOT modules:` entry naming a path that does not
+   * resolve, or one that resolves only by leaving the project root. Nothing
+   * read those paths before, so a route that went stale releases ago has been
+   * sitting in the contract unchallenged and arrives in one run.
+   */
+  contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-LINK-002` — a `file.md#anchor` citation in the assistant tree whose
+   * target document or heading is not there. Nothing resolved these citations
+   * before, so a tree refreshed in part carries the whole backlog of drifted
+   * anchors the moment the rule arrives — and repairing them is an edit to the
+   * vendored documents, not to the consumer's own work.
+   */
+  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed

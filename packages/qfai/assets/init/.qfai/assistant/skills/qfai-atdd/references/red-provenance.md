@@ -485,8 +485,8 @@ nothing later in the flow can produce the approval retroactively.
 ## A `review-fix` row comes back here for a new RED
 
 A reviewer's REVISE that asks for a change to the acceptance test returns the
-row to this stage: `/qfai-implement` does not author those tests and its `red`
-phase has no `acceptance-test-engineer`. What the corrected test owes — a fresh
+row to this stage: an acceptance test is **this** skill's owned artifact and is never edited in `/qfai-implement` (its Non-goals), whatever `agent-routing.yml` routes
+into any phase there — the rule is ownership, not who happens to be available, so it survives a routing change. What the corrected test owes — a fresh
 RED when it fails, the no-round path plus a re-addressed manifest and a proof
 marked stale when it passes, and where the round block goes — is in
 `review-fix-rounds.md`.

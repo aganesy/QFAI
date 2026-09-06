@@ -67,6 +67,9 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];
 
+/** Repo-relative rule-master paths cited by the generated agent instructions. */
+const RULE_REFERENCE_RE = /\.agents\/rules\/[A-Za-z0-9._-]+\.md/g;
+
 const TEXT_EXTENSIONS = new Set([
   ".md",
   ".yaml",
@@ -356,5 +359,45 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       );
     }
     expect(hits).toEqual([]);
+  });
+
+  // The generated agent instruction files declare `.agents/rules/**` the
+  // cross-AI SSOT. A consumer project has no other source for those files, so
+  // every path they name must exist in the tree `qfai init` just produced —
+  // otherwise the rules named as authoritative are unreadable by construction.
+  it("every .agents/rules path cited by the generated instructions resolves", async () => {
+    const tmpDir = await newTempDir();
+    await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
+
+    // Every entry point an agent loads on its own: Codex reads `AGENTS.md`,
+    // Claude Code reads `CLAUDE.md`, Copilot reads its instructions file.
+    // `.codex/README.md` is not auto-loaded, but it makes the same claim, so
+    // its citations have to resolve too.
+    const citingFiles = [
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      ".codex/README.md",
+    ];
+    const missing: string[] = [];
+
+    for (const citing of citingFiles) {
+      const citingPath = path.join(tmpDir, ...citing.split("/"));
+      const content = await readFile(citingPath, "utf-8").catch(() => null);
+      expect(content, `qfai init did not create ${citing}`).not.toBeNull();
+      const cited = new Set(content?.match(RULE_REFERENCE_RE) ?? []);
+      expect(cited.size, `${citing} cites no .agents/rules path`).toBeGreaterThan(0);
+      for (const rulePath of cited) {
+        const stats = await stat(path.join(tmpDir, ...rulePath.split("/"))).catch(() => null);
+        if (!stats?.isFile()) {
+          missing.push(`${citing} -> ${rulePath}`);
+        }
+      }
+    }
+
+    expect(
+      missing,
+      `dangling .agents/rules references in qfai init output:\n${missing.join("\n")}`,
+    ).toEqual([]);
   });
 });

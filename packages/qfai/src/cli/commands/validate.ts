@@ -1146,6 +1146,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
+  "QFAI-LINK-002":
+    "Every `file.md#anchor` citation inside .qfai/assistant/** names a document that is there, and a heading that is in it.",
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":
@@ -1233,6 +1235,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
+  "QFAI-PROT-337":
+    "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so each carries a promotion window
   // (`core/sunset.ts`) and reaches `error` only at its pinned release. The
@@ -1251,6 +1255,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
+  // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
+  // the expected state names the contracts root by role. Pinning the default
+  // path sent a project that moved its contracts to repair a directory it does
+  // not use, and the offending file is already on the finding's own line.
+  "QFAI-CONTRACT-050":
+    "Every `- SSOT modules:` entry in a contract under the configured contracts directory must resolve to a readable file or directory that travels with the project.",
   // `paths.contractsDir` is configurable, so the expected state names the file
   // by role rather than pinning the default location: a project that moved its
   // contracts must not be told to repair a directory it does not use. The

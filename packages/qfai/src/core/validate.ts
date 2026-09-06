@@ -25,6 +25,7 @@ import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
+import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import {
   DISCUSSION_PACK_PRODUCERS,
@@ -43,6 +44,7 @@ import {
   validateAgentDefinition,
   validateBpApDb,
   validateContractReferences,
+  validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -472,13 +474,26 @@ async function runProfileValidators(
     profile,
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
+  // Anchor integrity across the assistant tree runs in every profile too, and
+  // for the same reason: a citation that resolves to no heading is an
+  // instruction that silently does nothing, whichever stage followed it. That
+  // is a property of the installation, not of a stage. Its own walk tolerates
+  // the damage `QFAI-LINK-001` reports, so it cannot take that finding down.
+  //
+  // It therefore runs **before** the short-circuit below and is merged into it.
+  // Behind the short-circuit it never ran at all, so a `QFAI-LINK-002` on the
+  // intact half of the tree stayed hidden until `QFAI-LINK-001` was repaired —
+  // "every profile" is what this rule promises, and structural damage
+  // elsewhere is not a reason to withhold a finding the walk already has.
+  const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...toolProvenance, ...unusedPlatform, ...surface.issues];
+    return [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues];
   }
   return [
     ...toolProvenance,
     ...unusedPlatform,
     ...surface.issues,
+    ...anchorIssues,
     ...(await runProfileOwnValidators()),
   ];
 
@@ -644,6 +659,10 @@ async function runSddValidators(
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config, { specScope })),
     ...(await validateContractReferences(root, config)),
+    // Contract → implementation routing: every `- SSOT modules:` entry under
+    // `.qfai/contracts/**` must resolve on disk, so a renamed or never-written
+    // module cannot keep being asserted by the contract that documents it.
+    ...(await validateContractSsotModules(root, config)),
     ...(await validateSddDesignContractReadiness(root, config, {
       enforceNoPrematurePrototypingContracts,
     })),
@@ -773,8 +792,14 @@ async function relaxPrototypingIssuesIfExploration(
   const { readPrototypingModeForRelax } = await import("./prototyping/modeRead.js");
   const mode = await readPrototypingModeForRelax(root);
   if (mode !== "exploration") return issues;
-  const { relaxIssuesForMode } = await import("./prototyping/mode.js");
-  return [...relaxIssuesForMode(issues, mode)];
+  const { relaxIssuesForMode, buildExplorationRelaxationNotice } =
+    await import("./prototyping/mode.js");
+  const relaxed = [...relaxIssuesForMode(issues, mode)];
+  // Weakening a gate is auditable the way a waiver is: the downgraded
+  // findings carry `relaxedFrom` and this notice puts the mode, its
+  // source file and the affected codes into validate.json + stdout.
+  const notice = buildExplorationRelaxationNotice(relaxed, mode);
+  return notice === null ? relaxed : [...relaxed, notice];
 }
 
 async function runAtddValidators(
@@ -859,6 +884,12 @@ async function runTddValidators(
     // that cannot be applied was invisible to the only profile the stage runs.
     // `full` opts out below because `runSddValidators` already includes it.
     ...(includeContracts ? await validateContracts(root, config) : []),
+    // Same reasoning for the contract -> implementation routing block: the
+    // implementation stage is the one that moves and renames those modules, so
+    // `--profile tdd` — the gate `qfai-implement` names — has to see a
+    // `- SSOT modules:` entry it just made dead. It rides `includeContracts`
+    // so `full` does not report it twice.
+    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
   ];
 }
 
