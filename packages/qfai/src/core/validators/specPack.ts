@@ -46,6 +46,8 @@ import {
   type SpecStatus,
 } from "../parse/spec.js";
 import {
+  TRIAGE_NO_EXISTING_SPEC,
+  TRIAGE_NO_EXISTING_SPEC_LEGACY,
   TRIAGE_TABLE_HEADER,
   TRIAGE_TOP_LEVEL_OPS,
   TRIAGE_UPDATE_SUBOPS,
@@ -60,6 +62,9 @@ import { issue } from "./utils.js";
 
 /** The release `QFAI-TRIAGE-008` stops being a warning at. */
 const TRIAGE_HEADING_PROMOTION = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
+
+/** The release `QFAI-TRIAGE-009` stops being a warning at. */
+const EXISTING_SPEC_PROMOTION = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
 
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
@@ -153,7 +158,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds, specStatuses)));
-    issues.push(...(await validateTriageSectionForEntry(entry, toolVersion)));
+    issues.push(...(await validateTriageSectionForEntry(entry, toolVersion, knownSpecIds)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
@@ -163,7 +168,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // (PR #206 review LW-F). Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
-  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion)));
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion, knownSpecIds)));
 
   return issues;
 }
@@ -171,6 +176,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
 async function validatePoliciesDeltaTriage(
   specsRoot: string,
   toolVersion: string,
+  knownSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
   let text: string;
@@ -182,7 +188,7 @@ async function validatePoliciesDeltaTriage(
     return [];
   }
   const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
-  const issues = validateTriageSection(text, deltaPath, toolVersion);
+  const issues = validateTriageSection(text, deltaPath, toolVersion, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
   return issues;
 }
@@ -396,6 +402,173 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
  */
 const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
 
+/** The only well-formed spec token: `spec-` plus exactly four digits. */
+const EXISTING_SPEC_ID_RE = /^spec-\d{4}$/;
+
+/**
+ * Range notation in an `Existing Spec` cell. A range names no spec
+ * directory — it is a prose shorthand that no reader can resolve back to a
+ * concrete set — so it is not a form of the grammar. Multiple specs are
+ * enumerated with `+` instead.
+ */
+const EXISTING_SPEC_RANGE_RE = /spec-\d{4}\s*(?:[〜～~…–—ー]|\.\.\.?)\s*(?:spec-)?\d{4}/;
+
+/**
+ * A policy-only row acts on `_policies/**` rather than on a spec
+ * directory, so `_policies` (bare, backticked, or as a path to one of its
+ * files) is an accepted target. The match is anchored to the whole value:
+ * a cell that merely *contains* the literal (`not_policies`,
+ * `_policies_typo`) resolves to nothing and must not pass as a policy row.
+ *
+ * No segment may be `.` or `..`. The path characters alone admitted both, so
+ * `_policies/../spec-0001` read as a policy target: it skipped the spec
+ * existence check while normalising to something outside `_policies`
+ * entirely, which is the one thing "policy-only row" is supposed to mean.
+ */
+const EXISTING_SPEC_POLICY_RE = /^_policies(?:\/(?!\.\.?(?:\/|$))[0-9A-Za-z._-]+)*$/;
+
+/** Separators that may join several targets inside one `Existing Spec` cell. */
+const EXISTING_SPEC_SEPARATOR_RE = /[+,、，]/;
+
+/**
+ * A part that was *meant* to be a spec ID but is not one. Used only to pick
+ * the error wording: a botched ID is reported as such, anything else as a
+ * cell that names no target at all.
+ */
+const EXISTING_SPEC_ATTEMPT_RE = /spec[-_]?\d/i;
+
+/**
+ * What one `Existing Spec` cell resolves to, or why it resolves to nothing.
+ * The grammar declared in `references/sdd-triage.md` is closed and applies to
+ * the **whole** cell, so the cell is parsed once and every gate below reads
+ * the parse. Matching a well-formed token *inside* the cell and ignoring the
+ * remainder is what let `spec-0001 trailing prose`, `spec-0001+`,
+ * `spec-0001++spec-0003` and `spec-0001+_policies` through: each contains a
+ * valid token, and none of them is a valid cell.
+ */
+type ExistingSpecTarget =
+  | { readonly kind: "specs"; readonly ids: readonly string[] }
+  | { readonly kind: "policies" }
+  | { readonly kind: "malformed"; readonly message: string; readonly refs: readonly string[] };
+
+/**
+ * Strips one matched pair of surrounding backticks, and nothing else.
+ *
+ * Deleting every backtick in the cell normalised values the grammar exists to
+ * reject: ``spec-00`01`` became `spec-0001` and passed as an existing ID.
+ * Code-span decoration is a matched outer pair; a backtick anywhere else is
+ * part of the value and has to stay there so the grammar can refuse it.
+ */
+function stripMatchedBackticks(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || !trimmed.startsWith("`") || !trimmed.endsWith("`")) {
+    return trimmed;
+  }
+  const inner = trimmed.slice(1, -1);
+  // One span, not two. `` `spec-0003`+`spec-0004` `` also opens and closes with
+  // a backtick, and stripping the outermost pair there would leave a stray
+  // backtick glued to each target; that cell is handled by stripping each
+  // part's own span after the split.
+  return inner.includes("`") ? trimmed : inner.trim();
+}
+
+/**
+ * A markdown backslash escape: a backslash followed by ASCII punctuation, the
+ * only sequence CommonMark reads as one. `renderTriageMarkdown` writes
+ * `\_policies`, so the escape has to be undone — but deleting every backslash
+ * undid more than that, turning `spec-00\01` into `spec-0001`. A backslash
+ * before anything else is an ordinary character and is left in place, where
+ * the grammar rejects it.
+ */
+const MARKDOWN_ESCAPE_RE = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g;
+
+function unescapeMarkdown(value: string): string {
+  return value.replace(MARKDOWN_ESCAPE_RE, "$1");
+}
+
+/**
+ * Parse the whole cell into its targets. The value may arrive
+ * markdown-escaped (`\_policies`, written by `renderTriageMarkdown`) or
+ * backticked (`` `_policies` ``, or one span per target), so those decorations
+ * are undone — precisely, never by deleting the characters wherever they
+ * occur; what is left must split cleanly on the enumeration separators into
+ * parts that are each either a well-formed spec ID or a `_policies` path, and
+ * the two kinds may not be mixed in one cell.
+ */
+function parseExistingSpecCell(cell: string): ExistingSpecTarget {
+  const parts = stripMatchedBackticks(cell)
+    .split(EXISTING_SPEC_SEPARATOR_RE)
+    .map((part) => unescapeMarkdown(stripMatchedBackticks(part)));
+  if (parts.some((part) => part.length === 0)) {
+    return {
+      kind: "malformed",
+      message: `Existing Spec の区切りの前後に対象がありません: ${cell}`,
+      refs: [cell],
+    };
+  }
+  const unreadable = parts.filter(
+    (part) => !EXISTING_SPEC_ID_RE.test(part) && !EXISTING_SPEC_POLICY_RE.test(part),
+  );
+  if (unreadable.length > 0) {
+    return unreadable.some((part) => EXISTING_SPEC_ATTEMPT_RE.test(part))
+      ? {
+          kind: "malformed",
+          message: `Existing Spec の spec ID 表記が不正です: ${unreadable.join(", ")}`,
+          refs: unreadable,
+        }
+      : {
+          kind: "malformed",
+          message: `Existing Spec が対象を名指ししていません: ${cell}`,
+          refs: [cell],
+        };
+  }
+  const ids = parts.filter((part) => EXISTING_SPEC_ID_RE.test(part));
+  if (ids.length > 0 && ids.length < parts.length) {
+    return {
+      kind: "malformed",
+      message: `Existing Spec に spec と policy の対象が混在しています: ${cell}`,
+      refs: [cell],
+    };
+  }
+  const repeated = [...new Set(parts.filter((part, at) => parts.indexOf(part) !== at))];
+  if (repeated.length > 0) {
+    // An enumeration that names the same target twice is not an enumeration of
+    // two targets. It also misleads the removal check below, which reads "every
+    // target gone" as "the operation has been carried out" — a duplicated ID
+    // makes one absent spec look like a complete set.
+    return {
+      kind: "malformed",
+      message: `Existing Spec が同じ対象を重複して列挙しています: ${repeated.join(", ")}`,
+      refs: repeated,
+    };
+  }
+  return ids.length > 0 ? { kind: "specs", ids } : { kind: "policies" };
+}
+
+/**
+ * Operations whose completion removes the spec directory the row names.
+ * `sdd-triage.md` "Operation scope" defines DELETE as removing the directory
+ * entirely, and MERGE / SPLIT collapse or decompose their source into other
+ * spec IDs — so once such a row has been carried out, its targets are gone by
+ * construction while the row itself stays in delta.md as history. SUPERSEDE
+ * is not in the set: it flips the source spec's Status and keeps the
+ * directory.
+ */
+const SPEC_REMOVING_TRIAGE_OPS = new Set<TriageTopLevelOp>(["DELETE", "MERGE", "SPLIT"]);
+
+/** Whether the row's operation acts on a whole spec directory. */
+function isSpecScopedOp(opUpper: "UPDATE" | TriageTopLevelOp): boolean {
+  return opUpper !== "UPDATE" && SPEC_SCOPED_OPS.has(opUpper);
+}
+
+/** Whether carrying the row out removes the spec directories it names. */
+function isSpecRemovingOp(opUpper: "UPDATE" | TriageTopLevelOp): boolean {
+  return opUpper !== "UPDATE" && SPEC_REMOVING_TRIAGE_OPS.has(opUpper);
+}
+
+const EXISTING_SPEC_GRAMMAR_HINT =
+  "Existing Spec はセル全体が `spec-NNNN` (複数は `+` 連結)、policy 専用行は `_policies` (spec 単位の操作では不可)、対象 spec がまだ無い CREATE 行は `-` のいずれかである必要があります。";
+
 /** Bracket pairs that mark a parenthetical citation in a `Subject` cell. */
 const CITATION_BRACKETS: ReadonlyArray<readonly [string, string]> = [
   ["(", ")"],
@@ -498,6 +671,7 @@ function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
 async function validateTriageSectionForEntry(
   entry: SpecEntry,
   toolVersion: string,
+  knownSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
   if (!deltaPath) {
@@ -509,7 +683,7 @@ async function validateTriageSectionForEntry(
   } catch {
     return [];
   }
-  const issues = validateTriageSection(text, deltaPath, toolVersion);
+  const issues = validateTriageSection(text, deltaPath, toolVersion, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
   return issues;
 }
@@ -784,14 +958,137 @@ function validateCreateRows(
 }
 
 /**
+ * Enforce QFAI-TRIAGE-009: the `Existing Spec` cell binds the row to the
+ * spec it acts on, so its value must be readable — and readable the same
+ * way by every author. The grammar is declared in
+ * `references/sdd-triage.md` and applies to the whole cell: one or more
+ * `spec-NNNN` joined by `+`, `_policies` for a policy-only row (never for a
+ * spec-scoped operation), or `-` on a CREATE row, which has no existing spec
+ * yet. `knownSpecIds` is the set of spec directories actually on disk; when
+ * it is absent (callers that validate a delta.md in isolation) only the
+ * grammar is checked, not existence.
+ *
+ * A removal row (`SPEC_REMOVING_TRIAGE_OPS`) outlives the directories it
+ * names, so existence is read as a state rather than a requirement: every
+ * target still present means the row has not been carried out, every target
+ * gone means it has and the row is the tombstone. A row where only *some*
+ * targets resolve is in neither state — one of its sources is misspelled or
+ * was never allocated — and it is reported.
+ *
+ * The grammar this enforces is itself new, so the rule necessarily lands on
+ * cells written before it existed — on rows already approved, where the cell
+ * is no longer rewritten by anything. Severity therefore comes from the
+ * promotion window (`RULE_PROMOTIONS.triageExistingSpecCell`) rather than a
+ * literal beside the call, so an upgrade cannot latch a consuming repository's
+ * `--fail-on error` gate the moment it lands.
+ */
+function validateExistingSpecCell(
+  cell: string,
+  opUpper: "UPDATE" | TriageTopLevelOp,
+  rowLabel: string,
+  deltaPath: string,
+  toolVersion: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
+): Issue[] {
+  const existingSpecSeverity = newRuleSeverity(toolVersion, EXISTING_SPEC_PROMOTION);
+  const windowNote =
+    existingSpecSeverity === "warning"
+      ? `（${EXISTING_SPEC_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+      : "";
+  const report = (message: string, refs: string[]): Issue[] => [
+    issue(
+      "QFAI-TRIAGE-009",
+      `${message} (${rowLabel})${windowNote}`,
+      existingSpecSeverity,
+      deltaPath,
+      "triage.existingSpec",
+      refs,
+      "canonical",
+      EXISTING_SPEC_GRAMMAR_HINT,
+    ),
+  ];
+
+  const isNoneLiteral =
+    cell === TRIAGE_NO_EXISTING_SPEC ||
+    cell.toLowerCase() === TRIAGE_NO_EXISTING_SPEC_LEGACY.toLowerCase();
+
+  if (opUpper === "CREATE") {
+    return isNoneLiteral
+      ? []
+      : report(
+          `CREATE 行の Existing Spec は \`${TRIAGE_NO_EXISTING_SPEC}\` です: ${cell || "(empty)"}`,
+          [cell],
+        );
+  }
+  if (cell.length === 0 || isNoneLiteral) {
+    // Including DELETE. `classifyTriage` emits `op: "DELETE",
+    // existingSpec: null` when no active spec absorbed a removal-shaped REQ,
+    // and `renderTriageMarkdown` writes that as `-` — but a DELETE removes a
+    // whole spec directory, so a row that names none has nothing to carry
+    // out and the approval gate cannot supply the target either. That row is
+    // a proposal, not a persistable decision: the classifier says so in its
+    // rationale and this gate is what forces the target to be filled in,
+    // exactly as QFAI-TRIAGE-006 forces the CREATE `CAP-NNNN` placeholder.
+    return report(`Triage ${opUpper} の Existing Spec が対象を持ちません: ${cell || "(empty)"}`, [
+      cell,
+    ]);
+  }
+  if (EXISTING_SPEC_RANGE_RE.test(cell)) {
+    return report(`Existing Spec の範囲表記は形式として認められません: ${cell}`, [cell]);
+  }
+
+  const target = parseExistingSpecCell(cell);
+  if (target.kind === "malformed") {
+    return report(target.message, [...target.refs]);
+  }
+  if (target.kind === "policies") {
+    // `_policies` names no spec directory, and SPLIT / MERGE / SUPERSEDE /
+    // DELETE are defined on one — an approved policy-target row would have
+    // nothing to execute against, or would be read as a destructive
+    // operation on the policy files themselves.
+    return isSpecScopedOp(opUpper)
+      ? report(
+          `Triage ${opUpper} は spec 単位の操作なので policy target は指定できません: ${cell}`,
+          [cell],
+        )
+      : [];
+  }
+  if (!knownSpecIds) {
+    return [];
+  }
+  const missing = target.ids.filter((specId) => !knownSpecIds.has(specId));
+  if (missing.length === 0) {
+    return [];
+  }
+  if (isSpecRemovingOp(opUpper)) {
+    // Every target gone: the operation has been carried out and the row is
+    // its tombstone. Only some gone: neither state, so the row names a
+    // source that never existed.
+    return missing.length === target.ids.length
+      ? []
+      : report(
+          `Existing Spec の一部の対象だけが存在しません (未実行なら全て存在し、完了済みなら全て消えているはずです): ${missing.join(", ")}`,
+          missing,
+        );
+  }
+  return report(`Existing Spec が存在しない spec を指しています: ${missing.join(", ")}`, missing);
+}
+
+/**
  * `toolVersion` は必須引数。既定値を持たせると、渡し忘れた呼び出しでは
- * `QFAI-TRIAGE-008` が永久に warning のまま据え置かれ、promotion window が
- * 黙って無効化される。呼び出し側は `resolveToolVersion()` の結果を渡す。
+ * `QFAI-TRIAGE-008` / `QFAI-TRIAGE-009` が永久に warning のまま据え置かれ、
+ * promotion window が黙って無効化される。呼び出し側は `resolveToolVersion()`
+ * の結果を渡す。
+ *
+ * `knownSpecIds` は任意。delta.md を単体で検証する呼び出し (spec ツリーを
+ * 持たないユニットテスト等) では `QFAI-TRIAGE-009` の文法だけを見て、
+ * 存在検査は行わない。
  */
 export function validateTriageSection(
   text: string,
   deltaPath: string,
   toolVersion: string,
+  knownSpecIds?: ReadonlySet<string>,
 ): Issue[] {
   const issues: Issue[] = [];
   // `collectTriageSections` と同じ masked テキストから読む。生テキストのまま
@@ -847,7 +1144,9 @@ export function validateTriageSection(
   // Validate every canonical `## Triage` section, and every table inside
   // each of them (PR #206 review LWri covered the tables only).
   for (const section of sections) {
-    issues.push(...validateTriageSectionBody(section, sections.length, deltaPath));
+    issues.push(
+      ...validateTriageSectionBody(section, sections.length, deltaPath, toolVersion, knownSpecIds),
+    );
   }
 
   return issues;
@@ -857,6 +1156,8 @@ function validateTriageSectionBody(
   section: TriageSection,
   sectionCount: number,
   deltaPath: string,
+  toolVersion: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
   const tables = parseAllMarkdownTables(section.body);
@@ -907,7 +1208,9 @@ function validateTriageSectionBody(
       continue;
     }
 
-    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel));
+    issues.push(
+      ...validateTriageRows(table, headerMap, deltaPath, tableLabel, toolVersion, knownSpecIds),
+    );
   }
 
   return issues;
@@ -918,6 +1221,8 @@ function validateTriageRows(
   headerMap: Map<string, number>,
   deltaPath: string,
   tableLabel: string,
+  toolVersion: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
   for (const [rowIndex, row] of table.rows.entries()) {
@@ -926,6 +1231,7 @@ function validateTriageRows(
     const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
     const subjectCell = (row[headerMap.get("subject") ?? -1] ?? "").trim();
+    const existingSpecCell = (row[headerMap.get("existing spec") ?? -1] ?? "").trim();
     const baseLabel = sourceCell || `row ${rowIndex + 1}`;
     const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
 
@@ -940,7 +1246,7 @@ function validateTriageRows(
           "triage.operation",
           [opCell],
           "canonical",
-          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。`,
+          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。UPDATE:APPEND のようなコロン形式は散文上の略記であり、セル値ではありません。Operation に UPDATE を、Sub-op に APPEND / MODIFY / REMOVE を分けて記載してください。`,
         ),
       );
       continue;
@@ -948,6 +1254,20 @@ function validateTriageRows(
     // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
     // a bare type assertion (PR #206 review #34).
     const opUpper = opUpperRaw;
+
+    // QFAI-TRIAGE-009 is orthogonal to the Sub-op / approval gates below,
+    // so it is evaluated for every row whose Operation parsed, and the
+    // row keeps flowing through the remaining checks.
+    issues.push(
+      ...validateExistingSpecCell(
+        existingSpecCell,
+        opUpper,
+        rowLabel,
+        deltaPath,
+        toolVersion,
+        knownSpecIds,
+      ),
+    );
 
     if (opUpper === "UPDATE") {
       const subUpper = subCell.toUpperCase();
@@ -1561,7 +1881,17 @@ function validateLayeredNamespace(
       "specPack.layered.namespace",
       mismatched,
       "canonical",
-      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。`,
+      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。` +
+        // The old remedy asked the author to do the one thing they cannot: the
+        // mismatched ID belongs to ANOTHER spec, so 「make it match this one」 is
+        // not a repair. The supported form was undiscoverable except by tripping
+        // the validator repeatedly (#1101).
+        "別 spec が所有する ID を参照したい場合は、その spec の contract id " +
+        "(`CON-DB-*` / `CON-API-*` / `CON-UI-*`) を引用してください — `BR-*` / `US-*` などの " +
+        "レイヤー ID を直接参照することはこの検査が禁止します。所有 spec は対象 spec の " +
+        "Contracts 表で特定できます。この検査の対象は 02_User-stories.md / " +
+        "03_Acceptance-Criteria.md / 04_Business-Rules.md / 05_Examples.md / " +
+        "06_Test-Cases.md の 5 ファイルで、09_delta.md は対象外です。",
     ),
   ];
 }
