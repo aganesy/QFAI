@@ -32,6 +32,17 @@ function schemaWindowNote(severity: "warning" | "error"): string {
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/**
+ * Fence info strings whose block carries the summary itself.
+ *
+ * The shipped template writes a `yaml` fence, but a pack that fences the same
+ * data bare or as `yml` carries it too, and reading none of those would report
+ * every field missing. An allowlist rather than a denylist of languages: a
+ * denylist cannot be complete, and a block this does not recognise is not lost
+ * either — a section with no YAML fence at all still falls back whole.
+ */
+const YAML_INFO_WORDS = new Set(["", "yaml", "yml"]);
+
 /** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
 const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 /**
@@ -674,17 +685,27 @@ function storageSlotIssue(
  *
  * A closing fence is the same marker, at least as long as the opener, and
  * carries no info string: the same three conditions the mask applies.
+ *
+ * Only a block whose opener names YAML is collected. Every fence is still
+ * tracked so its body cannot be mistaken for one: a mermaid diagram, or a
+ * markdown paste of the blank template, is prose the section happens to carry,
+ * and reading it as data reported placeholders the real summary had already
+ * filled in.
  */
 function extractYamlPayload(section: string): string {
   const blocks: string[] = [];
-  let open: { marker: string; length: number } | null = null;
+  let open: { marker: string; length: number; collect: boolean } | null = null;
   let current: string[] = [];
 
   for (const line of section.split("\n")) {
     const fence = parseFenceLine(line);
     if (!open) {
       if (fence) {
-        open = { marker: fence.marker, length: fence.length };
+        open = {
+          marker: fence.marker,
+          length: fence.length,
+          collect: YAML_INFO_WORDS.has(fenceInfoWord(fence.info)),
+        };
       }
       continue;
     }
@@ -694,18 +715,31 @@ function extractYamlPayload(section: string): string {
       fence.length >= open.length &&
       !fence.info.trim()
     ) {
-      blocks.push(current.join("\n"));
+      if (open.collect) {
+        blocks.push(current.join("\n"));
+      }
       current = [];
       open = null;
       continue;
     }
-    current.push(line);
+    if (open.collect) {
+      current.push(line);
+    }
   }
-  if (open && current.length > 0) {
+  if (open?.collect && current.length > 0) {
     blocks.push(current.join("\n"));
   }
 
   return blocks.length > 0 ? blocks.join("\n") : section;
+}
+
+/**
+ * The first word of a fence's info string, lowercased: `yaml` out of an opener
+ * that carries attributes after the language, and the empty string out of a
+ * bare fence.
+ */
+function fenceInfoWord(info: string): string {
+  return info.trim().split(/\s+/u)[0]?.toLowerCase() ?? "";
 }
 
 /**

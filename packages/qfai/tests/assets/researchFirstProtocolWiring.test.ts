@@ -667,4 +667,54 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });
+
+  it("does not read a non-YAML fenced block as summary data", async () => {
+    // A pack may keep a diagram or a paste of the blank template beside its
+    // summary. Collecting every fence made that prose part of the payload, so
+    // placeholders the real run had already replaced were reported again.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const note = [
+      "```markdown",
+      "sources:",
+      "  - id: SRC-0404",
+      "    title: [Reference title]",
+      "    url: [https://example.com/reference]",
+      "```",
+      "",
+      "```yaml",
+      "research_summary:",
+    ].join("\n");
+    const withNote = filled.replace("```yaml\nresearch_summary:", note);
+    expect(withNote, "fixture did not attach the note block").not.toBe(filled);
+
+    const issues = await validateResearchSummary(await seedPack(withNote), defaultConfig);
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("reads the payload out of a tilde fence rather than the whole section", async () => {
+    // The section is where the mask says it is, so an earlier draft left above
+    // the fence is inside it. Only the fence separates that draft from the
+    // data, and a payload rule that knew backticks alone could not draw the
+    // line: the stale entry became the summary and its placeholder reported.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const draft = [
+      "An earlier draft, kept for reference:",
+      "",
+      "sources:",
+      "  - id: SRC-0404",
+      "    title: [Stale draft title]",
+      "",
+      "~~~yaml",
+      "research_summary:",
+    ].join("\n");
+    const tildeFenced = filled
+      .replace("```yaml\nresearch_summary:", draft)
+      .replace("\n```\n", "\n~~~\n");
+    expect(tildeFenced, "fixture still carries a backtick fence").not.toContain("```");
+
+    const issues = await validateResearchSummary(await seedPack(tildeFenced), defaultConfig);
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
 });
