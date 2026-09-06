@@ -1403,6 +1403,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every spec pack carries each heading `validation.require.specSections` lists, in its own Markdown or — for a layered pack — in the shared `_policies` pack.",
   "QFAI-SPECSECTION-002":
     "Every `validation.require.specSections` entry normalises to a comparable heading name, so a configured strict gate is never a no-op.",
+  "QFAI-RESEARCH-013":
+    "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
+  "QFAI-RESEARCH-014":
+    "Every registered competitive reference populates `adopted_points`, `rejected_points` and `local_translation` with real content rather than a placeholder.",
 };
 
 /**

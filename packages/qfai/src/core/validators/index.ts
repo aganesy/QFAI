@@ -65,6 +65,7 @@ export {
 export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
+export { validateCompetitiveReferences } from "./uix/competitiveRefs.js";
 export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
 export { validateMarkdownTableArity } from "./markdownTableArity.js";
 export { validateTraceability } from "./traceability.js";
