@@ -131,6 +131,7 @@
     "tests/integration/cli/commands/validate.tddProfileTableArity.test.ts",
     "tests/integration/cliStartupCost.test.ts",
     "tests/integration/contractDeferralNotes.test.ts",
+    "tests/integration/explorationRelaxationAudit.test.ts",
     "tests/integration/prototypingExplorationRelaxationScope.test.ts",
     "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
     "tests/integration/scripts/checkPublishDryRun.test.ts",

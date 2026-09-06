@@ -1233,6 +1233,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
+  "QFAI-PROT-337":
+    "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so each carries a promotion window
   // (`core/sunset.ts`) and reaches `error` only at its pinned release. The

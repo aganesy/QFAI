@@ -778,8 +778,14 @@ async function relaxPrototypingIssuesIfExploration(
   const { readPrototypingModeForRelax } = await import("./prototyping/modeRead.js");
   const mode = await readPrototypingModeForRelax(root);
   if (mode !== "exploration") return issues;
-  const { relaxIssuesForMode } = await import("./prototyping/mode.js");
-  return [...relaxIssuesForMode(issues, mode)];
+  const { relaxIssuesForMode, buildExplorationRelaxationNotice } =
+    await import("./prototyping/mode.js");
+  const relaxed = [...relaxIssuesForMode(issues, mode)];
+  // Weakening a gate is auditable the way a waiver is: the downgraded
+  // findings carry `relaxedFrom` and this notice puts the mode, its
+  // source file and the affected codes into validate.json + stdout.
+  const notice = buildExplorationRelaxationNotice(relaxed, mode);
+  return notice === null ? relaxed : [...relaxed, notice];
 }
 
 async function runAtddValidators(

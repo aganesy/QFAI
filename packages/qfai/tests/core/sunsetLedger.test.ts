@@ -118,6 +118,13 @@ const ERROR_FROM_INTRODUCTION: readonly { code: string; reason: string }[] = [
 ];
 
 const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
+  // `prototyping.mode=exploration` downgraded one or more declared-error
+  // gates to warning. The relaxation is what the project asked for, so the
+  // notice reports a configured fact and names the file it came from; what
+  // is new here is the audit trail, not the downgrade. There is no release
+  // at which telling an operator about their own setting should fail a
+  // build, so there is nothing for a promotion window to close.
+  "QFAI-PROT-337",
   // `.qfai/review/` holds a directory whose name is not a pack timestamp. The
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.
