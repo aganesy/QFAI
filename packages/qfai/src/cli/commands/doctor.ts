@@ -2,11 +2,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
+import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
+import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
-import type { FailOn } from "../../core/config.js";
+import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
+import type { Issue } from "../../core/types.js";
 import { isCiEnvironment } from "../../core/phasePolicy.js";
 import { resolveFailOn } from "../lib/failOn.js";
 import { info } from "../lib/logger.js";
@@ -25,7 +28,11 @@ export type DoctorCommandOptions = {
   /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
   skillProfile?: string;
   targetUrl?: string;
-  /** `--clean`: archive TTL-expired review packs into `.qfai/review/_archive/`. */
+  /**
+   * `--clean`: archive TTL-expired review packs into
+   * `.qfai/review/_archive/` and prune TTL-expired `<outDir>/run-*`
+   * validate run logs.
+   */
   clean?: boolean;
   /** `--autoremediate`: orchestrate install + clean + config-fill. */
   autoremediate?: boolean;
@@ -94,6 +101,96 @@ function formatDoctorJson(data: unknown): string {
   return JSON.stringify(data, null, 2);
 }
 
+/**
+ * Archive TTL-expired review packs and prune TTL-expired validate run
+ * logs, returning the side-effect summary lines.
+ *
+ * Phrase the summary in the future tense when `--dry-run` is in effect.
+ * Both cleaners still populate their result arrays under dry-run (they
+ * list what the live command WOULD do), so reusing the past-tense
+ * wording from the live path would falsely read as "it happened".
+ * Mirror the `autoremediate` dry-run vocabulary (`would run ...` /
+ * `would fill ...`).
+ *
+ * Review-pack archival always runs (it moves, and is therefore
+ * recoverable). The run-log prune deletes, so it runs only after
+ * `precheckRunLogPrune` clears it.
+ *
+ * `failed` reports run logs the prune could not remove. The summary is
+ * still printed in that case — the removals that DID happen are
+ * irreversible and the operator has to see them — and the flag makes
+ * `runDoctor` exit non-zero regardless of `--fail-on`.
+ *
+ * `config` and `configIssues` come from `runDoctor`'s single
+ * `loadConfig` rather than a second load here: `precheckRunLogPrune`
+ * blocks the irreversible half on unresolved config issues, so it has
+ * to see the very issue list the caller's `failOn` resolution read.
+ */
+async function runCleanPhase(
+  resolvedRoot: string,
+  config: QfaiConfig,
+  configIssues: readonly Issue[],
+  dryRun: boolean,
+): Promise<{ lines: string[]; failed: boolean }> {
+  const lines: string[] = [];
+  const reviewTtlDays = config.review?.staleTtlDays;
+  const packs = await cleanStaleReviewPacks(resolvedRoot, {
+    ...(typeof reviewTtlDays === "number" ? { ttlDays: reviewTtlDays } : {}),
+    ...(dryRun ? { dryRun: true } : {}),
+  });
+  lines.push(
+    dryRun
+      ? `doctor --clean (dry-run): would archive=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length}, kept-tracked=${packs.skippedWouldUntrack.length} (ttlDays=${packs.ttlDays})`
+      : `doctor --clean: archived=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length}, kept-tracked=${packs.skippedWouldUntrack.length} (ttlDays=${packs.ttlDays})`,
+  );
+  for (const entry of packs.archived) {
+    lines.push(
+      dryRun ? `  would move -> _archive/${entry.packName}` : `  -> _archive/${entry.packName}`,
+    );
+  }
+  // A pack whose archive move would take it out of version control is kept
+  // where it is: renaming a tracked pack into a git-ignored directory
+  // deletes it from the repository rather than retaining it.
+  for (const entry of packs.skippedWouldUntrack) {
+    lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
+  }
+
+  // The run-log half of `--clean` deletes rather than moves, so it is
+  // gated on the two preconditions the diagnostic pass would otherwise
+  // only report AFTER the deletion (invalid config, shared outDir).
+  const precheck = await precheckRunLogPrune(resolvedRoot, config, configIssues);
+  if (precheck.blocked) {
+    lines.push(`doctor --clean: run log prune skipped — ${precheck.reason}`);
+    return { lines, failed: false };
+  }
+
+  const runLogTtlDays = config.report?.staleTtlDays;
+  const keepLatestRuns = config.report?.keepLatestRuns;
+  const runLogs = await cleanStaleRunLogs(resolvedRoot, config, {
+    ...(typeof runLogTtlDays === "number" ? { ttlDays: runLogTtlDays } : {}),
+    ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
+    ...(dryRun ? { dryRun: true } : {}),
+  });
+  const runLogCounts = `in-ttl=${runLogs.skippedInTtl.length}, kept-latest=${runLogs.retainedLatest.length}, kept-pointer=${runLogs.retainedPointer.length} (ttlDays=${runLogs.ttlDays}, keepLatestRuns=${runLogs.keepLatest})`;
+  lines.push(
+    dryRun
+      ? `doctor --clean (dry-run): would prune run logs=${runLogs.removed.length}, ${runLogCounts}`
+      : `doctor --clean: pruned run logs=${runLogs.removed.length}, ${runLogCounts}`,
+  );
+  for (const entry of runLogs.removed) {
+    lines.push(dryRun ? `  would remove -> ${entry.runId}` : `  removed -> ${entry.runId}`);
+  }
+  // Listed after the removals so the two are read together: what is
+  // gone for good, then what is still on disk and why.
+  if (runLogs.failed.length > 0) {
+    lines.push(`doctor --clean: failed to prune run logs=${runLogs.failed.length}`);
+    for (const failure of runLogs.failed) {
+      lines.push(`  failed -> ${failure.entry.runId}: ${failure.reason}`);
+    }
+  }
+  return { lines, failed: runLogs.failed.length > 0 };
+}
+
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
   // Resolve the project root BEFORE running any side-effecting
   // pre-step. Pre-fix `runAutoremediate` and `cleanStaleReviewPacks`
@@ -113,10 +210,14 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // 契約 (errors バケットが空でなければ exit 1) にも validate にも
   // 反しない読み方が存在しなかった。`--clean` 分岐の TTL 参照も
   // この 1 回のロードを共有する。
-  const { config } = await loadConfig(resolvedRoot);
+  const { config, issues: configIssues } = await loadConfig(resolvedRoot);
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
+  // A partial run-log prune must not report success: some directories
+  // are irreversibly gone while others the operator asked to remove are
+  // still there. Independent of `--fail-on`, which grades diagnostics.
+  let cleanFailed = false;
   if (options.autoremediate) {
     // The owning business rule suppresses autoremediation on "standard CI
     // env vars", not on the single `CI` variable. An inline
@@ -153,6 +254,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(options.skillProfile ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
+    cleanFailed = summary.failedRunLogPrunes.length > 0;
     // When the operator did not pass `--profile <skill>`, the install
     // phase of runAutoremediate is structurally skipped (there is no
     // manifest to probe). Surface that explicitly so operators do not
@@ -182,33 +284,14 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       return 0;
     }
   } else if (options.clean) {
-    const ttlDays = config.review?.staleTtlDays;
-    const result = await cleanStaleReviewPacks(resolvedRoot, {
-      ...(typeof ttlDays === "number" ? { ttlDays } : {}),
-      ...(options.dryRun ? { dryRun: true } : {}),
-    });
-    // Phrase the side-effect summary in the future tense when `--dry-run`
-    // is in effect. `cleanStaleReviewPacks` still populates
-    // `result.archived` under dry-run (it lists the packs the live
-    // command WOULD move), so reusing the past-tense
-    // `archived=N` wording from the live path would falsely read as
-    // "rename happened". Mirror the `autoremediate` dry-run vocabulary
-    // (`would run ...` / `would fill ...`).
-    if (options.dryRun) {
-      sideEffectLines.push(
-        `doctor --clean (dry-run): would archive=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
-      );
-      for (const entry of result.archived) {
-        sideEffectLines.push(`  would move -> _archive/${entry.packName}`);
-      }
-    } else {
-      sideEffectLines.push(
-        `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
-      );
-      for (const entry of result.archived) {
-        sideEffectLines.push(`  -> _archive/${entry.packName}`);
-      }
-    }
+    const cleanPhase = await runCleanPhase(
+      resolvedRoot,
+      config,
+      configIssues,
+      Boolean(options.dryRun),
+    );
+    sideEffectLines.push(...cleanPhase.lines);
+    cleanFailed = cleanPhase.failed;
   }
 
   const data = await createDoctorData({
@@ -233,7 +316,10 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     options.failOn ? { failOn: options.failOn } : {},
     config.validation.failOn,
   );
-  const exitCode = shouldFailDoctor(data.summary, failOn) ? 1 : 0;
+  // `cleanFailed` overrides `failOn` on purpose: it reports an
+  // irreversible, partially-applied deletion, which is not a diagnostic
+  // severity for `--fail-on` (or `validation.failOn`) to grade away.
+  const exitCode = cleanFailed || shouldFailDoctor(data.summary, failOn) ? 1 : 0;
 
   if (isJson && sideEffectLines.length > 0) {
     process.stderr.write(`${sideEffectLines.join("\n")}\n`);
