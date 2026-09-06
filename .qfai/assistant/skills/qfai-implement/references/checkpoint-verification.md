@@ -133,7 +133,7 @@ all. Reading that exit 0 as a pass passes a gate that never ran: configure the g
 (`/qfai-configure`) and re-run. A waiver does not remove the finding — it stays in the output carrying
 `suppressed=true` — so a `QFAI-TEST-002` a `.qfai/waivers.yml` entry has marked that way is the
 accepted exception (typically an extension qfai has no stub dialect for) and does not block; every one
-without the mark does. Any non-zero exit is a FAIL: for a per-item checkpoint the A step
+without the mark does. A step
 outside the applicable set is not owed, and its absence is not a partial run. Any non-zero exit is a
 FAIL: for a per-item checkpoint the item stays at `refactor`, the failure is fixed, and the whole
 set is re-run. A partial run of the applicable set is not a pass.
