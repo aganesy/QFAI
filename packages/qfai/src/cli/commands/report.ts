@@ -13,7 +13,7 @@ import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
-import { warnIfTruncated } from "../lib/warnings.js";
+import { warnIfTruncated, withTruncatedScanIssue } from "../lib/warnings.js";
 import {
   configTargetsLegacyValidateJsonPath,
   legacyValidateJsonSeverity,
@@ -214,7 +214,10 @@ export async function runReport(options: ReportOptions): Promise<void> {
         }
       : validated;
     ranNarrowProfileInCi = ciProfileIssue !== null;
-    const normalized = normalizeValidationResult(root, result);
+    // A truncated scan has to reach `validate.json#issues` before the file is
+    // written, otherwise the artifact a reviewer opens records the run as
+    // clean while its coverage numbers came from a partial file set.
+    const normalized = withTruncatedScanIssue(normalizeValidationResult(root, result), "report");
     // Both scopings compose: `paths.validateJsonPath` already carries the
     // `--spec` suffix, and `writeValidationResults` adds the `--profile` one on
     // top, so a scoped profile run writes `validate.spec-<ids>-<profile>.json`
@@ -266,7 +269,12 @@ export async function runReport(options: ReportOptions): Promise<void> {
     // validate-prototyping.json` のような組み合わせでは成果物側の profile が
     // 実態を表す。profile 未記録の旧形式のときだけ指定値へフォールバックする。
     ranNarrowProfileInCi = buildCiProfileIssue(loaded.profile ?? options.profile) !== null;
-    validation = loaded;
+    // The truncation finding is different from the CI-profile one above: it is
+    // a property of the scan the loaded artifact records, so a `validate.json`
+    // written before the finding existed carries the truncated scan without the
+    // issue. `withTruncatedScanIssue` re-derives it and no-ops when the writing
+    // run already put it there.
+    validation = withTruncatedScanIssue(loaded, "report");
   }
 
   // The rendered body has to honour the same scope as the filename: a scoped
@@ -302,8 +310,11 @@ export async function runReport(options: ReportOptions): Promise<void> {
       "report: CI で full-scan ではない profile を実行しました。stage gate としては有効ですが、完了宣言の前に --profile full（または --profile 指定なし）で full-scan を実行してください。",
     );
   }
+  // `data.summary.counts`, not `validation.counts`: the report adds findings of
+  // its own (uncounted delta files), and a line that omitted them would print
+  // `warning=0` above a report body that lists warnings.
   info(
-    `report: info=${validation.counts.info} warning=${validation.counts.warning} error=${validation.counts.error}`,
+    `report: info=${data.summary.counts.info} warning=${data.summary.counts.warning} error=${data.summary.counts.error}`,
   );
   info(`wrote report: ${outPath}`);
 }
