@@ -431,7 +431,7 @@ Options:
   --upgrade-scope full          prototyping certify: scope 限定 certificate を full DONE に昇格 (validate --profile saas-package の signal を再評価)
   --operator <value>            audit log: operatorIdentity フィールドで filter
   --clause <substring>          audit log: envelopeContractClause で substring filter
-  --clean                       doctor: TTL 超過 review pack を _archive/ へ退避 (--dry-run 併用可)
+  --clean                       doctor: TTL 超過 review pack を _archive/ へ退避し、TTL 超過 validate run log (outDir/run-*) を削除 (最新 N 件は常に保持; --dry-run 併用可)
   --autoremediate               doctor: install + clean + config-fill をまとめて実行
   --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
   --spec <id>                   validate/report: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)

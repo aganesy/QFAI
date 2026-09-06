@@ -59,7 +59,12 @@ describe("the clarification budget binds a stage", () => {
       // The unbounded approval sources are named, so the carve-out is checkable
       // rather than a general escape hatch.
       expectPhrase(content, "`Approved By`");
-      expectPhrase(content, "shared-skill-delegation-baseline.md#round-budget-must");
+      // The heading gained "and convergence" upstream; the citation follows it
+      // rather than the name it had, which resolved to nothing.
+      expectPhrase(
+        content,
+        "shared-skill-delegation-baseline.md#round-budget-and-convergence-must",
+      );
       // A mixed prompt is classified question by question, so one approval
       // cannot carry an unbounded tail of clarifications past the budget.
       expectPhrase(content, "Classify **each question, not the prompt**");

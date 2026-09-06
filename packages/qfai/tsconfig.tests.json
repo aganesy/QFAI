@@ -29,12 +29,10 @@
     "means adding it here."
   ],
   "include": [
-    "vitest.config.ts",
-    "vitest.knobs.ts",
-    "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/assets.test.ts",
+    "tests/assets/atddScaffoldTunableSeed.test.ts",
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
@@ -88,6 +86,7 @@
     "tests/cli/prototypingRescope.test.ts",
     "tests/cli/prototypingRescopeCrashWindow.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
+    "tests/core/assistantAnchorReferences.test.ts",
     "tests/core/atddCarrierScanTruncation.test.ts",
     "tests/core/atddProseCarrierCoverage.test.ts",
     "tests/core/bpApDb.test.ts",
@@ -125,6 +124,7 @@
     "tests/helpers/workflowsIntegrityFixtures.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
     "tests/integration/cli/commands/doctorClean.keepsTracked.test.ts",
+    "tests/integration/cli/commands/doctorClean.runLogs.test.ts",
     "tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts",
     "tests/integration/cli/commands/validate.sddProfileLedgerSeed.test.ts",
     "tests/integration/cli/commands/validate.strictFailOnPrecedence.test.ts",
@@ -178,6 +178,8 @@
     "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
     "tests/unit/config-keys-are-wired.test.ts",
     "tests/unit/core/doctor/assetLineBudget.test.ts",
+    "tests/unit/core/doctor/cleanRunLogs.test.ts",
+    "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
@@ -189,6 +191,9 @@
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/importLite.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
-    "tests/validators/validatorReachability.test.ts"
+    "tests/validators/validatorReachability.test.ts",
+    "vitest.config.ts",
+    "vitest.knobs.ts",
+    "vitest.workspace.ts"
   ]
 }
