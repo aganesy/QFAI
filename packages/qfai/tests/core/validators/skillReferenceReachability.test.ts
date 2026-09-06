@@ -467,6 +467,33 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
     }
   });
 
+  /**
+   * The character that stops the token scan is in the machine's path, not the
+   * project's.
+   *
+   * Written with an explicit `~` so a Linux-only matrix runs it: on Windows it
+   * arrives for free, because `os.tmpdir()` is the 8.3 short form
+   * (`C:\Users\RUNNER~1\AppData\Local\Temp`) and every sandbox in this file
+   * already sits under it — which is why the case above fails there and cannot
+   * fail in CI. The reference's own project-relative spelling is clean, so
+   * nothing about the *document* says it needs the by-path pass.
+   */
+  it("resolves an absolute citation whose machine prefix no path token can span", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-prefix-"));
+    const enclosing = path.join(base, "skills~home");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const skillsDir = await mkdtemp(path.join(enclosing, "skills-"));
+      const referencesDir = await writeExternalSkillsDirFixture(root, skillsDir);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("keeps every shipped reference reachable from a SKILL.md, and readable", async () => {
     for (const root of SHIPPED_ROOTS) {
       const issues = await skillGraphIssues(root);

@@ -797,9 +797,12 @@ function collectReachableDocuments(
   // Which targets the token scan cannot spell is a property of the target's own
   // path — it does not depend on who is citing it — so it is decided once for
   // the whole walk instead of re-tested for every (citing file, target) pair.
-  // It is also the *small* set: only names carrying a space, a bracket or a
-  // `%` land here, so the second pass in `resolveCitations` now walks those
-  // few rather than every document.
+  // It is normally the *small* set: a name carrying a space, a bracket or a
+  // `%`, so the second pass in `resolveCitations` walks those few rather than
+  // every document. A machine path that no token can span — a home directory
+  // with a space, a Windows 8.3 `~` — puts every file under it here instead,
+  // which is the whole tree on such a machine. That is the fallback working:
+  // the set is large exactly where the fast path resolves nothing.
   const unscannableTargets = files.filter((file) => !isTokenScannable(context, file));
   const queue = [...reachable];
   while (queue.length > 0) {
@@ -939,11 +942,31 @@ function resolveCitations(
  * `references/My Guide.md` — a space no path-ish token can cross, which would
  * leave the scanner matching `Guide.md` and resolving nothing. Such a document
  * is looked up by its own path instead of by pattern.
+ *
+ * Both spellings a citing document may use are asked, because the character
+ * that stops the scan need not be in the part of the path the project can see.
+ * A `skillsDir` outside the project is cited by ABSOLUTE path, and the prefix
+ * leading to it belongs to the machine rather than to the repository: a home
+ * directory with a space in it, or the `~` every Windows 8.3 short name
+ * carries — `C:\Users\RUNNER~1\AppData\Local\Temp\…`. The token scan
+ * restarts after that character and produces a tail (`1/AppData/…/guide.md`)
+ * that resolves under no base, so a plainly cited reference is reported
+ * uncited. Its project-relative spelling is clean, which is why asking only
+ * that one missed it.
  */
 function isTokenScannable(context: CitationContext, file: string): boolean {
-  return toPosixRelative(context.root, file)
-    .split("/")
-    .every((segment) => SCANNABLE_SEGMENT_PATTERN.test(segment));
+  return (
+    isScannableSpelling(toPosixRelative(context.root, file)) &&
+    // The drive letter and leading separator are spanned by the citation
+    // pattern's own prefix group, not by a segment, so they are dropped before
+    // the segments are judged — `C:` is not a scannable segment and never has
+    // to be one.
+    isScannableSpelling(toPosix(file).replace(ABSOLUTE_CITATION_PREFIX_PATTERN, ""))
+  );
+}
+
+function isScannableSpelling(spelling: string): boolean {
+  return spelling.split("/").every((segment) => SCANNABLE_SEGMENT_PATTERN.test(segment));
 }
 
 const SCANNABLE_SEGMENT_PATTERN = /^[\p{L}\p{N}\p{M}._-]+$/u;
