@@ -12,7 +12,7 @@ import {
 } from "../discussionPack.js";
 import type { LocatedPack } from "../packLocator.js";
 import { findPacks } from "../packLocator.js";
-import { readDiscussionCurrentId } from "../state.js";
+import { readDiscussionPointer } from "../state.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
@@ -471,8 +471,15 @@ type ResearchSummaryScanTarget = {
   reportMissingStorageFile: boolean;
   /** Discussion root, used to anchor pack-level findings. */
   discussionRoot: string;
-  /** `currentId` that is set but does not resolve to exactly one pack on disk. */
-  brokenPointer: { currentId: string; reason: string } | null;
+  /**
+   * The pointer could not be turned into exactly one pack on disk.
+   *
+   * Two shapes, and the `currentId` says which: a string is a pointer that is
+   * set and resolves to no pack (or to more than one); `null` is a state file
+   * that is present but unreadable, where the pointer's value is unknown
+   * rather than absent.
+   */
+  brokenPointer: { currentId: string | null; reason: string } | null;
 };
 
 /**
@@ -485,8 +492,15 @@ type ResearchSummaryScanTarget = {
  * schema against, say, an `01_Context.md` that merely mentions the heading.
  *
  * A pointer that is set but unresolvable is a broken SSOT and is reported
- * (QFAI-RESEARCH-020) instead of being papered over. A pointer that is simply
- * absent is the normal state of a gitignored runtime file, so it falls back to
+ * (QFAI-RESEARCH-020) instead of being papered over. So is a state file that is
+ * present but unreadable: `readDiscussionPointer` separates "no pointer
+ * recorded" from "the pointer could not be read", and only the first of those
+ * may reach the fallbacks below — inferring "latest pack" from a corrupt file
+ * substitutes a pack nobody selected, and the gate then passes or fails on the
+ * wrong session's evidence.
+ *
+ * A pointer that is simply absent is the normal state of a gitignored runtime
+ * file, so it falls back to
  * the same rule `qfai discussion list --active` uses: a lone `discussion-*`
  * directory is the de-facto active session; two or more are ambiguous, so the
  * latest pack is still read (an abandoned older pack must not keep the gate red
@@ -501,12 +515,20 @@ async function resolveResearchSummaryScanTarget(
   const discussionRoot = path.resolve(root, config.paths.discussionDir);
   const base = { discussionRoot, brokenPointer: null, reportMissingStorageFile: false } as const;
 
-  let currentId: string | null = null;
-  try {
-    currentId = await readDiscussionCurrentId(root);
-  } catch {
-    currentId = null;
+  const pointer = await readDiscussionPointer(root);
+  if (!pointer.ok) {
+    // Unreadable, not unset. `readDiscussionCurrentId` collapses the two to
+    // `null`, and its own docblock says a caller that picks a fallback cannot
+    // use it for exactly this reason: the fallbacks below would validate the
+    // latest pack against a state file that may well pin an older one.
+    return {
+      ...base,
+      files: [],
+      activePackDir: null,
+      brokenPointer: { currentId: null, reason: pointer.reason },
+    };
   }
+  const currentId = pointer.currentId;
 
   if (currentId !== null) {
     try {

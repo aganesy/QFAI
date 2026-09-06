@@ -492,6 +492,25 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(broken?.message).toContain("discussion-20250101000000000");
   });
 
+  it("reports an unreadable state file instead of falling back to the latest pack", async () => {
+    // `.qfai/state.json` is present but not parsable, so the pointer's value is
+    // UNKNOWN — not absent. Treating the two alike sent the gate to the latest
+    // pack, which is a pack nobody selected: a project whose state file pins an
+    // older, incomplete pack would have been told its research was in order.
+    const template = await readShippedTemplate();
+    const root = await seedPack(fillEveryPlaceholder(template), "discussion-20260202000000000");
+    await writeFile(path.join(root, ".qfai", "state.json"), "{ not json", "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const broken = issues.find((item) => item.code === "QFAI-RESEARCH-020");
+
+    expect(broken, "an unreadable state file must be reported, not papered over").toBeDefined();
+    expect(broken?.message).toContain("state.json");
+    // And the fallback must not have run: no per-file finding may name the pack
+    // the corrupt pointer did not select.
+    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-016");
+  });
+
   it("validates only 04_Sources.md inside a pack", async () => {
     // The Storage contract names one file. A sibling pack file that merely
     // mentions the heading must not be held to the whole Output Schema.
