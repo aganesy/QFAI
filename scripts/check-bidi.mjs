@@ -66,9 +66,12 @@ const allowedControlBytes = new Set([0x09, 0x0a, 0x0d]);
 const deleteByte = 0x7f;
 
 /**
- * Extensions read as bytes rather than text.
+ * Extensions NOT scanned: a file with one of these is skipped, unread.
  *
- * Empty of anything this repository tracks today — every tracked file is text.
+ * A control byte in a PNG is its content, not a defect, so there is nothing to
+ * report and nothing to repair. Empty of anything this repository tracks today
+ * — every tracked file is text.
+ *
  * It is a DENY list rather than an allow list of text extensions on purpose:
  * an unlisted new binary type fails the lane and is added here, which a
  * reviewer sees, while an unlisted new TEXT type under an allow list would go
@@ -150,10 +153,14 @@ for (const relative of targets) {
  * The tracked files, from git rather than from a walk.
  *
  * `-z` because a path may carry a newline, and git quotes such a path in the
- * default output — a quoted path does not open. A checkout is not guaranteed
- * (a tarball, a vendored copy), and there the scan reports nothing rather than
- * failing: the lane it runs in has a repository, and a caller that does not is
- * not the case this defends.
+ * default output — a quoted path does not open.
+ *
+ * `null` on any failure, and the caller says so on stderr rather than
+ * diagnosing it: no checkout (a tarball, a vendored copy), no git on PATH, or
+ * output past `maxBuffer` all reach here identically, and naming one of them
+ * would be wrong about the others. Reporting nothing rather than failing keeps
+ * a caller without a repository working; the lane this runs in has one, and
+ * the skip line is what makes its absence visible there.
  */
 function trackedFiles(cwd = process.cwd()) {
   try {
@@ -192,53 +199,101 @@ function isScannableEntry(absolute) {
   return !binaryExtensions.has(path.extname(absolute).toLowerCase());
 }
 
-/** Where a byte offset falls, counted the way an editor counts. */
-function locate(bytes, offset) {
-  let line = 1;
-  let lineStart = 0;
-  for (let i = 0; i < offset; i++) {
-    if (bytes[i] === 0x0a) {
-      line += 1;
-      lineStart = i + 1;
-    }
-  }
-  return { line, column: offset - lineStart + 1 };
-}
+/**
+ * At most this many findings are reported from any one file.
+ *
+ * A guard has to name enough occurrences to repair, not all of them. A file
+ * that is genuinely binary and not on the deny list holds a control byte every
+ * few bytes, and reporting each one buries every other finding in the run and
+ * makes the log the size of the file. The count is still reported, so the cap
+ * never hides that there is more.
+ */
+const maxHitsPerFile = 20;
 
 const tracked = trackedFiles();
+let skipReason = null;
+if (tracked === null) {
+  skipReason = "`git ls-files` produced no list";
+}
 for (const relative of tracked ?? []) {
   const absolute = path.resolve(relative);
   if (!isScannableEntry(absolute)) {
     continue;
   }
   const bytes = readFileSync(absolute);
+  // Line and column are carried along the scan rather than recomputed per hit.
+  // Locating each hit by counting newlines from the start of the file is
+  // quadratic in the number of hits, which is exactly the file the cap above
+  // exists for: an unlisted binary is both the densest in hits and the one
+  // where each lookup is longest.
+  let line = 1;
+  let lineStart = 0;
+  let reported = 0;
+  let suppressed = 0;
   for (let i = 0; i < bytes.length; i++) {
     const byte = bytes[i];
+    if (byte === 0x0a) {
+      line += 1;
+      lineStart = i + 1;
+      continue;
+    }
     if (byte >= 0x20 && byte !== deleteByte) {
       continue;
     }
     if (allowedControlBytes.has(byte)) {
       continue;
     }
-    const { line, column } = locate(bytes, i);
+    if (reported >= maxHitsPerFile) {
+      suppressed += 1;
+      continue;
+    }
+    reported += 1;
     hits.push({
       file: relative,
       kind: "c0",
       // The byte, not a code point: a NUL is a NUL whatever the encoding, and
       // decoding first is what would have hidden it.
       code: `0x${byte.toString(16).padStart(2, "0")}`,
-      where: `line ${line}, column ${column}`,
+      // Bytes from the start of the line, not characters. The file is read as
+      // bytes on purpose, and a multi-byte character makes the two differ —
+      // saying "column" would be a promise about an editor's cursor that this
+      // does not keep.
+      where: `line ${line}, byte ${i - lineStart + 1}`,
+    });
+  }
+  if (suppressed > 0) {
+    hits.push({
+      file: relative,
+      kind: "c0-truncated",
+      code: `${suppressed} more`,
+      where: `not listed (cap ${maxHitsPerFile} per file)`,
     });
   }
 }
 
+// On stderr whether or not anything was found, and never phrased as a diagnosis.
+// The list can be missing because there is no checkout, because git is not on
+// PATH, or because the output outgrew `maxBuffer` — and a message naming one of
+// those would be wrong about the other two. What matters to a reader of a green
+// lane is the same in all three: this half of the guard did not run.
+if (skipReason !== null) {
+  console.error(
+    `check-bidi: the tracked-file scan was SKIPPED — ${skipReason}. ` +
+      "NUL and C0 controls were not checked in this run.",
+  );
+}
+
 if (hits.length > 0) {
   for (const hit of hits) {
+    if (hit.kind === "c0-truncated") {
+      console.error(`${hit.file}: ${hit.code} control characters ${hit.where}`);
+      continue;
+    }
     const label = hit.kind === "bom" ? "BOM" : hit.kind === "c0" ? "control" : "bidi/control";
     const where = hit.where ?? `index ${hit.index}`;
     console.error(`${hit.file}: ${label} character ${hit.code} at ${where}`);
   }
-  if (hits.some((hit) => hit.kind === "c0")) {
+  if (hits.some((hit) => hit.kind === "c0" || hit.kind === "c0-truncated")) {
     console.error(
       "A control character is invisible in a diff and can make the whole file " +
         "binary to every text tool here. Replace it with the character it stands " +
@@ -250,7 +305,7 @@ if (hits.length > 0) {
 }
 
 console.log(
-  tracked === null
-    ? "No bidi/control/BOM characters found (no git checkout: the tracked-file scan was skipped)."
-    : `No bidi/control/BOM characters found (${tracked.length} tracked paths).`,
+  skipReason !== null
+    ? "No bidi/BOM characters found in the named documents; the tracked-file scan was skipped."
+    : `No bidi/control/BOM characters found (${tracked?.length ?? 0} tracked paths).`,
 );

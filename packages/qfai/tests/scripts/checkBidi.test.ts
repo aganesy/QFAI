@@ -103,9 +103,11 @@ describe("check-bidi: NUL and C0 controls over the tracked tree", () => {
       .filter((line) => line.includes("instructionLanguageRules.ts"));
     expect(reported).toHaveLength(2);
     expect(reported[0]).toContain("control character 0x00");
-    // Located the way an editor counts, not as a byte offset into the file.
-    expect(reported[0]).toMatch(/line 2, column \d+/);
-    expect(reported[1]).toMatch(/line 5, column \d+/);
+    // Line, then BYTES into that line. Not "column": the file is read as bytes
+    // and a multi-byte character makes the two differ, so the word would be a
+    // promise about an editor's cursor that the number does not keep.
+    expect(reported[0]).toMatch(/line 2, byte \d+/);
+    expect(reported[1]).toMatch(/line 5, byte \d+/);
   });
 
   it("rejects a C0 byte that is not TAB, LF or CR", async () => {
@@ -175,6 +177,56 @@ describe("check-bidi: NUL and C0 controls over the tracked tree", () => {
     const result = runGuard(dir);
 
     expect(result.stdout).toContain("2 tracked paths");
+  });
+
+  it("caps the findings from one file and says how many it did not list", async () => {
+    // A file that is binary in fact and not on the deny list holds a control
+    // byte every few bytes. Listing each one buries every other finding in the
+    // run; the count is what keeps the cap from hiding that there is more.
+    const dense = Array.from({ length: 50 }, (_, index) => `line${index}${NUL}`).join("\n");
+    const dir = await newRepo({ "data/dense.tbl": dense });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    // `control character 0x…` is a located finding; the truncation line and
+    // the remedy sentence both carry the words and are not findings.
+    const listed = result.stderr
+      .split("\n")
+      .filter((line) => line.includes("control character 0x"));
+    expect(listed).toHaveLength(20);
+    expect(result.stderr).toContain("30 more control characters not listed (cap 20 per file)");
+    // The remedy still reaches the reader after a truncated list.
+    expect(result.stderr).toMatch(/invisible in a diff/);
+  });
+
+  it("caps per file, so a second file is still reported", async () => {
+    const dense = Array.from({ length: 30 }, (_, index) => `line${index}${NUL}`).join("\n");
+    const dir = await newRepo({ "data/a.tbl": dense, "data/b.tbl": `only${NUL}one\n` });
+
+    const result = runGuard(dir);
+
+    expect(result.stderr).toContain("data/b.tbl");
+    expect(result.stderr.split("\n").filter((line) => line.includes("data/b.tbl"))).toHaveLength(1);
+  });
+
+  it("says the tracked-file scan was skipped, without diagnosing why", async () => {
+    // No repository here, which is one of three ways the list goes missing —
+    // no checkout, no git on PATH, output past maxBuffer. A message naming any
+    // one of them would be wrong about the other two.
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-check-bidi-"));
+    tempDirs.push(dir);
+    await writeFile(path.join(dir, "loose.ts"), `const a${NUL}b = 1;\n`);
+
+    const result = runGuard(dir);
+
+    // Exit 0: a caller without a repository still works. The skip is on stderr
+    // so a green lane cannot read as "checked and clean".
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("the tracked-file scan was SKIPPED");
+    expect(result.stderr).toContain("NUL and C0 controls were not checked");
+    expect(result.stderr).not.toContain("no git checkout");
+    expect(result.stdout).not.toContain("tracked paths");
   });
 });
 
