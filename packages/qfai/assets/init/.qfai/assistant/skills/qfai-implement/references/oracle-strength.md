@@ -32,7 +32,12 @@ the same method. That satisfies `Oracle proof`; do not do it twice.
 ## Reject an `Oracle proof` when
 
 - the mutation is outside the code the item owns — breaking a shared helper
-  proves the helper is used, not that this test discriminates;
+  proves the helper is used, not that this test discriminates. **On a _RED not
+  observable_ row the predicate `Satisfied-by` names is the owned code for this
+  check**: that row's mutation is a sibling's predicate by construction, so read
+  literally this criterion rejected every correctly executed trio — on any
+  `Layer` — and `red-not-observable.md` forbids sending that case to
+  `exception`. Anything else is still out of bounds;
 - the mutation is a syntax error, a thrown "not implemented", or a deleted
   export — that is a load failure, the same non-observation
   `red-admissibility.md` rejects for RED;
