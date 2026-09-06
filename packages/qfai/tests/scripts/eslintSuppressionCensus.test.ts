@@ -11,9 +11,19 @@
  * A SET rather than a count. A count lets an addition and a removal cancel out, and this
  * repository has already been bitten by that once, in the pinned-bytes comparison.
  *
- * These twenty-four predate this change and are not endorsed by being listed. The list says what
- * is there, so that adding to it is an edit a reviewer approves; removing one needs no permission
- * at all and only makes this row happier.
+ * Twenty-four of these predate this change and are not endorsed by being listed. The list says
+ * what is there, so that adding to it is an edit a reviewer approves; removing one needs no
+ * permission at all and only makes this row happier.
+ *
+ * This change adds none. It once carried two, for the `config.ts` compat shims that keep the
+ * deprecated `testStrategy` knobs parsed until the next major: `normalizeValidation` read those
+ * knobs back off `defaultConfig`, and reading a property this same change marks `@deprecated` is
+ * what `@typescript-eslint/no-deprecated` fires on. Both are gone. The fallback was never a
+ * behavioural choice — `base` in that function IS `defaultConfig.validation`, so the value read
+ * back was always the one literal `false` written a few lines up — so naming that constant once
+ * (`DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT`) lets the loader state the fallback instead of
+ * re-entering the deprecated property, and removes the need for permission rather than seeking it.
+ * The remaining `config.ts` entry is the older `promptsDir` shim, which predates this change.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -81,6 +91,8 @@ function suppressions(): string[] {
 
 /** The census, as measured on the commit that removed review finding [133]'s suppression. */
 const PINNED: readonly string[] = [
+  // `paths.promptsDir`, which predates this change. The two
+  // `validation.testStrategy` compat shims no longer need one.
   "packages/qfai/src/core/config.ts :: @typescript-eslint/no-deprecated",
   "packages/qfai/src/core/critique/adapter.ts :: no-console",
   "packages/qfai/src/core/critique/adapter.ts :: no-console",

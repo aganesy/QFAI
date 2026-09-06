@@ -585,7 +585,11 @@ describe("bare `discussion list` rejects an invalid --format at the CLI entry po
       process.stdout.write = originalOut;
       process.exitCode = previousExitCode;
     }
-    expect(exitCode).toBe(1);
+    // `invalidExitCode`, which the exit-code table in
+    // `.qfai/contracts/cli/qfai-init.md` reserves as 2 for a malformed option
+    // value. It was 1 when this case was written and moved upstream; the
+    // assertion is on the same code path, not a new one.
+    expect(exitCode).toBe(2);
     // Usage, not a pack listing.
     expect(stdout.join("")).not.toMatch(/discussion-20260101000000000/);
     expect(stdout.join("")).toMatch(/Commands:/);
