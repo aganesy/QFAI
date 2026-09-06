@@ -6,7 +6,10 @@
 - SSOT modules:
   - `packages/qfai/src/cli/commands/init.ts`
   - `packages/qfai/src/core/paths/assistantPaths.ts` (canonical relative paths SSOT)
-  - `packages/qfai/src/core/assistantAssets.ts` (asset mirror copier)
+  - `packages/qfai/src/cli/lib/fs.ts` (asset mirror copier via
+    `copyTemplateTree` / `copyTemplatePaths`; also carries the create-only vs
+    `--force` overwrite policy. Note: `core/validators/assistantAssets.ts` is a
+    validator, not the copier)
 - Companion contracts:
   - `.qfai/contracts/cli/worklog-entry.schema.md` — the work-log entry schema
     this command seeds

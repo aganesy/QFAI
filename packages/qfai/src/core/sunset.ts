@@ -203,6 +203,13 @@ export const RULE_PROMOTIONS = {
    */
   specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CONTRACT-050` — a `- SSOT modules:` entry naming a path that does not
+   * resolve, or one that resolves only by leaving the project root. Nothing
+   * read those paths before, so a route that went stale releases ago has been
+   * sitting in the contract unchallenged and arrives in one run.
+   */
+  contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed
