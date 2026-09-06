@@ -207,6 +207,242 @@ describe("a TC that exists only in a fenced sample is not declared", () => {
   });
 });
 
+describe("an id a file holds as DATA is not a reference", () => {
+  // #1123 stopped a TRUNCATED id being matched out of a regex literal. It left
+  // the scanner's stated structural problem — "a string in a regex, a string
+  // literal, a comment, and a real annotation are the same text" — so a
+  // COMPLETE id still fired from any of them. `maskJsNonCode` knows where those
+  // spans are and is now asked to blank all of them EXCEPT comments (#1141).
+  //
+  // The prefix is built from a placeholder for the same reason as the suite
+  // above: a fixture for the scanner must not be visible to the scanner.
+  const tc = (spec: string): string => `QFAI:SPEC-${spec}:${"TC"}-`;
+  const us = (spec: string): string => `QFAI:SPEC-${spec}:${"US"}-`;
+
+  for (const [label, line] of [
+    ["a string literal", `const id = "${"@TC@"}0003-0004";`],
+    ["a template literal", "const id = `" + "@TC@" + "0003-0004`;"],
+    ["a regex literal", `const shape = /^${"@TC@"}0003-0004$/;`],
+  ] as const) {
+    it(`raises no QFAI-ATDD-102 for a complete id inside ${label}`, async () => {
+      await withProject(async (root) => {
+        await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+        await seedApiContract(root, "CON-API-0001");
+        await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001 */`);
+        await seedTest(
+          root,
+          "integration",
+          "a.test.ts",
+          [`/* ${tc("0001")}0001 */`, line.replace("@TC@", tc("0001"))].join("\n"),
+        );
+        await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.filter((entry) => entry.code === "QFAI-ATDD-102")).toEqual([]);
+      });
+    });
+  }
+
+  it("still reads a real annotation, which is written in a COMMENT", async () => {
+    // The direction a wrong fix breaks, and it breaks QUIETLY: blanking
+    // comments would stop finding every real annotation, so coverage findings
+    // would VANISH rather than appear. `TC-0001` is covered only by the
+    // comment, so `QFAI-ATDD-112` fires the moment the comment stops counting.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `// ${us("0001")}0001`);
+      await seedTest(root, "integration", "a.test.ts", `// ${tc("0001")}0001`);
+      await seedTest(root, "api", "a.test.ts", "// QFAI:CON-API-0001");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-112")).toEqual([]);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-111")).toEqual([]);
+    });
+  });
+
+  it("still reports an unknown id that a comment really does reference", async () => {
+    // Masking must not turn the scanner off. An id named in a comment is a
+    // reference, and an unregistered one is still an error.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001 */`);
+      await seedTest(
+        root,
+        "integration",
+        "a.test.ts",
+        [`/* ${tc("0001")}0001 */`, `/* ${tc("0001")}0003-0004 */`].join("\n"),
+      );
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const unknown = (await validateAtddCodeTraceability(root, defaultConfig)).filter(
+        (entry) => entry.code === "QFAI-ATDD-102",
+      );
+      expect(unknown).toHaveLength(1);
+      expect(unknown[0]?.message).toContain("TC-0003-0004");
+    });
+  });
+
+  it("leaves a Markdown annotation carrier alone, apostrophes and all", async () => {
+    // `.md` and `.feature` are in `DEFAULT_TEST_FILE_GLOB` as annotation
+    // carriers, so this needs no configuration to reach. A JS lexer over
+    // Markdown reads the apostrophe in "row's" as a string opening that runs to
+    // end of line — the annotation after it would be BLANKED and its coverage
+    // would vanish SILENTLY, which is the direction the extension gate exists
+    // to prevent. The first draft of this row used `.py`, which is scanned only
+    // when a project configures `testFileGlobs`, so the fixture was never
+    // collected and the row failed for the wrong reason.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001 */`);
+      await seedTest(
+        root,
+        "integration",
+        "ledger.md",
+        `- the row's deferral is recorded here: ${tc("0001")}0001`,
+      );
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-112")).toEqual([]);
+    });
+  });
+});
+
+describe("an id truncated out of a regex literal is not a reference", () => {
+  // `QFAI:SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)\b` made the second half optional,
+  // so a test validating its own annotations matched as the four-digit-short
+  // prefix of itself: the optional half cannot consume `-\d`, the short form
+  // succeeds, and `\b` holds because `-` is not a word character. The scanner
+  // reported a TC id four digits short — unregistered by construction, because
+  // the truncation invented it (#1123).
+  //
+  // The fixtures build the prefix from a placeholder so this test file does not
+  // carry a contiguous annotation of its own. That is the workaround the issue
+  // calls unexplained cleverness; it is right here and nowhere else, because a
+  // fixture for the scanner must not be visible to the scanner.
+  const tc = (spec: string): string => `QFAI:SPEC-${spec}:${"TC"}-`;
+  const us = (spec: string): string => `QFAI:SPEC-${spec}:${"US"}-`;
+
+  it("raises no QFAI-ATDD-102 for a TC prefix followed by a digit class", async () => {
+    // Only the LONG id is declared, which is what makes the row able to fail.
+    // An earlier draft declared the short one, so the truncation the old regex
+    // produced was a KNOWN reference and no finding was ever owed — the row
+    // passed against the very defect it exists for.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001-0002"], ["TC-0001-0002"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001-0002 */`);
+      await seedTest(
+        root,
+        "integration",
+        "a.test.ts",
+        [
+          `/* ${tc("0001")}0001-0002 */`,
+          `if (!/^${tc("0001")}0001-\\d{4}$/.test(entry.repro)) throw new Error("x");`,
+        ].join("\n"),
+      );
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-102")).toEqual([]);
+      // And the declared TC is still covered — by the real annotation beside
+      // it, not by the regex literal. A literal is not a reference.
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-112")).toEqual([]);
+    });
+  });
+
+  it("raises no QFAI-ATDD-101 for a US prefix followed by a digit class", async () => {
+    // Same shape one letter away. Fixing only the reported form would leave it.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001-0002"], ["TC-0001-0002"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(
+        root,
+        "e2e",
+        "a.test.ts",
+        [`/* ${us("0001")}0001-0002 */`, `const shape = /^${us("0001")}0001-\\d{4}$/;`].join("\n"),
+      );
+      await seedTest(root, "integration", "a.test.ts", `/* ${tc("0001")}0001-0002 */`);
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-101")).toEqual([]);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-111")).toEqual([]);
+    });
+  });
+
+  it("still reports an unknown SHORT-form TC id", async () => {
+    // The other direction, and the one a too-tight fix breaks. `TC-0001` is a
+    // legal id here — `TC_ID_RE`, `TC_REF_SHAPE` and `TC_ID_TOKEN` all accept
+    // four digits — so requiring eight would stop matching every annotation
+    // written the short way, and every unknown one would go unreported.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001 */`);
+      await seedTest(
+        root,
+        "integration",
+        "a.test.ts",
+        [`/* ${tc("0001")}0001 */`, `/* ${tc("0001")}9999 */`].join("\n"),
+      );
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const unknown = issues.filter((entry) => entry.code === "QFAI-ATDD-102");
+      expect(unknown).toHaveLength(1);
+      expect(unknown[0]?.message).toContain("TC-9999");
+    });
+  });
+
+  it("still reports an unknown LONG-form TC id", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001-0002"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001 */`);
+      await seedTest(
+        root,
+        "integration",
+        "a.test.ts",
+        [`/* ${tc("0001")}0001-0002 */`, `/* ${tc("0001")}0003-0004 */`].join("\n"),
+      );
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const unknown = issues.filter((entry) => entry.code === "QFAI-ATDD-102");
+      expect(unknown).toHaveLength(1);
+      expect(unknown[0]?.message).toContain("TC-0003-0004");
+    });
+  });
+
+  it("still reports a complete id that trails junk, rather than dropping it", async () => {
+    // The deliberate asymmetry: `(?!-)` guards the SHORT alternative only. A
+    // complete `TC-0003-0004` followed by `-foo` still matches and is still
+    // reported. Guarding both would have turned a false report into a silent
+    // miss, which is the worse trade in a validator.
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", `/* ${us("0001")}0001 */`);
+      await seedTest(
+        root,
+        "integration",
+        "a.test.ts",
+        [`/* ${tc("0001")}0001 */`, `/* ${tc("0001")}0003-0004-draft */`].join("\n"),
+      );
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const unknown = issues.filter((entry) => entry.code === "QFAI-ATDD-102");
+      expect(unknown).toHaveLength(1);
+      expect(unknown[0]?.message).toContain("TC-0003-0004");
+    });
+  });
+});
+
 async function seedSpec(
   root: string,
   specNumber: string,

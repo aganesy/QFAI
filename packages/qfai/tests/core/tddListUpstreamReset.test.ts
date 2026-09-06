@@ -243,7 +243,12 @@ describe("the DR-ID column definition covers the reset row", () => {
       );
       expect(drift).toContain("(any status -> `todo`)");
       expect(drift).toContain(
-        "The\n   sweep covers in-flight rows too: a `red` row whose obligation changed, and\n   an `exception` row whose anomaly the rerun resolved or superseded, reset the\n   same way.",
+        // Pinned WITH its line breaks, as the sibling assertions in this block are. The
+        // sweep item was re-wrapped to fit `drift-protocol.md` under the shipped line
+        // ceiling, so the breaks moved; the sentence did not. What this row asserts - that
+        // the sweep reaches `red` and `exception` rows rather than only `done` ones - is
+        // unchanged, and it still fails if the sentence leaves the file.
+        "The sweep covers in-flight rows too: a `red` row whose obligation changed, and an `exception` row whose anomaly the rerun resolved or\n   superseded, reset the same way.",
       );
 
       const rules = await readFile(

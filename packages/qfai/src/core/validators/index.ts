@@ -10,6 +10,7 @@ export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
 export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateContractReferences } from "./contractReferences.js";
+export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateAtddCoverageDepth } from "./atddCoverageDepth.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
@@ -26,16 +27,18 @@ export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
+export { validateSpecSections } from "./specSections.js";
 export { validateStatusInSpecs } from "./statusInSpecs.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
+export type { HtmlMockTiming } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
 export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
-export { validateTddList } from "./tddList.js";
+export { validateTddList, validateTddListSeedShape } from "./tddList.js";
 export { validateNavigationFlow } from "./navigationFlow.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignFidelity } from "./designFidelity.js";
@@ -43,7 +46,12 @@ export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
+  FROZEN_SURFACE_UNREACHABLE_CODE,
+  validateFrozenSurfaceReachability,
+} from "./frozenSurfaceReachability.js";
+export {
   validatePrototypingDesignContractReadiness,
+  validateRootDesignMdParse,
   validateSddDesignContractReadiness,
 } from "./designContractReadiness.js";
 export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
@@ -56,14 +64,17 @@ export {
 export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
+export { validateCompetitiveReferences } from "./uix/competitiveRefs.js";
 export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
 export { validateMarkdownTableArity } from "./markdownTableArity.js";
+export { validateTraceability } from "./traceability.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validateUpstreamSsotGuard } from "./upstreamSsotGuard.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
 export { validateTestTodoStubs } from "./testTodoStubs.js";
 export { validateWorklogSurface } from "./worklogSurface.js";
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
+export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";

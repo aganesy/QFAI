@@ -1442,13 +1442,22 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
  * on a push to `main`. They report no check on any pull request, so the configured set is
  * unchanged.
  *
+ * `renovate.yml` is outside it for the same reason, and the reason is worth stating precisely
+ * because this one does report a check somewhere. It runs on `schedule`, on `workflow_dispatch`,
+ * and on a push to `renovate/**` — never on `pull_request`. The push trigger puts a `repin` check
+ * on the head commit of Renovate's own update branches, so it is visible on THOSE pull requests
+ * and on no others; a human's pull request gains nothing, and
+ * `.github/required-status-contexts.json` still declares exactly one required context. Nothing in
+ * branch protection has to be configured for it, which is the surface `AC-0017-0018` is about.
+ *
  * The list stays a literal for the reason it always was: a creation, removal or rename should be
- * a failing test naming which file, not a diff somebody has to interpret. It named these two.
+ * a failing test naming which file, not a diff somebody has to interpret. It named each of these.
  */
 const OWN_WORKFLOW_FILES = [
   "ci.yml",
   "prepare-release.yml",
   "release.yml",
+  "renovate.yml",
   "tag-release.yml",
 ] as const;
 
@@ -1525,14 +1534,15 @@ function checkNames(file: string): string[] {
 
 describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no check name", () => {
   it("keeps the layer split inside the existing file as matrix legs of one job", () => {
-    // CLAIM 1 — two files, and neither is a per-layer workflow. A new workflow file would
-    // create a check name nobody has configured, which is why `AC-0017-0018` rejects it in
-    // review rather than treating it as a style choice.
+    // CLAIM 1 — this exact set, and no member of it is a per-layer workflow. A per-layer
+    // workflow would create a check name nobody has configured, which is why `AC-0017-0018`
+    // rejects it in review rather than treating it as a style choice.
     //
-    // Two and not three: change 7 deleted the repository's own duplicate of the shipped
-    // validate workflow. That deletion is `BR-0017-0058`'s, recorded in `DR-0017-0007`, and
-    // this row asserts the count layer separation must not change — not a count frozen at
-    // the moment the spec was written.
+    // The set has both shrunk and grown since the spec was written, which is the point:
+    // change 7 deleted the repository's own duplicate of the shipped validate workflow
+    // (`BR-0017-0058`, recorded in `DR-0017-0007`), and the release-automation and Renovate
+    // files were added. Each move had to be argued past the docblock above. This row asserts
+    // the set layer separation must not change — not a set frozen at that moment.
     expect
       .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
       .toEqual([...OWN_WORKFLOW_FILES]);
@@ -3137,5 +3147,118 @@ describe("release automation performs decisions rather than making them", () => 
         `${name} must take its write capability from a secret, not from the job token`,
       ).toContain("RELEASE_AUTOMATION_TOKEN");
     }
+  });
+
+  describe("the tag gate reads the field the REST response actually carries (#1155)", () => {
+    /**
+     * The shipped association check, cut out of `tag-release.yml` and made
+     * runnable.
+     *
+     * The `version` step decides whether the commit arrived from the release pull
+     * request. Everything before the check needs a token and a checkout; the
+     * check itself needs only `pulls` and `claimed`, so it is extracted from the
+     * `if` through its `fi` and run with those two supplied.
+     */
+    const associationGate = (): string => {
+      const document = workflow("tag-release.yml");
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+      const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+      const body = steps
+        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+        .find((run) => run.includes("/pulls"));
+      expect(
+        body,
+        "tag-release.yml has no step that asks which pull request carried the commit",
+      ).toBeTypeOf("string");
+      const lines = (body ?? "").split(/\r?\n/);
+      const open = lines.findIndex(
+        (line) => line.includes("grep -qxF") && line.includes("release/v"),
+      );
+      expect(open, "the association check is gone; this row has the wrong subject").toBeGreaterThan(
+        -1,
+      );
+      const close = lines.findIndex((line, at) => at > open && line.trim() === "fi");
+      expect(close, "the association check has no `fi`").toBeGreaterThan(open);
+      return lines.slice(open, close + 1).join("\n");
+    };
+
+    /** Runs the gate over one payload; true when the commit would be tagged. */
+    const wouldTag = (pulls: unknown, claimed: string): boolean => {
+      const dir = mkdtempSync(path.join(tmpdir(), "qfai-tagref-"));
+      try {
+        const script = path.join(dir, "gate.sh");
+        writeFileSync(
+          script,
+          [
+            "set -u",
+            `claimed=${JSON.stringify(claimed)}`,
+            `pulls=${JSON.stringify(JSON.stringify(pulls))}`,
+            "GITHUB_SHA=deadbeef",
+            `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
+            "",
+            associationGate(),
+            "",
+            "echo TAGGED",
+          ].join("\n"),
+          "utf-8",
+        );
+        const run = spawnSync("bash", [script], { encoding: "utf-8" });
+        if (run.error !== undefined) throw run.error;
+        return `${run.stdout}${run.stderr}`.includes("TAGGED");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    // The shape `GET /repos/{owner}/{repo}/commits/{sha}/pulls` returns, trimmed to
+    // the fields this gate can see. `head.ref` is where the branch name lives.
+    const restPayload = (ref: string): unknown => [
+      { number: 1152, state: "closed", head: { ref, sha: "1111111" }, base: { ref: "main" } },
+    ];
+
+    it("tags a release merge and declines everything else, measured by running it", () => {
+      expect(
+        wouldTag(restPayload("release/v1.10.2"), "1.10.2"),
+        "the merge of `release/v1.10.2` must be tagged: this is the whole point of the workflow",
+      ).toBe(true);
+
+      expect(
+        wouldTag(restPayload("fix/issue-1149-three-dot-drift-diff"), "1.10.2"),
+        "an ordinary feature merge that moved the manifest must not cut a tag",
+      ).toBe(false);
+
+      expect(
+        wouldTag(restPayload("release/v1.10.1"), "1.10.2"),
+        "a release branch for another version is not authorisation for this one",
+      ).toBe(false);
+
+      expect(wouldTag([], "1.10.2"), "a direct push belongs to no pull request").toBe(false);
+    });
+
+    it("is not satisfied by the GraphQL spelling of the field", () => {
+      // The regression pin. `headRefName` is what GraphQL calls it and what the
+      // gate used to read; REST carries no such key, so `jq` printed `null` for
+      // every associated pull request, the comparison never matched, and the step
+      // reported success having pushed nothing. It had never once tagged.
+      const graphqlShaped = [{ number: 1152, headRefName: "release/v1.10.2" }];
+      expect(
+        wouldTag(graphqlShaped, "1.10.2"),
+        "a payload carrying ONLY the GraphQL key must not tag — and a gate that reads that key " +
+          "cannot tag the REST payload above, which is the defect",
+      ).toBe(false);
+
+      // `// empty` is asserted on the filter TEXT, not through a payload, and
+      // deliberately: no input distinguishes it from the bare `.[].head.ref`.
+      // `jq -r` prints a missing value as the four characters `null`, and the
+      // pattern beside it is always `release/v` + a version, so the two forms
+      // decline every payload alike. Writing a row that appeared to tell them
+      // apart would need a fixture built to fake the difference. It is kept
+      // because it says what the filter means; the guard is that it is there.
+      expect(
+        associationGate(),
+        "the filter must drop a missing value rather than print it as `null`",
+      ).toContain("// empty");
+    });
   });
 });
