@@ -195,6 +195,14 @@ export const QFAI_GITIGNORE_BLOCK = [
   ".qfai/review/*",
   ".qfai/state.json",
   QFAI_STATE_SCRATCH_IGNORE,
+  // The advisory lock that serializes writes to the file above. It sits
+  // beside it so that everyone who may write the state may also reap a lock
+  // left behind by a crash — which a lock in the OS temp dir, owned by
+  // whichever user got there first, does not allow on a shared checkout.
+  // Deliberately absent from QFAI_GITIGNORE_RECOMMENDED_ENTRIES: a project
+  // whose `.gitignore` predates this line must not start failing validation
+  // over it.
+  ".qfai/state.json.lock",
   // Article XI rule 3, the one mandated ignore that is not under `.qfai/`.
   // Anchored: rule 2 names the repository-root staging area, and an unanchored
   // `tmp/` would also swallow a `src/**/tmp/` a project tracks on purpose.

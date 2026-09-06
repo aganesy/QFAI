@@ -1291,9 +1291,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Derived by running `qfai init` into the E2E's temp root and reading what it
   // wrote, which is how both predecessors were derived. Not copied from a
   // failure message: the point of the pin is that somebody looked at the block.
-  [".gitignore", "e56620ef701cc655a4a52e7ef437f2beee6b06a587f9b4011d6c591fc1cbdfac"],
+  [".gitignore", "f35a2624352ca319b3b53a6e9a556779877eef07c42338e85ab67afeef9bb832"],
   ["AGENTS.md", "04061092ed7048349ad93404145a9e3d71cb7c21bd37f5a531d0cd61147b313d"],
   ["CLAUDE.md", "040faf04c46b85d0064ca561ca813f66a3989b4f3ab44802f8c447908a0b455d"],
+  // Moved when the state lock joined `QFAI_GITIGNORE_BLOCK`: the lock now sits beside
+  // `.qfai/state.json` so that everyone who may write the state may also reap a lock a crash left
+  // behind, and a file init writes beside the state file is a file init must ignore. Re-derived
+  // rather than copied off the failure: dropping that one line from the tree init writes today
+  // reproduces the previous digest (`2cfeb083…`) byte for byte, which is what says the line is the
+  // whole change.
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
