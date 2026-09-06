@@ -9,6 +9,12 @@ export type ParsedArgs = {
     yes: boolean;
     dryRun: boolean;
     upgradeAssistantTree: boolean;
+    /**
+     * `qfai init --verbose`: expand the run report's `skipped` list. Off by
+     * default so a no-op re-run reports its skip count instead of every
+     * shipped asset path.
+     */
+    verbose: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
     reportIn?: string;
@@ -46,13 +52,17 @@ export type ParsedArgs = {
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
+    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
+    /** `rescope --remove <surface-id>`, repeatable. */
+    rescopeRemove: string[];
+    /** `rescope --reason <delta-id>`: the decision that retired the surface. */
+    rescopeReason?: string;
     prototypingTargetUrl?: string;
     /** Subcommand for `qfai discussion <list|use>`. */
     discussionAction?: "list" | "use";
     /** --active for `qfai discussion list`. */
     discussionActive?: boolean;
-    /** --format <text|json> for `qfai discussion list --active`. */
+    /** --format <text|json> for `qfai discussion list [--active]`. */
     discussionFormat?: "text" | "json";
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
@@ -154,26 +164,39 @@ export type ParsedArgs = {
     /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
     reportSpecIds: string[];
     help: boolean;
+    /**
+     * `--version` / `-V`: print the resolved tool version to stdout and
+     * exit 0. Accepted in the command position and as a trailing flag.
+     */
+    version: boolean;
+    /**
+     * Unrecognized `--flag` tokens, in argv order. The CLI prints them
+     * before the usage text so a typo names itself.
+     */
+    unknownFlags: string[];
+    /**
+     * Exit code used when `invalid` is set. CLI-arg errors (unknown
+     * flag, malformed or missing value) exit 2 on every command, per
+     * the exit-code table in the init CLI contract.
+     */
     invalidExitCode: number;
   };
 };
 
+/** Every spelling of the help flag the parser accepts. */
+const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
+
+/** Every spelling of the version flag the parser accepts. */
+const VERSION_FLAGS: ReadonlySet<string> = new Set(["--version", "-V"]);
+
 /**
- * `--dry-run` を配線していないコマンド群。フラグを受理しても書き込みを
- * 止められないため、parse 段階で拒否する対象。
- *
- * `handoff` はここに含めない: 唯一のサブコマンド `handoff upgrade` が
- * `--dry-run` をプレビューとして実装済みで、main.ts から配線されている。
+ * The single-dash flags the parser reserves, derived from the alias sets above
+ * so the flag loop and the positional scan can never disagree about which short
+ * tokens are flags. Every other option is spelled with `--`.
  */
-const DRY_RUN_UNSUPPORTED_COMMANDS = new Set([
-  "validate",
-  "report",
-  "guardrails",
-  "audit",
-  "atdd",
-  "discussion",
-  "prototyping",
-]);
+const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
+  [...HELP_FLAGS, ...VERSION_FLAGS].filter((flag) => !flag.startsWith("--")),
+);
 
 /** `qfai prototyping <action>` のサブコマンド名。 */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
@@ -183,6 +206,7 @@ type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
 
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
+    rescopeRemove: [],
     root: cwd,
     rootExplicit: false,
     dir: cwd,
@@ -190,6 +214,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     yes: false,
     dryRun: false,
     upgradeAssistantTree: false,
+    verbose: false,
     reportFormat: "md",
     reportRunValidate: false,
     doctorFormat: "text",
@@ -199,31 +224,70 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateSpecIds: [],
     reportSpecIds: [],
     help: false,
-    invalidExitCode: 1,
+    version: false,
+    unknownFlags: [],
+    invalidExitCode: 2,
   };
 
   const args = [...argv];
   let command = args.shift() ?? null;
   let invalid = false;
 
-  if (command === "--help" || command === "-h") {
+  if (command !== null && HELP_FLAGS.has(command)) {
     options.help = true;
+    command = null;
+  }
+
+  if (command !== null && VERSION_FLAGS.has(command)) {
+    options.version = true;
     command = null;
   }
 
   const markInvalid = (): void => {
     invalid = true;
     options.help = true;
-    if (command === "guardrails") {
-      options.invalidExitCode = 2;
-    }
   };
+
+  // 先頭トークンが `--` で始まる場合、それはコマンド名ではなく未知
+  // オプションである。`command = args.shift()` で取り除かれるため下の
+  // フラグループには到達せず、ここで捕まえないと main.ts の
+  // unknown-command 分岐に落ちて exit 0 になってしまう
+  // (`qfai --bogus`)。`--help` / `-h` は直前の分岐で null 化済み。
+  if (command !== null && command.startsWith("--")) {
+    options.unknownFlags.push(command);
+    markInvalid();
+    command = null;
+  }
 
   /**
    * Flag-ownership guard (下の flag-handling contract rule 2 用)。
    * `qfai prototyping <action>` のサブコマンドトークンは flag loop より
    * 前に確定するため、ループ内のどの arm からでも安全に呼べる。
    */
+  /**
+   * Whether a flag is on one of the commands that actually reads it.
+   *
+   * A flag accepted where nothing reads it reaches nothing, and the run
+   * proceeds as if it had not been given. `--dir` produced a verdict about the
+   * CURRENT tree and made `report` overwrite its `report.md` (#1143);
+   * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
+   * `--dry-run` let an operator believe a run was a rehearsal (#1144).
+   *
+   * The owner lists are derived from where `main.ts` reads each field, not
+   * guessed:
+   *
+   * - `dir`, `upgradeAssistantTree` — `init`
+   * - `yes` — `init`, `doctor`
+   * - `force` — `init`, `handoff`, `prototyping`
+   * - `dryRun` — `init`, `doctor`, `handoff`, `prototyping`
+   *
+   * One predicate rather than one per flag: two that mean almost the same
+   * thing are two contracts to keep in step, and this is the shape
+   * `ownedByPrototyping` and `ownedByGuardrails` below already use.
+   */
+  const ownedBy = (...commands: string[]): boolean =>
+    command !== null && commands.includes(command);
+
   const ownedByPrototyping = (...actions: PrototypingAction[]): boolean => {
     if (command !== "prototyping") {
       return false;
@@ -247,7 +311,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   if (command === "guardrails") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       const action = normalizeGuardrailsAction(candidate);
       if (action) {
         options.guardrailsAction = action;
@@ -262,12 +326,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // flag loop.
   if (command === "prototyping") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (
         candidate === "preflight" ||
         candidate === "iterate" ||
         candidate === "certify" ||
-        candidate === "show-spec"
+        candidate === "show-spec" ||
+        candidate === "rescope"
       ) {
         options.prototypingAction = candidate;
       } else {
@@ -280,7 +345,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai audit <subcommand>` — currently only `log` is supported.
   if (command === "audit") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "log") {
         options.auditAction = candidate;
       } else {
@@ -293,7 +358,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
   if (command === "handoff") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "upgrade") {
         options.handoffAction = candidate;
       } else {
@@ -302,7 +367,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.handoffAction === "upgrade") {
         const fileCandidate = args[0];
-        if (fileCandidate && !fileCandidate.startsWith("--")) {
+        if (isPositionalToken(fileCandidate)) {
           options.handoffLegacyFile = fileCandidate;
           args.shift();
         }
@@ -313,7 +378,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
   if (command === "atdd") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "scaffold") {
         options.atddAction = candidate;
       } else {
@@ -327,7 +392,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // positional <id> for `use`) before the flag loop.
   if (command === "discussion") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "list" || candidate === "use") {
         options.discussionAction = candidate;
       } else {
@@ -336,7 +401,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.discussionAction === "use") {
         const idCandidate = args[0];
-        if (idCandidate && !idCandidate.startsWith("--")) {
+        if (isPositionalToken(idCandidate)) {
           options.discussionId = idCandidate;
           args.shift();
         }
@@ -363,6 +428,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   for (; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg !== undefined && HELP_FLAGS.has(arg)) {
+      options.help = true;
+      continue;
+    }
+    if (arg !== undefined && VERSION_FLAGS.has(arg)) {
+      options.version = true;
+      continue;
+    }
     switch (arg) {
       case "--root":
         {
@@ -382,30 +455,58 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             markInvalid();
             break;
           }
-          options.dir = next;
+          // `--root` is the flag for pointing another command at a tree, and
+          // the usage text this refusal prints says so.
+          if (ownedBy("init")) {
+            options.dir = next;
+          } else {
+            markInvalid();
+          }
         }
         break;
       case "--force":
-        options.force = true;
+        // Read by the `init`, `handoff` and `prototyping` arms and nowhere else.
+        if (ownedBy("init", "handoff", "prototyping")) {
+          options.force = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--yes":
-        options.yes = true;
+        // Read by the `init` and `doctor` arms and nowhere else.
+        if (ownedBy("init", "doctor")) {
+          options.yes = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--dry-run":
-        // `--dry-run` を実装しているのは init / doctor / handoff upgrade
-        // のみ。尊重できないコマンドで黙って受理すると、プレビューのつもり
-        // の実行がそのまま書き込みになるため、ここで parse error として
-        // 拒否する。
-        // 各コマンドが dry-run を実装したら DRY_RUN_UNSUPPORTED_COMMANDS
-        // から外し、main.ts で dryRun を配線する。
-        if (command !== null && DRY_RUN_UNSUPPORTED_COMMANDS.has(command)) {
+        // Read by `init`, `doctor`, `handoff` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
+        if (ownedBy("init", "doctor", "handoff", "prototyping")) {
+          options.dryRun = true;
+        } else {
+          markInvalid();
+        }
+        break;
+      case "--upgrade-assistant-tree":
+        // Same shape as `--dir`, and worse in one way: accepted elsewhere it
+        // exited 0 having upgraded nothing, so the operator went on reading an
+        // assistant tree they believed had been refreshed.
+        if (ownedBy("init")) {
+          options.upgradeAssistantTree = true;
+        } else {
+          markInvalid();
+        }
+        break;
+      case "--verbose":
+        // init 専用。ヘルプでもそう公開しているので、他コマンドに付けた
+        // 場合は黙って捨てず誤指定として扱う（自動化が「詳細が出た」と
+        // 誤認したまま成功扱いになるのを防ぐ）。
+        if (command !== "init") {
           markInvalid();
           break;
         }
-        options.dryRun = true;
-        break;
-      case "--upgrade-assistant-tree":
-        options.upgradeAssistantTree = true;
+        options.verbose = true;
         break;
       case "--format": {
         const next = consumeOptionValue();
@@ -620,6 +721,34 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "validate") {
           options.platform = next;
+        } else {
+          markInvalid();
+        }
+        break;
+      }
+      case "--remove": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        // Repeatable: one decision can retire more than one surface, and each
+        // retirement earns its own audit entry.
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeRemove.push(next);
+        } else {
+          markInvalid();
+        }
+        break;
+      }
+      case "--reason": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeReason = next;
         } else {
           markInvalid();
         }
@@ -877,11 +1006,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--help":
-      case "-h":
-        options.help = true;
-        break;
       default:
+        // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
+        // parse error として markInvalid() する。位置引数
+        // (`discussion use <id>` / `handoff upgrade <legacy>` など) は
+        // 対象外に保つ必要があるため、「switch にマッチしなかった」で
+        // はなく `--` プレフィックスで判定する。
+        if (arg?.startsWith("--")) {
+          options.unknownFlags.push(arg);
+          markInvalid();
+        }
         break;
     }
   }
@@ -916,6 +1050,41 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   return { command, invalid, options };
+}
+
+/**
+ * Whether a token can be the subcommand name in `qfai <command> <subcommand>`.
+ *
+ * The scan that pulls it runs *before* the flag loop, so testing only for a
+ * `--` prefix let the short forms through as candidates: `qfai prototyping -V`
+ * had `-V` taken as an unknown action and shifted away, which both raised a
+ * usage error and stopped the flag loop from ever setting `options.version`,
+ * while the long `--version` was skipped here and worked. A subcommand name is
+ * drawn from a closed set and none of them starts with `-`, so this position
+ * excludes every dash-prefixed token.
+ */
+function isSubcommandToken(token: string | undefined): token is string {
+  return token !== undefined && token.length > 0 && !token.startsWith("-");
+}
+
+/**
+ * Whether a token can be the positional value after a subcommand — the
+ * `<legacy-file>` of `handoff upgrade`, the `<id>` of `discussion use`.
+ *
+ * A positional is caller data rather than a closed set, and a relative path may
+ * legitimately begin with a single `-`: `qfai handoff upgrade -legacy.yaml`
+ * names a file in the working directory and has to keep converting. So this
+ * position excludes only the spellings the parser actually reserves — any `--`
+ * long flag, plus RESERVED_SHORT_FLAGS — which still keeps `-V` and `-h` out
+ * of the positional and lets them reach the flag loop.
+ */
+function isPositionalToken(token: string | undefined): token is string {
+  return (
+    token !== undefined &&
+    token.length > 0 &&
+    !token.startsWith("--") &&
+    !RESERVED_SHORT_FLAGS.has(token)
+  );
 }
 
 function parseNonNegativeInteger(value: string): number | null {

@@ -1,11 +1,12 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 describe("cli root discovery", { timeout: 15000 }, () => {
@@ -31,16 +32,73 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
-  it("sets exitCode=1 when help is shown due to invalid args", async () => {
+  // CLI-arg errors exit 2 on every command, not just `guardrails`
+  // (`.qfai/contracts/cli/qfai-init.md` exit-code table).
+  it("sets exitCode=2 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
     try {
       await run(["validate", "--format"], cwd);
-      expect(process.exitCode).toBe(1);
+      expect(process.exitCode).toBe(2);
     } finally {
       process.exitCode = previousExitCode;
+    }
+  });
+
+  it("reports the unknown flag on stderr and exits 2 instead of running the command", async () => {
+    // A `--dry-run` typo used to fall through the parser's
+    // `default: break;` and perform a REAL init at exit 0, so the
+    // target directory must stay empty here.
+    const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-unknown-flag-"));
+    const written: string[] = [];
+    const writeSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array): boolean => {
+        written.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+        return true;
+      });
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((): boolean => true);
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["init", "--dryrun"], cwd);
+      expect(process.exitCode).toBe(2);
+      expect(written.join("")).toContain("--dryrun");
+      await expect(readdir(cwd)).resolves.toEqual([]);
+    } finally {
+      process.exitCode = previousExitCode;
+      writeSpy.mockRestore();
+      stdoutSpy.mockRestore();
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("exits 2 for an unknown option in the command position", async () => {
+    // `qfai --bogus` used to reach the unknown-command branch, which
+    // prints a message but sets no exit code — so a wrapper saw 0.
+    const cwd = process.cwd();
+    const written: string[] = [];
+    const writeSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array): boolean => {
+        written.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+        return true;
+      });
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((): boolean => true);
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["--bogus"], cwd);
+      expect(process.exitCode).toBe(2);
+      expect(written.join("")).toContain("--bogus");
+    } finally {
+      process.exitCode = previousExitCode;
+      writeSpy.mockRestore();
+      stdoutSpy.mockRestore();
     }
   });
 
@@ -230,5 +288,48 @@ describe("cli usage text", () => {
 
     expect(entry).not.toContain("それ以外は既存があればスキップ");
     expect(entry).toContain("assistant/manifest/**");
+  });
+});
+
+describe("cli --version", () => {
+  async function captureRun(argv: string[]): Promise<{ stdout: string; exitCode: unknown }> {
+    const chunks: string[] = [];
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    process.stdout.write = ((chunk: unknown): boolean => {
+      chunks.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      await run(argv, process.cwd());
+      return { stdout: chunks.join(""), exitCode: process.exitCode };
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = previousExitCode;
+    }
+  }
+
+  it("prints the resolved tool version and leaves the exit code unset", async () => {
+    const expected = await resolveToolVersion();
+    const { stdout, exitCode } = await captureRun(["--version"]);
+    expect(stdout.trim()).toBe(expected);
+    expect(exitCode).toBeUndefined();
+  });
+
+  it("supports the -V alias", async () => {
+    const expected = await resolveToolVersion();
+    const { stdout } = await captureRun(["-V"]);
+    expect(stdout.trim()).toBe(expected);
+  });
+
+  it("does not print usage for a version request", async () => {
+    const { stdout } = await captureRun(["--version"]);
+    expect(stdout).not.toContain("qfai <command> [options]");
+  });
+
+  it("advertises the version flag in usage output", async () => {
+    const { stdout } = await captureRun(["--help"]);
+    expect(stdout).toContain("-V, --version");
   });
 });
