@@ -348,6 +348,19 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `Evidence` survive it; left unmigrated the row validates but reaches
    `/qfai-implement` with nothing in the column that skill reads for its
    obligation.
+   Fill each
+   row's optional `Owning module` from the TC's parent `BR` — reached through the
+   TC's `EX-Ref` and that example's `BR-Ref`, falling back to the TC's `AC-Refs`
+   whenever the `EX-Ref` cell names no `EX` — an empty cell as much as `—` — since
+   no `TC` column names a `BR` directly, and leave
+   `-` only when no single module owns the row. It is the one pre-RED input to
+   `delivery-planner`'s parallel gate, not the whole gate: the other conditions in
+   `qfai-implement/references/parallelization-policy.md` still apply. A ledger
+   whose header predates the column is migrated here rather than left alone,
+   table by table: every ledger table in the file, each `## CHG-*` one included,
+   gains the column only where its own header lacks it and is otherwise filled in
+   place — never given a duplicate, which the validator would shadow
+   (`references/sdd-phase-checklists.md`).
    **Seed `Tier` with the
    row**, from its `Layer`, **what the item touches** (infrastructure, a public
    API surface, a `CON-*` contract or persisted schema → `T2`; UI behavior or

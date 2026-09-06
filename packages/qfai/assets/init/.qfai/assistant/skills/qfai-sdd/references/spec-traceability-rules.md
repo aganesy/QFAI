@@ -205,6 +205,26 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Optional columns detail: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
   row implements. Required when the row carries one, since `TC-*` annotations
   are forbidden in `tests/e2e/**` and `tests/api/**`.
+- Optional columns detail: `Owning module` — the production module the row will write,
+  one per row, `-` when not declared. `/qfai-sdd` seeds it at Phase 2b from the TC's
+  parent `BR`, reached by `EX-Ref` -> `05_Examples.md#BR-Ref` and, whenever the
+  `EX-Ref` cell names no `EX` — an empty cell as much as `—` — by the TC's
+  `AC-Refs`. It is the only evidence of a row's production write
+  set that exists before RED, since RED-first guarantees the module does not exist
+  yet — necessary for parallel dispatch, never sufficient: every other condition in
+  `qfai-implement/references/parallelization-policy.md` still has to hold. A ledger
+  without the column leaves parallel dispatch unevaluable, so a ledger authored before
+  the column existed gains it at the next Phase 2b — added to the header of each
+  ledger table that lacks it, `## CHG-*` tables included, and backfilled on every row.
+  A table already carrying the column is filled in place, never given a second one:
+  column order is free because the validator resolves the column by name, but it
+  resolves the **first** column of that name, so a duplicate shadows the new values.
+  Reach that parent by `EX-Ref` first: a TC naming an `EX` takes that example's
+  `BR-Ref` in `05_Examples.md`, which pins the parent 1:1. Fall back to the TC's
+  `AC-Refs` whenever the `EX-Ref` cell names no `EX` — an empty cell, `—` and `-`
+  all mean "none", and a TC carrying only `AC-Refs` is valid — taking the
+  `04_Business-Rules.md` rows whose `AC-Refs` name the same `AC`, so an error or
+  boundary TC inherits its normal-case sibling's parent on that `AC`.
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
   explicitly inert to it — recording one does not raise or lower TC coverage.
 - Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.
