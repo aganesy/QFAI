@@ -1501,6 +1501,17 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const commonOptionKeys = collectOptionKeys(preDispatch);
 
+    // 1c. Options the PARSER folds into an init option after the switch.
+    //     `main.ts`'s `case "init":` hands `runInit` its `dir` and never names
+    //     `options.root`, so an alias args.ts resolves on its own —
+    //     `options.dir = options.root` under a `command === "init"` guard — is
+    //     invisible to a derivation that reads main.ts alone. `--root` then
+    //     decides where `qfai init` writes while this test, whose name promises
+    //     "every qfai init flag", still calls it undocumented.
+    for (const key of collectInitAliasSources(argsSource, initOptionKeys)) {
+      initOptionKeys.add(key);
+    }
+
     // 2. Which flag writes each of those options in the parser? Short aliases
     //    (`-h`) and fall-through label groups (`case "--help": case "-h":`)
     //    both count, so the help flags resolve to a real registration.
@@ -2608,6 +2619,40 @@ function collectFlagAliasSets(argsSource: string): Map<string, string[]> {
 /** Net brace balance a single line contributes. */
 function braceBalance(line: string): number {
   return (line.match(/\{/g)?.length ?? 0) - (line.match(/\}/g)?.length ?? 0);
+}
+
+/**
+ * The option keys the parser copies INTO an init option under a
+ * `command === "init"` guard — i.e. the sources of init's own aliases.
+ *
+ * `collectOptionKeys` reads `main.ts`, which is only half the derivation:
+ * `args.ts` resolves `--root` into `options.dir` for `init` before `main.ts`
+ * ever sees it, so the flag that decides where `qfai init` writes never
+ * appears in the `case "init":` block. Following the assignment is what keeps
+ * "every qfai init flag" true of aliases as well as of direct registrations.
+ *
+ * Restricted to assignments whose TARGET is already a known init option, so an
+ * unrelated `command === "init"` guard cannot widen the documented set.
+ */
+function collectInitAliasSources(
+  argsSource: string,
+  initOptionKeys: ReadonlySet<string>,
+): Set<string> {
+  const sources = new Set<string>();
+  for (const guard of argsSource.matchAll(
+    /if\s*\(\s*command === "init"[\s\S]*?\)\s*\{([\s\S]*?)\n\s*\}/g,
+  )) {
+    for (const assignment of (guard[1] ?? "").matchAll(
+      /options\.([A-Za-z][A-Za-z0-9]*)\s*=\s*options\.([A-Za-z][A-Za-z0-9]*)/g,
+    )) {
+      const target = assignment[1];
+      const source = assignment[2];
+      if (target !== undefined && source !== undefined && initOptionKeys.has(target)) {
+        sources.add(source);
+      }
+    }
+  }
+  return sources;
 }
 
 /**
