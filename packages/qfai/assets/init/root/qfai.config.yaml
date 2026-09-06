@@ -11,12 +11,20 @@ validation:
   require:
     specSections: []
   testStrategy:
-    requireLayerTags: false
-    requireSizeTags: false
     maxE2eScenarioRatio: null
     maxE2eScenarioCount: null
+    # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
+    # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this
+    # to false is the documented opt-out.
+    #
+    # The opt-out is not machine-checked. Setting it to false makes the stub
+    # check return nothing at all — it does not downgrade to a warning, and no
+    # field here associates a waiver with it. Recording a waiver DR-ID is a
+    # project governance step you take and review yourselves; `qfai validate`
+    # will neither ask for one nor notice its absence. Treat a false here as a
+    # decision that needs a human reviewer, not one the gate will catch.
+    forbidTestTodoStubs: true
   traceability:
-    brMustHaveSc: true
     scMustHaveTest: true
     # Intentionally empty: this matches the in-code default and must be set to the
     # repository's real test layout before the SC traceability gate means anything.
@@ -33,8 +41,6 @@ validation:
     #   Cucumber:   features/**/*.feature
     testFileGlobs: []
     testFileExcludeGlobs: []
-    scNoTestSeverity: error
-    orphanContractsPolicy: error
     unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
