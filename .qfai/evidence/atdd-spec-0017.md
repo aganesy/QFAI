@@ -2191,24 +2191,52 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-**And again, from outside this stage a third time.** The `Integration`-row producer work on
-`fix/issue-523-integration-row-producer` added three `it` blocks to
-`tests/assets/tddLedgerTemplate.test.ts` — regression cover for the boundary reconciliation no
-longer keying on the mutable `Selector`, for `system` / `acceptance` routing to the Integration
-group, and for a cross-spec entry on an `Integration` row going to the ATDD evidence file. That
-file sits under the e2e project's second include glob, so the count moved 938 -> 941 with nothing
-about `spec-0017` changed. The number below is re-derived from the merged tree by walking both
-include globs, not copied out of the failure message, and it reconciles: `main` measures 927, and
-`tddLedgerTemplate.test.ts` is the only e2e-project file this branch touches, taking it from 11 to
-25 — the last three of those being the callsites named above (22 -> 25). Both suite totals above
-stay known-invalid for the current tree.
+**And it moved again — this time in a MERGE, with both parent TIPS individually correct.** Both parents
+of `2a6da1ca9` measure 932 and record 932, so neither branch could have found this by re-measuring its
+own tree at the point it was merged. They are short of the merge in different ways:
 
-e2e callsites at this tree: 943
+| revision                | measured | recorded | how it differs from the merge                                      |
+| ----------------------- | -------- | -------- | ------------------------------------------------------------------ |
+| `60b707fa0` (parent A)  | 932      | 932      | lacks `tests/assets/autoModeApprovalDegrade.test.ts` (5 callsites) |
+| `26a67fbe1` (parent B)  | 932      | 932      | has that file; is one callsite behind on five others (below)       |
+| `2a6da1ca9` (the merge) | **937**  | 932      | takes A's five single-callsite additions AND B's whole new file    |
 
-**That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
-each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
-by a test — deriving them would mean running the suite from inside it — but the thing that INVALIDATES
-them can be: a commit that changes an `it` / `test` callsite under the e2e project's two include globs.
+The five B is behind on: `atddRedProvenance` 212→213, `coverageDepthMatrixHome` 9→10,
+`evidenceCellContainer` 9→10, `evidenceGitignoreClaim` 4→5, `implementCheckpointVerification` 8→9. The
+record is byte-identical in both parents, so the merge carried it through unchanged and nothing
+re-measured after the integration. `test (e2e)`, `node-floor` and `ci-pass` have been red on `main` ever
+since: one stale integer, three required jobs, every open pull request red for a reason none of them
+contains. `git diff 2a6da1ca9 64dfea7ec` under either glob is empty, so the merge is where the whole
+delta enters.
+
+**The claim is about the tips, not about either history.** B's own history does contain a wrong commit:
+at `9ac4c967e0` the same walk measures 920 against a recorded 915, and `fe05265e80` repairs it to 920.
+That is the ordinary branch-local instance of this defect, and B fixed it branch-locally, which is the
+point — a branch that had already caught and repaired its own staleness still merged into an
+inconsistent tree. The two failure modes are independent.
+
+**The obligation therefore belongs to the merge, not to the branch.** The rule below says a commit that
+changes a callsite under the two globs owes a re-measurement, and at their tips both branches had
+honoured it. What neither can honour is a count that is a property of the UNION of two histories:
+`measure(A ∪ B)` is not recoverable from `measure(A)` and `measure(B)`, so the merge commit is the only
+revision at which this number can be made true. A branch-local discipline — including "re-measure last"
+— cannot reach it, and B's `fe05265e80` is the proof that practising it well is not enough. This is the
+strongest argument in this record for deriving the count rather than committing it: a literal that only
+a merge can invalidate has no author to hold responsible for it.
+
+Re-measured for this commit by a separate walk of the two include roots — not by calling into
+`stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
+readings agree: **937** (`tests/assets` 767, `tests/e2e` 170).
+
+e2e callsites at this tree: 1625
+
+**That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
+each found these totals a round behind, and each repair re-typed the number. The seventh INSTANCE is
+the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
+are not the same event: the merge is what carried 932 into a 937 tree, and re-recording 937 is what
+corrects it. Neither total can be derived by a test — deriving them would mean running the suite from
+inside it — but the thing that INVALIDATES them can be: a commit that changes an `it` / `test`
+callsite under the e2e project's two include globs.
 `stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
 that moves a callsite reddens until the line is corrected, and the totals beside it are known-invalid
 rather than presumed-valid in the window between.

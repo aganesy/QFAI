@@ -36,6 +36,14 @@ export async function collectTddCoverage(
   const specs: ReportTddCoverageSpec[] = [];
 
   for (const entry of entries) {
+    // A retired spec's ledger is history, not progress. `validateTddList`
+    // demotes every finding on it to `info` and prints "no longer gates"; a
+    // report that went on counting the same `todo` rows as open work would have
+    // the two commands disagreeing about the same file. Omitted rather than
+    // zeroed, on the same terms as the missing-`06_Test-Cases.md` branch below:
+    // "this spec owes nothing" is a different statement from "this spec is no
+    // longer assessed".
+    if (entry.status !== undefined && entry.status !== "active") continue;
     // The collector `validateTddList` decides coverage obligations from. The
     // report used to build its own set from the *first* `TC-ID` table alone and
     // skip the spec entirely when that table did not resolve, so a heading-form

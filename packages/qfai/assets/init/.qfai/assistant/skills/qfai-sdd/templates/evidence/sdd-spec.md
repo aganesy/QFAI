@@ -22,6 +22,11 @@
 > Cite the run-scoped copy, never `.qfai/report/preflight_summary.md`. That path
 > is the latest-run pointer and every rerun rewrites it, so once a second cycle
 > has run it no longer names the preflight this spec was triaged against.
+>
+> Take the path from the run rather than typing it — `summary:` in
+> `npx qfai sdd preflight`'s text output, `preflightSummaryPath` under
+> `--format json` — so a project that moved `paths.outDir` cites the file that
+> was actually written instead of a `.qfai/report/` path that does not exist there.
 
 ## Triage decisions
 
@@ -50,6 +55,16 @@
 
 - <artifact created or updated, with path>
 - <artifact created or updated, with path>
+
+## Contract executability
+
+> One line per `db/` contract this cycle authored or changed, in exactly the
+> form below. `QFAI-CONTRACT-031` (`warning`) reports a `db/` contract that no
+> such line names; it is a presence check, so the line is the whole record.
+> Rule: `references/contract-artifact-rules.md#executability-must`.
+
+- Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
+- <or> none
 
 ## Commands executed
 
@@ -91,6 +106,6 @@ npx qfai validate --profile sdd --fail-on error --format github
 - Rationale: <one line>
 
 > `Final status` accepts exactly `PASS` or `REVISE`, matching the reviewer
-> vocabulary in `shared-skill-delegation-baseline.md#verdict-vocabulary`. A
+> vocabulary in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`. A
 > `REVISE` here maps to `status: "FAIL"` when a review pack's `summary.json` is
 > written; they are the same outcome. Do not invent a third verdict.

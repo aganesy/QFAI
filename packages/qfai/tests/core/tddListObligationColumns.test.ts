@@ -196,6 +196,46 @@ describe("an obligation is only legal on the Layer that owns it", () => {
     );
   });
 
+  it("rejects an E2E row that leaves US-Refs empty once the column ships", async () => {
+    // The reverse direction was unchecked: the column was read as optional on
+    // every row, so a `Layer = E2E` row could carry `-` in TC-Refs (forbidden
+    // there) *and* `-` in US-Refs and reach `done` with no obligation in any
+    // column — nothing for a handoff to audit.
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs | CON-API-Refs |`,
+        `${BASE_SEP} ------- | ------------ |`,
+        "| TDD-0001 | -       | E2E   | tests/e2e/a.ts  | journey  | done   | -     | ev       | -       | -            |",
+        "| TDD-0002 | -       | API   | tests/api/a.ts  | contract | done   | -     | ev       |         |              |",
+      ],
+      (issues) => {
+        const findings = layerFindings(issues);
+        expect(findings).toHaveLength(2);
+        expect(findings[0]?.severity).toBe("error");
+        expect(findings[0]?.message).toContain("US-Refs is required on a Layer=E2E row");
+        expect(findings[0]?.suggested_action).toContain("cannot record its obligation in TC-Refs");
+        expect(findings[1]?.message).toContain("CON-API-Refs is required on a Layer=API row");
+      },
+    );
+  });
+
+  it("does not demand the obligation on a ledger without the column", async () => {
+    // The eight-column ledgers written before the columns shipped record what
+    // they can in TC-Refs. Requiring the cell there would be an unwaivable
+    // migration, not a gate.
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | E2E   | tests/e2e/a.ts  | journey  | done   | -     | ev       |",
+        "| TDD-0002 | -       | API   | tests/api/a.ts  | contract | done   | -     | ev       |",
+      ],
+      (issues) => {
+        expect(layerFindings(issues)).toEqual([]);
+      },
+    );
+  });
+
   it("says nothing when an E2E row carries `-` in TC-Refs", async () => {
     await withLedger(
       [
@@ -317,7 +357,28 @@ describe("the shipped ledger schema documents all eight required columns", () =>
       ]) {
         expect(required).toContain(column);
       }
-      expect(ledger.indexOf("| US-Refs ")).toBeGreaterThan(optional);
+      // The column table itself moved to `obligation-columns.md` when the ledger hit the
+      // shipped line ceiling; the ledger keeps the heading, a summary and the pointer. What
+      // this row is about — the optional section not being spliced into the required table —
+      // is unchanged, and the assertions follow the text rather than being relaxed.
+      const columns = await readFile(
+        path.join(
+          repoRoot,
+          tree,
+          "assistant/skills/qfai-implement/references/obligation-columns.md",
+        ),
+        "utf-8",
+      );
+      expect(columns).toContain("| US-Refs ");
+      expect(
+        ledger.slice(optional),
+        "the ledger's own section has to reach the file that carries the table",
+      ).toContain("obligation-columns.md");
+      // "Required by layer" has to say what the validator does, or the heading
+      // is the only place the requirement exists: the reverse direction is
+      // enforced, and only where the column is in the header.
+      expect(columns).toContain("an `E2E` / `API` row that leaves it empty or `-`");
+      expect(columns).toContain("It fires only where the\ncolumn exists");
     });
 
     it(`${tree}: the Red phase and the evidence contract branch by Layer`, async () => {

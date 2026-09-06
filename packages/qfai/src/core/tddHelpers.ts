@@ -66,10 +66,23 @@ export type LevelClassification = "coverage-target" | "non-coverage" | "unrecogn
  * `TDDLIST_TC_NOT_COVERED` demanded a ledger row for every TC. Classifying
  * positively means an unrecognized value is *visible* rather than silently
  * becoming a coverage target.
+ *
+ * **An undeclared `Level` is not a coverage target.** A blank cell, and a
+ * `06_Test-Cases.md` with no `Level` column at all, reach here as `""`, and
+ * `atddTraceability.resolveAtddHomeKind(undefined)` already routes exactly that
+ * TC to `tests/integration/**` and keeps `QFAI-ATDD-112` (`error`) on it —
+ * deliberately, as the conservative answer for a `Level` qfai cannot read.
+ * Answering `coverage-target` here as well made one TC a ledger coverage target
+ * *and* an ATDD annotation obligation: two owners, two test trees, two evidence
+ * files, and no derivable `Layer` for the row the ledger would seed, which is
+ * what gate item 10 selects the evidence file by. The heading form already
+ * behaved this way — a `## TC-0001` block with no `- Level:` line is claimed by
+ * ATDD alone — so this is the table form joining it, not a new rule. The TC is
+ * not thereby owed by nothing: it is owed by `QFAI-ATDD-112`.
  */
 export function classifyCoverageLevel(level: string): LevelClassification {
   const normalized = level.trim().toLowerCase();
-  if (normalized.length === 0) return "coverage-target";
+  if (normalized.length === 0) return "non-coverage";
   if (UNIT_COMPONENT_LAYERS.has(normalized)) return "coverage-target";
   if (NON_COVERAGE_LAYERS.has(normalized)) return "non-coverage";
   return "unrecognized";
@@ -420,4 +433,34 @@ export function resolveParentTcId(tcRef: string): string | undefined {
   if (!/^TC-\d{4}-\d{4}/i.test(tcRef)) return undefined;
   const parent = tcRef.replace(/-\d{4}$/, "");
   return parent !== tcRef ? parent : undefined;
+}
+
+/**
+ * The declared TC a ledger `TC-Refs` token speaks for, or `undefined` when it
+ * speaks for none.
+ *
+ * A ledger may decompose one declared TC into several rows and cite the parts
+ * as `TC-NNNN-NNNN`; only the parent is written in `06_Test-Cases.md`. Every
+ * rule that pairs a row with the spec therefore has to answer "which declared
+ * TC is this token about" the same way, and they did not: the unknown-reference
+ * check resolved the parent while the `Level`-migration check compared the
+ * token directly, so a row citing `TC-0001-0001` was accepted as a known
+ * reference *and* escaped the migration warning its parent had earned. One
+ * resolver, so the two cannot drift again.
+ *
+ * The token's own declaration wins over its parent's: a spec may declare a
+ * sub-ID in its own right, and that row's `Level` is then the one in force.
+ * A token of the wrong shape resolves to nothing — `resolveParentTcId` strips
+ * the last segment, so an over-long `TC-0001-0001-0001` would otherwise speak
+ * for a real `TC-0001-0001` on the strength of a typo.
+ */
+export function resolveDeclaredTcId(
+  ref: string,
+  declaredTcIds: ReadonlySet<string>,
+): string | undefined {
+  const normalized = ref.trim().toUpperCase();
+  if (!isWellFormedTcRef(normalized)) return undefined;
+  if (declaredTcIds.has(normalized)) return normalized;
+  const parent = resolveParentTcId(normalized);
+  return parent !== undefined && declaredTcIds.has(parent) ? parent : undefined;
 }

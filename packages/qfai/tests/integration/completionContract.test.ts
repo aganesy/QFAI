@@ -76,7 +76,10 @@ describe("item completion checklist end-to-end enforcement", () => {
       /test-list\.md.*updated|Status.*Evidence.*updated|Evidence cell's anchor resolves to a fresh per-item entry/i,
     );
     // The gate point #251 added: the verdict half of the evidence file is
-    // appended only after both reviewers have returned PASS.
+    // appended only after the reviewers have returned PASS. The obligation is
+    // over *every routed* reviewer, not a fixed pair (#571): a UI-affecting row
+    // routes `product-surface-reviewer` as well, and a count of two left that
+    // verdict unrecorded.
     // The file is named by item 10, not hard-coded here: an `E2E` / `API` /
     // `Integration` row's evidence lives in `atdd-<spec-id>.md`, because that
     // is the stage that ran its RED. Pinning `implement-<spec-id>.md` in this
@@ -84,7 +87,7 @@ describe("item completion checklist end-to-end enforcement", () => {
     // `done`. `Integration` is in the enumeration because `/qfai-sdd` Phase 2b
     // seeds those rows and `/qfai-atdd` authors their tests.
     expect(c).toMatch(
-      /The item's evidence file \(item 10\) is appended with both reviewer verdicts after items 7-8 returned PASS/,
+      /The item's evidence file \(item 10\) is appended with \*\*every routed reviewer's\*\* verdict after items 7-8 returned PASS/,
     );
     expect(c).toMatch(
       /`\.qfai\/evidence\/atdd-<spec-id>\.md` for an `E2E` \/ `API` \/ `Integration` row/,

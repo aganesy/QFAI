@@ -92,6 +92,12 @@ several independent state transitions gets **one row per boundary**, not one row
 (`.qfai/assistant/skills/qfai-implement/references/selector-granularity.md`).
 Writing it as several `TC-*` rows here is the clearer form.
 
+An **empty** cell is not that case: it declares nothing, so the TC gets no
+ledger row and `QFAI-ATDD-112` owns it from `<testsDir>/integration/**` like any
+other TC with no declared `Level`. Declare a `Level` for every TC — leaving the
+cell blank hands the TC to `/qfai-atdd`, which is rarely what a unit-level
+oracle wants.
+
 ### Type column values
 
 - `normal` — Happy path / expected successful behavior.
