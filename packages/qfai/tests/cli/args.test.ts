@@ -616,6 +616,22 @@ describe("parseArgs", () => {
   // exited 0. `.qfai/contracts/cli/qfai-init.md` reserves exit 2 for
   // CLI-arg errors, so an unknown flag must markInvalid() with 2.
   describe("unknown flags", () => {
+    // The usage-error code is one number for every command. It used to be 1 by
+    // default with `guardrails` alone raised to 2 by name, which contradicted
+    // `prototyping iterate`'s canonical matrix (#755). The default is 2 now, so
+    // the by-name branch assigned the value it already had - dead, and still
+    // reading as "guardrails is special". Asserted over a spread of commands
+    // rather than one, because a single case cannot tell a default from a
+    // special case.
+    it.each(["init", "validate", "report", "doctor", "guardrails", "atdd", "discussion", "audit"])(
+      "reserves the same usage-error code on %s",
+      (command) => {
+        const parsed = parseArgs([command, "--bogus-flag"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.invalidExitCode, `${command} must use the shared code`).toBe(2);
+      },
+    );
+
     it("marks an unrecognized --flag invalid and reserves exit 2", () => {
       const cwd = process.cwd();
       const parsed = parseArgs(["init", "--bogus-flag", "--dry-run"], cwd);
