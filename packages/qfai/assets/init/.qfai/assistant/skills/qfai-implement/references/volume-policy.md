@@ -47,12 +47,12 @@ The tier scales **how often** a gate runs, never **whether** it runs.
 `implementation-reviewer` all **mandatory** for `qfai-implement`; T1 only
 changes the submitted unit from one row to one coherent group. Every row is
 still covered by a live turn from each of those agents, and a group that has
-not been confirmed leaves all of its members short of the 11-point gate.
+not been confirmed leaves all of its members short of the 12-point gate.
 
 `blocking_agents` lists all three, so a `REVISE` from any of them blocks
-`done`; item 8 of the 11-point gate requires the `implementation-reviewer` PASS
+`done`; item 8 of the 12-point gate requires the `implementation-reviewer` PASS
 on the same terms. The two lists agree on **who** blocks — they differ in
-**what** they authorise. Read the 11-point gate as the authority for an item
+**what** they authorise. Read the 12-point gate as the authority for an item
 transition; `blocking_agents` governs phase progression, not the ledger write.
 
 ## Batched review
@@ -84,6 +84,20 @@ the review-ready state — and waits there for its group. Members still move
   first: every member has reached `refactor`; the next `todo` row belongs to a
   different BR/AC; the ledger has no `todo` rows left. A group never spans a
   spec, so finishing a ledger also closes the open group.
+- **Re-verify every member on the closed tree, before the reviews.** A member
+  parked in `refactor` recorded its `Refactor verify revision` against the tree
+  as it stood then, and every later member's production or test change moves
+  that address by construction. The group's single `completion-reviewer` /
+  `implementation-reviewer` pass reads the closed tree, so without this step the
+  earlier members' item 6 names a revision the two verdicts do not, and gate
+  item 10 — items 6, 7 and 8 name the **same** revision
+  (`references/evidence-revision.md`) — could never be satisfied for them. On
+  close, re-run each member's relevant test suite once on the closed tree and
+  refresh all three of its `Refactor verify` fields — `command`, `result` and
+  `revision` — the same refresh a behaviour-preserving rework requires
+  (`references/round-evidence.md`). One narrow run per member, not a full suite:
+  the group's checkpoint below is what covers them jointly. A member whose
+  re-verify is not GREEN stops the close, and it is the group that waits.
 - **Review** on close: one `qa-gatekeeper` turn over the members' recorded
   RED/GREEN evidence, one `completion-reviewer` pass, one
   `implementation-reviewer` pass. On `REVISE` no member goes `done`; where the
@@ -98,7 +112,8 @@ the review-ready state — and waits there for its group. Members still move
     in `refactor` instead would strand it: forward-only means it could never
     redo the RED the gatekeeper rejected.
 - **Checkpoint, then the ledger write.** Reviews passing is not the last gate:
-  `SKILL.md` Refactor step 5 and item 11 of the 11-point gate both require
+  `SKILL.md` Refactor step 5 and the gate item that cites
+  `SKILL.md#checkpoint-verification` (item 12 of the 12-point gate) both require
   checkpoint verification to pass **before** a row becomes `done`. Run it once
   for the group after the three reviews return PASS, and only then transition
   every member `refactor -> done` in the same ledger write. A failing checkpoint
