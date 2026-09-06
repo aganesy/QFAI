@@ -202,8 +202,18 @@ function listedFamilies(message: string): string[] {
 }
 
 /** `PREFIX-*` matches by prefix; anything else is an exact finding code. */
+/**
+ * Whether one table entry covers one emitted code.
+ *
+ * A table entry may carry an annotation after its pattern —
+ * `TDDLIST_* (execution state)` names the glob and says what it holds — so only
+ * the first whitespace-delimited token is the pattern. Reading the whole entry
+ * made an annotated glob match nothing, which turned the contradiction check
+ * below into a silent pass for every code that entry covers.
+ */
 function familyMatches(family: string, code: string): boolean {
-  return family.endsWith("*") ? code.startsWith(family.slice(0, -1)) : code === family;
+  const pattern = family.split(/\s+/u)[0] ?? family;
+  return pattern.endsWith("*") ? code.startsWith(pattern.slice(0, -1)) : code === pattern;
 }
 
 async function noticeFor(root: string, profile: ValidationProfile): Promise<Finding | undefined> {

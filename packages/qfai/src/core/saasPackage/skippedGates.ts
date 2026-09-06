@@ -55,7 +55,10 @@ export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, 
     // Only the integrity gate's own two codes. `QFAI-TRACE-*` would also claim
     // the `QFAI-TRACE-1xx` block, which belongs to `validateTraceability` — a
     // different validator, and not one this skip-set names.
-    validateTraceabilityIntegrity: ["QFAI-TRACE-001", "QFAI-TRACE-002"],
+    // `QFAI-TRACE-003` as well: the gate raises it when the check could not
+    // run at all — no diff, or a spec the diff names that the tree no longer
+    // carries — so a skip that omitted it under-reported what went unevaluated.
+    validateTraceabilityIntegrity: ["QFAI-TRACE-001", "QFAI-TRACE-002", "QFAI-TRACE-003"],
   };
 
 /** Deduped, order-preserving code families the saas-package profile skips. */

@@ -8,6 +8,7 @@ import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { SUNSETS, isAtOrPastSunset } from "../../core/sunset.js";
 import { toRelativePath } from "../../core/paths.js";
+import { EMITTED_RULE_CODES } from "../../core/emittedRuleCodes.js";
 import { ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE } from "../../core/saasPackage/profile.js";
 import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
 import type {
@@ -463,6 +464,20 @@ function buildDeprecationIssue(args: {
 }
 
 /**
+ * Every `TDDLIST_` code that is NOT seed shape — the execution state a row only
+ * carries once `/qfai-implement` has driven it.
+ *
+ * Derived from the generated registry by subtracting the seed-shape set rather
+ * than listed here, so a code added to `validators/tddList.ts` lands in exactly
+ * one of the two groups: seed shape if it is registered there, execution state
+ * otherwise. A hand-written list could leave a new code in neither, which is
+ * the shape of the omission this whole table exists to prevent.
+ */
+const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.filter(
+  (code) => code.startsWith("TDDLIST_") && !TDD_LIST_SEED_SHAPE_CODES.has(code),
+);
+
+/**
  * Validator groups the `full` profile runs, with the finding-code families
  * each one produces.
  *
@@ -608,11 +623,13 @@ export const GATE_GROUP_FAMILIES = {
   // `validate` they are reachable only through `validateReviewerJustification`,
   // which sdd runs — so they belong to sdd rather than to no group at all.
   "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT", "R-EXPLORATION-CERTIFY-ATTEMPT"],
-  // `validateContracts` (with `validateContractConsistency` /
-  // `validateDbContractExecutability`) — `runSddValidators` and
-  // `runTddValidators`. Listed by code, not as `QFAI-CONTRACT-*`: the wildcard
-  // would swallow the sdd-only `QFAI-CONTRACT-030` below, letting a `tdd` run
-  // claim a hard gate it never reached.
+  // `validateContracts` — `runSddValidators` and `runTddValidators`. It
+  // composes `validateContractConsistency` (`-040`) and
+  // `validateDbContractExecutability` (`-031`) internally, so their codes are
+  // this group's too. Listed by code, not as `QFAI-CONTRACT-*`: the wildcard
+  // would swallow the sdd-only reference codes below, letting a `tdd` run claim
+  // a hard gate it never reached. Enumerated from the emitters rather than from
+  // the range, which is how `-015` went missing on the first pass.
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -620,14 +637,29 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-012",
     "QFAI-CONTRACT-013",
     "QFAI-CONTRACT-014",
+    "QFAI-CONTRACT-015",
     "QFAI-CONTRACT-020",
     "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     "QFAI-CONTRACT-040",
     "QFAI-DB-*",
   ],
-  // `validateContractReferences` — `runSddValidators` only.
-  "contract-references": ["QFAI-CONTRACT-030"],
+  // `validateContractReferences` — `runSddValidators` only. Five codes, not
+  // one: the gate reports a missing reference, and four shapes of a reference
+  // that resolves to the wrong thing.
+  "contract-references": [
+    "QFAI-CONTRACT-030",
+    "QFAI-CONTRACT-032",
+    "QFAI-CONTRACT-033",
+    "QFAI-CONTRACT-034",
+    "QFAI-CONTRACT-035",
+  ],
+  // `validateContractSsotModules` — `runSddValidators`, and `runTddValidators`
+  // behind its `includeContracts` flag: the implementation stage is the one
+  // that moves and renames the modules a contract asserts, so its own gate has
+  // to see a `- SSOT modules:` entry it just made dead. Absent from the table
+  // entirely before, so no profile could report it as unevaluated.
+  "contract-ssot-modules": ["QFAI-CONTRACT-050"],
   // Root DESIGN.md sample / identity / lock gates, run by both
   // design-contract-readiness emitters before they branch on stage.
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032", "QFAI-DCON-034"],
@@ -673,7 +705,12 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-AUD-*",
     "QFAI-PLATFORM-*",
     "QFAI-CFG-LINK-*",
-    "QFAI-UIUX-PERF",
+    // `QFAI-UIUX-PERF` is deliberately absent. It is a retired code: the
+    // over-budget signal is printed beside the counts by
+    // `formatTimingOverruns` rather than pushed as a finding, because how long
+    // a run took describes the machine and not the tree — `validationTimings`
+    // asserts no run emits it. Naming it here would point the notice at a gate
+    // that cannot fire.
   ],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
@@ -705,10 +742,16 @@ export const GATE_GROUP_FAMILIES = {
   // them. `QFAI-TDDLIST-*` is the canonical spelling of the same gate and every
   // code it holds today is execution state, so the glob sits here whole.
   //
-  // `QFAI-TRACE-*` is deliberately NOT here: the four `traceability-*` groups
-  // below split that prefix, and leaving the glob would count every trace code
-  // in two groups at once.
-  tdd: ["TDDLIST_* (execution state)", "QFAI-TDDLIST-*", "QFAI-TEST-*"],
+  // The bare `TDDLIST_` half is enumerated, not globbed: `tdd-ledger-seed`
+  // holds the other part of that prefix, and `TDDLIST_*` here claimed both —
+  // so an `sdd` run, which DOES evaluate the seed half, was told
+  // `TDDLIST_MISSING` went unevaluated while it was emitting exactly that.
+  // Derived by subtraction so the two halves cannot overlap or leave a gap.
+  //
+  // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
+  // `traceability-*` groups below split that prefix, and leaving the glob would
+  // count every trace code in two groups at once.
+  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*", "QFAI-TEST-*"],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
@@ -857,6 +900,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "reviewer-justification-only",
     "contracts",
     "contract-references",
+    "contract-ssot-modules",
     "design-contract-readiness",
     "design-contract-readiness-sdd",
     "root-design-md-parse",
@@ -884,6 +928,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "atdd-traceability",
     "drift",
     "contracts",
+    "contract-ssot-modules",
     "traceability-ledger",
     "traceability-impl-drift",
     "traceability-layered",
