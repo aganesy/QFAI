@@ -112,6 +112,22 @@ export type ValidationWaivers = {
   suppressed: ValidationWaiverSuppressed;
 };
 
+/**
+ * Wall-clock cost of the UI/UX validator group, with the budget each part was
+ * measured against.
+ *
+ * How long a run took is a property of the machine that ran it, not of the
+ * tree being validated, so it is reported here instead of as a finding: the
+ * same commit keeps the same `counts` on a laptop and on a loaded CI runner.
+ * Present only for the profiles that run the UI/UX group.
+ */
+export type ValidationTimings = {
+  uiuxMs: number;
+  uiuxBudgetMs: number;
+  htmlMockMs: number;
+  htmlMockBudgetMs: number;
+};
+
 export type ValidationResult = {
   toolVersion: string;
   /**
@@ -132,4 +148,5 @@ export type ValidationResult = {
   counts: ValidationCounts;
   traceability: ValidationTraceability;
   waivers?: ValidationWaivers;
+  timings?: ValidationTimings;
 };
