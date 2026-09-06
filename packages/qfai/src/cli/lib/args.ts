@@ -9,7 +9,14 @@ export type ParsedArgs = {
   options: {
     root: string;
     rootExplicit: boolean;
+    /**
+     * `qfai init` の出力先。`--dir` 未指定で `--root` が明示された
+     * init 実行では `root` の値が入る（`--root` は init でも出力先の
+     * エイリアスとして働く）。
+     */
     dir: string;
+    /** `--dir` が明示されたか。init の出力先解決で `--root` より優先する。 */
+    dirExplicit: boolean;
     force: boolean;
     yes: boolean;
     dryRun: boolean;
@@ -215,6 +222,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     root: cwd,
     rootExplicit: false,
     dir: cwd,
+    dirExplicit: false,
     force: false,
     yes: false,
     dryRun: false,
@@ -485,6 +493,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // the usage text this refusal prints says so.
           if (ownedBy("init")) {
             options.dir = next;
+            options.dirExplicit = true;
           } else {
             markInvalid(notValidHere("--dir"));
           }
@@ -1085,6 +1094,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
   if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid(subcommandReason("atdd", null));
+  }
+  // init 以外の全コマンドは `--root` を「対象ディレクトリ」として読む。
+  // init だけが `--dir` しか見ないため、`--root` を渡すと値が捨てられ
+  // cwd が初期化されていた。init でも `--root` を出力先のエイリアスと
+  // して扱う。`--dir` が明示された場合は init 固有の `--dir` を優先。
+  if (command === "init" && options.rootExplicit && !options.dirExplicit) {
+    options.dir = options.root;
   }
   return { command, invalid, ...(invalidReason ? { invalidReason } : {}), options };
 }
