@@ -129,6 +129,11 @@ async function usePack(root: string, packName: string): Promise<void> {
 function deleteStorageSlot(template: string): string {
   const lines = template.split(/\r?\n/);
   const start = lines.findIndex((line) => /^#{1,3}\s+Research\s+Summary/.test(line));
+  // No heading, nothing to drop. Without this guard `start` is -1 and
+  // `slice(0, -1)` silently truncates the template's last line instead,
+  // so a caller would be handed a corrupted fixture rather than an
+  // unchanged one.
+  if (start === -1) return template;
   const rest = lines.slice(start + 1);
   const end = rest.findIndex((line) => /^#{1,3}\s+\S/.test(line));
   return [...lines.slice(0, start), ...(end === -1 ? [] : rest.slice(end))].join("\n");

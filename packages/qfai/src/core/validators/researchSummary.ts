@@ -32,7 +32,13 @@ function schemaWindowNote(severity: "warning" | "error"): string {
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
-/** ```yaml fence inside the stored section — the prose around it is not data. */
+/**
+ * A fenced block inside the stored section — the prose around it is not data.
+ *
+ * Any info string, not `yaml` alone: the shipped template fences the summary as
+ * ```yaml, but a pack that fences it bare or as ```yml carries the same data and
+ * reading none of it would report every field missing.
+ */
 const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
 /** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
 const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
