@@ -6,7 +6,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
@@ -20,6 +20,7 @@ import {
   listShippedAssistantFiles,
 } from "../helpers/repositoryAttribution.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -1009,6 +1010,87 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // suite; this static check keeps asserting the two actions are present.
     expect(content).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
     expect(content).toMatch(/actions\/setup-node@[0-9a-f]{40}\b/);
+
+    // The comment justifying the Node pin must quote the floor the package
+    // actually publishes, not one qfai stopped shipping releases ago.
+    const packageJsonText = await readFile(
+      path.join(repoRoot, "packages", "qfai", "package.json"),
+      "utf-8",
+    );
+    const nodeEngine = /"engines"\s*:\s*\{[^}]*"node"\s*:\s*"([^"]+)"/.exec(packageJsonText)?.[1];
+    expect(nodeEngine).toBeTruthy();
+    expect(content).toContain(`\`engines: "${nodeEngine}"\``);
+    expect(content).not.toContain('">=18.0.0"');
+  });
+
+  it("documents the pnpm precondition the validate lane stops closed on", async () => {
+    // The pnpm setup action resolves its version from
+    // `package.json#packageManager` and from nowhere else, so a repository
+    // holding a `pnpm-lock.yaml` and nothing else cannot install. Passing a
+    // `version:` input instead is not the fix — it would override the version
+    // the adopter declared — so the lane stops CLOSED with an annotation
+    // naming the file and the fix rather than reporting a validate result it
+    // never computed. The behavioural oracle is TC-0003-0044 in
+    // tests/integration/shippedWorkflowPortability.test.ts; what is checked
+    // here is that the shipped file and both READMEs agree with it.
+    const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
+    const content = await readFile(workflowPath, "utf-8");
+
+    expect(content).toContain("Resolve the package manager (pnpm route fails closed)");
+    // No `version:` input anywhere, on any step: a declared packageManager is
+    // the only source, so nothing may override it.
+    expect([...content.matchAll(/^\s*version: \S/gm)]).toHaveLength(0);
+
+    // …and neither README may promise a lockfile alone is enough.
+    for (const readmePath of [
+      path.join(repoRoot, "README.md"),
+      path.join(repoRoot, "packages", "qfai", "README.md"),
+    ]) {
+      const readme = await readFile(readmePath, "utf-8");
+      expect(readme, readmePath).toContain("package.json#packageManager");
+    }
+  });
+
+  // Both READMEs used to claim qfai generates no GitHub Actions workflow while
+  // `qfai init` copied `root/.github/workflows/` into every initialized
+  // repository. The set is read from SHIPPED_WORKFLOW_NAMES rather than spelled
+  // out here, so shipping a further workflow fails this test until the prose
+  // names it too — which is how the denial went stale in the first place.
+  it("documents every CI workflow `qfai init` installs in both READMEs", async () => {
+    const readmePaths = [
+      path.join(repoRoot, "README.md"),
+      path.join(repoRoot, "packages", "qfai", "README.md"),
+    ];
+
+    expect(SHIPPED_WORKFLOW_NAMES.size).toBeGreaterThan(0);
+    const invocations = shapeValueLiterals();
+    expect(
+      invocations.length,
+      "the declared shape exposes no invocation to check for",
+    ).toBeGreaterThan(0);
+
+    for (const readmePath of readmePaths) {
+      const readme = await readFile(readmePath, "utf-8");
+      const label = path.relative(repoRoot, readmePath);
+
+      expect(readme, `${label} must not deny the shipped workflows`).not.toContain(
+        "It does not generate GitHub Actions workflows.",
+      );
+      for (const name of SHIPPED_WORKFLOW_NAMES) {
+        expect(readme, `${label} must name .github/workflows/${name}`).toContain(
+          `.github/workflows/${name}`,
+        );
+      }
+      // Derived, never restated. The declared shape is the one oracle for the
+      // lane's subcommand / profile / threshold (the contract's DTC-5), so
+      // spelling the invocation here would make this a second one — and would
+      // go stale silently the day the shape changed it.
+      for (const invocation of invocations) {
+        expect(readme, `${label} must state the gate a shipped workflow runs`).toContain(
+          invocation,
+        );
+      }
+    }
   });
 
   it("prevents legacy completion-gate remnants in assistant markdown", async () => {
@@ -2690,6 +2772,13 @@ function shouldSkipReference(ref: string): boolean {
     return true;
   }
   if (ref.includes(".qfai/report/") || ref.includes(".qfai/evidence/")) {
+    return true;
+  }
+  // Written by `qfai init` into the ADOPTER's tree, so it is nameable in the
+  // README (the reader has to know to commit it) and absent from this one —
+  // the same class as the `.qfai/report/` outputs above, pinned to the single
+  // filename rather than a directory because that is the whole of the class.
+  if (ref === ".qfai/install-provenance.json") {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {
