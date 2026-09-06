@@ -618,6 +618,38 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // `QFAI-TEST-002` is `info`, so `--fail-on error` exits 0 on it. A project
+  // still carrying the `testFileGlobs: []` that `qfai init` ships scans zero
+  // files, `QFAI-TEST-001` cannot fire, and gates phrased as "zero
+  // QFAI-TEST-001" passed on a stub scan that never ran. Every gate that names
+  // the one code must name the other.
+  it("blocks completion on QFAI-TEST-002, not only on QFAI-TEST-001", async () => {
+    for (const dir of SKILL_DIRS) {
+      const checkpoint = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(checkpoint).toContain(
+        "reports zero `QFAI-TEST-001` **and** zero `QFAI-TEST-002` findings",
+      );
+      expect(checkpoint).toContain("Reading that exit 0 as a pass passes a gate that");
+      // A waiver leaves the finding in the output with `suppressed=true`
+      // (`waivers.ts:applyWaiversToFindings`), so a gate phrased as a flat
+      // "zero QFAI-TEST-002" would be unsatisfiable on the very repositories
+      // the waiver route exists for — an unscannable extension reports the
+      // code on every run.
+      expect(checkpoint).toContain("A waiver does not remove the finding");
+      expect(checkpoint).toContain("`suppressed=true`");
+
+      const checklist = await readFile(path.join(dir, "references", "final-checklist.md"), "utf-8");
+      expect(checklist).toContain("a waiver has not marked `suppressed=true`");
+      expect(checklist).toContain("Do **not** tick the");
+
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**Or the run reports a `QFAI-TEST-002` no waiver marked");
+    }
+  });
+
   // The boundary cadence was stated three times: this file denied the counted
   // rule that `relevant-test-suite.md` and gate item 12 both assume, so an agent
   // ran either ~1 full suite per row or ~1 per 10 depending on which document it

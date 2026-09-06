@@ -170,3 +170,13 @@ releases completion.
       formality: record the finding, its owning spec and why it is not this run's work,
       say so in the completion report, and do **not** claim the gate passed, weaken the
       profile or lower `--fail-on`. The repo-wide run belongs to `/qfai-verify`.
+- [ ] The same run reports zero `QFAI-TEST-002` findings a waiver has not marked `suppressed=true`.
+      `QFAI-TEST-002` is `info`, so it never fails `--fail-on error` — it reports that the stub scan
+      produced **no evidence**: an empty `validation.traceability.testFileGlobs` (the value
+      `npx qfai init` ships, under which zero files are scanned and `QFAI-TEST-001` cannot fire at
+      all), or an extension qfai has no stub dialect for. Under either, the zero-`QFAI-TEST-001` box
+      above certifies nothing, so ticking this list on the exit code alone declares completion over
+      an unrun gate. Configure the globs (`/qfai-configure`) and re-run. A waiver does not remove
+      the finding — it stays in the output carrying `suppressed=true`, and that mark is what makes
+      an extension qfai cannot scan a tickable exception rather than a blocker. Do **not** tick the
+      box because the command exited 0.

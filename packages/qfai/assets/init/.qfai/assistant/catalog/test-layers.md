@@ -244,9 +244,8 @@ same way an early one in `<testsDir>/api/**` is. Two consequences bind every `TC
 
 ## Directory → AtddTestKind (code-side, derived from the crosswalk)
 
-Derived from `## Layer vocabulary crosswalk (normative)`, which is the
-authority for this mapping. This list only restates the three kinds the ATDD
-scan can resolve:
+Derived from `## Layer vocabulary crosswalk (normative)`, which is the authority for
+this mapping. This list only restates the three kinds the ATDD scan can resolve:
 
 - `<testsDir>/integration/**` -> Integration
 - `<testsDir>/api/**` -> API
@@ -448,9 +447,8 @@ measurable:
   the observation is the judgement call above, and the evidence entry must say
   how the distribution was counted so it is not read as a tool measurement.
 
-Either way completion is not blocked and no Change Request is raised: a
-user-blocking Change Request against a project's own tuning knob cannot conclude
-anything actionable.
+Either way completion is not blocked and no Change Request is raised: a user-blocking
+Change Request against a project's own tuning knob cannot conclude anything actionable.
 
 ## Anti-patterns
 
@@ -497,3 +495,7 @@ implementation), so drop the modifier rather than delete the test.
 Without it a clean run on an unsupported stack is indistinguishable from a
 checked one — the detector used to be JS-only while file selection was
 stack-agnostic, so every other stack got a clean result that meant nothing.
+
+The same finding also reports an empty `validation.traceability.testFileGlobs`,
+the value `npx qfai init` ships: the stub gate then selects no file at all, so
+`QFAI-TEST-001` cannot fire until `/qfai-configure` populates that key.

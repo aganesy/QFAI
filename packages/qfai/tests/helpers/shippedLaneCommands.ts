@@ -1312,7 +1312,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Derived by running `qfai init` into the E2E's temp root and reading what it
   // wrote, which is how both predecessors were derived — not copied from a
   // failure message.
-  ["qfai.config.yaml", "6aa11ffeea8407552eea87acb6059204865e42431f44cf849171137623da46fb"],
+  // Re-derived once more for the MERGED file: main dropped the three retired
+  // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
+  // comment, and this branch seeds `testFileGlobs`. Neither predecessor digest
+  // describes what ships. Taken by running `qfai init` into a temp root and
+  // hashing the file it wrote, which is how both predecessors were taken.
+  ["qfai.config.yaml", "ed3b8b5e22a67ba6a83a81aa1a83d0db8ca39ba5f262b68895135ef9a57acf90"],
 ]);
 
 /**
