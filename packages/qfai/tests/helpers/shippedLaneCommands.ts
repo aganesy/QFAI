@@ -1297,15 +1297,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
-  // `scNoTestSeverity`, `orphanContractsPolicy`) AND the `forbidTestTodoStubs`
-  // comment no longer calls the opt-out's waiver a requirement. Neither
+  // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
+  // comment no longer calls the opt-out's waiver a requirement, AND the
+  // `atdd.scaffoldEscalateCycles` block this branch adds is present. Neither
   // predecessor's digest describes what ships, and the map is keyed by file
   // name, so this is one pin rather than two.
   //
   // Derived by running `qfai init` into the E2E's temp root and reading what it
   // wrote, which is how both predecessors were derived — not copied from a
   // failure message.
-  ["qfai.config.yaml", "6c9016bf3fdc6c4704219b9c57bceb0d37871277ca122b102daa8a72f152bc3a"],
+  ["qfai.config.yaml", "6aa11ffeea8407552eea87acb6059204865e42431f44cf849171137623da46fb"],
 ]);
 
 /**

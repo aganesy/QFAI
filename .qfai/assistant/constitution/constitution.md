@@ -137,7 +137,7 @@ Default policy:
   Approvals are unbounded by construction: SDD triage requires an `Approved By`
   on every approval-required row and puts no cap on rows, and the reviewer-gate
   escalation exit requires a user decision per escalation
-  (`shared-skill-delegation-baseline.md#round-budget-must`). Counting them would
+  (`shared-skill-delegation-baseline.md#round-budget-and-convergence-must`). Counting them would
   make this article impossible to satisfy in the stage that asks the most.
 - Classify **each question, not the prompt**. A prompt that carries both spends
   one unit per clarification it contains; only its approval questions are exempt.
