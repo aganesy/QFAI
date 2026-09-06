@@ -32,6 +32,7 @@
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/assets.test.ts",
+    "tests/assets/atddConDbOwnership.test.ts",
     "tests/assets/atddScaffoldTunableSeed.test.ts",
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
