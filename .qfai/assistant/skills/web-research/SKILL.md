@@ -3,7 +3,7 @@ name: web-research
 title: "Web Research Pipeline"
 description: "8-stage web research pipeline with MCP integration, caching, and citation generation."
 argument-hint: "[query] [--max-depth N] [--yolo]"
-allowed-tools: [Read, Glob, Bash, Write, WebSearch, WebFetch]
+allowed-tools: [Read, Glob, Bash, Write, Task, Agent, WebSearch, WebFetch]
 roles: [Researcher, Analyst, FactChecker]
 mode: research-pipeline
 ---
@@ -73,8 +73,9 @@ steps:
   returning `PASS`.
 - Reviewer responses use the response template in
   `shared-skill-delegation-baseline.md#reviewer-response-template`, including the
-  REQUIRED `Authored/edited under review:` line. A response omitting that line is
-  not a valid verdict; anything other than `none` cannot be a `PASS`.
+  REQUIRED `Reviewer role:`, `Reviewed artifact:` and `Authored/edited under review:`
+  lines. A response omitting any of them is not a valid verdict; anything other than
+  `none` on the last cannot be a `PASS`.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
 - A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.
@@ -109,7 +110,7 @@ Primary search provider. Connects via **stdio** transport for local execution.
 Also supports **HTTP transport** (streamable HTTP) for remote/hosted deployments
 where HTTP-based MCP endpoints are preferred.
 
-Configuration templates: `assets/mcp-templates/brave-search/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/brave-search/`
 
 ### 2.2 Firecrawl MCP
 
@@ -118,14 +119,14 @@ Content fetching and extraction. Supports two modes:
 - **Local**: `npx` execution via stdio transport.
 - **Hosted**: Remote Firecrawl service via HTTP transport.
 
-Configuration templates: `assets/mcp-templates/firecrawl/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/firecrawl/`
 
 ### 2.3 Playwright MCP
 
 Browser-based fetching for JavaScript-rendered pages.
 Used as fallback when Firecrawl cannot extract content.
 
-Configuration templates: `assets/mcp-templates/playwright/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/playwright/`
 
 ### 2.4 MCP Failure Recovery
 
