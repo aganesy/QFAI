@@ -101,7 +101,7 @@ Primary search provider. Connects via **stdio** transport for local execution.
 Also supports **HTTP transport** (streamable HTTP) for remote/hosted deployments
 where HTTP-based MCP endpoints are preferred.
 
-Configuration templates: `assets/mcp-templates/brave-search/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/brave-search/`
 
 ### 2.2 Firecrawl MCP
 
@@ -110,14 +110,14 @@ Content fetching and extraction. Supports two modes:
 - **Local**: `npx` execution via stdio transport.
 - **Hosted**: Remote Firecrawl service via HTTP transport.
 
-Configuration templates: `assets/mcp-templates/firecrawl/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/firecrawl/`
 
 ### 2.3 Playwright MCP
 
 Browser-based fetching for JavaScript-rendered pages.
 Used as fallback when Firecrawl cannot extract content.
 
-Configuration templates: `assets/mcp-templates/playwright/`
+Configuration templates: `.qfai/assistant/skills/web-research/mcp-templates/playwright/`
 
 ### 2.4 MCP Failure Recovery
 
