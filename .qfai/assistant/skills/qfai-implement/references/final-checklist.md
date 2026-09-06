@@ -133,7 +133,7 @@ releases completion.
 - [ ] Every ledger row reached a **terminal** status: `done`, or `exception` whose `DR-ID` names a
       Decision Record recorded as a **user-approved accepted-risk waiver** (a `TDDLIST-001` entry in
       `.qfai/waivers.yml`) — an `exception` whose DR only describes the anomaly is a parked defect.
-      No `todo`, `red`, `green`, `refactor` or `review-fix` row remains. Accurate statuses are a
+      No `todo`, `blocked`, `red`, `green`, `refactor` or `review-fix` row remains. Accurate statuses are a
       different claim: a run that advanced no row records the ones left mid-cycle correctly and still
       may not declare the spec complete (`SKILL.md#completion-prohibition-conditions`).
 - [ ] No `## Cross-spec obligations` entry of the **code-ownership** kind in this spec's evidence

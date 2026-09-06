@@ -40,6 +40,7 @@ const PARALLEL = "assistant/skills/qfai-implement/references/parallelization-pol
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const ROUND = "assistant/skills/qfai-implement/references/round-evidence.md";
 const CHECKPOINT = "assistant/skills/qfai-implement/references/checkpoint-verification.md";
+const AUDIT_HASH = "assistant/constitution/references/audited-evidence-hash.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -148,7 +149,6 @@ describe("evidence and verdicts carry a revision", () => {
 
     it(`${tree}: the refactor-verify pair carries the address items 6, 7 and 8 share`, async () => {
       const skill = flat(await read(tree, SKILL));
-      const delegation = flat(await read(tree, DELEGATION));
 
       // The write point is named, so the field is not left without one.
       expect(skill).toContain(
@@ -158,8 +158,11 @@ describe("evidence and verdicts carry a revision", () => {
         "**That is the address items 6, 7 and 8 share**, that run being the only observation of the refactored tree taken before the reviews",
       );
       // In the completion reviewers' audit subject: it is what their own
-      // `Reviewed revision` is checked against.
-      expect(delegation).toContain("`Refactor verify command` / `result` / `revision`");
+      // `Reviewed revision` is checked against. The subject moved out of the
+      // delegation baseline when that file went over the asset line budget, so
+      // this reads the reference the baseline now points at.
+      const auditHash = flat(await read(tree, AUDIT_HASH));
+      expect(auditHash).toContain("`Refactor verify command` / `result` / `revision`");
     });
 
     it(`${tree}: the three places share a procedure, not one address`, async () => {

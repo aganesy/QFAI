@@ -15,6 +15,14 @@ import {
   parseFirstMarkdownTable,
   splitMarkdownRow,
 } from "../specPackParsers.js";
+// The `DR-*` id class and its two declaration files, shared with the re-open
+// gate in `specPack.ts` so both resolve a `DR-*` against the same files.
+import {
+  collectDeclaredDrIds,
+  DR_DECLARATION_FILES,
+  DR_ID_FORMAT,
+  DR_POLICY_DECLARATION_FILE,
+} from "../decisionRecords.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
@@ -2248,20 +2256,6 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
- * The declared shape of a Decision Record id.
- *
- * `DR-ID` was a hard, `error`-severity precondition for `exception` with no
- * referent anywhere in the toolkit: no ID class, no row schema in either
- * shipped Decisions template, and no validator that resolved the reference. Any
- * non-empty string satisfied the gate, so the one thing a parked row was
- * required to carry was the one thing nothing could check.
- *
- * Kept in step with `ids.ts#STRICT_ID_PATTERNS.DR` — anchored here because this
- * validates one cell rather than scanning prose.
- */
-const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
-
-/**
  * Anything presenting itself as a DR id, so a malformed one is reported rather
  * than ignored.
  *
@@ -2271,10 +2265,6 @@ const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
  * prefix; whether the rest is well formed is what `DR_ID_FORMAT` decides.
  */
 const DR_ID_SHAPED = /^DR[-_\d]/i;
-
-/** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
-const DR_DECLARATION_FILES = ["07_Decisions.md"];
-const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
 
 /**
  * The standalone-record home, relative to the project root.
@@ -2475,24 +2465,19 @@ async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<strin
  * would make an id's validity depend on where it was declared, and would leave
  * the implement stage, which may write nowhere else, with no way to clear the
  * finding but the forbidden upstream write or a waiver.
+ *
+ * The two upstream files are read through `decisionRecords.ts`, which the
+ * re-open gate in `specPack.ts` reads too: one reader, so the two cannot
+ * disagree about where a `DR-*` may be declared. The record directory is this
+ * validator's own — the re-open gate resolves a `Re-opens:` against declaring
+ * headings, which a filename cannot carry.
  */
 async function buildDrDeclarationResolver(
   specDir: string,
   specsRoot: string,
   recordIds: ReadonlySet<string>,
 ): Promise<(drId: string) => boolean> {
-  const declared = new Set<string>();
-  const files = [
-    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
-    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
-  ];
-  for (const file of files) {
-    if (!(await exists(file))) continue;
-    const text = await readSafe(file);
-    for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
-      declared.add(match[0].toUpperCase());
-    }
-  }
+  const declared = await collectDeclaredDrIds(specDir, specsRoot);
   return (drId) => {
     const id = drId.toUpperCase();
     return declared.has(id) || recordIds.has(id);
