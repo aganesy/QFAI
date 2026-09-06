@@ -72,6 +72,9 @@ import {
 import {
   MAX_ITERATIONS,
   MAX_ITERATION_INDEX,
+  SEED_COMMIT_SHA,
+  SEED_PROSE_CRITIQUE_PLACEHOLDER,
+  SEED_REVIEWER_ID,
   iterationDir,
   iterationReviewPath,
   iterationHtmlPath,
@@ -208,6 +211,25 @@ export type RunPrototypingIterateOptions = {
    * `--force` the destructive path is refused with a recovery hint.
    */
   force?: boolean;
+  /**
+   * Preview: report what the run would do, and write nothing.
+   *
+   * `--dry-run` is parsed globally but reached only `init` and `doctor`,
+   * so this command performed the cycle-0 destructive reset under a flag
+   * documented as "display only, make no changes" — measured at 27 files
+   * and 1,475,551 bytes relocated, with `mutation-log.jsonl` recording
+   * every write as real and no dry-run marker on any entry. The
+   * destructive-rerun gate exists to make that outcome deliberate, and
+   * `--dry-run` walked straight past it.
+   *
+   * The preview is taken AFTER every read-only gate, so it reports the
+   * exit code those gates produce rather than exiting 0 past them:
+   * `--cycle 0 --dry-run` against a populated `iter-00` with no
+   * `--force` still refuses with 2, because that is what the real run
+   * does. It cannot predict a failure only the write path can reach — a
+   * capture error, a license-verify rejection — and says so.
+   */
+  dryRun?: boolean;
   /**
    * Absolute or root-relative path to an add-only license-patch file.
    * When set, iterate applies the patch to the frozen license catalog
@@ -699,11 +721,14 @@ export async function runPrototypingIterate(
   //     of the cycle-0 reset path so the backup is byte-equivalent to
   //     the prior loop. The rename MUST precede `clearEvidenceIterDirs`
   //     so a destructive-rerun failure cannot lose the prior loop.
+  //     The refusal is read-only and keeps its precedence over the
+  //     `--dry-run` preview below: a preview that exits 0 where the run
+  //     it previews exits 2 is the same defect in a new place.
+  let cycleZeroReset: { evidenceRootAbs: string; iter00Abs: string } | null = null;
   if (options.cycle === 0) {
     const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
     const iter00Abs = path.join(evidenceRootAbs, "iter-00");
-    const iter00Exists = await dirExists(iter00Abs);
-    if (iter00Exists) {
+    if (await dirExists(iter00Abs)) {
       if (!options.force) {
         error(
           "qfai prototyping iterate --cycle 0: an existing iter-00 directory was found at " +
@@ -713,6 +738,31 @@ export async function runPrototypingIterate(
         );
         return 2;
       }
+      cycleZeroReset = { evidenceRootAbs, iter00Abs };
+    }
+  }
+
+  // 3c) `--dry-run` stops here, the last point before any write.
+  //     Everything above is a read: the zero-UI-bearing precheck, the
+  //     DESIGN.md read and hash, the lock gate, the converged-loop
+  //     refusal, `--primary-spec-id` normalisation, the cycle-range gate
+  //     and the destructive-rerun refusal. The first mutation is the
+  //     mutation-log write in the reset block below.
+  if (options.dryRun === true) {
+    reportIterateDryRun({
+      root: options.root,
+      cycle: options.cycle,
+      mode: resolvedMode,
+      specCount: specs.length,
+      ...(options.targetUrl !== undefined ? { targetUrl: options.targetUrl } : {}),
+      reset: cycleZeroReset,
+    });
+    return 0;
+  }
+
+  if (cycleZeroReset !== null) {
+    {
+      const { evidenceRootAbs, iter00Abs } = cycleZeroReset;
       const backupAbs = path.join(
         evidenceRootAbs,
         `iter-00.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
@@ -776,7 +826,6 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
-      declaredScreens: (options.screens ?? []).map((s) => s.id),
       // cycle-0 SSOT for the spec set under review. Kept single-spec
       // (mirrors the legacy `specsCovered` field) until the per-spec
       // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
@@ -2002,13 +2051,6 @@ type SeedMetadata = {
   frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
   /**
-   * Declared screen ids (underscore casing). When non-empty the seed
-   * iteration's `evidenceRefs[]` bijects with this list. Empty /
-   * absent → no `evidenceRefs[]` entries on the seed iteration
-   * (legacy default-OFF capture path).
-   */
-  declaredScreens?: readonly string[];
-  /**
    * Resolved per-loop prototyping mode (convergence default,
    * exploration enables medium gate relaxation). Persisted as
    * `prototyping.json#mode` AND copied onto the seed iteration record
@@ -2026,12 +2068,6 @@ type SeedMetadata = {
  * The text is a single deterministic sentence repeated to land
  * inside the band.
  */
-const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
-  const sentence =
-    "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
-  return Array.from({ length: 10 }, () => sentence).join(" ");
-})();
-
 /**
  * Build the cycle-0 seed `iterations[]` array. Emits exactly one
  * iteration record whose shape passes `validatePrototypingEvidence`
@@ -2040,40 +2076,32 @@ const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
  * accidentally classify the seed as `axes-exceptional`; the reviewer
  * overwrites scores on the first review pass.
  *
- * `evidenceRefs` shape is the canonical `{ screenshot, html }` object
- * form per the {@link Iteration} type, `buildEvaluatorReview`, and the
- * ref-integrity validator (which reads `iter.evidenceRefs.screenshot`
- * / `.html` directly). When multiple screens are declared, the seed
- * uses the FIRST screen's paths as the iteration-level representative
- * — the reviewer overwrites this with the actually-reviewed surface on
- * the first review pass. When no screens are declared, the seed uses
- * the default `iter-NN/index.{png,html}` placeholder so the validator
- * has a concrete path to check.
+ * **The seed cites no evidence, and that is the fix for the window it
+ * used to open.** It carried an `evidenceRefs` pair, which
+ * `validatePrototypingArtifactRefIntegrity` requires to point at files
+ * that exist. Nothing had written them yet: capture runs AFTER
+ * `iterate`, so between the two the project failed its own gate on two
+ * `QFAI-PROT-009` errors. With no declared screens the pair fell back
+ * to `iter-NN/index.{png,html}`, which is worse than early — those two
+ * paths have no writer anywhere in the loop. The plan this same
+ * invocation writes says so: `paths.screenshotTemplate` is
+ * `iter-NN/{screen}.png`, and capture honours it, so `index.png` is
+ * never produced at any point. The errors named missing artifacts,
+ * which reads as "capture did not run", and re-running capture could
+ * not help.
+ *
+ * A placeholder that is explicitly not a review should not be asked to
+ * cite evidence it has not seen, so the field is omitted and
+ * `QFAI-PROT-009` skips iterations carrying {@link SEED_REVIEWER_ID}.
+ * The two are one change: dropping the field without the validator
+ * exemption trades two missing-artifact errors for two empty-field
+ * errors.
  */
-function buildSeedIterations(
-  declaredScreens: readonly string[],
-  mode?: "convergence" | "exploration",
-): unknown[] {
-  // Co-locate {screenshot, html} from the first declared screen; fall
-  // back to a deterministic placeholder when no screens are present so
-  // the seed always has non-empty fields. (refIntegrity treats empty
-  // fields as `QFAI-PROT-009` errors.)
-  //
-  // Paths are FULL repo-relative (e.g. `.qfai/evidence/prototyping/
-  // iter-00/<screen>.png`), matching the SSOT shape used by
-  // `buildEvaluatorReview` evidenceRefs and by `validatePrototyping
-  // ArtifactRefIntegrity` (which calls `path.resolve(root, value)`).
-  const firstScreen = declaredScreens[0];
-  const screenshotRef =
-    firstScreen !== undefined
-      ? iterationScreenshotPath(0, firstScreen)
-      : `${iterationDir(0)}/index.png`;
-  const htmlRef =
-    firstScreen !== undefined ? iterationHtmlPath(0, firstScreen) : `${iterationDir(0)}/index.html`;
+function buildSeedIterations(mode?: "convergence" | "exploration"): unknown[] {
   return [
     {
       index: 0,
-      commitSha: "uncommitted",
+      commitSha: SEED_COMMIT_SHA,
       proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
       scores: {
         informationArchitecture: "weak",
@@ -2084,11 +2112,7 @@ function buildSeedIterations(
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
       pivotDirective: "continue",
-      reviewerId: "iterate-seed",
-      evidenceRefs: {
-        screenshot: screenshotRef,
-        html: htmlRef,
-      },
+      reviewerId: SEED_REVIEWER_ID,
       // Prototyping-mode discriminator: per-iteration mode slot.
       // Certify reads `prototyping.json#iterations[i].mode` to refuse
       // sealing a loop that produced any exploration-mode iteration.
@@ -2098,6 +2122,48 @@ function buildSeedIterations(
       ...(mode !== undefined ? { mode } : {}),
     },
   ];
+}
+
+/**
+ * What a `--dry-run` invocation would have done.
+ *
+ * Every line is derived from a gate that has already run, so the preview
+ * cannot disagree with the run it previews about anything it reports.
+ * What it deliberately does NOT claim is completeness: capture,
+ * license-verify and the validate pass all live past this point and can
+ * still fail, so the last line says the preview covers the writes rather
+ * than the outcome.
+ */
+function reportIterateDryRun(input: {
+  root: string;
+  cycle: number;
+  mode: "convergence" | "exploration";
+  specCount: number;
+  targetUrl?: string;
+  reset: { evidenceRootAbs: string; iter00Abs: string } | null;
+}): void {
+  const lines = [
+    `qfai prototyping iterate --dry-run: would run cycle ${String(input.cycle)} in ${input.mode} mode ` +
+      `over ${String(input.specCount)} spec(s)` +
+      (input.targetUrl === undefined ? "." : ` against ${input.targetUrl}.`),
+  ];
+  if (input.reset !== null) {
+    const iterRel = path.relative(input.root, input.reset.iter00Abs).replace(/\\/g, "/");
+    lines.push(
+      `  would MOVE ${iterRel} to ${iterRel}.backup-<ISO> and log every file in it to ` +
+        `${PROTOTYPING_EVIDENCE_REL}/mutation-log.jsonl, then clear the evidence iteration dirs.`,
+    );
+  } else if (input.cycle === 0) {
+    lines.push(
+      `  no existing ${PROTOTYPING_EVIDENCE_REL}/iter-00 to back up; the cycle-0 reset would create it fresh.`,
+    );
+  }
+  lines.push(
+    `  would write ${PROTOTYPING_JSON_REL} (seed metadata) and ${iterationDir(input.cycle)}/iterate-plan.json.`,
+    "  wrote nothing. This preview covers the writes this command makes, not the outcome of the " +
+      "capture, license-verify and validate steps that follow them.",
+  );
+  for (const line of lines) info(line);
 }
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
@@ -2125,12 +2191,13 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // `designMd`, `runId`, `specsCovered`. Adding a new per-loop field
   // requires updating BOTH this list AND the comment.
   //
-  // Validate-conformance note: the iterations[] is seeded with a
-  // single stub entry whose evidenceRefs[] bijects with `declaredScreens`
-  // (if any) so `qfai validate --profile prototyping` is conformant
-  // immediately after iterate completes. The reviewer overwrites this
-  // entry on the first review pass.
-  body.iterations = buildSeedIterations(seed.declaredScreens ?? [], seed.mode);
+  // Validate-conformance note: iterations[] is seeded with a single
+  // stub entry that cites NO evidence, so `qfai validate --profile
+  // prototyping` is conformant immediately after iterate completes and
+  // stays conformant through capture and the reviewer pass. The
+  // reviewer overwrites this entry on the first review pass, and the
+  // artifact refs arrive with it.
+  body.iterations = buildSeedIterations(seed.mode);
   body.acceptedIterationIndex = 0;
   body.stopReason = null;
   // Prototyping-mode discriminator: the resolved per-loop mode is

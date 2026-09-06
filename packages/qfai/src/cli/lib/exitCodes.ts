@@ -22,20 +22,26 @@ export const EXIT_CODES = {
   /**
    * validate / doctor / preflight: --fail-on 閾値に到達。
    * guardrails check: 検査エラーを検出。
-   * 使用法エラーおよび実行時エラーの既定値でもある (guardrails を除く)。
+   * 実行時エラーの既定値でもある。加えて、未知の *コマンド* 名 (--help を
+   * 伴う場合も含む) はこの値で停止する — CLI 引数エラーとは別の行であり、
+   * init CLI contract の exit-code 表が 2 を予約しているのは未知のフラグと
+   * 値の不正だけなので、綴り誤りのコマンドをそこへ寄せない。
    * ここでいう実行時エラーはトップレベルの catch が拾う送出全般で、
    * prototyping certify の証明書書き込み失敗、validate の JSON 出力や
    * doctor / preflight の --out 書き込み失敗、prototyping show-spec が
    * spec 本文を ENOENT 以外の理由で読めない場合もこの値になる。
    * どれも検査結果の不合格ではないため、復旧手段 (権限 / ディスク /
    * パスの修正) が閾値到達とは異なる点に注意。
-   * パーサが値を拒否する値フラグ (--cycle に非負整数以外、--fail-on に
-   * never / warning / error 以外) も、peek / 本処理へ進まずこの使用法
-   * エラーで停止する。
    */
   findings: 1,
   /**
-   * 入力 / lock drift エラー。guardrails では使用法エラーも、
+   * CLI 引数エラー (未知のフラグ, 値の不正 / 欠落) — `parseArgs` の
+   * `invalidExitCode` が全コマンド共通で返す値で、init CLI contract の
+   * exit-code 表が予約している行。パーサが値を拒否する値フラグ
+   * (--cycle に非負整数以外、--fail-on に never / warning / error 以外) も、
+   * peek / 本処理へ進まずここで停止する。
+   *
+   * 入力 / lock drift エラーも同じ値。guardrails では使用法エラーも、
    * report / prototyping show-spec では入力ファイルの欠落 / 破損も、
    * prototyping certify では証明書 mismatch / 品質ゲート拒否もこの値。
    * prototyping iterate では --auto-serve のサーバ起動失敗や --capture の
@@ -143,25 +149,27 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "その他のコマンド",
     lines: [
-      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = 使用法エラー / 実行時エラー`,
+      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 使用法エラー,`,
+      `${EXIT_CODES.findings} = 実行時エラー`,
       "(init / discussion / audit log / handoff upgrade / atdd scaffold)",
     ],
   },
 ];
 
 const USAGE_ERROR_NOTE = [
-  `  ※ 使用法エラーは guardrails のみ ${EXIT_CODES.inputError}、` +
-    `他コマンドは ${EXIT_CODES.findings} を返す (既存互換のための差異)。`,
-  // 未知オプションはパーサの default 分岐で読み飛ばされる (args.ts)。
-  // 挙動を変えると positional / 将来フラグの互換に波及するため、当面は
-  // 「終了コードでは検出できない」ことを明示する側で穴を塞ぐ。
-  `  ※ 未知のオプション (例: --typo) は無視されるため、コマンド本体が成功すれば ${EXIT_CODES.ok} を返す。`,
-  "     オプション名の誤記は終了コードでは検出できない (未知の *コマンド* 名は --help を伴う場合も",
-  `     使用法エラーとして ${EXIT_CODES.findings})。`,
+  // CLI-arg エラーの終了コードは `parseArgs` の `invalidExitCode` 一箇所で
+  // 決まり、コマンド差はない。init CLI contract の exit-code 表の 2 行目
+  // (unknown flag / malformed value) がその SSOT。
+  `  ※ CLI 引数エラー (未知のフラグ, 値の不正 / 欠落) はコマンドを問わず ${EXIT_CODES.inputError}。`,
+  // 未知オプションはかつてパーサの `default` 分岐で読み飛ばされ、`--dry-run`
+  // の綴り誤りが本物の init を exit 0 で実行していた。現在は拒否される。
+  `  ※ 未知のオプション (例: --typo) はコマンド本体へ進まず ${EXIT_CODES.inputError} で停止する。`,
+  `     未知の *コマンド* 名は別の行で、--help を伴う場合も使用法エラーとして ${EXIT_CODES.findings}`,
+  "     (綴り誤りのコマンドを --help が成功に見せないため)。",
   // 値フラグの不正値はパーサが拒否する。--fail-on の未知の閾値を既定へ読み替えると、
   // 書かれたフラグと実際に効くゲートが黙って食い違うため、--cycle と同じ扱いになる。
   `  ※ --fail-on の不正値 (例: --fail-on typo) はパーサが拒否し、既定の閾値へ読み替えないため、`,
-  `     コマンド本体へ進まず使用法エラーとして ${EXIT_CODES.findings} を返す (--cycle と同じ)。`,
+  `     コマンド本体へ進まず ${EXIT_CODES.inputError} を返す (--cycle と同じ)。`,
 ].join("\n");
 
 /** CJK punctuation / kana / ideographs / fullwidth forms. */

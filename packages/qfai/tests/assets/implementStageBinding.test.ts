@@ -68,6 +68,19 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain("do not continue on stale steering");
   });
 
+  it("closes step 1 on the rule rather than the rationale that motivated it", async () => {
+    // `neither inheritance route` was commit-message rationale that survived
+    // into the instruction body: the shipped tree defines no such term, so the
+    // sentence named no artifact, stated no condition and gave no imperative —
+    // sitting one clause after a strict rule ("do not continue on stale
+    // steering"), which invites reading it as a constraint of unknown content.
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "Run this stage in full even when invoked from another skill: Stage 0 is not inherited from a parent skill, and this is the stage that creates production source trees.",
+    );
+    expect(skill).not.toContain("inheritance route");
+  });
+
   it("cites an anchor the SSOT actually has", async () => {
     // A dead anchor would leave the instruction as unactionable as its absence.
     const tech = await read(tree, TECH);

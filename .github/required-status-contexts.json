@@ -182,7 +182,7 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "eb86fd8163e77639a4281261c1c3c7a126184e1138dbd30781b90f1c0417c43f",
+        ".github/actions/setup/action.yml": "a4926e3f95b08d4a29ad40629f07bc750ce60b28760d0a18470a0c8fe4c54f7a",
         ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
         "scripts/check-atdd-annotation-ledger.mjs": "f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be",
@@ -193,15 +193,19 @@
         "scripts/check-not-a-dependency.mjs": "ce41f9a1e9e1b63c581c3896cac3998a22cc578abfcec616abd6ecbcf032e84e",
         "scripts/check-prompt-scanner-pair.mjs": "96d817088b1a648d39bfa34570a32a90659a37ddf7a807fb044fccada3aa49cc",
         "scripts/check-publish-dry-run.mjs": "7c6454a71ce2aacf3a0918b27744c6d85f72e2e0d480f1eecc927e44ba094486",
-        "scripts/check-readme-alignment.mjs": "64468c473a163214148e2233fe86ccf0ec364afd86cf9c84235e2f45e7672fc9",
+        "scripts/check-readme-alignment.mjs": "bea1d732a80e622329133430b25a10754e37e41c6323022693da88b05305d8d3",
         "scripts/check-review-profile-consistency.mjs": "2376a2cb3b2e3b990c4d97b36af0fd8b1e4f67513e34f873bd4cd68ae1c14c40",
         "scripts/check-scanner-coverage.mjs": "0f5d0f6d9c7a3db50ead67bbc104cf958883ec74ac523b6def4557a42ec64ed8",
         "scripts/check-toolchain-action.sh": "a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
         "scripts/check-workflow-hygiene.mjs": "88301295913cd60d28b7ee21243e0b0e4f4d53ae0c0282b2902885de2f2001eb",
+        "scripts/derive-e2e-callsites.mjs": "65735263ebda99baed4c1c365b36c752fddb62c36c7efb061de73c514bdb2cda",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
+        "scripts/gen-codex-agents.mjs": "415d5a1aae5a0947b1e8e3e3f757ec08ec0fbe0ef55a964bc87130a3127d8287",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
+        "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
         "scripts/pin-guard-bytes.mjs": "2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97",
+        "scripts/pin-stage-evidence-counts.mjs": "b854f878ab13f4fb5382822b7cb158b689beedebefed2f53fd966282654abba3",
         "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
         "scripts/verify-pack.mjs": "e7f5001d1665fd380214d4beccd08005ca17688c21a0771213bda33d90d66c74"
@@ -228,7 +232,7 @@
         "file says, and no file under either pinned root is missing from it."
       ],
       "closureActions": [
-        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+        "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
         "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
       ],
       "closureActionsNote": [
@@ -245,7 +249,7 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"],
+      "nestedActions": ["actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -269,7 +273,7 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@11d5960a326750d5838078e36cf38b85af677262"]
+        "mayPrecede": ["actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -353,7 +357,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "9f14f40981090bad",
+        "Verify the toolchain action before running it": "22f1204ba3ffadf3",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9a546eaa55780192",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "e7dc6e5136c17061",
@@ -361,7 +365,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "417a028240449a16",
+        "Run lint gate": "58584b41edc3099d",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",

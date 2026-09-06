@@ -190,17 +190,33 @@ describe("qfai --help exit-code section", () => {
     }
   });
 
-  it("warns that an unknown option is ignored rather than reported by exit code", async () => {
+  it("says an unknown option stops the run rather than being ignored", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
-    // parseArgs drops an unrecognized flag in its `default` branch, so the
-    // usage-error note would otherwise promise a 1 that never arrives.
+    // parseArgs used to drop an unrecognized flag in its `default` branch, and
+    // the note read "ignored — the command still exits 0". It rejects now, so
+    // the note that described the old hole would send an operator looking for
+    // a 0 that no longer arrives.
     const parsed = parseArgs(["validate", "--typo"], process.cwd());
-    expect(parsed.invalid).toBe(false);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.invalidExitCode).toBe(EXIT_CODES.inputError);
 
     expect(section).toContain("未知のオプション");
-    expect(section).toMatch(new RegExp(`未知のオプション[\\s\\S]*?${EXIT_CODES.ok} を返す`));
+    expect(section).toMatch(
+      new RegExp(`未知のオプション[\\s\\S]*?${EXIT_CODES.inputError} で停止する`),
+    );
+  });
+
+  it("keeps an unknown COMMAND name on its own row, apart from the arg-error code", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    // Two rows of one table, and the init CLI contract reserves 2 for an
+    // unknown flag or a malformed value — not for a mistyped command name.
+    // Folding the two together would file a typo under a row written for
+    // something else, and `--help` after the typo must not read as success.
+    expect(section).toMatch(new RegExp(`未知の \\*コマンド\\* 名[\\s\\S]*?${EXIT_CODES.findings}`));
   });
 
   it("names the certify runtime error that the 0 / 2 / 64 row omitted", async () => {
@@ -324,7 +340,7 @@ describe("qfai --help exit-code section", () => {
     expect(peekRow).toContain("10 以上の非負整数");
   });
 
-  it("returns the usage-error code for a negative --check-convergence cycle", async () => {
+  it("returns the CLI-arg-error code for a negative --check-convergence cycle", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "qfai-peek-negative-"));
     tempDirs.push(dir);
     const parsed = parseArgs(
@@ -341,27 +357,34 @@ describe("qfai --help exit-code section", () => {
         ["prototyping", "iterate", "--check-convergence", "--cycle", "-1", "--root", dir],
         dir,
       );
-      expect(process.exitCode).toBe(EXIT_CODES.findings);
+      // A rejected value is a CLI-arg error on every command, so it shares the
+      // out-of-range case's code rather than the findings code the note used
+      // to promise.
+      expect(process.exitCode).toBe(EXIT_CODES.inputError);
     } finally {
       spy.mockRestore();
       process.exitCode = previousExitCode;
     }
   });
 
-  it("documents that an invalid --fail-on value is a usage error", async () => {
+  it("documents that an invalid --fail-on value is a CLI-arg error", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
     // args.ts calls markInvalid() for an unknown threshold, exactly as it does
     // for --cycle: falling back to the config default would leave the gate
     // silently differing from the flag the caller wrote, in either direction.
+    // The code it stops with is `invalidExitCode`, which is the same on every
+    // command — the note said 1, so the number in the help disagreed with the
+    // number the parser had already chosen.
     const parsed = parseArgs(["validate", "--fail-on", "typo"], process.cwd());
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.failOn).toBeUndefined();
+    expect(parsed.options.invalidExitCode).toBe(EXIT_CODES.inputError);
 
     expect(section).toContain("--fail-on の不正値");
     expect(section).toMatch(
-      new RegExp(`--fail-on の不正値[\\s\\S]*?${EXIT_CODES.findings} を返す`),
+      new RegExp(`--fail-on の不正値[\\s\\S]*?${EXIT_CODES.inputError} を返す`),
     );
   });
 
