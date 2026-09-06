@@ -14,7 +14,7 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-eb86fd8163e77639a4281261c1c3c7a126184e1138dbd30781b90f1c0417c43f  .github/actions/setup/action.yml
+a4926e3f95b08d4a29ad40629f07bc750ce60b28760d0a18470a0c8fe4c54f7a  .github/actions/setup/action.yml
 0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f  .github/actions/setup/dependency-builds.txt
 0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f  .github/actions/setup/verify-rebuild-sources.mjs
 f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be  scripts/check-atdd-annotation-ledger.mjs
@@ -25,15 +25,17 @@ d1a3354deac4d4e426ce57508f1cbae68c00ec1692a1cedbafd3f0108117dcf7  scripts/check-
 ce41f9a1e9e1b63c581c3896cac3998a22cc578abfcec616abd6ecbcf032e84e  scripts/check-not-a-dependency.mjs
 96d817088b1a648d39bfa34570a32a90659a37ddf7a807fb044fccada3aa49cc  scripts/check-prompt-scanner-pair.mjs
 7c6454a71ce2aacf3a0918b27744c6d85f72e2e0d480f1eecc927e44ba094486  scripts/check-publish-dry-run.mjs
-64468c473a163214148e2233fe86ccf0ec364afd86cf9c84235e2f45e7672fc9  scripts/check-readme-alignment.mjs
+bea1d732a80e622329133430b25a10754e37e41c6323022693da88b05305d8d3  scripts/check-readme-alignment.mjs
 2376a2cb3b2e3b990c4d97b36af0fd8b1e4f67513e34f873bd4cd68ae1c14c40  scripts/check-review-profile-consistency.mjs
 0f5d0f6d9c7a3db50ead67bbc104cf958883ec74ac523b6def4557a42ec64ed8  scripts/check-scanner-coverage.mjs
 a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777  scripts/check-toolchain-action.sh
 c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203  scripts/check-types-future.mjs
 88301295913cd60d28b7ee21243e0b0e4f4d53ae0c0282b2902885de2f2001eb  scripts/check-workflow-hygiene.mjs
+65735263ebda99baed4c1c365b36c752fddb62c36c7efb061de73c514bdb2cda  scripts/derive-e2e-callsites.mjs
 3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7  scripts/gen-agent-catalog.mjs
 1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444  scripts/lib/bounded-read.mjs
 2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97  scripts/pin-guard-bytes.mjs
+b854f878ab13f4fb5382822b7cb158b689beedebefed2f53fd966282654abba3  scripts/pin-stage-evidence-counts.mjs
 7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d  scripts/pin-verification-bodies.mjs
 f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c  scripts/sync-init-to-root.mjs
 e7f5001d1665fd380214d4beccd08005ca17688c21a0771213bda33d90d66c74  scripts/verify-pack.mjs
