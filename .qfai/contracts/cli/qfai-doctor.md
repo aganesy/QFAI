@@ -12,7 +12,12 @@
     reached only through `--clean` / `--autoremediate`
     (`autoremediate.ts`, `cleanReviewPacks.ts`, `cleanRunLogs.ts`,
     `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
-    `staleTtl.ts`) plus three read-only checks that write nothing:
+    `staleTtl.ts`) with `archiveVisibility.ts` deciding, for one pack,
+    whether the archive move would take it out of version control —
+    `--clean` refuses the move when it would, because a rename into a
+    git-ignored directory deletes a tracked pack from the repository
+    rather than retaining it — plus two read-only checks that write
+    nothing:
     `workflowsIntegrity.ts`, which backs the `workflows.integrity`
     check documented below, `assetLineBudget.ts`, which owns the
     per-file assistant asset line ceiling at runtime so a project

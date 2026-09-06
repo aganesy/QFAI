@@ -36,6 +36,7 @@ import { parse as parseYaml } from "yaml";
 import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
+import { WOULD_UNTRACK_REASON } from "./archiveVisibility.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
 import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
@@ -322,17 +323,23 @@ export async function runAutoremediate(
   // dry-run vocabulary instead (`would archive` / `would move ->`).
   if (options.dryRun) {
     lines.push(
-      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}, kept-tracked=${cleanResult.skippedWouldUntrack.length}`,
     );
     for (const packName of archivedNames) {
       lines.push(`  would move -> _archive/${packName}`);
     }
+    for (const entry of cleanResult.skippedWouldUntrack) {
+      lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
+    }
   } else {
     lines.push(
-      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}, kept-tracked=${cleanResult.skippedWouldUntrack.length}`,
     );
     for (const packName of archivedNames) {
       lines.push(`  -> _archive/${packName}`);
+    }
+    for (const entry of cleanResult.skippedWouldUntrack) {
+      lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
     }
   }
 

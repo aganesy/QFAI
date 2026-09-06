@@ -7,16 +7,48 @@ import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
+import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
+import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
+import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
+import { resolveToolVersion } from "../core/version.js";
+
+/**
+ * Exit code for a command name nothing recognizes.
+ *
+ * Deliberately not `options.invalidExitCode`. That field carries the
+ * CLI-arg-error code the exit-code table in `.qfai/contracts/cli/qfai-init.md`
+ * reserves — 2, for an unknown flag or a malformed value — and the parser never
+ * sets `invalid` for an unrecognized command, so borrowing it here would file a
+ * mistyped command under a row the contract wrote for something else. 1 keeps
+ * the two distinguishable while still refusing to report success, which is the
+ * defect this branch closed: the `default:` arm used to print `Unknown command`
+ * and exit 0. A `--flag`-shaped first token never reaches here — the parser
+ * catches it, leaves `command` null, and the invalid-args branch above exits 2.
+ */
+const UNKNOWN_COMMAND_EXIT_CODE = 1;
 
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
+  // `--version` / `-V` short-circuits before the usage branch so the
+  // version is readable from anywhere, including outside a project.
+  if (options.version) {
+    info(await resolveToolVersion());
+    return;
+  }
+
   if (!command || options.help) {
+    // Name the offending token before anything else prints, so a typo is
+    // legible whichever stream the usage text ends up on below.
+    if (invalid && options.unknownFlags.length > 0) {
+      const label = options.unknownFlags.length > 1 ? "unknown options" : "unknown option";
+      error(`qfai: ${label}: ${options.unknownFlags.join(", ")}`);
+    }
     // A parser rejection never reaches runGuardrails(), so the `--format json`
     // promise ("stdout stays parseable for every outcome") has to be honoured
     // here too: usage goes to stderr and stdout carries the refusal envelope.
@@ -37,6 +69,28 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     return;
   }
 
+  // Every command except `validate` sends a filesystem fault straight to
+  // `cli/index.ts`, which writes `err.message` and exits 1 — a line naming the
+  // errno and the path but not the command, and not saying that the run is
+  // undetermined rather than clean (#1104). `validate` answers with
+  // `QFAI-SCAN-002` instead because #1112 wrapped `validateProject`; the others
+  // have no verdict artifact, so the refusal itself has to carry it.
+  //
+  // Rethrown, never swallowed: the exit code and the `cause` chain are what a
+  // caller and a stack trace still need. `describeIncompleteRun` returns `null`
+  // for anything that is not an unwrapped libuv error, so a deliberate refusal
+  // passes through with the message its author wrote.
+  try {
+    await dispatch(command, options);
+  } catch (thrown: unknown) {
+    // Bound as `thrown`, not `error`: this module imports a logger named
+    // `error`, and shadowing it inside the one block that must not log is a
+    // trap for the next edit.
+    throw describeIncompleteRun(thrown, command) ?? thrown;
+  }
+}
+
+async function dispatch(command: string, options: ParsedArgs["options"]): Promise<void> {
   switch (command) {
     case "init":
       await runInit({
@@ -45,6 +99,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         dryRun: options.dryRun,
         yes: options.yes,
         upgradeAssistantTree: options.upgradeAssistantTree,
+        verbose: options.verbose,
       });
       return;
     case "validate":
@@ -201,7 +256,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           process.exitCode = options.invalidExitCode;
           return;
         }
-        const resolvedRoot = await resolveRoot(options);
+        // `discussion ... --format json` writes its whole payload to
+        // stdout, so the defaultConfig notice has to go to stderr there —
+        // otherwise stdout is JSON-plus-a-Japanese-warning and no
+        // `JSON.parse` (or downstream jq) can read it.
+        const resolvedRoot = await resolveRoot(options, options.discussionFormat === "json");
         process.exitCode = await runDiscussion({
           root: resolvedRoot,
           action: options.discussionAction,
@@ -215,7 +274,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       {
         if (!options.prototypingAction) {
           error(
-            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
+            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec|rescope",
           );
           info(usage());
           process.exitCode = options.invalidExitCode;
@@ -229,6 +288,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             check: Boolean(options.prototypingCheckOnly),
             ...(options.prototypingScope !== undefined ? { scope: options.prototypingScope } : {}),
             ...(options.prototypingUpgradeScopeFull ? { upgradeScopeFull: true } : {}),
+          });
+          return;
+        }
+        if (options.prototypingAction === "rescope") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runPrototypingRescope({
+            root: resolvedRoot,
+            remove: options.rescopeRemove,
+            reason: options.rescopeReason ?? "",
+            dryRun: options.dryRun,
           });
           return;
         }
@@ -272,6 +341,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           cycle: options.prototypingCycle ?? 9,
           ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
           ...(options.force ? { force: true } : {}),
+          ...(options.dryRun ? { dryRun: true } : {}),
           ...(options.prototypingLicensePatch
             ? { licensePatch: options.prototypingLicensePatch }
             : {}),
@@ -293,7 +363,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     default:
       error(`Unknown command: ${command}`);
       info(usage());
-      process.exitCode = options.invalidExitCode;
+      process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
       return;
   }
 }
@@ -307,6 +377,7 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  discussion list              discussion pack を列挙（active pointer の pack に * を付与）
   discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
@@ -318,12 +389,15 @@ Commands:
                                         [--scope <saas-package|full>] scope 限定 certificate を発行
                                         [--upgrade-scope full] scope 限定 certificate を full DONE に昇格
   prototyping show-spec                 解決された primary prototyping spec を出力
+  prototyping rescope --remove <id> --reason <delta-id>
+                                        frozenSurfaceUnion から退役した surface を外す
+                                        (loop は現 cycle のまま。まだ解決する surface は拒否)
 
 Options:
   --root <path>   対象ディレクトリ
-  --dir <path>    init の出力先
+  --dir <path>    init の出力先 (init 専用。他コマンドの対象指定は --root)
   --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents、および symlink assets（.agents/.claude/.github/.codex）の生成物を上書き
-                  （生成物には各ツリーの README.md と .github/copilot-instructions.md を含む。specs/contracts/steering と assistant/manifest/** は上書きしない）
+                  （生成物には各ツリーの README.md と、qfai 提供の .github/copilot-instructions.md・.github/instructions/** を含む。specs/contracts/steering と assistant/manifest/** は上書きしない）
                   上書きだけでなく削除も行う: 過去の qfai が .claude/commands/ と .github/prompts/ に置いた
                   wrapper と、出荷されなくなった skill 用に qfai が置いた wrapper（symlink 化以前の
                   実ディレクトリを含む）を削除します。所有権は名前ではなくファイルの中身で判定するため
@@ -331,18 +405,25 @@ Options:
                   QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
                   .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
   --force         handoff upgrade: 既存の .qfai/handoff.yaml を上書き（上書き前に .backup-<ISO> へ退避）
+  --force         prototyping iterate --cycle 0: 既存 iter-00 の再シードに必須。iter-00 を
+                  iter-00.backup-<ISO> へ退避してから stale な iter-NN を掃除（未指定なら
+                  exit 2 で拒否）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
+  --yes           doctor --autoremediate: 対話確認をスキップ（それ以外では無効）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
-  --dry-run       init / doctor / handoff upgrade: 変更を行わず表示のみ
+  --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: 変更を行わず表示のみ
+  --verbose       init: 実行レポートの skipped パス一覧を展開（既定は件数のみ）
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
-  --active                     discussion list: active session pointer を表示
+  --remove <surface-id>        prototyping rescope: 外す surface id (repeatable)
+  --reason <delta-id>          prototyping rescope: 退役を決めた delta / decision id (必須)
+  --format <text|json>         doctor / prototyping preflight / discussion list の出力形式
+  --active                     discussion list: pack 列挙ではなく active session pointer を表示
   --strict                     validate: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
-  --fail-on <error|warning|never>  validate: 失敗条件
+  --fail-on <error|warning|never>  validate: 失敗条件（--strict より優先）
   --fail-on <error|warning|never>  doctor / prototyping preflight: 失敗条件（既定は validation.failOn、同梱既定値は error）
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
@@ -358,7 +439,7 @@ Options:
   --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
   --capture                     prototyping iterate: opt-in な PNG/HTML キャプチャ (default OFF; Playwright を dynamic import)
   --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
-  --license-patch <file>        prototyping iterate: cycle 0 ライセンス allowlist パッチを適用 (audit ledger に追記; replay 対応)
+  --license-patch <file>        prototyping iterate: 任意 cycle で add-only なライセンス allowlist パッチを適用 (cycle 0 限定ではない; audit ledger に追記し以降の cycle で replay。sourceHosts は replay 対象外)
   --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
   --emit-skeletons              prototyping iterate --cycle 0: frozenSurfaceUnion の screen ごとに placeholder HTML を出力 (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
@@ -375,13 +456,15 @@ Options:
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
                                  report: 既定の入出力も validate.spec-<ids>.json / report.spec-<ids>.md へ切り替える
   -h, --help      ヘルプ表示
+  -V, --version   バージョン表示（インストール済み qfai の版番を stdout に出力）
 `;
 }
 
 /**
  * `machineReadable` keeps stdout reserved for the payload when the command is
  * about to print JSON: the missing-config notice then goes to stderr so
- * `qfai <cmd> --format json` stays parseable.
+ * `qfai <cmd> --format json` stays parseable, and cannot be interleaved with
+ * the payload to break `JSON.parse` on the consumer side.
  */
 async function resolveRoot(
   options: { root: string; rootExplicit: boolean },

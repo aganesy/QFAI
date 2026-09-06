@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
+import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
@@ -139,13 +140,19 @@ async function runCleanPhase(
   });
   lines.push(
     dryRun
-      ? `doctor --clean (dry-run): would archive=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length} (ttlDays=${packs.ttlDays})`
-      : `doctor --clean: archived=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length} (ttlDays=${packs.ttlDays})`,
+      ? `doctor --clean (dry-run): would archive=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length}, kept-tracked=${packs.skippedWouldUntrack.length} (ttlDays=${packs.ttlDays})`
+      : `doctor --clean: archived=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length}, kept-tracked=${packs.skippedWouldUntrack.length} (ttlDays=${packs.ttlDays})`,
   );
   for (const entry of packs.archived) {
     lines.push(
       dryRun ? `  would move -> _archive/${entry.packName}` : `  -> _archive/${entry.packName}`,
     );
+  }
+  // A pack whose archive move would take it out of version control is kept
+  // where it is: renaming a tracked pack into a git-ignored directory
+  // deletes it from the repository rather than retaining it.
+  for (const entry of packs.skippedWouldUntrack) {
+    lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
   }
 
   // The run-log half of `--clean` deletes rather than moves, so it is
