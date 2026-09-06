@@ -1184,15 +1184,19 @@ function normalizeUiux(
     }
   }
   if (raw.competitive_refs_min !== undefined) {
+    // Integers only. A count of references is discrete, and now that the knob
+    // is a blocking gate a fractional bound is silently rounded up by the
+    // comparison while the finding still reports the fraction — `2.5` demands
+    // three references and says "at least 2.5".
     if (
       typeof raw.competitive_refs_min === "number" &&
-      Number.isFinite(raw.competitive_refs_min) &&
+      Number.isInteger(raw.competitive_refs_min) &&
       raw.competitive_refs_min >= 0
     ) {
       result.competitive_refs_min = raw.competitive_refs_min;
     } else {
       issues.push(
-        configIssue(configPath, "uiux.competitive_refs_min は0以上の数値である必要があります。"),
+        configIssue(configPath, "uiux.competitive_refs_min は0以上の整数である必要があります。"),
       );
     }
   }

@@ -203,6 +203,7 @@
     "tests/validators/importLite.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
+    "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts",
     "vitest.config.ts",
     "vitest.knobs.ts",
