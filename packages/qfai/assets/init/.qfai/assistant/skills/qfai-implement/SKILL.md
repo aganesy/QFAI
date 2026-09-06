@@ -101,11 +101,13 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ## Required Process
 
-### Phase: Stage 0 + Preflight — MANDATORY, runs first
+### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first
 
 1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory` and `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. Run this stage in full even when invoked from another skill: Stage 0 is not inherited from a parent skill, and this is the stage that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 3. **Run the pre-split evidence marker pass, once per repository** (`references/pre-split-evidence-migration.md`). Gate item 10 only _reads_ the `Pre-split-evidence: implement` marker, so until this pass has written it a legacy `E2E` / `API` / `Integration` row whose evidence lawfully sits in `implement-<spec-id>.md` is judged by the current rule and fails item 10 on every attempt — reported, not silently accepted, which is the safe direction but not an escape. **It reads every `.qfai/specs/*/tdd/test-list.md` in the repository, not the selected spec's**: the record it writes covers all of them, so migrating one ledger and recording it strands every other spec's legacy rows behind a flag that says the migration is done. The pass is guarded by `migrations.preSplitEvidence` in `.qfai/state.json`, which records **the fingerprint of the ledgers it read, taken from the working tree after it wrote its markers** — `path + NUL + git hash-object <path>` per ledger, sorted, hashed — not a commit-tree address, which reads the same before and after an uncommitted marker write and so survives that write being discarded, **and alongside it the fingerprint of the `migrations.preSplitEvidence.boundary` overrides it obeyed**, because an override is set precisely to overturn a verdict and a guard blind to it skips the very run that would apply the new boundary: **both fingerprints recorded and unchanged, skip it** — parse no row and walk no history — **either absent or different, run it and then record the current pair**, including when it marked nothing, and **record neither when it refused anything** — a layer whose split boundary it could not prove, or a row whose last advance it could not date because that advance is still uncommitted, absent from the history, or dated to conflicting verdicts by two merged lineages. That file is checkout-local, so a flag pinned to the checkout alone let a first branch with no legacy row decide for every later branch that has them. It is a repository migration, not a per-row check; leaving it inside item 10 gave it a mandate and no owner, and re-read a `git log -p` walk of the whole ledger on every completion gate.
+
+4. **Then run routing phase `plan`** — the only phase carrying `iteration: per-invocation`, and the one this stage exists ahead of: the planner must read the ledger those resets have already been applied to. Route `delivery-planner` over **every** queued ledger — a queue transition resumes at Phase Red and re-enters this phase only when its frame check finds the in-scope `CR-*` set or the plan's revision moved (`references/volume-policy.md#advancing-the-queue`) — for the risk tiers, the T1 coherent groups, the parallel dispatch decision and the order the rows will be worked in (Volume Policy), which Phase Red step 1 then walks; it is **blocking** here, so a non-PASS stops the invocation before any row moves, and it does **not** pick the row — that is Phase Red step 1, which runs per row inside the frame this phase fixes. Route `test-design-analyst` over the same ledgers, plus each spec's full `TC-*` / `US-*` / `CON-API-*` obligation set read independently of the rows, for coverage and layer-ownership findings; it is mandatory and **not** blocking, because the repair for a missing obligation is upstream and this skill invents no row that no TC backs (Preconditions). A **missing row** is raised only for a coverage-target `TC-*`: `US-*` and `CON-API-*` seed no rows, so zero `E2E` / `API` rows is normal and is never reported as a dropped obligation. What each receives and returns, why the analyst neither produces nor REVISEs over the Coverage Depth Matrix here, how a named-`TDD-ID` or mutation-only invocation is confirmed rather than re-planned, and where the findings are recorded: `references/plan-phase.md`.
 
 ### Phase: Red (Write Failing Test)
 
@@ -199,23 +201,22 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Formal Sub-agent Roster
 
-This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe. `acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`. Acceptance tests are `/qfai-atdd`'s owned artifact (Non-goals), so the role has no work in this skill and routing it here would license an edit to a test this skill does not own. `Layer = E2E` / `API` / `Integration` rows reach that role through `/qfai-atdd` — on the first pass via the handover this skill consumes, and on a REVISE via the Phase Red step 3b handback — never through a phase here.
+This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe. `acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`. Acceptance tests are `/qfai-atdd`'s owned artifact (Non-goals), so the role has no work in this skill and routing it here would license an edit to a test this skill does not own. `Layer = E2E` / `API` / `Integration` rows reach that role through `/qfai-atdd` — on the first pass via the handover this skill consumes, and on a REVISE via the Phase Red step 3b handback — never through a phase here. `plan` carries `iteration: per-invocation` — it runs once, before any row is touched (Required Process step 3, `references/plan-phase.md`).
 
 - `delivery-planner`
   - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of the obligation its `Layer` names — `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`
   - enforces Red-Green-Refactor **ordering** (which phase may run next), not the RED/GREEN observation itself
-  - is the sole authority for parallel dispatch decisions
-- `frontend-engineer` / `backend-engineer`
-  - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
+  - is the sole authority for parallel dispatch decisions, and is routed **blocking in the per-invocation `plan` phase**, where it frames the whole invocation before Phase Red selects the first row
+- `test-design-analyst`
+  - is routed in the `plan` phase only, and reports **coverage obligations and layer ownership** across the ledger: which row owes which `TC-*` / `US-*` / `CON-API-*`, and where an in-scope coverage-target `TC-*` — the only row-producing class — has no row at all
+  - returns findings, never ledger edits, and is mandatory but **not** blocking — the repair for a missing obligation is upstream in `/qfai-sdd` or `/qfai-atdd`, which this skill reaches by handoff note; it adjudicates neither item scope (`delivery-planner`'s call) nor RED/GREEN evidence (`qa-gatekeeper`'s)
+- `frontend-engineer` / `backend-engineer` — implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
   - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence. Routed per row in `red` (before production code) and `build` (after), not only in `review`
   - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
-- `implementation-reviewer`
-  - reviews code quality, maintainability, backend correctness, and hidden coupling
-- `completion-reviewer`
-  - verifies spec alignment, drift-protocol compliance, and final DoD
-- `product-surface-reviewer`
-  - reviews UI-affecting implementation when the item changes surface behavior
+- `implementation-reviewer` — reviews code quality, maintainability, backend correctness, and hidden coupling
+- `completion-reviewer` — verifies spec alignment, drift-protocol compliance, and final DoD
+- `product-surface-reviewer` — reviews UI-affecting implementation when the item changes surface behavior
 
 ## Volume Policy (MUST)
 
@@ -289,8 +290,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ## Parallelization Policy
 
-- **Cross-spec parallelism is barred.** One spec per invocation, always. This
-  is the Non-goal above and it is not approvable.
+- **Cross-spec parallelism is barred.** One spec **at a time**, always — never two specs in flight together. This is the Non-goal above and it is not approvable. A confirmed multi-spec queue does not breach it: the queue is walked one spec after another (`references/volume-policy.md#multi-spec-queue`), which is why the `per-invocation` `plan` phase may frame every queued ledger in one pass (`references/plan-phase.md`).
 - **Item-level parallelism inside one spec** may be authorized. Two gates apply
   and **both must hold**: a technical gate adjudicated by `delivery-planner`
   (the sole authority), and explicit user approval. **User approval cannot
