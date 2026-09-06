@@ -741,6 +741,28 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // Gate item 12 runs `npx qfai validate` at every per-item boundary and again
+  // per spec, and a partial command set is not a pass. A blanket "running
+  // validation gates is a non-goal" therefore denies the skill's most frequent
+  // command: honour it and no item leaves `refactor`.
+  it("does not disown the scoped validate run its own gate requires", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+
+      const nonGoals = /^## Non-goals$\n([\s\S]*?)(?=^## )/m.exec(skill)?.[1];
+      expect(nonGoals, "qfai-implement/SKILL.md must keep a `## Non-goals` section").toBeDefined();
+      if (nonGoals === undefined) continue;
+
+      // The blanket form. `/qfai-verify` may own the full scan; it may not own
+      // the scoped run gate item 12 mandates.
+      expect(nonGoals).not.toMatch(/^-\s+Running validation gates \(use `\/qfai-verify`\)\.$/m);
+      // Whatever the section reserves for `/qfai-verify`, it must say the
+      // scoped run belongs here.
+      expect(nonGoals).toContain("npx qfai validate --profile tdd --fail-on error --spec");
+      expect(nonGoals).toContain("references/checkpoint-verification.md");
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
