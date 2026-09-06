@@ -4,7 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
-import { SUNSETS, isAtOrPastSunset } from "./sunset.js";
+import { RULE_PROMOTIONS, SUNSETS, isAtOrPastSunset, newRuleSeverity } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
@@ -12,7 +12,21 @@ import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/rend
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
-export type OrphanContractsPolicy = "error" | "warning" | "allow";
+/**
+ * 廃止された orphanContractsPolicy の値集合。互換フィールドの型注釈はこちらを
+ * 参照する: 公開 alias を参照すると `@typescript-eslint/no-deprecated` が発火し、
+ * 静的解析抑制コメントを足す羽目になるため。この内部型は互換期間の終了
+ * (`RULE_PROMOTIONS.retiredTraceabilityKeys`) とともに削除する。
+ */
+type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
+
+/**
+ * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
+ * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
+ * が import している場合に型検査が壊れないよう、互換期間中のみ残す
+ * (promotion: `RULE_PROMOTIONS.retiredTraceabilityKeys`)。
+ */
+export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
 export type QfaiPaths = {
   contractsDir: string;
@@ -35,8 +49,6 @@ export type QfaiValidationConfig = {
     specSections: string[];
   };
   testStrategy: {
-    requireLayerTags: boolean;
-    requireSizeTags: boolean;
     maxE2eScenarioRatio: number | null;
     maxE2eScenarioCount: number | null;
     /**
@@ -47,15 +59,43 @@ export type QfaiValidationConfig = {
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;
+    /**
+     * @deprecated 検証側の読み取り箇所が存在しない dead knob。true にしても
+     * 診断は出ない。shipped な `qfai.config.yaml` からは除外済みで、次の
+     * major で型からも削除する。paths.promptsDir と同じ扱いで、それまでは
+     * 既定値・パースともに従来どおり維持する (公開型なので既存の
+     * TypeScript 利用者が `boolean` として参照できる状態を保つ)。
+     */
+    requireLayerTags: boolean;
+    /**
+     * @deprecated `testStrategy.requireLayerTags` と同じ扱い。
+     */
+    requireSizeTags: boolean;
   };
   traceability: {
-    brMustHaveSc: boolean;
     scMustHaveTest: boolean;
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
-    scNoTestSeverity: TraceabilitySeverity;
-    orphanContractsPolicy: OrphanContractsPolicy;
     unknownContractIdSeverity: TraceabilitySeverity;
+    /**
+     * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
+     * 読み込み時に QFAI-CFG-001 が出る (severity は
+     * `RULE_PROMOTIONS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
+     * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
+     */
+    brMustHaveSc?: boolean;
+    /**
+     * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
+     * いるため、この値は読まれない。互換期間中 (promotion:
+     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
+     */
+    scNoTestSeverity?: TraceabilitySeverity;
+    /**
+     * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
+     * この値は読まれない。互換期間中 (promotion:
+     * `RULE_PROMOTIONS.retiredTraceabilityKeys`) のみ optional で残す。
+     */
+    orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
 };
 
@@ -160,12 +200,37 @@ export type QfaiConfig = {
   baseBranch?: string;
 };
 
+/**
+ * Default for the two deprecated `testStrategy` compat knobs. Both are dead —
+ * no validator reads either — so the default is a fixed `false` rather than a
+ * behavioural choice. It lives here, once, so `defaultConfig` and the loader
+ * cannot drift apart, and so the loader can state the fallback instead of
+ * reading it back off a deprecated property (which is what previously forced a
+ * lint suppression at each of the two call sites).
+ */
+const DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT = false;
+
 export type ConfigPathKey = keyof QfaiPaths;
 
 export type ConfigLoadResult = {
   config: QfaiConfig;
   issues: Issue[];
   configPath: string;
+  /**
+   * The parsed YAML document, before normalization. `undefined` when the
+   * file is absent (`issues` empty) or could not be read / parsed at all
+   * (`issues` non-empty) — the two cases a caller distinguishes by the
+   * issue list.
+   *
+   * `issues` records *that* something was rejected but not *which* key,
+   * so it cannot answer "was the value I depend on honoured, or silently
+   * replaced by its default?". Normalization is per-key and independent,
+   * so an unrelated rejection (a bad `baseBranch`, say) says nothing
+   * about `paths.discussionDir`. A caller whose correctness hinges on one
+   * key reads it here and checks that key alone, rather than treating any
+   * issue anywhere in the file as a reason to distrust the whole config.
+   */
+  document?: unknown;
 };
 
 export type ConfigSearchResult = {
@@ -191,19 +256,16 @@ export const defaultConfig: QfaiConfig = {
       specSections: [],
     },
     testStrategy: {
-      requireLayerTags: false,
-      requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
+      requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+      requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
     },
     traceability: {
-      brMustHaveSc: true,
       scMustHaveTest: true,
       testFileGlobs: [],
       testFileExcludeGlobs: [],
-      scNoTestSeverity: "error",
-      orphanContractsPolicy: "error",
       unknownContractIdSeverity: "error",
     },
   },
@@ -266,7 +328,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   }
 
   const normalized = normalizeConfig(parsed, configPath, issues, toolVersion);
-  return { config: normalized, issues, configPath };
+  return { config: normalized, issues, configPath, document: parsed };
 }
 
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
@@ -290,7 +352,7 @@ function normalizeConfig(
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
-    validation: normalizeValidation(raw.validation, configPath, issues),
+    validation: normalizeValidation(raw.validation, configPath, issues, toolVersion),
     output: normalizeOutput(raw.output, configPath, issues),
   };
   if (uiux) {
@@ -362,6 +424,7 @@ function normalizeValidation(
   raw: unknown,
   configPath: string,
   issues: Issue[],
+  toolVersion: string,
 ): QfaiValidationConfig {
   const base = defaultConfig.validation;
   if (!raw) {
@@ -406,6 +469,8 @@ function normalizeValidation(
     testStrategyRaw = undefined;
   }
 
+  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues, toolVersion);
+
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
     require: {
@@ -418,20 +483,6 @@ function normalizeValidation(
       ),
     },
     testStrategy: {
-      requireLayerTags: readBoolean(
-        testStrategyRaw?.requireLayerTags,
-        base.testStrategy.requireLayerTags,
-        "validation.testStrategy.requireLayerTags",
-        configPath,
-        issues,
-      ),
-      requireSizeTags: readBoolean(
-        testStrategyRaw?.requireSizeTags,
-        base.testStrategy.requireSizeTags,
-        "validation.testStrategy.requireSizeTags",
-        configPath,
-        issues,
-      ),
       maxE2eScenarioRatio: readOptionalRatio(
         testStrategyRaw?.maxE2eScenarioRatio,
         base.testStrategy.maxE2eScenarioRatio,
@@ -453,15 +504,28 @@ function normalizeValidation(
         configPath,
         issues,
       ),
-    },
-    traceability: {
-      brMustHaveSc: readBoolean(
-        traceabilityRaw?.brMustHaveSc,
-        base.traceability.brMustHaveSc,
-        "validation.traceability.brMustHaveSc",
+      // Deprecated compat shim: no validator reads either flag, but the type is
+      // public, so keep parsing them until the next major instead of handing a
+      // `undefined` back to a caller that used to get its configured value. The
+      // fallback is named rather than read off `base.testStrategy`, which is
+      // `defaultConfig.validation.testStrategy` and therefore the very same
+      // constant — reading it back would only re-enter the deprecated property.
+      requireLayerTags: readBoolean(
+        testStrategyRaw?.requireLayerTags,
+        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+        "validation.testStrategy.requireLayerTags",
         configPath,
         issues,
       ),
+      requireSizeTags: readBoolean(
+        testStrategyRaw?.requireSizeTags,
+        DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
+        "validation.testStrategy.requireSizeTags",
+        configPath,
+        issues,
+      ),
+    },
+    traceability: {
       scMustHaveTest: readBoolean(
         traceabilityRaw?.scMustHaveTest,
         base.traceability.scMustHaveTest,
@@ -480,20 +544,6 @@ function normalizeValidation(
         traceabilityRaw?.testFileExcludeGlobs,
         base.traceability.testFileExcludeGlobs,
         "validation.traceability.testFileExcludeGlobs",
-        configPath,
-        issues,
-      ),
-      scNoTestSeverity: readTraceabilitySeverity(
-        traceabilityRaw?.scNoTestSeverity,
-        base.traceability.scNoTestSeverity,
-        "validation.traceability.scNoTestSeverity",
-        configPath,
-        issues,
-      ),
-      orphanContractsPolicy: readOrphanContractsPolicy(
-        traceabilityRaw?.orphanContractsPolicy,
-        base.traceability.orphanContractsPolicy,
-        "validation.traceability.orphanContractsPolicy",
         configPath,
         issues,
       ),
@@ -943,22 +993,55 @@ function readTraceabilitySeverity(
   return fallback;
 }
 
-function readOrphanContractsPolicy(
-  value: unknown,
-  fallback: OrphanContractsPolicy,
-  label: string,
+/**
+ * `validation.traceability` keys that were declared, defaulted and parsed but
+ * that no validator ever read. They are still accepted so an existing config
+ * keeps loading, and each one that is still present is named in a finding: a
+ * knob shaped like a gate control that changes nothing is worse than no knob,
+ * because it also misreports the gate the code actually runs.
+ *
+ * The acceptance is bounded like every other new code in the tool — the
+ * severity comes from {@link RULE_PROMOTIONS.retiredTraceabilityKeys} through
+ * {@link newRuleSeverity}, not from a literal here, so the window ends by
+ * itself instead of warning forever.
+ *
+ * A promotion rather than a sunset, even though the *shape* is what is being
+ * retired: `QFAI-CFG-001` is a finding code that did not exist
+ * before, and P7 measures the window from the code, because the code is what
+ * an upgrading repository meets.
+ */
+const RETIRED_TRACEABILITY_KEYS = [
+  "brMustHaveSc",
+  "scNoTestSeverity",
+  "orphanContractsPolicy",
+] as const;
+
+function reportRetiredTraceabilityKeys(
+  traceabilityRaw: Record<string, unknown> | undefined,
   configPath: string,
   issues: Issue[],
-): OrphanContractsPolicy {
-  if (value === "error" || value === "warning" || value === "allow") {
-    return value;
+  toolVersion: string,
+): void {
+  if (!traceabilityRaw) {
+    return;
   }
-  if (value !== undefined) {
+  const promoteAt = RULE_PROMOTIONS.retiredTraceabilityKeys.promoteAt;
+  const promotedSeverity = newRuleSeverity(toolVersion, promoteAt);
+  for (const key of RETIRED_TRACEABILITY_KEYS) {
+    if (traceabilityRaw[key] === undefined) {
+      continue;
+    }
     issues.push(
-      configIssue(configPath, `${label} は error|warning|allow のいずれかである必要があります。`),
+      configDeprecatedIssue(
+        configPath,
+        `validation.traceability.${key} は廃止されました。` +
+          `どの検証も参照しないため、設定しても挙動は変わりません。` +
+          `互換受理は qfai ${promoteAt} で終了します (同版以降は error)。` +
+          `qfai.config.yaml から削除してください。`,
+        promotedSeverity,
+      ),
     );
   }
-  return fallback;
 }
 
 function normalizeUiux(
@@ -1220,6 +1303,30 @@ function configIssue(file: string, message: string): Issue {
     message,
     file,
     rule: "config.invalid",
+  };
+}
+
+/**
+ * The severity argument is named for where it comes from, and the property is
+ * written out rather than shorthanded, because both are what make the pin
+ * followable. `tests/core/sunsetLedger.test.ts` reads the `severity:` sibling
+ * of `code: "…"` and asks whether that expression is one the file bound to
+ * `newRuleSeverity(…, RULE_PROMOTIONS.retiredTraceabilityKeys…)`. A shorthand
+ * `severity` yields no expression at all, so a correctly wired promotion read
+ * to that assertion exactly like an unwired one.
+ */
+function configDeprecatedIssue(
+  file: string,
+  message: string,
+  promotedSeverity: "warning" | "error",
+): Issue {
+  return {
+    code: "QFAI-CFG-001",
+    severity: promotedSeverity,
+    category: "canonical",
+    message,
+    file,
+    rule: "config.deprecatedKey",
   };
 }
 
