@@ -376,8 +376,8 @@ Commands:
                                         (loop は現 cycle のまま。まだ解決する surface は拒否)
 
 Options:
-  --root <path>   対象ディレクトリ
-  --dir <path>    init の出力先 (init 専用。他コマンドの対象指定は --root)
+  --root <path>   対象ディレクトリ（init では --dir 未指定時の出力先として扱う）
+  --dir <path>    init の出力先 (init 専用。--root と併用した場合は --dir が優先)
   --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents、および symlink assets（.agents/.claude/.github/.codex）の生成物を上書き
                   （生成物には各ツリーの README.md と、qfai 提供の .github/copilot-instructions.md・.github/instructions/** を含む。specs/contracts/steering と assistant/manifest/** は上書きしない）
                   上書きだけでなく削除も行う: 過去の qfai が .claude/commands/ と .github/prompts/ に置いた
