@@ -2846,6 +2846,13 @@ function shouldSkipReference(ref: string): boolean {
   if (ref === ".qfai/install-provenance.json") {
     return true;
   }
+  // Same carve-out, same reason: `.qfai/state.json` is written by
+  // `qfai discussion use` at runtime and is `.gitignore`d, so it is never in a
+  // checkout for this walk to find. Documenting the pointer a command reads is
+  // not a broken path reference.
+  if (ref === ".qfai/state.json") {
+    return true;
+  }
   if (!ref.includes("/") && !ref.includes("\\")) {
     if (ref === "report.json" || ref === "report.md" || ref === "validate.json") {
       return true;

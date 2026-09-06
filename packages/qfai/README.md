@@ -151,6 +151,20 @@ npx qfai report
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
+- `npx qfai sdd preflight`
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
+    resolves the blockers, and writes the summary run-scoped at
+    `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
+    (`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` by default; the run reports the path it wrote),
+    then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
+    `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
+    result on stdout.
+  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
+    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
+    the candidate list instead of silently gating a different pack.
+  - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
+    the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
+    overwritten.
 
 ## ATDD annotation hard gate
 

@@ -585,6 +585,9 @@ describe("parseArgs", () => {
       expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
         "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
       );
+      expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
+        "qfai sdd: unknown or missing subcommand. Expected: preflight",
+      );
     });
 
     it("quotes the rejected subcommand token", () => {
@@ -1208,6 +1211,7 @@ describe("parseArgs --version", () => {
     "handoff",
     "atdd",
     "discussion",
+    "sdd",
   ] as const) {
     for (const flag of ["--version", "-V"] as const) {
       it(`sets version for \`qfai ${command} ${flag}\``, () => {
@@ -1301,5 +1305,90 @@ describe("parseArgs dash-leading positionals", () => {
     expect(parsed.options.handoffAction).toBeUndefined();
     expect(parsed.options.handoffLegacyFile).toBeUndefined();
     expect(parsed.invalid).toBe(true);
+  });
+});
+
+describe("parseArgs: qfai sdd <subcommand>", () => {
+  it("routes `sdd preflight` and its diagnostic flags", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--format", "json", "--fail-on", "error"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.command).toBe("sdd");
+    expect(parsed.options.sddAction).toBe("preflight");
+    expect(parsed.options.sddFormat).toBe("json");
+    expect(parsed.options.failOn).toBe("error");
+  });
+
+  it("rejects an unknown sdd subcommand", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "triage"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddAction).toBeUndefined();
+  });
+
+  it("rejects a bare `sdd` with no subcommand", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd"], cwd);
+    expect(parsed.invalid).toBe(true);
+  });
+
+  it("rejects an unsupported --format value for sdd preflight", () => {
+    // The diagnostic has to name the rejected value and the accepted set.
+    // Routing this through formatReason() reported "--format is not valid for
+    // this command" instead, because formatChoicesFor() has no sdd entry — a
+    // caller who mistyped the value was told the flag itself was wrong.
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--format", "github"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddFormat).toBeUndefined();
+    expect(parsed.invalidReason).toBe(
+      'qfai sdd: invalid value for --format: "github". Expected: text|json',
+    );
+  });
+
+  it("rejects an unsupported --fail-on value instead of silently dropping it", () => {
+    // `--fail-on neve` used to fall through as `undefined`, so a run meant to
+    // report-only exited 1 on blockers with nothing explaining the typo.
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--fail-on", "neve"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
+  it("rejects an unsupported --fail-on value for validate as well", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--fail-on", "errors"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
+  it("collects repeatable --assume values for sdd preflight", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(
+      ["sdd", "preflight", "--assume", "OQ-0001 は次フェーズ", "--assume", "W-PENDING-PROMOTION"],
+      cwd,
+    );
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.sddAssumptions).toEqual(["OQ-0001 は次フェーズ", "W-PENDING-PROMOTION"]);
+  });
+
+  it("keeps a help flag out of the sdd subcommand slot", () => {
+    // The scan that pulls the subcommand runs before the flag loop, so testing
+    // only for a `--` prefix shifted `-h` away as an unknown action: the help
+    // request became a usage error naming a subcommand the caller never typed.
+    const cwd = process.cwd();
+    for (const flag of ["--help", "-h"] as const) {
+      const parsed = parseArgs(["sdd", flag], cwd);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.invalidReason).toBeUndefined();
+    }
+  });
+
+  it("rejects --assume outside `sdd preflight`", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--assume", "x"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddAssumptions).toEqual([]);
   });
 });

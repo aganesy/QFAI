@@ -9,6 +9,7 @@ import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
+import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
@@ -235,6 +236,25 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
+    case "sdd":
+      {
+        if (!options.sddAction) {
+          error("qfai sdd: unknown or missing subcommand. Expected: preflight");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        // `--format json` の stdout は machine-readable として README が案内
+        // している。root 探索の警告は stderr へ送り、JSON 本体だけを流す。
+        const resolvedRoot = await resolveRoot(options, options.sddFormat === "json");
+        process.exitCode = await runSddPreflightCommand({
+          root: resolvedRoot,
+          ...(options.sddFormat ? { format: options.sddFormat } : {}),
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
+          ...(options.sddAssumptions.length > 0 ? { assumptions: options.sddAssumptions } : {}),
+        });
+      }
+      return;
     case "atdd":
       {
         // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
@@ -403,6 +423,7 @@ Commands:
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
   handoff upgrade <legacy>     legacy handoff ファイルを canonical .qfai/handoff.yaml に変換 (CLI-HANDOFF)
+  sdd preflight                /qfai-sdd Stage 0 ゲート（active discussion-pack 選択 / REQ 件数 / blocker 判定）を実行し .qfai/report/preflight_summary.md を生成
   atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
@@ -446,6 +467,7 @@ Options:
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件（--strict より優先）
   --fail-on <error|warning|never>  doctor / prototyping preflight: 失敗条件（既定は validation.failOn、同梱既定値は error）
+  --fail-on <error|warning|never>  sdd preflight: 失敗条件（never は blocked でも exit 0。preflight は warning 段を持たないため warning は error と同義）
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
   --in <path>                   report: validate.json の入力先（configより優先）
@@ -472,6 +494,7 @@ Options:
   --clause <substring>          audit log: envelopeContractClause で substring filter
   --clean                       doctor: TTL 超過 review pack を _archive/ へ退避し、TTL 超過 validate run log (outDir/run-*) を削除 (最新 N 件は常に保持; --dry-run 併用可)
   --autoremediate               doctor: install + clean + config-fill をまとめて実行
+  --assume <text>               sdd preflight: carry-over の open question / 前提を summary に記録 (複数指定可)
   --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
   --spec <id>                   validate/report: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する

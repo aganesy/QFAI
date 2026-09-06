@@ -22,6 +22,11 @@
 > Cite the run-scoped copy, never `.qfai/report/preflight_summary.md`. That path
 > is the latest-run pointer and every rerun rewrites it, so once a second cycle
 > has run it no longer names the preflight this spec was triaged against.
+>
+> Take the path from the run rather than typing it — `summary:` in
+> `npx qfai sdd preflight`'s text output, `preflightSummaryPath` under
+> `--format json` — so a project that moved `paths.outDir` cites the file that
+> was actually written instead of a `.qfai/report/` path that does not exist there.
 
 ## Triage decisions
 

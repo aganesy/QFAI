@@ -56,5 +56,5 @@ research_summary:
 
 ## Storage
 
-- `research_summary` はカレントの discussion-pack 内（`## Research Summary` セクション）に記録
+- `research_summary` はカレントの discussion-pack の `04_Sources.md` 内（`## Research Summary` セクション）に記録
 - グローバルには永続保存しない

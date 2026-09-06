@@ -92,8 +92,21 @@ export function isPrototypingRequiredForDiscussionPack(
 const PLACEHOLDER_LINE_RE =
   /^(?:[-*]\s*)?(?:tbd|todo|none|n\/a|placeholder|\(placeholder\)|to be defined|to be updated|<[^>]+>)\.?$/i;
 
+export type InspectDiscussionPackOptions = {
+  /**
+   * Absolute path of the pack to inspect. Defaults to the newest pack under
+   * `discussionRoot`. Callers that honor the runtime-state pointer
+   * (`.qfai/state.json#discussion.currentId`) pass the pack it selects, so an
+   * operator who pinned an older pack with `npx qfai discussion use <id>` is
+   * not silently judged against the newest one. Legacy / dangerous pack-name
+   * scanning still covers every pack under the root either way.
+   */
+  selectedPackDir?: string;
+};
+
 export async function inspectLatestDiscussionPack(
   discussionRoot: string,
+  options: InspectDiscussionPackOptions = {},
 ): Promise<DiscussionPackReadiness> {
   const packs = await findPacks(discussionRoot, "discussion");
   const legacyPackNames = packs
@@ -104,7 +117,12 @@ export async function inspectLatestDiscussionPack(
     .filter((pack) => pack.isDangerous)
     .map((pack) => pack.name)
     .sort((left, right) => left.localeCompare(right));
-  const latest = selectLatestPack(packs);
+  const requestedPackDir =
+    options.selectedPackDir === undefined ? null : path.resolve(options.selectedPackDir);
+  const latest =
+    requestedPackDir === null
+      ? selectLatestPack(packs)
+      : packs.find((pack) => path.resolve(pack.path) === requestedPackDir);
   const latestPackDir = latest?.path ?? null;
   const latestPackName = latest?.name ?? null;
   if (!latestPackDir) {
@@ -229,8 +247,19 @@ export class ResolveActiveDiscussionPackError extends Error {
  * The thrown message lists every candidate `discussion-*` directory
  * present on disk plus the literal recovery command
  * `qfai discussion use <id>`.
+ *
+ * `discussionRoot` lets a caller that has ALREADY resolved
+ * `paths.discussionDir` pass it in. Callers holding a config that is
+ * not the one on disk — `validateProject` injecting a `configResult`,
+ * or a public validator invoked with a custom config — would
+ * otherwise have this helper re-read `qfai.config.yaml` and resolve
+ * `currentId` against a different directory than the rest of their
+ * work, reporting a present pack as missing.
  */
-export async function resolveActiveDiscussionPack(root: string): Promise<string> {
+export async function resolveActiveDiscussionPack(
+  root: string,
+  discussionRoot?: string,
+): Promise<string> {
   // Honor `paths.discussionDir` from qfai.config.yaml. The previous
   // hardcoded `<root>/.qfai/discussion` did not match what the CLI
   // `qfai discussion list --active` resolver (discussion.ts) reads,
@@ -238,9 +267,9 @@ export async function resolveActiveDiscussionPack(root: string): Promise<string>
   // could `qfai discussion use <id>` successfully, then have callers
   // of this active-pack resolver report the pack as missing because
   // it was scanning the wrong directory.
-  const discussionRoot = await resolveDiscussionRootFromConfig(root);
+  const resolvedRoot = discussionRoot ?? (await resolveDiscussionRootFromConfig(root));
   const pointer = await readDiscussionCurrentIdState(root);
-  const candidates = await findPacks(discussionRoot, "discussion");
+  const candidates = await findPacks(resolvedRoot, "discussion");
   const candidateNames = candidates
     .map((pack) => pack.name)
     .sort((left, right) => left.localeCompare(right));
