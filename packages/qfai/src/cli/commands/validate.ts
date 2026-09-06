@@ -18,11 +18,20 @@ import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
+import {
+  TDD_LIST_SEED_RECONCILIATION_CODES,
+  TDD_LIST_SEED_SHAPE_CODES,
+} from "../../core/validators/tddList.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
-import { resolveToolVersion } from "../../core/version.js";
-import { resolveFailOn, shouldFail } from "../lib/failOn.js";
-import { warnIfTruncated } from "../lib/warnings.js";
+import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
+import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
+import {
+  buildIncompleteRunIssue,
+  buildTruncatedScanIssue,
+  incompleteRunResult,
+  warnIfTruncated,
+} from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -105,11 +114,30 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for one. Replacing the run made every stage gate that names a narrow
   // profile unreachable in CI.
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  const validated = await validateProject(root, configResult, {
-    ...(options.profile ? { profile: options.profile } : {}),
-    ...(options.platform ? { platform: options.platform } : {}),
-    ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
-  });
+  // Wrapped, because an unhandled rejection here left the operator with one
+  // stderr line and no verdict — no `counts:`, no `run-log:`, no
+  // `validate.json` — and every shipped skill pipes validate through `| tail`,
+  // so that line was all an agent saw (#1104). Enumerating the `stat` sites
+  // that can raise reduces the ways in; this is what answers when the next one
+  // appears.
+  //
+  // `unknown`, deliberately not narrowed to a filesystem error: the point is a
+  // verdict for anything unexpected, and a narrowed catch would put the next
+  // unclassified failure back on the path this exists to close.
+  let validated: ValidationResult;
+  try {
+    validated = await validateProject(root, configResult, {
+      ...(options.profile ? { profile: options.profile } : {}),
+      ...(options.platform ? { platform: options.platform } : {}),
+      ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
+    });
+  } catch (error: unknown) {
+    validated = incompleteRunResult(
+      options.toolVersionOverride ?? (await resolveToolVersion()),
+      buildIncompleteRunIssue(error, "validate"),
+      options.profile,
+    );
+  }
   const rawResult = ciProfileIssue
     ? {
         ...validated,
@@ -121,6 +149,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // Test callers override; production reads the same package.json#version
   // the rest of the toolchain uses (so the source-of-truth is single).
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
+  await emitProvenance(effectiveToolVersion);
   const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
   const legacyWriteEnabled = legacySeverity === "warning";
   // Detect whether the operator's project config still aims the writer
@@ -172,6 +201,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const normalized = normalizeValidationResult(root, result);
   const partialProfileNotice = buildPartialProfileNotice(
     normalized.profile,
+    scopedSpecIds.length > 0,
     await unevaluatedPackageSelfGovernanceFamilies(root),
   );
   if (partialProfileNotice) {
@@ -180,8 +210,30 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
 
   warnIfTruncated(normalized.traceability.testFiles, "validate");
+  // The echo above is for a human reading stdout. The finding is what the exit
+  // gate, the annotation stream and the run-log can actually see, so a
+  // truncated scan can no longer pass `--fail-on warning` as a clean run.
+  const truncatedScanIssue = buildTruncatedScanIssue(normalized.traceability.testFiles, "validate");
+  if (truncatedScanIssue) {
+    normalized.issues.push(truncatedScanIssue);
+    normalized.counts = recountIssues(normalized.counts, truncatedScanIssue);
+  }
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  // No special case for an incomplete run. `QFAI-SCAN-002` is an `error`, so
+  // `counts.error` is non-zero and `shouldFail` already fails the run under
+  // every `--fail-on` but `never` — which is the one exception a caller asked
+  // for explicitly, and there the finding is still in the output and in
+  // `validate.json`.
+  //
+  // An earlier revision added `runIncomplete || …` here as a second guard. It
+  // was unreachable: removing it changed no row, because the severity is what
+  // decides. The invariant it was protecting — that this finding stays an
+  // `error` — is pinned in `validateRunIncomplete.test.ts` instead, which is
+  // where it can actually fail.
+  if (strictSupersededBy(options)) {
+    emitStrictSupersededNotice(failOn);
+  }
   const willFail = shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
@@ -191,6 +243,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     startedAt,
     command: "/qfai-validate",
     status: willFail ? "fail" : "pass",
+    failOn,
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
 
@@ -412,10 +465,18 @@ function buildDeprecationIssue(args: {
  * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
  * calls it.
  *
- * Entries are prefix globs, never bare codes: a gate that gains a second code
- * would otherwise drop out of the notice unannounced. Exported so
- * `tests/core/findingCodeGrammar.test.ts` can prove that for the gates whose
- * emitted codes it scans.
+ * Entries are prefix globs wherever a group owns a whole prefix: a gate that
+ * gains a second code would otherwise drop out of the notice unannounced.
+ * Exported so `tests/core/findingCodeGrammar.test.ts` can prove that for the
+ * gates whose emitted codes it scans.
+ *
+ * A group that is deliberately a *subset* of a prefix names its codes instead,
+ * and then the split has to partition the prefix rather than sample it. Two do:
+ * the three `QFAI-TRACE-*` groups below, split because the `sdd` and `tdd`
+ * profiles run different halves of it; and `tdd-ledger-seed`, which spreads the
+ * same constant its validator filters on rather than re-spelling it — the
+ * tighter form of the rule, since a list that IS the gate's own list cannot
+ * drift from what the gate evaluates.
  */
 export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
@@ -448,7 +509,52 @@ export const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
+  // The half of the ledger validator that describes what `/qfai-sdd` Phase 2b
+  // wrote. Both `sdd` and `tdd` run it, so it is its own group: folding it into
+  // `tdd` would tell an `sdd` reader these codes went unevaluated.
+  //
+  // Read from the same constant `validateTddListSeedShape` filters on rather
+  // than re-spelled here: a code in one list and absent from the other makes
+  // the notice lie in whichever direction the two drifted.
+  "tdd-ledger-seed": [...TDD_LIST_SEED_SHAPE_CODES],
+  // The downstream-ownership gate, and the only group `full` does NOT run.
+  //
+  // `/qfai-sdd` owns the protected files and edits them without a Change
+  // Request by design, and that author is told to run the full profile before
+  // completion like everyone else — so emitting the finding there would flag
+  // every legitimate authoring edit. `--profile tdd` is the completion gate the
+  // drift protocol names, i.e. the downstream stage the rule binds, and it is
+  // where the guard runs.
+  //
+  // Absent from this map entirely, the family could not even be REPORTED as
+  // unevaluated, so a `full` PASS looked drift-checked to an operator following
+  // `QFAI-PROFILE-001`'s own advice (#1122).
+  drift: ["QFAI-DRIFT-*"],
+  // The remaining `TDDLIST_*` codes report execution state that only exists
+  // after `/qfai-implement` has driven rows, so only its profile evaluates
+  // them. `QFAI-TDDLIST-*` is the canonical spelling of the same gate and every
+  // code it holds today is execution state, so the glob sits here whole.
+  //
+  // `QFAI-TRACE-*` is deliberately NOT here: the three `traceability-*` groups
+  // below split that prefix, and leaving the glob would count every trace code
+  // in two groups at once.
+  tdd: ["TDDLIST_* (execution state)", "QFAI-TDDLIST-*", "QFAI-TEST-*"],
+  // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
+  // and both profiles check that it is present and well-shaped, but `sdd` does
+  // not run the TDD-list gates.
+  "traceability-ledger": ["QFAI-TRACE-002"],
+  // Split from the group above because `sdd` deliberately does not run it: at
+  // that gate the linked implementation is untouched by design. `QFAI-TRACE-003`
+  // only ever reports that *this* check could not run — no diff at all, or a
+  // spec the diff names that the working tree no longer carries — so it travels
+  // with it.
+  "traceability-impl-drift": ["QFAI-TRACE-001", "QFAI-TRACE-003"],
+  // The rest of the `QFAI-TRACE-*` prefix: the layered-traceability report,
+  // dispatched by both `runSddValidators` and `runTddValidators`. It kept its
+  // place in the notice through the `QFAI-TRACE-*` glob the two groups above
+  // replaced, so it needs a group of its own or it drops out for every profile
+  // that runs neither.
+  "traceability-layered": ["QFAI-TRACE-1*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -456,24 +562,58 @@ type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
 /**
+ * What `full` and `verify` actually run: every group except `drift`.
+ *
+ * Derived by exclusion rather than enumerated, so a group added to
+ * `GATE_GROUP_FAMILIES` still reaches `full` without a second edit — which is
+ * the property `ALL_GATE_GROUPS` was there for. The one exclusion is named,
+ * and `runFullValidators` passing `includeUpstreamGuard = false` is the fact it
+ * mirrors (#1122).
+ */
+const FULL_GATE_GROUPS = ALL_GATE_GROUPS.filter((group) => group !== "drift");
+
+/**
  * Groups each profile actually runs, mirroring
  * `core/validate.ts#runProfileValidators`. Exhaustive over `ValidationProfile`
  * so a new profile cannot be added without deciding what it evaluates.
  */
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
-  full: ALL_GATE_GROUPS,
-  verify: ALL_GATE_GROUPS,
+  full: FULL_GATE_GROUPS,
+  verify: FULL_GATE_GROUPS,
   // Both stages mandate the review pack in their RCP footer and both now run
   // `validateReviewArtifacts`, so `QFAI-REVIEW-*` must not be listed as a
   // family the run did not evaluate. `runSddValidators` additionally calls
   // `runPackageSelfGovernanceValidators`, so sdd evaluates that group too.
   discussion: ["discussion", "review-artifacts"],
-  sdd: ["sdd", "package-self-governance", "review-artifacts"],
+  // `runSddValidators` also calls `validateTddListSeedShape`: the stage that
+  // seeds the ledger is gated on the shape it seeded.
+  sdd: [
+    "sdd",
+    "package-self-governance",
+    "review-artifacts",
+    "tdd-ledger-seed",
+    "traceability-ledger",
+    "traceability-layered",
+  ],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
+  // `drift`: `runTddValidators` passes `includeUpstreamGuard = true` here and
+  // `runFullValidators` passes `false`, so this is the only profile that
+  // evaluates `QFAI-DRIFT-*`.
+  //
+  // `tdd-ledger-seed` as well as `tdd`: this profile runs the WHOLE ledger
+  // validator, so it evaluates the seed shape the `sdd` profile also checks.
+  tdd: [
+    "tdd",
+    "tdd-ledger-seed",
+    "atdd-traceability",
+    "drift",
+    "traceability-ledger",
+    "traceability-impl-drift",
+    "traceability-layered",
+  ],
   "saas-package": ["prototyping"],
 };
 
@@ -484,6 +624,9 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
 /**
  * Deduped, order-preserving families for the groups a profile does not run.
  *
+ * `scoped` is whether the run carried `--spec`, which narrows what the `sdd`
+ * profile evaluates: see the branch below.
+ *
  * `unevaluatedSelfGovernance` carries the self-governance codes whose own
  * inputs are absent, so those detectors cannot fire whatever the project does
  * and their codes join the list even though the profile wires them in. It is
@@ -493,6 +636,7 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
  */
 function unevaluatedFamilies(
   profile: string,
+  scoped: boolean,
   unevaluatedSelfGovernance: readonly string[],
 ): string[] {
   if (!isKnownProfile(profile)) {
@@ -508,10 +652,28 @@ function unevaluatedFamilies(
     for (const family of GATE_GROUP_FAMILIES[group]) push(family);
   }
   if (families.length === 0) {
-    // A profile that runs every group is not partial, and this notice is the
-    // partial-profile notice. Reporting a precondition-gated group there would
-    // put "full is a partial profile" into the artifact.
+    // Nothing unevaluated: no notice. This used to be the `full` case and the
+    // comment here reasoned that reporting anything for `full` would put
+    // "full is a partial profile" into the artifact — but `full` does not run
+    // the `drift` group, so with respect to that gate the statement is true and
+    // the silence was the false claim (#1122). What the branch still guards is
+    // a profile with genuinely nothing left out: reporting a
+    // precondition-gated group there would be the artifact contradicting
+    // itself.
     return families;
+  }
+  if (profile === "sdd" && scoped) {
+    // A `--spec` run of this profile is the per-spec slice gate, which the
+    // skill's Required Process places before the phase that seeds the ledger —
+    // so `runSddValidators` drops the codes that reconcile the two. Read from
+    // the same constant it filters on, so the notice cannot claim a gate the
+    // run skipped.
+    //
+    // The drop is per spec — only where the ledger is genuinely absent — so on
+    // a scoped run over seeded specs these codes did in fact run. Listing them
+    // anyway is the conservative half of the error: the notice under-claims
+    // what was evaluated, which is the direction that cannot mislead.
+    for (const family of TDD_LIST_SEED_RECONCILIATION_CODES) push(family);
   }
   if (evaluated.has("package-self-governance")) {
     for (const family of unevaluatedSelfGovernance) push(family);
@@ -538,25 +700,45 @@ function unevaluatedFamilies(
  */
 function buildPartialProfileNotice(
   profile: string | undefined,
+  scoped: boolean,
   unevaluatedSelfGovernance: readonly string[],
 ): Issue | null {
+  // `core/validate.ts` resolves `options.profile ?? "full"` before this runs,
+  // so the only caller always supplies one; this is the parser-rejection path.
   if (!profile) {
     return null;
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile, unevaluatedSelfGovernance);
+  const unevaluated = unevaluatedFamilies(profile, scoped, unevaluatedSelfGovernance);
   if (unevaluated.length === 0) {
     return null;
   }
+  // Drift gets its own sentence because it is the one family NO wide profile
+  // reaches: `full` and `verify` both call `runFullValidators`, which passes
+  // `includeUpstreamGuard = false`. Sending the reader to `--fail-on error`
+  // for it would repeat the advice that produced the false PASS (#1122).
+  const driftNote = unevaluated.includes("QFAI-DRIFT-*")
+    ? " `QFAI-DRIFT-*` (a downstream phase patching upstream SSOT) is evaluated ONLY by " +
+      "`npx qfai validate --profile tdd`, the completion gate the drift protocol names — " +
+      "no wide profile wires it, so `--fail-on error` alone never checks it."
+    : "";
+  // `full` and `verify` run every group but `drift`. Calling them partial
+  // overstates it the other way — a reader would go looking for the rest — and
+  // telling a full run to go run the full profile is a loop. Every other
+  // profile keeps the wording it had, because it was already accurate.
+  const wide = profile === "full" || profile === "verify";
+  const body = wide
+    ? `profile="${profile}" runs every gate group except drift. NOT evaluated in ` +
+      `this run: ${unevaluated.join(", ")}.`
+    : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this ` +
+      `run: ${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
+      "`npx qfai validate --fail-on error` (full profile) before declaring completion.";
   return {
     code: "QFAI-PROFILE-001",
     severity: "info",
     category: "canonical",
-    message:
-      `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
-      `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
-      "`qfai validate --fail-on error` (full profile) before declaring completion.",
+    message: `${body}${driftNote}`,
     rule: "validate.partialProfileCoverage",
   };
 }
@@ -573,7 +755,20 @@ function recountIssues(
   };
 }
 
-function emitText(result: ValidationResult, failOn: FailOn): void {
+function emitStrictSupersededNotice(failOn: FailOn): void {
+  process.stderr.write(
+    `qfai validate: --strict is superseded by --fail-on ${failOn} (effective failOn=${failOn})\n`,
+  );
+}
+
+/**
+ * Renders the default `--format text` output.
+ *
+ * The emitted line grammar is documented for users in the shipped
+ * `assistant/catalog/cli-ux-guidelines.md` (Error Message Format section);
+ * both must be changed together.
+ */
+export function emitText(result: ValidationResult, failOn: FailOn): void {
   for (const item of result.issues) {
     const location = item.file ? ` (${item.file})` : "";
     const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
@@ -592,10 +787,39 @@ function emitText(result: ValidationResult, failOn: FailOn): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
+  // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
+  // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
+  process.stdout.write(`fail-on: ${failOn}\n`);
 }
 
 function emitTextRunLog(runLogPath: string): void {
   process.stdout.write(`run-log: ${runLogPath}\n`);
+}
+
+/**
+ * The version and the directory it came from — first line of every run.
+ *
+ * A validate run printed findings, `counts:` and `run-log:` and nothing about
+ * its own provenance, while `toolVersion` lived only inside `validate.json` —
+ * which the README calls internal and not a stable external contract. So an
+ * `npx qfai` that resolved three directories up, against another branch's
+ * lockfile, was indistinguishable in the transcript from one that resolved
+ * locally (#1096).
+ *
+ * **Before the work, and in every format.** Printed beside `run-log:` it was
+ * absent from `--format github`, which is the format the shipped SDD loop
+ * prescribes (`skills/qfai-sdd/SKILL.md`, `templates/evidence/sdd-spec.md`), so
+ * the answer was missing from the path the product actually runs. And printed
+ * after `validateProject` returned, it was missing from the run that needs it
+ * most: an old externally-resolved qfai throwing on a newer project structure
+ * left a stack trace and nothing about which binary produced it.
+ *
+ * stdout is safe in both formats — neither puts machine-readable JSON there.
+ */
+async function emitProvenance(toolVersion: string): Promise<void> {
+  const packageDir = await resolveToolPackageDir();
+  const where = packageDir === null ? "resolution unknown" : packageDir;
+  process.stdout.write(`qfai: ${toolVersion} (${where})\n`);
 }
 
 function emitGitHubOutput(
@@ -605,22 +829,64 @@ function emitGitHubOutput(
   status: { failOn: FailOn; willFail: boolean; runLogPath: string },
 ): void {
   const deduped = dedupeIssues(result.issues);
-  const omitted = Math.max(deduped.length - GITHUB_ANNOTATION_LIMIT, 0);
   const dropped = Math.max(result.issues.length - deduped.length, 0);
+  const perLevel = capPerLevel(deduped);
 
   emitGitHubSummary(result, {
     total: deduped.length,
-    omitted,
+    emitted: perLevel.emitted.length,
+    levels: perLevel.levels,
     dropped,
     jsonPath,
     root,
     ...status,
   });
 
-  const issues = deduped.slice(0, GITHUB_ANNOTATION_LIMIT);
-  for (const issue of issues) {
+  for (const issue of perLevel.emitted) {
     emitGitHub(issue, status.failOn);
   }
+}
+
+/** What one annotation level looked like: how many exist, and how many were emitted. */
+export interface LevelTally {
+  readonly level: GitHubLevel;
+  readonly total: number;
+  readonly emitted: number;
+}
+
+/**
+ * The issues to emit, capped at GitHub's own limit for each level, plus a tally per level.
+ *
+ * The cap is applied on the level the ANNOTATION carries, not on `issue.severity`, and those are
+ * not the same partition: a suppressed error annotates as `notice`. Capping by severity would
+ * count a suppressed error against the error budget while the runner counted it against the
+ * notice one — so the summary would be wrong in the direction that matters, claiming a level was
+ * complete while the runner truncated it. One derivation, used here and by the emitter.
+ *
+ * Order within a level is preserved, so the first ten of a level are the first ten a reader
+ * would have seen.
+ */
+export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelTally[] } {
+  const buckets = new Map<GitHubLevel, Issue[]>();
+  for (const issue of issues) {
+    const level = gitHubLevel(issue);
+    const bucket = buckets.get(level);
+    if (bucket === undefined) buckets.set(level, [issue]);
+    else bucket.push(issue);
+  }
+
+  const emitted: Issue[] = [];
+  const levels: LevelTally[] = [];
+  // A FIXED order, so the note reads the same way from one run to the next rather than in
+  // whichever order the issues happened to arrive.
+  for (const level of GITHUB_LEVELS) {
+    const bucket = buckets.get(level) ?? [];
+    if (bucket.length === 0) continue;
+    const kept = bucket.slice(0, GITHUB_ANNOTATION_LIMIT_PER_LEVEL);
+    emitted.push(...kept);
+    levels.push({ level, total: bucket.length, emitted: kept.length });
+  }
+  return { emitted, levels };
 }
 
 /**
@@ -637,14 +903,26 @@ function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   return failOn === "warning" && issue.severity === "warning";
 }
 
+/** The three levels GitHub counts separately, in the order the summary reports them. */
+export const GITHUB_LEVELS = ["error", "warning", "notice"] as const;
+
+type GitHubLevel = (typeof GITHUB_LEVELS)[number];
+
+/**
+ * The level an issue annotates as.
+ *
+ * Extracted from `emitGitHub` so the per-level cap and the emitter cannot disagree about which
+ * budget an issue spends. A suppressed issue is a `notice` whatever its severity, and that is
+ * exactly the case a second copy of this expression would get wrong.
+ */
+export function gitHubLevel(issue: Issue): GitHubLevel {
+  if (issue.suppressed) return "notice";
+  if (issue.severity === "error") return "error";
+  return issue.severity === "warning" ? "warning" : "notice";
+}
+
 function emitGitHub(issue: Issue, failOn: FailOn): void {
-  const level = issue.suppressed
-    ? "notice"
-    : issue.severity === "error"
-      ? "error"
-      : issue.severity === "warning"
-        ? "warning"
-        : "notice";
+  const level = gitHubLevel(issue);
   // The location metadata is ESCAPED, and by the property rules rather than the message
   // ones. Review finding [40]: `issue.file` can come from a finding the reviewer gate
   // ingested out of `.qfai/review/**`, which is a directory a pull request writes — so a
@@ -669,7 +947,8 @@ function emitGitHubSummary(
   result: ValidationResult,
   options: {
     total: number;
-    omitted: number;
+    emitted: number;
+    levels: LevelTally[];
     dropped: number;
     jsonPath: string;
     runLogPath: string;
@@ -683,21 +962,32 @@ function emitGitHubSummary(
     `error=${result.counts.error}`,
     `warning=${result.counts.warning}`,
     `info=${result.counts.info}`,
-    `annotations=${Math.min(options.total, GITHUB_ANNOTATION_LIMIT)}/${options.total}`,
+    `annotations=${options.emitted}/${options.total}`,
     `failOn=${options.failOn}`,
     `result=${options.willFail ? "FAIL" : "PASS"}`,
   ].join(" ");
   process.stdout.write(`${summary}\n`);
 
-  if (options.dropped > 0 || options.omitted > 0) {
+  const truncated = options.levels.filter((tally) => tally.emitted < tally.total);
+  if (options.dropped > 0 || truncated.length > 0) {
     const details = [
       "qfai validate note:",
       options.dropped > 0 ? `重複除外=${options.dropped}` : null,
-      options.omitted > 0 ? `上限省略=${options.omitted}` : null,
+      // PER LEVEL, because one number cannot express a per-level cap: a run with 5 errors and
+      // 200 notices is complete on one level and truncated on the other, and a single
+      // `上限省略=195` reads as though something was lost everywhere.
+      truncated.length > 0
+        ? `上限省略=${truncated
+            .map((tally) => `${tally.level} ${tally.emitted}/${tally.total}`)
+            .join(", ")}`
+        : null,
     ]
       .filter(Boolean)
       .join(" ");
     process.stdout.write(`${details}\n`);
+    process.stdout.write(
+      `qfai validate note: GitHub は annotation を level ごと 10 件/step までしか表示しません。省略分は JSON に全件あります。\n`,
+    );
   }
 
   const relative = toRelativePath(options.root, options.jsonPath);
@@ -745,7 +1035,25 @@ function resolveJsonPath(root: string, jsonPath: string): string {
   return path.isAbsolute(jsonPath) ? jsonPath : path.resolve(root, jsonPath);
 }
 
-const GITHUB_ANNOTATION_LIMIT = 100;
+/**
+ * GitHub's own cap on annotations, which is per LEVEL and per STEP.
+ *
+ * This was 100, applied to the whole run, and the summary printed
+ * `annotations=${min(total, 100)}/${total}` — so a run with 40 errors said `annotations=40/40`,
+ * which reads as "every finding was emitted", while the runner displayed ten and dropped thirty
+ * without saying so. The summary is the only thing an operator sees, and it said the opposite of
+ * what happened. Measured on the `test (cli)` lane, all three levels sat at exactly ten, so the
+ * truncation was the steady state rather than an edge case.
+ *
+ * Emitting past the cap was the alternative and buys nothing: the runner drops the extras, and a
+ * local `--format github` run just prints more lines that no reader gets. What is owed is not a
+ * smaller number but an honest report, which is why the per-level tally exists beside this.
+ *
+ * The cap is per STEP, and a step may run `validate` more than once — so this bounds what THIS
+ * invocation emits, not what the step ultimately displays. The note says the rule rather than
+ * promising an outcome this process cannot see.
+ */
+export const GITHUB_ANNOTATION_LIMIT_PER_LEVEL = 10;
 
 /**
  * Human-readable "expected state" per issue code. Exported so a test can assert
@@ -753,6 +1061,8 @@ const GITHUB_ANNOTATION_LIMIT = 100;
  * here or explicitly recorded as pending, instead of shipping without one.
  */
 export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+  "QFAI-CFG-001":
+    "qfai.config.yaml sets no key that has been retired. A retired key is still parsed so an existing config keeps loading, but nothing reads it, so leaving it in place misreports the gate the tool actually runs.",
   "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
   "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
@@ -770,12 +1080,24 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-PROT-011":
+    "Every spec named in `prototyping.json#frozenSurfaceUnion` still resolves as UI-bearing, so the open loop describes screens that exist; a retired surface is either restored or the loop is reset deliberately from cycle 0.",
+  "QFAI-SCAN-002":
+    "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
+  "QFAI-TOOL-002":
+    "The qfai a project's gates run through is the one its own dependency declaration installs, so the gating version is pinned by its own lockfile rather than by whichever checkout `npx` reached first.",
+  "QFAI-TOOL-001":
+    "The qfai that runs a project's gates is resolved from inside that project, so the gating version is pinned by its own lockfile; a global install or a monorepo-root hoist is a benign reading of the same path test.",
   "QFAI-PLATFORM-003":
     "Every `--platform` given is read by the profile it is given to; the discussion / sdd / atdd / tdd profiles never reach platform detection, so a value passed there changes nothing about the run.",
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+  "QFAI-TRIAGE-009":
+    "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
+  "QFAI-SPLIT-106":
+    "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
@@ -799,6 +1121,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every US must be referenced at least once from tests/e2e/**. Scoped to user-facing specs when any spec declares a surface type; project-wide otherwise.",
   "QFAI-ATDD-112":
     "Every TC must be referenced at least once from the test directory its declared Level routes to (default tests/integration/**).",
+  "QFAI-ATDD-118":
+    "User stories declaring `- x-qfai-status: planned` are deferred from the E2E-test obligation.",
   "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
   "QFAI-ATDD-114":
     "CON-API contracts declaring `x-qfai-status: planned` are deferred from the API-test obligation.",
@@ -810,6 +1134,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
+  "QFAI-ATDD-119":
+    "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
   "QFAI-ATDD-131":
     "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
   "QFAI-ATDD-132":
@@ -853,128 +1179,30 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
-  "QFAI-PROT-101":
-    "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-150": "prototyping.json exists at the canonical evidence path for UI prototyping.",
-  "QFAI-PROT-151": "surface must be one of web|mobile|desktop|mixed.",
-  "QFAI-PROT-152":
-    "mode.requested/mode.effective/mode.source/mode.rationale must follow the current prototyping evidence schema.",
-  "QFAI-PROT-171": "surface field must be one of: web, mobile, desktop, mixed.",
-  "QFAI-PROT-172":
-    "surface/mode obligation matrix mismatch — required evidence bundles are missing.",
-  "QFAI-PROT-173": "required render evidence bundle is missing.",
-  "QFAI-PROT-174": "required browser QA bundle is missing.",
-  "QFAI-PROT-175":
-    "non-UI prototyping surface but UI-only evidence present (runtimeGate.ui, uiFidelity, render, browserQa).",
-  "QFAI-PROT-176": "ui-bearing full-harness mode requires uiFidelity.",
-  "QFAI-PROT-177": "ui-bearing full-harness mode requires runtimeGate.",
-  "QFAI-PROT-111":
-    "Coverage Matrix rows in prototyping evidence include every `.qfai/specs/spec-*` entry.",
-  "QFAI-PROT-112":
-    "Per-spec UI checks satisfy declared route counts and leave no unresolved UI routes.",
-  "QFAI-PROT-153":
-    "iteration reviewer scores are malformed; every evaluation reviewer must score every axis with 0..100 and evidence refs.",
-  "QFAI-PROT-154": "iteration count exceeds the configured maximum for the effective mode.",
-  "QFAI-PROT-155":
-    "iteration stopReason is invalid; must be threshold-reached|max-iterations|manual-stop.",
-  "QFAI-PROT-156": "allReviewerAxesPerfect100 must be true when stopReason is threshold-reached.",
-  "QFAI-PROT-234": "unused legacy prototyping recommendation fields are not supported.",
-  "QFAI-PROT-235":
-    "legacy discussion recommendation fields are not supported in prototyping evidence.",
-  "QFAI-PROT-236": "explicit requested mode is invalid.",
-  "QFAI-PROT-237":
-    "interactive uiFidelity requires observed mockPaths issue ledger entries (fail|finding).",
-  "QFAI-PROT-238":
-    "uiFidelity does not satisfy UI contract coverage (screens empty or contract mismatch).",
-  "QFAI-PROT-241":
-    "uiFidelity screens must have no missing labels when expected.labels is present.",
-  "QFAI-PROT-242":
-    "uiFidelity screens must have no missing markers when expected.elements > 0 and markers are tracked.",
-  "QFAI-PROT-243":
-    "Placeholder/single-text pages are detected when expected elements > 2, observed <= 1, and found.labels <= 1.",
   "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
-  "QFAI-PROT-245":
-    "render coverage is incomplete for required default viewports or all renders are skipped.",
   "QFAI-PROT-251":
     "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
   "QFAI-PROT-252":
     "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
   "QFAI-PROT-253":
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
-  "QFAI-PROT-255": "captured render evidence screen references a file that does not exist on disk.",
-  "QFAI-PROT-256": "skipped/failed render evidence screen is missing required reason/error field.",
-  "QFAI-PROT-262":
-    "browser QA completed status without usable evidence (no summary and no findings).",
-  "QFAI-PROT-263":
-    "browser QA bundle exists but executed=false for full-harness ui-bearing project.",
-  "QFAI-PROT-265": "full-harness calibration pack could not be resolved from packPath.",
-  "QFAI-PROT-266": "full-harness evidence exists but iteration reviewer scores are empty.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
   "QFAI-PROT-274":
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-270": "uiFidelity is required for full-harness UI prototyping but is absent.",
-  "QFAI-PROT-271": "uiFidelity.mode='skeleton' is not allowed in full-harness UI prototyping.",
-  "QFAI-PROT-272":
-    "uiFidelity screen is missing required fields (uiContractId, route, expected, observed).",
-  "QFAI-PROT-284": "emoji characters (U+1F000–U+1FAFF) are forbidden in full-harness output.",
-  "QFAI-PROT-285": "prototyping phase state machine is invalid for completion.",
-  "QFAI-PROT-286": "post-selection polish iteration evidence is missing for completion.",
-  "QFAI-PROT-287": "completion requires every reviewer axis score to be 100.",
-  "QFAI-PROT-288": "legacy 95-point completion marker is not a valid completion border.",
-  "QFAI-PROT-289": "completionCertificate is required when completion is claimed.",
-  "QFAI-PROT-292":
-    "terminationReason is max-iterations but iterationCount is below configured maxIterations.",
   "QFAI-PROT-311":
     "executionPlan.delegationMap is present but is not an object, or one of its entries assigns a category to a role outside the SKILL.md Delegation Scope Table.",
-  "QFAI-PROT-318":
-    "runtimeGate/specCoverage evidenceRefs contain a non-concrete artifact reference.",
-  "QFAI-PROT-326": "runtimeGate.ui[].declaredRef must use the canonical screen contract sourceRef.",
-  "QFAI-PROT-327":
-    "fullHarness.iterations[].evidenceRefs.screenContract must use canonical screen contract refs.",
-  "QFAI-PROT-328":
-    "specs[].coverageRefs[].declaredRef must point to a spec declaration under .qfai/specs/.",
-  "QFAI-PROT-329": "fullHarness.status is completed but reviewerSignoff.timestamp is missing.",
-  "QFAI-PROT-330":
-    "uiFidelity screen actionsWired exceeds actionsDeclared (expected.actions). actionsWired must not exceed the number of declared actions.",
-  "QFAI-PROT-331":
-    "fullHarness.scoringTrace[<n>].screenshotDir is missing or empty; full-harness requires screenshot evidence per iteration.",
-  "QFAI-PROT-332":
-    "Lighthouse gate is required for full-harness + web surface but no lighthouse report is present in prototyping.json.",
-  "QFAI-PROT-333":
-    "fullHarness.iterations: minimum 2 iterations required before convergence; iteration 1 cannot be marked converged.",
-  "QFAI-PROT-334":
-    "scoringTrace.designSystemCompliance is below the 0.75 threshold while 12_design_system.md is present in the calibration pack; immediate fix required for next iteration.",
   "QFAI-PROT-335":
     ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
-  "QFAI-PROT-277":
-    "prototyping.json rounds[].commitSha / polishCycles[].commitSha must contain a 40-character git commit SHA.",
-  "QFAI-PROT-278":
-    "prototyping.json must use a distinct commitSha for each prototyping round and polish cycle.",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primarySpecId points to a spec ID that does not exist under the configured specs directory.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":
     "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
-  "QFAI-PROT-REF-001":
-    "An xxxRef string in prototyping.json / review-bundle.json / breakthrough.json points to a file that does not exist on disk.",
-  "QFAI-PROT-LINK-001":
-    "prototyping.json.specs[].specId references a spec that does not exist under .qfai/specs/.",
-  "QFAI-PROT-LINK-002":
-    "review-bundle.json.spec references a spec that does not exist under .qfai/specs/.",
-  "QFAI-PROT-LINK-003":
-    "prototyping.json.rounds[].candidates[].candidateId has no corresponding artifact directory under .qfai/evidence/prototyping/rounds/<rN>/candidates/.",
-  "QFAI-PROT-LINK-004":
-    "prototyping.json.polishCycles[].cycle has no corresponding iteration directory under .qfai/evidence/prototyping/iterations/.",
-  "QFAI-PROT-AXIS-FLOOR-001":
-    "Each candidate's evaluator-review perAxis[].score must meet evaluation-rubric.yaml hard_floors[].min_score in absorption rounds (r3|r2|r1). r5 is exempt.",
-  "QFAI-PROT-CONCEPT-001":
-    "Every active prototyping candidate must have a complete concept.json with differentiated design thesis and template-risk constraints.",
   "QFAI-UIE-001":
     "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":
@@ -1005,16 +1233,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
-  "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
-  "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
-  "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
-  "QFAI-BREAK-004": "breakthrough.json.triggerResult must be a boolean.",
-  "QFAI-BREAK-005": "breakthrough.json.triggerReasons must be an array of strings.",
-  "QFAI-BREAK-006": "breakthrough.json.avgScoreDeltas must be an array of numbers.",
-  "QFAI-BREAK-007": "breakthrough.json.diffLines must be a non-negative number.",
-  "QFAI-BREAK-008":
-    "triggerResult=true requires breakthrough.json.branchCount to be a positive integer.",
-  "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so each carries a promotion window
   // (`core/sunset.ts`) and reaches `error` only at its pinned release. The
@@ -1081,12 +1299,22 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every Markdown table row carries the same cell count as its header, so a positionally-read ledger cannot silently shift a column.",
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
+  "QFAI-ASSETS-003":
+    "Every Stage 0 steering catalog file (.qfai/assistant/catalog/{manifest,product,structure,tech}.md) holds project values rather than the `<...>` slots and bare TODO/TBD placeholders `qfai init` ships, since qfai-implement Stage 0 reads its gate commands from tech.md#standard-commands-copy-paste and cannot run one that is still a placeholder.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-TDDLIST-007":
+    "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
+  "QFAI-TDDLIST-009":
+    "Every row's recorded `Revision` still names the tree its observation ran against: nothing the observation covered — the test file it names, or the source under test — has changed since. A stale Revision looks exactly like a fresh one, so this is computed rather than read.",
+  "QFAI-TDDLIST-008":
+    "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
+  "QFAI-CTYPE-004":
+    "Every `### DL-` entry in a delta file carries the seven `#### Meta` keys `parseDeltaV1` reads, so the Change Type counters see it. An entry the parser skips is counted for nothing and leaves the summary describing less change than the file records.",
 };
 
 /**
@@ -1096,6 +1324,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  * values that failed the check.
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
+  // The finding already names the offending key and the release the window
+  // closes at; this is the catalog half, which `qfai report` renders for
+  // codes whose `issue(...)` sites carry no `suggested_action` of their own.
+  "QFAI-CFG-001":
+    "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
   "QFAI-BPAP-001":
     "Restore read access to the file, or delete it if it is no longer part of the rule set.",
   "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
@@ -1123,6 +1356,12 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
   "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
   "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+  // All four declared-mapping paths (blank cell, several directories, a CAP on
+  // two rows, two CAPs on one directory) pass no `suggested_action`, and one
+  // repair covers them: the `Spec` cell is the mapping, so the fix is always to
+  // make each row name exactly one directory that no other row names.
+  "QFAI-SPLIT-106":
+    "Edit the `Spec` cell of each `CAP-NNNN` row the message names in `_policies/03_Capabilities.md` so it holds exactly one `spec-NNNN` directory: fill a blank cell with the directory that capability owns, cut a cell that lists several down to the one that owns it, merge a CAP that appears on two rows into one row, and give a directory claimed by two CAPs to only one of them.",
   // The agent-catalog drift emitter passes no `suggested_action` on either of
   // its paths (absent block, stale block), so both depend on this catalog for
   // their `fix:` line. One repair covers both: the markdown file is the source.
