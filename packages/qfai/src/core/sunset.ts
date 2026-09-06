@@ -218,6 +218,15 @@ export const RULE_PROMOTIONS = {
    */
   assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-SPECSECTION-001` — a spec pack missing a heading that
+   * `validation.require.specSections` requires — and `QFAI-SPECSECTION-002`,
+   * an entry of that list that normalises to no heading name at all. Both
+   * arrive with the gate itself: a project that already set the key had
+   * nothing reading it, so every pack that never carried the heading, and
+   * every unusable entry already written, meets the rule in one run.
+   */
+  specSectionsRequiredHeadings: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed

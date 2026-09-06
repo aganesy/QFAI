@@ -44,10 +44,15 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-DOC-CONVERGENCE-MISSING",
   "QFAI-DOC-VOCABULARY-CONTRADICTION",
   "QFAI-DOC-VOCABULARY-PROHIBITED",
-  // `core/validators/mermaidFence.ts` was its sole emitter. This branch folds
-  // that fence check into `mermaidEnforcement.ts` — which raises
-  // `QFAI-MMD-001` over the same input — and deletes the file.
+  // `core/validators/mermaidFence.ts` was its sole emitter. That fence check
+  // folded into `mermaidEnforcement.ts` — which raises `QFAI-MMD-001` over the
+  // same input — and the file was deleted.
   "QFAI-MERMAID-001",
+  // Both retired by this change: the two performance findings are replaced by
+  // the `timings` record `validate.json` now carries, so nothing emits either
+  // code any more. Listed in sorted order because the assertion compares this
+  // against a sorted `retired`.
+  "QFAI-MOCK-099",
   "QFAI-REQCTX-000",
   "QFAI-REQCTX-001",
   "QFAI-REQCTX-002",
@@ -58,6 +63,7 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-REQCTX-021",
   "QFAI-REQINDEX-001",
   "QFAI-REQINDEX-002",
+  "QFAI-UIUX-PERF",
 ];
 
 /**

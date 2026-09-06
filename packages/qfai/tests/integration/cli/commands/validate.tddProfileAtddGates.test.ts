@@ -192,6 +192,9 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         expect(notice?.message).toContain('profile="discussion" is a partial profile');
         expect(notice?.message).toContain("QFAI-HYG-*");
         expect(notice?.message).toContain("TDDLIST_*");
+        // The required-heading gate is SDD-only, so a discussion run must
+        // declare it unevaluated rather than let the partial PASS look total.
+        expect(notice?.message).toContain("QFAI-SPECSECTION-*");
         expect(notice?.message).not.toContain("QFAI-DPACK-*");
       });
     });
