@@ -36,14 +36,20 @@ const control = vi.hoisted(() => ({
   mode: "off" as FaultMode,
   /** How many exclusive creates the fault has already answered. */
   denials: 0,
+  /** How many writability probes the acquire has attempted. */
+  probes: 0,
+  /** Make `lstat` of the lock path fail with something that is not ENOENT. */
+  lockStatDenied: false,
 }));
 
-function errnoError(code: string, target: string): NodeJS.ErrnoException {
+const PROBE_PREFIX = ".qfai-lock-probe-";
+
+function errnoError(code: string, syscall: string, target: string): NodeJS.ErrnoException {
   const error: NodeJS.ErrnoException = new Error(
-    `${code}: operation not permitted, open '${target}'`,
+    `${code}: operation not permitted, ${syscall} '${target}'`,
   );
   error.code = code;
-  error.syscall = "open";
+  error.syscall = syscall;
   error.path = target;
   return error;
 }
@@ -66,15 +72,28 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         spelled.includes(`${path.sep}.qfai${path.sep}`)
       ) {
         const isLock = spelled.endsWith("state.json.lock");
+        if (path.basename(spelled).startsWith(PROBE_PREFIX)) {
+          control.probes += 1;
+        }
         // `raceOnce` denies the FIRST lock create and nothing else, which is
         // the unlink window: the writability probe that follows must succeed.
         // `denyAll` denies the probe too, which is the unwritable directory.
         if (control.mode === "denyAll" || (isLock && control.denials === 0)) {
           control.denials += 1;
-          throw errnoError("EPERM", spelled);
+          throw errnoError("EPERM", "open", spelled);
         }
       }
       return actual.open(target, flags, mode);
+    },
+    lstat: async (
+      target: Parameters<typeof actual.lstat>[0],
+      options?: Parameters<typeof actual.lstat>[1],
+    ) => {
+      const spelled = String(target);
+      if (control.lockStatDenied && spelled.endsWith("state.json.lock")) {
+        throw errnoError("EACCES", "lstat", spelled);
+      }
+      return actual.lstat(target, options);
     },
   };
 });
@@ -84,11 +103,14 @@ let root: string;
 beforeEach(async () => {
   control.mode = "off";
   control.denials = 0;
+  control.probes = 0;
+  control.lockStatDenied = false;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-state-acquire-"));
 });
 
 afterEach(async () => {
   control.mode = "off";
+  control.lockStatDenied = false;
   await rm(root, { recursive: true, force: true });
 });
 
@@ -125,6 +147,30 @@ describe("TC-0010-0012: the state lock classifies a failed exclusive create", ()
     // Intact: the operator gets the real fault, not "still held after 5000ms".
     await expect(bumpCounter(root)).rejects.toThrow(/cannot create state lock .*EPERM/s);
     expect(await readStateTolerant(root)).toBeNull();
+  });
+
+  it("rethrows when the lock path itself cannot be stat'ed, and does not probe", async () => {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    control.mode = "raceOnce";
+    // The directory would accept a new name, so the probe alone would say
+    // "contended". The stat that could not answer has to stop it first —
+    // otherwise the confusion this function prevents arrives through the
+    // stat instead of through the open.
+    control.lockStatDenied = true;
+
+    await expect(bumpCounter(root)).rejects.toThrow(/cannot create state lock .*EPERM/s);
+    expect(control.probes).toBe(0);
+    expect(await readStateTolerant(root)).toBeNull();
+  });
+
+  it("treats an absent lock path as absent, which ENOENT is an answer to", async () => {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    control.mode = "raceOnce";
+
+    // The pair to the case above: the lock is gone by the time it is stat'ed,
+    // which is what the unlink window looks like, and the probe decides.
+    await expect(bumpCounter(root)).resolves.toBe(1);
+    expect(control.probes).toBe(1);
   });
 
   it("leaves no probe file behind on either outcome", async () => {

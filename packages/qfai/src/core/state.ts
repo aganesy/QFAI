@@ -1021,6 +1021,12 @@ async function acquireStateLock(lockPath: string): Promise<StateLock> {
  *
  *   - a name that is present and is not a file will never become creatable, so
  *     the failure is permanent whatever the errno says;
+ *   - a name the `lstat` itself cannot answer for leaves the question OPEN, and
+ *     an open question is not contention. `ENOENT` is an answer ("no such
+ *     name"); an `EACCES` on the lock path is not, and treating it as absence
+ *     would send a permanent fault into the retry loop — the very confusion
+ *     this function exists to prevent, arriving through the stat instead of
+ *     through the open;
  *   - otherwise, ask the directory directly whether this process can put a new
  *     name in it. If it can, the create lost a race and retrying is right; if
  *     it cannot, the original error is the true one and is rethrown intact.
@@ -1029,7 +1035,13 @@ async function exclusiveCreateWasContended(lockPath: string, error: unknown): Pr
   const code = errorCode(error);
   if (code === "EEXIST") return true;
   if (code !== "EPERM" && code !== "EACCES") return false;
-  const existing = await lstat(lockPath).catch(() => null);
+  let existing: Stats | null;
+  try {
+    existing = await lstat(lockPath);
+  } catch (statError) {
+    if (!isEnoent(statError)) return false;
+    existing = null;
+  }
   if (existing !== null && !existing.isFile()) return false;
   return acceptsNewNames(path.dirname(lockPath));
 }
@@ -1041,9 +1053,15 @@ async function exclusiveCreateWasContended(lockPath: string, error: unknown): Pr
  * explained. `access(dir, W_OK)` is not an answer on Windows: it reports the
  * read-only ATTRIBUTE, which is meaningless on a directory, and says "writable"
  * for a directory whose ACL denies this account — the one case this has to
- * catch. The probe name carries the pid and a UUID so two runs racing here
- * cannot collide, and it is removed on both paths; a name left behind by a
- * process killed mid-probe is inert.
+ * catch.
+ *
+ * The probe name carries the pid and a UUID so two runs racing here cannot
+ * collide. Removing it is BEST EFFORT: the answer is already known once the
+ * create succeeded, and failing the acquire because the cleanup failed would
+ * turn a working directory into a refusal. A name left behind — by a failed
+ * `rm`, or by a process killed between the create and it — is inert: nothing
+ * reads it, the lock and its reap file are addressed by exact path, and the
+ * next probe picks a fresh UUID rather than that one.
  */
 async function acceptsNewNames(dir: string): Promise<boolean> {
   const probePath = path.join(dir, `.qfai-lock-probe-${process.pid}-${randomUUID()}`);
