@@ -393,6 +393,9 @@ after its surface passes on the first run. So:
   (`open: N (blocked: M)`), so "not started" and "cannot start" are readable
   apart without changing what completion means.
 
+`blocked` is not a completion state and appears in the completion-prohibition
+list, on the same bullet as `todo`.
+
 ## Exception Handling
 
 `exception` means **anomaly, work paused** — not "accepted risk, closed". The

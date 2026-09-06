@@ -418,8 +418,9 @@ const SPEC_LEVEL_PARITY: readonly {
   },
   {
     heading: PROHIBITIONS_HEADING,
-    condition: "Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist",
-    box: "No `todo`, `red`, `green`, `refactor` or `review-fix` row remains",
+    condition:
+      "Items with `todo`, `blocked`, `red`, `green`, `refactor`, or `review-fix` status still exist",
+    box: "No `todo`, `blocked`, `red`, `green`, `refactor` or `review-fix` row remains",
   },
   {
     heading: PROHIBITIONS_HEADING,
@@ -717,7 +718,7 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     const checklist = await readChecklistProse(dir);
     expect(checklist).toContain("Every ledger row reached a **terminal** status");
     expect(checklist).toContain(
-      "No `todo`, `red`, `green`, `refactor` or `review-fix` row remains",
+      "No `todo`, `blocked`, `red`, `green`, `refactor` or `review-fix` row remains",
     );
     // The `exception` half is the waiver, not a bare DR that names the anomaly.
     expect(checklist).toContain("user-approved accepted-risk waiver");

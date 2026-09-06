@@ -393,7 +393,9 @@ Keep all other config keys unchanged.
 
 Sample 5-15 actual test files that match the proposed globs.
 
-- If zero matches exist, stop and ask for clarification.
+- If zero matches exist, stop and ask for clarification. Under `--auto` do not ask:
+  zero matches leave nothing to assume from, so stop with the empty match set reported
+  as a blocker and leave `testFileGlobs` unchanged.
 - If some directories are ambiguous, list them as Open Questions.
 
 ## Checkpoints

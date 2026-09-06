@@ -102,8 +102,10 @@ So for a machine-readable asset at the ceiling the remedy is, in order:
   explicit, labelled assumptions and record them in the output, as `--auto`
   does; a required approval may still be asked. See
   `constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
-- When `--auto` is active, ask nothing: no AskUserQuestion, no plain-text question.
-  Proceed with explicit assumptions and record them in the outputs.
+- When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask
+  via plain text. Proceed with explicit assumptions and record them in the outputs.
+  Proceeding presupposes evidence to assume from — when a step has none, it is a hard
+  blocker: stop there and report it as a blocker instead of asking or guessing.
 
 ## Canonical qfai Launcher (Mandatory)
 

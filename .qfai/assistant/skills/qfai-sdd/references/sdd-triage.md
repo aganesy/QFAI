@@ -35,6 +35,13 @@ Concretely, before persisting any Triage row:
    one), then cite the CAP in the Triage row's Rationale column.
    `QFAI-TRIAGE-006` will fail the validator otherwise, and a row left
    with an empty `Spec` cell reports `QFAI-SPLIT-106`.
+   Under `--auto` that catalog write is deferred together with the
+   approval it depends on: leave
+   `_policies/03_Capabilities.md` untouched, record the intended
+   `CAP-NNNN` in the Rationale column as a proposal, and let
+   `QFAI-TRIAGE-006` surface next to the missing approver in the same
+   blocker set (steps 5 and 7). An unapproved CREATE row must never leave
+   a new CAP behind in the catalog.
 
    `QFAI-SPLIT-106` is inside its promotion window, so it is emitted at
    `warning` and `validate --fail-on error` **still exits 0** while the
@@ -131,6 +138,8 @@ and that none were added or dropped — in the `Rationale` column of the
    at step 7 instead. Never synthesize an `Approved By` value — the column
    records who authorized the operation, so an invented approver is a false
    audit record. See `../SKILL.md#--auto-and-approval-required-rows`.
+   One such row stops the whole batch, because
+   Phase 0 onward is a fixed-order pass over the persisted table.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /

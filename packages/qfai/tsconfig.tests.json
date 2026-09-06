@@ -29,8 +29,12 @@
     "means adding it here."
   ],
   "include": [
+    "vitest.config.ts",
+    "vitest.knobs.ts",
+    "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
+    "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/assetOverflowHome.test.ts",
     "tests/assets/assets.test.ts",
     "tests/assets/atddConDbOwnership.test.ts",
@@ -39,6 +43,7 @@
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
+    "tests/assets/blockedCompletionProhibition.test.ts",
     "tests/assets/brandCatalogStepAnchor.test.ts",
     "tests/assets/capabilitySpecMapping.test.ts",
     "tests/assets/changeTypeRecordName.test.ts",
@@ -208,9 +213,6 @@
     "tests/validators/reOpenDecisionRecord.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
-    "tests/validators/validatorReachability.test.ts",
-    "vitest.config.ts",
-    "vitest.knobs.ts",
-    "vitest.workspace.ts"
+    "tests/validators/validatorReachability.test.ts"
   ]
 }
