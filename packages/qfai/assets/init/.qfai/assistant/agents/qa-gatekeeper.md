@@ -175,9 +175,11 @@ commit recorded **alongside** the path and symbol is provenance and is fine.
 outside the code the item owns, which on an `E2E` / `API` / `Integration` row is every
 production predicate there is — the same sentence above says no ledger row owns
 that surface. Applied literally, no branch-2 row could ever produce
-falsifiability evidence that passes. On a handed-over row, **the predicate
-`Satisfied-by` names is the owned code** for this check; anything else is still
-out of bounds.
+falsifiability evidence that passes. On a falsifiability row, **the predicate
+`Satisfied-by` names is the owned code** for this check — the exemption follows
+the evidence branch, not the `Layer`, because a `Unit` / `Component` trio
+mutates a sibling's predicate by construction too; anything else is still out of
+bounds.
 
 **On any other row the sibling row is still required** — production code
 no ledger row owns is the anomaly case there, not a substitute. See
