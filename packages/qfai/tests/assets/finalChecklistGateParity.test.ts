@@ -272,7 +272,7 @@ const GATE_ITEM_PARITY: readonly {
   },
   {
     item: 10,
-    condition: "`Review pack seal` is recomputed here",
+    condition: "Every `Review pack seal` the entry carries",
     box: "`Review pack seal` and each `Audited evidence hash` recomputed",
   },
   {
@@ -345,7 +345,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
   9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  10: "9df619fc647f75567d2fb91e0fce3146ab43cd21098ca876d235a8f101fd8c6f",
+  10: "7b258555f0116d60cb5740f880edfd8d6d1ffdabba262db461a82e72b686b0bd",
   11: "a7470dc8a8e922a0ea06fd70b7703a2ea35e31eb79c27436f84c329d11dc9493",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };

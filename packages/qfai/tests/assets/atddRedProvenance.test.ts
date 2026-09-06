@@ -213,7 +213,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      "RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "RED command+result, `Round 1: RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -2022,7 +2022,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(revision).toContain("**gate item 10 recomputes it from the pack**");
     expect(revision).toContain("**not** in any reviewer's audit subject");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("`Review pack seal` is recomputed here");
+    expect(implement).toContain("Every `Review pack seal` the entry carries");
+    expect(implement).toContain(
+      "is recomputed here from the `review-<timestamp>/` directory it names",
+    );
   });
 
   it("leaves the final status out of the stage subject", async () => {
@@ -2127,7 +2130,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const audit = flat(await read(tree, AUDIT_HASH));
     expect(audit).toContain("where the row has one, `Replacement proof revision`");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("also carries `Replacement proof revision`");
+    expect(implement).toContain("also carries `Round N: Replacement proof revision`");
   });
 
   it("stops restating the working-tree serialization in the baseline", async () => {
@@ -2157,7 +2160,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // still describes, so overwriting its revision with the tree a later
     // mutation ran against hashed two trees as one observation.
     const reviewFix = flat(await read(tree, REVIEW_FIX));
-    expect(reviewFix).toContain("`Replacement proof revision`");
+    expect(reviewFix).toContain("`Round N: Replacement proof revision`");
     expect(reviewFix).toContain("**not over `RED revision`**");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("Leave `RED revision` alone**");
@@ -2312,7 +2315,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     // The field is named now, so the consumer sentence names it too.
     expect(implement).toContain(
-      "**write the re-taken proof and, in `Replacement proof revision`, the tree it ran against",
+      "**write the re-taken proof and, in `Round N: Replacement proof revision`, the tree it ran against",
     );
   });
 
@@ -2463,7 +2466,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // recorded it — so a correct ATDD-owned row reached the completion gate
     // missing a mandatory field.
     const provenance = flat(await readProvenance(tree));
-    expect(provenance).toContain("`RED failure mode` is on both rows");
+    // The field takes the `Round N:` prefix like every other round field (#654),
+    // so the sentence names it prefixed. Same claim, the spelling the closed
+    // list requires.
+    expect(provenance).toContain("`Round 1: RED failure mode` is on both rows");
     expect(provenance).toContain("on branch 2 it is `falsifiability`");
   });
 
@@ -2862,8 +2868,13 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(provenance).toContain(
       "`RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS",
     );
+    // `Round 1:` on the revision, because `round-evidence.md` enumerates it as
+    // `Round N: Falsifiability revision` and says in as many words that writing
+    // it unprefixed leaves the completion gate unable to find the round it
+    // belongs to. This handoff is the row's round 1, which is why the failure
+    // mode beside it already carries the prefix.
     expect(provenance).toContain(
-      "**`Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair",
+      "**`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair",
     );
   });
 

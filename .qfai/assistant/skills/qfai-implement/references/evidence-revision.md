@@ -48,8 +48,10 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      could not agree on one revision and a correct item never reached `done`.
      What protects the pack is a **pack seal**, not the audit hash: that one
      addresses the evidence a reviewer _read_, and the pack is what it _wrote_.
-     When the last reviewer of a round has stored its response, record the seal
-     in the item's evidence entry as `Review pack seal` — by the **audit-hash**
+     When the last reviewer of a **review attempt** has stored its response,
+     record the seal in the item's evidence entry as `Review pack seal` — one
+     per attempt, because a behaviour-preserving `REVISE` re-reviews inside the
+     same round into a pack of its own — by the **audit-hash**
      procedure in
      `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
      not the working-tree one below: its step 2 normalization (LF, trailing
@@ -73,6 +75,13 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      beside it. A spec has several packs and a blocking REVISE opens more, so a
      bare hash left the gate unable to say which directory to recompute over —
      it either checked another round's pack or stopped a correct item.
+     **A round that was reviewed more than once carries one pair per attempt**,
+     qualified `(attempt M)` in review order (`round-evidence.md`): every review
+     writes its own pack, so writing the seal only for the attempt that closed
+     the round left the earlier packs unsealed and their edits undetectable.
+     **Gate item 10 recomputes every seal the entry carries**, not just the
+     latest — a recomputation that stops at one pair is the same hole with a
+     value stored beside it.
 
      **A record re-attestation seals its own pack the same way**, under
      `Record re-attestation pack` and `Record re-attestation pack seal` — it is

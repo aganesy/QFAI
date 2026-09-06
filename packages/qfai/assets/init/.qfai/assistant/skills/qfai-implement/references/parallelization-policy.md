@@ -378,7 +378,7 @@ unchanged. Two consequences are specific to dispatch:
     `observed-red` row has no such field, so requiring it there sends back a row
     that is already complete.
   - A row whose proof was re-taken after a **test-only replacement** returns
-    `Replacement proof revision` too — _beside_ its `RED revision`, not instead
+    `Round N: Replacement proof revision` too — _beside_ its `RED revision`, not instead
     of it. It names the temporary tree the replacement test's mutation proof ran
     against, which is why the contract gives it a field of its own rather than
     letting it overwrite the original RED's address
@@ -408,11 +408,11 @@ merged row can never reach `done`:
 
 1. **Before the merge, and before any slice worktree is removed**, the
    orchestrator validates every returned block against the field list the row's
-   own branch selects — including `Replacement proof revision` where the row
+   own branch selects — including `Round N: Replacement proof revision` where the row
    took a test-only replacement. A short block goes back to its worker
    **there**, while the tree its missing field names still stands. Afterwards no
    one can re-take `RED revision`, `Falsifiability revision` or
-   `Replacement proof revision`: the tree each named is not reconstructible from
+   `Round N: Replacement proof revision`: the tree each named is not reconstructible from
    the trunk, and the orchestrator may not write code. So an incomplete block
    blocks the **merge**, which is recoverable, rather than the row, which by
    then is not.
@@ -508,7 +508,7 @@ In serial mode the same rule holds with no merge step, and the replay has
 nothing to reconstruct: the implementation agent returns Status + Evidence after
 each phase and the orchestrator writes them then, so the row walks those same
 edges as they happen rather than afterwards.
-`RED revision`, `Falsifiability revision` and `Replacement proof revision` are
+`RED revision`, `Falsifiability revision` and `Round N: Replacement proof revision` are
 exempt from steps 2 and 3 and carry over unchanged — they are transient
 observations that name their own tree by design
 (`evidence-revision.md#a-transient-observation-names-its-own-revision`). That

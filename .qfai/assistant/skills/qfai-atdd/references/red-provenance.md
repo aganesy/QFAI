@@ -313,16 +313,20 @@ Exactly one form per row, never both and never neither:
 
 | Branch         | Recorded                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                                                                            |
-| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                                                                      |
+| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `Round 1: RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                                                                   |
+| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `Round 1: RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                                                    |
 | `exception`    | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects, recorded **before** P1d routes the gate — its audit subject is those plus the `DR-ID` and the DR artifact, so a row without them has nothing reproducible for `qa-gatekeeper` to hash. Then write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 
-`RED failure mode` is on both rows because the consumer's per-item contract
+`Round 1: RED failure mode` is on both rows because the consumer's per-item contract
 requires it before the reviewers run, and neither branch was recording it — an
 otherwise correct ATDD-owned row reached the completion gate missing a mandatory
 field. On an observed RED it is the kind the failure actually was
 (`assertion` | `expected-error`); on branch 2 it is `falsifiability`, which is
-what that form is.
+what that form is. It takes the `Round 1:` prefix because it classifies **a
+round's** RED and this handoff is the row's first round — a later round's RED
+can have a different mode, and writing it bare left the consumer's completion
+gate, which reads that prefix and only it, unable to find the classification at
+all (`../../qfai-implement/references/round-evidence.md`).
 
 Every branch carries the row identity and the obligation reference: the audit
 subject hashes them and the gatekeeper judges before `/qfai-implement` can add

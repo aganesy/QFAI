@@ -13,7 +13,10 @@ and the `Oracle proof` field below are what close that hole.
 
 ## `Oracle proof` — the evidence field
 
-Per item, alongside the RED/GREEN pair:
+Per **round**, alongside that round's RED/GREEN pair — a `REVISE` that opens
+round N+1 rewrites the code the mutation targets, so round 1's proof no longer
+shows that the new pass depends on the item's behaviour, and
+`round-evidence.md` records it as `Round N: Oracle proof`:
 
 1. Name the **smallest production change** that makes this item's test fail
    again — one line, in the code the item owns.
@@ -22,8 +25,9 @@ Per item, alongside the RED/GREEN pair:
 3. **Revert immediately.** The mutation is evidence, not a deliverable; it must
    never appear in the commit.
 
-One mutation per item. It is the only evidence that separates a discriminating
-test from a vacuous one, and it costs one run.
+One mutation per round — not one per item, and never round 1's re-used. It is
+the only evidence that separates a discriminating test from a vacuous one, and
+it costs one run.
 
 A row on the _RED not observable_ path already carries
 `Falsifiability command` / `Falsifiability result`, which is the same proof by
