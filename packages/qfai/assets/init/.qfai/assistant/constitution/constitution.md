@@ -143,12 +143,79 @@ Default policy:
   one unit per clarification it contains; only its approval questions are exempt.
   Attaching an approval to a clarification does not buy the clarification back.
 
+### Counting unit (MUST)
+
+- **Five clarifying questions per skill invocation.** The counter is owned by the
+  agent that received the invocation, starts at zero when the invocation starts,
+  and does **not** reset between stages of that invocation. A delegated subagent
+  spends its caller's budget; it does not receive one of its own.
+- **One question item is one question**, however many options it offers. An
+  AskUserQuestion call that bundles N question items spends N, not 1 — bundling
+  is a presentation choice, not a discount. The plain-text fallback uses the
+  same unit: one numbered choice set is one question.
+
+### What does not count (MUST)
+
+- **Approval questions are exempt.** A question whose subject is a user decision
+  the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
+  destructive-operation confirmation, an escalation under
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`
+  — is a decision, not a clarification. Such questions are unbounded and MUST
+  still be asked after the budget is exhausted. Skipping a mandatory approval to
+  stay under the budget violates this article; it is not compliance with it.
+- **`hard-required` inputs are exempt — but only where the invocation needs
+  them.** An input a skill's `Default Autopilot Policy` lists under
+  `hard-required` has no default and MUST NOT be guessed once the budget is
+  exhausted. The exemption is **scoped to the inputs the requested work actually
+  consumes**: `companyName` and brand intent when the run produces brand-facing
+  output, `primarySpecId` when the run is spec-scoped. An input the requested
+  path never reads MUST NOT be asked for and MUST NOT block the run — a
+  `/qfai-verify` run on a repository with no brand surface executes its quality
+  gates without ever asking for `companyName`. When a **needed** input is still
+  missing, stop and name what is blocked. Assumptions cover clarifications,
+  never inputs the skill declares undefaultable **and** the run requires.
+  **An explicit `--auto` skips the asking, not the rule.** Article X rule 4 is a
+  no-question mode, so such a run does not ask for the missing input — it stops
+  and names it as the blocker. `--auto` waives the question, never the input: a
+  value the skill declares undefaultable is not something a run may invent
+  because it was told not to ask.
+
 Stop conditions:
 
-- User says “stop / proceed / done”.
-- Question budget is exhausted.
+- User says “stop” → abort the invocation; no further work or file changes.
+- User says “proceed / done” → clarification-exhausted mode for the rest of the
+  invocation. It waives clarifications only; it is **not** `--auto`, and the
+  mandatory approvals and needed `hard-required` inputs above MUST still be
+  asked.
+- Question budget is exhausted → clarification-exhausted mode for the rest of the
+  invocation.
 
 ### On exhaustion (MUST)
+
+Exhaustion stops the questions, not the work: for the remainder of the
+invocation the agent is in **clarification-exhausted mode** — ask no further
+clarifying questions, proceed with explicit assumptions, and label every
+assumption in the outputs.
+
+The mode has **two entry conditions and one meaning**: the budget is spent, or
+the user closes it early by answering `proceed` / `done`. Such an answer waives
+the clarifying questions the agent still had, and nothing else.
+
+Clarification-exhausted mode is **not `--auto`**. `--auto` is a no-question mode
+(Article X, rule 4) that forbids AskUserQuestion and plain-text questions
+outright, and only the explicit `--auto` flag turns it on — neither a spent
+budget nor a `proceed` / `done` answer does; clarification-exhausted mode
+silences clarifications only, so the exemptions above survive it unchanged —
+mandatory approvals and needed `hard-required` inputs MUST still be asked, under
+either entry condition. An agent that exhausts the budget mid-invocation, or is
+told to `proceed` before an approval-required change is discovered, therefore
+never has to choose between skipping a mandatory approval and breaking the
+`--auto` rules: it is not under them.
+
+An explicit **“stop” is not exhaustion** and MUST NOT be read as `--auto` or as
+clarification-exhausted mode. It ends the invocation: ask nothing further, do no
+further work, make no further file changes, and report what was completed and
+what remains.
 
 Do not ask a sixth clarification. Settle the remaining ambiguity the way `--auto`
 does: proceed with explicit assumptions, label them, and record them in the
@@ -214,6 +281,16 @@ Rules:
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
    This is not an exception to the MUST rule — it is a "no-question mode".
+   The assumptions it proceeds with are the **defaultable** ones. A
+   `hard-required` input the invocation actually consumes has no default, so a
+   run missing one MUST stop and name it rather than invent a value: `--auto`
+   silences the question, it does not authorize the guess (Article VI).
+5. **Exhausting the Article VI budget is not `--auto`**: it enters
+   clarification-exhausted mode, which silences clarifying questions only.
+   Rule 4 does not apply to it — mandatory approvals and the `hard-required`
+   inputs that invocation actually consumes MUST still be asked. A user's
+   `proceed` / `done` answer enters that same mode and is likewise not `--auto`;
+   this rule is activated by the `--auto` flag alone.
 
 This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 

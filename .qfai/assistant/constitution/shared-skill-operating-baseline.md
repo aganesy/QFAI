@@ -115,7 +115,9 @@ There is one base, and it is the project root.
 - State why AskUserQuestion was unavailable.
 - Spend **at most 5 clarifying questions per invocation**, the unit being one
   top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
-  `/web-research`, …). Classify each question, not the prompt: a question asked
+  `/web-research`, …), counted per question item rather than per
+  AskUserQuestion call — one call carrying three question items spends three —
+  after which the skill proceeds with labelled assumptions instead of asking. Classify each question, not the prompt: a question asked
   because a document requires a recorded human decision (an SDD triage
   `Approved By`, a reviewer-gate escalation) is an **approval** and spends
   nothing, and bundling one into a prompt does not exempt the clarifications
@@ -127,6 +129,15 @@ There is one base, and it is the project root.
   via plain text. Proceed with explicit assumptions and record them in the outputs.
   Proceeding presupposes evidence to assume from — when a step has none, it is a hard
   blocker: stop there and report it as a blocker instead of asking or guessing.
+- Mandatory approval questions and `hard-required` inputs are exempt from the
+  budget, and exhaustion does not waive either: approvals MUST still be asked, and a missing `hard-required` input **that this
+  invocation actually consumes** MUST be asked for rather than assumed — if it
+  stays missing, stop instead of guessing. A `hard-required` input the requested
+  path never reads is neither asked for nor a blocker. Neither exhaustion nor a
+  user's `proceed` / `done` answer is `--auto`, so these questions survive both.
+  Under an explicit `--auto` the question is not asked at all — that run stops
+  and names the missing input instead of inventing one. See
+  `.qfai/assistant/constitution/constitution.md` Article VI.
 
 ## Canonical qfai Launcher (Mandatory)
 

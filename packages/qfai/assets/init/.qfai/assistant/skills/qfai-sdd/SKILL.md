@@ -123,6 +123,16 @@ This changes no bucket in `## Default Autopilot Policy`: the six operations stay
 in `ask-user`, and `--auto` never moves them to auto-decide. Without `--auto`,
 Stage 1 collects each approval through AskUserQuestion as usual.
 
+Those per-row approvals are decisions, not clarifications: they are exempt from
+the Article VI clarification budget and MUST be asked however many rows triage
+produced. The budget applies only to this skill's clarifying questions, and
+exhausting it enters clarification-exhausted mode rather than `--auto`, so a
+sixth approval-required row is still approved by the user. A `proceed` / `done`
+answer to a pre-Stage-1 question does the same: it closes the clarifications,
+not the approvals, so a CREATE / DELETE / UPDATE:REMOVE row classified after it
+is still approved row by row — see
+`.qfai/assistant/constitution/constitution.md` Article VI.
+
 ## FORMAT SSOT (Mandatory)
 
 - Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.
