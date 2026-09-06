@@ -610,11 +610,18 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
-      // `isCoverageTargetLevel` excludes only the non-coverage layers;
-      // everything else — including `unit`, `component` and any unrecognised
-      // value — is a target, and a `06_Test-Cases.md` with no `Level` column
-      // makes every TC one. Guidance naming a narrower allowlist makes a
-      // header-only ledger look truthful and skips the whole implementation.
+      // Among declared values `isCoverageTargetLevel` excludes only the
+      // non-coverage layers; everything else — including `unit`, `component`
+      // and any unrecognised value — is a target. Guidance naming a narrower
+      // allowlist makes a header-only ledger look truthful and skips the whole
+      // implementation.
+      //
+      // An **undeclared** `Level` is the one exception, and the doc has to say
+      // so: `QFAI-ATDD-112` already routes such a TC to `tests/integration/**`
+      // at `error`, so a row seeded here too would make one TC answer to two
+      // owners, two test trees and two evidence files — with no `Layer` the
+      // spec supports, which is what the completion gate selects the evidence
+      // file by.
       //
       // Compared case-insensitively: the set is normalised to lower case for
       // matching, while the doc quotes the spelling the shipped
@@ -624,9 +631,16 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         expect(isCoverageTargetLevel(layer)).toBe(false);
         expect(flatPreconditions).toContain(`\`${layer}\``);
       }
-      for (const target of ["unit", "component", "l1", "l2", ""]) {
+      for (const target of ["unit", "component", "l1", "l2"]) {
         expect(isCoverageTargetLevel(target)).toBe(true);
       }
+      expect(isCoverageTargetLevel("")).toBe(false);
+      expect(preconditions).toContain("A TC with no declared `Level` is not a target here");
+      expect(preconditions).toContain("do **not** seed a row for it");
+      // Gate item 10 reads a row's `Layer` to pick its evidence file, so the
+      // producer has to state which `Layer` it writes.
+      expect(preconditions).toContain("The `Layer` a seeded row carries");
+      expect(preconditions).toContain(".qfai/evidence/implement-<spec-id>.md");
       expect(preconditions).toMatch(/no `Level` column/);
       // The removed claim: only `L1` / `L2` counted as coverage targets.
       expect(preconditions).not.toMatch(/`L1`\s*\/\s*`L2`/);
