@@ -412,6 +412,63 @@ describe("parseArgs", () => {
     });
   });
 
+  // `--dry-run` is implemented by init, doctor, handoff upgrade and
+  // prototyping iterate|rescope. On every other command it used to be
+  // accepted and then ignored, so an operator reaching for a preview flag
+  // got a real write instead. `prototyping` wired the flag upstream while
+  // this branch was open, so it moved from the rejected list to the
+  // accepted one - the rule is unchanged, its membership is not.
+  describe("--dry-run scope", () => {
+    it.each(["init", "doctor"])("is accepted on %s", (command) => {
+      const parsed = parseArgs([command, "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+    });
+
+    it.each([["validate"], ["report"], ["guardrails"], ["audit"], ["atdd"], ["discussion"]])(
+      "marks --dry-run invalid on %s and leaves dryRun off",
+      (command) => {
+        const parsed = parseArgs([command, "--dry-run"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.dryRun).toBe(false);
+      },
+    );
+
+    // `prototyping` wired the flag upstream, but only under a subcommand: the
+    // bare command is rejected for the missing subcommand, not for the flag.
+    it.each(["iterate", "rescope"])("is accepted on prototyping %s", (action) => {
+      const parsed = parseArgs(["prototyping", action, "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+      expect(parsed.options.prototypingAction).toBe(action);
+    });
+
+    // `handoff upgrade` implements the flag as a preview, so it must NOT be
+    // rejected: the guard above is about commands that would ignore it.
+    it("keeps --dry-run on handoff upgrade, which previews instead of writing", () => {
+      const parsed = parseArgs(["handoff", "upgrade", "legacy.yaml", "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+      // The subcommand and its positional still parse alongside the flag.
+      expect(parsed.options.handoffAction).toBe("upgrade");
+      expect(parsed.options.handoffLegacyFile).toBe("legacy.yaml");
+    });
+
+    it("does not consume a following token when rejecting --dry-run", () => {
+      const parsed = parseArgs(["validate", "--dry-run", "--format", "github"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+    });
+
+    it("keeps honoring --dry-run alongside doctor --clean", () => {
+      const parsed = parseArgs(["doctor", "--clean", "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.doctorClean).toBe(true);
+      expect(parsed.options.dryRun).toBe(true);
+    });
+  });
+
   // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
   // --clause silently dropped on misuse, and --upgrade-scope did
   // not consume its value. Per-flag assertions follow.
