@@ -6,9 +6,14 @@
 - SSOT modules:
   - `packages/qfai/src/cli/commands/validate.ts`
   - `packages/qfai/src/core/paths/assistantPaths.ts` (canonical relative paths SSOT)
-  - `packages/qfai/src/core/worklog/parseEntry.ts` (work-log entry frontmatter parser)
-  - `packages/qfai/src/core/worklog/validateLinks.ts` (link-integrity check)
-  - `packages/qfai/src/core/worklog/drift.ts` (Reviewer-Gate inputs and outputs)
+  - `packages/qfai/src/core/validators/worklogSurface.ts` (work-log entry
+    frontmatter parsing and link-integrity check; both are private helpers of
+    this single module — there is no `core/worklog/` directory. A split into
+    dedicated `parseEntry` / `validateLinks` modules is an intended future
+    decomposition, not a location that exists today)
+  - `packages/qfai/src/core/validators/reviewerGate.ts` (Reviewer-Gate inputs)
+  - `packages/qfai/src/core/validators/reviewerJustification.ts`
+    (Reviewer-Gate `R-*` justification outputs)
 
 ## Existing public surface
 

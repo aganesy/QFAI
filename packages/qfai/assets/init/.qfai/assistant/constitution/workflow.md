@@ -18,13 +18,15 @@ This file defines the canonical stages and delegation expectations.
 
 At the start of any work, classify the change and record it in:
 
-- `09_delta.md` Change Log (latest CL entry)
+- `09_delta.md` `## Change Summary` (latest `DELTA-NNNN` entry)
 - PR description (Change Type section)
 
 Allowed values:
 
 - Primary: `Initial | Behavior | Structural | Ops`
-- Tags (optional): `@ui @api @db @nfr @docs @test`
+- Tags (optional): `@api @db @nfr @docs @test`
+
+These values are restated from `.qfai/assistant/constitution/change-classification.md` (SSOT). See `change-classification.md#2-tags-multi-select` for each tag's trigger condition and examples; a tag not listed there is dropped by every consumer.
 
 Do not proceed without a declared Change Type.
 
@@ -65,7 +67,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 
 Prototyping stage policy:
 
-- `/qfai-prototyping` scope is fixed to **ALL specs** discovered from `.qfai/specs/spec-*`.
+- `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/constitution/constitution.md` — the single home for both the scope floor and the Change Request exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
 - Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx qfai validate --profile prototyping --fail-on error` pass. The profile is explicit on purpose: an omitted `--profile` defaults to `full`, which runs the ATDD traceability rules (`QFAI-ATDD-111/112/113`) at severity `error` — obligations of stage 5, which has not run yet at stage 4.
 - The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/report/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See the Verify Output Contract in `.qfai/assistant/skills/qfai-verify/SKILL.md`.
 - Coverage gaps (missing spec rows, unresolved declared checks, API 404) are blocking.
