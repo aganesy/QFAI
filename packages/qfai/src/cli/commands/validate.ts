@@ -1303,6 +1303,16 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
   "QFAI-AGENT-014":
     "The agent catalog embeds each agent's canonical body verbatim under `developer_instructions`, so a loader that reads only the catalog gets the same instructions the markdown file states.",
+  "QFAI-AGENT-015":
+    "Every role a skill declares is dispatchable: some routing phase or its review profile selects it.",
+  "QFAI-AGENT-016":
+    "Every routed skill's `SKILL.md` frontmatter parses, and its `roles:` and `routing-profile:` are usable, so the routing cross-check has something to read.",
+  "QFAI-AGENT-017":
+    "Every skill that declares a `routing-profile:` is routed at least one dispatchable phase by the routing manifest.",
+  "QFAI-AGENT-018":
+    "Each routed skill has exactly one review gate, named by both sides and defined in the review-profile manifest.",
+  "QFAI-AGENT-019":
+    "A skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
   "QFAI-PROT-337":
@@ -1449,6 +1459,16 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // their `fix:` line. One repair covers both: the markdown file is the source.
   "QFAI-AGENT-014":
     "Copy the agent markdown file from its `## Mission` heading onward, verbatim, into that agent's `developer_instructions` block in the catalog. When the instructions themselves need to change, edit the markdown file first and regenerate the block from it — never the other way round.",
+  "QFAI-AGENT-015":
+    "Remove the role from the skill's `roles:`, or bind it in `agent-routing.yml` (a phase's agent list) or in the review profile the route names.",
+  "QFAI-AGENT-016":
+    "Repair the `SKILL.md` frontmatter the message names: close the `---` block, and give `roles:` a list of strings and `routing-profile:` a non-empty profile name.",
+  "QFAI-AGENT-017":
+    "Add a `- skill:` route with at least one phase that dispatches an agent to `agent-routing.yml`, or drop the skill's `routing-profile:` if it is deliberately un-routed.",
+  "QFAI-AGENT-018":
+    "Make the skill's `routing-profile:` and the route's `review_profile:` name the same profile, defined once in `review-profiles.yml`, and leave the skill exactly one route block declaring it.",
+  "QFAI-AGENT-019":
+    "Add the named agent to that skill's `roles:` frontmatter, or stop binding it to the skill in `agent-routing.yml` / the review profile the route selects.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an

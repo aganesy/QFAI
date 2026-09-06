@@ -14,7 +14,7 @@ roles:
     qa-strategist,
     completion-reviewer,
     architecture-reviewer,
-    implementation-reviewer,
+    product-experience-architect,
     product-surface-reviewer,
     qa-gatekeeper,
   ]
