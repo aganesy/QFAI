@@ -144,6 +144,20 @@ export type ValidationResult = {
    */
   generatedAt?: string;
   profile?: ValidationProfile;
+  /**
+   * Whether the profile's own validators ran.
+   *
+   * `false` when the integration-surface inspection found a path those
+   * validators walk that cannot be walked: the run returns the surface
+   * findings alone and evaluates no gate the profile is about. Readers that
+   * describe coverage — the `QFAI-PROFILE-001` notice above all — must not
+   * report the profile's gate list as observed in that case.
+   *
+   * Absent on a result assembled by something other than `validateProject`,
+   * which always sets it; absence is read as "no claim", i.e. the ordinary
+   * per-profile wording.
+   */
+  profileValidatorsRan?: boolean;
   issues: Issue[];
   counts: ValidationCounts;
   traceability: ValidationTraceability;

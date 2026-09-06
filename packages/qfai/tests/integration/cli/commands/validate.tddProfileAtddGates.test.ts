@@ -177,8 +177,9 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       ]) {
         expect(notice?.message).toContain(family);
       }
-      // What tdd does run must stay off the list.
-      expect(notice?.message).not.toContain("TDDLIST_*");
+      // What tdd does run must stay off the list — and it runs BOTH halves of
+      // the prefix, so no `TDDLIST_` code may appear at all.
+      expect(notice?.message).not.toContain("TDDLIST_");
     });
   });
 
@@ -191,7 +192,9 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
         expect(notice?.message).toContain('profile="discussion" is a partial profile');
         expect(notice?.message).toContain("QFAI-HYG-*");
-        expect(notice?.message).toContain("TDDLIST_*");
+        // Named per code rather than as `TDDLIST_*`: that glob claimed the seed
+        // half as well, which is a separate group.
+        expect(notice?.message).toContain("TDDLIST_STALE_STATUS");
         // The required-heading gate is SDD-only, so a discussion run must
         // declare it unevaluated rather than let the partial PASS look total.
         expect(notice?.message).toContain("QFAI-SPECSECTION-*");
@@ -220,6 +223,22 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("does not call the full profile partial, but still names what it skips", async () => {
+    // `runFullValidators` disables the two stage-ownership gates
+    // (`QFAI-DCON-019`, `QFAI-DRIFT-*`) and never composes the saas-package
+    // profile at all, so a silent full run would read as coverage of every
+    // gate in the tool. It is not a partial profile either.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.severity).toBe("info");
+      expect(notice?.message).not.toContain("is a partial profile");
+      expect(notice?.message).toContain("evaluated every gate a full scan covers");
+      expect(notice?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
+      expect(notice?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+    });
+  });
+
   it("says the full profile does not wire the drift gate", async () => {
     // The claim #1122 reports. `full` and `verify` both call
     // `runFullValidators`, which passes `includeUpstreamGuard = false`, so
@@ -236,9 +255,10 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("names drift and nothing else for the full profile", async () => {
-    // `FULL_GATE_GROUPS` is `ALL_GATE_GROUPS` minus `drift`, so any second
-    // family here means a group `full` does run got dropped from the map.
+  it("names only stage-only families for the full profile", async () => {
+    // `FULL_GATE_GROUPS` is `ALL_GATE_GROUPS` minus the three stage-only
+    // groups, so any family here that a full scan DOES cover means a group
+    // `full` runs got dropped from the map.
     await withProject(async (root) => {
       await runValidate({ root, strict: false, profile: "full" });
       const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
@@ -329,8 +349,10 @@ describe("--profile sdd owns the traceability-ledger gate", () => {
         // But the implementation-drift half is genuinely not evaluated by sdd,
         // so the notice must keep saying so.
         expect(notice?.message).toContain("QFAI-TRACE-001");
-        // The TDD-list gates are still not part of what sdd evaluates.
-        expect(notice?.message).toContain("TDDLIST_*");
+        // The execution-state TDD-list gates are still not part of what sdd
+        // evaluates — but the seed half is, so this names a code from the half
+        // it really does skip.
+        expect(notice?.message).toContain("TDDLIST_STALE_STATUS");
       });
     });
   });

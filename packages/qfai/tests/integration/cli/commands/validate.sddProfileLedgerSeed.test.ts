@@ -323,8 +323,10 @@ describe("the partial-profile notice tracks the split", () => {
     ]) {
       expect(message).not.toContain(code);
     }
-    // The half sdd still does not evaluate stays on the list.
-    expect(message).toContain("TDDLIST_* (execution state)");
+    // The half sdd still does not evaluate stays on the list, named per code:
+    // the annotated `TDDLIST_*` glob it used to carry matched the seed half
+    // above as well, so this same notice both listed and cleared those codes.
+    expect(message).toContain("TDDLIST_STALE_STATUS");
   });
 
   it("lists no TDDLIST family under tdd, which runs both halves", async () => {

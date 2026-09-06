@@ -157,18 +157,15 @@ export async function validateProject(
   const specScope = requestedScope;
 
   const timingsSink: TimingsSink = {};
-  const findings = [
-    ...configIssues,
-    ...scopeIssues,
-    ...(await runProfileValidators(
-      root,
-      config,
-      profile,
-      timingsSink,
-      options.platform,
-      specScope,
-    )),
-  ];
+  const profileRun = await runProfileValidators(
+    root,
+    config,
+    profile,
+    timingsSink,
+    options.platform,
+    specScope,
+  );
+  const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) =>
     isFindingInSpecScope(finding, scopeRoots, specScope),
   );
@@ -203,6 +200,10 @@ export async function validateProject(
     // `ValidationResult` carries it without having to remember to.
     generatedAt: new Date().toISOString(),
     profile,
+    // Reported, not inferred: a run stopped by the integration surface returns
+    // only those findings, and their absence is indistinguishable from a clean
+    // surface to a reader looking at the issue list alone.
+    profileValidatorsRan: profileRun.ranProfileValidators,
     issues,
     counts: countIssues(issues),
     traceability: {
@@ -474,6 +475,20 @@ async function buildUnusedPlatformIssues(
   ];
 }
 
+/**
+ * What one profile's run produced, and whether its own validators ran at all.
+ *
+ * The two cannot be recovered from the issue list downstream: an aborted run
+ * and a healthy one both return `surface.issues` first, so a caller counting
+ * findings cannot tell "the surface is broken and nothing else was looked at"
+ * from "the surface is broken and everything else passed".
+ */
+type ProfileValidatorRun = {
+  readonly issues: Issue[];
+  /** `false` when the integration-surface inspection stopped the run below. */
+  readonly ranProfileValidators: boolean;
+};
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -481,7 +496,7 @@ async function runProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
   specScope?: SpecScope,
-): Promise<Issue[]> {
+): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
   // so every gate the profile is about was defined by files nothing read. That
@@ -528,15 +543,21 @@ async function runProfileValidators(
   // elsewhere is not a reason to withhold a finding the walk already has.
   const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues];
+    return {
+      issues: [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
+      ranProfileValidators: false,
+    };
   }
-  return [
-    ...toolProvenance,
-    ...unusedPlatform,
-    ...surface.issues,
-    ...anchorIssues,
-    ...(await runProfileOwnValidators()),
-  ];
+  return {
+    issues: [
+      ...toolProvenance,
+      ...unusedPlatform,
+      ...surface.issues,
+      ...anchorIssues,
+      ...(await runProfileOwnValidators()),
+    ],
+    ranProfileValidators: true,
+  };
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
