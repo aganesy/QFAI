@@ -14,9 +14,16 @@
  *
  * The relaxation is applied as a pure post-filter on issue arrays so
  * the underlying validators do not need to know about the mode flag.
+ *
+ * Weakening a gate is the same act as waiving one, so it carries the
+ * same audit surface: each downgraded finding is stamped
+ * `relaxedFrom: "error"` (the counterpart of the waiver engine's
+ * `suppressed: true`) and one `info` notice per run names the mode,
+ * the file it was read from and the codes affected.
  */
 
 import type { Issue, IssueSeverity } from "../types.js";
+import { PROTOTYPING_JSON_REL } from "./paths.js";
 
 export type PrototypingMode = "convergence" | "exploration";
 
@@ -212,6 +219,9 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
   "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
   "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
+  // validators/uix/competitiveRefs.ts — Competitive Reference Registry
+  "QFAI-RESEARCH-013",
+  "QFAI-RESEARCH-014",
   "UIX-VAL-OQ-OPEN-CRITICAL",
   "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
   "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
@@ -284,6 +294,12 @@ export function resolvePrototypingMode(input: {
  * (input is not mutated) with the relaxable codes downgraded from
  * `error` to `warning` when `mode === "exploration"`. Under
  * `convergence` the input is returned verbatim.
+ *
+ * Every downgraded finding is stamped with `relaxedFrom: "error"`, the
+ * relaxation counterpart of the waiver engine's `suppressed: true`. A
+ * consumer reading `validate.json#issues[]` can then tell a gate that
+ * a mode flag weakened apart from one the validator authored at
+ * `warning` in the first place.
  */
 export function relaxIssuesForMode(
   issues: readonly Issue[],
@@ -295,6 +311,54 @@ export function relaxIssuesForMode(
     if (!relaxable.has(iss.code)) return iss;
     if (iss.severity !== "error") return iss;
     const downgraded: IssueSeverity = "warning";
-    return { ...iss, severity: downgraded };
+    const relaxedFrom: IssueSeverity = iss.severity;
+    return { ...iss, severity: downgraded, relaxedFrom };
   });
+}
+
+/** Code of the one-per-run notice that reports an applied relaxation. */
+export const EXPLORATION_RELAXATION_NOTICE_CODE = "QFAI-PROT-337" as const;
+
+/** Rule slug carried by the relaxation notice. */
+export const EXPLORATION_RELAXATION_NOTICE_RULE = "prototypingMode.explorationRelaxation" as const;
+
+/**
+ * Tally the `relaxedFrom` stamps left by `relaxIssuesForMode`, keyed by
+ * issue code and ordered so the notice message is stable across runs.
+ */
+function countRelaxedByCode(issues: readonly Issue[]): readonly (readonly [string, number])[] {
+  const byCode = new Map<string, number>();
+  for (const iss of issues) {
+    if (iss.relaxedFrom === undefined) continue;
+    byCode.set(iss.code, (byCode.get(iss.code) ?? 0) + 1);
+  }
+  return [...byCode.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+/**
+ * Build the single `info` finding that reports an applied relaxation,
+ * or `null` when nothing was downgraded. Emitting it puts the mode, the
+ * file it was read from and the affected codes into `validate.json` and
+ * into the CLI's human-readable output, so a reviewer who did not run
+ * the gates can see that four declared-`error` gates were weakened.
+ */
+export function buildExplorationRelaxationNotice(
+  issues: readonly Issue[],
+  mode: PrototypingMode,
+): Issue | null {
+  if (mode !== "exploration") return null;
+  const byCode = countRelaxedByCode(issues);
+  if (byCode.length === 0) return null;
+  const total = byCode.reduce((acc, [, count]) => acc + count, 0);
+  const breakdown = byCode.map(([code, count]) => `${code} x${count}`).join(", ");
+  return {
+    code: EXPLORATION_RELAXATION_NOTICE_CODE,
+    severity: "info",
+    category: "change",
+    message: `prototyping.mode=exploration relaxed ${total} finding(s) from error to warning: ${breakdown}.`,
+    suggested_action: `Re-run under prototyping.mode=convergence (or clear the mode in ${PROTOTYPING_JSON_REL}) to see these gates at their declared severity.`,
+    file: PROTOTYPING_JSON_REL,
+    rule: EXPLORATION_RELAXATION_NOTICE_RULE,
+    refs: byCode.map(([code]) => code),
+  };
 }

@@ -71,9 +71,8 @@ describe.each(TREES)("%s", (tree) => {
     // Without a seam step, a new-symbol row can only ever produce a load error
     // at Red time, so the gate is vacuous exactly where it matters most.
     const skill = await read(tree, SKILL);
-    expect(skill).toContain(
-      "3a. Create the **minimal seam** the test needs to reach its assertion",
-    );
+    expect(skill).toContain("#### Red 3a — Minimal seam");
+    expect(skill).toContain("Create the **minimal seam** the test needs to reach its assertion");
     expect(skill).toContain(
       "This is not Phase Green's production code: it implements no predicate",
     );

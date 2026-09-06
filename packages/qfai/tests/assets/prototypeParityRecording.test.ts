@@ -58,7 +58,9 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL_REL = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER_REL = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const REVISION_REL = "assistant/skills/qfai-implement/references/evidence-revision.md";
-const DELEGATION_REL = "assistant/constitution/shared-skill-delegation-baseline.md";
+// The _Completion review_ subject moved out of the delegation baseline into its
+// own reference while this branch was open; the baseline now points at it.
+const DELEGATION_REL = "assistant/constitution/references/audited-evidence-hash.md";
 
 const readAsset = (tree: string, relativePath: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, relativePath), "utf-8");
@@ -128,10 +130,16 @@ describe("prototype parity is recorded, not merely required", () => {
 
       // Item 10 recomputes "each reviewer verdict's `Audited evidence hash`";
       // without these two fields there is nothing to recompute for this one.
-      expect(parity).toContain("`Reviewed revision`");
-      expect(parity).toContain("`Audited evidence hash`");
-      expect(lineWith(skill, "- `Spec review` —")).toContain("`Audited evidence hash`");
-      expect(lineWith(skill, "- `Code quality review` —")).toContain("`Audited evidence hash`");
+      // main gave every verdict LABELLED sibling fields while this branch was open,
+      // and its `Code quality review` line forbids the unlabelled pair outright: the
+      // completion gate cannot tell which reviewer owns which. So the parity verdict
+      // carries the same two values under its own prefix.
+      expect(parity).toContain("`Prototype parity reviewed revision`");
+      expect(parity).toContain("`Prototype parity audited evidence hash`");
+      expect(lineWith(skill, "- `Spec review` —")).toContain("`Spec audited evidence hash`");
+      expect(lineWith(skill, "- `Code quality review` —")).toContain(
+        "`Code quality audited evidence hash`",
+      );
     });
 
     it(`${tree}: the ledger reference states the same count as gate item 11`, async () => {
@@ -174,9 +182,13 @@ describe("prototype parity is recorded, not merely required", () => {
       const skill = flat(await readSkill(tree));
       const revision = flat(await readAsset(tree, REVISION_REL));
 
-      expect(skill).toContain("on a UI-affecting row item 9's `Reviewed revision` shares it too");
-      expect(revision).toContain("**A UI-affecting row has a fifth: gate item 9**");
-      expect(revision).toContain("must equal `Revision`");
+      expect(skill).toContain(
+        "on a UI-affecting row item 9's `Prototype parity reviewed revision` shares it too",
+      );
+      // main renumbered the agreeing set to items 6, 7 and 8, so the parity verdict
+      // joins that set rather than being "a fifth" beside items 3, 5, 7 and 8.
+      expect(revision).toContain("**A UI-affecting row adds gate item 9 to that set**");
+      expect(revision).toContain("must equal the others'");
       expect(revision).not.toContain("leaves `Revision` for the GREEN and the two reviews");
     });
 
