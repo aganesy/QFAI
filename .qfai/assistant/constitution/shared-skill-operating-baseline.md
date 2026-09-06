@@ -67,6 +67,8 @@ reason. No prose asset has an exemption.
   explicit, labelled assumptions and record them in the output, as `--auto`
   does; a required approval may still be asked. See
   `constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
+- When `--auto` is active, ask nothing: no AskUserQuestion, no plain-text question.
+  Proceed with explicit assumptions and record them in the outputs.
 
 ## Canonical qfai Launcher (Mandatory)
 

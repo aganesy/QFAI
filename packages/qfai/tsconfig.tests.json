@@ -73,6 +73,7 @@
     "tests/assets/sddTestListMandatoryOutput.test.ts",
     "tests/assets/skillDelegationTool.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
+    "tests/assets/skillUserQuestionsSection.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/assets/tddIdAllocation.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
