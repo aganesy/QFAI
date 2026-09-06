@@ -56,6 +56,18 @@ let abs: string;
 /** Staging directories seen while they existed, mapped to their permission bits. */
 let stagingModes: Map<string, number>;
 
+/**
+ * The mode each staging directory was CREATED with, as asked for.
+ *
+ * Separate from {@link stagingModes}, which stats the directory that
+ * resulted. The two agree on POSIX and cannot on Windows, where the
+ * filesystem has no permission bits to carry the request: Node ignores
+ * `mode` there and `stat()` answers `0o666` for every file and directory
+ * alike. Asserting only the stat made this case fail on Windows for a
+ * platform property rather than for anything the source does (#1182).
+ */
+let stagingRequestedModes: Map<string, number | undefined>;
+
 /** The paths `writeFile` was asked to fill, in call order. */
 function writtenPaths(): string[] {
   return writeFileSpy.mock.calls.map((call) => String(call[1]));
@@ -77,6 +89,7 @@ function scratchRelPath(): string {
 
 beforeEach(async () => {
   stagingModes = new Map();
+  stagingRequestedModes = new Map();
   // Implementations first: `mkdir` below is the mocked export too, and a
   // reset spy silently does nothing.
   lstatSpy.mockReset();
@@ -90,6 +103,11 @@ beforeEach(async () => {
     // the write returns.
     if (String(target).endsWith(QFAI_STATE_SCRATCH_SUFFIX)) {
       stagingModes.set(String(target), (await actual.stat(String(target))).mode & 0o7777);
+      const options = rest[0] as { mode?: number } | number | undefined;
+      stagingRequestedModes.set(
+        String(target),
+        typeof options === "number" ? options : options?.mode,
+      );
     }
     return made;
   });
@@ -176,7 +194,15 @@ describe("TC-0010-0012: the atomic state.json write preserves what it replaces",
     // the rename is a check against a separate pathname lookup. Its own
     // `0700` directory denies the swap outright instead.
     const scratchDir = path.dirname(String(scratchOpen()?.[1]));
-    expect(stagingModes.get(scratchDir)).toBe(0o700);
+    // What the source asks for, on every platform.
+    expect(stagingRequestedModes.get(scratchDir)).toBe(0o700);
+    // And what the filesystem made of it, where there are bits to make it of.
+    // Windows has none: Node ignores `mode` in `mkdir` there and `stat()`
+    // answers `0o666` for every entry, so the stat says nothing about this
+    // source and asserting it failed the case on the platform, not the code.
+    if (process.platform !== "win32") {
+      expect(stagingModes.get(scratchDir)).toBe(0o700);
+    }
     expect(scratchDir).not.toBe(path.dirname(abs));
     expect(path.dirname(scratchDir)).toBe(path.dirname(abs));
     expect(await readdir(path.dirname(abs))).toEqual(["state.json"]);
