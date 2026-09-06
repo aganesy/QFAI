@@ -70,12 +70,9 @@ function makeConfig(overrides: Partial<QfaiConfig["prototyping"]> = {}): QfaiCon
         forbidTestTodoStubs: true,
       },
       traceability: {
-        brMustHaveSc: true,
         scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        scNoTestSeverity: "error",
-        orphanContractsPolicy: "error",
         unknownContractIdSeverity: "warning",
       },
     },

@@ -105,6 +105,40 @@ the row's own evidence; nothing in the calling work order substitutes for it.
 - when the `Selector` holds several entries, each entry's failure was observed
   separately. One aggregate run is not a RED for several entries.
 
+**A minimal seam in the tree is an admissible state, not a ground for REVISE.**
+The producer's Phase Red step 3a requires one for a surface that does not exist
+yet, so on a new-surface row the RED is necessarily observed with it in place.
+Accept it when all three hold: it resolves the symbol or route the test reaches
+for, it implements no predicate, and it answers with something the row does not
+contract for **in the place this row's predicate occupies**. The third condition
+takes the seam's own form. A **registered-route** seam answers with a status the
+row does not contract for **only when the status is the predicate the row
+owns** — `201` on create, `204` on delete, `403` on a refusal. When the row's
+predicate is a **body field or a header**, the selector reaches it _through_ the
+contracted status, so the admissible seam answers with that contracted status
+and the header and body _shape_ the selector assumes, withholding only the
+predicate the row owns; demanding an uncontracted status there raises the
+selector's status assertion first, which is not an assertion this row owns and
+which the first accept condition above already rejects, and leaves the row no
+seam that can satisfy both — the contracted status is exactly what
+`red-provenance.md` ("Neutral, not empty") requires of it. A **module, export or
+signature** seam — the form step 3a requires for a
+`Unit` / `Component` row whose test imports a new symbol — has no status to
+answer with and satisfies it by returning a placeholder value the row's
+predicate does not own. Requiring the status form of a module seam is what sent
+a correctly observed assertion-level RED on a non-HTTP new-symbol row to REVISE,
+leaving it unable to reach Phase Green at all. "No production code exists" is
+**not** one of the conditions above and must not be read into them — what the
+gate measures is that the failure is the row's own assertion, taken against a
+tree that does not yet make that assertion pass. The step 3a seam leaves such a
+tree; so does a **surface that already exists and implements the row's predicate
+wrongly** — a correct test fails against it on its first run, which
+`red-provenance.md` routes to branch 1 as an `observed-red` and requires this
+gate to PASS on the conditions above, the tree it was observed against being the
+one before the fix. See
+`.qfai/assistant/skills/qfai-implement/references/red-admissibility.md` and
+`.qfai/assistant/skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`.
+
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite
 pass that does not name the row's selector is not a GREEN for that row.
@@ -169,9 +203,8 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 
 - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
   Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
-  A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that file is ignored by the
-  managed `.gitignore` block, so neither it nor the justification for any `❌` reaches a commit, and the "unjustified"
-  judgement cannot be re-made by anyone reading the repository.
+  A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that committed file is the
+  ledger's per-item evidence payload, not the dedicated matrix artifact whose justifications this gate reads.
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
@@ -185,8 +218,9 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
 `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
 Mandatory Output,
-and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path, unlike the rest of
-`.qfai/evidence/**`. `qfai-sdd` neither defines its layout nor ships a section for it, so:
+and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed governance path alongside
+`implement-<spec-id>.md` and `atdd-<spec-id>.md`. Only run-scoped evidence remains ignored.
+`qfai-sdd` neither defines the matrix layout nor ships a section for it, so:
 
 - Apply this check from the **ATDD review cycle onward**, where
   `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists
