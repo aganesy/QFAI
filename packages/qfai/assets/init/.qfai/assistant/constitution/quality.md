@@ -10,8 +10,8 @@ update_frequency: occasional
 
 **Gate commands are project-defined. Always discover them from the repo.** This
 file names the capabilities a gate set must cover; it never names the commands,
-because the commands belong to the stack. `constitution.md` Article VIII and
-`workflow.md` say the same thing — this file used to disagree with both by
+because the commands belong to the stack. `.qfai/assistant/constitution/constitution.md` Article VIII and
+`.qfai/assistant/constitution/workflow.md` say the same thing — this file used to disagree with both by
 stating five `pnpm` commands as fact, which on a non-Node repository is five
 commands that do not exist.
 

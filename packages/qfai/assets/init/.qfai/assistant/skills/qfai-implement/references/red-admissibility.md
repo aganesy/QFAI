@@ -65,8 +65,9 @@ failure.
 
 ## Recording it
 
-The per-item evidence contract carries `RED failure mode`, whose value is one
-of:
+The per-item evidence contract carries `Round N: RED failure mode` — a round
+field, because a round-2 RED can have a different mode from round 1's
+(`round-evidence.md`) — whose value is one of:
 
 | Value            | Meaning                                                      |
 | ---------------- | ------------------------------------------------------------ |
@@ -198,7 +199,7 @@ exemption from the field.
 One case is legitimate: the obligation is already satisfied by a sibling row, so
 the correct test passes on first run. That is **not** a licence to accept a load
 error instead — it is a different path with its own evidence, and it is
-specified in `red-not-observable.md`. Record `RED failure mode: falsifiability`
-and follow that procedure.
+specified in `red-not-observable.md`. Record
+`Round N: RED failure mode: falsifiability` and follow that procedure.
 
 Never weaken a correct test until it fails in order to manufacture a RED.

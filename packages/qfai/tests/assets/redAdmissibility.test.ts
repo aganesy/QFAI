@@ -28,7 +28,9 @@ const ADMISSIBILITY = "assistant/skills/qfai-implement/references/red-admissibil
 const ROUND_EVIDENCE = "assistant/skills/qfai-implement/references/round-evidence.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
-const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
+// The audit subject moved out of the delegation baseline into its own reference
+// while this branch was open; the baseline cites it rather than restating it.
+const DELEGATION = "assistant/constitution/references/audited-evidence-hash.md";
 const WORKFLOW = "assistant/constitution/workflow.md";
 const AGENTS_DIR = "assistant/agents";
 const CODEX_GATEKEEPER = ".codex/agents/qa-gatekeeper.toml";
@@ -380,7 +382,9 @@ describe.each(TREES)("%s", (tree) => {
     // only on the consumer side would hand over an incomplete row; and a field
     // outside the audit subject can be back-filled after the PASS.
     expect(await read(tree, PROVENANCE)).toContain(
-      "`RED failure mode`, `RED assertion-stripped result`",
+      // Both round fields carry the `Round N:` prefix the closed list requires
+      // (#654), so the handover row names them prefixed.
+      "`Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`",
     );
     expect(await read(tree, DELEGATION)).toContain(
       "RED pair with its `RED assertion-stripped result`",
@@ -401,9 +405,8 @@ describe.each(TREES)("%s", (tree) => {
     // Without a seam step, a new-symbol row can only ever produce a load error
     // at Red time, so the gate is vacuous exactly where it matters most.
     const skill = await read(tree, SKILL);
-    expect(skill).toContain(
-      "3a. Create the **minimal seam** the test needs to reach its assertion",
-    );
+    expect(skill).toContain("#### Red 3a — Minimal seam");
+    expect(skill).toContain("Create the **minimal seam** the test needs to reach its assertion");
     expect(skill).toContain(
       "This is not Phase Green's production code: it implements no predicate",
     );
@@ -429,7 +432,7 @@ describe.each(TREES)("%s", (tree) => {
   it("adds a failure-mode field so the distinction is recorded, not inferred", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "`RED failure mode` — `assertion` | `expected-error` | `falsifiability`",
+      "`Round N: RED failure mode` — `assertion` | `expected-error` | `falsifiability`",
     );
     expect(skill).toContain("There is no admissible value for a load error");
   });
@@ -460,7 +463,7 @@ describe.each(TREES)("%s", (tree) => {
     // rules of its own; admitting a load error instead would be a second,
     // unaudited escape.
     const doc = await read(tree, ADMISSIBILITY);
-    expect(doc).toContain("`RED failure mode: falsifiability`");
+    expect(doc).toContain("`Round N: RED failure mode: falsifiability`");
     expect(doc).toContain("red-not-observable.md");
     expect(doc).toContain(
       "Never weaken a correct test until it fails in order to manufacture a RED.",

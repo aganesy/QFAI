@@ -3,12 +3,17 @@
  *
  * Review finding [59]. Moving the jsdom-backed import off module scope stopped every `qfai` command
  * paying its 910 ms — but the import then landed AFTER the clock started, so the one-off cost of
- * loading it was measured against a budget whose own message says "All blocks were validated". A
- * project configuring anything under a second raised `QFAI-MOCK-099` on every run however fast its
- * blocks parsed, and `--fail-on warning` failed the run on it.
+ * loading it was measured against a budget that is about parsing every block. A project configuring
+ * anything under a second was reported over budget on every run however fast its blocks parsed.
  *
  * The comment where the static import used to sit predicted exactly this, and the code was arranged
  * the other way round.
+ *
+ * These rows once read the retired `QFAI-MOCK-099` warning. The elapsed time is no longer a finding
+ * — it describes the machine, not the tree, so it travels in `ValidationResult.timings` instead of
+ * moving `counts.warning` — and the rows now read the measurement `validateHtmlMock` reports. The
+ * property under test is unchanged and the reason it can still be tested here is the same: the
+ * measurement is taken on the far side of the import, so a caller cannot take it instead.
  *
  * Measured by MOCKING the module with a slow factory rather than by timing the real jsdom. A
  * stopwatch on the real thing measures the module cache: by the time this file runs another test has
@@ -50,6 +55,7 @@ vi.mock("../../src/core/uiux/htmlMockDom.js", async () => {
 });
 
 import { validateHtmlMock } from "../../src/core/validators/htmlMock.js";
+import type { HtmlMockTiming } from "../../src/core/validators/htmlMock.js";
 import type { QfaiConfig } from "../../src/core/config.js";
 
 const dirs: string[] = [];
@@ -61,11 +67,22 @@ afterEach(async () => {
   }
 });
 
-function config(budget: number): QfaiConfig {
+/**
+ * The budget itself no longer lives here: the validator reports what parsing cost and the caller
+ * compares it against `uiux.htmlMockTimeout`, so these rows read the measurement directly. That the
+ * configured budget is what the caller compares against is covered in `validationTimings.test.ts`.
+ */
+function config(): QfaiConfig {
   return {
     paths: { discussionDir: ".qfai/discussion", specsDir: ".qfai/specs" },
-    uiux: { htmlMockTimeout: budget },
   } as unknown as QfaiConfig;
+}
+
+/** Runs the validator over `root` and returns only what it measured. */
+async function parseMsFor(root: string): Promise<number> {
+  const timing: HtmlMockTiming = { parseMs: -1 };
+  await validateHtmlMock(root, "web", config(), timing);
+  return timing.parseMs;
 }
 
 /** A tree holding exactly one HTML mock block, which is what makes the validator load the parser. */
@@ -82,13 +99,10 @@ async function treeWithOneMock(): Promise<string> {
   return root;
 }
 
-const budgetIssues = (issues: { code: string }[]): string[] =>
-  issues.filter((entry) => entry.code === "QFAI-MOCK-099").map((entry) => entry.code);
-
 describe("the mock budget measures parsing, not the parser's load", () => {
-  it("does not exceed a budget smaller than the load when the blocks parse instantly", async () => {
+  it("stays under a budget smaller than the load when the blocks parse instantly", async () => {
     const root = await treeWithOneMock();
-    const issues = await validateHtmlMock(root, "web", config(BUDGET_MS));
+    const parseMs = await parseMsFor(root);
 
     // The premise, asserted rather than assumed: the parser really was loaded, which is the only
     // reason the load cost exists to be charged. Without a block there is no import at all and this
@@ -99,18 +113,27 @@ describe("the mock budget measures parsing, not the parser's load", () => {
     ).toBeGreaterThan(BUDGET_MS);
 
     expect(
-      budgetIssues(issues),
+      parseMs,
       "the load is a real cost, and it is not the parsing this budget is for",
-    ).toEqual([]);
+    ).toBeLessThan(BUDGET_MS);
   }, 30_000);
 
-  it("still exceeds a budget the parsing itself cannot meet", async () => {
+  it("still overshoots a budget the parsing itself cannot meet", async () => {
     // The other direction, so the clock is a clock and not a removed check. Zero is a budget no
-    // amount of work fits inside, and the message says every block was validated anyway.
+    // amount of work fits inside, and every block is validated regardless.
     const root = await treeWithOneMock();
-    const issues = await validateHtmlMock(root, "web", config(0));
-    expect(budgetIssues(issues), "a budget nothing can meet must still be reported").toEqual([
-      "QFAI-MOCK-099",
-    ]);
+    const parseMs = await parseMsFor(root);
+    expect(parseMs, "a budget of zero must still be exceeded").toBeGreaterThan(0);
+  }, 30_000);
+
+  it("attributes nothing when there is no block to parse", async () => {
+    // The load is skipped entirely here, so there is no cost to attribute and the sink must be left
+    // as the caller set it — not overwritten with a stopwatch reading that spans the file walk.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-mock-budget-"));
+    dirs.push(root);
+    const timing: HtmlMockTiming = { parseMs: -1 };
+
+    await expect(validateHtmlMock(root, "web", config(), timing)).resolves.toEqual([]);
+    expect(timing.parseMs, "an untouched sink keeps the caller's initial value").toBe(-1);
   }, 30_000);
 });

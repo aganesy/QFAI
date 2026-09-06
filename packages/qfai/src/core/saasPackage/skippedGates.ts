@@ -41,7 +41,10 @@ export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number]
 export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, readonly string[]> =
   {
     validateAtddCodeTraceability: ["QFAI-ATDD-*"],
-    validateTddList: ["TDDLIST_*"],
+    // Three families for one gate: `TDDLIST_*` is frozen legacy, and codes
+    // this validator gained after the grammar landed are canonical, so a
+    // notice built from the legacy glob alone under-states the skip set.
+    validateTddList: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TCLEVEL-*"],
     validateTestTodoStubs: ["QFAI-TEST-*"],
     validateTraceabilityIntegrity: ["QFAI-TRACE-*"],
   };
