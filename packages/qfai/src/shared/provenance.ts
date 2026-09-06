@@ -415,11 +415,17 @@ const LOCK_PATIENCE_MS = 15_000;
  * and failed, about a lock that had been restored under it, on a documentation-only pull request
  * (#1190).
  *
- * What this budget covers is now ONLY the window in which the name is ABSENT: any object at the
- * name answers the question immediately, matching or not. So the only thing waiting longer
- * blocks is this run. Nobody else holds the lock while its name is empty, so the wait costs no
- * other writer anything, and the budget has to be long enough to outlast a scheduling delay
- * rather than a syscall.
+ * What this budget covers is now only the window in which the name yields NO OBJECT: any object
+ * at the name answers the question immediately, matching or not. "No object" is what `lstat`
+ * failing looks like, and the read does not sort the failures — an `ENOENT` from the move window
+ * and an `EACCES` on a lock directory this account cannot stat both arrive as `undefined`. The
+ * second is not transient and will spend the whole budget before failing; that is the honest
+ * outcome for a name this process cannot read, and it is bounded.
+ *
+ * Either way the only thing a longer wait blocks is this run. It costs no OTHER writer anything:
+ * in the move window nobody holds the lock, and in the unreadable case this process was never
+ * going to hold it. So the budget has to be long enough to outlast a scheduling delay rather
+ * than a syscall.
  *
  * The ceiling is `LOCK_STALE_MS`, and it stays well under it: a holder that spent its whole
  * staleness window confirming would be reclaimable the moment it started work. Half of it leaves
@@ -804,8 +810,9 @@ async function publishLock(staging: string, lockDir: string): Promise<boolean> {
  *
  * So the name is re-read while it answers with NOTHING, bounded by `LOCK_CONFIRM_MS`. An object
  * at the name ends the loop whichever object it is: the staged one is this holder's lock, and a
- * different one is somebody else's, which is the dispossession being tested for. Absence is the
- * only reading that is not yet an answer.
+ * different one is somebody else's, which is the dispossession being tested for. No object is the
+ * only reading that is not yet an answer — and that covers a failed `lstat` of any kind, not only
+ * `ENOENT`, which is why {@link LOCK_CONFIRM_MS} is described in those terms.
  *
  * Nothing is loosened — only an object whose `dev` and `ino` equal the staged one is accepted —
  * and the genuine dispossession is now reported on the read that sees it rather than after a

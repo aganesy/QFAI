@@ -63,7 +63,11 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       if (control.forgery.kind !== "off" && spelled.endsWith(LOCK_DIR_NAME)) {
         if (control.forgery.kind === "foreign") {
           control.serves += 1;
-          const real = await actual.lstat(target);
+          // `options` passed through, like every other delegation here: the
+          // mock declares the parameter, so dropping it would make a future
+          // `{ bigint: true }` caller silently get a different shape than the
+          // real function would have returned.
+          const real = await actual.lstat(target, options);
           // Same object in every respect but identity, so nothing but the
           // `dev`/`ino` comparison can be what rejects it.
           //
