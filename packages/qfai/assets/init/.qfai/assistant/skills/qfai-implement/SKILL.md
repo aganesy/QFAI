@@ -9,6 +9,7 @@ roles:
     orchestrator,
     delivery-planner,
     test-design-analyst,
+    qa-strategist,
     frontend-engineer,
     backend-engineer,
     implementation-reviewer,

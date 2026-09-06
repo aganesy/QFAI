@@ -298,15 +298,19 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
     // assistant tree they reach.
     case "verify":
     case "full":
+    case "prototyping":
+    case "saas-package":
       // Plus the agents tree, which `validateAgentDefinition` opens by
       // pathname: a canonical agent replaced by a directory gives it `EISDIR`
       // and a FIFO blocks it, either way taking the finding down with the run.
+      //
+      // `prototyping` and `saas-package` run `validateAgentDefinition` too,
+      // and since `QFAI-AGENT-019` / `QFAI-AGENT-015` it reaches the skills
+      // tree as well — it reads every routed skill's `SKILL.md` and `readdir`s
+      // the configured skills directory. Listing only the agents tree for them
+      // left a FIFO at a routed `SKILL.md` blocking the run forever with the
+      // `QFAI-LINK-001` that names it already in hand.
       return [skillsRelative, AGENTS_RELATIVE];
-    case "prototyping":
-    case "saas-package":
-      // These run `validateAgentDefinition` too, and nothing that opens the
-      // skills tree.
-      return [AGENTS_RELATIVE];
     case "sdd":
       return [skillsRelative];
     default:
