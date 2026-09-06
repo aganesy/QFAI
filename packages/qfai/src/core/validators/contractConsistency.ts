@@ -84,18 +84,19 @@ type DbFieldBinding = {
  */
 type DbDomain = {
   bindings: DbFieldBinding[];
+  /**
+   * Every value any contributing contract can store — the representability
+   * test, which is still the union.
+   *
+   * Held beside the bindings and grown with them rather than folded on demand.
+   * `validateApiFileAgainstDb` runs once per API contract, so a union computed
+   * at the point of use is rebuilt for every API file that names the field —
+   * an allocation the split would otherwise have introduced. It is updated at
+   * the one place a binding is added, so it cannot come to describe a set of
+   * bindings that is no longer there.
+   */
+  values: Set<string>;
 };
-
-/** Every value any contributing contract can store. */
-function domainValues(domain: DbDomain): Set<string> {
-  const values = new Set<string>();
-  for (const binding of domain.bindings) {
-    for (const value of binding.values) {
-      values.add(value);
-    }
-  }
-  return values;
-}
 
 function domainFiles(domain: DbDomain): string[] {
   return domain.bindings.map((binding) => binding.file).sort((a, b) => a.localeCompare(b));
@@ -179,9 +180,8 @@ async function validateApiFileAgainstDb(
     if (!db) {
       continue;
     }
-    const representable = domainValues(db);
     const unrepresentable = Array.from(api.values)
-      .filter((value) => !representable.has(value.toLowerCase()))
+      .filter((value) => !db.values.has(value.toLowerCase()))
       .sort((a, b) => a.localeCompare(b));
     if (unrepresentable.length === 0) {
       continue;
@@ -449,8 +449,10 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
         } else {
           existing.bindings.push(binding);
         }
+        // The union grows with the bindings, here and nowhere else.
+        binding.values.forEach((value) => existing.values.add(value));
       } else {
-        domains.set(normalized, { bindings: [binding] });
+        domains.set(normalized, { bindings: [binding], values: new Set(binding.values) });
       }
     }
   }
