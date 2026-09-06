@@ -25,6 +25,14 @@
  * Counters survive across runs; callers reset them when they observe
  * progress on a given TC (the placeholder shape is gone).
  *
+ * Persistence goes through `core/state.ts`, the single loader/writer
+ * for `.qfai/state.json`. A private copy of that logic here would mean
+ * two copies of the same read-failure policy, and the counters live in
+ * the same document as `discussion.currentId`: a write that starts
+ * from a failed read would erase the other writer's namespace. So the
+ * read-modify-write paths use `readStateStrict`, which refuses to
+ * merge onto an empty document when the existing file is unreadable.
+ *
  * Every mutation runs inside `updateState`, which holds the state-file
  * lock across the read AND the write. Incrementing through a plain
  * load-mutate-store would lose an update whenever two runs (two specs,
@@ -32,7 +40,7 @@
  * write erases the earlier increment, delaying an escalation.
  */
 
-import { readStateObject, updateState } from "../state.js";
+import { readStateTolerant, updateState } from "../state.js";
 
 /** Default escalation threshold when the config key is absent/invalid. */
 export const DEFAULT_SCAFFOLD_ESCALATE_CYCLES = 3;
@@ -82,7 +90,7 @@ async function readMapCount(
   specId: string,
   tcId: string,
 ): Promise<number> {
-  const state = await readStateObject(root);
+  const state = await readStateTolerant(root);
   const attempts = readAttemptsMap(state, mapName);
   return attempts[attemptKey(specId, tcId)] ?? 0;
 }
@@ -231,7 +239,7 @@ export async function resetValidateCycle(
 export async function listValidateCycleKeys(
   root: string,
 ): Promise<Array<{ specId: string; tcId: string }>> {
-  const state = await readStateObject(root);
+  const state = await readStateTolerant(root);
   const map = readAttemptsMap(state, "scaffoldValidateCycles");
   const out: Array<{ specId: string; tcId: string }> = [];
   for (const key of Object.keys(map)) {

@@ -68,15 +68,35 @@ describe("the work order template bans upstream patching unconditionally", () =>
     it(`${tree}: the drift protocol removes the judgement the qualifier implied`, async () => {
       const drift = flat(await read(tree, DRIFT));
 
+      // The blanket form now carries exactly one exception, and it is a
+      // different kind of thing from the qualifier this file was written
+      // against. `when owner rerun is required` asked the downstream agent to
+      // decide, per edit, whether the ban applied — the judgement it cannot
+      // make. This names one entry of the list, the code/test artifacts
+      // bullet, and points at the route that bullet already spells out; the
+      // agent looks the answer up instead of weighing it. Reading the blanket
+      // rule over that entry demanded an owner rerun for every shared-file
+      // edit, which the cross-spec procedure does not perform.
+      //
+      // Pinned in full, exception included, so widening it back into a
+      // judgement — or dropping the pointer to the bullet that carries the
+      // route — fails here.
       expect(drift).toContain(
-        "**Every artifact in this list requires an owner rerun by definition.**",
+        "**Every artifact in this list requires an owner rerun by definition — except " +
+          "the code and test artifacts of the last bullet, which carry their own route in " +
+          "that bullet.**",
       );
       // The qualifier inverted the dependency: the rerun follows from the
       // artifact being upstream SSOT, it is not a precondition for the ban.
       expect(drift).toContain(
         "the rerun is a _consequence_ of the artifact being upstream SSOT, never a precondition for the prohibition",
       );
-      expect(drift).toContain('There is no downstream test for "is an owner rerun required here?"');
+      // And the exception stays narrow: every OTHER entry keeps the property
+      // that there is nothing downstream to test, which is what made the ban
+      // unconditional for them in the first place.
+      expect(drift).toContain(
+        'For every other entry there is no downstream test for "is an owner rerun required here?"',
+      );
     });
 
     it(`${tree}: the two files still agree on the unconditional form`, async () => {
