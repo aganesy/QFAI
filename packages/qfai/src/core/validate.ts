@@ -18,7 +18,7 @@ import {
   collectScTestReferences,
 } from "./traceability.js";
 import type { Issue, ValidationCounts, ValidationProfile, ValidationResult } from "./types.js";
-import { resolveToolVersion } from "./version.js";
+import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
@@ -44,6 +44,7 @@ import {
   validateAgentDefinition,
   validateBpApDb,
   validateContractReferences,
+  validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -66,12 +67,15 @@ import {
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
+  validateTddListSeedShape,
   validateUiDefinitionConsistency,
   validateDesignAudit,
   validateNavigationFlow,
   validateRenderCritique,
   validateDesignFidelity,
+  validateFrozenSurfaceReachability,
   validatePrototypingDesignContractReadiness,
+  validateRootDesignMdParse,
   validateSddDesignContractReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
@@ -160,6 +164,9 @@ export async function validateProject(
   const toolVersion = await resolveToolVersion();
   return {
     toolVersion,
+    // Stamped where the result is assembled, so every writer of a
+    // `ValidationResult` carries it without having to remember to.
+    generatedAt: new Date().toISOString(),
     profile,
     issues,
     counts: countIssues(issues),
@@ -324,6 +331,84 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * failures return `"unknown"`, read as inside the window), so an unreadable
  * version cannot be what escalates this into a build failure.
  */
+/**
+ * A finding when the running qfai was resolved from outside the project root.
+ *
+ * `npx qfai` resolves a bare name by walking PARENT directories for
+ * `node_modules/.bin`, and every shipped skill prescribes exactly that form. A
+ * Claude Code worktree sits three levels below the main checkout, so a worktree
+ * without its own dependencies silently ran the enclosing checkout's binary —
+ * another branch, another lockfile — and the run said nothing about it. The
+ * version was reachable only inside `validate.json`, which the README calls
+ * internal, so no gate and no pasted evidence block could tell the two apart
+ * (#1096).
+ *
+ * `info`, at every site, and deliberately off P7's promotion ladder. The same
+ * path test catches a deliberate global install and a dependency hoisted to a
+ * monorepo root, and both of those are correct operation — so a window ending
+ * in `error` would make `--fail-on error` fail for a project doing nothing
+ * wrong, with no way out: `applyWaivers` rejects a waiver against an `error`
+ * finding (`QFAI-WAIVER-002`). This is the shape
+ * `INFO_ONLY_SINCE_BASELINE` exists for, in the words its first member is
+ * described with — it does not claim the tree is wrong, and it is not a gate
+ * waiting to close. Promoting it needs the project's own dependency
+ * declaration to tell an intended resolution from an ambient one, which is
+ * more than a path comparison, and what that would take is recorded in #1108.
+ */
+async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
+  const located = await locateToolAgainstProject(root);
+  if (located === null || !located.outside) {
+    return [];
+  }
+  // The one resolution nobody chose: a declaration exists and a different copy
+  // answered it. `QFAI-TOOL-001` cannot carry this — it is `info` because the
+  // path test alone admits a deliberate global install and a monorepo hoist,
+  // and those are correct operation. Splitting the code rather than promoting
+  // it is what keeps both statements true (#1108).
+  if (located.declaredElsewhere) {
+    const promoteAt = RULE_PROMOTIONS.toolResolvedAgainstDeclaration.promoteAt;
+    const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+    const windowNote =
+      severity === "warning" ? ` (${promoteAt} までは warning、以降は error になります)` : "";
+    return [
+      issue(
+        "QFAI-TOOL-002",
+        `このプロジェクトは qfai を依存として宣言していますが、実行されているのは ` +
+          `${located.packageDir} の別の copy です。宣言が指すディレクトリの外から解決されて` +
+          `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
+          `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
+          `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
+          `走っています。${windowNote}`,
+        severity,
+        undefined,
+        "toolProvenance.resolvedAgainstDeclaration",
+        [located.packageDir],
+        "canonical",
+        "この作業ツリーで `npm ci` / `pnpm install` を実行してから再実行してください。" +
+          "グローバルインストールを意図している場合は、そのプロジェクトから qfai の依存宣言を" +
+          "外してください — 宣言と実行の食い違いが、この finding が報告している状態です。",
+      ),
+    ];
+  }
+  return [
+    issue(
+      "QFAI-TOOL-001",
+      `実行中の qfai (${located.packageDir}) は検証対象のプロジェクト root ` +
+        `(${root}) の外から解決されています。このプロジェクトは qfai を依存として` +
+        `宣言していないため、グローバルインストールか npx による取得が唯一の実行経路で、` +
+        `いずれも意図した選択です。宣言と実行が食い違う場合は別に QFAI-TOOL-002 で` +
+        `報告されます。`,
+      "info",
+      undefined,
+      "toolProvenance.resolvedOutsideProject",
+      [located.packageDir],
+      "canonical",
+      "意図した解決であれば無視して構いません。そうでなければ、この作業ツリーで " +
+        "`npm ci` / `pnpm install` を実行してから再実行してください。",
+    ),
+  ];
+}
+
 async function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
@@ -364,6 +449,11 @@ async function runProfileValidators(
   // A CLI-boundary observation, independent of the tree below: it survives the
   // short-circuit so the operator still learns the flag went nowhere.
   const unusedPlatform = await buildUnusedPlatformIssues(profile, platformOption);
+  // Same standing as `unusedPlatform`: a property of the run rather than of the
+  // tree, so it survives the short-circuit below. It is also the finding most
+  // worth keeping when the tree turns out to be damaged — a validate run
+  // against another checkout's qfai explains a whole class of confusing damage.
+  const toolProvenance = await buildToolProvenanceIssues(root);
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -397,9 +487,10 @@ async function runProfileValidators(
   // elsewhere is not a reason to withhold a finding the walk already has.
   const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...unusedPlatform, ...surface.issues, ...anchorIssues];
+    return [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues];
   }
   return [
+    ...toolProvenance,
     ...unusedPlatform,
     ...surface.issues,
     ...anchorIssues,
@@ -413,11 +504,11 @@ async function runProfileValidators(
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
-        return runPrototypingValidators(root, config, platformOption);
+        return runPrototypingProfileValidators(root, config, platformOption);
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
-        return runTddValidators(root, config, true, true, true, true, true, specScope);
+        return runTddValidators(root, config, true, true, true, true, true, true, specScope);
       case "verify":
       case "full":
         return runFullValidators(root, config, platformOption, specScope);
@@ -432,7 +523,7 @@ async function runSaasPackage(
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  const prototypingIssues = await runPrototypingValidators(root, config, platformOption);
+  const prototypingIssues = await runPrototypingProfileValidators(root, config, platformOption);
   return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
@@ -446,6 +537,12 @@ async function runDiscussionValidators(
   reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
+    // `qfai-discussion` MUSTs a parsable root DESIGN.md and prescribes this
+    // profile as its gate, so the gate has to be able to see whether the file
+    // it mandates parses. Only the parse half — the lock comparison is
+    // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
+    // later stages (#1098).
+    ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
@@ -500,8 +597,47 @@ async function runSddValidators(
   // `full` runs the discussion profile too, which already carries the same
   // validator, so it opts out here to keep every QFAI-REVIEW-* finding once.
   includeReviewArtifacts = true,
+  // `full` also runs the tdd profile, which calls the whole of
+  // `validateTddList`, so it opts out here rather than reporting the
+  // seed-shape codes twice.
+  includeTddListSeedShape = true,
+  // `full` is the repo-wide audit and covers the downstream stage too, so it
+  // opts into the history-based `QFAI-TRACE-001` here — `runTddValidators`
+  // opts out in exchange, so the ledger is still read exactly once.
+  // `--profile sdd` on its own must never ask for it: see below.
+  includeImplementationDrift = false,
 ): Promise<Issue[]> {
   return [
+    // `/qfai-sdd` Phase 2b writes `tdd/test-list.md`, and `--profile sdd` is
+    // the only gate it stops on — so the profile has to be able to read back
+    // the shape it just wrote. Only the seed-shape half: the rest of
+    // `validateTddList` reports execution state that exists after
+    // `/qfai-implement`, which the SDD stage cannot clear.
+    // The scope is passed, not left to the run-level `--spec` filter: every
+    // `/qfai-sdd` slice gate is a `--spec` run, so an unscoped walk would read
+    // and `stat` every sibling ledger once per slice.
+    //
+    // That same equivalence places the gate: a `--spec` run of this profile IS
+    // the Phase 2 slice gate, and the Required Process runs Phase 2b — the
+    // phase that writes the ledger — only after it. Reconciling the ledger
+    // against `06_Test-Cases.md` there asks the writing stage for a file it
+    // has not reached yet, and a new spec declaring a Unit or Component TC got
+    // `TDDLIST_TC_NOT_COVERED` (error) on the very gate that has to pass
+    // before Phase 2b can run. The unscoped stop gate is the post-Phase-2b
+    // one, and it still evaluates the whole seed-shape set.
+    //
+    // The equivalence is one-way, though, and `beforeLedgerSeed` is read as a
+    // permission rather than an assertion for that reason: `--spec` is
+    // documented as a scope filter, so a `--spec` run is *also* how an author
+    // re-checks a single spec after Phase 2b. Treating the flag as the verdict
+    // let that run pass with rows missing. The validator drops the
+    // reconciliation codes only where the ledger really is absent.
+    ...(includeTddListSeedShape
+      ? await validateTddListSeedShape(root, config, {
+          ...(specScope ? { specScope } : {}),
+          beforeLedgerSeed: specScope !== undefined,
+        })
+      : []),
     ...(await validateMermaidEnforcement(root)),
     // Preflight input source: a project that has spec packs must be able to
     // point at what they were derived from — a discussion pack `06_REQ.md` or
@@ -523,10 +659,28 @@ async function runSddValidators(
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config, { specScope })),
     ...(await validateContractReferences(root, config)),
+    // Contract → implementation routing: every `- SSOT modules:` entry under
+    // `.qfai/contracts/**` must resolve on disk, so a renamed or never-written
+    // module cannot keep being asserted by the contract that documents it.
+    ...(await validateContractSsotModules(root, config)),
     ...(await validateSddDesignContractReadiness(root, config, {
       enforceNoPrematurePrototypingContracts,
     })),
     ...(await validateTraceability(root, config, { includeCodeReferences })),
+    // `16_Traceability-ledger.md` is an artifact `/qfai-sdd` writes, and
+    // `--profile sdd` is that skill's completion gate — so the profile that
+    // owns the file is the one that must hear `QFAI-TRACE-002` about it.
+    //
+    // Presence and shape only for `--profile sdd`. `/qfai-sdd` updates BR/AC
+    // and the ledger and leaves the implementation to `/qfai-implement`, so the
+    // linked code is untouched *by design* when that gate runs; asking for the
+    // history-based `QFAI-TRACE-001` there would fail the mandatory
+    // `--profile sdd --fail-on error` run on the flow the profile exists to
+    // certify. `QFAI-TRACE-001` gates the downstream profiles, which run after
+    // the code exists.
+    ...(await validateTraceabilityIntegrity(root, config, {
+      includeImplementationDiff: includeImplementationDrift,
+    })),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateNavigationFlow(root, config)),
@@ -563,12 +717,24 @@ async function runSddValidators(
   ];
 }
 
+/**
+ * The prototyping issue set at its validators' declared severity.
+ *
+ * `full` / `verify` call this one. The exploration relaxation belongs to the
+ * prototyping profile, not to this validator group: its trigger is a file
+ * committed to the repository under test
+ * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
+ * the project leaves the prototyping stage, and the last explicit mode is
+ * inherited forward — so applying it here let an abandoned exploration loop
+ * downgrade four gates of the verification profile permanently. Callers that
+ * want the relaxation go through `runPrototypingProfileValidators`.
+ */
 async function runPrototypingValidators(
   root: string,
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw: Issue[] = [
+  return [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await detectMockHrefDrift(root)),
     // Second-wave reviewer-gate findings (prototyping
@@ -579,6 +745,11 @@ async function runPrototypingValidators(
     ...(await validateDesignMdPatchZone(root, config)),
     ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
+    // A screen retired mid-loop leaves `frozenSurfaceUnion` naming a spec that
+    // no longer resolves, and nothing said so: `iterate`'s drift hard-stop only
+    // fires when EVERY UI signal is gone, so the partial case reported
+    // `error=0` over a loop describing a screen that does not exist (#1099).
+    ...(await validateFrozenSurfaceReachability(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
@@ -593,11 +764,24 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDelegationMap(root)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
-  // Prototyping-mode relaxation: under `mode: exploration` the
-  // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
-  // error → warning. Schema / path / license gates stay hard error.
-  // The mode is read from `prototyping.json#mode` written by iterate
-  // at cycle 0 (absent → legacy "convergence" interpretation).
+}
+
+/**
+ * The prototyping issue set as the `prototyping` (and `saas-package`) profile
+ * reports it.
+ *
+ * Prototyping-mode relaxation: under `mode: exploration` the
+ * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+ * error → warning. Schema / path / license gates stay hard error.
+ * The mode is read from `prototyping.json#mode` written by iterate
+ * at cycle 0 (absent → legacy "convergence" interpretation).
+ */
+async function runPrototypingProfileValidators(
+  root: string,
+  config: ConfigLoadResult["config"],
+  platformOption?: string,
+): Promise<Issue[]> {
+  const raw = await runPrototypingValidators(root, config, platformOption);
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 
@@ -657,6 +841,10 @@ async function runTddValidators(
   // `full` runs the sdd profile, which already calls
   // `validateMarkdownTableArity`.
   includeTableArity = true,
+  // Same reason: the sdd profile owns the traceability ledger and now runs
+  // `validateTraceabilityIntegrity` itself — under `full` with the
+  // implementation-drift check switched on — so `full` opts out here.
+  includeTraceabilityIntegrity = true,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
@@ -679,7 +867,7 @@ async function runTddValidators(
     ...(includeTraceability
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),
-    ...(await validateTraceabilityIntegrity(root, config)),
+    ...(includeTraceabilityIntegrity ? await validateTraceabilityIntegrity(root, config) : []),
     // The drift protocol names `--profile tdd` as the downstream completion
     // gate, so the downstream-only ownership rule is enforced here and nowhere
     // else: `/qfai-sdd` owns these files and edits them legitimately.
@@ -690,6 +878,12 @@ async function runTddValidators(
     // that cannot be applied was invisible to the only profile the stage runs.
     // `full` opts out below because `runSddValidators` already includes it.
     ...(includeContracts ? await validateContracts(root, config) : []),
+    // Same reasoning for the contract -> implementation routing block: the
+    // implementation stage is the one that moves and renames those modules, so
+    // `--profile tdd` — the gate `qfai-implement` names — has to see a
+    // `- SSOT modules:` entry it just made dead. It rides `includeContracts`
+    // so `full` does not report it twice.
+    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
   ];
 }
 
@@ -706,12 +900,16 @@ async function runFullValidators(
     // `"all"`: the full scan owns every review pack, not only the discussion
     // ones this runner gates inside its own profile.
     ...(await runDiscussionValidators(root, config, specScope, "all")),
-    // Review artifacts come in with the discussion profile above, so the sdd
-    // profile opts out rather than reporting every QFAI-REVIEW-* twice.
-    ...(await runSddValidators(root, config, true, false, specScope, false)),
+    // Review artifacts come in with the discussion profile above, and the tdd
+    // profile below carries the whole of `validateTddList`, so the sdd profile
+    // opts out of both rather than reporting QFAI-REVIEW-* and the ledger
+    // seed-shape codes twice. The trailing `true` is the opposite trade:
+    // `full` covers the downstream stage, so it opts INTO the history-based
+    // implementation-drift check here and `runTddValidators` opts out below.
+    ...(await runSddValidators(root, config, true, false, specScope, false, false, true)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
-    ...(await runTddValidators(root, config, false, false, false, false, false)),
+    ...(await runTddValidators(root, config, false, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
 }
