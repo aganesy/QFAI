@@ -62,9 +62,9 @@ Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mo
 ## Required Process
 
 1. Run the core interview for concept, scope, stakeholders, and constraints.
-2. Run Inception Deck and include at least one Mermaid diagram.
-3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
-4. Register source traceability and reference research in `04_Sources.md`.
+2. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+3. Run Inception Deck and include at least one Mermaid diagram.
+4. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
@@ -97,6 +97,7 @@ Before declaring completion, you MUST:
 - ensure `Disposition: open` count is zero in `11_OQ-Register.md`;
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
+- ensure the `## Research Summary` section of `04_Sources.md` is filled from an actual protocol run (`sources`, `best_practices`, `anti_patterns`, and `reflection` with at least one `action: apply`);
 - ensure the UI-bearing sidecar family is complete, and — when any classified surface (primary or secondary) is `web`, `mobile`, `desktop` or `mixed` — that the root `DESIGN.md` draft exists at the consuming-project root and parses as valid front-matter;
 - run `npx qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.

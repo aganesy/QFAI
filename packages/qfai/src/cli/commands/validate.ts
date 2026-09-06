@@ -1437,6 +1437,18 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // names a tier the ceremony rules recognise.
   "QFAI-TDDLIST-010":
     "Every filled `Tier` cell in a TDD Execution Ledger names one of `T1`, `T2`, `T3` or `-`, so the ceremony a row owes is the one its author declared.",
+  "QFAI-RESEARCH-015":
+    "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
+  "QFAI-RESEARCH-016":
+    "The current discussion pack's `04_Sources.md` holds the `## Research Summary` slot, so the stored protocol output is in the file that owns it.",
+  "QFAI-RESEARCH-017": "Every `sources[]` entry declares its `id`.",
+  "QFAI-RESEARCH-018":
+    "Every `best_practices[]` / `anti_patterns[]` entry declares `id`, `category`, `title`, `description` and `source_id`.",
+  "QFAI-RESEARCH-019": "Every `reflection[]` entry declares `source_id` and `finding`.",
+  "QFAI-RESEARCH-020":
+    "`.qfai/state.json#discussion.currentId` resolves to a discussion pack on disk, so the Research Summary is read from the pack the operator selected.",
+  "QFAI-RESEARCH-021":
+    "No required Research Summary value is still the shipped `[...]` template placeholder.",
 };
 
 /**
@@ -1541,6 +1553,18 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
   "QFAI-PROT-276":
     "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
+  "QFAI-RESEARCH-015":
+    "Point `source_id` at an `id` that the same Research Summary's `sources[]` declares, or add the missing source entry.",
+  "QFAI-RESEARCH-016":
+    "Add a `## Research Summary` section to the current pack's `04_Sources.md` and record the research-first protocol output under it.",
+  "QFAI-RESEARCH-017": "Give the `sources[]` entry an `id` (`SRC-NNNN`).",
+  "QFAI-RESEARCH-018":
+    "Fill the entry's missing `id` / `category` / `title` / `description` / `source_id` fields.",
+  "QFAI-RESEARCH-019": "Fill the reflection entry's missing `source_id` / `finding` fields.",
+  "QFAI-RESEARCH-020":
+    "Run `npx qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
+  "QFAI-RESEARCH-021":
+    "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

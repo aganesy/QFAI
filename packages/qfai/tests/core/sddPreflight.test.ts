@@ -69,6 +69,129 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("keeps carry-over open questions in the summary a blocked run writes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const result = await runSddPreflight(root, defaultConfig, {
+        assumptions: ["W-PENDING-PROMOTION: Stage 1 で昇格させる"],
+      });
+
+      expect(result.status).toBe("blocked");
+      expect(result.openQuestions).toEqual(["W-PENDING-PROMOTION: Stage 1 で昇格させる"]);
+
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("## Open Questions (Carry-over)");
+      expect(summary).toContain("- W-PENDING-PROMOTION: Stage 1 で昇格させる");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when 03_Story-Workshop.md carries no Mermaid diagram", async () => {
+    // `QFAI-DPACK-008` reports this at `error`, but `validate --profile sdd`
+    // does not run the discussion validator — so Stage 0 is the only gate
+    // standing between a pack with no flow and Stage 1, and prose of the right
+    // length used to clear it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203031", {
+        "03_Story-Workshop.md": [
+          "# 03 Story Workshop",
+          "",
+          "ユーザーはダッシュボードを開き、当日の予定を確認してから詳細画面へ遷移する。",
+          "この節は最小文字数を満たすが、フローを図として持っていない。",
+        ].join("\n"),
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("Mermaid"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not report the Mermaid blocker twice for an absent Story Workshop", async () => {
+    // A missing file is the missing-files blocker's finding. Naming it here as
+    // well would report one defect under two headings.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203032");
+      await rm(
+        path.join(
+          root,
+          ".qfai",
+          "discussion",
+          "discussion-20260216010203032",
+          "03_Story-Workshop.md",
+        ),
+        { force: true },
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("必須ファイル不足"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes("Mermaid"))).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks when a deferred OQ has no entry in 13_Deferred.md", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203030", {
+        "11_OQ-Register.md": [
+          "# 11 OQ Register",
+          "",
+          "| OQ-ID   | Question                   | Disposition | Gate       | Reason                             |",
+          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- |",
+          "| OQ-0007 | 契約バージョニング方針をどう決めるか | deferred    | discussion | 実装着手には影響しないため保留とする |",
+          "",
+          "補足: deferred にした OQ は 13_Deferred.md に同じ OQ-ID で詳細を記載する必要がある。",
+        ].join("\n"),
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("13_Deferred.md"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes("OQ-0007"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("counts REQ intake rows, not REQ references inside a description", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203031", {
+        "06_REQ.md": [
+          "# 06 REQ",
+          "",
+          "| REQ-ID   | Title            | Description                              | Source   | Priority | Status |",
+          "| -------- | ---------------- | ---------------------------------------- | -------- | -------- | ------ |",
+          "| REQ-0001 | 要件セットの保存   | 監査対応のため要件セットを保存できる         | SRC-0001 | must     | draft  |",
+          "| REQ-0002 | 要件セットの再読込 | REQ-0001 に依存し、保存済みの内容を再読込する | SRC-0001 | must     | draft  |",
+          "",
+          "補足: Description の相互参照で intake 件数が水増しされないことを確認するデータ。",
+        ].join("\n"),
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("ready");
+      expect(result.importedReqCount).toBe(2);
+
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("Imported REQ count: 2");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns blocked when discussion-pack has blocking OQ", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

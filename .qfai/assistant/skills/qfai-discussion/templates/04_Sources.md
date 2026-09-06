@@ -14,6 +14,12 @@
 
 ## Research Summary
 
+Storage slot for the `research_summary` output of
+`.qfai/assistant/constitution/research-first-protocol.md`. Replace every placeholder with the actual
+protocol run; `npx qfai validate --profile discussion` reports `QFAI-RESEARCH-*` while they remain.
+Never delete this heading to silence the gate: the current pack's `04_Sources.md` is required to
+carry it, and its absence is reported as `QFAI-RESEARCH-016`.
+
 Research-First Protocol output. Schema: `.qfai/assistant/constitution/research-first-protocol.md`.
 Replace every `[...]` placeholder with real research: validation rejects
 bracketed `title` / `url` / `reason` values and requires `published` to be a
@@ -24,18 +30,18 @@ passing.
 research_summary:
   sources:
     - id: SRC-0001
-      title: [Source title]
+      title: [Reference title]
       url: [https://example.com/reference]
-      published: [YYYY-MM-DD]
+      published: YYYY-MM-DD
   best_practices:
     - id: BP-0001
-      category: [Category]
+      category: [Category this practice belongs to]
       title: [Best practice title]
-      description: [What to do and why]
+      description: [What to do and when it applies]
       source_id: SRC-0001
   anti_patterns:
     - id: AP-0001
-      category: [Category]
+      category: [Category this anti-pattern belongs to]
       title: [Anti-pattern title]
       description: [What to avoid and why]
       source_id: SRC-0001
@@ -43,7 +49,7 @@ research_summary:
     - source_id: SRC-0001
       finding: [What the source implies for this project]
       action: apply
-      reason: [Why this action was chosen]
+      reason: [Why apply / reject / defer was chosen]
 ```
 
 ## Trend Scan

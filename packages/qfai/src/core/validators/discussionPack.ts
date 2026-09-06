@@ -173,7 +173,15 @@ export async function validateDiscussionPackReadiness(
   return issues;
 }
 
-function containsMermaidBlock(text: string): boolean {
+/**
+ * Whether `text` carries a mermaid fenced block.
+ *
+ * Exported because the `/qfai-sdd` Stage 0 preflight has to reach the same
+ * verdict `QFAI-DPACK-008` reaches: `validate --profile sdd` does not run this
+ * validator, so a second reading of "has a diagram" would let a pack the
+ * discussion profile rejects clear Stage 0.
+ */
+export function containsMermaidBlock(text: string): boolean {
   // Match backtick (3+) or tilde (3+) fences with mermaid info-string,
   // aligned with MERMAID_START_RE in discussMermaid.ts.
   return /^\s*(?:`{3,}|~{3,})\s*mermaid\b/im.test(text);
