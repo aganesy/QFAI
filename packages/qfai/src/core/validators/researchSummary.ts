@@ -29,6 +29,9 @@ const REASON_VALUE_RE = /^\s*-?\s*reason:\s*(.*)$/gm;
 const PLACEHOLDER_VALUE_RE = /^(?:\[[^\]]*\]|<[^>]*>|tbd|todo|n\/a|none|placeholder)\.?$/i;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
+  // `uiux.requireResearchSummary` is read further down, around the absence
+  // rule, and only there — see the comment on that guard for why the opt-out
+  // stops at "the section is missing" instead of returning [] from here.
   const issues: Issue[] = [];
   // `paths.discussionDir` may be absolute (packs relocated outside <root>);
   // resolve it the same way findLatestDiscussionPackDir's caller does, or the

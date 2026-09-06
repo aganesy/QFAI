@@ -1,6 +1,6 @@
 prototyping:
-  # Single-thread evolution loop. Iteration count is fixed at 15 globally
-  # (no per-mode override).
+  # Single-thread evolution loop (no per-mode override). The iteration
+  # budget is owned by `.qfai/assistant/skills/qfai-prototyping/SKILL.md`.
   # Replace `web` with one of the prototyping-supported surfaces if needed:
   #   web | mobile | desktop | mixed
   # (discussion classification also allows `cli` and `non-ui`, but those are
