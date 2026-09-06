@@ -232,6 +232,29 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       process.exitCode = previousExitCode;
     }
   });
+
+  it("writes the init tree to --root instead of the cwd", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-init-root-"));
+    const target = path.join(base, "target");
+    const cwd = path.join(base, "cwd");
+    try {
+      await mkdir(target, { recursive: true });
+      await mkdir(cwd, { recursive: true });
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(["init", "--root", target, "--yes"], cwd);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+
+      await expect(readdir(path.join(target, ".qfai"))).resolves.not.toHaveLength(0);
+      await expect(readdir(cwd)).resolves.toEqual([]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("cli usage errors", () => {
