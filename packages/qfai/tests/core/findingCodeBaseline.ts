@@ -306,6 +306,14 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-REVIEW-007",
   "QFAI-REVIEW-008",
   "QFAI-REVIEW-009",
+  // Surfaced by the third widening of the extractor: the object-literal scan
+  // required a quoted code, and `cli/lib/warnings.ts` writes
+  // `code: TRUNCATED_SCAN_CODE`. It predates the policy — both landed on
+  // 2026-08-22 in parallel branches, and this one reached `main` first:
+  //   97abcbfe8 QFAI-SCAN-001 -> main 2026-08-30T23:45:11Z
+  //   56c59f7fa P7            -> main 2026-08-31T00:43:00Z
+  // It is a fixed `warning` and fails no `--fail-on error` gate (#1110).
+  "QFAI-SCAN-001",
   "QFAI-SCOPE-001",
   "QFAI-SCOPE-002",
   "QFAI-SKILLS-001",
