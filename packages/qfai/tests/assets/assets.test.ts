@@ -6,15 +6,118 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
+import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
+import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
+import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
+import {
+  findRepositoryAttribution,
+  formatAttributionOffender,
+  isBinary,
+  listShippedAssistantFiles,
+} from "../helpers/repositoryAttribution.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateRootDir = path.join(templateRoot, "root");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
+
+// --- shipped iteration-budget vocabulary -----------------------------------
+// Two skills talk about the same budget under opposite obligations:
+// `qfai-prototyping` owns it and may print it, but every number it prints must
+// equal the constant; `qfai-discussion` owns nothing here and may not print a
+// number at all. Both guards read the patterns below so neither can grow an
+// arm the other lacks — the noun-first arm used to exist only on the
+// discussion side, which is how `Iteration count cap is 10` shipped unchecked.
+const BUDGET_NOUN = String.raw`(?:cycles?|iterations?)`;
+const BUDGET_CAP = String.raw`(?:cap(?:ped|s)?|budget|limit(?:ed|s)?|max(?:imum)?|total|at\s+most|up\s+to)`;
+// Gaps stay inside one clause (no `.`, `;` or newline) so
+// `Iteration count cap is 10; ... reaching cycle 9 ...` yields 10, not 9.
+const BUDGET_GAP = String.raw`[^.;\n]{0,24}?`;
+
+type BudgetLiteralPattern = {
+  readonly label: string;
+  readonly re: RegExp;
+  /** `terminal` is compared to MAX_ITERATION_INDEX, `total` to MAX_ITERATIONS. */
+  readonly against: "terminal" | "total";
+};
+
+const BUDGET_LITERAL_PATTERNS: readonly BudgetLiteralPattern[] = [
+  {
+    label: "terminal index",
+    against: "terminal",
+    re: /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi,
+  },
+  {
+    label: "count before the noun",
+    against: "total",
+    re: /\b(\d+)(?:\s+(?:cycles|iterations)|-(?:cycle|iteration))\b/gi,
+  },
+  {
+    // `Iteration count cap is 10`, `cycle limit: 10`, `max-iterations: 10`.
+    // A cap word is required: without it every `--cycle 0` would be flagged.
+    label: "count after the noun",
+    against: "total",
+    re: new RegExp(
+      String.raw`\b(?:${BUDGET_NOUN}${BUDGET_GAP}${BUDGET_CAP}|${BUDGET_CAP}${BUDGET_GAP}${BUDGET_NOUN})${BUDGET_GAP}\b(\d+)\b`,
+      "gi",
+    ),
+  },
+];
+
+type BudgetLiteral = {
+  readonly label: string;
+  readonly text: string;
+  readonly value: number;
+  readonly expected: number;
+};
+
+/** Every budget number a shipped surface states, with the constant it must equal. */
+function collectBudgetLiterals(content: string): BudgetLiteral[] {
+  const found: BudgetLiteral[] = [];
+  for (const { label, re, against } of BUDGET_LITERAL_PATTERNS) {
+    for (const match of content.matchAll(re)) {
+      found.push({
+        label,
+        text: match[0],
+        value: Number(match[1]),
+        expected: against === "terminal" ? MAX_ITERATION_INDEX : MAX_ITERATIONS,
+      });
+    }
+  }
+  return found;
+}
+
+/** Budget literals whose value has drifted away from the source constant. */
+function findStaleBudgetLiterals(content: string): string[] {
+  return collectBudgetLiterals(content)
+    .filter(({ value, expected }) => value !== expected)
+    .map(({ label, text, expected }) => `${text} [${label}] (expected ${expected})`);
+}
+
+// Non-owning surfaces are held to a stricter rule: no number near the noun at
+// all, cap word or not. That arm cannot be shared with the prototyping guard,
+// where `--cycle 0` and `reaching cycle 9` are legitimate.
+const BUDGET_RESTATEMENT_PATTERNS: readonly { readonly label: string; readonly re: RegExp }[] = [
+  ...BUDGET_LITERAL_PATTERNS.map(({ label, re }) => ({ label, re })),
+  {
+    label: "bare count adjacent to the noun",
+    re: new RegExp(String.raw`\b${BUDGET_NOUN}\b[^.\n]{0,40}?\b\d+\b`, "gi"),
+  },
+  { label: "loose range", re: /\b(?:C|cycles?|iterations?)\s*\d+\s*\.\.\s*\d+/gi },
+];
+
+/** Any numeric restatement of the budget, for surfaces that must only point at it. */
+function findBudgetRestatements(content: string): string[] {
+  return BUDGET_RESTATEMENT_PATTERNS.flatMap(({ label, re }) =>
+    [...content.matchAll(re)].map((match) => `${match[0]} [${label}]`),
+  );
+}
 
 describe("assets guardrails", { timeout: 30000 }, () => {
   it("checks relative path references in markdown", async () => {
@@ -228,6 +331,35 @@ describe("assets guardrails", { timeout: 30000 }, () => {
             return null;
           }
           return `${path.relative(repoRoot, filePath)}: ${found.join(", ")}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("ensures shipped assistant prose never attributes a concrete artifact id to this repository", async () => {
+    // Every file under assistant/ is copied verbatim by `qfai init`, so
+    // "this repository" resolves to the consuming project. Pairing that phrase
+    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `CON-API-NNNN` id
+    // therefore asserts a fact about an artifact the consumer does not have.
+    //
+    // The matcher, the soft-wrap normalizer and the file list live in
+    // `tests/helpers/repositoryAttribution.ts`; what stays here is the scan of
+    // the shipped tree. `tests/assets/repositoryAttributionGuard.test.ts`
+    // covers the matcher's own behaviour, so the two cannot drift.
+    const assistantDir = path.join(templateQfaiDir, "assistant");
+    const files = await listShippedAssistantFiles(assistantDir);
+
+    const offenders = (
+      await Promise.all(
+        files.map(async (filePath) => {
+          const raw = await readFile(filePath);
+          if (isBinary(raw)) {
+            return null;
+          }
+          const found = findRepositoryAttribution(raw.toString("utf-8"));
+          return found === null ? null : formatAttributionOffender(repoRoot, filePath, found);
         }),
       )
     ).filter((result): result is string => result !== null);
@@ -734,6 +866,110 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/best-of-history is gone/i);
   });
 
+  it("keeps shipped prototyping cycle literals aligned with the iteration budget", async () => {
+    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const files = await fg(["SKILL.md", "references/*.md"], { cwd: skillDir, absolute: true });
+
+    expect(files.length).toBeGreaterThan(0);
+
+    // Two families of free-text restatement drift independently, so
+    // BUDGET_LITERAL_PATTERNS scans both. Three divergent values once
+    // circulated here.
+    //   - terminal: the last legal cycle index ("cycles 1..9", "C1..9") — must
+    //     equal MAX_ITERATION_INDEX.
+    //   - total: the size of the budget, written either number-first ("up to
+    //     10 cycles", "fixed 10-cycle budget") or noun-first ("Iteration count
+    //     cap is 10") — must equal MAX_ITERATIONS. These are the user-facing
+    //     headline numbers; a missing arm leaves them stale and green.
+    const mismatches: string[] = [];
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      const relPath = path.relative(repoRoot, filePath);
+      for (const stale of findStaleBudgetLiterals(content)) {
+        mismatches.push(`${relPath}: ${stale}`);
+      }
+    }
+
+    expect(
+      mismatches,
+      `cycle literals must equal MAX_ITERATION_INDEX (${MAX_ITERATION_INDEX}) ` +
+        `or MAX_ITERATIONS (${MAX_ITERATIONS})`,
+    ).toEqual([]);
+
+    // The scan is the deliverable, so pin its reach in both directions: a
+    // guard that only ever reads correct files proves nothing. The noun-first
+    // phrasing is the one SKILL.md actually ships, and the number-first-only
+    // arm read straight past it.
+    const staleValue = MAX_ITERATIONS + 5;
+    for (const phrasing of [
+      `Iteration count cap is ${staleValue}`,
+      `iteration count is capped globally to ${staleValue}`,
+      `cycle limit: ${staleValue}`,
+      `max-iterations: ${staleValue}`,
+      `up to ${staleValue} cycles`,
+      `a fixed ${staleValue}-cycle budget`,
+      `Cycles 1..${staleValue}`,
+    ]) {
+      expect(findStaleBudgetLiterals(phrasing), `must flag: ${phrasing}`).not.toEqual([]);
+    }
+
+    // …and what it must not flag: this skill is full of legitimate per-cycle
+    // indices, so requiring a cap word is what keeps the guard usable.
+    for (const legitimate of [
+      "npx qfai prototyping iterate --cycle 0 --target-url <url>",
+      "reaching cycle 9 on a non-converged iteration set exits 65 directly",
+      "commit `prototyping: iter-09`",
+      "200..500 word critique",
+    ]) {
+      expect(findStaleBudgetLiterals(legitimate), `must not flag: ${legitimate}`).toEqual([]);
+    }
+  });
+
+  it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
+    const discussionDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const files = [
+      path.join(discussionDir, "references", "discussion-artifact-rules.md"),
+      path.join(discussionDir, "templates", "prototyping.yaml"),
+    ];
+
+    // qfai-discussion neither owns nor enforces the prototyping budget;
+    // restating it there is what produced a third value. Matching the exact
+    // sentence that was deleted would only forbid one spelling: `15
+    // iterations`, `fixed 15-cycle budget` and `cycles 1..15` all say the same
+    // thing and would all have passed. BUDGET_RESTATEMENT_PATTERNS rejects a
+    // number *anywhere near* a cycle/iteration word instead — in these two
+    // files there is no legitimate reason for one, since the budget is stated
+    // by pointer.
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      const rel = path.relative(repoRoot, filePath);
+      expect(findBudgetRestatements(content), `${rel} restates the budget`).toEqual([]);
+      expect(content).toContain(".qfai/assistant/skills/qfai-prototyping/SKILL.md");
+    }
+
+    // The matcher itself is the deliverable here, so pin what it rejects:
+    // a guard that only ever sees clean files proves nothing about its reach.
+    for (const restated of [
+      "up to 15 iterations",
+      "a fixed 15-cycle budget",
+      "cycles 1..15",
+      "C1..15",
+      "iteration count is capped globally to 15",
+      "Iteration count cap is 15",
+      "max-iterations: 15",
+      "the loop runs 10 cycles",
+    ]) {
+      expect(findBudgetRestatements(restated), `must reject: ${restated}`).not.toEqual([]);
+    }
+    // …and what it must not reject: the pointer form these files actually use.
+    for (const allowed of [
+      "The single-thread evolution loop owns its iteration budget; see the skill.",
+      "# budget is owned by `.qfai/assistant/skills/qfai-prototyping/SKILL.md`.",
+    ]) {
+      expect(findBudgetRestatements(allowed), `must allow: ${allowed}`).toEqual([]);
+    }
+  });
+
   it("placeholder for removed v1.x test (ships ui contract sample) — replaced by ui-contract.sample.yaml direct check above", () => {
     expect(true).toBe(true);
   });
@@ -774,6 +1010,87 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // suite; this static check keeps asserting the two actions are present.
     expect(content).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
     expect(content).toMatch(/actions\/setup-node@[0-9a-f]{40}\b/);
+
+    // The comment justifying the Node pin must quote the floor the package
+    // actually publishes, not one qfai stopped shipping releases ago.
+    const packageJsonText = await readFile(
+      path.join(repoRoot, "packages", "qfai", "package.json"),
+      "utf-8",
+    );
+    const nodeEngine = /"engines"\s*:\s*\{[^}]*"node"\s*:\s*"([^"]+)"/.exec(packageJsonText)?.[1];
+    expect(nodeEngine).toBeTruthy();
+    expect(content).toContain(`\`engines: "${nodeEngine}"\``);
+    expect(content).not.toContain('">=18.0.0"');
+  });
+
+  it("documents the pnpm precondition the validate lane stops closed on", async () => {
+    // The pnpm setup action resolves its version from
+    // `package.json#packageManager` and from nowhere else, so a repository
+    // holding a `pnpm-lock.yaml` and nothing else cannot install. Passing a
+    // `version:` input instead is not the fix — it would override the version
+    // the adopter declared — so the lane stops CLOSED with an annotation
+    // naming the file and the fix rather than reporting a validate result it
+    // never computed. The behavioural oracle is TC-0003-0044 in
+    // tests/integration/shippedWorkflowPortability.test.ts; what is checked
+    // here is that the shipped file and both READMEs agree with it.
+    const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
+    const content = await readFile(workflowPath, "utf-8");
+
+    expect(content).toContain("Resolve the package manager (pnpm route fails closed)");
+    // No `version:` input anywhere, on any step: a declared packageManager is
+    // the only source, so nothing may override it.
+    expect([...content.matchAll(/^\s*version: \S/gm)]).toHaveLength(0);
+
+    // …and neither README may promise a lockfile alone is enough.
+    for (const readmePath of [
+      path.join(repoRoot, "README.md"),
+      path.join(repoRoot, "packages", "qfai", "README.md"),
+    ]) {
+      const readme = await readFile(readmePath, "utf-8");
+      expect(readme, readmePath).toContain("package.json#packageManager");
+    }
+  });
+
+  // Both READMEs used to claim qfai generates no GitHub Actions workflow while
+  // `qfai init` copied `root/.github/workflows/` into every initialized
+  // repository. The set is read from SHIPPED_WORKFLOW_NAMES rather than spelled
+  // out here, so shipping a further workflow fails this test until the prose
+  // names it too — which is how the denial went stale in the first place.
+  it("documents every CI workflow `qfai init` installs in both READMEs", async () => {
+    const readmePaths = [
+      path.join(repoRoot, "README.md"),
+      path.join(repoRoot, "packages", "qfai", "README.md"),
+    ];
+
+    expect(SHIPPED_WORKFLOW_NAMES.size).toBeGreaterThan(0);
+    const invocations = shapeValueLiterals();
+    expect(
+      invocations.length,
+      "the declared shape exposes no invocation to check for",
+    ).toBeGreaterThan(0);
+
+    for (const readmePath of readmePaths) {
+      const readme = await readFile(readmePath, "utf-8");
+      const label = path.relative(repoRoot, readmePath);
+
+      expect(readme, `${label} must not deny the shipped workflows`).not.toContain(
+        "It does not generate GitHub Actions workflows.",
+      );
+      for (const name of SHIPPED_WORKFLOW_NAMES) {
+        expect(readme, `${label} must name .github/workflows/${name}`).toContain(
+          `.github/workflows/${name}`,
+        );
+      }
+      // Derived, never restated. The declared shape is the one oracle for the
+      // lane's subcommand / profile / threshold (the contract's DTC-5), so
+      // spelling the invocation here would make this a second one — and would
+      // go stale silently the day the shape changed it.
+      for (const invocation of invocations) {
+        expect(readme, `${label} must state the gate a shipped workflow runs`).toContain(
+          invocation,
+        );
+      }
+    }
   });
 
   it("prevents legacy completion-gate remnants in assistant markdown", async () => {
@@ -934,7 +1251,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   // .npmignore files removed — gitignore entries now live in root .gitignore
   // (see ensureRootGitignoreEntries in init.ts)
 
-  it("does not ship review_archive gitignore in init template", async () => {
+  it("does not ship review_archive gitignore in init template", () => {
     const reviewArchiveIgnorePath = path.join(templateQfaiDir, "review_archive", ".gitignore");
     expect(existsSync(reviewArchiveIgnorePath)).toBe(false);
   });
@@ -971,16 +1288,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       absolute: true,
     });
     const versionPattern = /\b(?:v)?\d+\.\d+\.\d+\b/;
-    const approvedVersionedDocs = new Set([
-      path.resolve(templateQfaiDir, "assistant", "constitution", "agent-selection.md"),
-    ]);
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
       const content = await readFile(filePath, "utf-8");
-      if (approvedVersionedDocs.has(path.resolve(filePath))) {
-        continue;
-      }
       if (versionPattern.test(content)) {
         matches.push(path.relative(repoRoot, filePath));
       }
@@ -1072,6 +1383,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const deltaTemplate = await readFile(deltaTemplatePath, "utf-8");
     expect(deltaTemplate).toContain("# 09 Delta");
     expect(deltaTemplate).toContain("## Change Summary");
+    // The sections `parseDeltaV1` reads. Without them the file is invisible to
+    // `qfai report`, which then prints zeros as if the run were clean (#545).
+    // The parse itself is pinned in tests/assets/deltaTemplateParses.test.ts.
+    expect(deltaTemplate).toContain("## Update History");
+    expect(deltaTemplate).toContain("## Decision Log");
+    expect(deltaTemplate).toContain("### DL-0001");
+    expect(deltaTemplate).toContain("#### Meta");
+    expect(deltaTemplate).toContain("#### Verification");
     expect(deltaTemplate).toContain("## Rationale");
     expect(deltaTemplate).toContain("## Candidates Considered");
     expect(deltaTemplate).toContain("## Adopted");
@@ -1093,7 +1412,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(waiversTemplate).toContain("evidence:");
   });
 
-  it("keeps root init assets free of wrapper directories", async () => {
+  it("keeps root init assets free of wrapper directories", () => {
     // `.claude` / `.codex` must be absent entirely (generated by init symlink step).
     for (const removedDir of [".claude", ".codex"]) {
       expect(existsSync(path.join(templateRootDir, removedDir))).toBe(false);
@@ -1181,6 +1500,17 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       0,
     );
     const commonOptionKeys = collectOptionKeys(preDispatch);
+
+    // 1c. Options the PARSER folds into an init option after the switch.
+    //     `main.ts`'s `case "init":` hands `runInit` its `dir` and never names
+    //     `options.root`, so an alias args.ts resolves on its own —
+    //     `options.dir = options.root` under a `command === "init"` guard — is
+    //     invisible to a derivation that reads main.ts alone. `--root` then
+    //     decides where `qfai init` writes while this test, whose name promises
+    //     "every qfai init flag", still calls it undocumented.
+    for (const key of collectInitAliasSources(argsSource, initOptionKeys)) {
+      initOptionKeys.add(key);
+    }
 
     // 2. Which flag writes each of those options in the parser? Short aliases
     //    (`-h`) and fall-through label groups (`case "--help": case "-h":`)
@@ -1366,7 +1696,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     };
 
     const files = [
-      ...validate.issues.map((issue) => issue.file).filter(Boolean),
+      // `.filter(Boolean)` drops the `undefined`s at run time but does not
+      // narrow the type, so this used to hand `path.isAbsolute` a
+      // `string | undefined` — the TS2345 that only appeared once this file
+      // entered `tsconfig.tests.json#include`.
+      ...validate.issues
+        .map((issue) => issue.file)
+        .filter((file): file is string => file !== undefined),
       ...Object.values(validate.traceability.sc.refs).flat(),
     ];
     for (const file of files) {
@@ -1374,7 +1710,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
-  it("ensures old tdd skills are abolished (not shipped)", async () => {
+  it("ensures old tdd skills are abolished (not shipped)", () => {
     for (const skillId of ["qfai-tdd-red", "qfai-tdd-green", "qfai-tdd-refactor"]) {
       expect(
         existsSync(path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md")),
@@ -1541,6 +1877,48 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
+  it("keeps 01_Context.md prototyping-surface guidance aligned with the execution surface set", async () => {
+    const contextTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "templates",
+      "01_Context.md",
+    );
+    const content = await readFile(contextTemplatePath, "utf-8");
+
+    const noteLine = content
+      .split(/\r?\n/)
+      .find((line) => line.includes("prototyping.yaml") && line.includes("|"));
+    expect(noteLine).toBeDefined();
+
+    // Every pipe-separated surface enumeration attributed to `prototyping.yaml`
+    // must be the execution set, never the wider classification set.
+    // Narrowed rather than asserted: `noUncheckedIndexedAccess` makes a capture group
+    // `string | undefined`, and the group is optional to the type system even though this
+    // pattern always fills it. A `!` or an `as string` would type-check by claiming
+    // something the regex engine does not promise.
+    const enumerations = [...(noteLine ?? "").matchAll(/`([a-z-]+(?:\|[a-z-]+)+)`/g)]
+      .map((match) => match[1])
+      .filter((value): value is string => value !== undefined);
+    expect(enumerations).toContain(PROTOTYPING_SUPPORTED_SURFACES.join("|"));
+    for (const enumeration of enumerations) {
+      expect(enumeration.split("|")).not.toContain("cli");
+      expect(enumeration.split("|")).not.toContain("non-ui");
+    }
+
+    expect(content).toContain(
+      "`cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`.",
+    );
+
+    // The classification bullet keeps `cli` as a UI-bearing classification value.
+    expect(content).toContain("`cli` is a UI-bearing surface");
+    expect(content).toContain(
+      "`primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.",
+    );
+  });
+
   it("ensures qfai-discussion templates include visuals guidance", async () => {
     const inceptionTemplatePath = path.join(
       templateQfaiDir,
@@ -1670,7 +2048,68 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(`${discussionPlaybook}\n${sddPlaybook}`).not.toContain("require");
   });
 
-  it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
+  it("pins the discussion review-pack write paths to the shared review tree", async () => {
+    const discussionSkillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const discussionPlaybookPath = path.join(
+      discussionSkillDir,
+      "references",
+      "review-cycle-playbook.md",
+    );
+    const reviewRequestTemplatePath = path.join(
+      discussionSkillDir,
+      "templates",
+      "14_Review-Request.md",
+    );
+    const skillPath = path.join(discussionSkillDir, "SKILL.md");
+    const [discussionPlaybook, reviewRequestTemplate, discussionSkill] = await Promise.all([
+      readFile(discussionPlaybookPath, "utf-8"),
+      readFile(reviewRequestTemplatePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // `validateReviewArtifacts` lists `^review-(\d{17})$` and nothing else, so the placeholder
+    // the playbook prints must expand to exactly 17 digits. A pack written under any other
+    // spelling is not enumerated, and an empty review tree only warns — the cycle would pass
+    // `--fail-on error` unreviewed.
+    const packDirName = "review-YYYYMMDDhhmmssSSS";
+    expect(packDirName.slice("review-".length)).toHaveLength(17);
+
+    for (const artifact of ["review_request.md", "R01_<reviewer>.md", "summary.json"]) {
+      expect(discussionPlaybook).toContain(`.qfai/review/${packDirName}/${artifact}`);
+    }
+    expect(reviewRequestTemplate).toContain(`.qfai/review/${packDirName}/review_request.md`);
+
+    // The skill body must actually route the run through the playbook: a write-path rule the
+    // Required Process never opens does not reach the reviewer step that writes the pack.
+    expect(discussionSkill).toContain("references/review-cycle-playbook.md");
+
+    // The discussion tree must name the review-pack directory exactly one way, so that a
+    // pack lands where `validateReviewArtifacts` looks for it. Both spellings are checked:
+    // a pack path under the review tree, and any leftover `<...>` placeholder that would
+    // leave the timestamp shape to the model's discretion.
+    const discussionMarkdown = await fg(["**/*.md"], {
+      cwd: discussionSkillDir,
+      absolute: true,
+    });
+    const strayNames: string[] = [];
+    for (const filePath of discussionMarkdown) {
+      const content = await readFile(filePath, "utf-8");
+      const matches = [
+        ...(content.match(/\.qfai\/review\/review-[^/\s`)]*/g) ?? []).map((match) =>
+          match.slice(".qfai/review/".length),
+        ),
+        ...(content.match(/review-<[^>]+>/g) ?? []),
+      ];
+      for (const match of matches) {
+        if (match !== packDirName) {
+          strayNames.push(`${match} (${path.relative(discussionSkillDir, filePath)})`);
+        }
+      }
+    }
+    expect(strayNames).toEqual([]);
+  });
+
+  it("ensures qfai-sdd no longer ships legacy spec-pack templates", () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
       "assistant",
@@ -1683,7 +2122,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(existsSync(legacySpecPackDir)).toBe(false);
   });
 
-  it("ensures removed split sdd wrappers are not shipped", async () => {
+  it("ensures removed split sdd wrappers are not shipped", () => {
     const removedSkills = ["qfai-sdd-planning", "qfai-sdd-refinement"];
     for (const skillId of removedSkills) {
       expect(
@@ -1765,6 +2204,57 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(contractsTemplate).toContain("erDiagram");
   });
 
+  it("keeps 05_Contracts example rows aligned with their own table header", async () => {
+    // #653: the three commented example rows carried 5 cells under a 6-column
+    // header, so an author who did what the comment asks — copy the row into
+    // the table — tripped QFAI-TABLE-001 and parked a purpose string in
+    // `Depends On`. Copying a shipped example row under its own header must
+    // produce a well-formed row.
+    const contractsTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "specs",
+      "_policies",
+      "05_Contracts.md",
+    );
+    const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
+    const lines = contractsTemplate.split(/\r?\n/);
+
+    const examples = [
+      { rowPrefix: "| DB-001", entityColumn: "Entity" },
+      { rowPrefix: "| API-001", entityColumn: "Router" },
+      { rowPrefix: "| UI-001", entityColumn: "Screen" },
+    ];
+    for (const { rowPrefix, entityColumn } of examples) {
+      const headerIndex = lines.findIndex(
+        (line) => line.startsWith("| Short ID |") && line.includes(`| ${entityColumn} |`),
+      );
+      expect(headerIndex).toBeGreaterThan(-1);
+      const exampleRow = lines.find((line) => line.startsWith(rowPrefix));
+      expect(exampleRow).toBeDefined();
+
+      const copied = [lines[headerIndex], lines[headerIndex + 1], exampleRow].join("\n");
+      expect(findTableArityMismatches(copied)).toEqual([]);
+
+      const [table] = parseAllMarkdownTables(copied);
+      expect(table).toBeDefined();
+      const dependsOn = table?.headers.indexOf("Depends On") ?? -1;
+      expect(dependsOn).toBeGreaterThan(-1);
+      // Mapping Rules give the column exactly two legal shapes: `-` for "no
+      // dependency", or the `CON-*` ids applied before this one. A purpose
+      // string — what the five-cell rows used to shift into this column —
+      // matches neither, which is the defect this guard exists to catch.
+      const dependsOnCell = table?.rows[0]?.[dependsOn];
+      expect(dependsOnCell).toBeDefined();
+      expect(dependsOnCell).toMatch(
+        /^(?:-|CON-(?:API|DB|UI)-\d{4}(?:, ?CON-(?:API|DB|UI)-\d{4})*)$/,
+      );
+    }
+  });
+
   it("ensures qfai-sdd no-argument mode uses all-spec batch delegation", async () => {
     const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
     const workflowPath = path.join(templateQfaiDir, "assistant", "constitution", "workflow.md");
@@ -1827,7 +2317,20 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
-  it("justifies every line-budget exemption and keeps it live", async () => {
+  it("states the same ceiling in the shipped baseline authors read", async () => {
+    // The number is owned by `src/core/doctor/assetLineBudget.ts` and quoted in
+    // prose that ships to a `qfai init` project. Nothing tied the two together,
+    // so the constant could move while the baseline went on telling authors a
+    // different number - and for a project that has only the published package
+    // that prose is the only copy of the rule it can read.
+    const baseline = await readFile(
+      path.join(templateQfaiDir, "assistant", "constitution", "shared-skill-operating-baseline.md"),
+      "utf-8",
+    );
+    expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
+  });
+
+  it("justifies every line-budget exemption and keeps it live", () => {
     // An exemption that no longer matches a shipped file is a stale licence:
     // it would silently cover a future file that happens to take the path.
     for (const [relativePath, reason] of LINE_BUDGET_EXEMPT) {
@@ -2143,18 +2646,133 @@ function collectOptionKeys(source: string): Set<string> {
   return keys;
 }
 
+/** A token `args.ts` can register as a CLI flag: `--long` or a `-s` alias. */
+const CLI_FLAG_TOKEN = /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/;
+
+/**
+ * Flag alias sets `args.ts` declares as named constants, e.g.
+ * `const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"])`.
+ *
+ * The parser tests these with `.has(...)` where it once carried switch labels,
+ * so a derivation that reads only `case` labels resolves no flag at all for
+ * the options such a guard writes.
+ */
+function collectFlagAliasSets(argsSource: string): Map<string, string[]> {
+  const sets = new Map<string, string[]>();
+  for (const declaration of argsSource.matchAll(
+    /\bconst\s+([A-Za-z_][A-Za-z0-9_]*)\b[^=\n]*=\s*new Set\(\s*\[([^\]]*)\]/g,
+  )) {
+    const name = declaration[1];
+    const literals = declaration[2];
+    if (name === undefined || literals === undefined) {
+      continue;
+    }
+    const flags = [...literals.matchAll(/"([^"]+)"/g)]
+      .map((literal) => literal[1])
+      .filter((flag): flag is string => flag !== undefined && CLI_FLAG_TOKEN.test(flag));
+    if (flags.length > 0) {
+      sets.set(name, flags);
+    }
+  }
+  return sets;
+}
+
+/** Net brace balance a single line contributes. */
+function braceBalance(line: string): number {
+  return (line.match(/\{/g)?.length ?? 0) - (line.match(/\}/g)?.length ?? 0);
+}
+
+/**
+ * The option keys the parser copies INTO an init option under a
+ * `command === "init"` guard — i.e. the sources of init's own aliases.
+ *
+ * `collectOptionKeys` reads `main.ts`, which is only half the derivation:
+ * `args.ts` resolves `--root` into `options.dir` for `init` before `main.ts`
+ * ever sees it, so the flag that decides where `qfai init` writes never
+ * appears in the `case "init":` block. Following the assignment is what keeps
+ * "every qfai init flag" true of aliases as well as of direct registrations.
+ *
+ * Restricted to assignments whose TARGET is already a known init option, so an
+ * unrelated `command === "init"` guard cannot widen the documented set.
+ */
+function collectInitAliasSources(
+  argsSource: string,
+  initOptionKeys: ReadonlySet<string>,
+): Set<string> {
+  const sources = new Set<string>();
+  for (const guard of argsSource.matchAll(
+    /if\s*\(\s*command === "init"[\s\S]*?\)\s*\{([\s\S]*?)\n\s*\}/g,
+  )) {
+    for (const assignment of (guard[1] ?? "").matchAll(
+      /options\.([A-Za-z][A-Za-z0-9]*)\s*=\s*options\.([A-Za-z][A-Za-z0-9]*)/g,
+    )) {
+      const target = assignment[1];
+      const source = assignment[2];
+      if (target !== undefined && source !== undefined && initOptionKeys.has(target)) {
+        sources.add(source);
+      }
+    }
+  }
+  return sources;
+}
+
 /**
  * Map `options.<key>` -> the CLI flags that write it, read straight out of
- * `args.ts`. Consecutive `case` labels share the body they fall through into
- * (`case "--help": case "-h":`), and short aliases are kept, so a flag is only
- * missing here when the parser really does not register it.
+ * `args.ts`. Two registration shapes count, because the parser uses both:
+ * consecutive `case` labels sharing the body they fall through into
+ * (`case "--help": case "-h":`), and a named alias set tested in a guard
+ * (`if (arg !== undefined && HELP_FLAGS.has(arg)) {`). Short aliases are kept
+ * in both, so a flag is only missing here when the parser really does not
+ * register it.
  */
 function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
   const flagsByOption = new Map<string, Set<string>>();
+  const aliasSets = collectFlagAliasSets(argsSource);
   let pendingFlags: string[] = [];
   let sawBody = false;
+  // The alias set an enclosing guard is matching, and the depth at which its
+  // block closes. Attribution is scoped to that block so a set cannot leak
+  // onto the assignments that follow it.
+  let guardFlags: readonly string[] = [];
+  let guardDepth = 0;
+
+  const record = (line: string, flags: readonly string[]): void => {
+    if (flags.length === 0) {
+      return;
+    }
+    for (const assignment of line.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=[^=]/g)) {
+      const key = assignment[1];
+      if (key === undefined) {
+        continue;
+      }
+      const bucket = flagsByOption.get(key) ?? new Set<string>();
+      for (const flag of flags) {
+        bucket.add(flag);
+      }
+      flagsByOption.set(key, bucket);
+    }
+  };
 
   for (const line of argsSource.split("\n")) {
+    if (guardFlags.length > 0) {
+      record(line, guardFlags);
+      guardDepth += braceBalance(line);
+      if (guardDepth <= 0) {
+        guardFlags = [];
+      }
+      continue;
+    }
+    // A single-line `if (... NAME.has(token)) {` guard over a known alias set.
+    // Requiring the brace on the same line keeps the scan off `.has(...)` uses
+    // that are not guards at all, such as the positional-token predicate.
+    const guard =
+      /^\s*(?:\}\s*else\s+)?if\s*\(.*\b([A-Za-z_][A-Za-z0-9_]*)\.has\(.*\)\s*\{\s*$/.exec(line);
+    const guarded = guard === null ? undefined : aliasSets.get(guard[1] ?? "");
+    if (guarded !== undefined) {
+      guardFlags = guarded;
+      guardDepth = 1;
+      continue;
+    }
     // A label line, with or without the block brace prettier keeps on it.
     const label = /^\s*(?:case "([^"]*)"|default)\s*:\s*\{?\s*$/.exec(line);
     if (label !== null) {
@@ -2163,7 +2781,7 @@ function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
         sawBody = false;
       }
       const flag = label[1];
-      if (flag !== undefined && /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/.test(flag)) {
+      if (flag !== undefined && CLI_FLAG_TOKEN.test(flag)) {
         pendingFlags.push(flag);
       }
       continue;
@@ -2172,20 +2790,7 @@ function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
       continue;
     }
     sawBody = true;
-    if (pendingFlags.length === 0) {
-      continue;
-    }
-    for (const assignment of line.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=[^=]/g)) {
-      const key = assignment[1];
-      if (key === undefined) {
-        continue;
-      }
-      const bucket = flagsByOption.get(key) ?? new Set<string>();
-      for (const flag of pendingFlags) {
-        bucket.add(flag);
-      }
-      flagsByOption.set(key, bucket);
-    }
+    record(line, pendingFlags);
   }
 
   return flagsByOption;
@@ -2228,6 +2833,13 @@ function shouldSkipReference(ref: string): boolean {
     return true;
   }
   if (ref.includes(".qfai/report/") || ref.includes(".qfai/evidence/")) {
+    return true;
+  }
+  // Written by `qfai init` into the ADOPTER's tree, so it is nameable in the
+  // README (the reader has to know to commit it) and absent from this one —
+  // the same class as the `.qfai/report/` outputs above, pinned to the single
+  // filename rather than a directory because that is the whole of the class.
+  if (ref === ".qfai/install-provenance.json") {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {
