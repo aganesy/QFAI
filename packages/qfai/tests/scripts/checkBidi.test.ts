@@ -210,6 +210,28 @@ describe("check-bidi: NUL and C0 controls over the tracked tree", () => {
     expect(result.stderr.split("\n").filter((line) => line.includes("data/b.tbl"))).toHaveLength(1);
   });
 
+  it("counts a bare CR as a line break, so a CR-only file locates correctly", async () => {
+    // CR is an ALLOWED byte, so a file that ends its lines with one is legal
+    // input here. Counting only LF put every finding on `line 1` — the wrong
+    // place, in the one situation where the reader cannot see the character
+    // they are hunting for.
+    const dir = await newRepo({ "src/old-mac.ts": `one\rtwo\rthree${NUL}\r` });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("control character 0x00 at line 3, byte 6");
+  });
+
+  it("counts a CRLF pair once, not twice", async () => {
+    const dir = await newRepo({ "src/dos.ts": `one\r\ntwo\r\nthree${NUL}\r\n` });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("control character 0x00 at line 3, byte 6");
+  });
+
   it("says the tracked-file scan was skipped, without diagnosing why", async () => {
     // No repository here, which is one of three ways the list goes missing —
     // no checkout, no git on PATH, output past maxBuffer. A message naming any

@@ -221,7 +221,7 @@ for (const relative of tracked ?? []) {
     continue;
   }
   const bytes = readFileSync(absolute);
-  // Line and column are carried along the scan rather than recomputed per hit.
+  // Line and byte are carried along the scan rather than recomputed per hit.
   // Locating each hit by counting newlines from the start of the file is
   // quadratic in the number of hits, which is exactly the file the cap above
   // exists for: an unlisted binary is both the densest in hits and the one
@@ -232,6 +232,16 @@ for (const relative of tracked ?? []) {
   let suppressed = 0;
   for (let i = 0; i < bytes.length; i++) {
     const byte = bytes[i];
+    // All three line endings, because CR is an ALLOWED byte here and a file
+    // that ends its lines with a bare CR would otherwise report every finding
+    // as `line 1` — a location that sends the reader to the wrong place in the
+    // one situation where they cannot see the character they are looking for.
+    // A CR followed by LF advances on the LF, so the pair counts once.
+    if (byte === 0x0d && bytes[i + 1] !== 0x0a) {
+      line += 1;
+      lineStart = i + 1;
+      continue;
+    }
     if (byte === 0x0a) {
       line += 1;
       lineStart = i + 1;
