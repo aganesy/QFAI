@@ -8,7 +8,7 @@ import { resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
 import { changedFilesSince } from "../gitChanges.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
   maskNonSpecRegions,
@@ -140,6 +140,16 @@ const VALID_STATUSES = new Set([
   "done",
   "exception",
 ]);
+
+/**
+ * Every ledger status that still owes work: `VALID_STATUSES` less `done`.
+ *
+ * Derived rather than listed, so a new non-terminal status cannot be added to
+ * the vocabulary and left out of the retirement migration instruction — which
+ * would strand exactly the rows nothing asks for again. `blocked` and
+ * `review-fix` are the two that were missed when this was spelled out by hand.
+ */
+const LIVE_LEDGER_STATUSES = Array.from(VALID_STATUSES).filter((status) => status !== "done");
 
 /** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
 const BLOCKED_BY_COLUMN = "Blocked-By";
@@ -2787,7 +2797,7 @@ export async function validateTddList(
       recordIds,
       srcRelDir,
     );
-    issues.push(...specIssues);
+    issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
 
   return issues;
@@ -2814,6 +2824,47 @@ function observationRevision(section: string): string | null {
     if (value !== null && value.length > 0) return value;
   }
   return rowEvidenceFieldValue(section, "Revision");
+}
+
+/**
+ * Ledger findings on a retired spec are a historical record, not live work.
+ *
+ * SUPERSEDE moves a spec's obligations to its successor and rewrites the
+ * source's `Status:`; deprecation and removal retire one without a successor.
+ * The ledger stayed where it was either way, so a retired spec kept offering
+ * `todo` rows as selectable work, kept demanding a resolution or a waiver for
+ * every parked `exception` row, and kept owing `Evidence` at `error` — for a
+ * spec nobody is allowed to touch, and that no later phase revisits because
+ * triage classification already ignores non-active specs.
+ *
+ * Demoted rather than dropped: the rows are the record of what the retired spec
+ * owed, and an operator migrating the live ones to the successor's ledger has
+ * to be able to list them. `info` keeps them printed while taking them out of
+ * `--fail-on error` / `--fail-on warning`.
+ *
+ * Only a complete declaration retires a ledger: `SpecEntry.status` is set from
+ * the header block alone, only once the retirement carries the companion field
+ * it requires, and — for `superseded` — only once that `Superseded-by` names a
+ * spec that exists to inherit the rows. An absent, unparseable, out-of-header,
+ * half-written or dangling `Status:` leaves the spec current here and is
+ * reported by its own `QFAI-STATUS-00N` rule — which matters because
+ * `--profile tdd` runs this validator without `validateSpecPacks`, so a
+ * demotion it granted on an unvalidated declaration would answer to nothing.
+ */
+function demoteRetiredSpecIssues(issues: readonly Issue[], entry: SpecEntry): Issue[] {
+  const status = entry.status;
+  if (status === undefined || status === "active") {
+    return [...issues];
+  }
+  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (${LIVE_LEDGER_STATUSES.join(" / ")}) to the successor spec's \`${TDD_LIST_REL_PATH}\`, giving each migrated row a TDD-ID the successor's ledger does not already use (TDD-NNNN is ledger-local, so a copied one fails TDDLIST_DUPLICATE_ID there) and remapping every spec-namespaced obligation onto the successor's own IDs — TC-Refs from its 06_Test-Cases.md, and US-Refs on each Layer=E2E row from its 02_User-stories.md. Repoint every Blocked-By naming a migrated row at its new spec-NNNN:TDD-MMMM as well; TDDLIST_BLOCKED_MISSING_REF only checks that the cell is non-empty, so a stale one goes unreported. Reset each migrated in-progress row to Status: todo with an empty DR-ID and Evidence — those cells describe a run against the old obligation — and record the migration in the approved CR. Leave done rows as the historical record.`;
+  return issues.map((found): Issue => {
+    return {
+      ...found,
+      severity: "info",
+      message: `${found.message} [demoted to info: spec-${entry.specNumber} is Status: ${status}]`,
+      suggested_action: migration,
+    };
+  });
 }
 
 /** Statuses at which a row's `Revision` is a claim rather than work in flight. */

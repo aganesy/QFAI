@@ -18,6 +18,15 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- HITL gate confirmation
+- research scope and depth decisions
+
 ## Sub-agent Delegation (MANDATORY)
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
