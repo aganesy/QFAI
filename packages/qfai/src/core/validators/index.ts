@@ -72,6 +72,7 @@ export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
 export { validateTestTodoStubs } from "./testTodoStubs.js";
 export { validateWorklogSurface } from "./worklogSurface.js";
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
+export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";

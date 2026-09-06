@@ -25,6 +25,7 @@ import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
+import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import {
   DISCUSSION_PACK_PRODUCERS,
@@ -474,13 +475,26 @@ async function runProfileValidators(
     profile,
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
+  // Anchor integrity across the assistant tree runs in every profile too, and
+  // for the same reason: a citation that resolves to no heading is an
+  // instruction that silently does nothing, whichever stage followed it. That
+  // is a property of the installation, not of a stage. Its own walk tolerates
+  // the damage `QFAI-LINK-001` reports, so it cannot take that finding down.
+  //
+  // It therefore runs **before** the short-circuit below and is merged into it.
+  // Behind the short-circuit it never ran at all, so a `QFAI-LINK-002` on the
+  // intact half of the tree stayed hidden until `QFAI-LINK-001` was repaired —
+  // "every profile" is what this rule promises, and structural damage
+  // elsewhere is not a reason to withhold a finding the walk already has.
+  const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...toolProvenance, ...unusedPlatform, ...surface.issues];
+    return [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues];
   }
   return [
     ...toolProvenance,
     ...unusedPlatform,
     ...surface.issues,
+    ...anchorIssues,
     ...(await runProfileOwnValidators()),
   ];
 

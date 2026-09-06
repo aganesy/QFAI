@@ -210,6 +210,14 @@ export const RULE_PROMOTIONS = {
    */
   contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-LINK-002` — a `file.md#anchor` citation in the assistant tree whose
+   * target document or heading is not there. Nothing resolved these citations
+   * before, so a tree refreshed in part carries the whole backlog of drifted
+   * anchors the moment the rule arrives — and repairing them is an edit to the
+   * vendored documents, not to the consumer's own work.
+   */
+  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-SPECSECTION-001` — a spec pack missing a heading that
    * `validation.require.specSections` requires — and `QFAI-SPECSECTION-002`,
    * an entry of that list that normalises to no heading name at all. Both

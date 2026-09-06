@@ -200,6 +200,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-LAYER-106",
   "QFAI-LEDGER-001",
   "QFAI-LINK-001",
+  "QFAI-LINK-002",
   "QFAI-MMD-001",
   "QFAI-MMD-002",
   "QFAI-MMD-003",
