@@ -975,25 +975,87 @@ async function acquireStateLock(lockPath: string): Promise<StateLock> {
   // this is, `.qfai/` does not exist yet — `writeStateObject` creates it, but
   // the lock has to be taken before that runs.
   await mkdir(path.dirname(lockPath), { recursive: true });
+  // What the LAST contended attempt failed with, when that was not a plain
+  // EEXIST. A wait that ends in the timeout below then still names the errno
+  // it kept seeing, rather than reporting a permission fault as contention.
+  let contendedBy: unknown = null;
   for (;;) {
     let handle: FileHandle | null = null;
     try {
       handle = await open(lockPath, "wx");
     } catch (error) {
-      if (errorCode(error) !== "EEXIST") {
+      if (!(await exclusiveCreateWasContended(lockPath, error))) {
         throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`);
       }
+      contendedBy = errorCode(error) === "EEXIST" ? null : error;
     }
     if (handle !== null) return stampLockOwner(lockPath, handle, owner);
     await reapStaleLock(lockPath);
     if (Date.now() >= deadline) {
       throw new Error(
         `qfai: state lock ${lockPath} is still held after ${LOCK_TIMEOUT_MS}ms; ` +
-          "refusing to update .qfai/state.json without it.",
+          "refusing to update .qfai/state.json without it." +
+          (contendedBy === null ? "" : ` Last attempt: ${describeError(contendedBy)}.`),
       );
     }
     await delay(LOCK_RETRY_MS);
   }
+}
+
+/**
+ * Whether a failed exclusive create means the NAME was taken.
+ *
+ * POSIX says `EEXIST` and only `EEXIST`. Windows does not: while the name is
+ * being unlinked — which is every release, and every reap — `CreateFile` with
+ * `CREATE_NEW` returns `ERROR_ACCESS_DENIED`, and libuv maps that to `EPERM`.
+ * Measured at 2 failures in 8 runs of `atddScaffoldEscalation.test.ts` on
+ * Windows 11; the CI matrix is Linux-only, so no lane can see it. Rethrowing
+ * made every state write fail under contention — `qfai discussion use` and the
+ * scaffold counters both go through `updateState`.
+ *
+ * Widening the check to the errno alone is what must NOT happen: `EPERM` and
+ * `EACCES` are also what a genuinely unwritable `.qfai/` returns, and calling
+ * that contention spins until the timeout and reports a permission fault as a
+ * busy lock. So the errno only selects the QUESTION, and the answer comes from
+ * the filesystem:
+ *
+ *   - a name that is present and is not a file will never become creatable, so
+ *     the failure is permanent whatever the errno says;
+ *   - otherwise, ask the directory directly whether this process can put a new
+ *     name in it. If it can, the create lost a race and retrying is right; if
+ *     it cannot, the original error is the true one and is rethrown intact.
+ */
+async function exclusiveCreateWasContended(lockPath: string, error: unknown): Promise<boolean> {
+  const code = errorCode(error);
+  if (code === "EEXIST") return true;
+  if (code !== "EPERM" && code !== "EACCES") return false;
+  const existing = await lstat(lockPath).catch(() => null);
+  if (existing !== null && !existing.isFile()) return false;
+  return acceptsNewNames(path.dirname(lockPath));
+}
+
+/**
+ * Can this process create a name in `dir` at all?
+ *
+ * Asked by creating one, because that is the operation whose failure is being
+ * explained. `access(dir, W_OK)` is not an answer on Windows: it reports the
+ * read-only ATTRIBUTE, which is meaningless on a directory, and says "writable"
+ * for a directory whose ACL denies this account — the one case this has to
+ * catch. The probe name carries the pid and a UUID so two runs racing here
+ * cannot collide, and it is removed on both paths; a name left behind by a
+ * process killed mid-probe is inert.
+ */
+async function acceptsNewNames(dir: string): Promise<boolean> {
+  const probePath = path.join(dir, `.qfai-lock-probe-${process.pid}-${randomUUID()}`);
+  let probe: FileHandle;
+  try {
+    probe = await open(probePath, "wx");
+  } catch {
+    return false;
+  }
+  await probe.close().catch(() => undefined);
+  await rm(probePath, { force: true }).catch(() => undefined);
+  return true;
 }
 
 /** Stamp the owner into a freshly created lock file. */
