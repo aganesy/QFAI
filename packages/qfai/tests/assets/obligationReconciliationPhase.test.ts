@@ -137,7 +137,10 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run touched) + Phase 4 (Delta update) only",
+        // main gave this route the Phase 2b API-row delta while this branch was
+        // open, and the phase list is one sentence: this branch's Phase 2c clause is
+        // inside it rather than beside it.
+        "run Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run touched, and the step that names an owner for a contract that delta finds none for)** + Phase 4 (Delta update) only",
       );
       expect(skill).toContain("**Phase 2c is not droppable in this mode.**");
     });

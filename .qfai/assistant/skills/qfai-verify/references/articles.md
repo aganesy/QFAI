@@ -6,7 +6,8 @@ These principles are inspired by “constitution / articles” patterns used by 
    If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
 
 2. **Traceability is mandatory**  
-   Every meaningful change must be traceable: **Require → Spec → Scenario → Tests → Code → Verification evidence**.
+   Every meaningful change must be traceable: **Require → Spec → US → AC → BR → EX → TC → Tests → Code → Verification evidence**.  
+   The `→ Tests` hop branches by layer: `TC-*` is answered from unit / component / integration tests, `CON-DB-*` from integration, `US-*` from E2E and `CON-API-*` from API. An E2E or API change is traced through `US-*` / `CON-API-*`, not through `TC-*` — `tdd/test-list.md` rejects `TC-Refs` on those rows (`TDDLIST_OBLIGATION_LAYER_MISMATCH`). Full rule: `.qfai/assistant/constitution/constitution.md` Article V.
 
 3. **Evidence over confidence**  
    Prefer observable proof (logs, commands, file diffs, test results). If you cannot verify, say so and record it.

@@ -2,8 +2,8 @@
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
 description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
-argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
   [
     orchestrator,
@@ -14,7 +14,7 @@ roles:
     qa-strategist,
     completion-reviewer,
     architecture-reviewer,
-    implementation-reviewer,
+    product-experience-architect,
     product-surface-reviewer,
     qa-gatekeeper,
   ]
@@ -48,7 +48,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 ## Stage 0: Preflight (Mandatory)
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
-Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
+Take a source inventory. A discussion pack is **optional, non-normative reference material** here — sources, requirement seeds, UX exploration and provenance IDs — not an upstream SSOT, so an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage. Do NOT edit, repair or re-run a pack to make this stage's gate pass: the correction belongs in the SDD-owned spec, policy or contract artifact, with the source discrepancy recorded in delta/evidence. Stop only when there is no usable source at all — no pack, no import-lite input, and no explicit user requirement. A product decision that cannot be inferred safely still goes to the user, and the answer is recorded in SDD artifacts rather than back-propagated into the pack.
 When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
@@ -59,9 +59,10 @@ Before any spec edit:
 1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).
 2. Classify each REQ/NFR into one of the 8 operations using `_policies/11_Slice-Policy.md`:
    - **CREATE / DELETE / SPLIT / MERGE / SUPERSEDE** (top-level, approval required)
-   - **UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE** (UPDATE:REMOVE also requires approval). The colon-separated form (no space) is the canonical SSOT used by validators (`QFAI-TRIAGE-003`/`004`) and `references/sdd-triage.md`.
-3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md`, then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
-4. Obtain AskUserQuestion approval for every approval-required row.
+   - **UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE** (UPDATE:REMOVE also requires approval). The colon-separated form is **prose shorthand** for the operation pair, never a cell value. In the Triage table the pair occupies **two cells**: `Operation` = `UPDATE`, `Sub-op` = `APPEND` / `MODIFY` / `REMOVE`. Writing `UPDATE:APPEND` into the `Operation` cell fails `QFAI-TRIAGE-003`. Row shape: `references/sdd-triage.md` (`## Triage table format`).
+3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md` and fill its `Spec` cell with the next unused `spec-NNNN` (an empty cell reports `QFAI-SPLIT-106`; while that code is inside its promotion window it is a `warning`, so `validate --fail-on error` still exits 0 — read the findings, do not read the exit code), then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). Under `--auto` that catalog row is not written until the CREATE row is approved — see "User Questions" below. See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
+4. Obtain AskUserQuestion approval for every approval-required row. Under `--auto` no
+   question is asked and the agent does not self-approve — see "User Questions" below.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
 
 Procedure: `references/sdd-triage.md`. Validators: `QFAI-TRIAGE-001..006`.
@@ -80,6 +81,57 @@ Validators: `QFAI-STATUS-001..006`.
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
+Under `--auto` the baseline's no-question rule wins over that MUST, and it is not a
+licence to self-approve: leave every approval-required row without `Approved By`, write no
+`CAP-NNNN` into `_policies/03_Capabilities.md` for those rows, stop before Phase 0, and
+report them as blockers (`QFAI-TRIAGE-005`). Phase 0 onward is a fixed-order pass over the
+persisted Triage table, so a Change Request carrying even one approval-required row stops
+whole. Approval-free rows (`UPDATE:APPEND` / `UPDATE:MODIFY`) proceed on the labelled
+assumptions only when the batch contains no approval-required row.
+
+### `--auto` and approval-required rows
+
+`--auto` is a no-question mode (`.qfai/assistant/constitution/constitution.md`,
+AskUserQuestion rule 4). Stage 1 requires a question for CREATE / DELETE /
+SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE. The precedence is:
+
+- **`--auto` covers Stage 1 classification only.** An approval-required row is
+  outside its scope, so rule 4 does not license deciding the row without the
+  operator. This is a scope boundary, not an exception to rule 4.
+- **Never ask while `--auto` is active.** Rule 4 forbids AskUserQuestion
+  _and_ plain text for the whole invocation, and a per-row scope boundary does
+  not clear the flag. Whether an operator is present makes no difference — the
+  no-question contract is what the caller bought with the flag.
+- **Never synthesize an `Approved By` value.** `Approved By` is the only trace
+  that a spec deletion or merge was authorized, so an invented approver is a
+  false audit record — worse than a stopped run.
+- **Stop the stage and hand the run back.** Leave `Approved By` as `-`, do not
+  enter Phase 0, write a `consultation-needed` work-log entry (see
+  `## Work-log entries`) naming every unapproved row with its Operation and
+  target, and report that the approvals need a rerun without `--auto`. The
+  resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run,
+  not a gate to route around.
+- **The kind is `consultation-needed`, not `blocker`.**
+  `.qfai/assistant/catalog/worklog-entry.schema.md` defines
+  `consultation-needed` as "the skill needs user input to proceed" and
+  `blocker` as a stuck skill; the user's approval releases this stop, so
+  `blocker` would report a false state to anything that reads `kind`.
+- Runs whose Triage is entirely UPDATE:APPEND / UPDATE:MODIFY carry no
+  approval-required row, so `--auto` completes them without a question.
+
+This changes no bucket in `## Default Autopilot Policy`: the six operations stay
+in `ask-user`, and `--auto` never moves them to auto-decide. Without `--auto`,
+Stage 1 collects each approval through AskUserQuestion as usual.
+
+Those per-row approvals are decisions, not clarifications: they are exempt from
+the Article VI clarification budget and MUST be asked however many rows triage
+produced. The budget applies only to this skill's clarifying questions, and
+exhausting it enters clarification-exhausted mode rather than `--auto`, so a
+sixth approval-required row is still approved by the user. A `proceed` / `done`
+answer to a pre-Stage-1 question does the same: it closes the clarifications,
+not the approvals, so a CREATE / DELETE / UPDATE:REMOVE row classified after it
+is still approved row by row — see
+`.qfai/assistant/constitution/constitution.md` Article VI.
 
 ## FORMAT SSOT (Mandatory)
 
@@ -89,6 +141,7 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/ui-contract-guide.md` (UI-bearing targets)
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
   - `.qfai/assistant/manifest/agent-catalog.yml`
   - `.qfai/assistant/manifest/agent-routing.yml`
@@ -96,9 +149,9 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 ## Inputs Priority
 
-1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
-2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
-3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
+1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest) — **reference and provenance input, not normative**. Cite it as `Source: <pack>#<id>`; citing it does not make the cited text binding. Where it conflicts with a lower-priority input, resolve the conflict INTO the SDD artifact with explicit rationale (and a user decision when the choice is a product one) rather than by amending the pack. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
+2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/instructions/*`)
+3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/steering/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`
@@ -136,6 +189,15 @@ and every reviewer response must carry its `Authored/edited under review:` attes
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
+### Routing Phase Crosswalk (pointer)
+
+`agent-routing.yml` names three phases for this skill; `## Stage and Phase Order (Fixed)` names
+nine stages and phases. They are one sequence in two vocabularies, and the mapping between them —
+which fixed-order entries each routing phase spans, and the two exceptions that bound the table —
+is normative and lives in `references/sdd-routing-phase-crosswalk.md`. Honour the spans there:
+a routing phase's mandatory agents run inside its span, and its blocking agents MUST return `PASS`
+before the span's last entry is left.
+
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
@@ -158,7 +220,7 @@ Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.
 
 ## Work Orders Summary
 
-Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST include `## Work Orders Summary`. Use the shared schema from `shared-skill-delegation-baseline.md`.
+Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST include `## Work Orders Summary`. Use the shared schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ## Review Cycle Protocol (RCP)
 
@@ -188,7 +250,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run touched) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. **Phase 2c is not droppable in this mode.** It is the one invocation whose ordering is inverted — the obligations already exist and the contract is what just changed — so it is the one invocation where an already-approved `BR` / `AC` can silently have stopped being realizable, and skipping the check would close the Change Request over the mismatch. Six qualifications apply, specified in `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`:
+- Contract-scoped (`/qfai-sdd --contract <CON-ID-or-path>`): run Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run touched, and the step that names an owner for a contract that delta finds none for)** + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. The Phase 2b delta runs after Phase 0, on the owner ledger only (Phase 2b's ownership rule below), and is scoped to this contract's row: a contract moved off `x-qfai-status: planned` becomes active and its `Layer = API` row is appended at `todo`, one moved back to `planned` or deleted has its row retired. Skipping it — the route did, running no seeding phase at all — left every contract-only status flip with a `QFAI-ATDD-113` gate and a ledger that disagree permanently, and no narrower rerun could fix it. **An activation this route cannot give an owner does not go through.** Phase 2b defers a contract no spec names to Phase 2c, and this route ran none — so making an unreferenced contract active here left the repo-wide `QFAI-ATDD-113` firing with no ledger to hold the row and no later step that would ever resolve one. So when the delta finds no owner for a contract this run activates, run Phase 2c over the specs in scope to name it and re-run the delta for what it resolves; if no spec names it even then, **leave the contract at `x-qfai-status: planned`** and stop with that finding, so the activation waits for a spec-scoped run whose own Phase 2b / Phase 2c seeds the row.
+  - The argument is a `CON-*` ID **or** a repo-relative path under `.qfai/contracts/`; both select the same contract and the same referencing specs. The path form is not a convenience: `.qfai/contracts/design/**` files declare no `QFAI-CONTRACT-ID` (`references/contract-artifact-rules.md`), and a defect CR whose subject is a missing or wrong ID has none to cite, so an ID-only selector left those reruns unaddressable. Prefer the ID wherever one exists.
+  - A path that names no file under `.qfai/contracts/`, or an ID no contract declares, is an unknown target: stop and report it rather than widening to the whole spec set.
+    **Phase 2c is not droppable in this mode.** It is the one invocation whose ordering is inverted — the obligations already exist and the contract is what just changed — so it is the one invocation where an already-approved `BR` / `AC` can silently have stopped being realizable, and skipping the check would close the Change Request over the mismatch. Six qualifications apply, specified in `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`:
   - **The target set is the obligations the specs already hold.** Phase 2 does not run here, so reading the standing "produced this run" wording literally would make the set empty and the phase a no-op.
   - **Scope follows what Phase 0 touched, not what the argument named.** Phase 0 Cross-contract Reconciliation may amend the paired `CON-DB-*` of a named `CON-API-*`; every contract this run changed or re-adjusted is in scope, and so, transitively, is every spec referencing any of them. Where the mode writes nothing — a `confirm-only` rerun — scope on the contracts Phase 0 **reconciled**, the named one and every contract paired against it, because a write-keyed scope is empty there and the phase would confirm the Change Request having read no `BR` / `AC` at all. Read that pairing from the `Reconciled With` column of `_policies/05_Contracts.md`; where the index predates the column, enumerate every contract declaring a domain for a field whose normalized name matches one the named contract declares, which is the rule `QFAI-CONTRACT-040` already applies. A guessed pair is a different scope per agent.
   - **Re-expand the scope after every contract write this phase makes.** Resolution happens on the contract side, and the contract it amends need not be one Phase 0 touched; a spec referencing only that contract is absent from a set computed once from Phase 0. The same write can break an obligation that already passed against that contract, in a spec long since in scope. Recompute the referencing specs after each contract write, re-reconcile every obligation in scope — not only the specs that just entered — and repeat until a pass adds no spec **and** writes no contract.
@@ -203,7 +268,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
    - Never invent a layout for an artifact a template already covers.
 2. Always write the preflight summary before generating shared/spec artifacts. Write it run-scoped, at `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` with a `- run id:` line, and copy the same body to `.qfai/report/preflight_summary.md` as the latest-run pointer. Evidence cites the run-scoped path: the pointer is rewritten by every rerun, so a citation to it stops naming the preflight the cycle actually saw.
-3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
+3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`, and each UI contract YAML authored per `references/ui-contract-guide.md` (`primary_tasks` shape, the closed structured schema, and the `QFAI-AUD-001` / `QFAI-AUD-020` count-to-behavior table). UI-bearing targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
@@ -224,13 +289,75 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below unless the target is cli-only). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
-7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
-   — one row per coverage-target TC, `Status = todo`; copy
-   `templates/specs/spec/tdd/test-list.md` when absent. Without it
-   `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
+7. Phase 2b: Seed each target spec's `tdd/test-list.md` in **three groups**, all
+   at `Status = todo` — one row per coverage-target TC from `06_Test-Cases.md`,
+   one `Layer = E2E` row per **active** `US-*` from `02_User-stories.md`
+   (obligation in `US-Refs`, `TC-Refs` = `-`), and one `Layer = API` row per
+   **active** `CON-API-*` the spec **owns** (obligation in `CON-API-Refs`,
+   `TC-Refs` = `-`); copy `templates/specs/spec/tdd/test-list.md` when absent.
+   **A seeded E2E/API row leaves `Test file` and `Selector` at `-`, and
+   `/qfai-implement` is what fills them.** The acceptance test does not exist
+   yet, so this phase must not invent a path for it; `/qfai-atdd` authors it and
+   never writes this ledger, so it records that test's own path and selector as
+   the row identity in its handoff entry, and `/qfai-implement` Phase Red step
+   3b writes both cells from that entry in the same edit that moves the row out
+   of `todo`. Naming no writer for them left both at `-` permanently — reaching
+   the `green` `Test file` existence check with no test to run, and gate item 10
+   with no identity to compare.
+   Without the first group `/qfai-implement` starts with zero selectable items;
+   without the other two the ledger cannot hold a `US-*` / `CON-API-*`
+   obligation, so an all-`done` ledger reports complete beside a
+   `QFAI-ATDD-111` / `QFAI-ATDD-113` gate at 0%. **Active** is the
+   `.qfai/assistant/catalog/test-layers.md` exemption: skip a `CON-API-*` whose
+   contract declares `x-qfai-status: planned`, and skip a `US-*` in a spec that
+   declares no user-facing surface — the latter **only when the project uses
+   surface typing at all** (at least one spec declares a surface by one of the
+   signals `test-layers.md` lists). A project that has never declared one has
+   not opted in, `QFAI-ATDD-111` stays project-wide for it, and every `US-*` is
+   therefore active; exempting them there would leave a legacy project with no
+   E2E row and a failing gate. Seeding a genuinely exempt obligation parks a
+   completion-prohibiting row on a test that must not be written.
+   **A surface-typing flip re-runs the E2E delta over every spec.** That
+   precondition is a property of the **project**, not of the target, so a run
+   that adds the project's **first** surface signal — or removes its **last** —
+   moves every other spec's `US-*` across the active/exempt line while this
+   phase otherwise touches the target spec alone. When this run flips it, apply
+   the E2E-row delta to **every** spec's ledger: losing the last signal returns
+   `QFAI-ATDD-111` to project-wide, so each non-target spec now owes E2E rows it
+   has none of, and gaining the first one makes the specs with no surface signal
+   exempt, so their existing E2E rows must be retired. Left at the target only,
+   the flip yields either a gate no ledger can clear or `todo` rows on tests
+   that must not be written — in every spec but one.
+   **Ownership of an API row** is mechanical, because `.qfai/contracts/**` has
+   no spec owner in the model: a spec owns a `CON-API-*` its own
+   `spec-*/01..10` / `16_*` files name, and when more than one names it the
+   **lowest-numbered** such spec owns the single row (the others record it as a
+   cross-spec obligation, not a duplicate row). A `CON-API-*` no spec names has
+   no owner and gets no row here — Phase 2c resolves the owner and re-runs this
+   delta for it, so it is deferred rather than dropped.
+   **Seeding is a delta,
    not a regeneration, in both directions**: unchanged rows keep their state,
-   new TCs append at `todo`, and changed / removed TCs are reset or retired
-   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
+   new TCs and newly active obligations append at `todo`, and
+   changed / removed TCs are reset or retired under the upstream-reset rule —
+   as is the row of a `US-*` / `CON-API-*` deleted upstream or newly exempt
+   (`references/sdd-phase-checklists.md`). **An eight-column ledger is migrated
+   in the same pass**: add `US-Refs` and `CON-API-Refs` to its header, and move
+   the `US-*` / `CON-API-*` its existing `E2E` / `API` rows recorded in
+   `TC-Refs` — the only cell they had — into the column the row's `Layer` owns,
+   leaving `TC-Refs` at `-`. It is a cell move, so `Status`, `DR-ID` and
+   `Evidence` survive it; left unmigrated the row validates but reaches
+   `/qfai-implement` with nothing in the column that skill reads for its
+   obligation.
+   **Seed `Tier` with the
+   row**, from its `Layer`, **what the item touches** (infrastructure, a public
+   API surface, a `CON-*` contract or persisted schema → `T2`; UI behavior or
+   rendered output → `T3`) and the criticality list in
+   `../qfai-implement/references/volume-policy.md`. `Layer` alone is not the
+   derivation: a `Unit` row over persisted schema or a `Component` row over
+   rendered output is `T2` / `T3`, and seeding it `T1` buys the batched ceremony
+   the validator cannot catch, because it only checks the value range. This
+   stage already holds every input the derivation takes, and a blank cell is
+   read downstream as `T1`.
 8. Phase 2c: Obligation reconciliation (per spec). Re-read `.qfai/contracts/**`
    against the `BR` / `AC` Phase 2 produced: name the realizing contract for
    each, and resolve every persisted attribute it names to a column, field or
@@ -240,6 +367,16 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
    Fix the contract or the obligation here; both are owned by this skill, and a
    mismatch carried downstream reaches an implementer who can fix neither.
+   **Close the phase by re-running the Phase 2b API-row delta over the
+   contracts this phase touched.** Naming a realizing contract here is what
+   makes a spec name it at all, so a `CON-API-*` that had no owner when
+   Phase 2b ran — or whose owner changed because a lower-numbered spec started
+   naming it — acquires one only now. Phase 2b runs once and earlier, so
+   without this re-run the newly owned contract keeps its `QFAI-ATDD-113`
+   obligation and no ledger row anywhere carries it. The re-run is the same
+   delta as Phase 2b, restricted to those contracts: append the missing
+   `Layer = API` row at `todo` on the owner ledger, and retire a row whose
+   owner moved.
    **In contract-scoped mode the target is the `BR` / `AC` the specs already
    hold**, not the ones this run produced — Phase 2 did not run — and the specs
    in scope are those referencing any contract this run touched, including a
@@ -256,7 +393,14 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    it either way. Under `confirm-only`, run it read-only and halt on a
    mismatch — that mode may write nothing but the CR reference.
 9. Phase 3: Plan finalize (after at least one slice gate passes).
-10. Phase 4: Delta update.
+10. Phase 4: Delta update. When an approved Change Request ordered this rerun,
+    record it as one row in the `## Change Requests` table of the delta the
+    destination table in `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`
+    step 4 names — `CR ID`, `Upstream artifact`, `Mode`, `Approved by`,
+    `Applied at`. Both `templates/specs/spec/09_delta.md` and
+    `templates/specs/_policies/10_delta.md` define that table, so the mandated
+    CR reference never needs a layout invented for it, and never borrows a
+    `## Triage` row.
 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
@@ -268,17 +412,29 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)
-- `spec-*/16_Traceability-ledger.md` when the spec's `BR-*` / `AC-*` are linked to implementation
-  files (optional artifact; create or refresh it in the same change as the BR/AC it links, from
-  `templates/specs/spec/16_Traceability-ledger.md`). Without it `QFAI-TRACE-002` is emitted and the
-  BR/AC ↔ implementation integrity check (`QFAI-TRACE-001`) is skipped for that spec. See
-  `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
+- Target `spec-*/tdd/test-list.md`, seeded at Phase 2b (empty table only when the spec declares no coverage-target TC)
 - Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight/run-<timestamp>/preflight_summary.md`, plus the `.qfai/report/preflight_summary.md` pointer
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
+
+## Optional Outputs
+
+Not owed by every run. Leaving one out is a valid outcome, so neither this skill's gate nor the
+completion reviewer treats an absent entry as unfinished work.
+
+- `spec-*/16_Traceability-ledger.md` — opt in per spec when its `BR-*` / `AC-*` should be held to
+  implementation drift. The check is per spec, not per row: once the spec's
+  `03_Acceptance-Criteria.md` or `04_Business-Rules.md` changed on the branch, `QFAI-TRACE-001`
+  (`error`) fires for every ledger row whose linked implementation file is unchanged — not only the
+  rows whose BR/AC you edited. A spec without one is valid: `QFAI-TRACE-002` (`warning`) records the
+  opt-out and the integrity check is skipped for that spec. Both findings belong to the `tdd` gate
+  group, so neither appears under the `--profile sdd` run this skill stops on. Create it from
+  `templates/specs/spec/16_Traceability-ledger.md`, and refresh an existing one — rows added,
+  removed, renumbered — in the same change as the BR/AC it links: a BR/AC with no row is never
+  checked. See `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 
 ## Phase 0 DESIGN.md Freeze (visual-prototyping surfaces only)
 
@@ -344,9 +500,11 @@ canonical layout for this artifact — copy it, keep every `##` heading in order
 
 Required sections, in order (the template is authoritative if the two ever disagree): Objective,
 Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
-Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
-Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
-`shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
+Decisions made, Work performed, Contract executability, Commands executed, Validate evidence paths,
+Work Orders Summary, Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column
+schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only
+`PASS` or `REVISE`. Contract executability carries one `- Executability: CON-DB-NNNN — …` line per
+`db/` contract this cycle authored or changed (`QFAI-CONTRACT-031`), or `- none`.
 
 ## Done Declaration
 
@@ -388,12 +546,14 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md` (Tier derived from Layer + what the row touches (infrastructure / public API / CON-\* contract / persisted schema = T2, UI or rendered output = T3) + criticality, seeded with the row and never written into Evidence), one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. That precondition is project-wide, so a run that adds the project's first surface signal or removes its last re-runs the E2E-row delta over every spec's ledger, not the target's alone. A seeded E2E/API row carries `-` in Test file and Selector — the test does not exist yet, `/qfai-atdd` never writes this ledger, and `/qfai-implement` Phase Red step 3b writes both cells from that stage's handoff entry when it advances the row. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync; that route runs Phase 2c itself for a contract it activates with no owner, and leaves the contract at `x-qfai-status: planned` when even that names none, rather than shipping a gate no ledger can clear. The same pass migrates an eight-column ledger: add `US-Refs` / `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
+- Exception to that delta: re-derive Tier on every Phase 2b re-run, and a **raised** Tier (T1 -> T2/T3, T2 -> T3) is an upstream reset even for an unchanged TC — return Status to todo and cite the driving CR-\* in DR-ID and in Evidence, keeping the prior Evidence as history. A lowered Tier keeps Status and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets on a visual-prototyping surface (skipped for cli-only); .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

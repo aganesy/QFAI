@@ -16,6 +16,14 @@ export type Issue = {
   category: IssueCategory;
   message: string;
   suppressed?: boolean;
+  /**
+   * Severity this finding was declared with before a mode relaxation
+   * rewrote it (`relaxedFrom: "error"` on a gate exploration mode
+   * downgraded to `warning`). Mirrors `suppressed` on the waiver path
+   * so a consumer of `issues[]` can tell a weakened gate from one the
+   * validator authored at the lower severity.
+   */
+  relaxedFrom?: IssueSeverity;
   suggested_action?: string;
   file?: string;
   /**
@@ -104,11 +112,41 @@ export type ValidationWaivers = {
   suppressed: ValidationWaiverSuppressed;
 };
 
+/**
+ * Wall-clock cost of the UI/UX validator group, with the budget each part was
+ * measured against.
+ *
+ * How long a run took is a property of the machine that ran it, not of the
+ * tree being validated, so it is reported here instead of as a finding: the
+ * same commit keeps the same `counts` on a laptop and on a loaded CI runner.
+ * Present only for the profiles that run the UI/UX group.
+ */
+export type ValidationTimings = {
+  uiuxMs: number;
+  uiuxBudgetMs: number;
+  htmlMockMs: number;
+  htmlMockBudgetMs: number;
+};
+
 export type ValidationResult = {
   toolVersion: string;
+  /**
+   * When this run produced its result, ISO-8601.
+   *
+   * Optional because a `validate.json` written before this field existed does
+   * not carry it, and a reader must be able to tell "older writer" from "the
+   * run happened at the epoch".
+   *
+   * It exists so a consumer can relate the result to the tree it describes.
+   * `qfai prototyping certify` seals evidence on the strength of a STORED
+   * `validate.json`, and with no timestamp on it a success from before the
+   * evidence changed was indistinguishable from one after (#1107).
+   */
+  generatedAt?: string;
   profile?: ValidationProfile;
   issues: Issue[];
   counts: ValidationCounts;
   traceability: ValidationTraceability;
   waivers?: ValidationWaivers;
+  timings?: ValidationTimings;
 };
