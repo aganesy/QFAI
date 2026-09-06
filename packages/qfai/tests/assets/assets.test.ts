@@ -2048,6 +2048,67 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(`${discussionPlaybook}\n${sddPlaybook}`).not.toContain("require");
   });
 
+  it("pins the discussion review-pack write paths to the shared review tree", async () => {
+    const discussionSkillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const discussionPlaybookPath = path.join(
+      discussionSkillDir,
+      "references",
+      "review-cycle-playbook.md",
+    );
+    const reviewRequestTemplatePath = path.join(
+      discussionSkillDir,
+      "templates",
+      "14_Review-Request.md",
+    );
+    const skillPath = path.join(discussionSkillDir, "SKILL.md");
+    const [discussionPlaybook, reviewRequestTemplate, discussionSkill] = await Promise.all([
+      readFile(discussionPlaybookPath, "utf-8"),
+      readFile(reviewRequestTemplatePath, "utf-8"),
+      readFile(skillPath, "utf-8"),
+    ]);
+
+    // `validateReviewArtifacts` lists `^review-(\d{17})$` and nothing else, so the placeholder
+    // the playbook prints must expand to exactly 17 digits. A pack written under any other
+    // spelling is not enumerated, and an empty review tree only warns — the cycle would pass
+    // `--fail-on error` unreviewed.
+    const packDirName = "review-YYYYMMDDhhmmssSSS";
+    expect(packDirName.slice("review-".length)).toHaveLength(17);
+
+    for (const artifact of ["review_request.md", "R01_<reviewer>.md", "summary.json"]) {
+      expect(discussionPlaybook).toContain(`.qfai/review/${packDirName}/${artifact}`);
+    }
+    expect(reviewRequestTemplate).toContain(`.qfai/review/${packDirName}/review_request.md`);
+
+    // The skill body must actually route the run through the playbook: a write-path rule the
+    // Required Process never opens does not reach the reviewer step that writes the pack.
+    expect(discussionSkill).toContain("references/review-cycle-playbook.md");
+
+    // The discussion tree must name the review-pack directory exactly one way, so that a
+    // pack lands where `validateReviewArtifacts` looks for it. Both spellings are checked:
+    // a pack path under the review tree, and any leftover `<...>` placeholder that would
+    // leave the timestamp shape to the model's discretion.
+    const discussionMarkdown = await fg(["**/*.md"], {
+      cwd: discussionSkillDir,
+      absolute: true,
+    });
+    const strayNames: string[] = [];
+    for (const filePath of discussionMarkdown) {
+      const content = await readFile(filePath, "utf-8");
+      const matches = [
+        ...(content.match(/\.qfai\/review\/review-[^/\s`)]*/g) ?? []).map((match) =>
+          match.slice(".qfai/review/".length),
+        ),
+        ...(content.match(/review-<[^>]+>/g) ?? []),
+      ];
+      for (const match of matches) {
+        if (match !== packDirName) {
+          strayNames.push(`${match} (${path.relative(discussionSkillDir, filePath)})`);
+        }
+      }
+    }
+    expect(strayNames).toEqual([]);
+  });
+
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
