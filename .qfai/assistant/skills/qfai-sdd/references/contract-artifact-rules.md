@@ -9,9 +9,9 @@ Contracts are version-managed downstream execution truth and inputs:
 - `api/`: OpenAPI YAML
 - `db/`: SQL schema contracts
 - `ui/`: UI contract YAML
-- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as separate rubric / calibration contracts.
+- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`) and no longer authored as separate rubric / calibration contracts.
 
-Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files.
+Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`constitution/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 
 ## Rules
 
@@ -134,7 +134,9 @@ satisfied by a file that cannot run.
   what exercises head-advance and expected-version guards; a single pass proves
   the first insert and nothing after it. Defects that appear only on traversal
   two are a normal share of the total, not an exotic case.
-- **Record it** in `.qfai/evidence/sdd-<spec-id>.md` as a line of the form:
+- **Record it** in `.qfai/evidence/sdd-<spec-id>.md`, under the
+  `## Contract executability` heading of `templates/evidence/sdd-spec.md`, as a
+  line of the form:
 
   ```
   - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>

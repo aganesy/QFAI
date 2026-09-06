@@ -18,6 +18,8 @@ import { describe, expect, it } from "vitest";
 import {
   EXPLORATION_RELAXABLE_CODES,
   EXPLORATION_HARD_ERROR_CODES,
+  EXPLORATION_RELAXATION_NOTICE_CODE,
+  buildExplorationRelaxationNotice,
   relaxIssuesForMode,
   resolvePrototypingMode,
 } from "../../../../src/core/prototyping/mode.js";
@@ -130,6 +132,69 @@ describe("TC-0012-0475: exploration medium gate-relaxation downgrades soft gates
     for (const hard of EXPLORATION_HARD_ERROR_CODES) {
       expect(relaxable.has(hard)).toBe(false);
     }
+  });
+});
+
+describe("exploration relaxation leaves an audit trail on the findings it rewrites", () => {
+  const softError: Issue = {
+    code: "QFAI-CRIT-008",
+    severity: "error",
+    category: "canonical",
+    message: "iter loop not completed",
+    rule: "renderCritique.loopNotCompleted",
+  };
+  const hardError: Issue = {
+    code: "QFAI-PROT-002",
+    severity: "error",
+    category: "canonical",
+    message: "schema missing required field",
+    rule: "prototypingEvidence.schema",
+  };
+  const authoredWarning: Issue = {
+    code: "QFAI-CRIT-008",
+    severity: "warning",
+    category: "canonical",
+    message: "already a warning",
+    rule: "renderCritique.loopNotCompleted",
+  };
+
+  it("stamps relaxedFrom on every downgraded finding", () => {
+    const out = relaxIssuesForMode([softError, hardError], "exploration");
+    expect(out.find((i) => i.code === "QFAI-CRIT-008")?.relaxedFrom).toBe("error");
+    expect(out.find((i) => i.code === "QFAI-PROT-002")?.relaxedFrom).toBeUndefined();
+  });
+
+  it("leaves an authored warning unstamped so the two kinds of warning stay distinguishable", () => {
+    const out = relaxIssuesForMode([authoredWarning], "exploration");
+    expect(out[0]?.severity).toBe("warning");
+    expect(out[0]?.relaxedFrom).toBeUndefined();
+  });
+
+  it("stamps nothing under convergence", () => {
+    const out = relaxIssuesForMode([softError], "convergence");
+    expect(out[0]?.relaxedFrom).toBeUndefined();
+  });
+
+  it("emits one info notice naming the mode, the source file and the affected codes", () => {
+    const relaxed = relaxIssuesForMode(
+      [softError, hardError, { ...softError, code: "QFAI-DCON-030" }],
+      "exploration",
+    );
+    const notice = buildExplorationRelaxationNotice(relaxed, "exploration");
+    expect(notice?.code).toBe(EXPLORATION_RELAXATION_NOTICE_CODE);
+    expect(notice?.severity).toBe("info");
+    expect(notice?.file).toBe(".qfai/evidence/prototyping/prototyping.json");
+    expect(notice?.message).toContain("exploration");
+    expect(notice?.message).toContain("QFAI-CRIT-008 x1");
+    expect(notice?.message).toContain("QFAI-DCON-030 x1");
+    expect(notice?.message).not.toContain("QFAI-PROT-002");
+    expect(notice?.refs).toEqual(["QFAI-CRIT-008", "QFAI-DCON-030"]);
+  });
+
+  it("emits no notice when nothing was downgraded", () => {
+    const relaxed = relaxIssuesForMode([hardError], "exploration");
+    expect(buildExplorationRelaxationNotice(relaxed, "exploration")).toBeNull();
+    expect(buildExplorationRelaxationNotice([softError], "convergence")).toBeNull();
   });
 });
 

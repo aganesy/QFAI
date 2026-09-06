@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { collectHeadingSlugs as headingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
@@ -54,37 +55,6 @@ const REVIEWER_AGENTS = [
 ];
 
 const DEFECT_CLASSES = ["defect:correctness", "defect:security", "defect:code-quality"] as const;
-
-/**
- * Simplified GitHub heading slug: lowercase, drop punctuation, spaces to
- * hyphens. It covers the ASCII headings these documents use and does not model
- * GitHub's Unicode normalization or emoji handling.
- */
-function slugify(heading: string): string {
-  return heading
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-/**
- * Anchor set for a document, including GitHub's duplicate disambiguation: the
- * first heading with a given slug keeps it and each later repeat gets a `-1`,
- * `-2`, … suffix in document order. Without that, a second heading that slugs
- * the same as an earlier one would make this test call a working link broken.
- */
-function headingSlugs(markdown: string): Set<string> {
-  const occurrences = new Map<string, number>();
-  const slugs = new Set<string>();
-  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
-    const base = slugify(match[1] ?? "");
-    const seen = occurrences.get(base) ?? 0;
-    occurrences.set(base, seen + 1);
-    slugs.add(seen === 0 ? base : `${base}-${seen}`);
-  }
-  return slugs;
-}
 
 /**
  * The body of one `###` section, so a rule can be asserted against the section
