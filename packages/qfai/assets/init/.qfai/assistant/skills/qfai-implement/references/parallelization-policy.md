@@ -5,8 +5,13 @@ carries the summary and the precedence statement.
 
 ## Scope of this policy
 
-- **Cross-spec parallelism is barred.** One spec per invocation, always. This
-  is the Non-goal above and it is not approvable.
+- **Cross-spec parallelism is barred.** One spec **at a time**, always — never
+  two specs in flight together. This is the Non-goal above and it is not
+  approvable. It is a concurrency rule, not a count of the ledgers one
+  invocation may read: a confirmed multi-spec queue
+  (`volume-policy.md#multi-spec-queue`) is walked one spec after another and
+  does not breach it, which is why the `per-invocation` `plan` phase may frame
+  every queued ledger in one pass (`plan-phase.md`).
 - **Item-level parallelism inside one spec** is what the rest of this section
   governs. `parallel_groups` in `agent-routing.yml` describes **role fan-out
   within a phase**, not item dispatch — whatever value it holds; it neither
