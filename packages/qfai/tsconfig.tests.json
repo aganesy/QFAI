@@ -52,6 +52,7 @@
     "tests/assets/finalChecklistGateParity.test.ts",
     "tests/assets/gateCommandHome.test.ts",
     "tests/assets/implementCheckpointVerification.test.ts",
+    "tests/assets/implementRedSubstepHeadings.test.ts",
     "tests/assets/implementRowSelectionPrecedence.test.ts",
     "tests/assets/initUpgradeCopySemantics.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",

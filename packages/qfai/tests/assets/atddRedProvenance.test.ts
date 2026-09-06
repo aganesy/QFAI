@@ -402,7 +402,7 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
     // the terminal state branch 2 exists to avoid, reached through the branch
     // itself. A falsifiability row could not reach `green` at all.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("3b.");
+    expect(implement).toContain("#### Red 3b — Handed-over provenance");
     expect(implement).toContain("consumes the provenance `/qfai-atdd` recorded");
     expect(implement).toContain("steps 4 and 5 do not apply to it");
     expect(implement).toContain("red-provenance.md#handover-to-qfai-implement");
@@ -623,9 +623,8 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // passes P5-P8, and P6 never happens. The deadlock is self-inflicted.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("goes to **step 3c**");
-    expect(implement).toContain(
-      "3c. **A `falsifiability` entry with no evidence yet: take it here.**",
-    );
+    expect(implement).toContain("#### Red 3c — Falsifiability mutation");
+    expect(implement).toContain("**A `falsifiability` entry with no evidence yet: take it here.**");
 
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
@@ -883,9 +882,8 @@ describe.each(TREES)("%s (someone can perform every step)", (tree) => {
     // nobody performed the first one and an ordinary first-run-pass row could
     // not leave `todo`.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain(
-      "3c. **A `falsifiability` entry with no evidence yet: take it here.**",
-    );
+    expect(implement).toContain("#### Red 3c — Falsifiability mutation");
+    expect(implement).toContain("**A `falsifiability` entry with no evidence yet: take it here.**");
     expect(implement).toContain("this mutation _is_ the row's `Oracle proof`");
 
     const provenance = flat(await readProvenance(tree));
@@ -1254,7 +1252,9 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     // `todo -> red` before 3b had checked the entry's branch, its selector and
     // its missing fields — advancing the ledger on unverified provenance.
     const implement = await read(tree, IMPLEMENT);
-    const [a, b, c] = ["   3a.", "   3b.", "   3c."].map((s) => implement.indexOf(s));
+    const [a, b, c] = ["#### Red 3a ", "#### Red 3b ", "#### Red 3c "].map((s) =>
+      implement.indexOf(s),
+    );
     expect(a).toBeGreaterThan(-1);
     expect(a).toBeLessThan(b);
     expect(b).toBeLessThan(c);
