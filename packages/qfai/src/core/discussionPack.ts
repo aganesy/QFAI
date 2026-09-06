@@ -247,8 +247,19 @@ export class ResolveActiveDiscussionPackError extends Error {
  * The thrown message lists every candidate `discussion-*` directory
  * present on disk plus the literal recovery command
  * `qfai discussion use <id>`.
+ *
+ * `discussionRoot` lets a caller that has ALREADY resolved
+ * `paths.discussionDir` pass it in. Callers holding a config that is
+ * not the one on disk — `validateProject` injecting a `configResult`,
+ * or a public validator invoked with a custom config — would
+ * otherwise have this helper re-read `qfai.config.yaml` and resolve
+ * `currentId` against a different directory than the rest of their
+ * work, reporting a present pack as missing.
  */
-export async function resolveActiveDiscussionPack(root: string): Promise<string> {
+export async function resolveActiveDiscussionPack(
+  root: string,
+  discussionRoot?: string,
+): Promise<string> {
   // Honor `paths.discussionDir` from qfai.config.yaml. The previous
   // hardcoded `<root>/.qfai/discussion` did not match what the CLI
   // `qfai discussion list --active` resolver (discussion.ts) reads,
@@ -256,9 +267,9 @@ export async function resolveActiveDiscussionPack(root: string): Promise<string>
   // could `qfai discussion use <id>` successfully, then have callers
   // of this active-pack resolver report the pack as missing because
   // it was scanning the wrong directory.
-  const discussionRoot = await resolveDiscussionRootFromConfig(root);
+  const resolvedRoot = discussionRoot ?? (await resolveDiscussionRootFromConfig(root));
   const pointer = await readDiscussionCurrentIdState(root);
-  const candidates = await findPacks(discussionRoot, "discussion");
+  const candidates = await findPacks(resolvedRoot, "discussion");
   const candidateNames = candidates
     .map((pack) => pack.name)
     .sort((left, right) => left.localeCompare(right));

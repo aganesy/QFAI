@@ -1,14 +1,32 @@
 export type ParsedArgs = {
   command: string | null;
   invalid: boolean;
+  /**
+   * 引数が拒否された理由 (stderr 向け診断文)。`invalid === true` の
+   * ときだけ設定され、最初に発火した拒否の理由を保持する。
+   */
+  invalidReason?: string;
   options: {
     root: string;
     rootExplicit: boolean;
+    /**
+     * `qfai init` の出力先。`--dir` 未指定で `--root` が明示された
+     * init 実行では `root` の値が入る（`--root` は init でも出力先の
+     * エイリアスとして働く）。
+     */
     dir: string;
+    /** `--dir` が明示されたか。init の出力先解決で `--root` より優先する。 */
+    dirExplicit: boolean;
     force: boolean;
     yes: boolean;
     dryRun: boolean;
     upgradeAssistantTree: boolean;
+    /**
+     * `qfai init --verbose`: expand the run report's `skipped` list. Off by
+     * default so a no-op re-run reports its skip count instead of every
+     * shipped asset path.
+     */
+    verbose: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
     reportIn?: string;
@@ -46,13 +64,17 @@ export type ParsedArgs = {
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
+    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
+    /** `rescope --remove <surface-id>`, repeatable. */
+    rescopeRemove: string[];
+    /** `rescope --reason <delta-id>`: the decision that retired the surface. */
+    rescopeReason?: string;
     prototypingTargetUrl?: string;
     /** Subcommand for `qfai discussion <list|use>`. */
     discussionAction?: "list" | "use";
     /** --active for `qfai discussion list`. */
     discussionActive?: boolean;
-    /** --format <text|json> for `qfai discussion list --active`. */
+    /** --format <text|json> for `qfai discussion list [--active]`. */
     discussionFormat?: "text" | "json";
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
@@ -116,7 +138,7 @@ export type ParsedArgs = {
      *   - `full`: callers may replace the body via generation (the
      *     renderer itself never calls a model)
      *   - `stub`: minimal `<!doctype html>` marker
-     * Unknown values are rejected via markInvalid().
+     * Unknown values are rejected via markInvalid(reason).
      */
     prototypingSkeletonMode?: "placeholder" | "full" | "stub";
     /**
@@ -128,7 +150,7 @@ export type ParsedArgs = {
      *     compliance) downgrade error → warning. Schema / path /
      *     license (exit 66) gates stay hard error.
      * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
-     * are rejected via markInvalid().
+     * are rejected via markInvalid(reason).
      */
     prototypingMode?: "convergence" | "exploration";
     /** Subcommand for `qfai audit <log>`. */
@@ -160,9 +182,39 @@ export type ParsedArgs = {
     /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
     reportSpecIds: string[];
     help: boolean;
+    /**
+     * `--version` / `-V`: print the resolved tool version to stdout and
+     * exit 0. Accepted in the command position and as a trailing flag.
+     */
+    version: boolean;
+    /**
+     * Unrecognized `--flag` tokens, in argv order. The CLI prints them
+     * before the usage text so a typo names itself.
+     */
+    unknownFlags: string[];
+    /**
+     * Exit code used when `invalid` is set. CLI-arg errors (unknown
+     * flag, malformed or missing value) exit 2 on every command, per
+     * the exit-code table in the init CLI contract.
+     */
     invalidExitCode: number;
   };
 };
+
+/** Every spelling of the help flag the parser accepts. */
+const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
+
+/** Every spelling of the version flag the parser accepts. */
+const VERSION_FLAGS: ReadonlySet<string> = new Set(["--version", "-V"]);
+
+/**
+ * The single-dash flags the parser reserves, derived from the alias sets above
+ * so the flag loop and the positional scan can never disagree about which short
+ * tokens are flags. Every other option is spelled with `--`.
+ */
+const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
+  [...HELP_FLAGS, ...VERSION_FLAGS].filter((flag) => !flag.startsWith("--")),
+);
 
 /** `qfai prototyping <action>` のサブコマンド名。 */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
@@ -172,13 +224,16 @@ type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
 
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
+    rescopeRemove: [],
     root: cwd,
     rootExplicit: false,
     dir: cwd,
+    dirExplicit: false,
     force: false,
     yes: false,
     dryRun: false,
     upgradeAssistantTree: false,
+    verbose: false,
     reportFormat: "md",
     reportRunValidate: false,
     doctorFormat: "text",
@@ -189,31 +244,88 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     reportSpecIds: [],
     sddAssumptions: [],
     help: false,
-    invalidExitCode: 1,
+    version: false,
+    unknownFlags: [],
+    invalidExitCode: 2,
   };
 
   const args = [...argv];
   let command = args.shift() ?? null;
   let invalid = false;
 
-  if (command === "--help" || command === "-h") {
+  if (command !== null && HELP_FLAGS.has(command)) {
     options.help = true;
     command = null;
   }
 
-  const markInvalid = (): void => {
+  let invalidReason: string | undefined;
+
+  if (command !== null && VERSION_FLAGS.has(command)) {
+    options.version = true;
+    command = null;
+  }
+
+  /**
+   * 拒否を記録する。`reason` は main.ts が usage の前に stderr へ
+   * 出す診断文。複数回発火しても最初の理由を保持する。
+   */
+  const markInvalid = (reason: string): void => {
     invalid = true;
     options.help = true;
-    if (command === "guardrails") {
-      options.invalidExitCode = 2;
-    }
+    invalidReason ??= reason;
   };
+
+  const scope = (): string => (command ? `qfai ${command}` : "qfai");
+  const missingValue = (flag: string): string => `${scope()}: ${flag} requires a value.`;
+  const badValue = (flag: string, value: string, expected: string): string =>
+    `${scope()}: invalid value for ${flag}: "${value}". Expected: ${expected}`;
+  const notValidHere = (flag: string): string =>
+    `${scope()}: ${flag} is not valid for this command.`;
+  const formatReason = (value: string): string => {
+    const choices = formatChoicesFor(command);
+    return choices ? badValue("--format", value, choices) : notValidHere("--format");
+  };
+
+  // 先頭トークンが `--` で始まる場合、それはコマンド名ではなく未知
+  // オプションである。`command = args.shift()` で取り除かれるため下の
+  // フラグループには到達せず、ここで捕まえないと main.ts の
+  // unknown-command 分岐に落ちて exit 0 になってしまう
+  // (`qfai --bogus`)。`--help` / `-h` は直前の分岐で null 化済み。
+  if (command !== null && command.startsWith("--")) {
+    options.unknownFlags.push(command);
+    markInvalid(`qfai: unknown option: ${command}`);
+    command = null;
+  }
 
   /**
    * Flag-ownership guard (下の flag-handling contract rule 2 用)。
    * `qfai prototyping <action>` のサブコマンドトークンは flag loop より
    * 前に確定するため、ループ内のどの arm からでも安全に呼べる。
    */
+  /**
+   * Whether a flag is on one of the commands that actually reads it.
+   *
+   * A flag accepted where nothing reads it reaches nothing, and the run
+   * proceeds as if it had not been given. `--dir` produced a verdict about the
+   * CURRENT tree and made `report` overwrite its `report.md` (#1143);
+   * `--upgrade-assistant-tree` exited 0 having upgraded nothing;
+   * `--dry-run` let an operator believe a run was a rehearsal (#1144).
+   *
+   * The owner lists are derived from where `main.ts` reads each field, not
+   * guessed:
+   *
+   * - `dir`, `upgradeAssistantTree` — `init`
+   * - `yes` — `init`, `doctor`
+   * - `force` — `init`, `handoff`, `prototyping`
+   * - `dryRun` — `init`, `doctor`, `handoff`, `prototyping`
+   *
+   * One predicate rather than one per flag: two that mean almost the same
+   * thing are two contracts to keep in step, and this is the shape
+   * `ownedByPrototyping` and `ownedByGuardrails` below already use.
+   */
+  const ownedBy = (...commands: string[]): boolean =>
+    command !== null && commands.includes(command);
+
   const ownedByPrototyping = (...actions: PrototypingAction[]): boolean => {
     if (command !== "prototyping") {
       return false;
@@ -237,12 +349,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   if (command === "guardrails") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       const action = normalizeGuardrailsAction(candidate);
       if (action) {
         options.guardrailsAction = action;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("guardrails", candidate));
       }
       args.shift();
     }
@@ -252,16 +364,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // flag loop.
   if (command === "prototyping") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (
         candidate === "preflight" ||
         candidate === "iterate" ||
         candidate === "certify" ||
-        candidate === "show-spec"
+        candidate === "show-spec" ||
+        candidate === "rescope"
       ) {
         options.prototypingAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("prototyping", candidate));
       }
       args.shift();
     }
@@ -270,11 +383,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai audit <subcommand>` — currently only `log` is supported.
   if (command === "audit") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "log") {
         options.auditAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("audit", candidate));
       }
       args.shift();
     }
@@ -283,16 +396,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
   if (command === "handoff") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "upgrade") {
         options.handoffAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("handoff", candidate));
       }
       args.shift();
       if (options.handoffAction === "upgrade") {
         const fileCandidate = args[0];
-        if (fileCandidate && !fileCandidate.startsWith("--")) {
+        if (isPositionalToken(fileCandidate)) {
           options.handoffLegacyFile = fileCandidate;
           args.shift();
         }
@@ -307,7 +420,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "preflight") {
         options.sddAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("sdd", candidate));
       }
       args.shift();
     }
@@ -316,11 +429,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
   if (command === "atdd") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "scaffold") {
         options.atddAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("atdd", candidate));
       }
       args.shift();
     }
@@ -330,16 +443,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // positional <id> for `use`) before the flag loop.
   if (command === "discussion") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "list" || candidate === "use") {
         options.discussionAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("discussion", candidate));
       }
       args.shift();
       if (options.discussionAction === "use") {
         const idCandidate = args[0];
-        if (idCandidate && !idCandidate.startsWith("--")) {
+        if (isPositionalToken(idCandidate)) {
           options.discussionId = idCandidate;
           args.shift();
         }
@@ -366,12 +479,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   for (; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg !== undefined && HELP_FLAGS.has(arg)) {
+      options.help = true;
+      continue;
+    }
+    if (arg !== undefined && VERSION_FLAGS.has(arg)) {
+      options.version = true;
+      continue;
+    }
     switch (arg) {
       case "--root":
         {
           const next = consumeOptionValue();
           if (next === null) {
-            markInvalid();
+            markInvalid(missingValue("--root"));
             break;
           }
           options.root = next;
@@ -382,40 +503,79 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         {
           const next = consumeOptionValue();
           if (next === null) {
-            markInvalid();
+            markInvalid(missingValue("--dir"));
             break;
           }
-          options.dir = next;
+          // `--root` is the flag for pointing another command at a tree, and
+          // the usage text this refusal prints says so.
+          if (ownedBy("init")) {
+            options.dir = next;
+            options.dirExplicit = true;
+          } else {
+            markInvalid(notValidHere("--dir"));
+          }
         }
         break;
       case "--force":
-        options.force = true;
+        // Read by the `init`, `handoff` and `prototyping` arms and nowhere else.
+        if (ownedBy("init", "handoff", "prototyping")) {
+          options.force = true;
+        } else {
+          markInvalid(notValidHere("--force"));
+        }
         break;
       case "--yes":
-        options.yes = true;
+        // Read by the `init` and `doctor` arms and nowhere else.
+        if (ownedBy("init", "doctor")) {
+          options.yes = true;
+        } else {
+          markInvalid(notValidHere("--yes"));
+        }
         break;
       case "--dry-run":
-        options.dryRun = true;
+        // Read by `init`, `doctor`, `handoff` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
+        if (ownedBy("init", "doctor", "handoff", "prototyping")) {
+          options.dryRun = true;
+        } else {
+          markInvalid(notValidHere("--dry-run"));
+        }
         break;
       case "--upgrade-assistant-tree":
-        options.upgradeAssistantTree = true;
+        // Same shape as `--dir`, and worse in one way: accepted elsewhere it
+        // exited 0 having upgraded nothing, so the operator went on reading an
+        // assistant tree they believed had been refreshed.
+        if (ownedBy("init")) {
+          options.upgradeAssistantTree = true;
+        } else {
+          markInvalid(notValidHere("--upgrade-assistant-tree"));
+        }
+        break;
+      case "--verbose":
+        // init 専用。ヘルプでもそう公開しているので、他コマンドに付けた
+        // 場合は黙って捨てず誤指定として扱う（自動化が「詳細が出た」と
+        // 誤認したまま成功扱いになるのを防ぐ）。
+        if (command !== "init") {
+          markInvalid(notValidHere("--verbose"));
+          break;
+        }
+        options.verbose = true;
         break;
       case "--format": {
         const next = consumeOptionValue();
         if (next === null) {
           // `--format` は値必須。欠落時はヘルプ表示（ただし次オプションは食わない）。
-          markInvalid();
+          markInvalid(missingValue("--format"));
           break;
         }
         if (command === "prototyping" && options.prototypingAction !== "preflight") {
-          markInvalid();
+          markInvalid(`qfai prototyping: --format is only valid for "prototyping preflight".`);
           break;
         }
         if (command === "discussion") {
           if (next === "text" || next === "json") {
             options.discussionFormat = next;
           } else {
-            markInvalid();
+            markInvalid(badValue("--format", next, "text|json"));
           }
           break;
         }
@@ -423,7 +583,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "table" || next === "json") {
             options.auditFormat = next;
           } else {
-            markInvalid();
+            markInvalid(badValue("--format", next, "table|json"));
           }
           break;
         }
@@ -431,12 +591,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "text" || next === "json") {
             options.sddFormat = next;
           } else {
-            markInvalid();
+            markInvalid(formatReason(next));
           }
           break;
         }
         if (!applyFormatOption(command, next, options)) {
-          markInvalid();
+          markInvalid(formatReason(next));
         }
         break;
       }
@@ -446,7 +606,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "discussion" && options.discussionAction === "list") {
           options.discussionActive = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--active"));
         }
         break;
       case "--strict":
@@ -455,17 +615,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "validate") {
           options.strict = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--strict"));
         }
         break;
       case "--phase":
-        markInvalid();
+        markInvalid(`${scope()}: --phase is not supported.`);
         consumeOptionValue();
         break;
       case "--profile": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--profile"));
           break;
         }
         if (isValidationProfile(next)) {
@@ -476,7 +636,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // doctor command threads the value into the manifest probe.
           options.doctorSkillProfile = next;
         } else {
-          markInvalid();
+          markInvalid(
+            badValue(
+              "--profile",
+              next,
+              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package",
+            ),
+          );
         }
         break;
       }
@@ -484,7 +650,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "doctor") {
           options.doctorClean = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--clean"));
         }
         break;
       }
@@ -492,14 +658,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "doctor") {
           options.doctorAutoremediate = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--autoremediate"));
         }
         break;
       }
       case "--fail-on": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--fail-on"));
           break;
         }
         // usage(): validate / doctor / prototyping preflight / sdd preflight のみが
@@ -514,7 +680,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           command !== "sdd" &&
           !ownedByPrototyping("preflight")
         ) {
-          markInvalid();
+          markInvalid(notValidHere("--fail-on"));
           break;
         }
         // 不正値を黙って捨てると、`--fail-on neve` のような typo が
@@ -525,14 +691,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // An unknown threshold must not fall through to the config
           // default: the gate would then silently differ from the flag
           // the caller wrote, in either direction.
-          markInvalid();
+          markInvalid(badValue("--fail-on", next, "never|warning|error"));
         }
         break;
       }
       case "--out": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--out"));
           break;
         }
         if (
@@ -543,20 +709,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else if (command === "report") {
           options.reportOut = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--out"));
         }
         break;
       }
       case "--in": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--in"));
           break;
         }
         if (command === "report") {
           options.reportIn = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--in"));
         }
         break;
       }
@@ -564,46 +730,48 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "report") {
           options.reportRunValidate = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--run-validate"));
         }
         break;
       case "--base-url": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--base-url"));
           break;
         }
         if (command === "report") {
           options.reportBaseUrl = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--base-url"));
         }
         break;
       }
       case "--path": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--path"));
           break;
         }
         if (command === "guardrails") {
           options.guardrailsPaths.push(next);
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--path"));
         }
         break;
       }
       case "--max": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--max"));
           break;
         }
         const parsed = Number.parseInt(next, 10);
         // usage(): `guardrails extract` のみ。runGuardrails は list /
         // check パスで max を読まないため、そこでは誤指定として拒否する。
-        if (!ownedByGuardrails("extract") || Number.isNaN(parsed)) {
-          markInvalid();
+        if (!ownedByGuardrails("extract")) {
+          markInvalid(notValidHere("--max"));
+        } else if (Number.isNaN(parsed)) {
+          markInvalid(badValue("--max", next, "an integer"));
         } else {
           options.guardrailsMax = parsed;
         }
@@ -612,7 +780,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--keyword": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--keyword"));
           break;
         }
         // usage(): `guardrails list/extract` のみ。check パスは
@@ -620,27 +788,55 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (ownedByGuardrails("list", "extract")) {
           options.guardrailsKeyword = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--keyword"));
         }
         break;
       }
       case "--platform": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--platform"));
           break;
         }
         if (command === "validate") {
           options.platform = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--platform"));
+        }
+        break;
+      }
+      case "--remove": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--remove"));
+          break;
+        }
+        // Repeatable: one decision can retire more than one surface, and each
+        // retirement earns its own audit entry.
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeRemove.push(next);
+        } else {
+          markInvalid(notValidHere("--remove"));
+        }
+        break;
+      }
+      case "--reason": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--reason"));
+          break;
+        }
+        if (ownedByPrototyping("rescope")) {
+          options.rescopeReason = next;
+        } else {
+          markInvalid(notValidHere("--reason"));
         }
         break;
       }
       case "--target-url": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--target-url"));
           break;
         }
         // `doctor --profile prototyping` だけが同じ targetUrl 診断を通す
@@ -650,19 +846,21 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "doctor" || ownedByPrototyping("preflight", "iterate")) {
           options.prototypingTargetUrl = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--target-url"));
         }
         break;
       }
       case "--cycle": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--cycle"));
           break;
         }
         const parsed = parseNonNegativeInteger(next);
-        if (!ownedByPrototyping("iterate") || parsed === null) {
-          markInvalid();
+        if (!ownedByPrototyping("iterate")) {
+          markInvalid(notValidHere("--cycle"));
+        } else if (parsed === null) {
+          markInvalid(badValue("--cycle", next, "a non-negative integer"));
         } else {
           options.prototypingCycle = parsed;
         }
@@ -674,33 +872,33 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (ownedByPrototyping("certify")) {
           options.prototypingCheckOnly = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--check"));
         }
         break;
       }
       case "--license-patch": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--license-patch"));
           break;
         }
         if (ownedByPrototyping("iterate")) {
           options.prototypingLicensePatch = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--license-patch"));
         }
         break;
       }
       case "--primary-spec-id": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--primary-spec-id"));
           break;
         }
         if (ownedByPrototyping("iterate")) {
           options.prototypingPrimarySpecId = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--primary-spec-id"));
         }
         break;
       }
@@ -713,7 +911,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (ownedByPrototyping("iterate")) {
           options.prototypingCheckConvergence = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--check-convergence"));
         }
         break;
       }
@@ -723,7 +921,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (ownedByPrototyping("iterate")) {
           options.prototypingCapture = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--capture"));
         }
         break;
       }
@@ -733,7 +931,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (ownedByPrototyping("iterate")) {
           options.prototypingAutoServe = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--auto-serve"));
         }
         break;
       }
@@ -745,37 +943,37 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (ownedByPrototyping("iterate")) {
           options.prototypingEmitSkeletons = true;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--emit-skeletons"));
         }
         break;
       }
       case "--skeleton-mode": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--skeleton-mode"));
           break;
         }
         if (!ownedByPrototyping("iterate")) {
-          markInvalid();
+          markInvalid(notValidHere("--skeleton-mode"));
         } else if (next === "placeholder" || next === "full" || next === "stub") {
           options.prototypingSkeletonMode = next;
         } else {
-          markInvalid();
+          markInvalid(badValue("--skeleton-mode", next, "placeholder|full|stub"));
         }
         break;
       }
       case "--mode": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--mode"));
           break;
         }
         if (!ownedByPrototyping("iterate")) {
-          markInvalid();
+          markInvalid(notValidHere("--mode"));
         } else if (next === "convergence" || next === "exploration") {
           options.prototypingMode = next;
         } else {
-          markInvalid();
+          markInvalid(badValue("--mode", next, "convergence|exploration"));
         }
         break;
       }
@@ -789,10 +987,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       //   1. A value-taking flag always reads its value token via
       //      `consumeOptionValue()`, which advances the cursor as part
       //      of the read. A missing value (`null`) is a parse error →
-      //      `markInvalid()`.
+      //      `markInvalid(missingValue(flag))`.
       //   2. When the flag is used on a command / subcommand that does
-      //      NOT own it, also call `markInvalid()` so the misuse is
-      //      surfaced rather than silently dropped. The value token is
+      //      NOT own it, also call `markInvalid(notValidHere(flag))` so
+      //      the misuse is surfaced rather than silently dropped, with a
+      //      diagnostic main.ts can print to stderr. The value token is
       //      STILL consumed so it cannot leak into the positional
       //      stream — keeping consumption symmetric across all
       //      value-taking flags.
@@ -808,7 +1007,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--spec": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--spec"));
           break;
         }
         if (command === "atdd") {
@@ -823,14 +1022,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // to render its own slice without writing the shared `report.md`.
           options.reportSpecIds.push(next);
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--spec"));
         }
         break;
       }
       case "--assume": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--assume"));
           break;
         }
         if (command === "sdd") {
@@ -838,14 +1037,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // `Open Questions (Carry-over)` にそのまま並ぶ。
           options.sddAssumptions.push(next);
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--assume"));
         }
         break;
       }
       case "--scope": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--scope"));
           break;
         }
         if (command === "audit") {
@@ -854,61 +1053,66 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "saas-package" || next === "full") {
             options.prototypingScope = next;
           } else {
-            markInvalid();
+            markInvalid(badValue("--scope", next, "saas-package|full"));
           }
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--scope"));
         }
         break;
       }
       case "--upgrade-scope": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--upgrade-scope"));
           break;
         }
         if (command === "prototyping" && options.prototypingAction === "certify") {
           if (next === "full") {
             options.prototypingUpgradeScopeFull = true;
           } else {
-            markInvalid();
+            markInvalid(badValue("--upgrade-scope", next, "full"));
           }
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--upgrade-scope"));
         }
         break;
       }
       case "--operator": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--operator"));
           break;
         }
         if (command === "audit") {
           options.auditOperator = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--operator"));
         }
         break;
       }
       case "--clause": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--clause"));
           break;
         }
         if (command === "audit") {
           options.auditClause = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--clause"));
         }
         break;
       }
-      case "--help":
-      case "-h":
-        options.help = true;
-        break;
       default:
+        // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
+        // parse error として markInvalid() する。位置引数
+        // (`discussion use <id>` / `handoff upgrade <legacy>` など) は
+        // 対象外に保つ必要があるため、「switch にマッチしなかった」で
+        // はなく `--` プレフィックスで判定する。
+        if (arg?.startsWith("--")) {
+          options.unknownFlags.push(arg);
+          markInvalid(`qfai: unknown option: ${arg}`);
+        }
         break;
     }
   }
@@ -922,30 +1126,107 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     options.prototypingTargetUrl !== undefined &&
     options.profile !== "prototyping"
   ) {
-    markInvalid();
+    markInvalid(`qfai doctor: --target-url requires --profile prototyping.`);
   }
   if (command === "guardrails" && !options.help && !options.guardrailsAction) {
-    markInvalid();
+    markInvalid(subcommandReason("guardrails", null));
   }
   if (command === "prototyping" && !options.help && !options.prototypingAction) {
-    markInvalid();
+    markInvalid(subcommandReason("prototyping", null));
   }
   if (command === "discussion" && !options.help && !options.discussionAction) {
-    markInvalid();
+    markInvalid(subcommandReason("discussion", null));
   }
   if (command === "audit" && !options.help && !options.auditAction) {
-    markInvalid();
+    markInvalid(subcommandReason("audit", null));
   }
   if (command === "handoff" && !options.help && !options.handoffAction) {
-    markInvalid();
+    markInvalid(subcommandReason("handoff", null));
   }
   if (command === "atdd" && !options.help && !options.atddAction) {
-    markInvalid();
+    markInvalid(subcommandReason("atdd", null));
   }
   if (command === "sdd" && !options.help && !options.sddAction) {
-    markInvalid();
+    markInvalid(subcommandReason("sdd", null));
   }
-  return { command, invalid, options };
+  // init 以外の全コマンドは `--root` を「対象ディレクトリ」として読む。
+  // init だけが `--dir` しか見ないため、`--root` を渡すと値が捨てられ
+  // cwd が初期化されていた。init でも `--root` を出力先のエイリアスと
+  // して扱う。`--dir` が明示された場合は init 固有の `--dir` を優先。
+  if (command === "init" && options.rootExplicit && !options.dirExplicit) {
+    options.dir = options.root;
+  }
+  return { command, invalid, ...(invalidReason ? { invalidReason } : {}), options };
+}
+
+/** `qfai <command> <subcommand>` で受理されるサブコマンドの集合。 */
+const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
+  ["guardrails", "list|extract|check"],
+  ["prototyping", "preflight|iterate|certify|show-spec"],
+  ["discussion", "list|use"],
+  ["audit", "log"],
+  ["handoff", "upgrade"],
+  ["atdd", "scaffold"],
+  ["sdd", "preflight"],
+]);
+
+/**
+ * サブコマンド欠落 / 不正の診断文を組み立てる。`value === null` は
+ * 「そもそも指定されていない」ケース。
+ */
+function subcommandReason(command: string, value: string | null): string {
+  const expected = SUBCOMMAND_EXPECTATIONS.get(command) ?? "";
+  const what = value === null ? "unknown or missing subcommand" : `unknown subcommand "${value}"`;
+  return `qfai ${command}: ${what}. Expected: ${expected}`;
+}
+
+/** `--format` が当該コマンドで受理する値の集合 (空 = 非対応)。 */
+function formatChoicesFor(command: string | null): string {
+  if (command === "report") {
+    return "md|json";
+  }
+  if (command === "validate") {
+    return "text|github";
+  }
+  if (command === "doctor" || command === "prototyping") {
+    return "text|json";
+  }
+  return "";
+}
+
+/**
+ * Whether a token can be the subcommand name in `qfai <command> <subcommand>`.
+ *
+ * The scan that pulls it runs *before* the flag loop, so testing only for a
+ * `--` prefix let the short forms through as candidates: `qfai prototyping -V`
+ * had `-V` taken as an unknown action and shifted away, which both raised a
+ * usage error and stopped the flag loop from ever setting `options.version`,
+ * while the long `--version` was skipped here and worked. A subcommand name is
+ * drawn from a closed set and none of them starts with `-`, so this position
+ * excludes every dash-prefixed token.
+ */
+function isSubcommandToken(token: string | undefined): token is string {
+  return token !== undefined && token.length > 0 && !token.startsWith("-");
+}
+
+/**
+ * Whether a token can be the positional value after a subcommand — the
+ * `<legacy-file>` of `handoff upgrade`, the `<id>` of `discussion use`.
+ *
+ * A positional is caller data rather than a closed set, and a relative path may
+ * legitimately begin with a single `-`: `qfai handoff upgrade -legacy.yaml`
+ * names a file in the working directory and has to keep converting. So this
+ * position excludes only the spellings the parser actually reserves — any `--`
+ * long flag, plus RESERVED_SHORT_FLAGS — which still keeps `-V` and `-h` out
+ * of the positional and lets them reach the flag loop.
+ */
+function isPositionalToken(token: string | undefined): token is string {
+  return (
+    token !== undefined &&
+    token.length > 0 &&
+    !token.startsWith("--") &&
+    !RESERVED_SHORT_FLAGS.has(token)
+  );
 }
 
 function parseNonNegativeInteger(value: string): number | null {

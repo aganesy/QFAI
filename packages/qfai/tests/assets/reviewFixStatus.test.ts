@@ -49,7 +49,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     it(`${relativePath}: review-fix blocks completion`, async () => {
       const skill = await read(relativePath, "SKILL.md");
       expect(skill).toContain(
-        "- Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist",
+        "- Items with `todo`, `blocked`, `red`, `green`, `refactor`, or `review-fix` status still exist",
       );
     });
 
@@ -87,6 +87,115 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
         expect(reference).toContain(field);
       }
       expect(reference).toContain("## Single-round items");
+    });
+
+    it(`${relativePath}: the closed round list enumerates every field the Round N prefix is required on`, async () => {
+      // The list declares itself whole, so a field absent from it is row-level
+      // by construction — one slot for however many rounds the row has. These
+      // fields have a producer that runs once per round, so a second round
+      // either overwrote round 1's record or reused it for a tree that no
+      // longer exists. Left uncounted on purpose: the set grows, and a comment
+      // that names a number goes stale the next time it does.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      for (const field of [
+        "`Round N: Falsifiability revision`",
+        "`Round N: Oracle proof`",
+        "`Round N: Review pack`",
+        "`Round N: Review pack seal`",
+        // A round-1 `falsifiability` row can get a natural RED in round 2, so
+        // the classification of a round's RED moves with the round.
+        "`Round N: RED failure mode`",
+      ]) {
+        expect(reference).toContain(field);
+      }
+      // ...and the paragraph that closes the list names them, so the summary
+      // and the enumeration cannot drift apart again.
+      expect(flat(reference)).toContain(
+        "the `RED failure mode` that classifies it, the `Replacement proof revision` where the test was replaced, the GREEN pair, the `Oracle proof`, the review pack and its seal, the reviewer verdict",
+      );
+      // The rule that decides where a newly added field lands, so the next
+      // omission is answerable without re-deriving it in SKILL.md.
+      expect(flat(reference)).toContain(
+        "a field its producer writes once per round takes the prefix",
+      );
+    });
+
+    it(`${relativePath}: the producers write RED failure mode with the round prefix`, async () => {
+      // The closed list is the sole authority on the prefix, so a producer
+      // still writing the field bare leaves the completion gate unable to find
+      // round 1's classification at all.
+      const skill = await read(relativePath, "SKILL.md");
+      expect(skill).toContain("`Round 1: RED failure mode: falsifiability`");
+      expect(skill).not.toContain("the `RED failure mode: falsifiability`");
+      const admissibility = await read(relativePath, "references/red-admissibility.md");
+      expect(flat(admissibility)).toContain("`Round N: RED failure mode`");
+      expect(flat(admissibility)).toContain("`Round N: RED failure mode: falsifiability`");
+    });
+
+    it(`${relativePath}: an entry predating the list keeps its bare fields readable`, async () => {
+      // The tree an `Oracle proof` or a RED addressed is gone by the revert or
+      // by Phase Green, so a row already at `refactor`/`review-fix` cannot
+      // re-take what the prefix would demand. The bare slot was overwritten by
+      // each round, so its surviving value is the last round's — reading it as
+      // round 1's would attribute the newest proof to the oldest tree.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      expect(flat(reference)).toContain(
+        "**An entry written before a field joined this list carries it unprefixed.**",
+      );
+      expect(flat(reference)).toContain(
+        "as belonging to that entry's **highest-numbered** round, **not** to round 1",
+      );
+    });
+
+    it(`${relativePath}: the replacement proof revision is a round field too`, async () => {
+      // A REVISE can replace the acceptance test in more than one round, and
+      // the proof is re-taken against a different tree each time.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      expect(reference).toContain("`Round N: Replacement proof revision`");
+      // ...and the producers name it with the prefix, or the round block and
+      // the instruction that fills it disagree.
+      const skill = await read(relativePath, "SKILL.md");
+      expect(skill).toContain("`Round N: Replacement proof revision`");
+      expect(skill).not.toContain("carries `Replacement proof revision`");
+    });
+
+    it(`${relativePath}: a round keeps one review pack per review attempt`, async () => {
+      // A behaviour-preserving REVISE re-reviews inside the same round and
+      // every review creates its own pack, so one slot per round either
+      // discarded the REVISE pack's audit trail or left the completion gate
+      // recomputing over a pack the round did not close on.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      expect(flat(reference)).toContain("**One pair per review attempt, not one per round**");
+      expect(flat(reference)).toContain(
+        "`Round N: Review pack (attempt M)` / `Round N: Review pack seal (attempt M)`",
+      );
+      // Each pack in the round is answerable to the verdict it carried.
+      expect(flat(reference)).toContain(
+        "A round with several review attempts records each attempt's verdict here in review order, under the same `(attempt M)` qualifier",
+      );
+    });
+
+    it(`${relativePath}: the oracle-proof producer is per round, not per item`, async () => {
+      // Round 2 rewrites the code round 1's mutation targeted, so a re-used
+      // proof shows nothing about the new pass.
+      const oracle = await read(relativePath, "references/oracle-strength.md");
+      expect(flat(oracle)).toContain("Per **round**, alongside that round's RED/GREEN pair");
+      expect(flat(oracle)).toContain(
+        "One mutation per round — not one per item, and never round 1's re-used",
+      );
+      expect(oracle).not.toContain("One mutation per item.");
+    });
+
+    it(`${relativePath}: every attempt's seal is produced and recomputed`, async () => {
+      // Sealing only the attempt that closed the round left the earlier packs
+      // editable with nothing recomputing over them.
+      const revision = await read(relativePath, "references/evidence-revision.md");
+      expect(flat(revision)).toContain(
+        "**A round that was reviewed more than once carries one pair per attempt**",
+      );
+      expect(flat(revision)).toContain("**Gate item 10 recomputes every seal the entry carries**");
+      const skill = await read(relativePath, "SKILL.md");
+      expect(skill).toContain("Every `Review pack seal` the entry carries");
     });
 
     it(`${relativePath}: review is requested from refactor, so REVISE has a legal edge`, async () => {
@@ -148,8 +257,11 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       );
       expect(reference).toContain("## A `REVISE` that needs no new production behaviour");
       expect(reference).toContain("**No round is opened.**");
+      // All three `Refactor verify` fields, the revision included: the rework
+      // moved the tree, so a stale address would put the re-review out of
+      // agreement with item 6 at gate item 10.
       expect(reference).toContain(
-        "refresh\n   `Refactor verify command` / `Refactor verify result`",
+        "refresh all three\n   `Refactor verify` fields — `command`, `result` and `revision`",
       );
       expect(reference).toContain("Which path applies is decided by the finding, not by the");
     });

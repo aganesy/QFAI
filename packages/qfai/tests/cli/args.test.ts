@@ -22,6 +22,88 @@ describe("parseArgs", () => {
     expect(parsed.options.validateFormat).toBe("github");
   });
 
+  it("accepts --dir on init, which is the only command that reads it", () => {
+    const parsed = parseArgs(["init", "--dir", "/tmp/out"], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.dir).toBe("/tmp/out");
+  });
+
+  for (const command of ["validate", "report", "doctor", "atdd"] as const) {
+    it(`rejects --dir on ${command}, which never reads it`, () => {
+      // `options.dir` is read at exactly one place — the `init` arm of the
+      // dispatch. Anywhere else the flag reached nothing and `resolveRoot` fell
+      // through to the current directory, so `validate --dir <path>` answered
+      // about the CURRENT tree and `report --dir <path>` overwrote its
+      // `report.md`. A confident verdict about a tree the operator did not name
+      // is worse than an error, because it looks like an answer (#1143).
+      const parsed = parseArgs([command, "--dir", "/tmp/elsewhere"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+    });
+  }
+
+  it("accepts --upgrade-assistant-tree on init", () => {
+    const parsed = parseArgs(
+      ["init", "--dir", "/tmp/out", "--upgrade-assistant-tree"],
+      process.cwd(),
+    );
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.upgradeAssistantTree).toBe(true);
+  });
+
+  for (const command of ["validate", "report", "doctor"] as const) {
+    it(`rejects --upgrade-assistant-tree on ${command}`, () => {
+      // The same shape as --dir and worse in one way: accepted here it exited 0
+      // having upgraded nothing, so the operator went on reading an assistant
+      // tree they believed had been refreshed (#1143).
+      const parsed = parseArgs([command, "--upgrade-assistant-tree"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+    });
+  }
+
+  describe("shared flags reach only the commands that read them", () => {
+    // The owner lists are derived from where `main.ts` reads each field. A flag
+    // accepted where nothing reads it reaches nothing and the run proceeds as if
+    // it had not been given — `--dry-run` most sharply, since an operator who
+    // believes a run is a rehearsal gets a real one (#1144).
+    //
+    // `handoff` and `prototyping` take a subcommand, so their rows name one: a
+    // bare `handoff` is invalid for its own reasons and would pass a rejection
+    // row without testing the flag.
+    const OWNERS = [
+      ["--force", [["init"], ["handoff", "upgrade"], ["prototyping", "iterate"]], ["validate"]],
+      ["--yes", [["init"], ["doctor"]], ["validate", "report"]],
+      [
+        "--dry-run",
+        [["init"], ["doctor"], ["handoff", "upgrade"], ["prototyping", "iterate"]],
+        ["validate", "report", "atdd"],
+      ],
+    ] as const;
+
+    for (const [flag, owners, strangers] of OWNERS) {
+      for (const owner of owners) {
+        it(`accepts ${flag} on ${owner.join(" ")}`, () => {
+          const parsed = parseArgs([...owner, flag], process.cwd());
+          expect(parsed.invalid).toBe(false);
+        });
+      }
+      for (const stranger of strangers) {
+        it(`rejects ${flag} on ${stranger}, which never reads it`, () => {
+          const parsed = parseArgs([stranger, flag], process.cwd());
+          expect(parsed.invalid).toBe(true);
+        });
+      }
+    }
+  });
+
+  it("still accepts --root on the commands that resolve a target", () => {
+    // The flag the operator wanted. A rejection that did not leave this working
+    // would have removed the only way to point those commands at a tree.
+    const parsed = parseArgs(["validate", "--root", "/tmp/project"], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.root).toBe("/tmp/project");
+    expect(parsed.options.rootExplicit).toBe(true);
+  });
+
   it("parses --fail-on {never|warning|error} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["never", "warning", "error"] as const) {
@@ -250,6 +332,31 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  it("parses --verbose for init and defaults it off", () => {
+    const cwd = process.cwd();
+    const withFlag = parseArgs(["init", "--dir", ".", "--verbose"], cwd);
+    expect(withFlag.invalid).toBe(false);
+    expect(withFlag.options.verbose).toBe(true);
+
+    const without = parseArgs(["init", "--dir", "."], cwd);
+    expect(without.invalid).toBe(false);
+    expect(without.options.verbose).toBe(false);
+  });
+
+  // --verbose is published in the help text as an init-only option, so a
+  // misuse must surface rather than be silently dropped: automation that
+  // asked for the expanded list would otherwise get a success exit code and
+  // no detail.
+  it("rejects --verbose on commands other than init", () => {
+    const cwd = process.cwd();
+    for (const command of ["validate", "doctor", "report"]) {
+      const parsed = parseArgs([command, "--verbose"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.verbose).toBe(false);
+    }
+  });
+
   // Pin the unified value-taking-flag contract (see args.ts contract
   // block): when --spec / --scope / --upgrade-scope / --operator /
   // --clause are used on a subcommand that does NOT accept the flag,
@@ -302,6 +409,63 @@ describe("parseArgs", () => {
     it("defaults to an empty scope, which means the whole repo", () => {
       const parsed = parseArgs(["report"], process.cwd());
       expect(parsed.options.reportSpecIds).toEqual([]);
+    });
+  });
+
+  // `--dry-run` is implemented by init, doctor, handoff upgrade and
+  // prototyping iterate|rescope. On every other command it used to be
+  // accepted and then ignored, so an operator reaching for a preview flag
+  // got a real write instead. `prototyping` wired the flag upstream while
+  // this branch was open, so it moved from the rejected list to the
+  // accepted one - the rule is unchanged, its membership is not.
+  describe("--dry-run scope", () => {
+    it.each(["init", "doctor"])("is accepted on %s", (command) => {
+      const parsed = parseArgs([command, "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+    });
+
+    it.each([["validate"], ["report"], ["guardrails"], ["audit"], ["atdd"], ["discussion"]])(
+      "marks --dry-run invalid on %s and leaves dryRun off",
+      (command) => {
+        const parsed = parseArgs([command, "--dry-run"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.dryRun).toBe(false);
+      },
+    );
+
+    // `prototyping` wired the flag upstream, but only under a subcommand: the
+    // bare command is rejected for the missing subcommand, not for the flag.
+    it.each(["iterate", "rescope"])("is accepted on prototyping %s", (action) => {
+      const parsed = parseArgs(["prototyping", action, "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+      expect(parsed.options.prototypingAction).toBe(action);
+    });
+
+    // `handoff upgrade` implements the flag as a preview, so it must NOT be
+    // rejected: the guard above is about commands that would ignore it.
+    it("keeps --dry-run on handoff upgrade, which previews instead of writing", () => {
+      const parsed = parseArgs(["handoff", "upgrade", "legacy.yaml", "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+      // The subcommand and its positional still parse alongside the flag.
+      expect(parsed.options.handoffAction).toBe("upgrade");
+      expect(parsed.options.handoffLegacyFile).toBe("legacy.yaml");
+    });
+
+    it("does not consume a following token when rejecting --dry-run", () => {
+      const parsed = parseArgs(["validate", "--dry-run", "--format", "github"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+    });
+
+    it("keeps honoring --dry-run alongside doctor --clean", () => {
+      const parsed = parseArgs(["doctor", "--clean", "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.doctorClean).toBe(true);
+      expect(parsed.options.dryRun).toBe(true);
     });
   });
 
@@ -377,6 +541,201 @@ describe("parseArgs", () => {
       // the dangling `full` does not interfere with the next iter.
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.auditScope).toBe("deviation");
+    });
+  });
+  // 引数拒否の理由 (invalidReason) は main.ts が stderr に出す診断文。
+  // 「どのトークンが拒否されたか」が出力に現れることを固定する。
+  describe("invalidReason", () => {
+    it("names the flag when a value-taking flag has no value", () => {
+      const parsed = parseArgs(["validate", "--format"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe("qfai validate: --format requires a value.");
+    });
+
+    it("names the flag, the rejected value and the accepted set", () => {
+      const parsed = parseArgs(["validate", "--profile", "bogus"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toContain("--profile");
+      expect(parsed.invalidReason).toContain('"bogus"');
+      expect(parsed.invalidReason).toContain("full");
+    });
+
+    it("keeps the first reason when several rejections fire", () => {
+      const parsed = parseArgs(["validate", "--format", "--profile"], process.cwd());
+      expect(parsed.invalidReason).toBe("qfai validate: --format requires a value.");
+    });
+
+    it("reuses the per-family subcommand wording when the subcommand is missing", () => {
+      const cwd = process.cwd();
+      expect(parseArgs(["audit"], cwd).invalidReason).toBe(
+        "qfai audit: unknown or missing subcommand. Expected: log",
+      );
+      expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
+        "qfai atdd: unknown or missing subcommand. Expected: scaffold",
+      );
+      expect(parseArgs(["handoff"], cwd).invalidReason).toBe(
+        "qfai handoff: unknown or missing subcommand. Expected: upgrade",
+      );
+      expect(parseArgs(["discussion"], cwd).invalidReason).toBe(
+        "qfai discussion: unknown or missing subcommand. Expected: list|use",
+      );
+      expect(parseArgs(["prototyping"], cwd).invalidReason).toBe(
+        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
+      );
+      expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
+        "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
+      );
+    });
+
+    it("quotes the rejected subcommand token", () => {
+      const parsed = parseArgs(["prototyping", "bogusaction"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe(
+        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-spec',
+      );
+    });
+
+    it("reports a flag used on a command that does not accept it", () => {
+      // `init` rather than `report`: `report --spec` is a real scoping flag
+      // now, so it is no longer an example of this class.
+      const parsed = parseArgs(["init", "--spec", "0003"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe("qfai init: --spec is not valid for this command.");
+    });
+
+    it("leaves invalidReason unset when the arguments parse", () => {
+      const parsed = parseArgs(["validate", "--profile", "full"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.invalidReason).toBeUndefined();
+    });
+  });
+
+  // Unknown-flag handling. Pre-fix the flag switch ended with a bare
+  // `default: break;`, so any unrecognized `--token` was silently
+  // dropped: `qfai init --dryrun` performed a REAL init and still
+  // exited 0. `.qfai/contracts/cli/qfai-init.md` reserves exit 2 for
+  // CLI-arg errors, so an unknown flag must markInvalid() with 2.
+  describe("unknown flags", () => {
+    // The usage-error code is one number for every command. It used to be 1 by
+    // default with `guardrails` alone raised to 2 by name, which contradicted
+    // `prototyping iterate`'s canonical matrix (#755). The default is 2 now, so
+    // the by-name branch assigned the value it already had - dead, and still
+    // reading as "guardrails is special". Asserted over a spread of commands
+    // rather than one, because a single case cannot tell a default from a
+    // special case.
+    it.each(["init", "validate", "report", "doctor", "guardrails", "atdd", "discussion", "audit"])(
+      "reserves the same usage-error code on %s",
+      (command) => {
+        const parsed = parseArgs([command, "--bogus-flag"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.options.invalidExitCode, `${command} must use the shared code`).toBe(2);
+      },
+    );
+
+    it("marks an unrecognized --flag invalid and reserves exit 2", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["init", "--bogus-flag", "--dry-run"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.options.unknownFlags).toEqual(["--bogus-flag"]);
+    });
+
+    it("does not let a --dry-run typo fall through to a real init", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["init", "--dryrun"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.dryRun).toBe(false);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.options.unknownFlags).toEqual(["--dryrun"]);
+    });
+
+    it("collects every unknown flag in argv order", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--nope", "--strict", "--also-nope"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.strict).toBe(true);
+      expect(parsed.options.unknownFlags).toEqual(["--nope", "--also-nope"]);
+    });
+
+    it("keeps positional subcommand arguments exempt", () => {
+      const cwd = process.cwd();
+      const use = parseArgs(["discussion", "use", "disc-0001"], cwd);
+      expect(use.invalid).toBe(false);
+      expect(use.options.discussionId).toBe("disc-0001");
+      expect(use.options.unknownFlags).toEqual([]);
+
+      const handoff = parseArgs(["handoff", "upgrade", "legacy.md"], cwd);
+      expect(handoff.invalid).toBe(false);
+      expect(handoff.options.handoffLegacyFile).toBe("legacy.md");
+      expect(handoff.options.unknownFlags).toEqual([]);
+    });
+
+    it("routes arg errors on non-guardrails commands to exit 2 as well", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--format"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+    });
+
+    // A leading unknown option is consumed by `command = args.shift()`
+    // before the flag loop, so it used to reach main.ts's
+    // unknown-command branch, which sets no exit code (exit 0).
+    it("rejects an unknown option in the command position", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["--bogus"], cwd);
+      expect(parsed.command).toBeNull();
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.unknownFlags).toEqual(["--bogus"]);
+      expect(parsed.options.invalidExitCode).toBe(2);
+    });
+
+    it("still keeps a leading --help/-h a clean help request", () => {
+      const cwd = process.cwd();
+      for (const token of ["--help", "-h"]) {
+        const parsed = parseArgs([token], cwd);
+        expect(parsed.command).toBeNull();
+        expect(parsed.invalid).toBe(false);
+        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.unknownFlags).toEqual([]);
+      }
+    });
+
+    it("collects a leading unknown option together with later ones", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["--bogus", "--also-bogus"], cwd);
+      expect(parsed.command).toBeNull();
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.unknownFlags).toEqual(["--bogus", "--also-bogus"]);
+    });
+  });
+
+  describe("init destination resolution", () => {
+    it("uses --root as the init destination when --dir is omitted", () => {
+      const parsed = parseArgs(["init", "--root", "/tmp/target"], "/tmp/cwd");
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dir).toBe("/tmp/target");
+      expect(parsed.options.root).toBe("/tmp/target");
+      expect(parsed.options.rootExplicit).toBe(true);
+    });
+
+    it("keeps --dir as the init destination when both flags are supplied", () => {
+      const parsed = parseArgs(["init", "--root", "/tmp/target", "--dir", "/tmp/out"], "/tmp/cwd");
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dir).toBe("/tmp/out");
+      expect(parsed.options.dirExplicit).toBe(true);
+    });
+
+    it("falls back to cwd for init when neither flag is supplied", () => {
+      const parsed = parseArgs(["init"], "/tmp/cwd");
+      expect(parsed.options.dir).toBe("/tmp/cwd");
+      expect(parsed.options.dirExplicit).toBe(false);
+    });
+
+    it("does not rewrite --dir for non-init commands", () => {
+      const parsed = parseArgs(["validate", "--root", "/tmp/target"], "/tmp/cwd");
+      expect(parsed.options.dir).toBe("/tmp/cwd");
+      expect(parsed.options.root).toBe("/tmp/target");
     });
   });
 
