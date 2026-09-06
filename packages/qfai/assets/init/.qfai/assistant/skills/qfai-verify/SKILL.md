@@ -299,7 +299,7 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
    only), **populate them by analyzing the current repository**:
 
 - derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints + standard gate commands from the task-runner manifest (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, …), then CI config, then lockfiles — same order as `constitution/quality.md` (tech.md#standard-commands-copy-paste)
+- derive runtime/tooling versions + constraints + standard gate commands from the task-runner manifest (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, …), then CI config, then lockfiles — same order as `.qfai/assistant/constitution/quality.md` (tech.md#standard-commands-copy-paste)
 - derive repo layout + key directories from the file tree and scripts (structure.md)
 
 1. Do **not** invent facts. If something cannot be verified, write it as:
@@ -452,7 +452,7 @@ When you declare DONE, include:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 

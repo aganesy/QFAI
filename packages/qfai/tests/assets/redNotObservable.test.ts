@@ -112,7 +112,9 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
 
       const reference = await read(tree, REFERENCE);
       expect(reference).toContain("**The `FINAL CHECKLIST` Red and Green boxes**");
-      expect(reference).toContain("**`project_memory` and `constitution/workflow.md`**");
+      expect(reference).toContain(
+        "**`project_memory` and `.qfai/assistant/constitution/workflow.md`**",
+      );
     });
 
     it(`${tree}: the evidence contract states the two forms are exclusive`, async () => {

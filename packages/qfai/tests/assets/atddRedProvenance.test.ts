@@ -2616,15 +2616,16 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // From `qfai-implement/references/` a bare `constitution/...` resolves to
     // `qfai-implement/references/constitution/...`, which does not exist, so a
     // producer could not reach the extraction rule and hashed its own range.
+    // The project-root form is now the one shape the baseline mandates.
     const evidence = await read(
       tree,
       "assistant/skills/qfai-implement/references/evidence-revision.md",
     );
     expect(flat(evidence)).toContain(
-      "`../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`",
+      "`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`",
     );
     for (const match of evidence.matchAll(/`(\.{0,2}[^`\s]*constitution\/[^`\s]+)`/g)) {
-      expect(match[1]?.startsWith("../../../constitution/")).toBe(true);
+      expect(match[1]?.startsWith(".qfai/assistant/constitution/")).toBe(true);
     }
   });
 

@@ -73,7 +73,7 @@ promised.
 That is not an implementer defect and must not be worked around by strengthening
 the assertion past the contract: doing so encodes a reviewer-originated
 obligation in a hard assertion, which
-`constitution/drift-protocol.md#reviewer-originated-obligations` forbids in
+`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations` forbids in
 exactly those terms.
 
 The route:
@@ -81,7 +81,7 @@ The route:
 1. Record `Oracle proof: equivalent-mutant`, naming the contract clause that is
    weaker than the obligation.
 2. Raise it as an advisory / Change Request per
-   `drift-protocol.md#when-drift-is-detected`. `/qfai-sdd` owns closing it, by
+   `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`. `/qfai-sdd` owns closing it, by
    tightening the contract.
 3. The row may reach `done` against its existing obligation with the advisory
    recorded — the gap is upstream, and blocking the implementer on a finding

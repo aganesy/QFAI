@@ -189,7 +189,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   stage's own `.qfai/evidence/atdd-<spec-id>.md`**, whose RED provenance is taken
   before the passing code exists and so cannot be regenerated. A negation does
   not stage a file — commit it
-  (`../../constitution/drift-protocol.md#which-evidence-is-committed`).
+  (`.qfai/assistant/constitution/drift-protocol.md#which-evidence-is-committed`).
 - **The matrix is a governance record, not a log**, so it is committed:
   `.qfai/evidence/coverage-depth-<spec-id>.md`, one justification per `❌`
   (`references/test-case-depth-checklist.md#where-the-matrix-lives`).
@@ -213,7 +213,7 @@ there: `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared
 `Level`, from `tests/integration/**`, and P4 writes those tests. Self-owned,
 they had `/qfai-implement` demand a fresh RED for a test already green here.
 
-- **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
+- **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `.qfai/assistant/constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
 - **`/qfai-sdd` Phase 2b seeds one `Layer = E2E` row per active `US-*` and one `Layer = API` row per active `CON-API-*` the spec owns — the lowest-numbered spec naming that contract; this stage still cannot create them.** A spec with an active obligation **of its own** therefore normally arrives with rows here — enumerate them and build the handoff from them. Zero is legitimate when every obligation is exempt **and** every active `CON-API-*` the spec references is owned by another spec, and even then is not "nothing to do"; a row missing for an **active** obligation this spec owns is an incomplete Phase 2b — report it, never write it. Do not demand an API row for a contract another spec owns: that row must not exist twice. `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
 - **The stage order makes that a real question**: Work Orders build the surfaces a journey needs (P3, P4), so a journey written after them passes first run — an anomaly bound for `exception`, which then becomes the only reachable terminal state.
@@ -465,7 +465,7 @@ reintroduced (or the RE-OPEN DR-IDs).
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated.
-- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 

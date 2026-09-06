@@ -406,7 +406,7 @@ If an observed layer distribution looks wrong:
 3. Continue. The stage is not blocked.
 
 The record goes to evidence, not into the spec, on purpose.
-`constitution/drift-protocol.md` lists `*_delta.md` and the per-spec Open
+`.qfai/assistant/constitution/drift-protocol.md` lists `*_delta.md` and the per-spec Open
 Questions file among the upstream SSOT a downstream stage must not edit without
 explicit user approval, and whitelists `.qfai/evidence/**` append/update as an
 allowed exception. Pointing this step at the spec would send ATDD and implement
@@ -417,7 +417,7 @@ spec's own Open Questions file on a later run: `08_Open-questions.md` in a
 layered spec, `15_Open-questions.md` in a spec pack.
 (`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)
 
-A Change Request is reserved for `constitution/drift-protocol.md`-class events
+A Change Request is reserved for `.qfai/assistant/constitution/drift-protocol.md`-class events
 — an actual conflict with an upstream SSOT decision. A volume observation is not
 one, and it stays non-blocking either way. What differs is how much of it is
 measurable:

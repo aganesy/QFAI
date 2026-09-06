@@ -1,6 +1,6 @@
 # Audited Evidence Hash
 
-The procedure `../shared-skill-delegation-baseline.md#reviewer-response-template`
+The procedure `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`
 cites for its `Audited evidence hash` field. The reviewer computes it and
 `/qfai-implement` gate item 10 recomputes it, so it is stated once, here.
 

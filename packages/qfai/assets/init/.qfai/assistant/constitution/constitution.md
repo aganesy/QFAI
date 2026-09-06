@@ -76,7 +76,7 @@ Maintain traceability links:
 through `06_Test-Cases.md`). A legacy spec-pack project carries a single
 `Scenario` hop (`scenario.feature`) in their place; that hop is superseded and
 the layered layout never produces it, so do not reference it in a layered
-project. `drift-protocol.md` lists the legacy SSOT files it belongs to.
+project. `.qfai/assistant/constitution/drift-protocol.md` lists the legacy SSOT files it belongs to.
 
 The `→ Tests` hop branches by test layer — a test answers the obligation its
 own layer owns, and only that one:
@@ -121,7 +121,7 @@ Default policy:
 
 - Ask **at most 5 clarifying questions per invocation**. The unit is one
   top-level skill or command invocation: every `/qfai-*` stage listed in
-  `workflow.md` → “Stages (canonical)”, and equally a non-stage command such as
+  `.qfai/assistant/constitution/workflow.md` → “Stages (canonical)”, and equally a non-stage command such as
   `/qfai-configure` or `/web-research`. Each invocation spends its own budget and
   the next one starts with a full budget. It is not per session and not per
   conversation.
@@ -137,7 +137,7 @@ Default policy:
   Approvals are unbounded by construction: SDD triage requires an `Approved By`
   on every approval-required row and puts no cap on rows, and the reviewer-gate
   escalation exit requires a user decision per escalation
-  (`shared-skill-delegation-baseline.md#round-budget-and-convergence-must`). Counting them would
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`). Counting them would
   make this article impossible to satisfy in the stage that asks the most.
 - Classify **each question, not the prompt**. A prompt that carries both spends
   one unit per clarification it contains; only its approval questions are exempt.
@@ -215,7 +215,7 @@ Rules:
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
    This is not an exception to the MUST rule — it is a "no-question mode".
 
-This article survives context compaction because `constitution.md` is a P1 reload target.
+This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 
 ---
 

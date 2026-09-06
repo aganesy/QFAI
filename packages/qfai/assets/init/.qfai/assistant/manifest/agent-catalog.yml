@@ -1497,7 +1497,7 @@ agents:
       genuinely weaker than the obligation. It is an upstream gap: route it as an
       advisory / Change Request, do not send the implementer to strengthen an
       assertion past the contract — that is reviewer-originated scope, which
-      `drift-protocol.md` forbids. Full criteria and the weak-oracle shapes:
+      `.qfai/assistant/constitution/drift-protocol.md` forbids. Full criteria and the weak-oracle shapes:
       `.qfai/assistant/skills/qfai-implement/references/oracle-strength.md`.
 
       ## RED/GREEN Observation Gate (MUST)

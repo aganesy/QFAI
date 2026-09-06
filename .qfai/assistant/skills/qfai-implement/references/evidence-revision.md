@@ -51,7 +51,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      When the last reviewer of a round has stored its response, record the seal
      in the item's evidence entry as `Review pack seal` — by the **audit-hash**
      procedure in
-     `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
+     `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
      not the working-tree one below: its step 2 normalization (LF, trailing
      whitespace, leading and trailing blank lines, one final newline), its
      `path + NUL + SHA-256` record sorted by path, its final hash over the
@@ -77,7 +77,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      **A record re-attestation seals its own pack the same way**, under
      `Record re-attestation pack` and `Record re-attestation pack seal` — it is
      not a round, so it takes no `Round N:` prefix
-     (`../../../constitution/drift-protocol.md#the-record-defect-queue`). The
+     (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
+     The
      pack holding the verdict it supersedes is never edited to restamp a hash:
      that would break the seal already recorded over it, which is the one thing
      a seal exists to prevent.
@@ -148,7 +149,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
 evidence hash`** beside its `Reviewed revision`. **What it covers is the
   named subject for that observation** — RED, GREEN or completion review —
   defined once in
-  `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
   Do not restate it here and do not derive it by subtraction: an entry that goes
   on growing means "the section minus what is written later" is a different
   value for every reader, and each observation is judged against the fields that
@@ -174,7 +175,7 @@ item 5's `Revision` with the final value, or pull a reviewer's back to the
 pre-refactor one, and break that table or gate item 10. The three places:
 
 1. **Reviewer responses** — as `Reviewed revision`, per
-   `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
 2. **The per-item evidence contract** — one `Revision` per round block, beside
    the RED / GREEN commands and results, one for the refactor-verify pair, named
    `Refactor verify revision` after the pair it sits beside, and one for the
@@ -301,7 +302,7 @@ identical timestamps. The revision is the only thing that survives the question
 "which code did this verdict actually rule on?".
 
 Reviewers and `qa-gatekeeper` are dispatched against the **integrated** tree by
-design — `../../../constitution/workflow.md`'s worktree-separation rule constrains
+design — `.qfai/assistant/constitution/workflow.md`'s worktree-separation rule constrains
 implementers, not reviewers — so the tree a reviewer reads is legitimately
 allowed to move under it. A fully independent reviewer reading a tree that is
 being edited mid-review produces a verdict that is honest, independent and

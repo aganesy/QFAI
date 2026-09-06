@@ -315,7 +315,7 @@ describe("a Change Request is a defined artifact", () => {
         expect(cells(delta), `${template} CR table columns`).toContain(header);
         expect(delta).toContain(
           "The canonical CR-reference record required by " +
-            "`constitution/drift-protocol.md#when-drift-is-detected` step 4.",
+            "`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` step 4.",
         );
         // The Triage table must not become the fallback the constraint forced.
         expect(delta).toContain("Do not record a CR as a `## Triage` row");

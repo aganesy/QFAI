@@ -85,6 +85,27 @@ So for a machine-readable asset at the ceiling the remedy is, in order:
    document — naming what makes the split impossible. "This file is long" is
    not that reason, and a prose asset may not use this step.
 
+## Citation Path Form (Mandatory)
+
+A pointer only resolves if the reader knows what base to resolve it against.
+There is one base, and it is the project root.
+
+- **Cite a constitution document by its full path from the project root.**
+  Write the path from the project root, with `#anchor` appended when one
+  applies: `.qfai/assistant/constitution/drift-protocol.md`. Not the bare
+  filename, not the assistant-root form starting at **constitution/**, not a
+  **../../../** climb. That form is the only one that resolves from every
+  directory in the tree, and the only one that still resolves when read with
+  the cwd at the project root — which is where an agent's cwd is.
+- **The same holds when a constitution document cites another one**, including
+  a sibling in its own directory. A bare name works there only by accident of
+  where the citing file sits; it stops working the moment the text is quoted
+  elsewhere.
+- **Within a skill's own directory, keep pointers relative to that directory**:
+  `references/<topic>.md`, `templates/<name>.md`. Those name the skill's own
+  parts, not a shared document, and the surrounding text already establishes
+  which skill is meant.
+
 ## User Questions (AskUserQuestion Protocol)
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available.
@@ -101,7 +122,7 @@ So for a machine-readable asset at the ceiling the remedy is, in order:
   beside it. On exhaustion, do not ask a sixth clarification — proceed with
   explicit, labelled assumptions and record them in the output, as `--auto`
   does; a required approval may still be asked. See
-  `constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
+  `.qfai/assistant/constitution/constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
 - When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask
   via plain text. Proceed with explicit assumptions and record them in the outputs.
   Proceeding presupposes evidence to assume from — when a step has none, it is a hard
@@ -186,7 +207,7 @@ Rules:
 
 ## Gate Failure Autorepair Protocol
 
-When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `shared-skill-delegation-baseline.md#verdict-vocabulary`):
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
 
 - inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skills/qfai-verify/references/validate-json-schema.md`);
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
@@ -197,7 +218,7 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
 - stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
-- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `review-convergence.md#round-budget-must`.
+- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `.qfai/assistant/constitution/review-convergence.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 
@@ -274,16 +295,16 @@ instead of the completion claim.
 Open Questions register row carrying its tracking fields — ID, owner, status,
 due — and the `Open Questions` heading, `OQ-ID` table header and empty-state row
 that the required `Open-questions.md` files ship with while recording zero open
-questions. Article II and `workflow.md` both end an unverifiable fact by
+questions. Article II and `.qfai/assistant/constitution/workflow.md` both end an unverifiable fact by
 recording an Open Question, so the tracked record they prescribe must never be
 reported as an unresolved placeholder. Everywhere else the two strings are still
 scanned: a bare `OQ` or `OPEN QUESTION` left as a value in generated spec prose
 or a contract field, or a row missing its owner, status or due date, is a hit
 like any other token.
 
-**A documented `TBD` is a compliant record.** `constitution.md` Article II and
-`thinking.md` require writing `TBD` together with a note of what evidence is
-missing, and `thinking.md` requires raising the matching Open Question for the
+**A documented `TBD` is a compliant record.** `.qfai/assistant/constitution/constitution.md` Article II and
+`.qfai/assistant/constitution/thinking.md` require writing `TBD` together with a note of what evidence is
+missing, and `.qfai/assistant/constitution/thinking.md` requires raising the matching Open Question for the
 same fact. Both halves together are the finished form, not an unfinished one; do
 not report it and do not delete it — deleting it destroys the record of the
 missing evidence, which is the whole point of the marker. A `TBD` missing either
@@ -307,6 +328,6 @@ Open Question_ are NOT available for a hit that stands in for a concrete
 security defect, data loss or corruption, or a correctness defect that would
 break a released contract. Such a hit is cleared only by a named fix or by
 dropping the item from scope; recording it and declaring completion anyway is
-prohibited, exactly as `shared-skill-delegation-baseline.md` withholds that same
+prohibited, exactly as `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` withholds that same
 exit for that same class. While neither of the two remaining verdicts applies,
 completion stays blocked.

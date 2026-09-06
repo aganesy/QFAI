@@ -26,7 +26,7 @@ Allowed values:
 - Primary: `Initial | Behavior | Structural | Ops`
 - Tags (optional): `@api @db @nfr @docs @test`
 
-These values are restated from `.qfai/assistant/constitution/change-classification.md` (SSOT). See `change-classification.md#2-tags-multi-select` for each tag's trigger condition and examples; a tag not listed there is dropped by every consumer.
+These values are restated from `.qfai/assistant/constitution/change-classification.md` (SSOT). See `.qfai/assistant/constitution/change-classification.md#2-tags-multi-select` for each tag's trigger condition and examples; a tag not listed there is dropped by every consumer.
 
 Do not proceed without a declared Change Type.
 
@@ -37,7 +37,7 @@ Do not proceed without a declared Change Type.
 - Read and enforce `.qfai/assistant/constitution/drift-protocol.md`.
 - Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
 - If drift is required, STOP and raise a Change Request (3 options + recommendation), then wait for approval and rerun the owner skill.
-- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the Change Request enumerates. Unaffected items continue, and more than one Change Request may be open at once — see `drift-protocol.md#multiple-open-change-requests`.
+- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the Change Request enumerates. Unaffected items continue, and more than one Change Request may be open at once — see `.qfai/assistant/constitution/drift-protocol.md#multiple-open-change-requests`.
 
 ## Test-layer policy (Mandatory)
 
@@ -98,7 +98,7 @@ Legacy note:
 
 This subsection binds **every** stage that delegates in parallel, including
 `/qfai-sdd` no-argument batch runs and `/qfai-implement` slice execution. It is
-a real heading so `workflow.md#concurrency-stage-independent-mandatory` resolves
+a real heading so `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory` resolves
 from the skills and baselines that cite it.
 
 - Worktree separation is required whenever two or more delegated agents write

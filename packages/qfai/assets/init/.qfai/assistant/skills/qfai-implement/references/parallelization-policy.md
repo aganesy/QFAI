@@ -76,7 +76,7 @@ per-worker schema isolation, not by a blanket deny.
   Satisfy it either by a **disjoint write set** (each item owns different
   ports/paths/keys) or by **per-worker isolation** (ephemeral port 0, a
   `mkdtemp` directory per worker, a namespaced cache/queue prefix). A resource
-  neither disjoint nor isolated is a DENY: `constitution/workflow.md#concurrency-stage-independent-mandatory`
+  neither disjoint nor isolated is a DENY: `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`
   requires no shared state, and the collision would appear at run time as a
   flaky RED/GREEN rather than at adjudication.
 
@@ -91,7 +91,7 @@ is a DENY, because the independence claim then has no concrete evidence.
 ## Isolation requirement (worktree separation)
 
 Adjudicated separately from the "all must be true" list above, and **not
-waivable**. Per `constitution/workflow.md#concurrency-stage-independent-mandatory`,
+waivable**. Per `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`,
 worktree separation is required for parallel execution, so
 `delivery-planner` has two outcomes, not three:
 

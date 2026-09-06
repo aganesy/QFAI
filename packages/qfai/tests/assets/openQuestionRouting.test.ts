@@ -64,7 +64,7 @@ describe("the Completion Checklist routes open questions to the owner phase", ()
         const checklist = flat(completionChecklist(await read(tree, skillPath(skill))));
 
         expect(checklist).toContain(
-          "Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`;",
+          "Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`;",
         );
         // A skill's own configuration questions are not reviewer-originated
         // product scope: routing them to the owner phase would misdeliver a

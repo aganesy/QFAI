@@ -21,7 +21,7 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
   `TDD-ID`s in `review_request.md` as a **list** — one id for a T2 or T3 row, the group's whole
   membership for a T1 coherent group, written as the single block `volume-policy.md#batched-review`
   already requires of the evidence file. The verdict then carries one `Audited evidence hash` per
-  listed id (`shared-skill-delegation-baseline.md#reviewer-response-template`).
+  listed id (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`).
 - A T1 group review is **one round**, not one turn per member — and not one turn in total. Each
   reviewer this pack carries (`completion-reviewer`, `implementation-reviewer`, and
   `product-surface-reviewer` where item 9 applies) takes **one** turn over the whole group, as
@@ -64,7 +64,7 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
   declares no form at all is a producer that forgot. Only `revision_form: "legacy"`, corroborated by
   `.qfai/review/.legacy-packs`, marks a pack as predating the form.
   A `REVISE` verdict during iteration is written as `status: "FAIL"` here — see
-  `shared-skill-delegation-baseline.md#verdict-vocabulary`.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - **A round that produced no responses is written down, not left as an absence.** When the routed
   reviewers die before writing anything, the pack still gets its `summary.json`, declaring
   `reviewers: []` and `overall_status: FAIL` — a round that returned no verdict returned no
@@ -74,7 +74,7 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
 - A **record re-attestation** takes a new pack of this same shape, even though it is not a round
-  (`../../../constitution/drift-protocol.md#the-record-defect-queue`). It carries the same
+  (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`). It carries the same
   `Reviewed revision` and `Result` as the verdict it supersedes and a recomputed
   `Audited evidence hash`; `summary.json` names the same `revision`. It is a separate pack because
   the superseded verdict's pack is fixed by a `Review pack seal` the completion gate recomputes —

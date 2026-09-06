@@ -103,7 +103,7 @@ unable to reach `done`.
 - **The `FINAL CHECKLIST` Red and Green boxes** are ticked by this path's
   substitutes: the falsifiability trio for Red, and the observed pass with no
   new production code for Green.
-- **`project_memory` and `constitution/workflow.md`** restate "fresh RED +
+- **`project_memory` and `.qfai/assistant/constitution/workflow.md`** restate "fresh RED +
   GREEN evidence is mandatory per item"; both now carry this path's exception,
   so a run that reloads only its memory context does not re-impose the RED pair
   and force a fabricated failure.

@@ -101,6 +101,6 @@ npx qfai validate --profile sdd --fail-on error --format github
 - Rationale: <one line>
 
 > `Final status` accepts exactly `PASS` or `REVISE`, matching the reviewer
-> vocabulary in `shared-skill-delegation-baseline.md#verdict-vocabulary`. A
+> vocabulary in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`. A
 > `REVISE` here maps to `status: "FAIL"` when a review pack's `summary.json` is
 > written; they are the same outcome. Do not invent a third verdict.

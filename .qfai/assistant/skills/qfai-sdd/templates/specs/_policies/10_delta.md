@@ -44,7 +44,7 @@
 ## Change Requests
 
 <!-- The canonical CR-reference record required by
-     `constitution/drift-protocol.md#when-drift-is-detected` step 4. One row per
+     `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` step 4. One row per
      approved Change Request whose owner-skill rerun landed in this layer. The
      rerun writes it in Phase 4, never before approval. `Mode` is the rerun mode
      the CR approved (`confirm-only` or `re-derive`); `Applied at` matches the

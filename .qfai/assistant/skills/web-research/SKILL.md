@@ -52,7 +52,7 @@ baseline overlap, the baseline governs.
 ## Work Orders Summary
 
 Every major research artifact MUST include a `## Work Orders Summary` table.
-Use the shared schema from `shared-skill-delegation-baseline.md` — including the
+Use the shared schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` — including the
 `Agent instance` column, without which an author-reviewed-their-own-work
 collision cannot be detected from the evidence afterwards. Typical pipeline
 steps:
@@ -66,13 +66,13 @@ steps:
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be performed by an independent reviewer, as defined
-  normatively in `shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
+  normatively in `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
   Being routed as `Reviewer` does not by itself make an agent independent: an agent
   that drafted or edited any artifact under review is disqualified for the whole run,
   and MUST hand the same evidence set to a non-participating reviewer instead of
   returning `PASS`.
 - Reviewer responses use the response template in
-  `shared-skill-delegation-baseline.md#reviewer-response-template`, including the
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`, including the
   REQUIRED `Reviewer role:`, `Reviewed artifact:` and `Authored/edited under review:`
   lines. A response omitting any of them is not a valid verdict; anything other than
   `none` on the last cannot be a `PASS`.

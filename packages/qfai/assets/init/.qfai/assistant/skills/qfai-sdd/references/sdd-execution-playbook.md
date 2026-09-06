@@ -19,7 +19,7 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 1. Identify the latest discussion-pack, if there is one.
 2. Note which of its files are missing, and any blocking OQ, as reference-quality
    facts — they are recorded, not blocking. A pack is non-normative reference
-   material (`constitution/drift-protocol.md#core-rule`), so do NOT repair or
+   material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
 3. Stop only when there is no usable source at all: no pack, no import-lite

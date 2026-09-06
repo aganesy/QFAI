@@ -86,7 +86,7 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
   does not exempt it; in degraded mode it is the only committer, so a sweeping
   stage there mixes every sibling's work into one commit.
 - Isolation requirements for concurrent stages are defined once in
-  `constitution/workflow.md#concurrency-stage-independent-mandatory`.
+  `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`.
 
 ## Work Orders Summary
 
@@ -171,16 +171,16 @@ in/out split is not re-derived per run.
 - `Traces to:` names what the finding enforces. Legal values:
   - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named constitution/catalog rule **that governs the product's behaviour**;
   - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts themselves, cited with the evidence that demonstrates it
-    (see `drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
+    (see `.qfai/assistant/constitution/drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
   - `record:<CODE>` — a defect in the run's own record rather than in the product: a ledger cell, a round block, an evidence anchor, the provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
 - `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the record-defect queue the
-  reviewing stage's own completion contract names, and that contract is what drains it (`drift-protocol.md#the-record-defect-queue`). **The class needs a drain: only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record, re-attested in a new pack where a reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair —
+  reviewing stage's own completion contract names, and that contract is what drains it (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`). **The class needs a drain: only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record, re-attested in a new pack where a reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair —
   a record rule worth a round is worth a validator code.
 - **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false
   `Authored/edited under review` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
   built on them, so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
-- A `none` advisory takes the Change Request / Open Question path (`drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
+- A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
 - Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
 
 ### Reviewer budget exhausted
@@ -205,12 +205,12 @@ Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
-- constitution/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
+- .qfai/assistant/constitution/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
 Constraints:
 - must: enforce Drift Protocol
 - must: follow applicable test-layer or validation policy
 - must_not: patch upstream artifacts directly; every upstream change requires
-  STOP + Change Request + owner rerun per constitution/drift-protocol.md
+  STOP + Change Request + owner rerun per .qfai/assistant/constitution/drift-protocol.md
 Output format:
 - <headings / bullet schema>
 Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`: that is the reviewer's vocabulary and the completion gate matches on it, so a doer told to report in it emits a verdict on its own work
@@ -236,7 +236,7 @@ Evidence checked:
 - <refs>
 ```
 
-`Round` is required — the round budget in `review-convergence.md` is counted
+`Round` is required — the round budget in `.qfai/assistant/constitution/review-convergence.md` is counted
 from it. `2b` is the
 post-escalation verification review of a user-named fix.
 

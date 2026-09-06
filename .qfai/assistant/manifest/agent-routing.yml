@@ -16,7 +16,7 @@ schema_version: "1.0"
 # The reverse also holds: a declared role that neither this manifest nor the
 # skill's review profile selects is a stale grant and is reported as a warning.
 # The one exception is `orchestrator`, the invoking agent, which
-# `constitution/shared-skill-delegation-baseline.md` governs instead of any
+# `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` governs instead of any
 # routing phase.
 #
 # Both directions need a `roles:` list to compare, so a `roles:` key that is
@@ -206,7 +206,7 @@ routing:
         parallel_groups: []
         # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
         # unconditional 12-point gate in qfai-implement/SKILL.md, and every DONE
-        # rule in the skill and in shared-skill-delegation-baseline.md is phrased
+        # rule in the skill and in .qfai/assistant/constitution/shared-skill-delegation-baseline.md is phrased
         # over *blocking* reviewers. Listing it as mandatory-only let an item
         # reach `done` with the code-quality reviewer sitting at REVISE.
         blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
@@ -365,5 +365,5 @@ routing:
 #                               touched, including ones that passed
 #
 # The key was previously on all 23 phases, defined nowhere and read by nothing,
-# so a typo in it was invisible. `constitution/drift-protocol.md` step 4 uses the
-# same vocabulary when a Change Request names its rerun mode.
+# so a typo in it was invisible. `.qfai/assistant/constitution/drift-protocol.md`
+# step 4 uses the same vocabulary when a Change Request names its rerun mode.

@@ -97,7 +97,9 @@ describe("output language is stated in one place only", () => {
     it(`${tree}: agent-selection.md points at the Absolute Rule instead`, async () => {
       const text = flat(await read(tree, AGENT_SELECTION));
 
-      expect(text).toContain("`constitution.md` の Absolute Rule — Output Language に従う");
+      expect(text).toContain(
+        "`.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う",
+      );
       // Naming the removal is what stops it being re-ported as a "missing"
       // header block the next time the file is synced from `.instruction/`.
       expect(text).toContain("このファイルは出力言語を固定しない");
@@ -183,7 +185,7 @@ describe("fixed-language directive matcher", () => {
     ],
     [
       "the agent-selection disclaimer",
-      "> **出力言語**: `constitution.md` の Absolute Rule — Output Language に従う。\n" +
+      "> **出力言語**: `.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う。\n" +
         "> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、\n" +
         "> エージェントの出力に対する指示ではない）。",
     ],

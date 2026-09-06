@@ -36,7 +36,7 @@ raises `TDDLIST_EXCEPTION_UNRESOLVED_DR`.
 ## Re-open records
 
 `Status: re-open` is the `[RE-OPEN]` decision record the Delta Rejected Guard
-(`constitution/shared-skill-operating-baseline.md`) requires before a candidate
+(`.qfai/assistant/constitution/shared-skill-operating-baseline.md`) requires before a candidate
 listed under a delta's `## Rejected` may be re-adopted. It is an ordinary entry
 in this file, so it inherits the ID scheme above and resolves the same way.
 

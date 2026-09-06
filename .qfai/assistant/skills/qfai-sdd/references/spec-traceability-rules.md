@@ -195,9 +195,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   empty or a dash placeholder, and `Selector` while the seeded value does not resolve against
   the row's named test file. It owns nothing else — `TC-Refs`, `Layer`, `US-Refs` and
   `CON-API-Refs` carry the row's obligation identity and stay upstream. This is the carve-out
-  in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both
-  conditions; adding, removing or re-scoping a row is an upstream change and takes the Change
-  Request path.
+  in `.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`,
+  which states both conditions; adding, removing or re-scoping a row is an upstream change and
+  takes the Change Request path.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
@@ -262,7 +262,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   split.** Uniqueness alone does not say who takes the next value.
   `TDD-NNNN` is spec-scoped and monotonic, so that value is `max + 1`
   over the very file every concurrent author is also appending to — and
-  `constitution/workflow.md` requires worktree separation for parallel work,
+  `.qfai/assistant/constitution/workflow.md` requires worktree separation for parallel work,
   which makes the read stale the moment another author appends.
   `TDDLIST_DUPLICATE_ID` is an `error`, so everyone but the last writer is
   locked out of landing their rows at all. The rule:
@@ -354,7 +354,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
      the next author is handed `TDD-0066`, reissuing the very ids the gap
      retired. **A deleted row leaves its id behind the same way.** The
      Drift Protocol removes — does not reset — a row whose obligation was
-     deleted outright (`constitution/drift-protocol.md`), so the id leaves
+     deleted outright (`.qfai/assistant/constitution/drift-protocol.md`), so the id leaves
      the table and rule 1's maximum falls back with it: delete the highest
      row, `TDD-0002`, and the next allocation is handed `TDD-0002` again,
      breaking rule 4 for every reference already written outside the ledger.

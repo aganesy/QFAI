@@ -6,7 +6,7 @@ update_frequency: occasional
 
 <!-- markdownlint-disable MD041 -->
 
-> **出力言語**: `constitution.md` の Absolute Rule — Output Language に従う。
+> **出力言語**: `.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う。
 > このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、
 > エージェントの出力に対する指示ではない）。
 

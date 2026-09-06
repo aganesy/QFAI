@@ -19,7 +19,7 @@ outcomes used to violate a shipped rule:
 - do not change it, and the Refactor phase's own instruction is unmet, and
   spec B ships a duplicate.
 
-Neither left any trace under `.qfai/**`. `drift-protocol.md`'s upstream list
+Neither left any trace under `.qfai/**`. `.qfai/assistant/constitution/drift-protocol.md`'s upstream list
 contains no code or test artifacts, so the STOP → Change Request → owner-rerun
 route never fired for them.
 
@@ -29,7 +29,7 @@ route never fired for them.
 spec's to certify.** So is a test file another spec's ledger names in
 `Test file`, for the narrower case where the file being edited is itself that
 spec's test. In both columns it is the `done` rows that carry the certification
-— `constitution/drift-protocol.md` reads the two columns the same way. Editing
+— `.qfai/assistant/constitution/drift-protocol.md` reads the two columns the same way. Editing
 such a file does not require permission — it requires a record and a re-review.
 
 1. **Detect.** Before editing a production file **or a test file** — in **any
@@ -167,7 +167,7 @@ that path is now routed through the new guard" is.
 
 If the other spec's obligation genuinely no longer holds — the behaviour it
 asserted has changed, not merely moved — that is upstream drift, and
-`constitution/drift-protocol.md#when-drift-is-detected` governs from step 1.
+`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` governs from step 1.
 Record the CR id in `Resolution`. Re-review cannot ratify a behaviour change the
 other spec never agreed to; only its owner can.
 

@@ -1,7 +1,7 @@
 # Review Convergence
 
 How a review round ends, and what may follow it. Referenced from
-`shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
 which owns the delegation rules these sit beside.
 
 ### Round budget (MUST)
