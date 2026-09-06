@@ -75,6 +75,11 @@ const TEXT_EXTENSIONS = new Set([
   ".yaml",
   ".yml",
   ".json",
+  // The MCP server templates the `web-research` skill ships. A text format the
+  // init payload carries but this walk does not open is a distributed surface
+  // with no guard over it — the shell guard greps the tree with no extension
+  // filter, so the two layers would disagree about what they cover.
+  ".toml",
   ".ts",
   ".tsx",
   ".js",
@@ -194,6 +199,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     const hits: Hit[] = [];
     const nameHits: Hit[] = [];
     const visitedRelative: string[] = [];
+    const scannedRelative: string[] = [];
     for await (const { full: file, isFile } of walk(tmpDir)) {
       const relative = path.relative(tmpDir, file);
       visitedRelative.push(relative);
@@ -203,6 +209,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       // extensionless `.gitkeep` / `.gitignore` / `.gitattributes` included.
       if (!isFile) continue;
       if (!isScannableTextFile(file)) continue;
+      scannedRelative.push(relative);
       const stats = await stat(file);
       if (stats.size > 1_000_000) continue;
       const content = await readFile(file, "utf-8");
@@ -272,6 +279,21 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       symlinked.length,
       "the walk must reach the skill wrappers init creates as symlinks",
     ).toBeGreaterThan(0);
+
+    // The MCP server templates the `web-research` skill ships are TOML — a text
+    // format the init payload did not carry until they moved into it, and one
+    // this pass would have walked past unread. A shipped text file the content
+    // scan skips is a distributed surface with no guard over it, and the shell
+    // guard greps the tree with no extension filter at all, so the two layers
+    // would have disagreed about what they cover with nothing saying so.
+    //
+    // Pinned on the SCANNED list rather than the walked one: walking a file
+    // proves nothing about whether its bytes were read, which is the whole
+    // distinction `isScannableTextFile` draws.
+    expect(
+      scannedRelative.filter((rel) => rel.endsWith(".toml")),
+      "the init payload ships .toml, so the content scan has to open it",
+    ).not.toEqual([]);
   });
 
   // The walk above only proves that today's tree happens to be clean —
