@@ -139,7 +139,36 @@ once, then after each ledger:
    conditions or report the blockers. `exception` rows do not stop the queue;
    they are reported with their DR-IDs and carried into the final summary.
 2. Look at the remaining queue. **Empty -> exit.** Otherwise announce the next
-   `spec-id`, load its `test-list.md`, and restart at Phase: Red.
+   `spec-id` and **re-validate the frame before loading its ledger.** The plan
+   was fixed before the first row of the first spec moved (`plan-phase.md`), and
+   the specs ahead of this one have since written production code and may have
+   opened Change Requests, so check the two inputs that pass was taken over:
+   - the **in-scope `CR-*` set** for this spec — re-run step 1 of
+     `change-request-reset.md#the-mandatory-preflight` and compare it with what
+     the `plan` pass enumerated;
+   - the **revision** the plan was taken against, by the procedure in
+     `evidence-revision.md#the-field`, against the tree as it stands now.
+
+   **Both unchanged -> reuse the plan.** Load the spec's `test-list.md` and
+   restart at Phase: Red — **inside the plan already fixed for that spec**: the
+   tiers, groups, dispatch decision and row order it runs under are the ones
+   that pass returned, and the transition re-enters neither Stage 0 nor `plan`.
+   That is the ordinary path and what `iteration: per-invocation` buys.
+
+   **Either moved -> re-enter Stage 0 step 2 and `plan`** over the specs still
+   queued, and run this one inside the plan that pass returns. A `CR-*` created
+   or approved mid-run has had no reset applied to it, so the old plan moves
+   rows an approved reset had already invalidated; and an earlier spec's edits
+   move the import graph the dependency order, the risk tiers and the
+   **parallel dispatch** decision were derived from, so the old plan can license
+   a parallel run against a dependency graph that no longer exists. Record which
+   of the two fired in `.qfai/evidence/implement-<spec-id>.md`.
+
+   Re-entry on a moved frame is **not** the per-ledger iteration
+   `per-invocation` rules out: it is the same re-entry a blocking
+   `delivery-planner` REVISE already takes (`plan-phase.md`), and the check
+   above is the only thing that reaches it.
+
 3. "Report and exit" in CRITICAL CONSTRAINTS applies per ledger, not per run: a
    ledger whose rows are all `done` yields "nothing to do" **for that spec** and
    the queue advances past it rather than ending the run.
@@ -148,7 +177,12 @@ once, then after each ledger:
 
 A queue entry is never skipped silently: a spec that cannot be started (missing
 ledger, unresolved Change Request) is reported as blocked and the queue moves
-on to the next entry.
+on to the next entry. That determination is made in the `plan` phase, which
+read every queued ledger, so it is surfaced up front rather than discovered
+when the queue reaches the entry — for everything knowable at that point. A
+spec the step-2 re-validation newly blocks, because the run itself raised the
+unresolved Change Request, is reported at that transition instead: the up-front
+pass cannot have judged a CR that did not exist when it ran.
 
 ## Cost visibility
 
