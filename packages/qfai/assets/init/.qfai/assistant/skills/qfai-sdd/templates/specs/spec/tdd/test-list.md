@@ -44,6 +44,16 @@ Phase 2c gives it one.
 An empty table below is valid — it means the spec has no coverage-target TC and
 no active `US-*` / `CON-API-*` yet, not that the ledger is missing.
 
+`Tier` is seeded with the row, from its `Layer`, what the item touches
+(infrastructure, a public API surface, a `CON-*` contract or persisted schema →
+`T2`; UI behavior or rendered output → `T3`) and the criticality list in
+`.qfai/assistant/skills/qfai-implement/references/volume-policy.md`. `Layer`
+alone does not decide it: a `Unit` row over persisted schema and a `Component`
+row over rendered output are `T2` and `T3`. The stage that fixes `Layer` already
+holds every input the derivation takes, and `/qfai-implement` needs the answer
+before it starts the row — so it is declared here and
+never written into `Evidence`.
+
 The E2E and API rows are **tracked** here, not authored here. Their acceptance
 tests are written by `/qfai-atdd` and their `Status` / `DR-ID` / `Evidence` are
 advanced by `/qfai-implement`; the production behaviour a journey exercises is
@@ -86,8 +96,8 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ |
+| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs |
+| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ |
 
 ## Schema
 

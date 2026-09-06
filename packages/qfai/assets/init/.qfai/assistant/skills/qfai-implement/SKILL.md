@@ -220,13 +220,13 @@ This skill delegates through the centralized routing policy in `.qfai/assistant/
 
 ## Volume Policy (MUST)
 
-Scale the ceremony to the ledger: derive a **risk tier** per row, **batch** T1 gatekeeping and
-reviews per coherent BR/AC group, process multiple specs as a **sequential queue**, state the
-implied **cost** before starting. The tier scales how **often** a gate runs, never **whether** it
-runs: `agent-routing.yml` keeps `qa-gatekeeper`, `completion-reviewer` and
-`implementation-reviewer` all mandatory and all blocking, and criticality
-(authz, crypto, money, data integrity) forces T2 regardless of layer. Why this exists, the tier
-table, the group-formation transitions and the queue-advance steps: `references/volume-policy.md`.
+Scale the ceremony to the ledger: take each row's **risk tier** from its own ledger table's `Tier` column
+(blank is T1; a table lacking that column derives per row), **batch** T1 gatekeeping and reviews per
+coherent BR/AC group, process multiple specs as a **sequential queue**, state the implied **cost** before
+starting. The tier scales how **often** a gate runs, never **whether** it runs: `agent-routing.yml` keeps
+`qa-gatekeeper`, `completion-reviewer` and `implementation-reviewer` all mandatory and all blocking, and
+criticality (authz, crypto, money, data integrity) forces T2 regardless of layer. Why this exists, the
+tier table, the group-formation transitions and the queue-advance steps: `references/volume-policy.md`.
 
 ### Handoff Contracts
 

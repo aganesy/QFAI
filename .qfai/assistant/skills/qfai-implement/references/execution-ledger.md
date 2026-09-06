@@ -58,6 +58,35 @@ commit message, `.qfai/evidence/implement-*.md`, `.qfai/evidence/atdd-*.md`, a
 the reservation bullet's shape and why it must not be a markdown table:
 `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`.
 
+## Declared tier column (optional, seeded at ledger-authoring time)
+
+| Column | Description                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------------ |
+| Tier   | Review tier `/qfai-implement` owes this row. Legal values: `T1`, `T2`, `T3`; `-` when undeclared |
+
+`Tier` sizes the ceremony a row is processed with
+(`volume-policy.md#risk-tier-derive-per-row`). Like `Owning module` it is a
+**declaration made upstream**, and for the same reason: the stage that fixes a
+row's `Layer` already holds every input the tier derivation takes, and the
+consumer needs the answer _before_ it starts the row.
+
+- Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b), from the row's
+  `Layer`, what the item touches, and the criticality list in
+  `volume-policy.md#criticality-outranks-connectedness`.
+- **Blank or `-` means `T1`.** The default runs this way round only because the
+  tier is seeded rather than claimed: a row nobody escalated is a row nobody
+  found a reason to escalate. A ledger **table** carrying no `Tier` column is
+  not covered by that default — read the header of the table the row lives in,
+  not the file, because `/qfai-implement` appends a table per change request and
+  a seeded table can sit beside one that predates the column. Derive the tier of
+  every row in that table before processing it.
+- **Never record it in `Evidence`.** That cell is a pointer, not the payload
+  ("Evidence cell contract" below), and it is written last, by the agent whose
+  ceremony the tier was supposed to size. A tier kept there cannot be read
+  before the work it governs, which is what made `T1` unreachable.
+- A value outside `T1` / `T2` / `T3` raises `QFAI-TDDLIST-010` (error).
+  Blank buys the cheapest tier, so a mistyped one must not quietly buy it too.
+
 ## Declared seam column (optional, required for parallel dispatch)
 
 | Column        | Description                                                                                |

@@ -16,6 +16,12 @@ const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.m
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
+/**
+ * Collapse markdown soft wraps so assertions pin wording, not the column at
+ * which the sentence happened to break.
+ */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 /** Splits a markdown table row into trimmed cells. */
 const cells = (row: string): string[] =>
   row
@@ -40,6 +46,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "TDD-ID",
         "TC-Refs",
         "Layer",
+        // Seeded with `Layer`, which is where the tier derivation's inputs
+        // already are. Shipping it in the header is what makes T1 reachable:
+        // a tier nobody can write is a tier nobody claims.
+        "Tier",
         "Test file",
         "Selector",
         "Status",
@@ -49,6 +59,111 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "CON-API-Refs",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
+    });
+
+    it(`${tree}: the template says who seeds Tier and what a blank cell means`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("`Tier` is seeded with the row");
+      expect(template).toContain("never written into `Evidence`");
+      // The template used to restate the schema and this line read it there.
+      // main moved the schema into the rules file and told the template not to
+      // restate it, so optionality is asserted where the schema now lives: the
+      // required list is closed and `Tier` is not in it.
+      const schema = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(schema).toContain(
+        "- Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence",
+      );
+      expect(schema).toMatch(/- Optional columns:[^.]*`Tier`/);
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Seed each row's `Tier` alongside its `Layer`");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("**Seed `Tier` with the\n   row**");
+    });
+
+    it(`${tree}: the ledger FORMAT SSOT carries Tier so Phase 2b cannot drop it`, async () => {
+      // The template points at `spec-traceability-rules.md` for the full rules
+      // and `qfai-sdd/SKILL.md` makes it required reading before any artifact
+      // is written. A column absent from that list reads as non-standard, and
+      // the agent that omits it un-seeds the tier the template just seeded.
+      const rules = unwrap(
+        await read(tree, "assistant/skills/qfai-sdd/references/spec-traceability-rules.md"),
+      );
+      // Membership, not position: the case that owns `Owning module` pins this
+      // list from its opening, so `Tier` joins the end of it.
+      expect(rules).toMatch(/Optional columns:[^.]*`Tier`/);
+      expect(rules).toContain("Legal values `T1`, `T2`, `T3`, or `-`");
+      expect(rules).toContain("raises `QFAI-TDDLIST-010`");
+      // Optionality, value range and owner — all three, in the SSOT.
+      expect(rules).toContain("seeded at Phase 2b beside `Layer` and never written by");
+      expect(rules).toContain("Do not drop the column as non-standard");
+    });
+
+    it(`${tree}: a raised Tier reopens the row instead of inheriting T1 evidence`, async () => {
+      // Phase 2b is re-run per change request. Without this, a TC whose tier
+      // is corrected upward keeps `done` and the batched T1 reviewer trail, so
+      // the per-row and product-surface turns the new tier owes never run.
+      const checklists = unwrap(
+        await read(tree, "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md"),
+      );
+      expect(checklists).toContain("Re-derive `Tier` on every re-run");
+      expect(checklists).toContain("it overrides the delta rule above");
+      expect(checklists).toContain(
+        "return `Status` to `todo`, record the driving `CR-*` in `DR-ID`, and cite that `CR-*` in `Evidence` **above the retained prior trail**",
+      );
+      expect(checklists).toContain("A **lowered** tier keeps `Status` and `Evidence`");
+
+      // The reset is the upstream reset, so it obeys that rule's own contract:
+      // `execution-ledger.md` makes the reset cite its approval in `Evidence`
+      // and the template keeps prior `Evidence`. Wiping the cell would delete
+      // the only record of the cycle the raise withdrew, and with it the
+      // reviewer's way to audit that the reopen was authorised.
+      expect(checklists).not.toContain("clear the now-void `Evidence`");
+      expect(checklists).toContain("never as credit toward the new tier");
+
+      // The short project_memory is what a compacted run keeps, so the
+      // exception has to survive there too — otherwise that run reads the
+      // unqualified delta rule and leaves the raised row `done`.
+      const memory = unwrap(await read(tree, "assistant/skills/qfai-sdd/SKILL.md"));
+      expect(memory).toContain(
+        "a **raised** Tier (T1 -> T2/T3, T2 -> T3) is an upstream reset even for an unchanged TC",
+      );
+      expect(memory).toContain("keeping the prior Evidence as history");
+      expect(memory).toContain("A lowered Tier keeps Status and Evidence.");
+    });
+
+    it(`${tree}: the tier derivation reads what the row touches, not only Layer`, async () => {
+      // `volume-policy.md` tiers on three inputs — `Layer`, what the item
+      // touches, and criticality. Naming only two of them here seeds a `Unit`
+      // row over persisted schema, or a `Component` row over rendered output,
+      // as T1; the validator only checks the value range, so the batched
+      // ceremony would stand.
+      const template = unwrap(await read(tree, TEMPLATE));
+      expect(template).toContain("from its `Layer`, what the item touches");
+      expect(template).toContain(
+        "a `Unit` row over persisted schema and a `Component` row over rendered output are `T2` and `T3`",
+      );
+
+      const checklists = unwrap(
+        await read(tree, "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md"),
+      );
+      expect(checklists).toContain("The tier table takes three inputs, not one");
+      expect(checklists).toContain(
+        "A `Unit` row over persisted schema or a `Component` row over rendered output is therefore not `T1`",
+      );
+
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-sdd/SKILL.md"));
+      expect(skill).toContain("**what the item touches**");
+      expect(skill).toContain("`Layer` alone is not the derivation");
+      // Including the compacted memory line.
+      expect(skill).toContain("Tier derived from Layer + what the row touches");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

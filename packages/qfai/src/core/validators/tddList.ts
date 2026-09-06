@@ -172,6 +172,16 @@ const BLOCKED_BY_COLUMN = "Blocked-By";
 const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
 
 /**
+ * The review tiers a `Tier` cell may name, lower-cased.
+ *
+ * The tier used to be free prose inside `Evidence`, written last by the agent
+ * whose ceremony it decides, and an unrecorded one meant the most expensive
+ * tier — so the cheap tier was the one nobody could reach. It is now a column
+ * the ledger author seeds, and a blank or `-` cell reads as `T1`.
+ */
+const VALID_TIERS = new Set(["t1", "t2", "t3"]);
+
+/**
  * The ledger `Layer` vocabulary, lower-cased. A value outside it is already
  * reported by `TDDLIST_UNKNOWN_LAYER`; the crosswalk treats it as "no evidence"
  * rather than stacking a second finding on the same typo.
@@ -3674,6 +3684,52 @@ async function validateSpecTddList(
         "Declare one repo-relative path or dotted module path, or `-` when the seam is not declared. " +
           "A row that genuinely owns two modules is a row to split (`references/selector-granularity.md`); " +
           "a list would put the parallel-dispatch gate back to comparing sets it cannot evaluate before RED.",
+      ),
+    );
+  }
+
+  // Phase 2 – Check 9f: the declared tier.
+  //
+  // `Tier` sizes the ceremony `/qfai-implement` owes the row, and a blank cell
+  // now reads as `T1` — the cheapest one — because the tier is seeded upstream
+  // with the row rather than claimed downstream in `Evidence`. That default is
+  // only safe while a value that is *present* is a value that was understood:
+  // `T@`, `Tier 2` or `t2 (authz)` match no tier, and reading them as blank
+  // would hand a row its author escalated the batched ceremony instead.
+  //
+  // Behind a promotion window (`RULE_PROMOTIONS`, design principle P7), for the
+  // reason the registry entry states: the column is new, so the ledgers that
+  // have one filled it against prose rather than against this value set, and
+  // every row whose spelling misses lands on the same upgrade. `warning` until
+  // the pinned release, `error` from it. `resolveToolVersion` resolves rather
+  // than rejects — a read failure returns `"unknown"`, which the comparator
+  // reads as inside the window, so an unreadable version cannot be what turns
+  // this into a build failure.
+  const unknownTierPromotion = RULE_PROMOTIONS.tddListUnknownTier.promoteAt;
+  const unknownTierSeverity = newRuleSeverity(await resolveToolVersion(), unknownTierPromotion);
+  const unknownTierWindowNote =
+    unknownTierSeverity === "warning"
+      ? ` Reported as a warning until the ${unknownTierPromotion} release, then an error.`
+      : "";
+  for (const ref of ledgerRows()) {
+    const tier = cell(ref, "Tier");
+    if (tier.length === 0 || tier === "-") continue;
+    if (VALID_TIERS.has(tier.toLowerCase())) continue;
+    issues.push(
+      issue(
+        "QFAI-TDDLIST-010",
+        `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}".${unknownTierWindowNote}`,
+        unknownTierSeverity,
+        relPath,
+        "tddList.tier",
+        undefined,
+        "canonical",
+        "Write one of `T1` / `T2` / `T3`, or `-` when the tier is not declared. " +
+          "Derive it from the row's `Layer`, what the row touches (infrastructure, a " +
+          "public API surface, a contract or persisted schema, UI or rendered output) " +
+          "and the criticality list in `references/volume-policy.md`; a blank or `-` " +
+          "cell is read as `T1`, so an unrecognized value would silently buy the " +
+          "cheapest ceremony.",
       ),
     );
   }

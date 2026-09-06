@@ -1424,6 +1424,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":
     "Every registered competitive reference populates `adopted_points`, `rejected_points` and `local_translation` with real content rather than a placeholder.",
+  // States the healthy tree rather than the rejected values: a blank cell reads
+  // as `T1`, so what the operator has to see is that a cell which is *filled*
+  // names a tier the ceremony rules recognise.
+  "QFAI-TDDLIST-010":
+    "Every filled `Tier` cell in a TDD Execution Ledger names one of `T1`, `T2`, `T3` or `-`, so the ceremony a row owes is the one its author declared.",
 };
 
 /**

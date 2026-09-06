@@ -172,13 +172,20 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`. `Blocked-By`
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`, `Tier`. `Blocked-By`
   names what a `blocked` row is waiting on and is required on those rows.
   `Owning module` declares the production module the row will write, is filled at
   Phase 2b alongside the row itself, and is what the parallel-dispatch gate is evaluated
   against before RED: a ledger with no `Owning module` column supports parallel dispatch
   only for seams that already exist
   (`qfai-implement/references/execution-ledger.md`, `parallelization-policy.md`).
+- Optional column detail: `Tier` — the review tier `/qfai-implement` owes the row. Legal values
+  `T1`, `T2`, `T3`, or `-`; anything else raises `QFAI-TDDLIST-010`. It is **`/qfai-sdd`'s
+  cell**, seeded at Phase 2b beside `Layer` and never written by `/qfai-implement` — not in
+  `Evidence`, not anywhere. Blank or `-` reads as `T1`; a ledger **table** whose header carries no
+  `Tier` at all predates the column, and each of that table's rows is derived per
+  `qfai-implement/references/volume-policy.md#risk-tier-derive-per-row`. Do not drop the column as
+  non-standard: it is the only place the tier can be read before the work it sizes.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.

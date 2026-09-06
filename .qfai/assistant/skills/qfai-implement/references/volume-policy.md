@@ -11,7 +11,8 @@ what keeps those intact; dropping a gate is not on the table.
 ## Risk tier (derive per row)
 
 Derive the tier from the ledger row's `Layer`, what the item touches, and what
-it would cost to get wrong:
+it would cost to get wrong. `/qfai-sdd` Phase 2b derives it once per row, while
+it is seeding the row, and writes it to that row's `Tier` column:
 
 | Tier              | Row shape                                                                                                              | Ceremony                                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -19,8 +20,24 @@ it would cost to get wrong:
 | **T2 — elevated** | Touches infrastructure, a public API surface, a contract (`CON-*`), or persisted schema — **or** is critical (below)   | Full per-item ceremony: per-row `qa-gatekeeper` RED and GREEN turns, per-row `completion-reviewer` and `implementation-reviewer`. |
 | **T3 — surface**  | Changes UI behavior or rendered output                                                                                 | T2 plus `product-surface-reviewer`.                                                                                               |
 
-Record the tier in the row's `Evidence` cell alongside the RED/GREEN commands.
-A row with no recorded tier is treated as **T2**.
+The tier lives in the row's own `Tier` column
+(`execution-ledger.md#declared-tier-column-optional-seeded-at-ledger-authoring-time`).
+It is **not** recorded in `Evidence`: that cell is a pointer rather than a
+payload, and it is written last, by the agent whose ceremony the tier decides —
+a tier kept there cannot be read before the work it sizes, which is what left
+T1 unreachable.
+
+A row whose `Tier` cell is blank or `-` is **T1**: the tier is seeded upstream
+now, so an unescalated row is one the seeder found no reason to escalate.
+
+**The column is read per ledger table, not per file.** `/qfai-implement` appends
+a table per change request, so one `test-list.md` can hold a freshly seeded
+table beside one that predates the column. A ledger **table** whose header
+carries no `Tier` is not covered by that default — derive the tier of every row
+in _that_ table from the table above before processing it and apply the
+criticality tie-break below, whatever a neighbouring table declares. An absent
+column is not a claim of T1, and a sibling table's column does not stand in for
+the missing one.
 
 ### Criticality outranks connectedness
 
