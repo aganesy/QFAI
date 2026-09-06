@@ -467,6 +467,60 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
     }
   });
 
+  /**
+   * The character that stops the token scan is in the machine's path, not the
+   * project's.
+   *
+   * Written with an explicit `~` so a Linux-only matrix runs it: on Windows it
+   * arrives for free, because `os.tmpdir()` is the 8.3 short form
+   * (`C:\Users\RUNNER~1\AppData\Local\Temp`) and every sandbox in this file
+   * already sits under it — which is why the case above fails there and cannot
+   * fail in CI. The reference's own project-relative spelling is clean, so
+   * nothing about the *document* says it needs the by-path pass.
+   */
+  it("resolves an absolute citation whose machine prefix no path token can span", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-prefix-"));
+    const enclosing = path.join(base, "skills~home");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const skillsDir = await mkdtemp(path.join(enclosing, "skills-"));
+      const referencesDir = await writeExternalSkillsDirFixture(root, skillsDir);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * The same machine prefix, around a skillsDir that is INSIDE the project.
+   *
+   * Not a regression net for a bug that was ever live — it pins the boundary
+   * the fix chose. An in-project reference is cited relatively, so the path
+   * around the repository cannot appear in any citation of it, and judging it
+   * on that path would make every document in a project under `C:\Users\John
+   * Doe\` unscannable at once and put the whole tree through the by-path pass,
+   * which is |reachable| x |unscannable|. This asserts the ordinary graph still
+   * resolves with both an unscannable character and a space in the prefix.
+   */
+  it("judges an in-project reference on its project-relative spelling alone", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-inproject-"));
+    const enclosing = path.join(base, "John Doe~1");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const referencesDir = await writeSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      // `cited.md` and the `two-hop.md` it names both resolved by token scan.
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("keeps every shipped reference reachable from a SKILL.md, and readable", async () => {
     for (const root of SHIPPED_ROOTS) {
       const issues = await skillGraphIssues(root);
