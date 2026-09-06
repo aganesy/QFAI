@@ -94,8 +94,9 @@ export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
 
 /**
  * Governance records that must stay in version control: Change Requests
- * carrying user approval, and durable decision records. `qfai init` writes
- * these negations after the ignore lines so the later pattern wins.
+ * carrying user approval, durable decision records, and the per-item evidence
+ * the completion gate reads. `qfai init` writes these negations after the
+ * ignore lines so the later pattern wins.
  *
  * They are deliberately NOT in `QFAI_GITIGNORE_RECOMMENDED_ENTRIES`: an existing
  * project whose `.gitignore` predates them must not start failing validation.
@@ -127,9 +128,17 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   "!.qfai/evidence/decisions/**",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
-  // Per-item TDD evidence is the durable payload behind each ledger row's
-  // Evidence anchor. The validator resolves those anchors on a fresh clone,
-  // so both implementation- and ATDD-owned records must be committed.
+  // The per-item RED/GREEN record the completion gate resolves every
+  // `test-list.md` Evidence anchor against: `implement-<spec-id>.md`, or
+  // `atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row. Unlike a
+  // report or a run log these are not regenerable — a RED is an observation
+  // taken before the code that makes it pass exists, and rerunning the owner
+  // skill afterwards cannot reproduce it. Left ignored, the anchor resolved
+  // only on the machine that ran the gate: a reviewer, a fresh clone and CI
+  // all read a repository where the payload is absent, and the ledger's
+  // `Evidence` cell is the only part of the record that reaches a commit.
+  // The negation stays narrow — the remaining stage evidence files really are
+  // regenerable logs and stay ignored.
   "!.qfai/evidence/implement-*.md",
   "!.qfai/evidence/atdd-*.md",
   // The Coverage Depth Matrix and the justification behind each `❌` cell.

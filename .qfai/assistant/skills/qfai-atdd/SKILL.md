@@ -184,8 +184,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   resolve them on a fresh clone. The managed `.gitignore` block re-includes it,
   alongside `.qfai/evidence/implement-<spec-id>.md`. **Governance records also
   stay in version control**: Change Requests (`.qfai/decisions/CR-*.md`),
-  durable decision records (`.qfai/evidence/decisions/*.json`) and the
-  **Coverage Depth Matrix** (`.qfai/evidence/coverage-depth-<spec-id>.md`).
+  durable decision records (`.qfai/evidence/decisions/*.json`), the **Coverage
+  Depth Matrix** (`.qfai/evidence/coverage-depth-<spec-id>.md`) and **this
+  stage's own `.qfai/evidence/atdd-<spec-id>.md`**, whose RED provenance is taken
+  before the passing code exists and so cannot be regenerated. A negation does
+  not stage a file — commit it
+  (`../../constitution/drift-protocol.md#which-evidence-is-committed`).
 - **The matrix is a governance record, not a log**, so it is committed:
   `.qfai/evidence/coverage-depth-<spec-id>.md`, one justification per `❌`
   (`references/test-case-depth-checklist.md#where-the-matrix-lives`).

@@ -22,6 +22,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import {
+  isPathIgnoredByLayers,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
@@ -129,6 +130,8 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!coverage-depth-*.md",
         "!decisions/",
         "!decisions/**",
+        "!implement-*.md",
+        "!atdd-*.md",
       ]) {
         expect(after).toContain(negation);
       }
@@ -147,6 +150,52 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
           }).status,
         ).toBe(1);
       }
+    });
+  });
+
+  // Membership in the legacy file is not the claim; the VERDICT is. Every root
+  // governance negation needs its leaf counterpart, and the RED/GREEN records
+  // were the two that shipped without one: on a project carrying the legacy
+  // file, `git check-ignore -v .qfai/evidence/implement-<spec-id>.md` still
+  // named the nested `*` as the winner, so the fresh clone and CI this change
+  // exists to serve saw neither file. Ask the repository's own layered matcher
+  // the same question git would.
+  it("leaves no root governance negation inert under the legacy file", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await writeFile(legacy, "*\n!.gitignore\n!README.md\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const layers = [
+        { dir: "", lines: (await readGitignore(root)).split(NL).map((l) => l.trimEnd()) },
+        {
+          dir: ".qfai/evidence",
+          lines: (await readFile(legacy, "utf-8")).split(NL).map((l) => l.trimEnd()),
+        },
+      ];
+      for (const sample of [
+        ".qfai/evidence/implement-spec-0001.md",
+        ".qfai/evidence/atdd-spec-0001.md",
+        ".qfai/evidence/coverage-depth-spec-0001.md",
+        ".qfai/evidence/change-request-0001.md",
+        ".qfai/evidence/decision-0001.md",
+        ".qfai/evidence/decisions/20260101T000000000.json",
+      ]) {
+        expect(
+          isPathIgnoredByLayers(layers, sample),
+          `${sample} must survive the legacy nested ignore file`,
+        ).toBe(false);
+      }
+
+      // Over-correction pin: the migration re-includes the governance records,
+      // not the regenerable stage logs the legacy file exists to hide.
+      expect(
+        isPathIgnoredByLayers(layers, ".qfai/evidence/validate-run.log"),
+        "a regenerable stage log stays ignored",
+      ).toBe(true);
     });
   });
 

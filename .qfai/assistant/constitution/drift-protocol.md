@@ -485,6 +485,11 @@ defect is gone with it. The drain is what pays for dropping the round.
   `.gitignore` block written by `npx qfai init` negates them after the ignore
   lines for exactly this reason.
 
+  **Committing them is a step, not a consequence.** A negation only stops git
+  hiding a file; it does not stage one. Left untracked, the anchor resolves on
+  the machine that ran the gate and nowhere else — the state the negation was
+  added to end. Commit them with the change whose obligations they discharge.
+
 ## Non-negotiable constraints
 
 - Downstream skills must not patch upstream SSOT directly. **This is detected.**
