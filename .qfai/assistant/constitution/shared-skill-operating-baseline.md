@@ -179,6 +179,8 @@ Rules:
 
 - Do not reintroduce options marked as rejected in `09_delta.md`.
 - If a rejected option must be reconsidered, create a `[RE-OPEN]` decision record that references the prior DR-ID, states what changed, and includes explicit approval.
+- A `[RE-OPEN]` is an entry in the spec's `07_Decisions.md` carrying `Status: re-open`, `Re-opens:` (the prior `DR-*`), `Decision:` (what changed) and `Approved by:` / `Approved at:`. The rejected entry in `09_delta.md` points back at it through `## Rejected`'s `Re-opened by:` line. The shape is defined in `skills/qfai-sdd/templates/specs/spec/07_Decisions.md#re-open-records`.
+- Checkable form of this gate: **no candidate listed under a spec's `## Rejected` may appear under `## Adopted` unless a `Status: re-open` DR names it.** `npx qfai validate` enforces it directly — it matches the `- Candidate:` names under `## Rejected` against the `- Adopted:` names and requires the re-adopted one to carry a `Re-opened by:` (`QFAI-DECISION-006`) — plus the record's shape and its back-reference (`QFAI-DECISION-001`..`QFAI-DECISION-005`, `-007`), so a re-open asserted only in a PR description, a commit message or a completion report does not satisfy the guard.
 
 ## Gate Failure Autorepair Protocol
 
