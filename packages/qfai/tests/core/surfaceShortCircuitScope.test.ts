@@ -229,6 +229,24 @@ describe("the short-circuit is scoped to the profiles that walk the damage", () 
     },
   );
 
+  it.skipIf(process.platform === "win32")(
+    "stops `prototyping`, whose agent-definition validator reads the skills tree",
+    async () => {
+      // `validateAgentDefinition` gained `QFAI-AGENT-019` / `QFAI-AGENT-015`,
+      // which read every routed skill's `SKILL.md` and `readdir` the configured
+      // skills directory. Listing only the agents tree for this profile left
+      // that read raising `ENOTDIR` — or blocking forever on a FIFO — with the
+      // finding that names the path already in hand.
+      await withDamagedCanonical(async (root) => {
+        const result = await validateProject(root, undefined, { profile: "prototyping" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
+
+        expect([...codes]).toEqual(["QFAI-LINK-001"]);
+        return true;
+      });
+    },
+  );
+
   it("lets `atdd` report its own findings, which do not touch that tree", async () => {
     await withDamagedCanonical(async (root) => {
       const result = await validateProject(root, undefined, { profile: "atdd" });
