@@ -1427,7 +1427,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // States the healthy tree rather than the rejected values: a blank cell reads
   // as `T1`, so what the operator has to see is that a cell which is *filled*
   // names a tier the ceremony rules recognise.
-  TDDLIST_UNKNOWN_TIER:
+  "QFAI-TDDLIST-010":
     "Every filled `Tier` cell in a TDD Execution Ledger names one of `T1`, `T2`, `T3` or `-`, so the ceremony a row owes is the one its author declared.",
 };
 

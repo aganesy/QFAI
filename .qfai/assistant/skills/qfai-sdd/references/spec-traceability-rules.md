@@ -180,7 +180,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   only for seams that already exist
   (`qfai-implement/references/execution-ledger.md`, `parallelization-policy.md`).
 - Optional column detail: `Tier` — the review tier `/qfai-implement` owes the row. Legal values
-  `T1`, `T2`, `T3`, or `-`; anything else raises `TDDLIST_UNKNOWN_TIER`. It is **`/qfai-sdd`'s
+  `T1`, `T2`, `T3`, or `-`; anything else raises `QFAI-TDDLIST-010`. It is **`/qfai-sdd`'s
   cell**, seeded at Phase 2b beside `Layer` and never written by `/qfai-implement` — not in
   `Evidence`, not anywhere. Blank or `-` reads as `T1`; a ledger **table** whose header carries no
   `Tier` at all predates the column, and each of that table's rows is derived per
