@@ -6,6 +6,19 @@
 
 ### Changed
 
+- **ソースに紛れていた NUL バイト 2 件を除去し、再発を止めるガードを追加した。**
+  NUL が 1 バイトあると、そのファイルはあらゆるテキストツールから **バイナリ扱い**
+  になる。`grep` / `ripgrep` は `Binary file ... matches` と出すだけで中身を表示せず、
+  `git diff` は `Binary files differ` になり、テキストとして読むスキャナは
+  そのファイルを飛ばすか NUL で読み止まる。つまり 1 バイトで、識別子の漏洩を
+  探すものを含めたリポジトリの全ガードの射程からファイルが静かに外れる。
+
+  2 件とも、2 文字のエスケープを書くべきところに生バイトが入っていた:
+  `validators/traceability.ts` は不正な glob を説明するコメント内、
+  `testFileGlobsConfiguration.test.ts` は glob そのもの。後者は
+  **fast-glob が拒否するパターンが必要**で機能的だが、だからこそエスケープが
+  正しい綴りである — 値は同じで、ファイルはテキストのまま。
+
 - **`findOutDirCoOwners` が返すパスをプラットフォーム標準の区切り文字に揃えた。**
   `owners.roots` は fast-glob の結果に `path.dirname()` をかけたもので、fast-glob は
   どのプラットフォームでも `/` を出す。そのため Windows では `C:/Users/...` が返り、
@@ -64,6 +77,24 @@
   **新しい surface に向け直した**。検証内容は変えていないので、その文が出荷
   ツリーから消えれば従来どおり落ちる。
 
+- **`actions/checkout` と `actions/setup-node` を Node 24 対応版へ。**
+  どちらも `runs.using: node20` を宣言しており、runner が Node 24 で強制実行
+  したうえで全 job に deprecation warning を出していた。GitHub が Node 20 を
+  撤去した時点で checkout が失敗して全 lane が落ちる、予告済みの破壊的変更
+  である (#1161)。
+  - `actions/checkout` → `fbc6f399…` (v5.1.0)
+  - `actions/setup-node` → `a0853c24…` (v5.0.0)
+
+  どちらの SHA も `action.yml` を取得して `using: node24` を実際に確認した。
+  出荷アセット側 (`qfai-tests.yml` / `qfai-validate.yml`) も同時に上げている
+  ため、`qfai init` が書く workflow も同じ警告を出さなくなる。
+
+  出荷 action の pin は 1 箇所ではなく 4 箇所に登録されている: `uses:` 行、
+  version を含む step の `name:` ラベル、`ALLOWED_ACTION_COMMITS` と
+  `ALLOWED_STEP_SHAPE`、そして `ALLOWED_WORKFLOW_FILES` の byte digest。
+  `uses:` だけ書き換えると label が古い版を指したまま残り、e2e の
+  scaffold gate が落ちる。4 箇所すべてを更新済み。
+
 ### Fixed
 
 - **`brandCatalogStepAnchor.test.ts` の path 判定を Windows でも成立するように
@@ -78,8 +109,6 @@
 
   後者のほうが悪い。落ちない行は coverage として報告されるからである。
   両側を `/` に正規化し、scan が空でないことも主張した。
-
-### Fixed
 
 - **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
   取り除くようにした。** このマーカーはパッケージ内で出荷アセット 2 本にしか
@@ -270,26 +299,6 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   `GITHUB_TOKEN` による push / PR 作成には workflow event が発生しないため、
   checks が一度も走らない PR ができてしまう (`prepare-release.yml` と同じ理由)。
   **この secret は本変更では作成できない** — 手順は `.github/renovate.md`。
-
-### Changed
-
-- **`actions/checkout` と `actions/setup-node` を Node 24 対応版へ。**
-  どちらも `runs.using: node20` を宣言しており、runner が Node 24 で強制実行
-  したうえで全 job に deprecation warning を出していた。GitHub が Node 20 を
-  撤去した時点で checkout が失敗して全 lane が落ちる、予告済みの破壊的変更
-  である (#1161)。
-  - `actions/checkout` → `fbc6f399…` (v5.1.0)
-  - `actions/setup-node` → `a0853c24…` (v5.0.0)
-
-  どちらの SHA も `action.yml` を取得して `using: node24` を実際に確認した。
-  出荷アセット側 (`qfai-tests.yml` / `qfai-validate.yml`) も同時に上げている
-  ため、`qfai init` が書く workflow も同じ警告を出さなくなる。
-
-  出荷 action の pin は 1 箇所ではなく 4 箇所に登録されている: `uses:` 行、
-  version を含む step の `name:` ラベル、`ALLOWED_ACTION_COMMITS` と
-  `ALLOWED_STEP_SHAPE`、そして `ALLOWED_WORKFLOW_FILES` の byte digest。
-  `uses:` だけ書き換えると label が古い版を指したまま残り、e2e の
-  scaffold gate が落ちる。4 箇所すべてを更新済み。
 
 ## [1.10.2] - 2026-09-05
 
