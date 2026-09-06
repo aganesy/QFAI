@@ -74,6 +74,37 @@ export const SUNSETS = {
  */
 export const RULE_PROMOTIONS = {
   /**
+   * `QFAI-TOOL-002` — the project declares a `qfai` dependency and a different
+   * copy is running. Unlike its `info` sibling this is not anybody's choice:
+   * the project said what it wanted and something else answered.
+   *
+   * A window, and P7's default is right here — the condition is INVISIBLE
+   * today, so a project carrying it has never been told. It needs a minor to
+   * notice and fix before the gate starts failing on it. That is the opposite
+   * of a code whose condition already crashes the run, where a window would
+   * turn a hard failure into a pass for two minors.
+   */
+  toolResolvedAgainstDeclaration: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CTYPE-004` — a delta file was read and counted for nothing, per
+   * `### DL-` entry. The window is P7's default and it is doing real work: the
+   * condition was previously a Markdown NOTE that left `issues`,
+   * `summary.counts` and `deltaCoverage.status` untouched, so every project
+   * carrying it has been reporting a clean run. Failing the gate on the release
+   * that first makes the condition visible would fail it on a backlog nobody
+   * was ever told about.
+   */
+  deltaEntryUncounted: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
+   * as UI-bearing. The window is doing real work: the in-loop way out does not
+   * exist yet (a `rescope` operation is proposed in #1099), so until it does,
+   * the only remedy is the cycle-0 reset this finding exists to warn about in
+   * advance. Failing a gate for a condition whose remedy discards the review
+   * already paid for would make the warning worse than the silence it replaces.
+   */
+  frozenSurfaceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
    * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
    * full minor beyond it.
@@ -157,12 +188,146 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
+   * declared grammar, or names a spec that is not on disk. The grammar is new,
+   * so every delta file written before it carries whatever spelling its author
+   * chose, and the cell is never rewritten once a row is approved.
+   */
+  triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPLIT-106` — a CAP row the declared catalog cannot resolve to exactly
+   * one spec directory: a blank `Spec` cell, one naming several directories, a
+   * CAP repeated across rows, or two CAPs claiming the same directory. The
+   * `Spec` column is new, so every catalog written before it exists resolves
+   * nothing and draws the finding on every one of its rows at once.
+   */
+  specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-050` — a `- SSOT modules:` entry naming a path that does not
+   * resolve, or one that resolves only by leaving the project root. Nothing
+   * read those paths before, so a route that went stale releases ago has been
+   * sitting in the contract unchallenged and arrives in one run.
+   */
+  contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-LINK-002` — a `file.md#anchor` citation in the assistant tree whose
+   * target document or heading is not there. Nothing resolved these citations
+   * before, so a tree refreshed in part carries the whole backlog of drifted
+   * anchors the moment the rule arrives — and repairing them is an edit to the
+   * vendored documents, not to the consumer's own work.
+   */
+  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPECSECTION-001` — a spec pack missing a heading that
+   * `validation.require.specSections` requires — and `QFAI-SPECSECTION-002`,
+   * an entry of that list that normalises to no heading name at all. Both
+   * arrive with the gate itself: a project that already set the key had
+   * nothing reading it, so every pack that never carried the heading, and
+   * every unusable entry already written, meets the rule in one run.
+   */
+  specSectionsRequiredHeadings: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-DECISION-001`, `QFAI-DECISION-002`, `QFAI-DECISION-003`,
+   * `QFAI-DECISION-004`, `QFAI-DECISION-005`, `QFAI-DECISION-006` and
+   * `QFAI-DECISION-007` — the Delta Rejected Guard's re-open record, checked
+   * for the first time. The record had no status value, no field for the prior
+   * decision and no field for the approval, so every re-open written before
+   * these rules existed is missing fields its author was never asked for, and
+   * a spec that re-adopted a rejected candidate meets the whole backlog at
+   * once. One window covers the seven because they are one guard: an operator
+   * repairing a re-open answers all of them in the same edit.
+   */
+  specPackReOpenDecisionRecord: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed
    * arrives in the first run after the upgrade.
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
+   * cell states an outcome in prose and carries no canonical pointer into the
+   * evidence file its `Layer` owns. Nothing read the cell before, so every
+   * ledger written under the old shape states its evidence exactly this way.
+   */
+  tddListEvidenceAnchorMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-008` — a pointer that does not resolve: the
+   * wrong owner file for the row's `Layer`, another row's item, a heading that
+   * is not there, or an entry behind it that is not complete. The rule is
+   * right and the rows it lands on are already at `done`, a state with no
+   * transition left that could re-observe anything — the same shape the first
+   * entry in this registry was written after. This repository meets 29 of
+   * these on the release that introduces the code.
+   */
+  tddListEvidenceAnchorUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+
+  /**
+   * `QFAI-TDDLIST-009` — the row's `Revision` names a tree that files the
+   * observation covered have moved past.
+   *
+   * `evidence-revision.md#what-makes-evidence-stale` has always defined
+   * staleness mechanically, and nothing computed it: the field was written by
+   * hand, required in three places, and compared against nothing (#1146). So
+   * every project carries whatever stale revisions it has accumulated, by
+   * construction — an immediate `error` would fail gates over a backlog nobody
+   * has been told about, which is exactly what this window is for.
+   *
+   * After the window the severity splits by status: `error` at `refactor` /
+   * `done` / `review-fix`, `warning` earlier. A row still moving is expected to
+   * re-take; a row at rest is making a claim.
+   */
+  tddListEvidenceRevisionStale: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-ASSETS-003` — a Stage 0 steering catalog file still holding the
+   * angle-bracket slots and bare to-do keywords it shipped with. `qfai init`
+   * copies those four templates verbatim, so on the release that adds the
+   * detector every project that has not yet run `/qfai-configure` meets four
+   * findings at once, on files it never edited.
+   *
+   * (The keywords are spelled out rather than quoted here: a backticked
+   * all-caps word in this comment reads as a second finding code to the
+   * wiring assertion in `tests/core/sunsetLedger.test.ts`.)
+   */
+  steeringCatalogPlaceholders: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CFG-001` — a `validation.traceability` key that was
+   * declared, defaulted and parsed but that no validator ever read
+   * (`brMustHaveSc`, `scNoTestSeverity`, `orphanContractsPolicy`).
+   *
+   * The *shape* being retired is old, which is what a {@link SUNSETS} entry
+   * describes — but the finding code is new, and P7 keys on the code, because
+   * that is what an upgrade meets. Nothing warned about these keys before, so
+   * every config in the wild still carries whichever of them it was written
+   * with; at `error` on day one the rule would fail a repository for a knob
+   * this same change is what made inert. Per OC-63 the one-minor window opens
+   * at the release that starts warning and closes at the next minor.
+   */
+  retiredTraceabilityKeys: { introducedIn: "1.10.1", promoteAt: "1.11.0" },
+  /**
+   * The skill / `agent-routing.yml` cross-check, which ships as one rule in
+   * five findings: `QFAI-AGENT-015` (a declared role nothing routes or selects),
+   * `QFAI-AGENT-016` (a `SKILL.md` whose `roles:` or `routing-profile:` cannot
+   * be read), `QFAI-AGENT-017` (a skill that binds itself to the manifest which
+   * the manifest routes nothing to), `QFAI-AGENT-018` (a route whose review
+   * profile is undefined or contradicted by a second route) and
+   * `QFAI-AGENT-019` (a routed agent the skill's `roles:` omits).
+   *
+   * They share one window because they share one cause: nothing compared the
+   * two sides before, so on the release that introduces them every project
+   * whose `roles:` and manifest drifted apart — which is every project that
+   * customised either — meets the whole backlog in a single run.
+   */
+  skillRolesRoutingCrossCheck: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-010` — a `Tier` cell that is neither `T1`/`T2`/`T3` nor
+   * `-`. The column itself is new, so the first ledgers to carry one were
+   * hand-filled against prose rather than against this value set, and a
+   * spelling the rule rejects (`T@`, `Tier 2`, `t2 (authz)`) is a cell its
+   * author believed was fine. Every such row fails at once on upgrade.
+   */
+  tddListUnknownTier: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

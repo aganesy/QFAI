@@ -1,8 +1,11 @@
 # Evidence revision (what state the observation describes)
 
 Four of the twelve gate items — 3, 5, 7 and 8 — are sub-agent observations, and
-`../SKILL.md#evidence-hard-rules` says stale evidence MUST NOT be reused. That rule needs
-something to compare against. This file defines it.
+item 6 re-confirms GREEN after the refactor; `../SKILL.md#evidence-hard-rules`
+says stale evidence MUST NOT be reused. That rule needs something to compare
+against. This file defines it. Which of the five addresses which tree is the
+table under _Which tree each gate item addresses_, which carries item 12's
+checkpoint address as well.
 
 ## The field
 
@@ -11,6 +14,14 @@ Every observation records the revision it was made against.
 ```
 Revision: <git rev> | working-tree+<content hash>
 ```
+
+**The form is checked, in the committed evidence.** A value that is neither a
+git rev nor `working-tree+<content hash>` addresses no tree, so nothing can be
+recomputed against it and staleness has nothing to compare — and the review pack
+is local-only, so on a fresh clone the committed entry is the only thing left to
+check. Gate item 10 rejects any other shape wherever a revision is recorded:
+`Revision`, `RED revision`, `Falsifiability revision` and both
+`reviewed revision` fields.
 
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
   observation. Preferred: it is exact and someone else can reproduce from it.
@@ -84,10 +95,12 @@ Revision: <git rev> | working-tree+<content hash>
      same hand can update it. Three successive homes were tried and each fell to
      the same move — beside the artifact, in a commit, in the newest commit that
      introduces the line — and a fourth would fall too. **Committing the seal is
-     not the answer either**, and not available: stage evidence is regenerable
-     and deliberately not committed (`.qfai/evidence/*` is ignored, with only
-     the governance records negated back in), so a rule requiring a committed
-     copy of `implement-<spec-id>.md` would have stopped every completion.
+     not the answer either.** `implement-<spec-id>.md` and `atdd-<spec-id>.md`
+     are now governance records and ARE committed (`.qfai/evidence/*` is
+     ignored, with the governance records negated back in), so the objection is
+     no longer availability — it is that a committed copy buys nothing here. The
+     same hand that rewrites the pair rewrites the seal in the same commit, so
+     the fourth home falls exactly as the other three did.
 
      A consistent rewrite is caught where consistent rewrites are caught: by
      review of the change itself, against a history the seals make legible.
@@ -118,9 +131,10 @@ Revision: <git rev> | working-tree+<content hash>
 
   **The ledger is excluded from it.** Phase Green step 3 writes `green` and
   Refactor step 3 writes `refactor` into `test-list.md` between the
-  observations, and gate item 10 requires the GREEN and the two reviews to name
-  the **same** revision — so a hash over the whole of `git diff HEAD` moved on
-  its own bookkeeping and no uncommitted item could reach `done`. Compute it
+  observations, and gate item 10 requires the refactor-verify run and the two
+  reviews to name the **same** revision — so a hash over the whole of
+  `git diff HEAD` moved on its own bookkeeping and no uncommitted item could
+  reach `done`. Compute it
   over the tree **minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`\*\*:
   those are the record of the observation, not the thing observed. Everything the
   observation is about — production code, tests, fixtures — stays in.
@@ -151,12 +165,23 @@ evidence hash`** beside its `Reviewed revision`. **What it covers is the
   the hash explicitly. `git stash create` does not do it either: it has no
   `-u`, and the tree it builds omits untracked files.
 
-It appears in three places, all carrying the same address:
+It appears in three places. All three compute the address by the same procedure,
+but **each names the tree its own observation was taken against**, and those are
+not one tree: a round block's `Revision` names the pre-refactor tree, while
+`Refactor verify revision` and the reviewers' `Reviewed revision` name the final
+one — the table under _Which tree each gate item addresses_ says which is which.
+Reading "the same address" into this list is what would make a producer overwrite
+item 5's `Revision` with the final value, or pull a reviewer's back to the
+pre-refactor one, and break that table or gate item 10. The three places:
 
 1. **Reviewer responses** — as `Reviewed revision`, per
    `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
 2. **The per-item evidence contract** — one `Revision` per round block, beside
-   the RED / GREEN commands and results, and one for the refactor-verify pair.
+   the RED / GREEN commands and results, one for the refactor-verify pair, named
+   `Refactor verify revision` after the pair it sits beside, and one for the
+   checkpoint pair, named `Checkpoint verification revision` the same way
+   (`checkpoint-verification.md`). Which of these carry a `Round N:` prefix is
+   `round-evidence.md`'s list and only that.
 3. **The review pack** — `summary.json`'s `revision` field, which is what makes
    the fact machine-checkable (`QFAI-REVIEW-009`). Write
    `"revision_form": "content-hash"` beside it — **required**, not optional.
@@ -183,12 +208,71 @@ It appears in three places, all carrying the same address:
    to it later is a visible change to a migration record. Until that pass has run those packs are reported rather than
    accepted, which is the safe direction, and running it is what clears them.
 
+## Which tree each gate item addresses
+
+One table, so nothing has to be inferred from an exception list attached to a
+different item. The **final tree** is the one the reviewers judge: the tree as it
+stands after Phase: Refactor.
+
+| Gate item                             | Field that carries the address                                                   | Tree it addresses                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 3 — RED observed                      | `Round N: RED revision`, or `Round N: Falsifiability revision` on a branch-2 row | before the production code that makes the test pass exists; for a mutation run, the mutated tree, reverted before the GREEN |
+| 5 — GREEN observed                    | `Round N: Revision`                                                              | after implementation, **before** the refactor                                                                               |
+| 6 — GREEN re-confirmed after refactor | `Refactor verify revision`, beside `Refactor verify command` / `result`          | the final tree                                                                                                              |
+| 7 — `completion-reviewer` PASS        | `Reviewed revision` in the response                                              | the final tree                                                                                                              |
+| 8 — `implementation-reviewer` PASS    | `Reviewed revision` in the response                                              | the final tree                                                                                                              |
+| 12 — checkpoint verification passed   | `Checkpoint verification revision`, beside its `command` / `result`              | the tree the checkpoint's own command set ran on — the final tree, that boundary sitting after every reviewer PASS          |
+
+**Items 6, 7 and 8 MUST name the same revision. Items 3 and 5 each name their
+own**, and are exempt from that rule for the reason below.
+
+**Item 12 takes its address from its own run.** The per-item boundary is reached
+after items 7 and 8 have passed and before `refactor -> done`, so a checkpoint
+that passes first time ran on the tree those three name — but that is the
+ordinary case, not a guarantee, and the seal over the checkpoint record has to
+say which tree the record describes. A checkpoint failure is fixed and the whole
+set re-run (`checkpoint-verification.md#pass-criteria`), which moves the address;
+the same fix re-earns the reviewer PASSes and refreshes the `Refactor verify`
+triple, so the four move together rather than drifting apart. Borrowing a round
+block's `Revision` for the seal would be worse than imprecise: that field
+addresses the pre-refactor tree, so the seal would certify a run that was never
+made there, and a producer trying to make the two agree would overwrite item 5's
+address and break the row above. The spec-level boundary has no row and so no
+round block to borrow from at all; it records the field the same way.
+
+**On a T1 batched review, item 6 is re-taken when the group closes.** Members are
+parked in `refactor` while the rest of the coherent group is implemented, so each
+later member's change moves the tree under the ones already parked, and the
+group's single pair of reviews reads the closed tree. The close therefore re-runs
+every member's relevant suite on that tree and refreshes all three
+`Refactor verify` fields before the reviews are requested
+(`volume-policy.md#group-formation-states-and-transitions`). Without it the rule
+above is unsatisfiable for every member but the last — not because batching
+exempts anything, but because the address was taken too early.
+
+**On a parallel run, item 6 and every review are re-taken after the merge.** A
+worker takes them all inside its own worktree, and the merge adds every other
+slice's change, so the address they share is not the integrated tree's. The
+post-merge step re-runs each merged item's relevant suite, refreshes its
+`Refactor verify` fields and re-requests the reviews — items 7 and 8 on every
+item, and item 9's `product-surface-reviewer` review as well on a UI-affecting
+one (prototype parity, or on a cli-only target the captured-output surface
+review item 9 puts in its place), whose reviewed output another slice can change
+while this item's own suite stays GREEN — before that item goes `done`
+(`parallelization-policy.md#re-verify-each-merged-item-on-the-integrated-tree`).
+"Before `done`" is literal: the orchestrator writes a worker's returned `done`
+into the trunk as `refactor` and promotes it only after the re-take passes
+(`parallelization-policy.md#ledger-ownership`), because the reconciliation write
+runs first and `done` has no edge back to `refactor`.
+Same cause as the T1 case: the observations were taken before the tree the item
+ships on existed.
+
 ## A transient observation names its own revision
 
 **Every RED is one.** A RED is observed before the code that makes it pass
 exists — that is what a RED _is_ — so on an uncommitted tree Phase Green's write
 moves the content address by construction, and requiring item 3 to name the same
-`Revision` as items 5, 7 and 8 made an ordinary `Unit` / `Component` /
+`Revision` as the later observations made an ordinary `Unit` / `Component` /
 `Integration` cycle stale the moment it went green. Framing the exemption as
 two special cases was reading the handed-over RED and the falsifiability
 mutation as exceptions to a rule they are instances of. **Item 3 records
@@ -197,8 +281,18 @@ mutation as exceptions to a rule they are instances of. **Item 3 records
 run and that tree is reverted before the GREEN. Both are exempt from the
 same-revision rule, because the property that makes them worth having is that
 they were taken somewhere else — a mutation run against the final tree would
-prove nothing, since the mutation is not in it. The remaining observations still
-agree with each other.
+prove nothing, since the mutation is not in it.
+
+**So is every GREEN, for the same reason one step later.** Item 5 is observed
+after implementation and before Phase: Refactor; items 7 and 8 are requested from
+`refactor` and never from `green` (`../SKILL.md`, Phase: Refactor step 4). A
+refactor that changes one byte moves the content address by construction, so
+requiring item 5 to agree with items 7 and 8 left that pair jointly satisfiable
+only by a refactor that changed nothing — **only by not doing item 6**. Item 5
+keeps its round block's `Revision`, which addresses the pre-refactor tree.
+The observation of the tree the reviewers judge is item 6's, recorded as
+`Refactor verify revision`, and that is the address items 7 and 8 agree with.
+The remaining observations still agree with each other.
 
 ## Why an address, not a timestamp
 
@@ -249,11 +343,13 @@ Mechanically, so it can be checked rather than judged:
 
 Consequences:
 
-- An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
-  revision. Verdicts from different revisions do not compose into a ruling about
-  one state — the earlier ones ruled on code that no longer exists.
-- **The exception is item 3, on every row, above under _A transient
-  observation names its own revision_.** A RED is observed before the code that
+- An item's verdicts **on the final tree** — gate items 6, 7 and 8 — MUST all
+  name the **same** revision. Verdicts from different revisions do not compose
+  into a ruling about one state — the earlier ones ruled on code that no longer
+  exists.
+- **The exceptions are items 3 and 5, on every row, above under _A transient
+  observation names its own revision_** and in the table under _Which tree each
+  gate item addresses_. A RED is observed before the code that
   makes it pass exists, so on an uncommitted tree Phase Green moves the content
   address by construction — an ordinary `Unit` / `Component` / `Integration`
   cycle as much as a handed-over one. Listing two special cases here left a
@@ -262,13 +358,18 @@ Consequences:
   taken before the production code exists, so its revision is earlier than the
   GREEN's by construction; a `falsifiability` row's mutation run is taken
   against a tree that is reverted before the GREEN, so its revision names a tree
-  that no longer exists. In both, that is the property the observation is worth
-  having, not decay. Each records its own field — `RED revision` beside the RED
-  pair, `Falsifiability revision` beside the trio — and leaves `Revision` for
-  the GREEN and the two reviews, which must still agree with each other. Folding
-  either into `Revision` made a correct row permanently stale and unable to
-  reach `done`: the `observed-red` E2E/API rows first, and every branch-2 row
-  once the gate began reading the mutated tree.
+  that no longer exists. A GREEN is observed before the refactor, so any refactor
+  that changes a byte moves the address before items 7 and 8 are even requested.
+  In all three, that is the property the observation is worth
+  having, not decay. Each records its own field — `Round N: RED revision` beside
+  the RED pair, `Round N: Falsifiability revision` beside the trio,
+  `Round N: Revision` beside the
+  GREEN pair — and leaves `Refactor verify revision` for item 6 and the two
+  reviews, which must still agree with each other. Folding
+  any of them into one field made a correct row permanently stale and unable to
+  reach `done`: the `observed-red` E2E/API rows first, every branch-2 row
+  once the gate began reading the mutated tree, and every row whose refactor
+  actually changed something.
   Everything else about staleness is unchanged: `RED revision` is judged
   against the tree the RED was observed on, and a later commit touching the
   test itself invalidates it the same way.
@@ -276,6 +377,18 @@ Consequences:
   the observation; do not carry the verdict forward because "the change was
   unrelated". Whether it was unrelated is exactly the judgement the evidence
   exists to remove.
+- **Compute it as an interval, from the revision the observation NAMES to now**
+  — not as "did anything change since my last commit?", which is a different
+  and much weaker question:
+
+  ```bash
+  git diff --name-only <the revision this observation names>..HEAD -- src tests
+  ```
+
+  A non-empty result means re-take before submitting. The wrong baseline is the
+  reading that produces a stale field, and it produces one that looks exactly
+  like a fresh one.
+
 - **Read that bullet by what it says: _any file the observation covered_.** A commit that changes only
   the record — this evidence file, the ledger's `Status` / `DR-ID` / `Evidence` cells — covers no file
   any observation ran against, so it does not stale one. This is what allows an item's anchors to be

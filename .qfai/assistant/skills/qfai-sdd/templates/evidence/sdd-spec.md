@@ -51,6 +51,16 @@
 - <artifact created or updated, with path>
 - <artifact created or updated, with path>
 
+## Contract executability
+
+> One line per `db/` contract this cycle authored or changed, in exactly the
+> form below. `QFAI-CONTRACT-031` (`warning`) reports a `db/` contract that no
+> such line names; it is a presence check, so the line is the whole record.
+> Rule: `references/contract-artifact-rules.md#executability-must`.
+
+- Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
+- <or> none
+
 ## Commands executed
 
 ```

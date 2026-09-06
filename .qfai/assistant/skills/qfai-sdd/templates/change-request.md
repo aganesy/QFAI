@@ -92,11 +92,24 @@ union of the open CRs' blocked sets.
 
 ## Impact scope
 
+<!--
+THIS SECTION IS WHAT AUTHORISES AN UPSTREAM EDIT. `QFAI-DRIFT-001` reads it —
+and only it — from every CR at `Status: approved`, so a path named anywhere
+else in this document authorises nothing. That includes `## Context`, the
+`## Reproduction` block a defect-class CR must carry, and a rejected option: a
+sentence FORBIDDING an edit used to grant it.
+
+Name each upstream file by its repository-relative path (preferred) or by its
+bare filename. A contract ID does NOT authorise a path — `CON-DB-0022` names a
+declaration inside a file, not the file — so give the path as well as the ID.
+-->
+
 - Specs: `<spec-NNNN, ...>`
 - Plans: `<paths>`
 - Tests: `<paths / TDD-IDs>`
-- Contracts: `<CON-*>`
+- Contracts: `<CON-*>` — `<.qfai/contracts/db/<file>.sql, ...>`
 - Schema: `<paths>`
+- Upstream paths edited under this CR: `<repository-relative paths, comma-separated>`
 
 ## Decision needed from user
 

@@ -6,6 +6,7 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 - Required `_policies` files exist.
 - Required target spec files exist.
+- Each target spec has `tdd/test-list.md` with one row per coverage-target TC from `06_Test-Cases.md`, and the ledger is the first Markdown table in the file.
 - `_policies/11_Slice-Policy.md` matches the current repo slice model.
 - `_policies/04_Business-Flow.md` contains Mermaid `flowchart` or `sequenceDiagram`.
 - `10_Plan.md` exists and remains How-only.
