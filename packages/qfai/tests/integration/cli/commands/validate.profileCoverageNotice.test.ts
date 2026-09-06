@@ -393,12 +393,16 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
   });
 
   it("keeps the tdd-only traceability-integrity codes out of the shared group", async () => {
-    // `validateTraceability` (QFAI-TRACE-1xx) is shared; `QFAI-TRACE-001/002`
-    // come from `validateTraceabilityIntegrity`, which only tdd runs.
+    // `validateTraceability` (QFAI-TRACE-1xx) is shared. So is one half of
+    // `validateTraceabilityIntegrity`: `runSddValidators` calls it with
+    // `includeImplementationDiff: false`, so `--profile sdd` hears
+    // `QFAI-TRACE-002` about the ledger it writes, and not `QFAI-TRACE-001` /
+    // `-003`, which read a diff that is untouched by design at that gate.
     await withProject(async (root) => {
       const sdd = await noticeFor(root, "sdd");
       expect(sdd?.message).toContain("QFAI-TRACE-001");
-      expect(sdd?.message).toContain("QFAI-TRACE-002");
+      expect(sdd?.message).toContain("QFAI-TRACE-003");
+      expect(sdd?.message).not.toContain("QFAI-TRACE-002");
       expect(sdd?.message).not.toContain("QFAI-TRACE-1*");
 
       const tdd = await noticeFor(root, "tdd");
@@ -435,7 +439,11 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
         for (const profile of PARTIAL_PROFILES) {
           const notice = await noticeFor(root, profile);
           expect(notice?.message ?? "").not.toMatch(/TDDLIST-\d/);
-          expect(notice?.message ?? "").not.toContain("TDDLIST-*");
+          // A BARE `TDDLIST-` glob only. `QFAI-TDDLIST-*` is the canonical
+          // spelling of the execution-state family and is a real finding code
+          // prefix, so a plain substring test rejects the entry the table is
+          // supposed to carry.
+          expect(notice?.message ?? "").not.toMatch(/(?<!QFAI-)TDDLIST-\*/);
         }
       });
     });
