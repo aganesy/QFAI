@@ -88,6 +88,45 @@ async function lockHolders(root: string): Promise<string[] | undefined> {
   return await readdir(lockDir(root)).catch(() => undefined);
 }
 
+/** The provenance module's own source, which several rows below assert on directly. */
+async function provenanceSource(): Promise<string> {
+  return await readFile(path.resolve(__dirname, "../../../src/shared/provenance.ts"), "utf-8");
+}
+
+/**
+ * A numeric constant the provenance module declares, read from its source.
+ *
+ * Read rather than restated so a row and the constant it reasons about cannot drift apart, and
+ * throwing rather than answering `NaN` when the declaration is gone: a renamed constant is a
+ * broken row, not a failing claim, and `NaN` comparisons pass silently in one direction.
+ */
+async function lockConstant(name: string): Promise<number> {
+  const declared = new RegExp(`const ${name} = ([0-9_]+);`).exec(await provenanceSource())?.[1];
+  if (declared === undefined) {
+    throw new Error(`provenance.ts declares no ${name}`);
+  }
+  return Number(declared.replace(/_/g, ""));
+}
+
+/**
+ * The body of a top-level function in the provenance module, with comment lines removed.
+ *
+ * Comments are stripped because what these rows measure is CODE — its order, and which calls
+ * appear in which function. A sibling row already reddened once on the very paragraph that
+ * explained the thing it was asserting, which is how the stripping got here.
+ */
+function functionBody(source: string, declaration: string): string {
+  const start = source.indexOf(declaration);
+  if (start < 0) {
+    throw new Error(`provenance.ts declares no ${declaration}`);
+  }
+  return source
+    .slice(start, source.indexOf("\n}\n", start) + 3)
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().startsWith("*") && !line.trim().startsWith("//"))
+    .join("\n");
+}
+
 function entry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     sha256: createHash("sha256").update("x").digest("hex"),
@@ -389,6 +428,27 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     // Six writers observe that same stale lock at the same moment. Reclaiming it by `unlink`
     // meant the second one deleted the first one's FRESH lock and both entered the section; the
     // symptom is an entry that is simply not in the record afterwards.
+    //
+    // What this row IS an oracle for, measured rather than assumed, because the sibling row below
+    // is described as "the deterministic half" and that reads as a stronger claim than it is:
+    //
+    //   - the lock removed outright — RED, 8 runs out of 8 (7 of 8 before the retry repair)
+    //   - `clearAbandonedLock` reverted to unlinking through the lock NAME — GREEN, 5 of 5
+    //   - `updateInstallProvenance`'s verify-and-re-apply removed — GREEN
+    //
+    // So it guards the end-to-end property, "no entry lost", and it does fail when there is no
+    // lock at all. It is NOT a mutation oracle for either repair on its own: the two defend the
+    // same property, so reverting one leaves the other to carry it, which is what defence in
+    // depth is for and also what makes each half invisible from here. Both numbers were taken on
+    // this revision and on the one before it, so the repair below neither strengthened nor
+    // weakened the row.
+    //
+    // Nothing better is available in-process, and that is the same limit six source-asserting
+    // rows in this file already name: two writers being inside the section at once is only
+    // observable across the awaits that span it, and the one seam under the lock is `mutate`,
+    // which is synchronous by contract. A fixture that watches the lock directory instead would
+    // be exposed to the reclaim window it cannot distinguish from the defect — a flake in the
+    // suite that exists to catch flakes.
     const names = ["a", "b", "c", "d", "e", "f"].map((n) => `qfai-${n}.yml`);
     await Promise.all(
       names.map((name) =>
@@ -530,8 +590,9 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
   });
 
   it("waits out a LIVE lock and then refuses, leaving no staging directory", async () => {
-    // Two properties in one row, because one fixture establishes both and neither has another
-    // deterministic reproduction.
+    // Three properties in one row, because one fixture establishes all three and none has
+    // another deterministic reproduction. The fixture costs a full `LOCK_PATIENCE_MS` to build,
+    // which is the other reason not to spend it three times.
     //
     // 1. The staleness ceiling is CONSULTED. A lock whose marker is fresh belongs to a holder
     //    that may still be inside the section, and taking it would put two writers there. With
@@ -543,12 +604,16 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     //    removed, every other row here stayed green.
     //
     // The marker is KEPT FRESH while the writer waits, and that is the whole fixture rather than
-    // a detail. Giving up takes `LOCK_ATTEMPTS * LOCK_POLL_MS`, which is nominally well inside the
-    // staleness ceiling — but 200 polls of 25ms is not five seconds on a machine running the whole
-    // suite, and measured there the wait outlived the ceiling, the lock read as abandoned, the
-    // writer took it and this row failed. A holder that is still going is precisely one whose
-    // marker keeps moving; without that the row is green only while the machine is idle, which is
-    // the opposite of when a lock matters.
+    // a detail. Giving up takes `LOCK_PATIENCE_MS`, which OUTLIVES the staleness ceiling on
+    // purpose — a waiter that gave up first could never reach the reclaim it was waiting for. So
+    // a marker left alone would be judged abandoned partway through this row, the writer would
+    // take the lock and the row would fail. A holder that is still going is precisely one whose
+    // marker keeps moving; without that the row asserts nothing about a LIVE lock at all.
+    //
+    // The elapsed time is asserted too, and that is the half a duration buys. As an iteration
+    // count the wait was `attempts * (poll + whatever each attempt cost)`, so a slower attempt
+    // bought more patience than the constants declared and nothing said so; against a deadline
+    // the cost of an attempt can only make the last poll late.
     //
     // The refresh here stands for ANOTHER PROCESS, which is what a lock is for and what no
     // in-process fixture can supply. Review finding [46] read it the other way round and was
@@ -567,6 +632,8 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       }
     }, 250);
 
+    const patience = await lockConstant("LOCK_PATIENCE_MS");
+    const startedAt = Date.now();
     try {
       await expect(
         updateInstallProvenance(root, (current) => ({
@@ -575,6 +642,22 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
         })),
         "a live lock must be waited out and then refused, never taken",
       ).rejects.toThrow(/another process is writing the record/i);
+      const waited = Date.now() - startedAt;
+
+      // 3. The patience is a DURATION, and this is where that is observable. Both bounds matter:
+      //    below `LOCK_PATIENCE_MS` the writer gave up before the ceiling it must outlive, and
+      //    far above it the budget is being spent in some other unit than time — which is what an
+      //    iteration count did, buying more patience than the constants declared whenever an
+      //    attempt got slower. One poll of slack for the attempt in flight when the deadline
+      //    passes, and generous headroom above that so a loaded machine is not itself the claim.
+      expect(
+        waited,
+        "a waiter must not give up before its declared patience",
+      ).toBeGreaterThanOrEqual(patience);
+      expect(
+        waited,
+        "and must not spend a budget denominated in attempts rather than in time",
+      ).toBeLessThan(patience * 2);
 
       expect(
         await lockHolders(root),
@@ -736,37 +819,40 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     // Asserted on the source for the reason the heartbeat row gives: the only seam inside the lock
     // is `mutate`, which is synchronous, so no in-process interleaving observes the marker between
     // the rename and the release.
-    const source = await readFile(
-      path.resolve(__dirname, "../../../src/shared/provenance.ts"),
-      "utf-8",
-    );
-    const acquire = source.slice(source.indexOf("async function acquireRecordLock("));
-    const body = acquire.slice(0, acquire.indexOf("\n}\n") + 3);
-    // Comment lines stripped first, so the distance this measures is CODE. Without that the
-    // assertion fails the moment the paragraph explaining the stamp grows — which it did.
-    const code = body
-      .split(/\r?\n/)
-      .filter((line) => !line.trim().startsWith("//"))
-      .join("\n");
+    const source = await provenanceSource();
+
+    // The stamp lives in the step that runs only once a rename has SUCCEEDED, and the waiting
+    // step carries none of it. That placement is the claim: a stamp reachable from inside the
+    // wait would date a lock that does not exist yet.
     expect(
-      code,
-      "the successful rename must be followed by a stamp on the marker it just published",
-    ).toMatch(/await rename\(staging, lockDir\);[\s\S]{0,200}?await utimes\(/);
+      functionBody(source, "async function confirmPublishedLock("),
+      "the step that runs after a successful publish must stamp the marker it published",
+    ).toMatch(/await utimes\(path\.join\(lockDir, marker\)/);
+    expect(
+      functionBody(source, "async function publishLock("),
+      "and the step that is still waiting must not stamp anything: there is no lock to date yet",
+    ).not.toMatch(/utimes\(/);
 
     // And the patience, read from the constants rather than restated.
-    const value = (name: string): number =>
-      Number(new RegExp(`const ${name} = ([0-9_]+);`).exec(source)?.[1]?.replace(/_/g, ""));
-    const attempts = value("LOCK_ATTEMPTS");
-    const poll = value("LOCK_POLL_MS");
-    const stale = value("LOCK_STALE_MS");
+    //
+    // ONE comparison now, where it used to be `attempts * poll` against the ceiling. That product
+    // was only the real wait at the nominal sleep, so it had to be restated whenever either half
+    // moved — and it was wrong twice, once in each direction. A duration compares directly.
+    const patience = await lockConstant("LOCK_PATIENCE_MS");
+    const stale = await lockConstant("LOCK_STALE_MS");
     expect(
-      Number.isFinite(attempts) && Number.isFinite(poll) && Number.isFinite(stale),
-      "all three constants must be readable",
-    ).toBe(true);
-    expect(
-      attempts * poll,
+      patience,
       "a waiter that gives up before the ceiling can never reach the reclaim it is waiting for",
     ).toBeGreaterThan(stale);
+
+    // …and the confirmation window is not a second helping of it. It exists to outlast another
+    // process's move-and-restore, so a lock momentarily quarantined is not read as taken over;
+    // stretched past the ceiling it would instead keep a holder claiming a lock the tree has
+    // already judged abandoned.
+    expect(
+      await lockConstant("LOCK_CONFIRM_MS"),
+      "re-reading a published lock must stay well inside the ceiling it is not a substitute for",
+    ).toBeLessThan(stale);
   });
   it("leaves no staging directory behind, on either path", async () => {
     // The publish is a private directory renamed onto the lock name, and a rename that SUCCEEDS
@@ -1160,10 +1246,7 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
     // asks what is at that name NOW — not necessarily what was just put there. A `rename` is
     // atomic, so the object that arrived is the object staged, and the staging directory was
     // read under a private name nothing else could reach.
-    const source = await readFile(
-      new URL("../../../src/shared/provenance.ts", import.meta.url),
-      "utf-8",
-    );
+    const source = await provenanceSource();
     const stagedAt = source.indexOf("const staged = await lstat(staging)");
     const renameAt = source.indexOf("await rename(staging, lockDir)");
     expect(
@@ -1176,14 +1259,94 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
     );
 
     expect(
-      source.slice(renameAt, renameAt + 4000),
+      functionBody(source, "async function confirmPublishedLock("),
       "and what arrived must be compared against it, rather than adopted as this holder's",
-    ).toMatch(/arrived\.ino !== staged\.ino/);
+    ).toMatch(/arrived\.dev === staged\.dev && arrived\.ino === staged\.ino/);
+
+    // The acquisition FAILS on disagreement, and it does so from the caller — where the throw is
+    // nobody's retry to swallow. `confirmPublishedLock` answers a boolean rather than throwing
+    // for exactly that reason: the decision and the failure are one step apart and visible in one
+    // place.
+    const acquire = functionBody(source, "async function acquireRecordLock(");
     expect(
-      source.slice(renameAt, renameAt + 4000),
+      acquire,
       "with acquisition failing when they disagree — continuing would record somebody else's " +
         "directory as this holder's own",
-    ).toMatch(/throw new Error\(/);
+    ).toMatch(/if \(!\(await confirmPublishedLock\([\s\S]{0,200}?throw new Error\(/);
+  });
+
+  it("never retries a rename that already happened", async () => {
+    // The flake this row was written for, and the defect under it.
+    //
+    // The stamp and the identity read used to sit INSIDE the wait loop, wrapped in the same
+    // `catch` that means "the destination was not publishable, try again". So a failure of
+    // either was retried — but the `rename` had already succeeded, and a successful rename
+    // CONSUMES the staging directory. Every remaining attempt then renamed a source that no
+    // longer existed: a guaranteed `ENOENT`, spun until the whole patience was gone, and
+    // reported as `another process is writing the record`, which by then was false. The lock the
+    // writer had published stayed published with its heartbeat already stopped, so every other
+    // writer in the tree stalled a full `LOCK_STALE_MS` behind a holder that had given up, and
+    // the entry was simply absent afterwards — a file on disk with no record, which reads as
+    // `adopter-owned` and is never recorded again.
+    //
+    // Measured on a loaded machine with nothing injected: one `lock was replaced` throw, one
+    // reclaimer restoring the lock it had moved, then 178 `ENOENT` renames and a lost entry.
+    //
+    // Asserted on the SOURCE, and the reason is the same one the heartbeat row gives rather than
+    // a convenience. Reaching the path needs another process's reclaim to land between this
+    // holder's `rename` and its `lstat` — two adjacent syscalls — and the only in-process seam
+    // inside the lock is `mutate`, which runs after acquisition has already returned. What a row
+    // can pin is the structure that makes the retry impossible: the loop holds nothing but the
+    // rename, and everything after publication happens once.
+    const source = await provenanceSource();
+    const wait = functionBody(source, "async function publishLock(");
+    const acquire = functionBody(source, "async function acquireRecordLock(");
+
+    // CLAIM 1 — the loop retries the rename and nothing else. A stamp or an identity read inside
+    // it is, by construction, work that can only run after the rename succeeded.
+    expect(wait, "the wait must be the thing that retries the rename").toMatch(
+      /await rename\(staging, lockDir\)/,
+    );
+    for (const [operation, why] of [
+      ["utimes\\(", "a stamp inside the wait dates a lock that has already been published"],
+      ["lstat\\(", "an identity read inside the wait is post-publication work"],
+      ["confirmPublishedLock\\(", "confirmation inside the wait is retried when it fails"],
+    ] as const) {
+      expect(wait, why).not.toMatch(new RegExp(operation));
+    }
+
+    // CLAIM 2 — and it stops the moment the rename lands, rather than falling through to the
+    // reclaim and the sleep. `staging` is gone by then; there is nothing left to retry with.
+    const returned = wait.indexOf("return published;");
+    const reclaimed = wait.indexOf("await clearAbandonedLock(");
+    expect(returned, "the wait must answer whether it published").toBeGreaterThan(-1);
+    expect(reclaimed, "and must still reclaim between attempts").toBeGreaterThan(-1);
+    expect(
+      returned,
+      "a published lock must leave the loop before the reclaim, not after another pass",
+    ).toBeLessThan(reclaimed);
+
+    // CLAIM 3 — the caller does the rest ONCE. No loop of any kind survives in the acquisition
+    // path, so there is no construct left for a post-publication failure to be retried by.
+    for (const construct of ["for (", "while ("] as const) {
+      expect(
+        acquire,
+        `acquisition must hold no ${construct.trim()} loop: publication happens once, and so must ` +
+          "everything after it",
+      ).not.toContain(construct);
+    }
+
+    // CLAIM 4 — and it swallows nothing. The bare `catch` that made the replacement error
+    // invisible is gone; the one `catch` left rethrows what it caught after stopping the
+    // heartbeat, which is the opposite of discarding it.
+    const bareCatches = [...acquire.matchAll(/(?<!\.)\bcatch\b\s*(?:\([^)]*\))?\s*\{/g)];
+    expect(
+      bareCatches.length,
+      "acquisition must not grow a second catch: the first one is what hid the defect",
+    ).toBe(1);
+    expect(acquire, "and the one that remains must rethrow, never absorb").toMatch(
+      /catch \(error\) \{[\s\S]{0,200}?throw error;/,
+    );
   });
   it("still releases its own lock when it was never reclaimed", async () => {
     // The other direction. A release that refuses too readily leaves the lock standing, and the

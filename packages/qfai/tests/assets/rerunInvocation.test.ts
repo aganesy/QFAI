@@ -42,7 +42,36 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("names a concrete invocation per upstream artifact class", async () => {
     const drift = await read(tree, DRIFT);
     expect(drift).toContain("`/qfai-sdd <spec-id>`");
-    expect(drift).toContain("`/qfai-sdd --contract <CON-ID>`");
+    expect(drift).toContain("`/qfai-sdd --contract <CON-ID-or-path>`");
+  });
+
+  it("makes the contract selector usable for contracts that carry no ID", async () => {
+    // `.qfai/contracts/design/**` declares no `QFAI-CONTRACT-ID`, so an
+    // ID-only selector cannot be assembled for it and the "every upstream
+    // class has an owner rerun" rule was unsatisfiable for that class.
+    const drift = await read(tree, DRIFT);
+    expect(drift).toContain("**The contract selector is an ID _or_ a path.**");
+    expect(drift).toContain("`/qfai-sdd --contract .qfai/contracts/design/DESIGN.md.lock.yaml`");
+    expect(drift).toContain(
+      "a defect CR whose subject _is_ a missing or wrong ID has none to cite either",
+    );
+
+    const sdd = await read(tree, SDD);
+    expect(sdd).toContain(
+      "The argument is a `CON-*` ID **or** a repo-relative path under `.qfai/contracts/`",
+    );
+    expect(sdd).toContain("an ID-only selector left those reruns unaddressable");
+
+    // The ID exemption and the path form must be stated together, or a reader
+    // who reaches the exemption first still has no invocation.
+    const rules = await read(
+      tree,
+      "assistant/skills/qfai-sdd/references/contract-artifact-rules.md",
+    );
+    expect(rules).toContain(
+      "they are addressed by repo-relative path when an owner rerun targets them: " +
+        "`/qfai-sdd --contract .qfai/contracts/design/<file>`",
+    );
   });
 
   it("requires the CR to name a rerun mode, and defines both", async () => {
@@ -64,13 +93,23 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // A contract-only Change Request previously had no rerun narrower than the
     // whole spec.
     const sdd = await read(tree, SDD);
-    expect(sdd).toContain("Contract-scoped (`/qfai-sdd --contract <CON-ID>`)");
-    expect(sdd).toContain("Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only");
+    expect(sdd).toContain("Contract-scoped (`/qfai-sdd --contract <CON-ID-or-path>`)");
+    // The route also runs the Phase 2b API-row delta: a contract-only status
+    // flip owes a new `Layer = API` row, or the retirement of a stale one, and
+    // Stage 0 + Phase 0 + Phase 4 alone ran no seeding phase at all. Phase 2c
+    // joins it for a contract the delta finds no owner for — that is the only
+    // step able to name one, and without it an activation shipped a gate with
+    // no ledger row anywhere.
+    expect(sdd).toContain(
+      "Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c for a contract that delta finds no owner for** + Phase 4 (Delta update) only",
+    );
   });
 
   it("advertises it in the argument hint, not only in prose", async () => {
     const sdd = await read(tree, SDD);
-    expect(sdd).toContain('argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"');
+    expect(sdd).toContain(
+      'argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"',
+    );
   });
 
   it("documents the rerun_policy vocabulary where the key lives", async () => {

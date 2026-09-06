@@ -3,7 +3,7 @@ name: qfai-discussion
 title: QFAI Discussion (Exploration Planner)
 description: "Run structured discussion that defines exploration conditions, evaluation rubric, and anti-goals for downstream prototyping."
 argument-hint: "<idea-or-problem> [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
   [
     orchestrator,
@@ -25,6 +25,15 @@ mode: interactive-by-default
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- ask-user bucket decisions (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations)
+- destructive operations and scope expansions outside the active envelope
+
 ## Goal
 
 Produce a unified 15-file discussion pack plus exploration-first UI sidecars so `/qfai-sdd` and `/qfai-prototyping` can operate without forcing an early visual direction decision.
@@ -42,6 +51,8 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 ## UI-bearing Canonical Sidecar Family
 
+Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md` (surface mapping plus detection signals) before applying any UI-bearing branch in this file.
+
 Every UI-bearing pack must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. Only a pack on a **visual-prototyping surface** (`web`, `mobile`, `desktop` or `mixed`, as `primary_surface` or in `secondary_surfaces`) MUST additionally emit a draft brand SSOT at the **consuming-project root**; a cli-only pack MUST NOT author it:
 
 - `<consuming-project-root>/DESIGN.md` — **visual-prototyping surfaces only.** Brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
@@ -54,15 +65,15 @@ Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mo
 2. Run Inception Deck and include at least one Mermaid diagram.
 3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 4. Register source traceability and reference research in `04_Sources.md`.
-5. Capture scope, REQ, NFR, glossary, constraints, and policies; confirm topic coverage against `references/discussion-coverage-checklist.md`.
-6. Run Example Mapping and capture `Example Seeds` per the perspectives in `references/example-mapping-guide.md`.
-7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`. Field definitions and guardrails for both files are canonical in `references/oq-and-deferred-rules.md`.
-8. Classify the target per `references/ui-bearing-playbook.md`, then generate the exploration-first sidecar family for UI-bearing targets.
-9. **Emit root `DESIGN.md` draft** per `references/design-dna-intake.md`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets.
+5. Capture scope, REQ, NFR, glossary, constraints, and policies.
+6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
+7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
+8. Generate the exploration-first sidecar family for UI-bearing targets.
+9. **Emit root `DESIGN.md` draft** per `references/design-dna-intake.md`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. Fill its required `brand.archetype` field in two phases: **Phase A** picks the closest-fitting archetype from `references/design-md-brand-catalog.md` and takes its `aesthetic_properties` as draft defaults; **Phase B** routes each default to its own home: `color_tendency` / `typography` / `spacing` into the `visual.*` token tree, and the `interaction` default into `accessibility.motion` (`visual.*` accepts only `colors | typography | radius | shadow | spacing`). This fills the draft brand SSOT only — exploration directions stay unranked and the design system is not finalized here.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
-11. Request review and record the Reviewer result, following the cycle rules in `references/review-cycle-playbook.md`.
+11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
-For UI-bearing targets, follow `references/design-dna-intake.md` and the durable decision rules in `references/ui_ux_best_practices.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
+For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars, and apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
 ## UI-bearing Authoring Requirements
 
@@ -82,6 +93,7 @@ sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Leg
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;
+- confirm every required topic in `references/discussion-coverage-checklist.md` is covered, or captured as an OQ or deferred item;
 - ensure `Disposition: open` count is zero in `11_OQ-Register.md`;
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
@@ -93,6 +105,8 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
+  required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
 - the UI-bearing sidecar family is complete when the pack is UI-bearing;
 - discussion stayed planner-first and did not choose a single visual winner;
@@ -119,7 +133,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Reviewer role:` + `Reviewed artifact:` + `Result: PASS | REVISE`). A response missing the role or artifact line is not a verdict; re-request it.
 
 ## Completion Message & Next Actions (MUST)
 
@@ -147,7 +161,9 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+
+Route every ask-user and hard-required item through the protocol in [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol) above, including its `--auto` no-question rule.
 
 project_memory:
 

@@ -5,6 +5,17 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import {
+  collectDeclaredDrHeadingIds,
+  DR_ID_FORMAT,
+  DR_POLICY_DECLARATION_FILE,
+  DR_SPEC_SCOPED_ID_FORMAT,
+  isAuditableInstant,
+  isPlaceholderValue,
+  parseDecisionRecordEntries,
+  RE_OPEN_STATUS,
+  type DecisionRecordEntry,
+} from "../decisionRecords.js";
+import {
   AC_GHERKIN_SECTION,
   extractIds,
   extractInvalidIdOccurrences,
@@ -37,8 +48,17 @@ import {
   parseTestCaseIds,
   resolveTestCaseTable,
 } from "../specPackParsers.js";
-import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
 import {
+  isValidDeprecatedAt,
+  parseSpec,
+  SPEC_STATUS_VALUES,
+  SUPERSEDED_BY_RE,
+  type ParsedSpec,
+  type SpecStatus,
+} from "../parse/spec.js";
+import {
+  TRIAGE_NO_EXISTING_SPEC,
+  TRIAGE_NO_EXISTING_SPEC_LEGACY,
   TRIAGE_TABLE_HEADER,
   TRIAGE_TOP_LEVEL_OPS,
   TRIAGE_UPDATE_SUBOPS,
@@ -47,12 +67,18 @@ import {
 } from "../sddTriage.js";
 import { loadLayerPolicy } from "../layerPolicy.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
-import type { Issue } from "../types.js";
+import type { Issue, IssueSeverity } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /** The release `QFAI-TRIAGE-008` stops being a warning at. */
 const TRIAGE_HEADING_PROMOTION = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
+
+/** The release `QFAI-TRIAGE-009` stops being a warning at. */
+const EXISTING_SPEC_PROMOTION = RULE_PROMOTIONS.triageExistingSpecCell.promoteAt;
+
+/** The release the seven `QFAI-DECISION-*` codes stop being warnings at. */
+const RE_OPEN_PROMOTION = RULE_PROMOTIONS.specPackReOpenDecisionRecord.promoteAt;
 
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
@@ -124,6 +150,11 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   const issues: Issue[] = [...layerPolicy.issues];
 
   const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
+  // The same evidence `collectSpecEntries` retires a spec on, so what
+  // `QFAI-STATUS-004` reports and what `SpecEntry.status` accepts cannot drift.
+  const specStatuses = new Map<string, SpecStatus | undefined>(
+    entries.map((entry) => [`spec-${entry.specNumber}`, entry.status]),
+  );
 
   for (const entry of entries) {
     if (entry.layout === "layered") {
@@ -140,8 +171,9 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // Common checks (PR #206 review #42): Status / Triage validation is
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
-    issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
-    issues.push(...(await validateTriageSectionForEntry(entry, toolVersion)));
+    issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds, specStatuses)));
+    issues.push(...(await validateTriageSectionForEntry(entry, toolVersion, knownSpecIds)));
+    issues.push(...(await validateReOpenForEntry(entry, specsRoot, toolVersion)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
@@ -151,7 +183,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // (PR #206 review LW-F). Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
-  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion)));
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion, knownSpecIds)));
 
   return issues;
 }
@@ -159,6 +191,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
 async function validatePoliciesDeltaTriage(
   specsRoot: string,
   toolVersion: string,
+  knownSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
   let text: string;
@@ -170,18 +203,36 @@ async function validatePoliciesDeltaTriage(
     return [];
   }
   const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
-  const issues = validateTriageSection(text, deltaPath, toolVersion);
+  const issues = validateTriageSection(text, deltaPath, toolVersion, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
   return issues;
 }
 
 const STATUS_ENUM_LIST = SPEC_STATUS_VALUES.join(" | ");
-const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
-const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * What the spec set knows about the spec under validation and its neighbours.
+ *
+ * `collectSpecEntries` already refuses to retire a `superseded` spec whose
+ * `Superseded-by` points at itself or at a spec that does not declare
+ * `Status: active` — the obligations moved nowhere, so the ledger keeps gating.
+ * Silently, though: without this context `QFAI-STATUS-004` checked only that
+ * the target directory exists, so a self-reference or a retired successor
+ * passed `--profile full` while the source went on gating for a reason no
+ * finding named. Both fields are optional so a caller holding one spec in
+ * isolation still gets the single-spec rules.
+ */
+export type SpecStatusContext = {
+  /** `spec-NNNN` of the spec being validated, for self-reference detection. */
+  selfSpecId?: string;
+  /** Resolved lifecycle per `spec-NNNN`; `undefined` where none was declared. */
+  statuses?: ReadonlyMap<string, SpecStatus | undefined>;
+};
 
 async function validateSpecStatusForEntry(
   entry: SpecEntry,
   knownSpecIds: Set<string>,
+  statuses: ReadonlyMap<string, SpecStatus | undefined>,
 ): Promise<Issue[]> {
   const specMdPath = entry.specPath;
   if (!specMdPath) {
@@ -194,13 +245,17 @@ async function validateSpecStatusForEntry(
     return [];
   }
   const parsed = parseSpec(text, specMdPath);
-  return validateSpecStatus(parsed, specMdPath, knownSpecIds);
+  return validateSpecStatus(parsed, specMdPath, knownSpecIds, {
+    selfSpecId: `spec-${entry.specNumber}`,
+    statuses,
+  });
 }
 
 export function validateSpecStatus(
   parsed: ParsedSpec,
   specMdPath: string,
   knownSpecIds: Set<string>,
+  context: SpecStatusContext = {},
 ): Issue[] {
   const issues: Issue[] = [];
 
@@ -276,6 +331,35 @@ export function validateSpecStatus(
           "置換先 spec を作成するか、Superseded-by を実在する spec ID に修正してください。",
         ),
       );
+    } else if (context.selfSpecId !== undefined && parsed.supersededBy === context.selfSpecId) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-004",
+          `Superseded-by が自分自身を指しています: ${parsed.supersededBy}`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.self",
+          [parsed.supersededBy],
+          "canonical",
+          "SUPERSEDE は義務を別の spec へ移す操作です。Superseded-by を移行先の active な spec に修正してください。",
+        ),
+      );
+    } else if (
+      context.statuses !== undefined &&
+      context.statuses.get(parsed.supersededBy) !== "active"
+    ) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-004",
+          `Superseded-by が指す spec が active ではありません: ${parsed.supersededBy}`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.active",
+          [parsed.supersededBy],
+          "canonical",
+          "退役済み、または Status 宣言のない spec は義務を引き継げません。Superseded-by を `- Status: active` を宣言している spec に修正してください。",
+        ),
+      );
     }
   }
 
@@ -293,17 +377,17 @@ export function validateSpecStatus(
           "01_Spec.md に `- Deprecated-at: YYYY-MM-DD` を設定してください。",
         ),
       );
-    } else if (!DEPRECATED_AT_RE.test(parsed.deprecatedAt)) {
+    } else if (!isValidDeprecatedAt(parsed.deprecatedAt)) {
       issues.push(
         issue(
           "QFAI-STATUS-006",
-          `Deprecated-at の形式が不正です: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
+          `Deprecated-at が実在する日付ではありません: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
           "error",
           specMdPath,
           "specStatus.deprecatedAt.format",
           [parsed.deprecatedAt],
           "canonical",
-          "Deprecated-at を `YYYY-MM-DD` 形式に修正してください。",
+          "Deprecated-at を実在する暦日の `YYYY-MM-DD` 形式に修正してください。",
         ),
       );
     }
@@ -332,6 +416,173 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
  * `UPDATE:REMOVE`.
  */
 const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
+
+/** The only well-formed spec token: `spec-` plus exactly four digits. */
+const EXISTING_SPEC_ID_RE = /^spec-\d{4}$/;
+
+/**
+ * Range notation in an `Existing Spec` cell. A range names no spec
+ * directory — it is a prose shorthand that no reader can resolve back to a
+ * concrete set — so it is not a form of the grammar. Multiple specs are
+ * enumerated with `+` instead.
+ */
+const EXISTING_SPEC_RANGE_RE = /spec-\d{4}\s*(?:[〜～~…–—ー]|\.\.\.?)\s*(?:spec-)?\d{4}/;
+
+/**
+ * A policy-only row acts on `_policies/**` rather than on a spec
+ * directory, so `_policies` (bare, backticked, or as a path to one of its
+ * files) is an accepted target. The match is anchored to the whole value:
+ * a cell that merely *contains* the literal (`not_policies`,
+ * `_policies_typo`) resolves to nothing and must not pass as a policy row.
+ *
+ * No segment may be `.` or `..`. The path characters alone admitted both, so
+ * `_policies/../spec-0001` read as a policy target: it skipped the spec
+ * existence check while normalising to something outside `_policies`
+ * entirely, which is the one thing "policy-only row" is supposed to mean.
+ */
+const EXISTING_SPEC_POLICY_RE = /^_policies(?:\/(?!\.\.?(?:\/|$))[0-9A-Za-z._-]+)*$/;
+
+/** Separators that may join several targets inside one `Existing Spec` cell. */
+const EXISTING_SPEC_SEPARATOR_RE = /[+,、，]/;
+
+/**
+ * A part that was *meant* to be a spec ID but is not one. Used only to pick
+ * the error wording: a botched ID is reported as such, anything else as a
+ * cell that names no target at all.
+ */
+const EXISTING_SPEC_ATTEMPT_RE = /spec[-_]?\d/i;
+
+/**
+ * What one `Existing Spec` cell resolves to, or why it resolves to nothing.
+ * The grammar declared in `references/sdd-triage.md` is closed and applies to
+ * the **whole** cell, so the cell is parsed once and every gate below reads
+ * the parse. Matching a well-formed token *inside* the cell and ignoring the
+ * remainder is what let `spec-0001 trailing prose`, `spec-0001+`,
+ * `spec-0001++spec-0003` and `spec-0001+_policies` through: each contains a
+ * valid token, and none of them is a valid cell.
+ */
+type ExistingSpecTarget =
+  | { readonly kind: "specs"; readonly ids: readonly string[] }
+  | { readonly kind: "policies" }
+  | { readonly kind: "malformed"; readonly message: string; readonly refs: readonly string[] };
+
+/**
+ * Strips one matched pair of surrounding backticks, and nothing else.
+ *
+ * Deleting every backtick in the cell normalised values the grammar exists to
+ * reject: ``spec-00`01`` became `spec-0001` and passed as an existing ID.
+ * Code-span decoration is a matched outer pair; a backtick anywhere else is
+ * part of the value and has to stay there so the grammar can refuse it.
+ */
+function stripMatchedBackticks(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || !trimmed.startsWith("`") || !trimmed.endsWith("`")) {
+    return trimmed;
+  }
+  const inner = trimmed.slice(1, -1);
+  // One span, not two. `` `spec-0003`+`spec-0004` `` also opens and closes with
+  // a backtick, and stripping the outermost pair there would leave a stray
+  // backtick glued to each target; that cell is handled by stripping each
+  // part's own span after the split.
+  return inner.includes("`") ? trimmed : inner.trim();
+}
+
+/**
+ * A markdown backslash escape: a backslash followed by ASCII punctuation, the
+ * only sequence CommonMark reads as one. `renderTriageMarkdown` writes
+ * `\_policies`, so the escape has to be undone — but deleting every backslash
+ * undid more than that, turning `spec-00\01` into `spec-0001`. A backslash
+ * before anything else is an ordinary character and is left in place, where
+ * the grammar rejects it.
+ */
+const MARKDOWN_ESCAPE_RE = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g;
+
+function unescapeMarkdown(value: string): string {
+  return value.replace(MARKDOWN_ESCAPE_RE, "$1");
+}
+
+/**
+ * Parse the whole cell into its targets. The value may arrive
+ * markdown-escaped (`\_policies`, written by `renderTriageMarkdown`) or
+ * backticked (`` `_policies` ``, or one span per target), so those decorations
+ * are undone — precisely, never by deleting the characters wherever they
+ * occur; what is left must split cleanly on the enumeration separators into
+ * parts that are each either a well-formed spec ID or a `_policies` path, and
+ * the two kinds may not be mixed in one cell.
+ */
+function parseExistingSpecCell(cell: string): ExistingSpecTarget {
+  const parts = stripMatchedBackticks(cell)
+    .split(EXISTING_SPEC_SEPARATOR_RE)
+    .map((part) => unescapeMarkdown(stripMatchedBackticks(part)));
+  if (parts.some((part) => part.length === 0)) {
+    return {
+      kind: "malformed",
+      message: `Existing Spec の区切りの前後に対象がありません: ${cell}`,
+      refs: [cell],
+    };
+  }
+  const unreadable = parts.filter(
+    (part) => !EXISTING_SPEC_ID_RE.test(part) && !EXISTING_SPEC_POLICY_RE.test(part),
+  );
+  if (unreadable.length > 0) {
+    return unreadable.some((part) => EXISTING_SPEC_ATTEMPT_RE.test(part))
+      ? {
+          kind: "malformed",
+          message: `Existing Spec の spec ID 表記が不正です: ${unreadable.join(", ")}`,
+          refs: unreadable,
+        }
+      : {
+          kind: "malformed",
+          message: `Existing Spec が対象を名指ししていません: ${cell}`,
+          refs: [cell],
+        };
+  }
+  const ids = parts.filter((part) => EXISTING_SPEC_ID_RE.test(part));
+  if (ids.length > 0 && ids.length < parts.length) {
+    return {
+      kind: "malformed",
+      message: `Existing Spec に spec と policy の対象が混在しています: ${cell}`,
+      refs: [cell],
+    };
+  }
+  const repeated = [...new Set(parts.filter((part, at) => parts.indexOf(part) !== at))];
+  if (repeated.length > 0) {
+    // An enumeration that names the same target twice is not an enumeration of
+    // two targets. It also misleads the removal check below, which reads "every
+    // target gone" as "the operation has been carried out" — a duplicated ID
+    // makes one absent spec look like a complete set.
+    return {
+      kind: "malformed",
+      message: `Existing Spec が同じ対象を重複して列挙しています: ${repeated.join(", ")}`,
+      refs: repeated,
+    };
+  }
+  return ids.length > 0 ? { kind: "specs", ids } : { kind: "policies" };
+}
+
+/**
+ * Operations whose completion removes the spec directory the row names.
+ * `sdd-triage.md` "Operation scope" defines DELETE as removing the directory
+ * entirely, and MERGE / SPLIT collapse or decompose their source into other
+ * spec IDs — so once such a row has been carried out, its targets are gone by
+ * construction while the row itself stays in delta.md as history. SUPERSEDE
+ * is not in the set: it flips the source spec's Status and keeps the
+ * directory.
+ */
+const SPEC_REMOVING_TRIAGE_OPS = new Set<TriageTopLevelOp>(["DELETE", "MERGE", "SPLIT"]);
+
+/** Whether the row's operation acts on a whole spec directory. */
+function isSpecScopedOp(opUpper: "UPDATE" | TriageTopLevelOp): boolean {
+  return opUpper !== "UPDATE" && SPEC_SCOPED_OPS.has(opUpper);
+}
+
+/** Whether carrying the row out removes the spec directories it names. */
+function isSpecRemovingOp(opUpper: "UPDATE" | TriageTopLevelOp): boolean {
+  return opUpper !== "UPDATE" && SPEC_REMOVING_TRIAGE_OPS.has(opUpper);
+}
+
+const EXISTING_SPEC_GRAMMAR_HINT =
+  "Existing Spec はセル全体が `spec-NNNN` (複数は `+` 連結)、policy 専用行は `_policies` (spec 単位の操作では不可)、対象 spec がまだ無い CREATE 行は `-` のいずれかである必要があります。";
 
 /** Bracket pairs that mark a parenthetical citation in a `Subject` cell. */
 const CITATION_BRACKETS: ReadonlyArray<readonly [string, string]> = [
@@ -435,6 +686,7 @@ function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
 async function validateTriageSectionForEntry(
   entry: SpecEntry,
   toolVersion: string,
+  knownSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
   if (!deltaPath) {
@@ -446,7 +698,7 @@ async function validateTriageSectionForEntry(
   } catch {
     return [];
   }
-  const issues = validateTriageSection(text, deltaPath, toolVersion);
+  const issues = validateTriageSection(text, deltaPath, toolVersion, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
   return issues;
 }
@@ -721,14 +973,137 @@ function validateCreateRows(
 }
 
 /**
+ * Enforce QFAI-TRIAGE-009: the `Existing Spec` cell binds the row to the
+ * spec it acts on, so its value must be readable — and readable the same
+ * way by every author. The grammar is declared in
+ * `references/sdd-triage.md` and applies to the whole cell: one or more
+ * `spec-NNNN` joined by `+`, `_policies` for a policy-only row (never for a
+ * spec-scoped operation), or `-` on a CREATE row, which has no existing spec
+ * yet. `knownSpecIds` is the set of spec directories actually on disk; when
+ * it is absent (callers that validate a delta.md in isolation) only the
+ * grammar is checked, not existence.
+ *
+ * A removal row (`SPEC_REMOVING_TRIAGE_OPS`) outlives the directories it
+ * names, so existence is read as a state rather than a requirement: every
+ * target still present means the row has not been carried out, every target
+ * gone means it has and the row is the tombstone. A row where only *some*
+ * targets resolve is in neither state — one of its sources is misspelled or
+ * was never allocated — and it is reported.
+ *
+ * The grammar this enforces is itself new, so the rule necessarily lands on
+ * cells written before it existed — on rows already approved, where the cell
+ * is no longer rewritten by anything. Severity therefore comes from the
+ * promotion window (`RULE_PROMOTIONS.triageExistingSpecCell`) rather than a
+ * literal beside the call, so an upgrade cannot latch a consuming repository's
+ * `--fail-on error` gate the moment it lands.
+ */
+function validateExistingSpecCell(
+  cell: string,
+  opUpper: "UPDATE" | TriageTopLevelOp,
+  rowLabel: string,
+  deltaPath: string,
+  toolVersion: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
+): Issue[] {
+  const existingSpecSeverity = newRuleSeverity(toolVersion, EXISTING_SPEC_PROMOTION);
+  const windowNote =
+    existingSpecSeverity === "warning"
+      ? `（${EXISTING_SPEC_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+      : "";
+  const report = (message: string, refs: string[]): Issue[] => [
+    issue(
+      "QFAI-TRIAGE-009",
+      `${message} (${rowLabel})${windowNote}`,
+      existingSpecSeverity,
+      deltaPath,
+      "triage.existingSpec",
+      refs,
+      "canonical",
+      EXISTING_SPEC_GRAMMAR_HINT,
+    ),
+  ];
+
+  const isNoneLiteral =
+    cell === TRIAGE_NO_EXISTING_SPEC ||
+    cell.toLowerCase() === TRIAGE_NO_EXISTING_SPEC_LEGACY.toLowerCase();
+
+  if (opUpper === "CREATE") {
+    return isNoneLiteral
+      ? []
+      : report(
+          `CREATE 行の Existing Spec は \`${TRIAGE_NO_EXISTING_SPEC}\` です: ${cell || "(empty)"}`,
+          [cell],
+        );
+  }
+  if (cell.length === 0 || isNoneLiteral) {
+    // Including DELETE. `classifyTriage` emits `op: "DELETE",
+    // existingSpec: null` when no active spec absorbed a removal-shaped REQ,
+    // and `renderTriageMarkdown` writes that as `-` — but a DELETE removes a
+    // whole spec directory, so a row that names none has nothing to carry
+    // out and the approval gate cannot supply the target either. That row is
+    // a proposal, not a persistable decision: the classifier says so in its
+    // rationale and this gate is what forces the target to be filled in,
+    // exactly as QFAI-TRIAGE-006 forces the CREATE `CAP-NNNN` placeholder.
+    return report(`Triage ${opUpper} の Existing Spec が対象を持ちません: ${cell || "(empty)"}`, [
+      cell,
+    ]);
+  }
+  if (EXISTING_SPEC_RANGE_RE.test(cell)) {
+    return report(`Existing Spec の範囲表記は形式として認められません: ${cell}`, [cell]);
+  }
+
+  const target = parseExistingSpecCell(cell);
+  if (target.kind === "malformed") {
+    return report(target.message, [...target.refs]);
+  }
+  if (target.kind === "policies") {
+    // `_policies` names no spec directory, and SPLIT / MERGE / SUPERSEDE /
+    // DELETE are defined on one — an approved policy-target row would have
+    // nothing to execute against, or would be read as a destructive
+    // operation on the policy files themselves.
+    return isSpecScopedOp(opUpper)
+      ? report(
+          `Triage ${opUpper} は spec 単位の操作なので policy target は指定できません: ${cell}`,
+          [cell],
+        )
+      : [];
+  }
+  if (!knownSpecIds) {
+    return [];
+  }
+  const missing = target.ids.filter((specId) => !knownSpecIds.has(specId));
+  if (missing.length === 0) {
+    return [];
+  }
+  if (isSpecRemovingOp(opUpper)) {
+    // Every target gone: the operation has been carried out and the row is
+    // its tombstone. Only some gone: neither state, so the row names a
+    // source that never existed.
+    return missing.length === target.ids.length
+      ? []
+      : report(
+          `Existing Spec の一部の対象だけが存在しません (未実行なら全て存在し、完了済みなら全て消えているはずです): ${missing.join(", ")}`,
+          missing,
+        );
+  }
+  return report(`Existing Spec が存在しない spec を指しています: ${missing.join(", ")}`, missing);
+}
+
+/**
  * `toolVersion` は必須引数。既定値を持たせると、渡し忘れた呼び出しでは
- * `QFAI-TRIAGE-008` が永久に warning のまま据え置かれ、promotion window が
- * 黙って無効化される。呼び出し側は `resolveToolVersion()` の結果を渡す。
+ * `QFAI-TRIAGE-008` / `QFAI-TRIAGE-009` が永久に warning のまま据え置かれ、
+ * promotion window が黙って無効化される。呼び出し側は `resolveToolVersion()`
+ * の結果を渡す。
+ *
+ * `knownSpecIds` は任意。delta.md を単体で検証する呼び出し (spec ツリーを
+ * 持たないユニットテスト等) では `QFAI-TRIAGE-009` の文法だけを見て、
+ * 存在検査は行わない。
  */
 export function validateTriageSection(
   text: string,
   deltaPath: string,
   toolVersion: string,
+  knownSpecIds?: ReadonlySet<string>,
 ): Issue[] {
   const issues: Issue[] = [];
   // `collectTriageSections` と同じ masked テキストから読む。生テキストのまま
@@ -784,7 +1159,9 @@ export function validateTriageSection(
   // Validate every canonical `## Triage` section, and every table inside
   // each of them (PR #206 review LWri covered the tables only).
   for (const section of sections) {
-    issues.push(...validateTriageSectionBody(section, sections.length, deltaPath));
+    issues.push(
+      ...validateTriageSectionBody(section, sections.length, deltaPath, toolVersion, knownSpecIds),
+    );
   }
 
   return issues;
@@ -794,6 +1171,8 @@ function validateTriageSectionBody(
   section: TriageSection,
   sectionCount: number,
   deltaPath: string,
+  toolVersion: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
   const tables = parseAllMarkdownTables(section.body);
@@ -844,7 +1223,9 @@ function validateTriageSectionBody(
       continue;
     }
 
-    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel));
+    issues.push(
+      ...validateTriageRows(table, headerMap, deltaPath, tableLabel, toolVersion, knownSpecIds),
+    );
   }
 
   return issues;
@@ -855,6 +1236,8 @@ function validateTriageRows(
   headerMap: Map<string, number>,
   deltaPath: string,
   tableLabel: string,
+  toolVersion: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
   for (const [rowIndex, row] of table.rows.entries()) {
@@ -863,6 +1246,7 @@ function validateTriageRows(
     const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
     const subjectCell = (row[headerMap.get("subject") ?? -1] ?? "").trim();
+    const existingSpecCell = (row[headerMap.get("existing spec") ?? -1] ?? "").trim();
     const baseLabel = sourceCell || `row ${rowIndex + 1}`;
     const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
 
@@ -877,7 +1261,7 @@ function validateTriageRows(
           "triage.operation",
           [opCell],
           "canonical",
-          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。`,
+          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。UPDATE:APPEND のようなコロン形式は散文上の略記であり、セル値ではありません。Operation に UPDATE を、Sub-op に APPEND / MODIFY / REMOVE を分けて記載してください。`,
         ),
       );
       continue;
@@ -885,6 +1269,20 @@ function validateTriageRows(
     // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
     // a bare type assertion (PR #206 review #34).
     const opUpper = opUpperRaw;
+
+    // QFAI-TRIAGE-009 is orthogonal to the Sub-op / approval gates below,
+    // so it is evaluated for every row whose Operation parsed, and the
+    // row keeps flowing through the remaining checks.
+    issues.push(
+      ...validateExistingSpecCell(
+        existingSpecCell,
+        opUpper,
+        rowLabel,
+        deltaPath,
+        toolVersion,
+        knownSpecIds,
+      ),
+    );
 
     if (opUpper === "UPDATE") {
       const subUpper = subCell.toUpperCase();
@@ -1498,7 +1896,17 @@ function validateLayeredNamespace(
       "specPack.layered.namespace",
       mismatched,
       "canonical",
-      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。`,
+      `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。` +
+        // The old remedy asked the author to do the one thing they cannot: the
+        // mismatched ID belongs to ANOTHER spec, so 「make it match this one」 is
+        // not a repair. The supported form was undiscoverable except by tripping
+        // the validator repeatedly (#1101).
+        "別 spec が所有する ID を参照したい場合は、その spec の contract id " +
+        "(`CON-DB-*` / `CON-API-*` / `CON-UI-*`) を引用してください — `BR-*` / `US-*` などの " +
+        "レイヤー ID を直接参照することはこの検査が禁止します。所有 spec は対象 spec の " +
+        "Contracts 表で特定できます。この検査の対象は 02_User-stories.md / " +
+        "03_Acceptance-Criteria.md / 04_Business-Rules.md / 05_Examples.md / " +
+        "06_Test-Cases.md の 5 ファイルで、09_delta.md は対象外です。",
     ),
   ];
 }
@@ -1507,7 +1915,7 @@ async function collectExistingLayeredDeltaFiles(entry: SpecEntry): Promise<strin
   const candidates = Array.from(new Set(entry.deltaCandidates));
   const existing: string[] = [];
   for (const candidate of candidates) {
-    if (!/(?:^|_)delta\.md$/i.test(path.basename(candidate))) {
+    if (!DELTA_FILE_NAME.test(path.basename(candidate))) {
       continue;
     }
     if (await fileExists(candidate)) {
@@ -1678,6 +2086,760 @@ function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
       "18_delta.md に `Change Summary / Rationale / Candidates Considered / Adopted / Rejected / Impact / Follow-ups` を揃え、Rejected に `DO NOT` と `Temptation` を記載してください。",
     ),
   ];
+}
+
+/** Decisions-file entry shape checks for a `[RE-OPEN]` record. */
+const RE_OPEN_RULE = "specPack.decisionsReOpen";
+/** The `## Rejected` back-reference that points at such a record. */
+const RE_OPENED_BY_RULE = "specPack.deltaReOpenedBy";
+
+const RE_OPENED_BY_LINE = /^\s*[-*]\s*re-opened\s+by\s*[:：]\s*(.*)$/i;
+
+/**
+ * The `[RE-OPEN]` record the Delta Rejected Guard names.
+ *
+ * The guard forbids re-adopting a candidate listed under a delta's
+ * `## Rejected` without a re-open decision record, and four reviewer agents
+ * block on it — but the record had no status value, no field for the prior
+ * `DR-*` and no field for the approval, so nothing could tell a valid re-open
+ * from a sentence in a PR description. These checks fire only once a project
+ * actually writes `Status: re-open` or a `Re-opened by:` back-reference, so an
+ * existing spec pack that has never re-opened anything is unaffected.
+ */
+async function validateReOpenForEntry(
+  entry: SpecEntry,
+  specsRoot: string,
+  toolVersion: string,
+): Promise<Issue[]> {
+  const decisionsText = await readSafe(entry.decisionsPath);
+  const deltas = await collectDeltaFiles(entry);
+  const records = parseDecisionRecordEntries(decisionsText);
+  const reOpens = records.filter((record) => record.status === RE_OPEN_STATUS);
+  const bound = deltas.flatMap((delta) =>
+    delta.rejected.candidates.flatMap((candidate) => candidate.reOpenedBy),
+  );
+  const unbound = deltas.flatMap((delta) => delta.rejected.unbound);
+  const decisionsName = path.basename(entry.decisionsPath);
+  const window = reOpenWindow(toolVersion);
+  // Runs whether or not a re-open exists: a candidate moved from `## Rejected`
+  // to `## Adopted` with no record at all is the reintroduction the guard is
+  // about, and it is exactly the case the two `Re-opened by:` checks below
+  // cannot see, because nothing was written for them to read.
+  const readopted = deltas.flatMap((delta) =>
+    validateReadoptedCandidates(delta, decisionsName, window),
+  );
+  if (reOpens.length === 0 && bound.length === 0 && unbound.length === 0) {
+    return readopted;
+  }
+
+  const context: ReOpenContext = {
+    // The layout's own Decisions file, not the layered name: `spec-pack`
+    // resolves `14_Decisions.md`, and searching `07_Decisions.md` there
+    // reported every correctly declared prior DR as missing.
+    declared: await collectDeclaredDrHeadingIds(entry.dir, specsRoot, entry.decisionsPath),
+    cyclic: collectCyclicReOpenIds(reOpens),
+    decisionsPath: entry.decisionsPath,
+    decisionsName,
+    ...window,
+  };
+  const issues: Issue[] = [
+    ...readopted,
+    ...validateUniqueDecisionIds(records, context),
+    ...(await validateReferencedDecisionOwnership(specsRoot, records, reOpens, context)),
+  ];
+  for (const record of reOpens) {
+    issues.push(...validateReOpenRecord(record, context));
+  }
+  issues.push(
+    ...validateReOpenBackReferences(entry, reOpens, bound, unbound, context.decisionsName, window),
+  );
+  return issues;
+}
+
+/**
+ * The promotion window the seven `QFAI-DECISION-*` codes report inside.
+ *
+ * The guard is new, and the records it reads are not: a spec that re-opened a
+ * decision before any of these fields were defined is missing every one of
+ * them, and a spec that re-adopted a rejected candidate meets the whole
+ * backlog in a single run. So the severity comes from the pin rather than from
+ * a literal beside each `issue(...)`, and the message says which release ends
+ * the window while `--fail-on error` keeps working.
+ *
+ * Resolved once per validator run and threaded through {@link ReOpenContext}:
+ * the window is a property of the tool, not of the spec being read.
+ */
+function reOpenWindow(toolVersion: string): ReOpenWindow {
+  const reOpenSeverity = newRuleSeverity(toolVersion, RE_OPEN_PROMOTION);
+  return {
+    reOpenSeverity,
+    windowNote:
+      reOpenSeverity === "warning"
+        ? `（${RE_OPEN_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+        : "",
+  };
+}
+
+/** One delta file of a spec, with the two sections these checks read parsed. */
+type DeltaFile = { path: string; rejected: RejectedSection; adopted: Set<string> };
+
+/** A `*_delta.md`, under either the layered or the legacy naming. */
+const DELTA_FILE_NAME = /(?:^|_)delta\.md$/i;
+
+/** The delta files this spec could have, canonical first, without duplicates. */
+function deltaFilePaths(entry: SpecEntry): string[] {
+  const seen = new Set<string>();
+  for (const candidate of [entry.deltaPath, ...entry.deltaCandidates]) {
+    if (candidate.length > 0 && DELTA_FILE_NAME.test(path.basename(candidate))) {
+      seen.add(candidate);
+    }
+  }
+  return [...seen];
+}
+
+/**
+ * Every delta the spec actually has, parsed once each.
+ *
+ * `entry.deltaPath` alone is not enough. `resolveDeltaCandidates` sorts the
+ * `*_delta.md` files it finds and the layouts take the first, so a layered spec
+ * holding an extra `00_delta.md` beside the required `09_delta.md` pointed
+ * `deltaPath` at the extra file: the required-files check still passed on
+ * `09_delta.md`, while every re-adoption written there sat outside all of
+ * `QFAI-DECISION-*`. Each candidate is authoritative for the guard, so each is
+ * read, and a candidate that does not exist reads as empty and contributes
+ * nothing.
+ *
+ * Masking happens here, once per file: fenced samples, HTML comments and
+ * indented code are not the delta, and a `Re-opened by:` parked in one of them
+ * is not a live back-reference.
+ */
+async function collectDeltaFiles(entry: SpecEntry): Promise<DeltaFile[]> {
+  const files: DeltaFile[] = [];
+  for (const target of deltaFilePaths(entry)) {
+    const raw = await readSafe(target);
+    if (raw.length === 0) {
+      continue;
+    }
+    const text = maskNonSpecRegions(raw);
+    files.push({
+      path: target,
+      rejected: collectRejectedSection(text),
+      adopted: collectAdoptedCandidateKeys(text),
+    });
+  }
+  return files;
+}
+
+/**
+ * One `- Candidate:` block of a delta's `## Rejected`, with the back-references
+ * written under it.
+ */
+type RejectedCandidate = { name: string; reOpenedBy: string[] };
+
+const CANDIDATE_LINE = /^\s*[-*]\s*candidate\s*[:：]\s*(.*)$/i;
+const ADOPTED_LINE = /^\s*[-*]\s*adopted\s*[:：]\s*(.*)$/i;
+
+const TRAILING_PUNCTUATION = /[.,;。、]+\s*$/;
+const SURROUNDING_QUOTES = /^\s*["'“”「『]+|["'“”」』]+\s*$/g;
+
+/**
+ * Strip the decoration a delta field carries around a candidate name.
+ *
+ * Punctuation is stripped on both sides of the quotes, not only inside them:
+ * `- Candidate: "in-process cache".` is ordinary prose, and removing the quotes
+ * first leaves the sentence period between the name and the end of the string,
+ * so the closing quote survives normalisation and the key no longer equals the
+ * `- Adopted: in-process cache` it names. The same candidate could then be
+ * re-adopted with no `Re-opened by:` and `QFAI-DECISION-006` stayed silent.
+ */
+function candidateKey(raw: string): string {
+  return raw
+    .replace(/`/g, "")
+    .replace(TRAILING_PUNCTUATION, "")
+    .replace(SURROUNDING_QUOTES, "")
+    .replace(TRAILING_PUNCTUATION, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * The rejected candidates that reappear under `## Adopted` without a re-open.
+ *
+ * This is the guard's own sentence, checked: "no candidate listed under a
+ * spec's `## Rejected` may appear under `## Adopted` unless a `Status: re-open`
+ * DR names it". The `Re-opened by:` checks alone cannot enforce it — a delta
+ * that simply moves the candidate up and leaves `Re-opened by: -` writes
+ * nothing for them to read, so every `QFAI-DECISION-*` stays silent and the
+ * reintroduction lands. Both sections name the candidate in a field
+ * (`- Adopted:` / `- Candidate:`), so the correspondence is a field comparison,
+ * not a prose-similarity guess: names are matched after case, whitespace,
+ * backticks, quotes and trailing punctuation are normalised, and a candidate
+ * still carrying the template placeholder is not a name at all.
+ *
+ * The binding is per candidate: the back-reference has to sit under the block
+ * of the candidate that was re-adopted, so a delta re-adopting two candidates
+ * cannot cover both with one `Re-opened by:`.
+ */
+function validateReadoptedCandidates(
+  delta: DeltaFile,
+  decisionsName: string,
+  window: ReOpenWindow,
+): Issue[] {
+  if (delta.adopted.size === 0) {
+    return [];
+  }
+
+  const { reOpenSeverity, windowNote } = window;
+  const issues: Issue[] = [];
+  for (const candidate of delta.rejected.candidates) {
+    const key = candidateKey(candidate.name);
+    if (key.length === 0 || isPlaceholderValue(candidate.name) || !delta.adopted.has(key)) {
+      continue;
+    }
+    if (candidate.reOpenedBy.length > 0) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-DECISION-006",
+        `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。${windowNote}`,
+        reOpenSeverity,
+        delta.path,
+        RE_OPENED_BY_RULE,
+        [candidate.name],
+        "canonical",
+        `${decisionsName} に \`Status: re-open\` の Decision Record を追加し、この候補の \`Re-opened by:\` にその ID を記載してください。再採用しないなら \`## Adopted\` から外します。`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/** A bullet list item: its indent, its marker, and the gap before its content. */
+const BULLET_ITEM_LINE = /^( *)([-*+]|\d+[.)])( +)/;
+
+/** Columns past a block's content indent at which an indented code block opens. */
+const CODE_BLOCK_INDENT = 4;
+
+/**
+ * Blank the lines a list in these sections holds as an indented code sample.
+ *
+ * {@link maskNonSpecRegions} stops recognising indented code while a list is
+ * open, on purpose: under a list item four spaces are continuation rather than
+ * code, and telling the two apart needs the list's content column. In these
+ * sections that column is knowable — every field is a bullet — so it is
+ * computed here. Without it a `- Re-opened by: DR-*` written as an indented
+ * sample under a `- Candidate:` bullet was read as that candidate's live
+ * back-reference, which cleared `QFAI-DECISION-004` and `-006` while the
+ * candidate that was actually re-adopted carried none.
+ *
+ * The threshold is CommonMark's: code starts four columns past the content
+ * indent of the block containing it, which for a list item is the column its
+ * marker's text begins at. A field nested one list level deeper therefore stays
+ * a field, and only an indentation no list level explains is dropped.
+ */
+function maskListIndentedCode(lines: string[]): string[] {
+  let contentIndent = 0;
+  return lines.map((raw) => {
+    const line = raw.replace(/\t/g, " ".repeat(CODE_BLOCK_INDENT));
+    if (line.trim().length === 0) {
+      return line;
+    }
+    const indent = line.length - line.trimStart().length;
+    if (indent >= contentIndent + CODE_BLOCK_INDENT) {
+      return "";
+    }
+    const bullet = BULLET_ITEM_LINE.exec(line);
+    if (bullet) {
+      contentIndent =
+        (bullet[1] ?? "").length + (bullet[2] ?? "").length + (bullet[3] ?? "").length;
+    } else if (indent < contentIndent) {
+      // A block that left the item's content closes the list levels above it.
+      contentIndent = indent;
+    }
+    return line;
+  });
+}
+
+/**
+ * The lines of every section named `heading`, one group per section.
+ *
+ * Every section, not the first: a second `## Rejected` is where a candidate
+ * hides from a reader that stops at the first one. Grouped rather than joined,
+ * because a per-candidate scan has to start each section clean — see
+ * {@link collectRejectedCandidates}.
+ */
+function sectionLineGroups(text: string, heading: string): string[][] {
+  return extractMarkdownSections(text, heading).map((section) =>
+    maskListIndentedCode(section.replace(/\r\n/g, "\n").split("\n")),
+  );
+}
+
+/** Those lines flattened, for the readers that need no section boundary. */
+function sectionLines(text: string, heading: string): string[] {
+  return sectionLineGroups(text, heading).flat();
+}
+
+/**
+ * A delta's `## Rejected`, parsed once: the candidate blocks, and the
+ * back-references that belong to none of them.
+ */
+type RejectedSection = {
+  candidates: RejectedCandidate[];
+  /** `Re-opened by:` values written above the section's first `- Candidate:`. */
+  unbound: string[];
+};
+
+/**
+ * The `- Candidate:` blocks of a delta's `## Rejected`, in document order, with
+ * each `Re-opened by:` attached to the block it was written under.
+ *
+ * The binding is the point. A `- Re-opened by:` at the head of the section —
+ * or of a duplicate `## Rejected` — documents no candidate at all; collected
+ * flat it stood in for the back-reference of every `Status: re-open` record,
+ * so the candidate that was actually re-adopted could carry none and
+ * `QFAI-DECISION-004` still passed. Such a reference is kept in `unbound`
+ * rather than dropped: it may still name an id no record declares, which is a
+ * dangling reference whoever owns it.
+ */
+function collectRejectedSection(deltaText: string): RejectedSection {
+  const candidates: RejectedCandidate[] = [];
+  const unbound: string[] = [];
+  for (const lines of sectionLineGroups(deltaText, "Rejected")) {
+    // Reset per section: a `- Re-opened by:` that opens a second `## Rejected`
+    // sits under no candidate at all. Scanning the sections joined kept the
+    // first section's last candidate current across the boundary and handed it
+    // that back-reference, so a candidate whose own block carried none passed
+    // `QFAI-DECISION-006` — and `-004` resolved on the stray reference.
+    let current: RejectedCandidate | null = null;
+    for (const line of lines) {
+      const candidate = CANDIDATE_LINE.exec(line);
+      if (candidate) {
+        current = { name: cleanFieldValue(candidate[1] ?? ""), reOpenedBy: [] };
+        candidates.push(current);
+        continue;
+      }
+      const reOpenedBy = RE_OPENED_BY_LINE.exec(line);
+      if (!reOpenedBy) {
+        continue;
+      }
+      const refs = splitReOpenedByRefs(reOpenedBy[1] ?? "");
+      if (current) {
+        current.reOpenedBy.push(...refs);
+      } else {
+        unbound.push(...refs);
+      }
+    }
+  }
+  return { candidates, unbound };
+}
+
+/** The normalised `- Adopted:` names of a delta's `## Adopted`. */
+function collectAdoptedCandidateKeys(deltaText: string): Set<string> {
+  const adopted = new Set<string>();
+  for (const line of sectionLines(deltaText, "Adopted")) {
+    const match = ADOPTED_LINE.exec(line);
+    if (!match) continue;
+    const value = cleanFieldValue(match[1] ?? "");
+    if (isPlaceholderValue(value)) continue;
+    const key = candidateKey(value);
+    if (key.length > 0) adopted.add(key);
+  }
+  return adopted;
+}
+
+/**
+ * A `DR-*` id is declared at most once per Decisions file.
+ *
+ * Two blocks declaring the same id each pass the per-record checks on their
+ * own, and one delta `Re-opened by:` naming it then satisfies the
+ * back-reference of both — the audit record no longer says which prior decision
+ * was reconsidered, or which approval lifted the rejection. The template already
+ * states the rule for the ID scheme ("an ID declared twice has two owners");
+ * this reports it while the re-open gate is live.
+ */
+function validateUniqueDecisionIds(
+  records: DecisionRecordEntry[],
+  context: ReOpenContext,
+): Issue[] {
+  const { reOpenSeverity, windowNote } = context;
+  const issues: Issue[] = [];
+  for (const [id, count] of duplicateDecisionIds(records)) {
+    issues.push(
+      issue(
+        "QFAI-DECISION-007",
+        `${context.decisionsName} に \`### ${id}\` の Decision Record が ${count} 件あります。同じ ID の重複宣言は、どの決定を再オープンしたのかを一意に定めません。${windowNote}`,
+        reOpenSeverity,
+        context.decisionsPath,
+        RE_OPEN_RULE,
+        [id],
+        "canonical",
+        "重複した Decision Record のいずれかに別の `DR-NNNN-MMMM` を割り当てるか、1 件に統合してください。delta の `Re-opened by:` も残した ID に合わせます。",
+      ),
+    );
+  }
+  return issues;
+}
+
+/** How many `### DR-*` headings declare each id in one file. */
+function countDecisionIds(records: DecisionRecordEntry[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** The ids a Decisions file declares more than once, with their count. */
+function duplicateDecisionIds(records: DecisionRecordEntry[]): Map<string, number> {
+  const counts = countDecisionIds(records);
+  for (const [id, count] of counts) {
+    if (count < 2) counts.delete(id);
+  }
+  return counts;
+}
+
+/** The prior ids the re-opens name in `Re-opens:`, upper-cased. */
+function referencedPriorIds(reOpens: DecisionRecordEntry[]): Set<string> {
+  const referenced = new Set<string>();
+  for (const record of reOpens) {
+    const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+    if (prior.length > 0) referenced.add(prior.toUpperCase());
+  }
+  return referenced;
+}
+
+/** How `_policies/08_Decisions.md` is written in a message, on every platform. */
+const POLICY_DECISIONS_LABEL = "_policies/08_Decisions.md";
+
+/**
+ * A `DR-*` a re-open reconsiders is owned by exactly one block across the files
+ * this spec can reach.
+ *
+ * The spec-local uniqueness check cannot see this: it counts one file, while
+ * `collectDeclaredDrHeadingIds` folds every declaration — the spec's own and
+ * `_policies/08_Decisions.md` — into a `Set`, so any number of owners resolves a
+ * `Re-opens:` and leaves no answer to which decision was reconsidered. Both
+ * spreads are that same ambiguity: the policy file declaring the id twice, and
+ * the spec declaring a copy of a policy id beside it. The second slipped past
+ * every other check because {@link validateReOpenIdScheme} only reads records
+ * that are themselves `Status: re-open`, and the colliding local block is the
+ * ordinary prior record.
+ *
+ * Only the ids the current re-opens actually name are reported, so an unrelated
+ * collision elsewhere is not this spec's failure — and a local duplicate is left
+ * to {@link validateUniqueDecisionIds}, which already reports it.
+ */
+async function validateReferencedDecisionOwnership(
+  specsRoot: string,
+  localRecords: DecisionRecordEntry[],
+  reOpens: DecisionRecordEntry[],
+  context: ReOpenContext,
+): Promise<Issue[]> {
+  const referenced = referencedPriorIds(reOpens);
+  if (referenced.size === 0) {
+    return [];
+  }
+  const policyPath = path.join(specsRoot, DR_POLICY_DECLARATION_FILE);
+  const policyCounts = countDecisionIds(parseDecisionRecordEntries(await readSafe(policyPath)));
+  const localCounts = countDecisionIds(localRecords);
+
+  const issues: Issue[] = [];
+  for (const id of referenced) {
+    const local = localCounts.get(id) ?? 0;
+    const policy = policyCounts.get(id) ?? 0;
+    if (local >= 2 || local + policy < 2) {
+      continue;
+    }
+    issues.push(ambiguousOwnerIssue(id, local, policy, policyPath, context));
+  }
+  return issues;
+}
+
+/** `QFAI-DECISION-007` for a prior `DR-*` that more than one block declares. */
+function ambiguousOwnerIssue(
+  id: string,
+  local: number,
+  policy: number,
+  policyPath: string,
+  context: ReOpenContext,
+): Issue {
+  const { reOpenSeverity, windowNote } = context;
+  const spread = local > 0;
+  const where = spread
+    ? `${context.decisionsName} と ${POLICY_DECISIONS_LABEL} の両方に \`### ${id}\` の Decision Record があります`
+    : `${POLICY_DECISIONS_LABEL} に \`### ${id}\` の Decision Record が ${policy} 件あります`;
+  return issue(
+    "QFAI-DECISION-007",
+    `${where}。この spec の \`Re-opens: ${id}\` がどの決定を再考したのか一意に定まりません。${windowNote}`,
+    reOpenSeverity,
+    spread ? context.decisionsPath : policyPath,
+    RE_OPEN_RULE,
+    [id],
+    "canonical",
+    spread
+      ? `spec 側の \`### ${id}\` に spec スコープの \`DR-NNNN-MMMM\` を割り当てるか、${POLICY_DECISIONS_LABEL} 側と 1 件に統合してください。`
+      : `${POLICY_DECISIONS_LABEL} の重複した Decision Record のいずれかに別の \`DR-NNNN\` を割り当てるか、1 件に統合してください。`,
+  );
+}
+
+/** The severity every `QFAI-DECISION-*` finding takes, and how it says so. */
+type ReOpenWindow = { reOpenSeverity: IssueSeverity; windowNote: string };
+
+/** What the per-record checks need beyond the record itself. */
+type ReOpenContext = ReOpenWindow & {
+  declared: Set<string>;
+  cyclic: Set<string>;
+  decisionsPath: string;
+  decisionsName: string;
+};
+
+/**
+ * The `Re-opens:` chains that never reach a decision made before them.
+ *
+ * Two `Status: re-open` records naming each other satisfy "declared" and
+ * "not myself" while no prior decision exists anywhere in the loop, so the
+ * pair manufactures its own justification. A chain that leaves the re-open
+ * records — reaching a `rejected` or `accepted` entry — terminates and is fine.
+ */
+function collectCyclicReOpenIds(records: DecisionRecordEntry[]): Set<string> {
+  const target = new Map<string, string>();
+  for (const record of records) {
+    const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+    if (prior.length > 0) target.set(record.id, prior.toUpperCase());
+  }
+  const cyclic = new Set<string>();
+  for (const id of target.keys()) {
+    const seen = new Set<string>([id]);
+    let cursor = target.get(id);
+    while (cursor !== undefined) {
+      if (seen.has(cursor)) {
+        cyclic.add(id);
+        break;
+      }
+      seen.add(cursor);
+      cursor = target.get(cursor);
+    }
+  }
+  return cyclic;
+}
+
+/**
+ * The four things the guard's own sentence demands of a re-open: an id in the
+ * `DR-*` scheme, the prior `DR-*` it reconsiders, what changed since the
+ * rejection, and an explicit approval.
+ */
+function validateReOpenRecord(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  return [
+    ...validateReOpenIdScheme(record, context),
+    ...validateReOpensField(record, context),
+    ...validateReOpenRationale(record, context),
+    ...validateReOpenApproval(record, context),
+  ];
+}
+
+/**
+ * The record's own id obeys the **spec-scoped** `DR-NNNN-MMMM` scheme.
+ *
+ * The heading pattern is deliberately loose so a mistyped id still surfaces as
+ * a record rather than vanishing; without this check `### DR-fake` would carry
+ * a correct prior DR and approval past every other gate, and a delta could
+ * point back at it by the same off-scheme id.
+ *
+ * The short `DR-NNNN` is not enough either. This record is declared in the
+ * spec's own Decisions file, and the ID scheme both templates state reserves the
+ * short form for `_policies/08_Decisions.md`; a bare `### DR-NNNN` here has
+ * the same id as a policy decision, so nothing says which one a `Re-opens:` or a
+ * delta's `Re-opened by:` reached.
+ */
+function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  if (DR_SPEC_SCOPED_ID_FORMAT.test(record.id)) {
+    return [];
+  }
+  const { reOpenSeverity, windowNote } = context;
+  return [
+    issue(
+      "QFAI-DECISION-001",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が spec スコープの DR-NNNN-MMMM 形式ではありません（短い DR-NNNN は _policies/08_Decisions.md 専用です）。${windowNote}`,
+      reOpenSeverity,
+      context.decisionsPath,
+      RE_OPEN_RULE,
+      [record.id],
+      "canonical",
+      "`### DR-NNNN-MMMM` の形式で見出しを書き直し、delta の `Re-opened by:` も同じ ID に合わせてください。",
+    ),
+  ];
+}
+
+/** `Re-opens:` names a well-formed prior `DR-*` that is declared somewhere. */
+function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  const { reOpenSeverity, windowNote } = context;
+  const issues: Issue[] = [];
+  const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+  const cyclic = context.cyclic.has(record.id);
+
+  if (!DR_ID_FORMAT.test(prior) || prior.toUpperCase() === record.id || cyclic) {
+    const reason = cyclic
+      ? `\`Re-opens:\` の参照が循環しており、先行する決定に到達しません (値: ${prior || "(なし)"})`
+      : `再考の対象となる先行 DR を \`Re-opens:\` が指していません (値: ${prior || "(なし)"})`;
+    issues.push(
+      issue(
+        "QFAI-DECISION-001",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。${windowNote}`,
+        reOpenSeverity,
+        context.decisionsPath,
+        RE_OPEN_RULE,
+        [record.id],
+        "canonical",
+        "`Re-opens:` に先行する Decision Record の ID を DR-NNNN もしくは DR-NNNN-MMMM の形式で記載してください（自分自身も、自分を指し返す re-open も指せません）。",
+      ),
+    );
+  } else if (!context.declared.has(prior.toUpperCase())) {
+    issues.push(
+      issue(
+        "QFAI-DECISION-002",
+        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が ${context.decisionsName} にも _policies/08_Decisions.md にもありません。${windowNote}`,
+        reOpenSeverity,
+        context.decisionsPath,
+        RE_OPEN_RULE,
+        [record.id, prior],
+        "canonical",
+        `先行 Decision Record を spec の ${context.decisionsName}（または _policies/08_Decisions.md）に宣言してから再オープンしてください。`,
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * A re-open records what changed since the rejection.
+ *
+ * The guard's sentence and both templates require it: a re-open that only
+ * repeats the original argument is the reintroduction the guard exists to stop,
+ * and without `Decision:` there is nothing to read it from.
+ */
+function validateReOpenRationale(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  if (!isPlaceholderValue(record.decision)) {
+    return [];
+  }
+  const { reOpenSeverity, windowNote } = context;
+  return [
+    issue(
+      "QFAI-DECISION-005",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、却下時から何が変わったかを述べる \`Decision:\` がありません。${windowNote}`,
+      reOpenSeverity,
+      context.decisionsPath,
+      RE_OPEN_RULE,
+      [record.id],
+      "canonical",
+      "`Decision:` に、却下の根拠を無効化した変化（何が変わって再採用できるのか）を記載してください。",
+    ),
+  ];
+}
+
+/** A re-open carries the explicit, auditable approval the guard requires. */
+function validateReOpenApproval(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  const missingApprover = isPlaceholderValue(record.approvedBy);
+  // Non-empty is not enough: `Approved at: yesterday` records that someone
+  // typed something, not when the re-open was approved.
+  const badInstant = !isAuditableInstant(record.approvedAt);
+  if (!missingApprover && !badInstant) {
+    return [];
+  }
+  const { reOpenSeverity, windowNote } = context;
+  const reason = missingApprover
+    ? "明示的な承認 (`Approved by` / `Approved at`) がありません"
+    : `\`Approved at: ${(record.approvedAt ?? "").trim() || "(なし)"}\` が YYYY-MM-DDThh:mm:ssZ 形式の実在する時刻ではありません`;
+  return [
+    issue(
+      "QFAI-DECISION-003",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。${windowNote}`,
+      reOpenSeverity,
+      context.decisionsPath,
+      RE_OPEN_RULE,
+      [record.id],
+      "canonical",
+      "`Approved by:` に承認者、`Approved at:` に YYYY-MM-DDThh:mm:ssZ 形式（UTC）の承認時刻を記載してください。承認前は `Status: proposed` のままにします。",
+    ),
+  ];
+}
+
+/**
+ * The delta's `## Rejected` and the re-open record point at each other.
+ *
+ * Both directions are required, not one: a re-open record whose delta entry
+ * still reads `Re-opened by: -` leaves the rejection standing as `DO NOT` while
+ * the record claims it was lifted, which is exactly the state the guard is
+ * meant to make unreachable.
+ *
+ * Only `bound` references — the ones written under a `- Candidate:` block —
+ * answer the record direction, because only those say which rejection was
+ * lifted. `unbound` ones are still checked for resolving to a record: a
+ * dangling `Re-opened by:` is a defect wherever it sits.
+ */
+function validateReOpenBackReferences(
+  entry: SpecEntry,
+  reOpens: DecisionRecordEntry[],
+  bound: string[],
+  unbound: string[],
+  decisionsName: string,
+  window: ReOpenWindow,
+): Issue[] {
+  const { reOpenSeverity, windowNote } = window;
+  const issues: Issue[] = [];
+  const reOpenIds = new Set(reOpens.map((record) => record.id));
+  const referenced = new Set(bound.map((ref) => ref.toUpperCase()));
+  const deltaFile = entry.deltaPath.length > 0 ? entry.deltaPath : entry.decisionsPath;
+  for (const ref of [...bound, ...unbound]) {
+    if (reOpenIds.has(ref.toUpperCase())) continue;
+    issues.push(
+      issue(
+        "QFAI-DECISION-004",
+        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の ${decisionsName} にある \`Status: re-open\` の Decision Record に解決しません。${windowNote}`,
+        reOpenSeverity,
+        deltaFile,
+        RE_OPENED_BY_RULE,
+        [ref],
+        "canonical",
+        `${decisionsName} に \`Status: re-open\` の DR エントリを追加し、\`Re-opened by:\` からその ID を参照してください。再採用を取り消す場合は \`Re-opened by:\` を \`-\` に戻します。`,
+      ),
+    );
+  }
+  for (const record of reOpens) {
+    if (referenced.has(record.id)) continue;
+    issues.push(
+      issue(
+        "QFAI-DECISION-004",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、delta の \`## Rejected\` に \`Re-opened by: ${record.id}\` の逆参照がありません。${windowNote}`,
+        reOpenSeverity,
+        deltaFile,
+        RE_OPENED_BY_RULE,
+        [record.id],
+        "canonical",
+        `delta の \`## Rejected\` で再採用した候補の \`Re-opened by:\` に \`${record.id}\` を記載してください。再採用しないなら ${decisionsName} の \`Status:\` を \`proposed\` に戻します。`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/** Strip the decoration a delta field carries around its value. */
+function cleanFieldValue(raw: string): string {
+  return raw
+    .replace(/<!--.*?-->/g, "")
+    .replace(/`/g, "")
+    .trim();
+}
+
+/** The non-placeholder ids on one `Re-opened by:` line. */
+function splitReOpenedByRefs(raw: string): string[] {
+  const refs: string[] = [];
+  for (const token of cleanFieldValue(raw).split(/[,;\s]+/)) {
+    if (token.length > 0 && !isPlaceholderValue(token)) refs.push(token);
+  }
+  return refs;
 }
 
 function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
@@ -2207,13 +3369,12 @@ function normalizeHeader(value: string): string {
 
 function extractH2Headings(text: string): Set<string> {
   const headings = new Set<string>();
-  const pattern = /^##\s+(.+?)\s*$/gm;
-  for (const match of text.matchAll(pattern)) {
-    const heading = match[1];
-    if (!heading) {
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    const heading = parseAtxHeading(line);
+    if (heading?.level !== H2_LEVEL || heading.name.length === 0) {
       continue;
     }
-    headings.add(normalizeHeading(heading));
+    headings.add(normalizeHeading(heading.name));
   }
   return headings;
 }
@@ -2222,44 +3383,84 @@ function normalizeHeading(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** The heading level the spec-pack contract writes its named sections at. */
+const H2_LEVEL = 2;
+
+const HEADING_LINE = /^(#{1,6})\s*(.*?)\s*$/;
+
+/**
+ * CommonMark's optional closing sequence: whitespace, then a run of `#` at the
+ * end of the line. Decoration, not part of the heading's name — and the leading
+ * whitespace is required, so `C#` keeps its hash.
+ */
+const ATX_CLOSING_HASHES = /(?:^|\s)#+$/;
+
+/** An ATX heading: its level, and its name with the decoration removed. */
+type AtxHeading = { level: number; name: string };
+
+/**
+ * The one place a heading line is read.
+ *
+ * Both readers below need the same two facts, and parsing them apart let them
+ * disagree: `extractH2Headings` required a space after the hashes while
+ * {@link extractMarkdownSections} did not, and neither stripped the closing
+ * sequence, so `## Rejected ##` was a section named `rejected ##` — collected by
+ * nothing, which let a delta keep an empty plain `## Rejected` and re-adopt its
+ * candidate in the decorated pair with `QFAI-DECISION-006` silent.
+ */
+function parseAtxHeading(line: string): AtxHeading | null {
+  const match = HEADING_LINE.exec(line);
+  if (!match) {
+    return null;
+  }
+  const name = (match[2] ?? "").replace(ATX_CLOSING_HASHES, "").trim();
+  return { level: (match[1] ?? "").length, name };
+}
+
 function extractMarkdownSection(text: string, heading: string): string {
+  return extractMarkdownSections(text, heading)[0] ?? "";
+}
+
+/**
+ * **Every** `## `-level section carrying `heading`, in document order.
+ *
+ * A document may repeat a heading, and taking only the first is a way past the
+ * checks that read a named section: with two `## Rejected` blocks, the first
+ * satisfying the structural `DO NOT` / `Temptation` requirement and the second
+ * holding the `- Candidate:` that was re-adopted, the candidate was never
+ * collected — `extractH2Headings` folds the duplicate into a `Set`, so no
+ * structural error fired either, and `QFAI-DECISION-006` could not see the
+ * reintroduction it exists to report.
+ *
+ * The level is part of the match, not only the name. The contract names
+ * `## Adopted` and `## Rejected`; matching on the name alone made an
+ * illustrative `### Adopted` under a `## Notes` section the delta's own
+ * adoption list, and a candidate merely quoted there was reported as re-adopted.
+ */
+function extractMarkdownSections(text: string, heading: string): string[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const target = heading.trim().toLowerCase();
-  let start = -1;
-  let level = 0;
+  const sections: string[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
-    const match = /^(#{1,6})\s*(.+?)\s*$/.exec(lines[index] ?? "");
-    if (!match) {
+    const match = parseAtxHeading(lines[index] ?? "");
+    if (match?.level !== H2_LEVEL || match.name.toLowerCase() !== target) {
       continue;
     }
-    const name = (match[2] ?? "").trim().toLowerCase();
-    if (name !== target) {
-      continue;
+    let end = lines.length;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const next = parseAtxHeading(lines[cursor] ?? "");
+      if (next && next.level <= H2_LEVEL) {
+        end = cursor;
+        break;
+      }
     }
-    start = index;
-    level = (match[1] ?? "").length;
-    break;
+    sections.push(lines.slice(index, end).join("\n"));
+    // Resume at the section's own end so a nested repeat is not re-collected.
+    index = end - 1;
   }
 
-  if (start < 0) {
-    return "";
-  }
-
-  let end = lines.length;
-  for (let index = start + 1; index < lines.length; index += 1) {
-    const match = /^(#{1,6})\s*(.+?)\s*$/.exec(lines[index] ?? "");
-    if (!match) {
-      continue;
-    }
-    const nextLevel = (match[1] ?? "").length;
-    if (nextLevel <= level) {
-      end = index;
-      break;
-    }
-  }
-
-  return lines.slice(start, end).join("\n");
+  return sections;
 }
 
 async function readSafe(filePath: string): Promise<string> {
