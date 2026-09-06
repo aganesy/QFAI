@@ -3,7 +3,7 @@
 Use this document to keep SKILL bodies compact.
 Skill files should reference this baseline and only restate skill-specific additions or overrides.
 
-## SKILL.md Authoring Shape (Mandatory)
+## Asset Authoring Shape (Mandatory)
 
 A `SKILL.md` states the contract and points at the file that carries the detail.
 It is not where the detail lives.
@@ -12,19 +12,19 @@ It is not where the detail lives.
   constraints, the phase/step order, and the gate conditions. Enough for an
   agent to know what it must do and when it is done.
 - **Move out**: command sets, table schemas, field-by-field contracts, worked
-  procedures, checklists and rationale. These go under the skill's own
+  procedures, checklists and rationale. These go under the owning tree's own
   directory:
-  - `references/` — normative detail the skill body cites (`references/<topic>.md`)
-  - `templates/` — artifacts the skill produces, as fillable skeletons
+  - `references/` — normative detail the body cites (`references/<topic>.md`)
+  - `templates/` — artifacts the file produces, as fillable skeletons
   - `examples/` — worked instances that illustrate, and bind, nothing
 - **One topic per file.** Do not replace an oversized `SKILL.md` with an
   oversized `references/everything.md`; that is the same problem one directory
   down. Split by topic and keep each file readable on its own — a reader who
   followed one pointer should not have to scan past three unrelated subjects to
   reach the one they came for.
-- **Every pointer resolves.** A `SKILL.md` line that moves detail out must name
-  the file (and anchor, when the file covers more than one topic) so the reader
-  is never left guessing where the rule went.
+- **Every pointer resolves.** A line that moves detail out must name the file
+  (and anchor, when the file covers more than one topic) so the reader is never
+  left guessing where the rule went.
 
 A hard line ceiling backs this up: **800 lines per assistant asset file**, for
 every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as
@@ -49,6 +49,41 @@ One shipped file is exempt, and only because it is a roster rather than prose:
 shipped or adjusted through `qfai-configure` — and splitting it would mean
 splitting the roster itself. `npx qfai doctor` names it under `exempt` with that
 reason. No prose asset has an exemption.
+
+### The owning tree is the one the file sits in
+
+The ceiling applies to **every** shipped assistant asset, not only `SKILL.md`,
+so this shape does too — wherever the asset is prose a reader reads.
+`assistant/` has more trees than `skills/`, and each one owns the same overflow
+directories directly under itself: `constitution/references/<topic>.md`,
+`catalog/references/<topic>.md`, `agents/references/<topic>.md`,
+`manifest/references/<topic>.md`, `process/references/<topic>.md`. A
+constitution or catalog file at the ceiling splits by topic into its own tree's
+`references/` and cites the result, exactly as a `SKILL.md` splits into the
+skill's — the tree that owns the file owns where its detail goes, and a worked
+instance ships at `constitution/references/audited-evidence-hash.md`.
+
+For a prose asset, raising the ceiling or claiming an exemption is not the
+remedy. An exemption claims no split is possible, and a Markdown file whose tree
+has a `references/` home available cannot make that claim.
+
+### Machine-readable assets split in their own format, or say why they cannot
+
+The ceiling is measured over YAML assets too — routing and profile manifests,
+gate rule sets, the shipped contract templates. The split above is not open to
+them: a validator parses those files as structured data, or a skill copies one
+whole into a project, so an entry moved into a Markdown sibling under
+`references/` leaves the parsed document and stops meaning anything. Prose
+about the file may move there; the file's own items may not.
+
+So for a machine-readable asset at the ceiling the remedy is, in order:
+
+1. **Split it in its own format** — a sibling of the same kind that the loader
+   or schema already reads, so every item stays parsed.
+2. **Record an exemption** where the document has to stay whole — a file
+   generated from another asset, one the schema admits only as a single
+   document — naming what makes the split impossible. "This file is long" is
+   not that reason, and a prose asset may not use this step.
 
 ## User Questions (AskUserQuestion Protocol)
 
