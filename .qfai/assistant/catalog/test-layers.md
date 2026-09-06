@@ -270,10 +270,34 @@ and `**Unit and Component owe no ATDD annotation.**` above.
 
 ## ATDD annotation hard gate
 
+**One reference, not one test.** The gate below asks that each obligation ID
+appear at least once in the directory that answers it. It does not ask for a
+test per ID, and reading it that way is what turns a story count into a test
+count: a project with 56 stories arrived at 130 E2E tests, with input
+validation and boundary values among them, because "every `US-*` must be
+referenced" was implemented as "every `US-*` gets its own E2E test".
+
+The gate is satisfied by **one E2E test per business flow carrying every
+`US-*` that flow realizes**:
+
+```
+// QFAI:SPEC-0007:US-0007-0001
+// QFAI:SPEC-0007:US-0007-0004
+test("an operator schedules a call list and it dials", ...)
+```
+
+That is the intended shape. The flows are already enumerated — Main Flow,
+Alternate and Exception Flows in `_policies/04_Business-Flow.md` — and their
+count is what should bound the E2E tree, not the story count. Input validation,
+boundary values and API vocabulary belong at L3/L4 whatever the story they trace
+to; putting them at E2E is the "convert all obligations into E2E" anti-pattern
+below, and no annotation obligation asks for it.
+
 - E2E obligations:
   - Every `US-*` in a **user-facing** spec must be referenced at least once from
-    `<testsDir>/e2e/**`. "User-facing" is the same surface **union**
-    `/qfai-prototyping` enforces. Any one of these signals puts a spec in it:
+    `<testsDir>/e2e/**` — from any test there, and several stories may share
+    one. "User-facing" is the same surface **union** `/qfai-prototyping`
+    enforces. Any one of these signals puts a spec in it:
     - frontmatter `surface_type: ui-bearing` in `01_Spec.md`;
     - a matching UI contract `.qfai/contracts/ui/<spec-id>*.yaml` — a project
       that declares its surfaces only through contracts is still in scope;
@@ -437,15 +461,24 @@ measurable:
   report warning in the evidence, so the breach is auditable rather than
   paraphrased.
 
-  **What it counts is narrow.** These two knobs measure **Gherkin scenarios
-  parsed out of each spec's Examples file**, bucketed by their `@layer-*` tags.
-  They never inspect `<testsDir>/e2e/**` or any other code test. A project that
-  writes no Gherkin — the normal shape for a layered project whose E2E lives in
-  code — measures zero scenarios, so the guardrail stays silent however many
-  code E2E tests exist. Treat them as a guardrail over the **scenario**
-  distribution, not over the real test-layer distribution: when they are silent,
-  the observation is the judgement call above, and the evidence entry must say
-  how the distribution was counted so it is not read as a tool measurement.
+  **What it counts.** These two knobs measure **obligations bucketed by layer**,
+  from whichever of two sources the project actually has: Gherkin scenarios
+  parsed out of each spec's Examples file and bucketed by their `@layer-*` tags,
+  or — where no Gherkin parses — the `Layer` column of every active spec's
+  `tdd/test-list.md`. `report.testStrategy.layerSource` names which one produced
+  the numbers (`scenario-tags` / `ledger-layer` / `none`), and the evidence entry
+  should carry it so the count is not read as coming from somewhere it did not.
+
+  **What it still does not count** is `<testsDir>/e2e/**` itself. The ledger is a
+  register of TC obligations, so an E2E test written with no ledger row behind it
+  is invisible to these knobs — and an obligation whose row says `E2E` is counted
+  whether or not the test exists yet. The two agree only for a project that keeps
+  its ledger, which the layered layout requires anyway.
+
+  **When both sources are empty** (`layerSource: none`) neither knob can fire.
+  That reads as "nothing could be counted", never as "no E2E tests" — a project
+  in that state owes the judgement call above, and the evidence entry has to say
+  how the distribution was counted by hand.
 
 Either way completion is not blocked and no Change Request is raised: a user-blocking
 Change Request against a project's own tuning knob cannot conclude anything actionable.
