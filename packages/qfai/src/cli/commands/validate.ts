@@ -9,7 +9,12 @@ import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { SUNSETS, isAtOrPastSunset } from "../../core/sunset.js";
 import { toRelativePath } from "../../core/paths.js";
 import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
-import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
+import type {
+  Issue,
+  ValidationProfile,
+  ValidationResult,
+  ValidationTimings,
+} from "../../core/types.js";
 import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
@@ -490,6 +495,7 @@ export const GATE_GROUP_FAMILIES = {
     // checked when nothing had looked.
     "QFAI-IMPLITE-*",
     "QFAI-SPACK-*",
+    "QFAI-SPECSECTION-*",
     "QFAI-COV-*",
     "QFAI-ID-*",
     "QFAI-LAYER-*",
@@ -790,6 +796,61 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
   // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
   process.stdout.write(`fail-on: ${failOn}\n`);
+  const overruns = formatTimingOverruns(result.timings);
+  if (overruns) {
+    process.stdout.write(`${overruns}\n`);
+  }
+}
+
+/**
+ * The validator groups that overshot their budget, as one text line, or `null`
+ * when everything fit.
+ *
+ * Printed next to the counts rather than pushed as a finding: how long a run
+ * took describes the machine, not the tree, so it must not move
+ * `counts.warning` and make the same commit report different totals on a
+ * laptop and on a loaded CI runner.
+ */
+export function formatTimingOverruns(timings: ValidationTimings | undefined): string | null {
+  if (!timings) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (timings.uiuxMs > timings.uiuxBudgetMs) {
+    parts.push(
+      `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
+        `(budget ${timings.uiuxBudgetMs}ms)`,
+    );
+  }
+  if (timings.htmlMockMs > timings.htmlMockBudgetMs) {
+    parts.push(
+      `htmlMock=${formatOverrunMs(timings.htmlMockMs, timings.htmlMockBudgetMs)}ms ` +
+        `(budget ${timings.htmlMockBudgetMs}ms)`,
+    );
+  }
+  return parts.length > 0 ? `timings: over budget ${parts.join(" ")}` : null;
+}
+
+const MAX_OVERRUN_DECIMALS = 9;
+
+/**
+ * A measurement that already exceeds `budget`, rendered at the coarsest
+ * precision that still reads as larger than the budget.
+ *
+ * Rounding to whole milliseconds unconditionally would print
+ * `uiux=2000ms (budget 2000ms)` for a 2000.1ms run — a diagnostic that
+ * contradicts the over-budget branch it was printed from — and collapse a
+ * fractional custom budget to `0ms (budget 0.1ms)`. So the decimals grow until
+ * the rendered value is strictly greater than the budget.
+ */
+function formatOverrunMs(value: number, budget: number): string {
+  for (let decimals = 0; decimals <= MAX_OVERRUN_DECIMALS; decimals += 1) {
+    const rendered = value.toFixed(decimals);
+    if (Number(rendered) > budget) {
+      return rendered;
+    }
+  }
+  return String(value);
 }
 
 function emitTextRunLog(runLogPath: string): void {
@@ -839,6 +900,7 @@ function emitGitHubOutput(
     dropped,
     jsonPath,
     root,
+    timingOverruns: formatTimingOverruns(result.timings),
     ...status,
   });
 
@@ -955,6 +1017,7 @@ function emitGitHubSummary(
     root: string;
     failOn: FailOn;
     willFail: boolean;
+    timingOverruns: string | null;
   },
 ): void {
   const summary = [
@@ -967,6 +1030,13 @@ function emitGitHubSummary(
     `result=${options.willFail ? "FAIL" : "PASS"}`,
   ].join(" ");
   process.stdout.write(`${summary}\n`);
+
+  if (options.timingOverruns) {
+    // The measurement is not a finding, so it has no annotation of its own to
+    // ride on; without this line a CI run in `--format github` would only
+    // carry the overrun inside validate.json#timings.
+    process.stdout.write(`::notice::${escapeGitHubCommandValue(options.timingOverruns)}\n`);
+  }
 
   const truncated = options.levels.filter((tally) => tally.emitted < tally.total);
   if (options.dropped > 0 || truncated.length > 0) {
@@ -1329,6 +1399,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
   "QFAI-CTYPE-004":
     "Every `### DL-` entry in a delta file carries the seven `#### Meta` keys `parseDeltaV1` reads, so the Change Type counters see it. An entry the parser skips is counted for nothing and leaves the summary describing less change than the file records.",
+  "QFAI-SPECSECTION-001":
+    "Every spec pack carries each heading `validation.require.specSections` lists, in its own Markdown or — for a layered pack — in the shared `_policies` pack.",
+  "QFAI-SPECSECTION-002":
+    "Every `validation.require.specSections` entry normalises to a comparable heading name, so a configured strict gate is never a no-op.",
 };
 
 /**

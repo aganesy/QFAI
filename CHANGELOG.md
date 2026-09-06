@@ -6,6 +6,13 @@
 
 ### Changed
 
+- **`findOutDirCoOwners` が返すパスをプラットフォーム標準の区切り文字に揃えた。**
+  `owners.roots` は fast-glob の結果に `path.dirname()` をかけたもので、fast-glob は
+  どのプラットフォームでも `/` を出す。そのため Windows では `C:/Users/...` が返り、
+  `path.join` で組んだ値と一致せず、`cleanRunLogs` の拒否メッセージも誤った区切り文字で
+  オペレータに表示されていた。直後の `path.resolve(owner) !== selfRoot` は既に解決済みの
+  パスを前提にしており、戻り値だけがそうなっていなかった。
+
 - **出荷アセットの行上限を 500 から 800 に上げた。** 分割では届かないことを
   実測した上での変更である (#1179)。
 

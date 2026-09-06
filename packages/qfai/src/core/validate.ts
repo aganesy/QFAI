@@ -17,7 +17,13 @@ import {
   collectScIdsFromScenarioFiles,
   collectScTestReferences,
 } from "./traceability.js";
-import type { Issue, ValidationCounts, ValidationProfile, ValidationResult } from "./types.js";
+import type {
+  Issue,
+  ValidationCounts,
+  ValidationProfile,
+  ValidationResult,
+  ValidationTimings,
+} from "./types.js";
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
@@ -64,6 +70,7 @@ import {
   validateSpecIdLinkage,
   validateResearchSummary,
   validateRepositoryHygiene,
+  validateSpecSections,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
@@ -99,9 +106,21 @@ import {
   validateStaleReferences,
   validateImportLiteEvidencePresence,
 } from "./validators/index.js";
+import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
+const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
+
+/**
+ * Where `runUiuxValidators` leaves what it measured.
+ *
+ * Threaded down instead of returned so the profile runners keep their
+ * `Issue[]` shape. Timing used to travel as two `warning` findings, which put
+ * the host's speed into `counts.warning`; the sink keeps the signal without
+ * letting it reach the issue stream.
+ */
+type TimingsSink = { timings?: ValidationTimings };
 
 export type ValidationOptions = {
   profile?: ValidationProfile;
@@ -137,10 +156,18 @@ export async function validateProject(
   // slips through while `QFAI-SCOPE-00x` reports the misuse.
   const specScope = requestedScope;
 
+  const timingsSink: TimingsSink = {};
   const findings = [
     ...configIssues,
     ...scopeIssues,
-    ...(await runProfileValidators(root, config, profile, options.platform, specScope)),
+    ...(await runProfileValidators(
+      root,
+      config,
+      profile,
+      timingsSink,
+      options.platform,
+      specScope,
+    )),
   ];
   const scopedFindings = findings.filter((finding) =>
     isFindingInSpecScope(finding, scopeRoots, specScope),
@@ -175,6 +202,7 @@ export async function validateProject(
       testFiles,
     },
     waivers,
+    ...(timingsSink.timings ? { timings: timingsSink.timings } : {}),
   };
 }
 
@@ -442,6 +470,7 @@ async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
   profile: ValidationProfile,
+  timings: TimingsSink,
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
@@ -508,16 +537,16 @@ async function runProfileValidators(
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
-        return runPrototypingProfileValidators(root, config, platformOption);
+        return runPrototypingProfileValidators(root, config, timings, platformOption);
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
         return runTddValidators(root, config, true, true, true, true, true, true, specScope);
       case "verify":
       case "full":
-        return runFullValidators(root, config, platformOption, specScope);
+        return runFullValidators(root, config, timings, platformOption, specScope);
       case "saas-package":
-        return runSaasPackage(root, config, platformOption);
+        return runSaasPackage(root, config, timings, platformOption);
     }
   }
 }
@@ -525,9 +554,15 @@ async function runProfileValidators(
 async function runSaasPackage(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const prototypingIssues = await runPrototypingProfileValidators(root, config, platformOption);
+  const prototypingIssues = await runPrototypingProfileValidators(
+    root,
+    config,
+    timings,
+    platformOption,
+  );
   return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
@@ -657,6 +692,11 @@ async function runSddValidators(
     // pipe silently shifts the columns every other validator reads.
     ...(await validateMarkdownTableArity(root, config)),
     ...(await validateStatusInSpecs(root, config)),
+    // `validation.require.specSections` is the operator's own strict
+    // required-heading list. It ships empty, so this is a no-op until it is
+    // set; once it is set the list has to bind, or `qfai.config.yaml` records
+    // a gate nothing applies.
+    ...(await validateSpecSections(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
@@ -736,10 +776,11 @@ async function runSddValidators(
 async function runPrototypingValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
   return [
-    ...(await runUiuxValidators(root, config, platformOption)),
+    ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
     // Second-wave reviewer-gate findings (prototyping
     // surface). Both detectors no-op when their gating files are
@@ -783,9 +824,10 @@ async function runPrototypingValidators(
 async function runPrototypingProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw = await runPrototypingValidators(root, config, platformOption);
+  const raw = await runPrototypingValidators(root, config, timings, platformOption);
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 
@@ -900,6 +942,7 @@ async function runTddValidators(
 async function runFullValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
@@ -917,7 +960,7 @@ async function runFullValidators(
     // `full` covers the downstream stage, so it opts INTO the history-based
     // implementation-drift check here and `runTddValidators` opts out below.
     ...(await runSddValidators(root, config, true, false, specScope, false, false, true)),
-    ...(await runPrototypingValidators(root, config, platformOption)),
+    ...(await runPrototypingValidators(root, config, timings, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
@@ -927,14 +970,25 @@ async function runFullValidators(
 async function runUiuxValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
   const uiuxStart = performance.now();
   const platformResult = await detectPlatform(root, config, platformOption);
   const platform = platformResult.platform;
+  // The html-mock pass times itself and reports through here, rather than
+  // being wall-clocked from this side. Its budget is for parsing the mock
+  // blocks, and the parser is a jsdom-backed module loaded lazily inside the
+  // pass at ~910ms; a stopwatch around the call would charge that one-off load
+  // to the budget and report every sub-second `htmlMockTimeout` as an overrun
+  // however fast the blocks actually parsed.
+  //
+  // Stays 0 when there are no mock blocks to parse — nothing was loaded and
+  // nothing was parsed, so there is no cost to attribute.
+  const htmlMockTiming: HtmlMockTiming = { parseMs: 0 };
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
-    () => validateHtmlMock(root, platform, config),
+    () => validateHtmlMock(root, platform, config, htmlMockTiming),
     () => validateMermaidScreenFlow(root, config),
     () => validateBpApDb(root, config),
     () => validateUiDefinitionConsistency(root, config),
@@ -946,16 +1000,12 @@ async function runUiuxValidators(
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
-  const uiuxElapsed = performance.now() - uiuxStart;
-  if (uiuxElapsed > UIUX_VALIDATION_BUDGET_MS) {
-    uiuxIssues.push({
-      code: "QFAI-UIUX-PERF",
-      severity: "warning",
-      category: "canonical",
-      message: `UI/UX validation exceeded budget (${UIUX_VALIDATION_BUDGET_MS}ms). All validators were executed.`,
-      rule: "uiux.performanceBudget",
-    });
-  }
+  timings.timings = {
+    uiuxMs: performance.now() - uiuxStart,
+    uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
+    htmlMockMs: htmlMockTiming.parseMs,
+    htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
+  };
   return uiuxIssues;
 }
 

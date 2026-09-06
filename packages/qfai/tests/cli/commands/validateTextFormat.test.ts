@@ -145,6 +145,7 @@ type LineKind =
   | "header"
   | "counts"
   | "fail-on"
+  | "timings"
   | "run-log"
   | "detail"
   | "detail-continuation"
@@ -180,6 +181,11 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       section = "none";
       severity = undefined;
       return { kind: "counts" as const, line };
+    }
+    if (line.startsWith("timings: ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "timings" as const, line };
     }
     if (line.startsWith("fail-on: ")) {
       section = "none";
@@ -537,8 +543,16 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(7);
-    const anchors = ["[warn] ", "[info] ", "counts: ", "fail-on: ", "run-log: ", "error_code:"];
+    expect(rules).toHaveLength(8);
+    const anchors = [
+      "[warn] ",
+      "[info] ",
+      "counts: ",
+      "fail-on: ",
+      "timings: ",
+      "run-log: ",
+      "error_code:",
+    ];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
@@ -586,6 +600,9 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
           false,
         );
         expect(entry.line.startsWith("fail-on: "), `structural line absorbed: ${entry.line}`).toBe(
+          false,
+        );
+        expect(entry.line.startsWith("timings: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
         expect(entry.line.startsWith("run-log: "), `structural line absorbed: ${entry.line}`).toBe(
