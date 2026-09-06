@@ -304,6 +304,17 @@ describe("doctor --clean prunes stale validate run logs", () => {
       path.join(mono, "shared-report"),
     );
     expect(coOwners).toEqual([path.join(mono, "app-b")]);
+    // Platform-native, not raw glob output. `owners.roots` is built from
+    // `path.dirname()` of fast-glob results, and fast-glob emits `/` on every
+    // platform - so before the resolve these came back as `C:/Users/...` on
+    // Windows and compared unequal to anything built with `path.join`, while
+    // the operator read the wrong separator in `cleanRunLogs`'s refusal.
+    // Stated as the invariant rather than as a separator check: on a platform
+    // where `/` is native the two are the same string, and the assertion above
+    // is what fails when this regresses.
+    for (const owner of coOwners) {
+      expect(owner, `co-owner path is not resolved: ${owner}`).toBe(path.resolve(owner));
+    }
   });
 
   it("doctor reports the run-log count so the growth is visible", async () => {
