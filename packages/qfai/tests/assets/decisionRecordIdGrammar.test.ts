@@ -5,7 +5,7 @@
  * A reader with only that bullet in front of them completes the abstract half
  * from the concrete one, and mints `DR-YYYYMMDD-NNNN-<slug>.md`. But the ledger
  * cell that cites a DR is validated by `DR_ID_FORMAT`
- * (`/^DR-\d{4}(?:-\d{4})?$/`, `core/validators/tddList.ts`), so an id copied off
+ * (`/^DR-\d{4}(?:-\d{4})?$/`, `core/decisionRecords.ts`), so an id copied off
  * such a filename is claimed by `DR_ID_SHAPED` and then rejected — the
  * `TDDLIST_EXCEPTION_INVALID_DR` path. In one consuming project 6 of 6 anomaly
  * Decision Records had taken the date form.
@@ -151,7 +151,7 @@ describe("the spelled-out shapes are the ones the validator accepts", () => {
     // Guards the doc/validator pairing: if `DR_ID_FORMAT` is ever widened or
     // narrowed, the shapes the protocol advertises must move with it.
     const source = await readFile(
-      path.join(repoRoot, "packages/qfai/src/core/validators/tddList.ts"),
+      path.join(repoRoot, "packages/qfai/src/core/decisionRecords.ts"),
       "utf-8",
     );
     const declaration = /const DR_ID_FORMAT = \/(.+?)\/;/.exec(source);
