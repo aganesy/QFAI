@@ -58,12 +58,36 @@ type DbFieldBinding = {
    * currently asserts: it can be dropped, replaced, or declared `NOT VALID`,
    * and the column itself still holds the value.
    *
-   * Within one file the enum wins, which `collectSqlDomainBounds` already
-   * does: an ENUM column carrying a redundant CHECK is still an ENUM column,
+   * Within one file the enum wins where the two forms provably bound the SAME
+   * column: an ENUM column carrying a redundant CHECK is still an ENUM column,
    * and the strictest constraint is the one an implementation has to satisfy
-   * (#1100).
+   * (#1100). Where they may not — see {@link enumEvidence} — this is false and
+   * the finding stays a warning.
    */
   enumBacked: boolean;
+  /**
+   * The file declared an ENUM for this name, whether or not that is decisive.
+   *
+   * `collectSqlDomainBounds` keys on the column NAME, not on the table, so a
+   * contract declaring two tables that each have a `status` column — one ENUM,
+   * one CHECK — collapses to one entry carrying both forms, indistinguishable
+   * there from #1100's single column with a redundant CHECK. The tie is broken
+   * by the one fact that separates them: a file declaring ONE table has only
+   * one column of that name, so both forms are the same column; a file
+   * declaring several may not, and the same rule as across contracts applies —
+   * a CHECK among the candidates means the value can be stored, so
+   * impossibility is not a claim this rule may make.
+   *
+   * That downgrade costs the one case it cannot tell apart: a genuinely
+   * redundant CHECK in a multi-table contract reports `warning` instead of
+   * `error`. Attributing a column to its table is what would recover it, and
+   * that is a change to the SQL scan rather than to this decision.
+   *
+   * Kept separate from {@link enumBacked} so the message can still name the
+   * contract the ENUM came from, which is what the reader needs in order to
+   * settle the pairing.
+   */
+  enumEvidence: boolean;
 };
 
 /**
@@ -102,9 +126,17 @@ function domainFiles(domain: DbDomain): string[] {
   return domain.bindings.map((binding) => binding.file).sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * The contracts that declared an ENUM for this name — evidence, not verdict.
+ *
+ * `enumEvidence` rather than `enumBacked`, so a contract whose ENUM was not
+ * decisive is still named. That contract is exactly what the reader has to look
+ * at to settle the pairing, and omitting it would leave the message saying the
+ * candidates disagree without saying with whom.
+ */
 function enumFiles(domain: DbDomain): string[] {
   return domain.bindings
-    .filter((binding) => binding.enumBacked)
+    .filter((binding) => binding.enumEvidence)
     .map((binding) => binding.file)
     .sort((a, b) => a.localeCompare(b));
 }
@@ -418,6 +450,14 @@ const NAMED_TYPE_USAGE_PATTERNS = [
   /\bALTER\s+(?:COLUMN\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+(?:SET\s+DATA\s+)?TYPE\s+(?:"?[A-Za-z_][A-Za-z0-9_]*"?\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gi,
 ] as const;
 
+const CREATE_TABLE_PATTERN =
+  /\bCREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMPORARY|TEMP|UNLOGGED)\s+)?TABLE\b/gi;
+
+/** How many tables a contract declares, over text with comments removed. */
+function countCreateTables(rawText: string): number {
+  return (stripSqlComments(rawText).match(CREATE_TABLE_PATTERN) ?? []).length;
+}
+
 async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbDomain>> {
   const domains = new Map<string, DbDomain>();
   for (const file of dbFiles) {
@@ -427,6 +467,11 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
     } catch {
       continue;
     }
+    // One table means one column of any given name, so a name carrying both
+    // forms carries them on the SAME column and #1100's "enum wins" applies.
+    // Counted over comment-stripped text, so a commented-out `CREATE TABLE`
+    // cannot make a single-table contract look like several.
+    const singleTable = countCreateTables(text) <= 1;
     for (const [name, bound] of collectSqlDomainBounds(text).entries()) {
       if (!isStateLikeFieldName(name)) {
         continue;
@@ -435,7 +480,9 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
       const binding: DbFieldBinding = {
         file,
         values: new Set(bound.values),
-        enumBacked: bound.enumBacked,
+        // Decisive only when the two forms cannot be on different columns.
+        enumBacked: bound.enumBacked && (!bound.checkBacked || singleTable),
+        enumEvidence: bound.enumBacked,
       };
       const existing = domains.get(normalized);
       if (existing) {
@@ -446,6 +493,7 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
         if (sameFile) {
           binding.values.forEach((value) => sameFile.values.add(value));
           sameFile.enumBacked = sameFile.enumBacked || binding.enumBacked;
+          sameFile.enumEvidence = sameFile.enumEvidence || binding.enumEvidence;
         } else {
           existing.bindings.push(binding);
         }
@@ -485,6 +533,15 @@ export type SqlDomainBound = {
    * `NOT VALID` (#1100).
    */
   enumBacked: boolean;
+  /**
+   * True when a `CHECK (col IN (…))` was also seen for this name in this file.
+   *
+   * Not exclusive with {@link enumBacked}, and recorded rather than folded
+   * because the PAIR is what says whether the ENUM reading is decisive — this
+   * map is keyed by column name, so two tables with a same-named column look
+   * exactly like one column bound twice. See `DbFieldBinding.enumEvidence`.
+   */
+  checkBacked: boolean;
 };
 
 /**
@@ -509,8 +566,9 @@ export function collectSqlDomainBounds(rawText: string): Map<string, SqlDomainBo
         ? {
             values: Array.from(new Set([...existing.values, ...literals])),
             enumBacked: existing.enumBacked || enumBacked,
+            checkBacked: existing.checkBacked || !enumBacked,
           }
-        : { values: literals, enumBacked },
+        : { values: literals, enumBacked, checkBacked: !enumBacked },
     );
   };
 
