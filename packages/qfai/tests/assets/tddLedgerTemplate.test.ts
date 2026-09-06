@@ -390,7 +390,12 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       const route = skill.slice(skill.indexOf("- Contract-scoped (`/qfai-sdd --contract"));
       const bullet = route.slice(0, route.indexOf("\n-"));
-      expect(bullet).toContain("**Phase 2c for a contract that delta finds no owner for**");
+      // The phase list is one sentence now: this route also runs Phase 2c to
+      // reconcile the obligations the in-scope specs already hold (#580), so the
+      // owner-resolution clause reads as part of that step rather than beside it.
+      expect(bullet).toContain(
+        "the step that names an owner for a contract that delta finds none for",
+      );
       expect(bullet).toContain(
         "**An activation this route cannot give an owner does not go through.**",
       );

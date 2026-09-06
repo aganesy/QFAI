@@ -94,14 +94,14 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // whole spec.
     const sdd = await read(tree, SDD);
     expect(sdd).toContain("Contract-scoped (`/qfai-sdd --contract <CON-ID-or-path>`)");
-    // The route also runs the Phase 2b API-row delta: a contract-only status
-    // flip owes a new `Layer = API` row, or the retirement of a stale one, and
-    // Stage 0 + Phase 0 + Phase 4 alone ran no seeding phase at all. Phase 2c
-    // joins it for a contract the delta finds no owner for — that is the only
-    // step able to name one, and without it an activation shipped a gate with
-    // no ledger row anywhere.
+    // One phase list, carrying both facts. The route runs the Phase 2b API-row
+    // delta - a contract-only status flip owes a new `Layer = API` row, or the
+    // retirement of a stale one - and it runs Phase 2c, both to reconcile the
+    // obligations the in-scope specs ALREADY hold (Phase 2 never ran here) and to
+    // name an owner for a contract the delta finds none for. Two sentences would
+    // be two contracts; this asserts the one the skill states.
     expect(sdd).toContain(
-      "Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c for a contract that delta finds no owner for** + Phase 4 (Delta update) only",
+      "Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run touched, and the step that names an owner for a contract that delta finds none for)** + Phase 4 (Delta update) only",
     );
   });
 
