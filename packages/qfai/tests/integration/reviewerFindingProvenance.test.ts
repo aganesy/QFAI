@@ -328,7 +328,11 @@ describe("reviewer finding provenance", () => {
     // A stage without a drain does not lose the finding — it keeps the class it
     // would otherwise have had.
     expect(baseline).toMatch(/keeps the class it would otherwise have had/);
-    expect(drift).toMatch(/blocking under the rule it names/);
+    // `\s+` between every word for the same reason the two pins above use it: the phrase sits in a
+    // hard-wrapped paragraph, and the line-ceiling guard on `drift-protocol.md` moves the wrap
+    // point. A pin with a literal space silently asserts today's column as well as the words, and
+    // reddens on a re-wrap that changed no prose.
+    expect(drift).toMatch(/blocking\s+under\s+the\s+rule\s+it\s+names/);
   });
 
   it("names the queue's home from each stage's own evidence file, not a pattern", async () => {

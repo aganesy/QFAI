@@ -19,7 +19,7 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 - UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
-- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work.
+- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
 - **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
   `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
   table necessarily becomes N cross-referencing files. State the resulting

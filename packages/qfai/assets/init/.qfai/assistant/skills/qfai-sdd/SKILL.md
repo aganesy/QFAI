@@ -2,7 +2,7 @@
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
 description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
-argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"
+argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
   [
@@ -240,7 +240,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c for a contract that delta finds no owner for** + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. The Phase 2b delta runs after Phase 0, on the owner ledger only (Phase 2b's ownership rule below), and is scoped to this contract's row: a contract moved off `x-qfai-status: planned` becomes active and its `Layer = API` row is appended at `todo`, one moved back to `planned` or deleted has its row retired. Skipping it — the route did, running no seeding phase at all — left every contract-only status flip with a `QFAI-ATDD-113` gate and a ledger that disagree permanently, and no narrower rerun could fix it. **An activation this route cannot give an owner does not go through.** Phase 2b defers a contract no spec names to Phase 2c, and this route ran none — so making an unreferenced contract active here left the repo-wide `QFAI-ATDD-113` firing with no ledger to hold the row and no later step that would ever resolve one. So when the delta finds no owner for a contract this run activates, run Phase 2c over the specs in scope to name it and re-run the delta for what it resolves; if no spec names it even then, **leave the contract at `x-qfai-status: planned`** and stop with that finding, so the activation waits for a spec-scoped run whose own Phase 2b / Phase 2c seeds the row.
+- Contract-scoped (`/qfai-sdd --contract <CON-ID-or-path>`): run Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c for a contract that delta finds no owner for** + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. The Phase 2b delta runs after Phase 0, on the owner ledger only (Phase 2b's ownership rule below), and is scoped to this contract's row: a contract moved off `x-qfai-status: planned` becomes active and its `Layer = API` row is appended at `todo`, one moved back to `planned` or deleted has its row retired. Skipping it — the route did, running no seeding phase at all — left every contract-only status flip with a `QFAI-ATDD-113` gate and a ledger that disagree permanently, and no narrower rerun could fix it. **An activation this route cannot give an owner does not go through.** Phase 2b defers a contract no spec names to Phase 2c, and this route ran none — so making an unreferenced contract active here left the repo-wide `QFAI-ATDD-113` firing with no ledger to hold the row and no later step that would ever resolve one. So when the delta finds no owner for a contract this run activates, run Phase 2c over the specs in scope to name it and re-run the delta for what it resolves; if no spec names it even then, **leave the contract at `x-qfai-status: planned`** and stop with that finding, so the activation waits for a spec-scoped run whose own Phase 2b / Phase 2c seeds the row.
+  - The argument is a `CON-*` ID **or** a repo-relative path under `.qfai/contracts/`; both select the same contract and the same referencing specs. The path form is not a convenience: `.qfai/contracts/design/**` files declare no `QFAI-CONTRACT-ID` (`references/contract-artifact-rules.md`), and a defect CR whose subject is a missing or wrong ID has none to cite, so an ID-only selector left those reruns unaddressable. Prefer the ID wherever one exists.
+  - A path that names no file under `.qfai/contracts/`, or an ID no contract declares, is an unknown target: stop and report it rather than widening to the whole spec set.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
 ## Critical Constraints
@@ -359,7 +361,14 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `Layer = API` row at `todo` on the owner ledger, and retire a row whose
    owner moved.
 9. Phase 3: Plan finalize (after at least one slice gate passes).
-10. Phase 4: Delta update.
+10. Phase 4: Delta update. When an approved Change Request ordered this rerun,
+    record it as one row in the `## Change Requests` table of the delta the
+    destination table in `constitution/drift-protocol.md#when-drift-is-detected`
+    step 4 names — `CR ID`, `Upstream artifact`, `Mode`, `Approved by`,
+    `Applied at`. Both `templates/specs/spec/09_delta.md` and
+    `templates/specs/_policies/10_delta.md` define that table, so the mandated
+    CR reference never needs a layout invented for it, and never borrows a
+    `## Triage` row.
 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 

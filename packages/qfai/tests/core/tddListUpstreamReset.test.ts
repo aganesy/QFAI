@@ -191,6 +191,17 @@ describe("Layer and Test file must agree", () => {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
+/**
+ * Collapse every whitespace run to a single space.
+ *
+ * A prose pin that carries the shipped file's hard wrap asserts two things at once: that the
+ * sentence is present, and that it is broken across lines at exactly these columns. Only the first
+ * is the obligation. The second turns any re-wrap — the line-ceiling guard on
+ * `drift-protocol.md` forces one periodically — into a red on an unchanged sentence, which is what
+ * happened here. Comparing flattened text pins the words and lets the wrap move.
+ */
+const flat = (s: string): string => s.replace(/\s+/g, " ");
+
 describe("the DR-ID column definition covers the reset row", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the column definition is not "exception items only"`, async () => {
@@ -242,13 +253,10 @@ describe("the DR-ID column definition covers the reset row", () => {
         "utf-8",
       );
       expect(drift).toContain("(any status -> `todo`)");
-      expect(drift).toContain(
-        // Pinned WITH its line breaks, as the sibling assertions in this block are. The
-        // sweep item was re-wrapped to fit `drift-protocol.md` under the shipped line
-        // ceiling, so the breaks moved; the sentence did not. What this row asserts - that
-        // the sweep reaches `red` and `exception` rows rather than only `done` ones - is
-        // unchanged, and it still fails if the sentence leaves the file.
-        "The sweep covers in-flight rows too: a `red` row whose obligation changed, and an `exception` row whose anomaly the rerun resolved or\n   superseded, reset the same way.",
+      expect(flat(drift)).toContain(
+        flat(
+          "The sweep covers in-flight rows too: a `red` row whose obligation changed, and an `exception` row whose anomaly the rerun resolved or superseded, reset the same way.",
+        ),
       );
 
       const rules = await readFile(

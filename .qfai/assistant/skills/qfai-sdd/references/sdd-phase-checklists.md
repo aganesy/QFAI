@@ -88,3 +88,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
   under a dated duplicate heading go unchecked.
 - Record adoption and rejection rationale.
 - When rejections exist, include `DO NOT` and `Temptation`.
+- When an approved Change Request ordered this rerun, add one row to that
+  delta's `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
+  `Approved by`, `Applied at`. That table is the canonical CR-reference format
+  in both delta templates; a `## Triage` row is not a substitute for it.
