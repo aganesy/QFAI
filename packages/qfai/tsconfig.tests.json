@@ -29,12 +29,10 @@
     "means adding it here."
   ],
   "include": [
-    "vitest.config.ts",
-    "vitest.knobs.ts",
-    "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/assets.test.ts",
+    "tests/assets/atddScaffoldTunableSeed.test.ts",
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
@@ -193,6 +191,9 @@
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/importLite.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
-    "tests/validators/validatorReachability.test.ts"
+    "tests/validators/validatorReachability.test.ts",
+    "vitest.config.ts",
+    "vitest.knobs.ts",
+    "vitest.workspace.ts"
   ]
 }
