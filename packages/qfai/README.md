@@ -89,6 +89,10 @@ npx qfai report
 
 ## What you can do (CLI commands)
 
+- `npx qfai --version` (alias `-V`)
+  - Prints the installed QFAI version to stdout and exits 0. It works anywhere, including outside a project
+    with no `qfai.config.yaml`. The same value is also available as the `version` field of
+    `npx qfai doctor --format json`.
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
     (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.
@@ -101,7 +105,9 @@ npx qfai report
     | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
     | `--upgrade-assistant-tree` | Migrate a pre-recut project to the 4-layer tree. Only the two pre-recut surfaces `.qfai/assistant/instructions/` and `.qfai/assistant/steering/` are scanned; `assistant/manifest/` is already the canonical layer, so it is kept in place and never re-copied. This is what the `D-DEPRECATED-PATH` finding is asking for. Files are copied, never deleted: the legacy paths stay until you remove them, and an existing file at a scanned surface's migration target is kept (reported as `W-USER-EDIT-PRESERVED`) — that warning only ever covers those scanned targets. A project left with nothing but `manifest/` has nothing to migrate and is reported as "no pre-recut surfaces ... found".                                                                                                                                                                                                                                                                                                                         |
     | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
     | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review artifacts
@@ -314,16 +320,24 @@ validation:
     testFileExcludeGlobs:
       - "**/fixtures/**"
     scMustHaveTest: true
-    scNoTestSeverity: warning # error | warning
 ```
 
 Notes.
 
-- `validate.json`, `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
+- `validate.json` is a **public** surface: its keys are documented in
+  `.qfai/assistant/skills/qfai-verify/references/validate-json-schema.md` and a change to
+  them takes the `@api` path (`.qfai/assistant/constitution/change-classification.md`). The
+  skills instruct agents to read it, so it is a contract whether or not this file says so —
+  it used to say the opposite, which left a consumer following the skills depending on
+  something the README disclaimed. `message` text and the order of `issues` are still not
+  stable; match on `issues[].code`
+- `report.json`, `doctor.json`, and `run-*` JSON logs are internal exports and are not a stable external contract; prefer `report.md` for integrations that must survive tool upgrades.
 - Scenario files are expected to use the Gherkin extension `*.feature` (not `*.md`).
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
 - `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
   Put calibration values in the referenced pack instead of `qfai.config.yaml`.
+- `validation.traceability.brMustHaveSc`, `scNoTestSeverity`, and `orphanContractsPolicy` were retired: no validator ever read them.
+  They are still accepted so an existing config keeps loading, but `qfai validate` reports each one still present as deprecated and inert.
 - Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
 
 ## Specifications and contracts (SDD)
@@ -391,8 +405,10 @@ Release gate behavior:
 
 QFAI generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
-It does not generate GitHub Actions workflows.
-Configure CI in your own platform and run:
+Into `.github/workflows/` it writes exactly two files — `qfai-validate.yml`
+and `qfai-tests.yml` — and touches nothing else there; both open with a
+`# Generated by \`qfai init\`` line. Configure the rest of CI in your own
+platform and run:
 
 ```bash
 pnpm ci:gate
