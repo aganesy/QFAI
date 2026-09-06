@@ -242,7 +242,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     // Both fill-me-in signals: the date and every bracketed placeholder.
     expect(codes).toContain("QFAI-RESEARCH-006");
-    expect(codes).toContain("QFAI-RESEARCH-019");
+    expect(codes).toContain("QFAI-RESEARCH-021");
   });
 
   it("still fails when only the date was refreshed", async () => {
@@ -254,7 +254,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       await seedPack(fillDateOnly(template)),
       defaultConfig,
     );
-    const placeholder = issues.find((item) => item.code === "QFAI-RESEARCH-019");
+    const placeholder = issues.find((item) => item.code === "QFAI-RESEARCH-021");
 
     expect(placeholder, "date-only edit must not pass the Research Summary gate").toBeDefined();
     for (const key of ["title", "url", "category", "description", "finding", "reason"]) {
@@ -291,7 +291,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
 
-    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-013");
+    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-015");
   });
 
   it("reports a pack whose Research Summary section was deleted", async () => {
@@ -302,7 +302,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(stripped).not.toMatch(RESEARCH_SUMMARY_HEADING_RE);
 
     const issues = await validateResearchSummary(await seedPack(stripped), defaultConfig);
-    const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-014");
+    const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-016");
 
     // Windowed, not hard: this fires on every pack written before the storage
     // slot existed, which is the population the section-missing rule already
@@ -322,7 +322,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     await usePack(root, "discussion-20260101000000000");
     const onOlder = await validateResearchSummary(root, defaultConfig);
-    expect(onOlder.map((item) => item.code)).toContain("QFAI-RESEARCH-019");
+    expect(onOlder.map((item) => item.code)).toContain("QFAI-RESEARCH-021");
 
     await usePack(root, "discussion-20260202000000000");
     const onNewer = await validateResearchSummary(root, defaultConfig);
@@ -342,7 +342,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     await usePack(root, "discussion-20260101000000000");
 
     const issues = await validateResearchSummary(root, defaultConfig);
-    const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-014");
+    const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-016");
 
     expect(slotMissing?.severity).toBe("warning");
     expect(slotMissing?.message).toContain(SCHEMA_PROMOTE_AT);
@@ -351,7 +351,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
   it("resolves source_id references by scalar value, not by quoting", async () => {
     // A YAML serializer may quote `sources[].id` and leave the references
-    // bare. Both spell the same scalar, so QFAI-RESEARCH-013 must not fire.
+    // bare. Both spell the same scalar, so QFAI-RESEARCH-015 must not fire.
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
       "    - id: SRC-0001",
       '    - id: "SRC-0001"',
@@ -389,7 +389,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
         "$1reason: [Why this applies] # TODO",
       );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
-    const placeholder = issues.filter((item) => item.code === "QFAI-RESEARCH-019");
+    const placeholder = issues.filter((item) => item.code === "QFAI-RESEARCH-021");
 
     expect(placeholder).toHaveLength(1);
     expect(placeholder[0]?.message).toContain("title");
@@ -408,7 +408,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       (item) => item.code,
     );
 
-    expect(codes).not.toContain("QFAI-RESEARCH-013");
+    expect(codes).not.toContain("QFAI-RESEARCH-015");
   });
 
   it("rejects an empty block scalar in a required field", async () => {
@@ -423,7 +423,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       (item) => item.code,
     );
 
-    expect(codes).toContain("QFAI-RESEARCH-016"); // best_practices[].description
+    expect(codes).toContain("QFAI-RESEARCH-018"); // best_practices[].description
   });
 
   it("accepts a block scalar that actually carries a body", async () => {
@@ -469,7 +469,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     const issues = await validateResearchSummary(await seedPack(emptied), defaultConfig);
 
-    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-014");
+    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-016");
   });
 
   it("reports a current-pack pointer that resolves to nothing", async () => {
@@ -480,7 +480,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     await usePack(root, "discussion-20250101000000000");
 
     const issues = await validateResearchSummary(root, defaultConfig);
-    const broken = issues.find((item) => item.code === "QFAI-RESEARCH-018");
+    const broken = issues.find((item) => item.code === "QFAI-RESEARCH-020");
 
     expect(broken?.severity).toBe("warning");
     expect(broken?.message).toContain(SCHEMA_PROMOTE_AT);
@@ -523,7 +523,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       ].join("\n"),
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
-    const missingId = issues.find((item) => item.code === "QFAI-RESEARCH-015");
+    const missingId = issues.find((item) => item.code === "QFAI-RESEARCH-017");
 
     expect(missingId?.message).toContain("sources[1]");
   });
@@ -534,7 +534,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       "    - id: BP-0002\n      title: Second practice with no category\n  anti_patterns:",
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
-    const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-016");
+    const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-018");
 
     expect(incomplete?.message).toContain("best_practices[1]");
     for (const field of ["category", "description", "source_id"]) {
@@ -544,11 +544,11 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
   it("requires source_id and finding on every reflection entry", async () => {
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
-      "```\n\n- Every",
+      "```\n\n## Trend Scan",
       "    - action: defer\n      reason: Second entry without source_id or finding\n```\n\n- Every",
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
-    const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-017");
+    const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-019");
 
     expect(incomplete?.message).toContain("reflection[1]");
     expect(incomplete?.message).toContain("source_id");
@@ -587,15 +587,15 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     );
 
     expect(codes).toContain("QFAI-RESEARCH-004"); // sources[].title
-    expect(codes).toContain("QFAI-RESEARCH-015"); // sources[].id
-    expect(codes).toContain("QFAI-RESEARCH-016"); // best_practices[].description
+    expect(codes).toContain("QFAI-RESEARCH-017"); // sources[].id
+    expect(codes).toContain("QFAI-RESEARCH-018"); // best_practices[].description
   });
 
   it("does not read a source_id reference out of a block scalar body", async () => {
     // A multi-line `description` is valid input, and quoting a legacy config
     // inside one is ordinary prose. Scanning the whole section for
     // `source_id:` lines collected that quotation as a real reference and
-    // reported QFAI-RESEARCH-013 against a complete summary.
+    // reported QFAI-RESEARCH-015 against a complete summary.
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
       /^([ \t]+)description: Recorded by the research-first protocol run$/m,
       [
@@ -616,7 +616,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     // regex. A `description` that quotes the template line it replaced is
     // ordinary prose in a valid multi-line value; scanning the whole payload
     // read that quotation as the entry's own unfilled `title` and reported
-    // QFAI-RESEARCH-019 against a summary with nothing left to fill in.
+    // QFAI-RESEARCH-021 against a summary with nothing left to fill in.
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
       /^([ \t]+)description: Recorded by the research-first protocol run$/m,
       [

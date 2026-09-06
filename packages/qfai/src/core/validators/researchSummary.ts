@@ -71,6 +71,9 @@ const PRACTICE_FIELDS = ["id", "category", "title", "description", "source_id"] 
 const REFLECTION_FIELDS = ["source_id", "finding"] as const;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
+  // `uiux.requireResearchSummary` is read further down, around the absence
+  // rule, and only there — see the comment on that guard for why the opt-out
+  // stops at "the section is missing" instead of returning [] from here.
   const issues: Issue[] = [];
   // Resolved once for the whole run: the promotion window is a property of the
   // tool, not of any one pack, and every rule below reads the same answer.
@@ -110,7 +113,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
     const section = extractResearchSummarySection(content);
-    // An empty section on the storage file is QFAI-RESEARCH-014's finding
+    // An empty section on the storage file is QFAI-RESEARCH-016's finding
     // (reported above); elsewhere there is nothing to validate.
     if (!section) continue;
 
@@ -145,7 +148,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       if (!hasNonEmptyField(entry, "id")) {
         issues.push(
           issue(
-            "QFAI-RESEARCH-015",
+            "QFAI-RESEARCH-017",
             `Source entry missing required field "id": ${label}${schemaWindowNote(schemaSeverity)}`,
             schemaSeverity,
             rel,
@@ -221,7 +224,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     if (placeholderKeys.length > 0) {
       issues.push(
         issue(
-          "QFAI-RESEARCH-019",
+          "QFAI-RESEARCH-021",
           `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run${schemaWindowNote(schemaSeverity)}`,
           schemaSeverity,
           rel,
@@ -234,7 +237,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     for (const unresolved of collectUnresolvedSourceIds(referencingEntries, sourceIds)) {
       issues.push(
         issue(
-          "QFAI-RESEARCH-013",
+          "QFAI-RESEARCH-015",
           `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}${schemaWindowNote(schemaSeverity)}`,
           schemaSeverity,
           rel,
@@ -308,7 +311,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
  * directory when the latest pack has markdown but none of it carries the
  * section.
  *
- * This is broader than QFAI-RESEARCH-014, which asks the narrower question of
+ * This is broader than QFAI-RESEARCH-016, which asks the narrower question of
  * whether the slot sits in the file that owns it: a pack that recorded the
  * protocol in some other file answers this rule and still fails that one.
  */
@@ -378,7 +381,7 @@ function checkPracticeEntries(
     if (missing.length > 0) {
       issues.push(
         issue(
-          "QFAI-RESEARCH-016",
+          "QFAI-RESEARCH-018",
           `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}${schemaWindowNote(schemaSeverity)}`,
           schemaSeverity,
           rel,
@@ -405,7 +408,7 @@ function checkReflectionEntries(
     if (missing.length > 0) {
       issues.push(
         issue(
-          "QFAI-RESEARCH-017",
+          "QFAI-RESEARCH-019",
           `reflection entry missing required field(s) ${missing.join(", ")}: ${label}${schemaWindowNote(schemaSeverity)}`,
           schemaSeverity,
           rel,
@@ -454,7 +457,7 @@ type ResearchSummaryScanTarget = {
    * report. `validateDiscussionPackReadiness` (QFAI-DPACK-002) only inspects
    * the LATEST pack, so an active pointer pinned to an OLDER pack that lost
    * the file is reported by nobody else — there, the missing storage slot is
-   * QFAI-RESEARCH-014's finding.
+   * QFAI-RESEARCH-016's finding.
    */
   reportMissingStorageFile: boolean;
   /** Discussion root, used to anchor pack-level findings. */
@@ -473,7 +476,7 @@ type ResearchSummaryScanTarget = {
  * schema against, say, an `01_Context.md` that merely mentions the heading.
  *
  * A pointer that is set but unresolvable is a broken SSOT and is reported
- * (QFAI-RESEARCH-018) instead of being papered over. A pointer that is simply
+ * (QFAI-RESEARCH-020) instead of being papered over. A pointer that is simply
  * absent is the normal state of a gitignored runtime file, so it falls back to
  * the same rule `qfai discussion list --active` uses: a lone `discussion-*`
  * directory is the de-facto active session; two or more are ambiguous, so the
@@ -590,7 +593,7 @@ function describeBrokenPointer(
   }
   return [
     issue(
-      "QFAI-RESEARCH-018",
+      "QFAI-RESEARCH-020",
       `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}${schemaWindowNote(schemaSeverity)}`,
       schemaSeverity,
       path.relative(root, target.discussionRoot).replace(/\\/g, "/"),
@@ -651,7 +654,7 @@ function storageSlotIssue(
   schemaSeverity: "warning" | "error",
 ): Issue {
   return issue(
-    "QFAI-RESEARCH-014",
+    "QFAI-RESEARCH-016",
     `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there${schemaWindowNote(schemaSeverity)}`,
     schemaSeverity,
     path.relative(root, storageFile).replace(/\\/g, "/"),
@@ -720,7 +723,7 @@ function isPlaceholderParsed(parsed: unknown): boolean {
  *
  * Read off the entries that the Output Schema says carry a reference, not off
  * the whole section: a `source_id:` line quoted inside a `description: |-`
- * body is prose, and scanning for it reported QFAI-RESEARCH-013 against a
+ * body is prose, and scanning for it reported QFAI-RESEARCH-015 against a
  * summary whose real references all resolved.
  */
 function collectUnresolvedSourceIds(
@@ -738,7 +741,7 @@ function collectUnresolvedSourceIds(
   const unresolved = new Set<string>();
   for (const entry of referencingEntries) {
     const value = readScalarField(entry, "source_id") ?? "";
-    // A placeholder value is already reported as QFAI-RESEARCH-019; an absent
+    // A placeholder value is already reported as QFAI-RESEARCH-021; an absent
     // or empty one is reported as a missing required field.
     if (!value || PLACEHOLDER_TEXT_RE.test(value) || known.has(value)) {
       continue;
@@ -944,7 +947,7 @@ function normalizeScalar(raw: string): string {
   // `source_id: []` on top of that.
   //
   // A placeholder therefore reports twice, and both reports are wanted:
-  // QFAI-RESEARCH-019 names every unfilled key in one finding, and the
+  // QFAI-RESEARCH-021 names every unfilled key in one finding, and the
   // required-field rules (-004 / -005 / -010 …) each name their own field on
   // their own entry. The per-field rules are the ones that say WHICH source
   // entry is unfilled; -019 is the one that says the pack is still the shipped

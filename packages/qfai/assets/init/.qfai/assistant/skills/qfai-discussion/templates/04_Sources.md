@@ -18,9 +18,9 @@ Storage slot for the `research_summary` output of
 `.qfai/assistant/constitution/research-first-protocol.md`. Replace every placeholder with the actual
 protocol run; `npx qfai validate --profile discussion` reports `QFAI-RESEARCH-*` while they remain.
 Never delete this heading to silence the gate: the current pack's `04_Sources.md` is required to
-carry it, and its absence is reported as `QFAI-RESEARCH-014`.
+carry it, and its absence is reported as `QFAI-RESEARCH-016`.
 
-Research-First Protocol output. Schema: `constitution/research-first-protocol.md`.
+Research-First Protocol output. Schema: `.qfai/assistant/constitution/research-first-protocol.md`.
 Replace every `[...]` placeholder with real research: validation rejects
 bracketed `title` / `url` / `reason` values and requires `published` to be a
 real `YYYY-MM-DD` date, so an unfilled block below reports errors rather than
@@ -51,12 +51,6 @@ research_summary:
       action: apply
       reason: [Why apply / reject / defer was chosen]
 ```
-
-- Every `sources[]` entry needs `id`, `title`, `url`, and a `published` date in `YYYY-MM-DD` form.
-- At least 80% of the sources should be published within the last two years.
-- Every `source_id` must resolve to an `id` in the same `sources[]` list.
-- At least one `reflection[]` entry must record an apply decision (`action` set to apply); never
-  auto-overwrite an existing BP/AP rule — record a reject or defer decision with a reason instead.
 
 ## Trend Scan
 
@@ -179,7 +173,29 @@ research_summary:
 
 ## Competitive Reference Registry
 
-### Reference: [Product/Service Name]
+UI-bearing packs must register at least `uiux.competitive_refs_min` complete
+references (default: 3). Three blocks are pre-seeded below; copy another
+`### Reference:` block for each reference beyond that, and delete any block you
+do not use only if the remaining count still meets the minimum.
+
+Every bracketed value below is a placeholder and counts as unpopulated — replace
+all of them. `TBD`, `TODO`, `N/A`, and `-` are rejected the same way.
+
+### Reference: [Product/Service Name 1]
+
+- reference: [Product/Service Name or URL]
+- adopted_points: [What was adopted from this reference and why]
+- rejected_points: [What was not adopted and why]
+- local_translation: [How adopted points were adapted for this project]
+
+### Reference: [Product/Service Name 2]
+
+- reference: [Product/Service Name or URL]
+- adopted_points: [What was adopted from this reference and why]
+- rejected_points: [What was not adopted and why]
+- local_translation: [How adopted points were adapted for this project]
+
+### Reference: [Product/Service Name 3]
 
 - reference: [Product/Service Name or URL]
 - adopted_points: [What was adopted from this reference and why]

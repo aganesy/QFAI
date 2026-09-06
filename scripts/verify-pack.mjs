@@ -433,7 +433,7 @@ const seededDiscussionPackFiles = {
     "",
     // The research-first protocol stores its output here, and the gate now
     // requires the section on the current pack — a seeded pack without it is
-    // QFAI-RESEARCH-014. That code rides the `researchSummarySchemaFields`
+    // QFAI-RESEARCH-016. That code rides the `researchSummarySchemaFields`
     // promotion window, so while the window is open it is a `warning` and the
     // `--fail-on error` run below (line 631) reports it without failing; from
     // the release the window names it is an `error` and the run stops. Seeded
