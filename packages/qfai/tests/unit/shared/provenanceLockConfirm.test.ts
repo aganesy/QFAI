@@ -76,8 +76,15 @@ vi.mock("node:fs/promises", async (importOriginal) => {
           // which is past `Number.MAX_SAFE_INTEGER`, so `+ 1` is a no-op and
           // the forgery silently forged nothing. It cost a green run of a case
           // that cannot pass.
+          //
+          // In the width `real.ino` actually has. `{ bigint: true }` makes
+          // `lstat` answer with `BigIntStats`, and a `number` planted into one
+          // of those is a shape the real function never returns — the same
+          // dishonesty as dropping `options`, one line further down.
+          const foreignIno =
+            typeof real.ino === "bigint" ? (real.ino === 1n ? 2n : 1n) : real.ino === 1 ? 2 : 1;
           return Object.create(real, {
-            ino: { value: real.ino === 1 ? 2 : 1, enumerable: true },
+            ino: { value: foreignIno, enumerable: true },
           }) as Awaited<ReturnType<typeof actual.lstat>>;
         }
         if (control.forgery.remaining > 0) {
