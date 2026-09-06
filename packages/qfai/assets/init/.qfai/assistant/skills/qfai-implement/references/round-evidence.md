@@ -50,6 +50,14 @@ to end.
   in round 2 (`../../qfai-atdd/references/review-fix-rounds.md`) changes mode
   between rounds, so one row-level field either rewrote round 1's
   classification or left round 2 misclassified
+- `Round N: RED assertion-stripped result` — the same command re-run with the
+  row's assertions neutralized. A reviewer judges the RED pair and its
+  assertion-stripped run together, so the two are recorded together:
+  row's assertions neutralized, the strip diff and its **passing** output, the
+  test restored immediately. Per round because each round's RED is taken on its
+  own tree and is stripped there (`red-admissibility.md`). A round whose RED
+  predates this field records `pre-contract` instead — see
+  **A round whose RED predates a field**
 - `Round N: Satisfied-by` / `Falsifiability command` / `Falsifiability result`
   — **in place of the RED pair** on a `falsifiability` row, with
   `Round N: Falsifiability revision` **in place of `Round N: RED revision`** as
@@ -104,7 +112,9 @@ to end.
 Round 1 is the original RED/GREEN cycle. Each blocking reviewer `REVISE` that
 requires new production behaviour adds a round. A `REVISE` that needs none
 (naming, duplication, comments) opens no round and is verified by a refreshed
-`Refactor verify` pair instead. Rounds are numbered and repeatable, not appended
+`Refactor verify` pair instead. One further round is opened by no reviewer at
+all — the **evidence-migration round** below, whose trigger is a
+canonical-skills update. Rounds are numbered and repeatable, not appended
 as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
@@ -148,6 +158,105 @@ Rewrite the value under its round's prefix the next time the row opens a round;
 a bare value left beside a prefixed one for the same round is a duplicate, not
 two rounds. A row that never opens another round keeps the unprefixed form and
 reaches `done` on it.
+
+## A round whose RED predates a field
+
+That last sentence binds fields added later, and
+`RED assertion-stripped result` is the first of them. A row resumed at `green`,
+`refactor` or `review-fix` after the canonical skills were updated has a
+Round 1 RED taken under the previous contract, and the run the field asks for is
+no longer takeable there: the production code that makes the test pass is in
+the tree, so a stripped run would pass for a reason that says nothing about
+the assertions, and the failure it would have to be taken against is gone.
+Required retroactively, the field would leave a legitimately evidenced row
+unable to finish, with no migration and no way back.
+
+Such a round records the field as `pre-contract`, and the warrant has to be
+**checkable against the update**, not merely plausible. "The round already has
+its GREEN pair" is not that: a round that took its RED after the update, skipped
+the strip, then wrote production code and a GREEN pair satisfies it exactly as a
+genuinely pre-contract round does, and a `RED revision` of the form
+`working-tree+<content hash>` is ordered against nothing at all. Left there, the
+criterion this contract just made mandatory would stay optional for any new
+round willing to write four characters. So the warrant is the round's
+`RED revision` **as a commit**, shown to be older than the field:
+
+`Round 1: RED assertion-stripped result: pre-contract — RED observed at <git rev>, an ancestor of <field commit>, which added this field`
+
+- `<git rev>` is a commit — never `working-tree+<content hash>`. A content hash
+  has no position in history, so it cannot show the RED came first.
+- `<field commit>` is the commit that introduced
+  `RED assertion-stripped result` into this project's `.qfai` tree — the
+  **oldest** commit that changed its occurrence count in this file:
+  `git log --reverse --format=%H -S'RED assertion-stripped result' -- <this file>`,
+  first line. **Do not filter that log to added files.** A project that
+  already had a `.qfai` tree receives the field as a _modification_ of this
+  file, so `--diff-filter=A` matches nothing there and would make
+  `pre-contract` unavailable on every project that was ever updated rather
+  than initialized after the field.
+- The ancestry must be **strict**: `<git rev>` is an ancestor of
+  `<field commit>` **and** the two revisions differ —
+  `git merge-base --is-ancestor <git rev> <field commit>` plus
+  `<git rev> != <field commit>`. `--is-ancestor` alone also holds when the RED
+  was taken **on** `<field commit>`, a tree that already carries the field and
+  on which the stripped run was therefore takeable. That, and only that, is
+  the "before" this value asserts.
+- Where the project does not track `.qfai`, there is no such commit and
+  `pre-contract` is **unavailable** — nothing in the tree orders the RED
+  against the update. So is a round whose `RED revision` is
+  `working-tree+<content hash>`. Neither is stranded by that: both take the
+  **evidence-migration round** below.
+- The round must already hold a complete GREEN pair. A round still at RED can
+  take the stripped run now and therefore must — so `pre-contract` on a RED
+  being submitted for `red`-phase review is a REVISE, whatever the row's
+  `Status`, and a round this cycle opens never qualifies.
+
+A round that cannot show that ancestry has no warrant, and the field is a
+REVISE. The way back is a fresh observation, not a weaker warrant: the rework
+opens round N+1, whose RED and stripped run are both taken on its own tree. It
+grandfathers an observation that has already happened; it is not a value a
+round may choose.
+
+## The evidence-migration round
+
+`pre-contract` being unavailable does not make the row unfinishable, and no
+reviewer `REVISE` is needed to reopen it. A round whose warrant cannot exist —
+the project does not track `.qfai`, or the round's `RED revision` is
+`working-tree+<content hash>` — opens one **evidence-migration round**, the
+only round whose trigger is the canonical-skills update itself rather than a
+finding:
+
+1. Take the row's production behaviour back out of the tree: check out the
+   parent of the commit that made the row GREEN, or revert the row's own
+   production change on a scratch tree. The row's `Test file` stays as it is,
+   so the failure is the row's assertions again.
+2. Observe the RED there and take its stripped run on that same tree, both
+   exactly as `red-admissibility.md` requires. Then write **the whole of this
+   round's RED subject** against that tree — the pair, the stripped run,
+   `RED revision`, and `RED test hash` with its manifest wherever the row owes
+   one — from the **Round block** list above, which is the only statement of it.
+   Step 4 puts the production code back and the tree these fields address stops
+   existing, so this is the last moment any of them can be taken.
+3. **Submit that RED to `qa-gatekeeper`, routing phase `red`, and obtain its
+   verdict here — before the restore.** This round is judged as an ordinary
+   round, so it owes the ordinary RED gate an ordinary subject, and the
+   completion gate re-asks for that verdict on every round. Restoring first and
+   submitting after would put the gatekeeper in front of a tree the RED was not
+   observed on, and would close the migration on the one round nobody judged —
+   which is the audit gap the migration exists to repair, reproduced by the
+   procedure meant to repair it. Nothing here is exempt from the gate: the round
+   carries no absence to admit, so a REVISE is answered as it is in any other
+   round.
+4. Restore the production code and re-run to take this round's GREEN pair.
+5. Record the trigger on `Round N: reviewer verdict` as "evidence migration —
+   `RED assertion-stripped result` added by the canonical-skills update; round
+   N-1 could not warrant `pre-contract`".
+
+It needs no gate of its own — step 3 sends it through the one every round
+uses — and it is no bypass: it costs a real RED observation, a real stripped
+run and a real verdict, which is the whole of what the field asks for. So
+`pre-contract` is **not** available on a migration round — the round exists to
+produce the very run it would excuse — and a row takes at most one per field.
 
 ## Where the rounds happen
 

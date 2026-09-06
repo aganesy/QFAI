@@ -213,7 +213,8 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      "RED command+result, `Round 1: RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      // The handover row carries the assertion-stripped run too (#639).
+      "RED command+result, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -483,7 +484,7 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // re-observe.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain(
-      "Submit that run to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
+      "Submit that run — the RED pair and its assertion-stripped run — to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
     );
     expect(provenance).toContain("Stage gate **P1b** is where steps 1-4 happen.");
   });
@@ -3275,7 +3276,7 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
     // Step 4 — the handoff the producer actually submits — carries it too.
     const flatProvenance = flat(provenance);
     expect(flatProvenance).toContain(
-      "Submit that run to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
+      "Submit that run — the RED pair and its assertion-stripped run — to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
     );
     expect(flatProvenance).not.toContain(
       "(routing phase `red`) before any code implementing the row's predicate exists",

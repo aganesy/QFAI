@@ -168,6 +168,23 @@ gate condition where it is defined below.
       later — Phase Green does not touch those files — so it is what makes the
       freshness claim checkable rather than asserted.
 
+      **Take the assertion-stripped run here, before step 4 submits the
+      pair.** The handover table below requires `RED assertion-stripped result`
+      on every `observed-red` entry, and nothing downstream supplies it: the
+      consumer's `/qfai-implement` step 3b consumes a handed-over row **without
+      running its own step 4**, which is the only place that skill strips a RED.
+      A row handed over without it therefore owes a field no later step takes,
+      and `qa-gatekeeper` REVISEs it on absence — so a journey with a perfectly
+      natural RED stops here for want of a run this stage could have made in the
+      same minute. Neutralize every assertion this row's selector executes,
+      re-run the RED command unchanged, confirm it **passes**, record the strip
+      diff and that output, and **restore the test immediately**. The procedure,
+      the compilable neutralization for languages that reject unused locals, and
+      the reject conditions are the one in
+      `../../qfai-implement/references/red-admissibility.md` — do not restate
+      them here. Before step 4, because the gatekeeper judges the entry as it
+      stands and this field is inside its audit subject.
+
       **Both are recorded when observed, never reconstructed.**
       `/qfai-implement` Phase Green changes the tree, and its completion gate
       requires the handed-over RED to name the revision it was taken at
@@ -187,7 +204,25 @@ gate condition where it is defined below.
       first leaves the planner nothing but "keep the PASS and open a new row",
       which cannot repair a handoff at the wrong granularity — the row has to be
       split before its RED is taken, not after.
-   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) while no
+      **Take the assertion-stripped run here, before step 4 submits the
+      pair.** The handover table below requires `RED assertion-stripped result`
+      on every `observed-red` entry, and nothing downstream supplies it: the
+      consumer's `/qfai-implement` step 3b consumes a handed-over row **without
+      running its own step 4**, which is the only place that skill strips a RED.
+      A row handed over without it therefore owes a field no later step takes,
+      and `qa-gatekeeper` REVISEs it on absence — so a journey with a perfectly
+      natural RED stops here for want of a run this stage could have made in the
+      same minute. Neutralize every assertion this row's selector executes,
+      re-run the RED command unchanged, confirm it **passes**, record the strip
+      diff and that output, and **restore the test immediately**. The procedure,
+      the compilable neutralization for languages that reject unused locals, and
+      the reject conditions are the one in
+      `../../qfai-implement/references/red-admissibility.md` — do not restate
+      them here. Before step 4, because the gatekeeper judges the entry as it
+      stands and this field is inside its audit subject.
+
+   4. **Submit that run — the RED pair and its assertion-stripped run — to
+      `qa-gatekeeper` (routing phase `red`) while no
       implementation makes that assertion pass — the step 1 seam does not, and
       neither does an existing surface that implements the row's predicate
       wrongly — and wait for PASS.** `qfai-implement/SKILL.md` requires an
@@ -204,7 +239,8 @@ gate condition where it is defined below.
       phase `acceptance-test-engineer` and no backend or frontend agent. The
       surface is built by `/qfai-implement` Phase Green from this handover, and
       the GREEN pair is recorded there. Branch 1's output is the RED pair, its
-      `qa-gatekeeper` PASS, and the `Oracle proof` plan.
+      assertion-stripped run, its `qa-gatekeeper` PASS, and the `Oracle proof`
+      plan.
 
    Stage gate **P1b** is where steps 1-4 happen.
 
@@ -313,7 +349,7 @@ Exactly one form per row, never both and never neither:
 
 | Branch         | Recorded                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `Round 1: RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                                                                   |
+| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                         |
 | Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `Round 1: RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                                                    |
 | `exception`    | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects, recorded **before** P1d routes the gate — its audit subject is those plus the `DR-ID` and the DR artifact, so a row without them has nothing reproducible for `qa-gatekeeper` to hash. Then write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 

@@ -47,7 +47,8 @@ procedure, in four steps:
      `API` — an ATDD-owned row has no `TC-ref`, so naming only that one left
      its obligation outside every hash), `RED test hash`, the row's own
      transient revision (`RED revision` or `Falsifiability revision`), and the
-     RED pair or the falsifiability trio with `RED failure mode`. **Not
+     RED pair with its `RED assertion-stripped result`, or the falsifiability
+     trio, with `RED failure mode`. **Not
      `Revision`**: it names the tree the GREEN landed at and does not exist
      yet, so including it made every correct RED PASS stale at GREEN.
    - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair,
