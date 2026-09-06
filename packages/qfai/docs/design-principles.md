@@ -50,9 +50,21 @@ When a new validator is added, it MUST be:
 3. registered in the error-codes expected-message table in `cli/commands/validate.ts`.
 
 Enforcement: `tests/unit/validators-are-wired.test.ts` (added in Phase 2)
-fails CI if any prototyping validator export is not referenced from
-`validate.ts`. This is the primary defence against the Phase 1.8.3
-"executionPlan / delegationMap dead-code" failure mode.
+fails CI if any validator export under `src/core/validators/` is not invoked
+from the `validate.ts` symbol graph, which `tests/helpers/validatorGraph.ts`
+walks on the TypeScript AST. "Exported" covers all three forms —
+`export function validateX`, `export const validateX =` and
+`export { local as validateX }`. Wiring means an identifier in value position:
+a barrel re-export in `validators/index.ts`, an `import` declaration, a mention
+in a comment or inside a string, and a call sitting in a sibling export that
+nothing imports all fail to count — only a call or a registry reference does.
+An aliased import (`import { validateX as runX }`) is credited to `validateX`,
+so renaming at the import site is still wiring. The same test checks
+obligation 1 across the whole tree. This is the primary defence against
+the Phase 1.8.3 "executionPlan / delegationMap dead-code" failure mode.
+Validators that were already dead, or already missing their barrel re-export,
+when the guard was widened are grandfathered on the dated `PENDING_WIRING` /
+`BARREL_EXPORT_EXEMPT` lists in that file; both lists may only shrink.
 
 ## P5. "Completion" is an artifact
 
@@ -116,3 +128,30 @@ cannot walk past the ratchet. A third assertion checks the pin itself: a
 promotion that is not a GA release would leave the finding a warning forever
 under the conservative fallback, and one less than a minor past `introducedIn`
 would be a window nobody can migrate inside of.
+
+### Three exemptions, and the criterion for each
+
+A window is the default, not the only answer. Three registries name the codes it
+does not apply to, and each states its own test:
+
+- `tests/core/findingCodeBaseline.ts#FINDING_CODES_BEFORE_PROMOTION_POLICY` —
+  **frozen.** Codes `src/` already emitted when P7 was adopted. A code missing
+  from it is a code introduced after the policy, and the remedy is a promotion
+  entry, never a new line here.
+- `tests/core/sunsetLedger.test.ts#INFO_ONLY_SINCE_BASELINE` — a finding that is
+  `info` at every site is off the ladder. It reports a fact rather than a
+  defect: it does not claim the tree is wrong, and it is not a gate waiting to
+  close.
+- `tests/core/sunsetLedger.test.ts#ERROR_FROM_INTRODUCTION` — **the condition
+  the code reports already fails the run today.** Then the window has no backlog
+  to absorb, because no project is passing in that state — and shipping at
+  `warning` would be a regression rather than a courtesy, since a `warning`
+  under the default `--fail-on error` exits 0 where the previous behaviour did
+  not. `QFAI-SCAN-002` is the case: before it existed, a validator throwing
+  ended the process with a bare stderr line and a non-zero exit.
+
+Each `ERROR_FROM_INTRODUCTION` entry carries its reason, and the guard checks
+the reason is present, the code is `"error"` at every site, something still
+emits it, and the frozen baseline does not already cover it. **It cannot check
+that the reason is true** — a reviewer tests that by asking what the tree did
+before the code existed, which is why the list is meant to stay short.
