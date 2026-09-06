@@ -289,7 +289,7 @@ const GATE_ITEM_PARITY: readonly {
   },
   {
     item: 11,
-    condition: "is appended with both reviewer verdicts after items 7-8 returned PASS",
+    condition: "is appended with **every routed reviewer's** verdict after items 7-8 returned PASS",
     box: "both verdicts are appended to the evidence file the row's `Layer` owns",
   },
   {
@@ -308,6 +308,11 @@ const GATE_ITEM_PARITY: readonly {
     condition:
       "The **full** suite is required here only when the item sits on a checkpoint boundary",
     box: "the **full** suite where the row sits on a checkpoint boundary",
+  },
+  {
+    item: 10,
+    condition: "on a UI-affecting row item 9's `Prototype parity reviewed revision` shares it too",
+    box: "a parity PASS taken before the surface moved is stale",
   },
 ];
 
@@ -340,8 +345,8 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
   9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  10: "64ae9eb7fe8d1de5b1216263205f2ee459aaf3abebf274739f78f7edbbd7891b",
-  11: "e4c7de62d79995caf9578da4383a0281b120867d5ffb54246ea541ccbe8d1dba",
+  10: "9df619fc647f75567d2fb91e0fce3146ab43cd21098ca876d235a8f101fd8c6f",
+  11: "a7470dc8a8e922a0ea06fd70b7703a2ea35e31eb79c27436f84c329d11dc9493",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
 
@@ -407,7 +412,7 @@ const SPEC_LEVEL_PARITY: readonly {
   },
   {
     heading: PROHIBITIONS_HEADING,
-    condition: "does not record both reviewer verdicts for the item",
+    condition: "does not record **every routed reviewer's** verdict for the item",
     box: "both verdicts are appended to the evidence file the row's `Layer` owns",
   },
   {

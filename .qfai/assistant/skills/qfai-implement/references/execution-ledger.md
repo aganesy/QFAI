@@ -397,10 +397,16 @@ after its surface passes on the first run. So:
   every pair; it stopped being true the moment another stage did.
   `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
   E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
-  matching prohibition condition append the two reviewer verdicts to **that**
-  file. This skill still runs `completion-reviewer` and
-  `implementation-reviewer` for every row it advances — only the RED provenance
-  came from elsewhere.
+  matching prohibition condition append **every routed reviewer's** verdict to
+  **that** file — `Spec review` and `Code quality review` on every row, and
+  `Prototype parity` as well on a UI-affecting one, because gate item 9 routes
+  `product-surface-reviewer` there too and the routed set is therefore wider
+  than two. This skill still runs those reviewers for every row it advances —
+  only the RED provenance came from elsewhere. A fixed count of two here while
+  item 11 obliged three made `done` depend on which of the two files the runner
+  read, and the parity verdict — the only one that cannot be re-derived from the
+  spec and the diff, because it was taken against a rendered surface that has
+  since moved — was the one it dropped.
 - **`exception` is for a row where both are unavailable** — an obligation with
   no persisted form or no observable surface at L5, recorded with a `DR-*`
   naming what is missing. It is not the routine outcome of surface-first

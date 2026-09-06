@@ -55,6 +55,9 @@ releases completion.
       evidence entry records the verdict on either target — the field name does not change — and it
       is not the verdict; the `--profile tdd` run this list ends on reports no `QFAI-REVIEW-*`
       finding, so a pack that never held a UI review passes it (gate item 9).
+      Its `Prototype parity reviewed revision` names the **same** revision as items 6, 7
+      and 8: a parity PASS taken before the surface moved is stale, and it is the one
+      verdict a later reader cannot re-derive from the spec and the diff (gate item 10).
 - [ ] `test-list.md` statuses are accurate **and** each row's `Evidence` anchor resolves to a fresh
       entry in the file its `Layer` owns, with `Review pack seal` and each `Audited evidence hash`
       recomputed, **and the entry's identity copy still matches the ledger row** — `TDD-ID`, `Layer`,

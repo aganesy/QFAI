@@ -80,7 +80,7 @@ procedure, in four steps:
      for another existing `DR-*`, one already waived perhaps, with the
      revision and the hash both unmoved. Gate item 10 also requires the
      verdict to name the `DR-ID` the row currently carries.
-   - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
+   - **Completion review** (`completion-reviewer` / `implementation-reviewer` / `product-surface-reviewer` — the routed set is wider than two whenever the row is UI-affecting, and naming only two left the parity verdict's subject undefined, so the reviewer and gate item 10 each chose one and a correct UI row could not reach `done`):
      the GREEN subject plus `Refactor verify command` / `result` / `revision`, the
      `Shared-artifact re-verify` block when the row has one — omitting it let
      the earlier rows' re-runs and re-taken proofs it records be edited away
@@ -90,6 +90,7 @@ procedure, in four steps:
      put their own line in what they hashed. A round heading left at `###` is
      unmigrated evidence, not an absent field: migrate or stop before hashing
      (`../../skills/qfai-implement/references/round-evidence.md`).
+     **`product-surface-reviewer` takes that same subject and one record class more**: each surface artifact the row's phase-authored `Surface artifacts` manifest names under `.qfai/evidence/**` — a runtime screenshot, an HTML capture — whole, one record per artifact under its repo-relative path, in the step 3 order. `Reviewed revision` excludes that tree, so nothing else pins the rendered output this verdict is actually about, and a screenshot replaced after the PASS moved neither the revision nor a subject built from fields alone. Artifacts it reads from **inside** the revision — `.qfai/contracts/design/prototype-handoff.yaml`, `.qfai/prototypes/winner/index.html`, the UI contracts — contribute no record: `Reviewed revision` already pins them, and hashing them twice would stale this verdict on an unrelated prototype edit. **A row carrying this verdict has no "no such artifact" state**: `Surface artifacts` is a required phase-authored field on a UI-affecting row (`../../skills/qfai-implement/SKILL.md`), an empty one is refused at the completion gate rather than hashed, and this record class is empty only for rows that take no parity verdict at all. Reading it as optional is what made the class vacuous — the subject was then fields alone on every conforming entry, and the screenshots the verdict was taken on could be swapped with the revision excluding that tree and the hash unmoved.
 
    A field absent at that point contributes nothing — it is not a placeholder
    and not an error. Nothing written after an observation is in its subject,
@@ -101,10 +102,12 @@ procedure, in four steps:
    the revision and the pack seal both miss — so it carries a seal of its own,
    taken as it is written and recomputed by the gate that reads it.
 
-2. **Normalize.** LF line endings; strip trailing whitespace from every line;
-   drop leading and trailing blank lines; end with exactly one newline.
+2. **Normalize — a Markdown or HTML record only.** LF line endings; strip trailing whitespace from every line; drop leading and trailing blank lines; end with exactly one newline. **Every other record skips this step and hashes the artifact's raw bytes as they sit on disk.** A `product-surface-reviewer`'s runtime screenshot is a `.png` (`../../skills/qfai-prototyping/SKILL.md` names the path the capture writes) — an arbitrary byte string with no lines to re-end and no trailing whitespace to strip, where "LF line endings" rewrites whatever `0x0D 0x0A` fell inside the compressed stream and the strip eats the `0x20` / `0x09` before it. Normalizing it made the digest a property of whichever decoder each side reached for, so the reviewer and gate item 10 computed different values for one unchanged image and a correct UI row could not reach `done`; and it mapped two images differing only in those bytes onto one digest, which is the replacement this verdict exists to catch.
+
+   **The class is the record's extension, never sniffed content**: `.md` and `.html` normalize — the extracted entry and `coverage-depth-<spec-id>.md` are recorded under their `.md` paths, a `DR-*` artifact is one too, and an HTML capture is text — every other extension is raw, so reviewer and gate cannot classify one artifact two ways.
+
 3. **Serialize.** One record per artifact — the repo-relative path, a NUL
-   byte, then the SHA-256 of that artifact's normalized bytes — sorted by
+   byte, then the SHA-256 of that artifact's bytes as step 2 leaves them, normalized where that step applies and raw where it does not — sorted by
    path, joined with newlines. **This is the audit hash, not the working-tree
    revision**: that one has its own four steps, including the untracked
    record's `kind` and `mode`, in
@@ -114,7 +117,7 @@ procedure, in four steps:
    on a branch-3 row the `DR-*` artifact the row names, whole, under its
    repo-relative path — the subject says the DR is that branch's evidence, and
    a subject with no record for it is a hash that does not move when the DR
-   text changes; and
+   text changes; and on a `product-surface-reviewer` verdict each surface artifact the entry's `Surface artifacts` manifest names under `.qfai/evidence/**`, whole, under its repo-relative path, for the same reason — the rendered output is that verdict's evidence, and a subject of fields alone does not move when the screenshot is replaced; and
    the part of `.qfai/evidence/coverage-depth-<spec-id>.md` that belongs to
    this row's obligation — not the file whole, and matched **exactly**. A
    row may legitimately carry several (`TC-Refs: TC-0001, TC-0002`), so split

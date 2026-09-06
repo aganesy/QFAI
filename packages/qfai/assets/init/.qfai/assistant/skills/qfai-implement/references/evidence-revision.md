@@ -347,6 +347,15 @@ Consequences:
   name the **same** revision. Verdicts from different revisions do not compose
   into a ruling about one state — the earlier ones ruled on code that no longer
   exists.
+- **A UI-affecting row adds gate item 9 to that set**: the
+  `product-surface-reviewer` PASS recorded as `Prototype parity`. Its
+  `Reviewed revision` is held to the same rule and must equal the others'. The
+  routed set is the subject here, not a fixed pair — reading it as one let a
+  parity PASS taken against an earlier rendering stand while the UI moved
+  underneath it, and that is the one verdict a later reader cannot re-derive
+  from the spec and the diff: it was an observation of a surface that no longer
+  exists. A row that routed no parity reviewer has nothing extra to agree; the
+  rule applies where item 9 does.
 - **The exceptions are items 3 and 5, on every row, above under _A transient
   observation names its own revision_** and in the table under _Which tree each
   gate item addresses_. A RED is observed before the code that
@@ -364,7 +373,7 @@ Consequences:
   having, not decay. Each records its own field — `Round N: RED revision` beside
   the RED pair, `Round N: Falsifiability revision` beside the trio,
   `Round N: Revision` beside the
-  GREEN pair — and leaves `Refactor verify revision` for item 6 and the two
+  GREEN pair — and leaves `Refactor verify revision` for item 6 and the routed
   reviews, which must still agree with each other. Folding
   any of them into one field made a correct row permanently stale and unable to
   reach `done`: the `observed-red` E2E/API rows first, every branch-2 row

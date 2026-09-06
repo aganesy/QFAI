@@ -2200,7 +2200,7 @@ the count from `main`'s 927 to 932. Again nothing about `spec-0017` changed, and
 totals above are known-invalid for this tree rather than assumed current: the line below is what
 says so.
 
-e2e callsites at this tree: 1505
+e2e callsites at this tree: 1520
 =======
 **And it moved again — this time in a MERGE, with both parent TIPS individually correct.** Both parents
 of `2a6da1ca9` measure 932 and record 932, so neither branch could have found this by re-measuring its
