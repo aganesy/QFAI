@@ -33,7 +33,7 @@ import { resolveToolVersion } from "../core/version.js";
 const UNKNOWN_COMMAND_EXIT_CODE = 1;
 
 export async function run(argv: string[], cwd: string): Promise<void> {
-  const { command, invalid, options } = parseArgs(argv, cwd);
+  const { command, invalid, invalidReason, options } = parseArgs(argv, cwd);
 
   // `--version` / `-V` short-circuits before the usage branch so the
   // version is readable from anywhere, including outside a project.
@@ -43,11 +43,17 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   }
 
   if (!command || options.help) {
-    // Name the offending token before anything else prints, so a typo is
-    // legible whichever stream the usage text ends up on below.
+    // 拒否理由は stderr、usage は stdout。呼び出し側が stdout を捨てても
+    // 「どのトークンが拒否されたか」は必ず手元に残る。`--format json` の
+    // 経路でも理由は stderr なので、stdout の JSON は汚れない。
+    //
+    // The flag list is more specific than the stored reason when several
+    // unknown flags arrived together, so it is preferred where it exists.
     if (invalid && options.unknownFlags.length > 0) {
       const label = options.unknownFlags.length > 1 ? "unknown options" : "unknown option";
       error(`qfai: ${label}: ${options.unknownFlags.join(", ")}`);
+    } else if (invalid) {
+      error(invalidReason ?? "qfai: invalid arguments.");
     }
     // A parser rejection never reaches runGuardrails(), so the `--format json`
     // promise ("stdout stays parseable for every outcome") has to be honoured
@@ -182,12 +188,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "audit":
       {
-        if (!options.auditAction) {
-          error("qfai audit: unknown or missing subcommand. Expected: log");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAuditLog({
           root: resolvedRoot,
@@ -200,12 +201,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "atdd":
       {
-        if (!options.atddAction) {
-          error("qfai atdd: unknown or missing subcommand. Expected: scaffold");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
         if (!options.atddSpecId) {
           error("qfai atdd scaffold: --spec <id> is required.");
           info(usage());
@@ -221,15 +217,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "handoff":
       {
-        if (!options.handoffAction) {
-          error("qfai handoff: unknown or missing subcommand. Expected: upgrade");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-        // Only `upgrade` is supported today; the action gate above
-        // already markInvalid()s unrecognized values, so we land here
-        // with `upgrade` selected.
+        // Only `upgrade` is supported today; parseArgs already
+        // markInvalid()s a missing / unrecognized action, so we land
+        // here with `upgrade` selected.
         if (!options.handoffLegacyFile) {
           error("qfai handoff upgrade: <legacy-file> is required.");
           info(usage());
@@ -250,10 +240,10 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "discussion":
       {
-        if (!options.discussionAction) {
-          error("qfai discussion: unknown or missing subcommand. Expected: list|use");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // ここでは required な `action` を narrow するためだけに読む。
+        const discussionAction = options.discussionAction;
+        if (!discussionAction) {
           return;
         }
         // `discussion ... --format json` writes its whole payload to
@@ -263,7 +253,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         const resolvedRoot = await resolveRoot(options, options.discussionFormat === "json");
         process.exitCode = await runDiscussion({
           root: resolvedRoot,
-          action: options.discussionAction,
+          action: discussionAction,
           ...(options.discussionActive ? { active: true } : {}),
           ...(options.discussionFormat ? { format: options.discussionFormat } : {}),
           ...(options.discussionId !== undefined ? { id: options.discussionId } : {}),
@@ -272,15 +262,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "prototyping":
       {
-        if (!options.prototypingAction) {
-          error(
-            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec|rescope",
-          );
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
         if (options.prototypingAction === "certify") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingCertify({

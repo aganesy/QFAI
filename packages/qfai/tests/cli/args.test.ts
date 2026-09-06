@@ -486,6 +486,72 @@ describe("parseArgs", () => {
       expect(parsed.options.auditScope).toBe("deviation");
     });
   });
+  // 引数拒否の理由 (invalidReason) は main.ts が stderr に出す診断文。
+  // 「どのトークンが拒否されたか」が出力に現れることを固定する。
+  describe("invalidReason", () => {
+    it("names the flag when a value-taking flag has no value", () => {
+      const parsed = parseArgs(["validate", "--format"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe("qfai validate: --format requires a value.");
+    });
+
+    it("names the flag, the rejected value and the accepted set", () => {
+      const parsed = parseArgs(["validate", "--profile", "bogus"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toContain("--profile");
+      expect(parsed.invalidReason).toContain('"bogus"');
+      expect(parsed.invalidReason).toContain("full");
+    });
+
+    it("keeps the first reason when several rejections fire", () => {
+      const parsed = parseArgs(["validate", "--format", "--profile"], process.cwd());
+      expect(parsed.invalidReason).toBe("qfai validate: --format requires a value.");
+    });
+
+    it("reuses the per-family subcommand wording when the subcommand is missing", () => {
+      const cwd = process.cwd();
+      expect(parseArgs(["audit"], cwd).invalidReason).toBe(
+        "qfai audit: unknown or missing subcommand. Expected: log",
+      );
+      expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
+        "qfai atdd: unknown or missing subcommand. Expected: scaffold",
+      );
+      expect(parseArgs(["handoff"], cwd).invalidReason).toBe(
+        "qfai handoff: unknown or missing subcommand. Expected: upgrade",
+      );
+      expect(parseArgs(["discussion"], cwd).invalidReason).toBe(
+        "qfai discussion: unknown or missing subcommand. Expected: list|use",
+      );
+      expect(parseArgs(["prototyping"], cwd).invalidReason).toBe(
+        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
+      );
+      expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
+        "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
+      );
+    });
+
+    it("quotes the rejected subcommand token", () => {
+      const parsed = parseArgs(["prototyping", "bogusaction"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe(
+        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-spec',
+      );
+    });
+
+    it("reports a flag used on a command that does not accept it", () => {
+      // `init` rather than `report`: `report --spec` is a real scoping flag
+      // now, so it is no longer an example of this class.
+      const parsed = parseArgs(["init", "--spec", "0003"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe("qfai init: --spec is not valid for this command.");
+    });
+
+    it("leaves invalidReason unset when the arguments parse", () => {
+      const parsed = parseArgs(["validate", "--profile", "full"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.invalidReason).toBeUndefined();
+    });
+  });
 
   // Unknown-flag handling. Pre-fix the flag switch ended with a bare
   // `default: break;`, so any unrecognized `--token` was silently
