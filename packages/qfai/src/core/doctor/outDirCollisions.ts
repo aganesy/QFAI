@@ -207,8 +207,15 @@ export async function findOutDirCoOwners(
   if (!owners) {
     return [];
   }
+  // Resolved, not raw. `owners.roots` holds `path.dirname()` of glob output,
+  // and fast-glob emits `/` separators on every platform - so on Windows these
+  // came back as `C:/Users/...` while everything they are compared against, and
+  // the operator reading them in `cleanRunLogs`'s refusal, uses `\`. Resolving
+  // here makes the returned paths platform-native, which is what the filter
+  // below already assumed.
   return Array.from(owners.roots)
-    .filter((owner) => path.resolve(owner) !== selfRoot)
+    .map((owner) => path.resolve(owner))
+    .filter((owner) => owner !== selfRoot)
     .sort((a, b) => a.localeCompare(b));
 }
 
