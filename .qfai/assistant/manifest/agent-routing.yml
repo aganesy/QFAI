@@ -120,13 +120,25 @@ routing:
   # self-attestation it exists to prevent.
   - skill: qfai-implement
     phases:
+      # Runs once, before any ledger row is touched: `delivery-planner` frames
+      # the invocation (risk tiers, T1 groups, dispatch, order) and blocks it
+      # when the plan is wrong, while `test-design-analyst` reports coverage /
+      # layer-ownership findings and does not block, because their repair is
+      # upstream. Written up in `qfai-implement/SKILL.md` under
+      # `### Phase: Stage 0 + Preflight + Plan` — a routed phase the skill body
+      # never named dispatched `test-design-analyst` with no task definition.
+      # `changed-scope-dependents`, not `failed-agents-only`: repairing a
+      # `delivery-planner` scope REVISE splits a selector, adds a row or moves
+      # an obligation reference, which changes the ledger `test-design-analyst`
+      # read — so its earlier PASS would otherwise stand over a ledger that no
+      # longer exists. Same reason the ATDD scope gate uses this policy.
       - id: plan
         iteration: per-invocation
         mandatory_agents: [delivery-planner, test-design-analyst]
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner]
-        rerun_policy: failed-agents-only
+        rerun_policy: changed-scope-dependents
       # The failing test exists and no production code does. This is the only
       # window in which "watch it fail" is a first-hand observation, so the
       # gatekeeper is mandatory AND blocking here: RED must be confirmed before
