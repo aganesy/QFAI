@@ -149,7 +149,6 @@ describe("evidence and verdicts carry a revision", () => {
 
     it(`${tree}: the refactor-verify pair carries the address items 6, 7 and 8 share`, async () => {
       const skill = flat(await read(tree, SKILL));
-      const delegation = flat(await read(tree, DELEGATION));
 
       // The write point is named, so the field is not left without one.
       expect(skill).toContain(
