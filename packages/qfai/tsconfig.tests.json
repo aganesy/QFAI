@@ -76,6 +76,7 @@
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/reviewPayloadSchemaShipped.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
+    "tests/assets/roundBlockHome.test.ts",
     "tests/assets/sddInputsPriorityRecut.test.ts",
     "tests/assets/sddOptionalOutputs.test.ts",
     "tests/assets/sddRoutingPhaseCrosswalk.test.ts",

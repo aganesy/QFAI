@@ -82,13 +82,14 @@ procedure, in four steps:
      verdict to name the `DR-ID` the row currently carries.
    - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
      the GREEN subject plus `Refactor verify command` / `result` / `revision`, the
-     `Shared-artifact re-verify` block when the row has one — it records the
-     earlier rows' re-runs and re-taken proofs, which these reviewers are the
-     ones who audit, so leaving it out let it be edited or deleted without
-     moving either hash — and, from every `### Round N` block the row
-     carries, that block's **phase-authored** fields only. `Round N: reviewer verdict` is written by these reviewers
-     after they have read the block, so taking the whole block put their own
-     line inside what they hashed.
+     `Shared-artifact re-verify` block when the row has one — omitting it let
+     the earlier rows' re-runs and re-taken proofs it records be edited away
+     without moving either hash — and, from every `#### Round N` block nested
+     in the row's `### <TDD-ID>` section, that block's **phase-authored**
+     fields only: `Round N: reviewer verdict` is theirs, so the whole block
+     put their own line in what they hashed. A round heading left at `###` is
+     unmigrated evidence, not an absent field: migrate or stop before hashing
+     (`../../skills/qfai-implement/references/round-evidence.md`).
 
    A field absent at that point contributes nothing — it is not a placeholder
    and not an error. Nothing written after an observation is in its subject,
