@@ -209,6 +209,40 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-006");
   });
 
+  it("keeps the Research Summary content rules on when uiux.requireResearchSummary is false", async () => {
+    // The setting says the section is not required. It does not say a section
+    // the project chose to write may record the protocol wrongly, so only the
+    // absence rule is suppressed and the content rules stay on. The absence
+    // rule itself is covered by the two pack-directory tests below; this
+    // fixture is a loose file with no pack, so QFAI-RESEARCH-012 has nothing
+    // to report here either way and is not worth asserting on.
+    const root = await newTempDir();
+    await seedResearchSummaryWithoutSources(root);
+
+    const codes = (
+      await validateResearchSummary(root, {
+        ...defaultConfig,
+        uiux: { ...defaultConfig.uiux, requireResearchSummary: false },
+      })
+    ).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-001");
+  });
+
+  it("keeps the Research Summary gate when uiux.requireResearchSummary is true or unset", async () => {
+    const root = await newTempDir();
+    await seedResearchSummaryWithoutSources(root);
+
+    const optedIn = await validateResearchSummary(root, {
+      ...defaultConfig,
+      uiux: { ...defaultConfig.uiux, requireResearchSummary: true },
+    });
+    const unset = await validateResearchSummary(root, defaultConfig);
+
+    expect(optedIn.map((item) => item.code)).toContain("QFAI-RESEARCH-001");
+    expect(unset.map((item) => item.code)).toContain("QFAI-RESEARCH-001");
+  });
+
   it("does not treat best_practices ids as source entries", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");
@@ -975,6 +1009,13 @@ describe("uiux validators", () => {
     expect(issues.some((item) => item.code === "QFAI-DT-006")).toBe(false);
   });
 });
+
+async function seedResearchSummaryWithoutSources(root: string): Promise<void> {
+  const discussionDir = path.join(root, ".qfai", "discussion");
+  await mkdir(discussionDir, { recursive: true });
+  const md = ["# Spec", "", "## Research Summary", "sources:", ""].join("\n");
+  await writeFile(path.join(discussionDir, "opt-out.md"), md, "utf-8");
+}
 
 async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-uiux-"));
