@@ -5,6 +5,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 import { validateOrphanProhibition } from "../../src/core/validators/orphanProhibition.js";
 import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";
@@ -28,7 +30,7 @@ describe("v1.4.36 layered validators", () => {
   it("ignores CAP mentions in prose outside the CAP Catalog table", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, {
         prose: "- 運用健全性は CAP-0003 が所有する（参考記述）。",
       });
       await seedSpec(root, "0001", "CAP-0001");
@@ -45,7 +47,7 @@ describe("v1.4.36 layered validators", () => {
   it("ignores CAP mentions in the Notes cell of the CAP Catalog table", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, {
         notes: { "CAP-0001": "CAP-0003 と併せて読むこと" },
       });
       await seedSpec(root, "0001", "CAP-0001");
@@ -62,7 +64,7 @@ describe("v1.4.36 layered validators", () => {
   it("ignores a table that sits outside the CAP Catalog section", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedPolicies(root, ["CAP-0001", "CAP-0002"], {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], undefined, {
         trailingSection: [
           "## Related capabilities (reference)",
           "",
@@ -84,7 +86,7 @@ describe("v1.4.36 layered validators", () => {
   it("ignores an illustrative CAP Catalog heading inside a fenced sample", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, {
         preamble: [
           "旧フォーマットの例:",
           "",
@@ -111,7 +113,7 @@ describe("v1.4.36 layered validators", () => {
   it("ignores an illustrative CAP Catalog heading inside an HTML comment", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], undefined, {
         preamble: [
           "<!--",
           "## CAP Catalog",
@@ -167,7 +169,7 @@ describe("v1.4.36 layered validators", () => {
   it("still reads the real catalog when a fenced sample follows it", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      await seedPolicies(root, ["CAP-0001", "CAP-0002"], {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], undefined, {
         trailingSection: [
           "## Example",
           "",
@@ -250,6 +252,549 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("accepts an ID gap left by an approved DELETE when the catalog declares the mapping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // spec-0002 was deleted with its capability; 11_Slice-Policy.md forbids
+      // renumbering spec-0003, so the surviving directories keep their IDs.
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reports a spec directory the declared mapping does not name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const codes = issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-SPLIT-103");
+      expect(codes).toContain("QFAI-SPLIT-104");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("compares the declared pair, not the positional one, for the CAP back-reference", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0009");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const parentIssue = issues.find((issue) => issue.code === "QFAI-SPLIT-105");
+      expect(parentIssue?.refs).toEqual(["spec-0003", "CAP-0003"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a CAP row that declares no spec directory of its own", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001", null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports two CAP rows that declare the same spec directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001", "spec-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["spec-0001 (CAP-0001, CAP-0002)"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a Spec cell that names a file rather than the directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `spec-0001.md` is not `spec-0001`. The tail lookahead excluded `-` and
+      // word characters but not `.`, so the cell truncated to a directory that
+      // does exist — and every downstream check then passed on a declaration
+      // nobody made.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001.md", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not read an audit table below a legacy catalog as the mapping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A legacy catalog has no `Spec` column, so the derivation is positional.
+      // The change-history table below it legitimately carries `CAP ID` and
+      // `Spec` columns; scanning past the catalog for "a table with both
+      // headers" made that history the mapping, and the live rows then resolved
+      // through it. Here it would claim CAP-0001 owns `spec-0002`.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], undefined, {
+        trailingSection: [
+          // An H3, so it stays INSIDE the `## CAP Catalog` section — which is
+          // where the finding puts it, and the only place the two readings can
+          // disagree. Under an H2 the section ends before the table and both
+          // readings decline it, which is a fixture that never reaches the
+          // distinguishing input.
+          "### Change history",
+          "",
+          "| CAP ID | Spec | Moved on |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0002 | 2026-01-01 |",
+          "",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      // Positional derivation holds: CAP-0001 -> spec-0001, CAP-0002 ->
+      // spec-0002, both present, so nothing is missing, extra or unresolved.
+      expect(
+        issues.map((issue) => issue.code),
+        "the history table is not a catalog and must not resolve anything",
+      ).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("names a missing directory once when two CAP rows declare it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The finding is about the directory, not about how many rows want it.
+      // Filtering the per-row expectations without de-duplicating put the id in
+      // the message twice and in `refs` twice.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0009", "spec-0009"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const missing = issues.filter((issue) => issue.code === "QFAI-SPLIT-103");
+      expect(missing).toHaveLength(1);
+      expect(missing[0]?.refs).toEqual(["spec-0009"]);
+      expect(missing[0]?.message).toContain("spec-0009");
+      expect(missing[0]?.message).not.toContain("spec-0009, spec-0009");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats an all-blank Spec column as a declared mapping, not as a legacy catalog", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The column exists, so the catalog opted into the declared mapping; the
+      // sequential directories must not smuggle the positional derivation back.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("takes the QFAI-SPLIT-106 severity from its promotion pin, not from a literal", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The `Spec` column is new, so every catalog written before it exists
+      // declares nothing and draws this finding on all of its rows in one
+      // upgrade. P7 gives such a rule a window: `warning` until the pinned
+      // release, `error` from it onwards. Shipping it at a literal `"error"`
+      // latched the final gate for those repositories on the day they upgraded.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const promoteAt = RULE_PROMOTIONS.specSplitDeclaredMapping.promoteAt;
+      const expected = newRuleSeverity(await resolveToolVersion(), promoteAt);
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.severity).toBe(expected);
+      // Inside the window the operator has to be able to see the debt they are
+      // about to owe, so the release that ends it is named in the finding.
+      if (expected === "warning") expect(mapping[0]?.message).toContain(promoteAt);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not synthesise a positional directory for a blank Spec cell", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const codes = issues.map((issue) => issue.code);
+      // Only the missing declaration is reported: no 103 for a phantom
+      // spec-0002, and no 104 for the directory the blank row still owns.
+      expect(codes).toEqual(["QFAI-SPLIT-106"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a CAP that occupies more than one catalog row", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0001"], ["spec-0001", "spec-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a repeated CAP row even when the second row names another spec", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0001"], ["spec-0001", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping.map((issue) => issue.refs)).toEqual([["CAP-0001"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a Spec cell that declares more than one directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // Taking only the first match would let `spec-0001 / spec-0002` pass as
+      // long as spec-0001 exists, even though a row declares exactly one.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001 / spec-0002", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-106"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0001"]);
+      expect(issues[0]?.message).toContain("複数の spec ディレクトリ");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("stops at the end of the catalog table instead of reading a later one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A change-log table that reuses the same column positions, inside the
+      // catalog's own section, must not be folded in as a second catalog row
+      // for CAP-0001.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001", "spec-0002"], {
+        trailingMarkdown: [
+          "| CAP ID | Spec | Change |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0002 | moved before the split |",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the table under the CAP Catalog heading, not an earlier one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A migration table placed above the catalog declares a complete, valid
+      // mapping while the catalog itself leaves every Spec cell blank. Taking
+      // the first table with both headers would let that blank catalog pass.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+        leadingMarkdown: [
+          "## Migration record",
+          "",
+          "| CAP ID | Spec | Note |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0001 | migrated |",
+          "| CAP-0002 | spec-0002 | migrated |",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The section resolver and the declared-mapping reader used to be two
+  // different heading matchers. `CAP_CATALOG_HEADING` accepts the qualifier the
+  // template permits; the mapping reader's own copy demanded an exact match and
+  // fell back to the whole document when it missed. Under that heading the two
+  // read different tables, so the earlier migration table supplied the mapping
+  // and the live table's blank cells drew nothing.
+  it("scopes the declared mapping to a CAP Catalog heading that carries a qualifier", async () => {
+    for (const heading of ["## CAP Catalog (required)", "## CAP Catalog （必須）"]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+          heading,
+          leadingMarkdown: [
+            "## Migration record",
+            "",
+            "| CAP ID | Spec | Note |",
+            "| --- | --- | --- |",
+            "| CAP-0001 | spec-0001 | migrated |",
+            "| CAP-0002 | spec-0002 | migrated |",
+            "",
+          ].join("\n"),
+        });
+        await seedSpec(root, "0001", "CAP-0001");
+        await seedSpec(root, "0002", "CAP-0002");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+        expect(mapping, `${heading} must not hand the mapping to the migration table`).toHaveLength(
+          1,
+        );
+        expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // `\b` sits between the last digit and the hyphen, so the old pattern read
+  // `spec-0001` out of `spec-0001-old`. That resolved to a directory that does
+  // exist, and every downstream check then agreed on a name no directory has.
+  it("does not read a spec id out of a longer directory name", async () => {
+    for (const cell of ["spec-0001-old", "[spec-0001-old](../spec-0001-old)"]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        await seedPolicies(root, ["CAP-0001"], [cell]);
+        await seedSpec(root, "0001", "CAP-0001");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+        expect(mapping, `${cell} declares no valid directory`).toHaveLength(1);
+        expect(mapping[0]?.refs).toEqual(["CAP-0001"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // Taking the first match let one row own two CAPs: the count, the declaration
+  // and the back-reference all agreed while the second CAP owned no directory,
+  // and the orphan check found its string elsewhere in the document.
+  it("reports a CAP ID cell that names more than one CAP", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001 / CAP-0002"], ["spec-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+      expect(mapping[0]?.message).toContain("1 行 1 CAP");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reads a catalog written without the CAP Catalog heading", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"], {
+        heading: false,
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats an escaped pipe in a Spec cell as text, not as a column boundary", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `owner \| spec-0001` is one GFM cell declaring one directory. Splitting
+      // on every `|` would shift the columns and drop the id, so the row would
+      // draw a bogus QFAI-SPLIT-106.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["owner \\| spec-0001", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats a markdown link in a Spec cell as one declaration, not two", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `[spec-0001](../spec-0001)` names the id twice — label and target — and
+      // `[Spec-0002](../spec-0002)` a third way, with different case. Counting
+      // raw matches would call each cell ambiguous and stop the final gate on a
+      // QFAI-SPLIT-106 that no legal edit clears.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        ["[spec-0001](../spec-0001)", "[Spec-0002](../spec-0002)"],
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a commented-out catalog table above the live one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The retired mapping is inside an HTML comment directly under the
+      // heading. Reading raw markdown adopts it as the catalog, and the live
+      // table's all-blank Spec column then passes unreported.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+        sectionPreamble: [
+          "<!--",
+          "| CAP ID | Spec | Note |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0001 | before the migration |",
+          "| CAP-0002 | spec-0002 | before the migration |",
+          "-->",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a fenced catalog example above the live table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The catalog document illustrates its own format; the sample must not
+      // outrank the table it illustrates.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+        sectionPreamble: [
+          "```markdown",
+          "| CAP ID | Spec | Note |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0001 | example |",
+          "| CAP-0002 | spec-0002 | example |",
+          "```",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not demand a catalog row for a CAP named only inside a comment", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The CAP roll-call and the declared mapping must read the same masked
+      // document. Masking only the table would leave the commented CAP in the
+      // roll-call and demand a row the live catalog rightly does not carry.
+      await seedPolicies(root, ["CAP-0001"], ["spec-0001"], {
+        sectionPreamble: "<!-- CAP-0002 was retired by an approved DELETE -->\n",
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the positional derivation when the catalog declares no Spec column", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const codes = issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-SPLIT-103");
+      expect(codes).toContain("QFAI-SPLIT-104");
+      expect(codes).not.toContain("QFAI-SPLIT-106");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails layered traceability when Parent is missing or down-ref exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -305,22 +850,60 @@ describe("v1.4.36 layered validators", () => {
   });
 });
 
+interface SeedPoliciesOptions {
+  /** Markdown emitted before the `## CAP Catalog` heading. */
+  readonly leadingMarkdown?: string;
+  /** Markdown emitted inside the catalog section, above the catalog table. */
+  readonly sectionPreamble?: string;
+  /** Markdown appended after the catalog table. */
+  readonly trailingMarkdown?: string;
+  /**
+   * `false` for a legacy catalog written without the heading, or a literal
+   * heading line to use in place of the plain `## CAP Catalog` — the template
+   * also permits a parenthesised qualifier.
+   */
+  readonly heading?: boolean | string;
+  /** Markdown emitted before the heading, ahead of `preamble`. */
+  readonly prose?: string;
+  /** Further lines emitted before the heading. */
+  readonly preamble?: string[];
+  /** Per-CAP `Notes` cell content, keyed by CAP id. */
+  readonly notes?: Record<string, string>;
+  /** Lines appended after the catalog table, ahead of `trailingMarkdown`. */
+  readonly trailingSection?: string[];
+}
+
+/**
+ * Seeds `_policies`. Pass `declaredSpecIds` to emit the `Spec` column that
+ * declares the CAP -> spec directory mapping; `null` leaves a row's cell empty.
+ * Omit it to get the legacy catalog with no `Spec` column at all.
+ */
 async function seedPolicies(
   root: string,
   capIds: string[],
-  options: {
-    prose?: string;
-    preamble?: string[];
-    notes?: Record<string, string>;
-    trailingSection?: string[];
-  } = {},
+  declaredSpecIds?: (string | null)[],
+  options: SeedPoliciesOptions = {},
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
 
+  const header = declaredSpecIds
+    ? ["| CAP ID | Spec | Statement | Success metrics | Notes |", "| --- | --- | --- | --- | --- |"]
+    : [
+        "| CAP ID | Statement | Success metrics | Notes |",
+        "| ------ | --------- | --------------- | ----- |",
+      ];
   const capLines = capIds
-    .map((capId) => `| ${capId} | capability | metric | ${options.notes?.[capId] ?? "note"} |`)
+    .map((capId, index) =>
+      declaredSpecIds
+        ? `| ${capId} | ${declaredSpecIds[index] ?? ""} | capability | metric | ${options.notes?.[capId] ?? "note"} |`
+        : `| ${capId} | capability | metric | ${options.notes?.[capId] ?? "note"} |`,
+    )
     .join("\n");
+  const heading =
+    options.heading === false
+      ? []
+      : [typeof options.heading === "string" ? options.heading : "## CAP Catalog", ""];
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
     [
@@ -328,14 +911,14 @@ async function seedPolicies(
       "",
       ...(options.prose ? [options.prose, ""] : []),
       ...(options.preamble ? [...options.preamble, ""] : []),
-      "## CAP Catalog",
-      "",
-      "| CAP ID | Statement | Success metrics | Notes |",
-      "| ------ | --------- | --------------- | ----- |",
+      options.leadingMarkdown ?? "",
+      ...heading,
+      options.sectionPreamble ?? "",
+      ...header,
       capLines,
       "",
       ...(options.trailingSection ?? []),
-      "",
+      options.trailingMarkdown ?? "",
     ].join("\n"),
     "utf-8",
   );

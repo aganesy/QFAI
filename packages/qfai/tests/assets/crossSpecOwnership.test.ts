@@ -298,9 +298,18 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("makes an open obligation block completion", async () => {
     // Without this the record is a note; with it, a run cannot report clean
     // while knowingly leaving another spec's assertion unverified.
+    //
+    // The condition names the **code-ownership** kind since `/qfai-atdd` began
+    // writing its non-blocking contract residue into the same section of the
+    // same `atdd-<spec-id>.md`; that qualifier narrows which entries block, and
+    // this case pins that the kind recorded HERE still does.
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "A `## Cross-spec obligations` entry in this spec's evidence file is still open",
+      "A `## Cross-spec obligations` entry of the **code-ownership** kind in this spec's evidence file is still open",
+    );
+    expect(skill).toContain("this run changed a file another spec's ledger names in `Test file`");
+    expect(skill).toContain(
+      "A clean completion here would certify an obligation this run knowingly left unmet (`references/cross-spec-ownership.md`)",
     );
   });
 

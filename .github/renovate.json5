@@ -1,0 +1,107 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // Dependency update pull requests, opened by this repository's own workflow.
+  //
+  // Read `.github/workflows/renovate.yml` alongside this: it holds the reasoning for running
+  // self-hosted, for the token, and for the second job that re-pins the digest files an action
+  // bump invalidates. `.github/renovate.md` is the setup the maintainer has to do once.
+  //
+  // NOT at the repository root, where Renovate also looks. `.agents/rules/root-additions-policy.md`
+  // asks for approval before an agent adds a root file, and `.github/` is one of the sanctioned
+  // locations Renovate searches.
+
+  extends: [
+    "config:recommended",
+    // Group what moves together, so one review covers one decision instead of five.
+    "group:monorepos",
+    "group:recommended",
+    // Actions arrive as a SHA plus a version comment, which is the form this tree already uses
+    // and the form `check-workflow-hygiene.mjs`'s `action-pin` rule requires.
+    "helpers:pinGitHubActionDigests",
+  ],
+
+  timezone: "Asia/Tokyo",
+  schedule: ["before 6am on monday"],
+
+  // A ceiling, not a target. The queue this repository already carries is the argument: a bot
+  // that opens thirty pull requests produces a backlog nobody reads, and an unread update pull
+  // request is worse than none — it reads as "the dependency is being watched".
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+
+  labels: ["dependencies"],
+
+  // `chore(deps): …`, built from the two fields rather than from `commitMessagePrefix`, which
+  // would override the semantic prefix and give two ways to spell one thing.
+  semanticCommits: "enabled",
+  semanticCommitType: "chore",
+  semanticCommitScope: "deps",
+
+  // The identity the `repin` job also commits under. Renovate decides whether a branch was edited
+  // by hand by comparing its commits against this, and it stops updating a branch it believes
+  // someone else has touched — so a re-pin under any other name would freeze exactly the branches
+  // it had just fixed. Stated here rather than left to default, which resolves to whatever user
+  // the token belongs to and would make a real hand edit by that user invisible.
+  gitAuthor: "renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+
+  // Never a version the ecosystem published minutes ago: three days is enough for an unpublish or
+  // a fast follow-up to land first.
+  minimumReleaseAge: "3 days",
+
+  // The lockfile is checked in and CI installs with `--frozen-lockfile`, so an update that leaves
+  // it stale fails every lane.
+  postUpdateOptions: ["pnpmDedupe"],
+
+  packageRules: [
+    {
+      // The shipped workflows under `assets/init/root/.github/workflows/**` are what `qfai init`
+      // writes into an adopter's repository. They move with this repository's own — an adopter
+      // should not inherit a deprecation the maintainers already fixed for themselves — so they
+      // are grouped with it rather than updated on a schedule of their own.
+      matchManagers: ["github-actions"],
+      matchFileNames: [
+        ".github/workflows/**",
+        ".github/actions/**",
+        "packages/qfai/assets/init/root/.github/workflows/**",
+      ],
+      groupName: "github actions",
+    },
+    {
+      // A toolchain floor is a decision, not an update: raising `engines.node` changes what the
+      // published package promises its users, and `packageManager` changes what every lane runs.
+      // Renovate lists these on the dashboard and opens nothing until someone ticks the box.
+      matchDepTypes: ["engines", "packageManager"],
+      groupName: null,
+      dependencyDashboardApproval: true,
+    },
+  ],
+
+  customManagers: [
+    {
+      // Renovate's own version, which it cannot see by itself: the `github-actions` manager reads
+      // `uses:` lines and the `node-version` inputs of three `actions/setup-*` actions, and
+      // `renovate-version` is none of those. Without this the pin in the workflow is the one
+      // version in this tree that nothing keeps current.
+      customType: "regex",
+      managerFilePatterns: [".github/workflows/renovate.yml"],
+      matchStrings: ["renovate-version:\\s*(?<currentValue>\\S+)"],
+      depNameTemplate: "renovate",
+      datasourceTemplate: "npm",
+    },
+  ],
+
+  // One issue listing everything that is waiting, so the queue is readable without opening thirty
+  // pull requests to see it.
+  dependencyDashboard: true,
+  dependencyDashboardTitle: "Dependency dashboard",
+
+  vulnerabilityAlerts: {
+    // A known-exploitable advisory does not wait for Monday, and does not wait three days for the
+    // fix to settle either.
+    labels: ["dependencies", "security"],
+    schedule: null,
+    minimumReleaseAge: null,
+    prCreation: "immediate",
+  },
+}
