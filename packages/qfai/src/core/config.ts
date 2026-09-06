@@ -180,6 +180,25 @@ export type QfaiReviewConfig = {
   staleTtlDays?: number;
 };
 
+export type QfaiReportConfig = {
+  /**
+   * Stale run-log TTL (calendar days) used by `qfai doctor --clean` to
+   * decide whether a `<paths.outDir>/run-*` directory may be pruned.
+   * `0` opts out entirely (never prune). Default (when unset) is applied
+   * at the call-site by `RUN_LOG_STALE_TTL_DAYS_DEFAULT`.
+   */
+  staleTtlDays?: number;
+  /**
+   * Number of newest `run-*` directories retained regardless of age, so
+   * `validate.log`'s `run_log:` pointer can never be pruned away.
+   * Default (when unset) is applied at the call-site by
+   * `RUN_LOG_KEEP_LATEST_DEFAULT`; `0` is clamped up to
+   * `RUN_LOG_KEEP_LATEST_MIN` (1) there, because keeping nothing would
+   * strand that pointer. Use `staleTtlDays: 0` to keep every run.
+   */
+  keepLatestRuns?: number;
+};
+
 export type QfaiAtddConfig = {
   /**
    * Number of consecutive un-skip + re-skip cycles tolerated before the
@@ -196,6 +215,7 @@ export type QfaiConfig = {
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
   review?: QfaiReviewConfig;
+  report?: QfaiReportConfig;
   atdd?: QfaiAtddConfig;
   baseBranch?: string;
 };
@@ -349,6 +369,7 @@ function normalizeConfig(
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues, toolVersion);
   const review = normalizeReview(raw.review, configPath, issues);
+  const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
@@ -363,6 +384,9 @@ function normalizeConfig(
   }
   if (review) {
     base.review = review;
+  }
+  if (report) {
+    base.report = report;
   }
   if (atdd) {
     base.atdd = atdd;
@@ -787,6 +811,57 @@ function normalizeReview(
       issues.push(
         configIssue(configPath, "review.staleTtlDays は 0 以上の整数である必要があります。"),
       );
+    }
+  }
+  return Object.keys(result).length === 0 ? undefined : result;
+}
+
+function readNonNegativeInteger(
+  raw: unknown,
+  field: string,
+  configPath: string,
+  issues: Issue[],
+): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw) && Number.isInteger(raw) && raw >= 0) {
+    return raw;
+  }
+  issues.push(configIssue(configPath, `${field} は 0 以上の整数である必要があります。`));
+  return undefined;
+}
+
+function normalizeReport(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiReportConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "report はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiReportConfig = {};
+  if (raw.staleTtlDays !== undefined) {
+    const value = readNonNegativeInteger(
+      raw.staleTtlDays,
+      "report.staleTtlDays",
+      configPath,
+      issues,
+    );
+    if (value !== undefined) {
+      result.staleTtlDays = value;
+    }
+  }
+  if (raw.keepLatestRuns !== undefined) {
+    const value = readNonNegativeInteger(
+      raw.keepLatestRuns,
+      "report.keepLatestRuns",
+      configPath,
+      issues,
+    );
+    if (value !== undefined) {
+      result.keepLatestRuns = value;
     }
   }
   return Object.keys(result).length === 0 ? undefined : result;
