@@ -503,6 +503,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-*",
     "QFAI-NAV-*",
     "QFAI-MMD-*",
+    // The re-open gate runs with the spec-pack validators, so a partial
+    // profile has to name it among the hard gates it did not evaluate.
+    "QFAI-DECISION-*",
     "E_*",
     "R-*",
   ],
@@ -1148,6 +1151,20 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+  "QFAI-DECISION-001":
+    "A `Status: re-open` Decision Record uses the `DR-*` id scheme and names the prior `DR-*` it reconsiders in `Re-opens:` — not itself, and not a record that points back at it.",
+  "QFAI-DECISION-002":
+    "The `Re-opens:` reference resolves to a record declared in the spec's Decisions file or _policies/08_Decisions.md.",
+  "QFAI-DECISION-003":
+    "A `Status: re-open` Decision Record carries the explicit approval the Delta Rejected Guard requires (`Approved by` and an `Approved at` of YYYY-MM-DDThh:mm:ssZ).",
+  "QFAI-DECISION-004":
+    "A delta's `## Rejected` `Re-opened by:` and the spec's `Status: re-open` record name each other.",
+  "QFAI-DECISION-005":
+    "A `Status: re-open` Decision Record states in `Decision:` what changed since the rejection.",
+  "QFAI-DECISION-006":
+    "No candidate listed under a delta's `## Rejected` reappears under `## Adopted` unless that candidate's `Re-opened by:` names a `Status: re-open` record.",
+  "QFAI-DECISION-007":
+    "A `DR-*` id is declared once per Decisions file, so a `Re-opens:` or `Re-opened by:` reference resolves to one decision.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-PROT-011":

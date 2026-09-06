@@ -2109,7 +2109,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(strayNames).toEqual([]);
   });
 
-  it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
+  it("ensures qfai-sdd no longer ships legacy spec-pack templates", () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
       "assistant",

@@ -227,6 +227,18 @@ export const RULE_PROMOTIONS = {
    */
   specSectionsRequiredHeadings: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-DECISION-001`, `QFAI-DECISION-002`, `QFAI-DECISION-003`,
+   * `QFAI-DECISION-004`, `QFAI-DECISION-005`, `QFAI-DECISION-006` and
+   * `QFAI-DECISION-007` — the Delta Rejected Guard's re-open record, checked
+   * for the first time. The record had no status value, no field for the prior
+   * decision and no field for the approval, so every re-open written before
+   * these rules existed is missing fields its author was never asked for, and
+   * a spec that re-adopted a rejected candidate meets the whole backlog at
+   * once. One window covers the seven because they are one guard: an operator
+   * repairing a re-open answers all of them in the same edit.
+   */
+  specPackReOpenDecisionRecord: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed

@@ -36,6 +36,10 @@ const STAGE_HANDOVER = "assistant/skills/qfai-atdd/references/stage-handover.md"
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
 const MIGRATION = "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md";
+// The `Audited evidence hash` procedure moved out of the delegation baseline
+// into the constitution tree's own `references/` overflow home; the baseline
+// cites it rather than restating it.
+const AUDIT_HASH = "assistant/constitution/references/audited-evidence-hash.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 const DRIFT = "assistant/constitution/drift-protocol.md";
@@ -1783,15 +1787,13 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The gatekeeper hashes the entry and then writes its PASS into it, so
     // item 10 recomputed over an entry grown by the gatekeeper`s own line and
     // called the verdict stale the moment it was recorded.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
+    const audit = flat(await read(tree, AUDIT_HASH));
     // Widened again: the checkpoint fields are appended after the reviewers
     // too, so the rule is the whole gate-completed group.
     // Replaced by named per-observation subjects: no exclusion list can keep
     // up with an entry that goes on growing.
-    expect(baseline).toContain("the fields this observation could read, named");
-    expect(baseline).toContain("**RED observation**");
+    expect(audit).toContain("the fields this observation could read, named");
+    expect(audit).toContain("**RED observation**");
   });
 
   it("names both transient observations where the rule is stated", async () => {
@@ -1886,14 +1888,12 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("hashes what each observation could read, not the whole section", async () => {
     // The entry keeps growing after every observation, so subtracting a list
     // of later fields only moved the problem to the next field added.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("the fields this observation could read, named");
-    expect(baseline).toContain('Not "the section minus what is written later"');
-    expect(baseline).toContain("**RED observation**");
-    expect(baseline).toContain("**GREEN observation**");
-    expect(baseline).toContain("**Completion review**");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("the fields this observation could read, named");
+    expect(audit).toContain('Not "the section minus what is written later"');
+    expect(audit).toContain("**RED observation**");
+    expect(audit).toContain("**GREEN observation**");
+    expect(audit).toContain("**Completion review**");
   });
 
   it("seals the stage's own review pack and checks the status against it", async () => {
@@ -1966,10 +1966,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("splits a multi-id obligation column before matching the matrix", async () => {
     // Comparing the whole column against a single-id cell matched nothing, so
     // a row with two obligations had no matrix rows in its subject at all.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("split the copied column on commas first");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("split the copied column on commas first");
   });
 
   it("recomputes the stage hash before completion is declared", async () => {
@@ -2023,10 +2021,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("leaves the final status out of the stage subject", async () => {
     // The P8 reviewer fills it in, so hashing it made the verdict stale on
     // being recorded.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**minus the `## Final status` section**");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**minus the `## Final status` section**");
   });
 
   it("stops restating the record shape in the producer reference", async () => {
@@ -2051,11 +2047,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("gives a stage review a subject that needs no row", async () => {
     // A spec with no ATDD-owned rows is the ordinary case, and its final
     // review has no `### <TDD-ID>` section to extract.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**Stage review**");
-    expect(baseline).toContain("the stage evidence file **whole**, under its repo-relative path");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**Stage review**");
+    expect(audit).toContain("the stage evidence file **whole**, under its repo-relative path");
   });
 
   it("seals the finalized review pack from outside it", async () => {
@@ -2085,22 +2079,18 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Change `TC-Refs` alone after the PASS and the entry still holds the old
     // copy, so nothing recomputes differently — a verdict about one
     // requirement standing for another.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("the four identity fields **and the obligation reference**");
-    expect(baseline).toContain("The obligation is on that list for the same reason");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("the four identity fields **and the obligation reference**");
+    expect(audit).toContain("The obligation is on that list for the same reason");
   });
 
   it("matches the matrix rows an obligation names exactly", async () => {
     // "Everything after the table" was the other reading, and two readers
     // taking one each computed different hashes from one file.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("matched **exactly**");
-    expect(baseline).toContain("`TC-0001` does not match `TC-00011`");
-    expect(baseline).toContain("A justification that names no obligation belongs to none of them");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("matched **exactly**");
+    expect(audit).toContain("`TC-0001` does not match `TC-00011`");
+    expect(audit).toContain("A justification that names no obligation belongs to none of them");
   });
 
   it("syncs the row identity a review-fix moved", async () => {
@@ -2127,10 +2117,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("puts the replacement proof revision inside a subject", async () => {
     // `.qfai/evidence/**` is out of the working-tree revision, so a subject
     // without it let the proof be attributed to a tree it never ran on.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("where the row has one, `Replacement proof revision`");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("where the row has one, `Replacement proof revision`");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("also carries `Replacement proof revision`");
   });
@@ -2152,11 +2140,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // One hash over a representative leaves the other members' evidence free to
     // change after the PASS, and a private concatenation has no order the gate
     // can reproduce.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**A T1 coherent group is one pass and several rows**");
-    expect(baseline).toContain("one `Audited evidence hash` per `TDD-ID` in the group");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**A T1 coherent group is one pass and several rows**");
+    expect(audit).toContain("one `Audited evidence hash` per `TDD-ID` in the group");
   });
 
   it("keeps a replacement proof's revision out of RED revision", async () => {
@@ -2174,10 +2160,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The obligation is what the DR says cannot be observed, so a subject
     // without it let the reference be pointed at a different requirement after
     // the PASS with nothing moving.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain(
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain(
       "**Branch 3** (`exception`): row identity, the obligation reference the row's `Layer` selects",
     );
   });
@@ -2247,10 +2231,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("serializes the branch-3 DR as a record of its own", async () => {
     // A subject that names the DR but a serialization that has no record for it
     // is a hash that does not move when the DR text changes.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("on a branch-3 row the `DR-*` artifact the row names, whole");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("on a branch-3 row the `DR-*` artifact the row names, whole");
   });
 
   it("has the producer record the identity the reviewers hash", async () => {
@@ -2277,24 +2259,18 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Hashing a value the entry already holds proves only that the entry has
     // not changed; the ledger is excluded from the revision too, so editing
     // `Selector` after the PASS moved nothing.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**The copy is checked against the ledger, not trusted**");
-    expect(baseline).toContain("requires them to equal the copy");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**The copy is checked against the ledger, not trusted**");
+    expect(audit).toContain("requires them to equal the copy");
   });
 
   it("gives branch 3 a subject of its own", async () => {
     // There is no RED and no GREEN on that branch, so the DR is the evidence —
     // and leaving it out let the pointer be swapped after the PASS for another
     // existing `DR-*` with the revision and the hash both unmoved.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain(
-      "**Branch 3** (`exception`): row identity, the obligation reference",
-    );
-    expect(baseline).toContain("the verdict to name the `DR-ID` the row currently carries");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**Branch 3** (`exception`): row identity, the obligation reference");
+    expect(audit).toContain("the verdict to name the `DR-ID` the row currently carries");
   });
   it("puts the falsifiability trio in the round block it belongs to", async () => {
     // The reference listed only the RED/GREEN pair and step 3c wrote the trio
@@ -2346,11 +2322,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The ledger is excluded from the revision, so changing `Selector` after a
     // PASS to another valid test in the same file moved nothing — and a verdict
     // that only ran the old selector stood as evidence for the new one.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**Row identity, in all three**");
-    expect(baseline).toContain("Mutable bookkeeping — `Status`, `Evidence` — stays out");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**Row identity, in all three**");
+    expect(audit).toContain("Mutable bookkeeping — `Status`, `Evidence` — stays out");
   });
 
   it("keeps the review pack out of the working-tree revision", async () => {
@@ -2368,11 +2342,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The matrix is one document for the spec and a later `/qfai-atdd` run
     // recomputes it, so hashing all of it made every existing verdict stale
     // when an unrelated obligation's cell moved.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("that belongs to this row's obligation — not the file whole");
-    expect(baseline).toContain("a `done` row has no re-review path to clear that");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("that belongs to this row's obligation — not the file whole");
+    expect(audit).toContain("a `done` row has no re-review path to clear that");
   });
 
   it("states the audit-hash extraction in one place only", async () => {
@@ -2393,42 +2365,34 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // An ATDD-owned row has no `TC-ref`, so naming only that one left its
     // obligation outside every hash — rewritable to a different requirement
     // after the PASS without moving a value.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("the obligation reference the row's `Layer` selects");
-    expect(baseline).toContain("an ATDD-owned row has no `TC-ref`");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("the obligation reference the row's `Layer` selects");
+    expect(audit).toContain("an ATDD-owned row has no `TC-ref`");
   });
 
   it("puts the shared-artifact block in the completion subject", async () => {
     // These reviewers are the ones who audit it, so leaving it out let the
     // re-runs and re-taken proofs be edited without moving either hash.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("the `Shared-artifact re-verify` block when the row has one");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("the `Shared-artifact re-verify` block when the row has one");
   });
 
   it("keeps the final Revision out of the RED subject", async () => {
     // `Revision` names the tree the GREEN landed at and does not exist when
     // the RED gatekeeper hashes, so including it put a later field into the
     // subject and made every correct RED PASS stale at GREEN.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**Not `Revision`**");
-    expect(baseline).toContain("**GREEN observation**: the RED subject plus `Revision`");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**Not `Revision`**");
+    expect(audit).toContain("**GREEN observation**: the RED subject plus `Revision`");
   });
 
   it("keeps the round reviewer verdict out of the completion subject", async () => {
     // These reviewers write `Round N: reviewer verdict` into the block after
     // reading it, so taking the whole block put their own line inside what
     // they hashed.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("that block's **phase-authored** fields only");
-    expect(baseline).toContain("ask which observation could have read it");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("that block's **phase-authored** fields only");
+    expect(audit).toContain("ask which observation could have read it");
   });
 
   it("accepts the pre-split anchor only from a row that carries the marker", async () => {
@@ -2513,12 +2477,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // `Checkpoint verification command`/`result` are appended after the
     // reviewers, so leaving them in made both verdicts stale on every ordinary
     // item the moment the checkpoint ran.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
+    const audit = flat(await read(tree, AUDIT_HASH));
     // The gate-completed fields are simply not in any observation subject now.
-    expect(baseline).toContain("**Completion review**");
-    expect(baseline).toContain("Nothing written after an observation is in its subject");
+    expect(audit).toContain("**Completion review**");
+    expect(audit).toContain("Nothing written after an observation is in its subject");
   });
 
   it("records a shared-artifact re-verify on the row that caused it", async () => {
@@ -2565,17 +2527,15 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The subject is part of a file, so a file-level manifest alone left the
     // reviewer and item 10 free to hash different extents — a verdict that is
     // either always stale or never checked.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**How to compute it, exactly.**");
-    expect(baseline).toContain("the heading line through the line before the next");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**How to compute it, exactly.**");
+    expect(audit).toContain("the heading line through the line before the next");
     // The row's own `### Round N` blocks are in the completion-review subject:
     // a rework's RED, GREEN and proof live there.
-    expect(baseline).toContain("heading that names a `TDD-` id");
-    expect(baseline).toContain("every `### Round N` block the row carries");
-    expect(baseline).toContain("strip trailing whitespace from every line");
-    expect(baseline).toContain("Gate item 10 runs the same four steps");
+    expect(audit).toContain("heading that names a `TDD-` id");
+    expect(audit).toContain("every `### Round N` block the row carries");
+    expect(audit).toContain("strip trailing whitespace from every line");
+    expect(audit).toContain("Gate item 10 runs the same four steps");
   });
 
   it("gives the mutation run a revision of its own", async () => {
@@ -2681,10 +2641,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
     );
     expect(checkpoint).toContain("taken the moment the run ends");
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**A field written after every reviewer is in no subject at all**");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**A field written after every reviewer is in no subject at all**");
   });
 
   it("puts the falsifiability addresses in the round block at step 3c too", async () => {
@@ -2859,11 +2817,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Recorded output is arbitrary: a test asserting on Markdown prints its own
     // `## ...`, and a boundary that took it dropped the GREEN, the proof and
     // the round evidence out of the audit subject.
-    const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
-    );
-    expect(baseline).toContain("**counting only headings outside a fenced block**");
-    expect(baseline).toContain("Every recorded output is fenced for this reason");
+    const audit = flat(await read(tree, AUDIT_HASH));
+    expect(audit).toContain("**counting only headings outside a fenced block**");
+    expect(audit).toContain("Every recorded output is fenced for this reason");
   });
 
   it("requires the revision fields of every pack producer, not just one", async () => {

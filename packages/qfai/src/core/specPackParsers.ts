@@ -124,16 +124,36 @@ const TEST_CASE_TABLE_HEADING = /^ {0,3}(#{1,6})\s*test\s*case\s*table\s*(?:\([^
 /** Any ATX heading, with the 0-3 leading spaces CommonMark permits. */
 const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
 
-/** A fenced code block delimiter, per CommonMark (0-3 leading spaces). */
+/** A fenced code block opener, per CommonMark (0-3 leading spaces). */
 const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
+
+/**
+ * A fenced code block **closer**: the marker and nothing but whitespace after
+ * it.
+ *
+ * CommonMark allows an info string only on the opener, so a line such as
+ * ` ```js ` inside an open block is content, not a delimiter. Closing on
+ * {@link FENCE_LINE} ended the block there and handed the rest of the sample
+ * back to the validators as document text — which is how a `- Re-opened by:
+ * DR-*` written inside a fenced example counted as a live back-reference and
+ * cleared `QFAI-DECISION-004` / `-006` while the real candidate carried none.
+ */
+const FENCE_CLOSE_LINE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
 
 /**
  * Removes the HTML-comment regions of a single line.
  *
  * Returns the visible remainder plus whether a comment is still open at the end
  * of the line, so the caller can carry the state across lines.
+ *
+ * Exported so every reader that has to tell a document's own text from a
+ * commented-out sample carries the state the same way — a second, private copy
+ * of this loop is how one reader ends up parsing what another one hides.
  */
-function maskLineComments(line: string, inComment: boolean): { text: string; open: boolean } {
+export function maskLineComments(
+  line: string,
+  inComment: boolean,
+): { text: string; open: boolean } {
   let visible = "";
   let index = 0;
   let open = inComment;
@@ -307,7 +327,7 @@ export function maskNonSpecRegions(text: string): string {
   return lines
     .map((line) => {
       if (open !== null) {
-        const closing = FENCE_LINE.exec(line)?.[1];
+        const closing = FENCE_CLOSE_LINE.exec(line)?.[1];
         if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
           open = null;
         }
