@@ -266,9 +266,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     invalid = true;
     options.help = true;
     invalidReason ??= reason;
-    if (command === "guardrails") {
-      options.invalidExitCode = 2;
-    }
   };
 
   const scope = (): string => (command ? `qfai ${command}` : "qfai");
