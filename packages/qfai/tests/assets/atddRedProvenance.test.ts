@@ -215,6 +215,107 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     expect(provenance).toContain("branch 1 names the mutation it intends");
   });
 
+  it("does not owe an Oracle proof on a branch-3 row", async () => {
+    // The requirement was stated on "**every** item", which no branch-3 row
+    // can satisfy: it is reached only when neither a mutation nor an
+    // `equivalent-mutant` is available, and `:254` ends "do not enter Phase
+    // Green". `agents/qa-gatekeeper.md` already scopes the requirement to a
+    // GREEN or completion gate; the reference dropped that qualifier and never
+    // named branch 3, so a P1d handover read as owing a proof it cannot make.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "`qa-gatekeeper` requires an `Oracle proof` on **every row that reaches `red`** — branch 1 and branch 2 —",
+    );
+    expect(provenance).toContain("A branch-3 row owes none");
+    expect(provenance).toContain("it never reaches GREEN");
+    expect(provenance).toContain("Its audit subject at P1d is the row identity");
+    expect(provenance).not.toContain("requires an `Oracle proof` on **every** item");
+  });
+
+  it("keeps the branch-3 exclusion true of a waived row at the completion gate", async () => {
+    // The first cut said a branch-3 row "never reaches a GREEN or completion
+    // gate". A user-approved `TDDLIST-001` waiver carries an `exception` row
+    // to the spec-level completion gate — so that clause was false there, and
+    // `qa-gatekeeper` still demanded an `Oracle proof` "on each item" at that
+    // gate: the one form the branch is defined by not having.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("carried there by a user-approved `TDDLIST-001` waiver");
+    expect(provenance).not.toContain("never reaches a GREEN or completion gate");
+
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "Require an `Oracle proof` on each item that reached `red` **at a GREEN or completion gate**",
+    );
+    expect(gatekeeper).toContain(
+      "**A branch-3 `exception` is outside this requirement, at either gate.**",
+    );
+    expect(gatekeeper).toContain("`TDDLIST-001` waiver can carry it to the spec-level");
+    expect(gatekeeper).not.toContain("Require an `Oracle proof` on each item **at a GREEN");
+  });
+
+  it("keys the exclusion on the DR, not on the exception status", async () => {
+    // `exception` is reachable from ANY active status, so a row that reached
+    // `red`, proved its oracle and was parked at `refactor -> exception` by a
+    // failing checkpoint is an `exception` that already owed a proof. Excluding
+    // on the status let a `TDDLIST-001` waiver walk that row into the
+    // completion gate with its proof unchecked.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("The status alone does not carry the exclusion; the `DR-*` does.");
+    expect(gatekeeper).toContain("reachable from **any** active status");
+    expect(gatekeeper).toContain("`refactor -> exception`");
+    expect(gatekeeper).toContain("records that **both** proof forms were unavailable");
+    // A DR naming some other anomaly leaves the obligation where `red` left it.
+    expect(gatekeeper).toContain("leaves the row's `Oracle proof` obligation exactly where its");
+    // The unqualified status-keyed form must not come back.
+    expect(gatekeeper).not.toContain("**An `exception` item is outside this requirement");
+
+    // The reference agrees, so the operator reading either lands in one place.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("excludes a branch-3 `exception` from the requirement");
+    expect(provenance).toContain("not on the status");
+  });
+
+  it("reads the DR of the current exception, not any DR left in the cell", async () => {
+    // `execution-ledger.md` keeps the old anomaly's `DR-*` through
+    // `exception -> todo` and APPENDS a new one on re-entry, so the cell can
+    // hold both. Asking only whether *a* `DR-*` reports both forms unavailable
+    // exempts a row on a branch-3 record that is over — readmitting exactly the
+    // row that reached `red` and still owes its proof.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("appended, not substituted");
+
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell",
+    );
+    expect(gatekeeper).toContain("Read the **last appended** `DR-*`");
+
+    // The reference and the downstream gate name the same key.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("keyed on the **last appended** `DR-*`");
+    expect(flat(await read(tree, IMPLEMENT))).toContain("Read the last appended `DR-*`");
+  });
+
+  it("excludes a waived branch-3 row from the downstream completion conditions too", async () => {
+    // The gatekeeper's Oracle-proof exclusion alone does not make a waived
+    // branch-3 `exception` completable: `qfai-implement`'s completion
+    // prohibitions still demand RED, GREEN and both reviewer verdicts per item,
+    // and branch 3 never enters Phase Green, so the waiver released the status
+    // bullet and nothing else.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "A waived branch-3 `exception` is outside the RED, GREEN, reviewer-verdict and `Oracle proof` conditions above as well",
+    );
+    expect(implement).toContain("it never enters Phase Green and produces none of that evidence");
+    // Judged where the exclusion is defined, rather than re-litigated here.
+    expect(implement).toContain('under "Branch 3 gets its own verdict"');
+    // The waiver carve-out it extends is still the one on the status bullet.
+    expect(implement).toContain("user-approved accepted-risk");
+
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("The same exclusion holds at `/qfai-implement`'s completion");
+  });
+
   it("accepts a valid exception as the third evidence form", async () => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("or a `DR-*` recording why neither was available");
@@ -1016,7 +1117,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
       "**At a RED observation the proof is a plan, and a plan is enough.**",
     );
     expect(gatekeeper).toContain(
-      "Require an `Oracle proof` on each item **at a GREEN or completion gate**",
+      "Require an `Oracle proof` on each item that reached `red` **at a GREEN or completion gate**",
     );
   });
 
