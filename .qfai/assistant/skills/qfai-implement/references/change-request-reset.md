@@ -82,7 +82,7 @@ completion:
 - when `Status` is `approved`, `Applied at` is populated — approval alone does
   not release the gate. It is set only after the owner-skill rerun in "Approved
   actions" completed and upstream artifacts are updated, which is when
-  `constitution/drift-protocol.md` resumes downstream work.
+  `.qfai/assistant/constitution/drift-protocol.md` resumes downstream work.
 
 ## Ordering against the drift protocol
 
