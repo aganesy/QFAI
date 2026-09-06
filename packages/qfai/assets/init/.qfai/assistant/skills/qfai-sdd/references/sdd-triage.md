@@ -298,3 +298,79 @@ catches a source that was misspelled or never allocated.
   with the wrong `01_Spec.md`).
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.
+
+### Ledger migration (SUPERSEDE / deprecation)
+
+Retiring a spec retires its execution ledger with it, so move the work
+**before** rewriting `Status:`.
+
+**Name the inheritor first.** Only `superseded` carries one in the
+lifecycle schema (`Superseded-by`); `deprecated` and `removed` require
+`Deprecated-at` and nothing else, so for those the spec that takes the
+work over is a triage decision and must be written into the delta row's
+`Rationale` before the bullet is. A retirement with live rows and no
+named inheritor is not ready to be written: either name one, or close
+those rows out first — finish them, or `UPDATE:REMOVE` the obligations
+they cover — so the ledger holds nothing but `done`. `validate` demotes
+every finding the moment the bullet lands, so an undecided target does
+not block anything; it just loses the work quietly. Below, **the
+inheritor** means the `Superseded-by` spec or that recorded decision.
+
+1. Migrate every live row of the source spec's `tdd/test-list.md` into
+   the inheritor's ledger. Live = every `Status` except `done`:
+   `todo` / `blocked` / `red` / `green` / `refactor` / `review-fix` /
+   `exception`. `blocked` is an obligation nobody has started and
+   `review-fix` is a reviewer's REVISE still owed — leaving either
+   behind retires work that was never delivered.
+2. Remap every spec-namespaced obligation on a migrated row onto the
+   inheritor's own IDs — both `TC-Refs` and the `US-Refs` that
+   `Layer=E2E` rows carry instead. `TC-NNNN-MMMM` and `US-NNNN-MMMM`
+   both encode the spec number in `NNNN`, so a copied cell keeps
+   pointing at the retired spec. A copied `TC-Refs` at least fails
+   `TDDLIST_UNKNOWN_REF` in the successor and leaves its matching TC at
+   `TDDLIST_TC_NOT_COVERED`; a copied `US-Refs` fails nothing —
+   `validateObligationColumn()` checks the token's shape and the row's
+   `Layer`, not whether the US exists — so the E2E row stays silently
+   bound to the retired spec's user story. Build both correspondences
+   from the successor's `06_Test-Cases.md` and `02_User-stories.md`; if
+   it has no TC or US for a migrated row, add one there first.
+3. Renumber each migrated row to a `TDD-ID` the successor's ledger does
+   not already use, and keep the old -> new correspondence. `TDD-NNNN`
+   is ledger-local, not spec-namespaced, so two ledgers that both start
+   at `TDD-0001` collide the moment a row is copied: the migrated row
+   fails `TDDLIST_DUPLICATE_ID` (`error`) in the successor while the
+   source row it came from is already demoted to `info` — the work ends
+   up gated nowhere.
+4. Rewrite, through that same correspondence, every `Blocked-By` that
+   names a migrated row. The allowed `spec-NNNN:TDD-MMMM` form carries
+   both the spec and the old ledger-local ID, so a copied cell keeps
+   pointing at the retired spec's row — and
+   `TDDLIST_BLOCKED_MISSING_REF` only checks that the cell is non-empty,
+   so nothing reports the broken reference and the migrated work waits
+   on a blocker no live ledger owes. Blockers that are not migrated rows
+   (`CR-YYYYMMDD-NNNN` IDs, contract paths, rows of a third spec that
+   stays active) are left as written.
+5. Reset every migrated in-progress row to `Status: todo` with an empty
+   `DR-ID` and `Evidence`, and list the migration in the approved
+   `CR-YYYYMMDD-NNNN` that authorises the retirement. A `red` / `green`
+   / `refactor` / `review-fix` / `exception` row's three cells record a
+   run against the **old** obligation and an older revision of the tree;
+   copied over verbatim they assert that the inheritor's freshly mapped
+   TC/US was evidenced by work that never referenced it. Nor may SDD
+   rewrite them into a truthful claim — `spec-traceability-rules.md`
+   gives `Status`, `DR-ID` and `Evidence` to `/qfai-implement`. Resetting
+   is what SDD does own: the row re-enters as unstarted work, the CR
+   carries the re-scope, and `/qfai-implement` takes new evidence against
+   the new obligation. `blocked` keeps its status and its rewritten
+   `Blocked-By`; `todo` has nothing to reset.
+6. Leave `done` rows where they are — they are the historical record of
+   what the retired spec delivered.
+7. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
+   `Superseded-by` must name an **active** spec other than the source;
+   pointing it at a missing, self- or already-retired spec leaves the
+   source gating, because nothing inherited its rows.
+
+`validate` demotes every ledger finding on a non-active spec to `info`,
+matching the rule above that triage ignores such specs. That is what
+stops a retired ledger from gating the repository — and it is also why
+step 1 is mandatory: nothing will ask for those rows again.

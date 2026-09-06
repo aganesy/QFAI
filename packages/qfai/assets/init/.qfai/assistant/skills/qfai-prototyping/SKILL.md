@@ -21,6 +21,16 @@ budget. Supported surfaces: web, mobile, desktop, mixed. cli surface is
 rejected and `ui_bearing: false` specs are excluded from prototyping
 execution.
 
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- DESIGN.md lock drift / conflict resolution (exit `2` recovery)
+- hard-required inputs absent at cycle 0 (`companyName`, brand intent — see the
+  hard-required bucket under `## Default Autopilot Policy`)
+
 ## Goal
 
 One final prototype satisfying the spec under a locked brand identity, with all four UX axes `exceptional`, no layout anti-patterns, and no DESIGN.md violations.
