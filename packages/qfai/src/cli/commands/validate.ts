@@ -1404,6 +1404,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "QFAI-ASSETS-003":
     "Every Stage 0 steering catalog file (.qfai/assistant/catalog/{manifest,product,structure,tech}.md) holds project values rather than the `<...>` slots and bare TODO/TBD placeholders `qfai init` ships, since qfai-implement Stage 0 reads its gate commands from tech.md#standard-commands-copy-paste and cannot run one that is still a placeholder.",
+  // Both state the graph, not a path: `paths.skillsDir` is configurable, and
+  // the file actually judged is on the finding's `target:` line.
+  "QFAI-SKILLS-013":
+    "Every file under a skill's `references/` is cited by some document reachable from that skill's `SKILL.md`, so progressive disclosure can reach it.",
+  "QFAI-SKILLS-014":
+    "Every document under the skills tree can be read, so reference reachability is decided over the whole graph rather than over the part that happened to open.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
