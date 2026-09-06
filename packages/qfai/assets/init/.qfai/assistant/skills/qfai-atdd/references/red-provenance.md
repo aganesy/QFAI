@@ -346,14 +346,30 @@ a table cell: a GFM row is one physical line and a cell ends at every unescaped
 either truncates the proof or breaks every row below it
 (`../../qfai-implement/references/execution-ledger.md#evidence-cell-contract`).
 
-`qa-gatekeeper` requires an `Oracle proof` on **every** item — a named
-production mutation that makes the test fail, or a recorded `equivalent-mutant`
-— because a passing run does not show the test depends on the behaviour the row
-owns. A natural RED is not a substitute: it shows the test failed before the
-code existed, not that it discriminates once the code does. Branch 2 satisfies
-this with the mutation it already performs; branch 1 names the mutation it
-intends and `/qfai-implement` records the run at GREEN, when there is production
-code to mutate.
+`qa-gatekeeper` requires an `Oracle proof` on **every row that reaches `red`** —
+branch 1 and branch 2 — a named production mutation that makes the test fail,
+or a recorded `equivalent-mutant`, because a passing run does not show the test
+depends on the behaviour the row owns. A natural RED is not a substitute: it
+shows the test failed before the code existed, not that it discriminates once
+the code does. Branch 2 satisfies this with the mutation it already performs;
+branch 1 names the mutation it intends and `/qfai-implement` records the run at
+GREEN, when there is production code to mutate. A branch-3 row owes none — it
+never reaches GREEN, and it is reached only when neither form is available, so
+the requirement would ask it for the evidence its branch is defined by not
+having. It **can** stand at a spec-level completion gate, carried there by a
+user-approved `TDDLIST-001` waiver ("Branch 3 does not close a spec on its
+own" below), and the gate does not acquire an `Oracle proof` claim on it there:
+`agents/qa-gatekeeper.md` excludes a branch-3 `exception` from the requirement
+at both gates and judges it on its `DR-*` instead — keyed on the **last
+appended** `DR-*` recording both forms unavailable, not on the status and not on
+any `DR-*` in the cell, since `exception` is reachable from any active status, a
+row parked there after proving its oracle still owes one, and `exception ->
+todo` keeps the old record while a re-entry appends the new one. The same
+exclusion holds at `/qfai-implement`'s completion prohibitions, which otherwise
+demand a GREEN and two reviewer verdicts branch 3 never produces. Its audit
+subject at P1d is the
+row identity and obligation reference plus the `DR-ID` and the DR artifact, as
+the `exception` row above states.
 Criteria: `../../qfai-implement/references/oracle-strength.md`.
 
 The `Evidence` cell is a pointer; the payload lives in
