@@ -34,7 +34,7 @@ const LEDGER = `# TDD Execution Ledger
 
 async function withProject<T>(
   fn: (root: string) => Promise<T>,
-  opts: { ledger?: string; examples?: string } = {},
+  opts: { ledger?: string; examples?: string; spec?: string } = {},
 ): Promise<T> {
   const root = path.join(
     os.tmpdir(),
@@ -44,7 +44,7 @@ async function withProject<T>(
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   try {
     for (const [name, body] of [
-      ["01_Spec.md", "# Spec\n"],
+      ["01_Spec.md", opts.spec ?? "# Spec\n"],
       ["02_User-stories.md", "# US\n"],
       ["03_Acceptance-Criteria.md", "# AC\n"],
       ["05_Examples.md", opts.examples ?? "# 05 Examples\n\n| EX-ID | BR-Ref |\n| --- | --- |\n"],
@@ -108,6 +108,131 @@ describe("the layer distribution reads the artifact the templates produce", () =
         expect(report.markdown).toContain("- source: `Layer` column of `tdd/test-list.md`");
       },
       { ledger: LEDGER },
+    );
+  });
+
+  it("leaves a retired spec's ledger out of the distribution", async () => {
+    // `validate` has stopped gating on these rows; counting them here would
+    // present a retired spec's history as the repository's current test mix.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+        expect(report.testStrategy.layerSource).toBe("none");
+        expect(report.testStrategy.layer.unit).toBe(0);
+      },
+      { ledger: LEDGER, spec: "# Spec\n\n- Status: deprecated\n- Deprecated-at: 2026-01-01\n" },
+    );
+  });
+
+  it("leaves a retired spec's scenarios out of the distribution too", async () => {
+    // The scenario path runs first and one readable file suppresses the ledger
+    // fallback entirely, so counting a retired spec's `@layer-*` scenarios both
+    // mixed its history into the current test mix and stopped every active
+    // layered spec's `Layer` column from being read at all.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.testStrategy.totalScenarios).toBe(0);
+        expect(data.testStrategy.layer.e2e).toBe(0);
+        expect(data.testStrategy.layerSource).toBe("none");
+        // The headline count reads the same list. Filtering only inside
+        // `collectTestStrategy` left one report stating two scenario totals —
+        // `totalScenarios` 0 beside `summary.scenarios` 1, the second of them
+        // a retired spec's history counted as current work.
+        expect(data.summary.scenarios).toBe(0);
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: deprecated\n- Deprecated-at: 2026-01-01\n",
+        examples: [
+          "Feature: retired",
+          "",
+          "  @layer-e2e @size-s",
+          "  Scenario: history",
+          "    Given a retired spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
+  it("still counts the scenarios of an active spec", async () => {
+    // The guard above must key on the lifecycle, not on the file.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.testStrategy.totalScenarios).toBe(1);
+        expect(data.testStrategy.layer.e2e).toBe(1);
+        expect(data.testStrategy.layerSource).toBe("scenario-tags");
+        expect(data.summary.scenarios).toBe(1);
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: active\n",
+        examples: [
+          "Feature: current",
+          "",
+          "  @layer-e2e @size-s",
+          "  Scenario: live",
+          "    Given an active spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
+  it("leaves a retired spec's SC IDs out of SC Coverage as well", async () => {
+    // SC coverage is computed inside `validateProject` and only carried into
+    // the report, so filtering the report's own list left one report saying two
+    // things: `summary.scenarios` 0 beside an SC Coverage total of 1 whose
+    // `missingIds` demanded tests for a retired obligation — and `scSources`,
+    // built from the active list, could name no file those IDs came from.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.summary.scenarios).toBe(0);
+        expect(data.traceability.sc.total).toBe(0);
+        expect(data.traceability.sc.missingIds).toEqual([]);
+        expect(Object.keys(data.traceability.scSources)).toEqual([]);
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: deprecated\n- Deprecated-at: 2026-01-01\n",
+        examples: [
+          "Feature: retired",
+          "",
+          "  @layer-e2e @size-s @SC-0001-0001",
+          "  Scenario: history",
+          "    Given a retired spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
+  it("still reports an active spec's SC IDs as coverage", async () => {
+    // The over-correction pin: SC Coverage must keep gating on the specs that
+    // are still current, so an uncovered SC ID stays in `missingIds`.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.summary.scenarios).toBe(1);
+        expect(data.traceability.sc.total).toBe(1);
+        expect(data.traceability.sc.missingIds).toEqual(["SC-0001-0001"]);
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: active\n",
+        examples: [
+          "Feature: current",
+          "",
+          "  @layer-e2e @size-s @SC-0001-0001",
+          "  Scenario: live",
+          "    Given an active spec",
+          "",
+        ].join("\n"),
+      },
     );
   });
 

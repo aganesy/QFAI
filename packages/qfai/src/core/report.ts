@@ -5,6 +5,7 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { collectTddCoverage } from "./reportTddCoverage.js";
 import {
+  activeScenarioFiles,
   collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
   collectScenarioFiles,
@@ -508,8 +509,20 @@ export async function createReportData(
   const specFiles = (await collectSpecFiles(specsRoot)).filter((file) =>
     isPathInSpecScope(file, scopeRoots, specScope),
   );
-  const scenarioFiles = (await collectScenarioFiles(specsRoot)).filter((file) =>
-    isPathInSpecScope(file, scopeRoots, specScope),
+  // One active list, shared by every scenario aggregate in this report. Filtering
+  // inside `collectTestStrategy` alone left `summary.scenarios` counting a
+  // retired spec's feature that `testStrategy.totalScenarios` had already
+  // dropped — the same report stating two different scenario totals, one of
+  // them history. `validateProject` applies the same filter for the SC coverage
+  // it hands back below, so the two halves of this report agree on which
+  // scenarios exist. The `--spec` scope narrows the list first, and the retired
+  // filter reads the same narrowed `specEntries`, so the two filters compose
+  // instead of one of them silently re-admitting what the other dropped.
+  const scenarioFiles = activeScenarioFiles(
+    (await collectScenarioFiles(specsRoot)).filter((file) =>
+      isPathInSpecScope(file, scopeRoots, specScope),
+    ),
+    specEntries,
   );
   const scenarioCount = await countScenarios(scenarioFiles);
   const testStrategy = await collectTestStrategy(
@@ -2661,6 +2674,10 @@ async function collectLedgerLayerCounts(
     if (!isSpecInScope(entry.specNumber, scope)) {
       continue;
     }
+    // A retired spec's rows are the record of what it delivered, not the
+    // repository's current test-layer distribution — and `validate` has already
+    // stopped gating on them.
+    if (entry.status !== undefined && entry.status !== "active") continue;
     const ledgerPath = path.join(entry.dir, "tdd", "test-list.md");
     let text: string;
     try {

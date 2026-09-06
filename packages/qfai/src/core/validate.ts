@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
-import { collectScenarioFiles } from "./discovery.js";
+import { activeScenarioFiles, collectScenarioFiles } from "./discovery.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "./sunset.js";
 import { issue } from "./validators/utils.js";
@@ -177,9 +177,17 @@ export async function validateProject(
   // Traceability is part of the same scoped answer: leaving every spec's
   // Examples in would report a sibling's SC totals, missing IDs and refs as the
   // coverage of the requested slice.
-  const scenarioFiles = (await collectScenarioFiles(specsRoot)).filter((file) =>
-    isPathInSpecScope(file, scopeRoots, specScope),
-  );
+  //
+  // A retired spec is out of the answer for the same reason. Its findings are
+  // already demoted and `qfai report` drops its scenarios from every other
+  // aggregate; counting its SC IDs here put them back into SC Coverage's total
+  // and `missingIds` while `scSources`, built from the active list, could name
+  // no file they came from. `activeScenarioFiles` is the one filter both
+  // commands use, so they cannot drift apart.
+  const scenarioFiles = activeScenarioFiles(
+    await collectScenarioFiles(specsRoot),
+    await collectSpecEntries(specsRoot),
+  ).filter((file) => isPathInSpecScope(file, scopeRoots, specScope));
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
   const { refs: scTestRefs, scan: testFiles } = await collectScTestReferences(
     root,

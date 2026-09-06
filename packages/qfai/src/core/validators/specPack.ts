@@ -37,7 +37,14 @@ import {
   parseTestCaseIds,
   resolveTestCaseTable,
 } from "../specPackParsers.js";
-import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
+import {
+  isValidDeprecatedAt,
+  parseSpec,
+  SPEC_STATUS_VALUES,
+  SUPERSEDED_BY_RE,
+  type ParsedSpec,
+  type SpecStatus,
+} from "../parse/spec.js";
 import {
   TRIAGE_NO_EXISTING_SPEC,
   TRIAGE_NO_EXISTING_SPEC_LEGACY,
@@ -129,6 +136,11 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   const issues: Issue[] = [...layerPolicy.issues];
 
   const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
+  // The same evidence `collectSpecEntries` retires a spec on, so what
+  // `QFAI-STATUS-004` reports and what `SpecEntry.status` accepts cannot drift.
+  const specStatuses = new Map<string, SpecStatus | undefined>(
+    entries.map((entry) => [`spec-${entry.specNumber}`, entry.status]),
+  );
 
   for (const entry of entries) {
     if (entry.layout === "layered") {
@@ -145,7 +157,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // Common checks (PR #206 review #42): Status / Triage validation is
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
-    issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
+    issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds, specStatuses)));
     issues.push(...(await validateTriageSectionForEntry(entry, toolVersion, knownSpecIds)));
   }
 
@@ -182,12 +194,30 @@ async function validatePoliciesDeltaTriage(
 }
 
 const STATUS_ENUM_LIST = SPEC_STATUS_VALUES.join(" | ");
-const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
-const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * What the spec set knows about the spec under validation and its neighbours.
+ *
+ * `collectSpecEntries` already refuses to retire a `superseded` spec whose
+ * `Superseded-by` points at itself or at a spec that does not declare
+ * `Status: active` — the obligations moved nowhere, so the ledger keeps gating.
+ * Silently, though: without this context `QFAI-STATUS-004` checked only that
+ * the target directory exists, so a self-reference or a retired successor
+ * passed `--profile full` while the source went on gating for a reason no
+ * finding named. Both fields are optional so a caller holding one spec in
+ * isolation still gets the single-spec rules.
+ */
+export type SpecStatusContext = {
+  /** `spec-NNNN` of the spec being validated, for self-reference detection. */
+  selfSpecId?: string;
+  /** Resolved lifecycle per `spec-NNNN`; `undefined` where none was declared. */
+  statuses?: ReadonlyMap<string, SpecStatus | undefined>;
+};
 
 async function validateSpecStatusForEntry(
   entry: SpecEntry,
   knownSpecIds: Set<string>,
+  statuses: ReadonlyMap<string, SpecStatus | undefined>,
 ): Promise<Issue[]> {
   const specMdPath = entry.specPath;
   if (!specMdPath) {
@@ -200,13 +230,17 @@ async function validateSpecStatusForEntry(
     return [];
   }
   const parsed = parseSpec(text, specMdPath);
-  return validateSpecStatus(parsed, specMdPath, knownSpecIds);
+  return validateSpecStatus(parsed, specMdPath, knownSpecIds, {
+    selfSpecId: `spec-${entry.specNumber}`,
+    statuses,
+  });
 }
 
 export function validateSpecStatus(
   parsed: ParsedSpec,
   specMdPath: string,
   knownSpecIds: Set<string>,
+  context: SpecStatusContext = {},
 ): Issue[] {
   const issues: Issue[] = [];
 
@@ -282,6 +316,35 @@ export function validateSpecStatus(
           "置換先 spec を作成するか、Superseded-by を実在する spec ID に修正してください。",
         ),
       );
+    } else if (context.selfSpecId !== undefined && parsed.supersededBy === context.selfSpecId) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-004",
+          `Superseded-by が自分自身を指しています: ${parsed.supersededBy}`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.self",
+          [parsed.supersededBy],
+          "canonical",
+          "SUPERSEDE は義務を別の spec へ移す操作です。Superseded-by を移行先の active な spec に修正してください。",
+        ),
+      );
+    } else if (
+      context.statuses !== undefined &&
+      context.statuses.get(parsed.supersededBy) !== "active"
+    ) {
+      issues.push(
+        issue(
+          "QFAI-STATUS-004",
+          `Superseded-by が指す spec が active ではありません: ${parsed.supersededBy}`,
+          "error",
+          specMdPath,
+          "specStatus.supersededBy.active",
+          [parsed.supersededBy],
+          "canonical",
+          "退役済み、または Status 宣言のない spec は義務を引き継げません。Superseded-by を `- Status: active` を宣言している spec に修正してください。",
+        ),
+      );
     }
   }
 
@@ -299,17 +362,17 @@ export function validateSpecStatus(
           "01_Spec.md に `- Deprecated-at: YYYY-MM-DD` を設定してください。",
         ),
       );
-    } else if (!DEPRECATED_AT_RE.test(parsed.deprecatedAt)) {
+    } else if (!isValidDeprecatedAt(parsed.deprecatedAt)) {
       issues.push(
         issue(
           "QFAI-STATUS-006",
-          `Deprecated-at の形式が不正です: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
+          `Deprecated-at が実在する日付ではありません: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
           "error",
           specMdPath,
           "specStatus.deprecatedAt.format",
           [parsed.deprecatedAt],
           "canonical",
-          "Deprecated-at を `YYYY-MM-DD` 形式に修正してください。",
+          "Deprecated-at を実在する暦日の `YYYY-MM-DD` 形式に修正してください。",
         ),
       );
     }
