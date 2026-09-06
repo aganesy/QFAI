@@ -70,13 +70,46 @@ If spec and code conflict:
 ## Article V — Traceability is mandatory
 
 Maintain traceability links:
-**Require → Spec → Scenario → Tests → Code → Verification evidence**
+**Require → Spec → US → AC → BR → EX → TC → Tests → Code → Verification evidence**
+
+`US → AC → BR → EX → TC` are the layered spec items (`02_User-stories.md`
+through `06_Test-Cases.md`). A legacy spec-pack project carries a single
+`Scenario` hop (`scenario.feature`) in their place; that hop is superseded and
+the layered layout never produces it, so do not reference it in a layered
+project. `.qfai/assistant/constitution/drift-protocol.md` lists the legacy SSOT files it belongs to.
+
+The `→ Tests` hop branches by test layer — a test answers the obligation its
+own layer owns, and only that one:
+
+- `TC-* → Unit / Component / Integration tests`
+- `CON-DB-* → Integration tests`
+- `US-* → E2E tests`
+- `CON-API-* → API tests`
+
+`catalog/test-layers.md` fixes the directory each ID type is answered from. A
+layer can owe more than one of them: an Integration test answers `TC-*` and, on
+a project with an active DB contract, `CON-DB-*` as well — a `CON-DB-*` with no
+Integration annotation is an error (`QFAI-ATDD-115`).
+
+The ledger and the annotations are two separate rules, and only the first is a
+flat prohibition. `tdd/test-list.md` rejects `TC-Refs` on a `Layer = E2E` /
+`API` row (`TDDLIST_OBLIGATION_LAYER_MISMATCH`), because a `TC-*` obligation
+belongs at L1–L3. A test file's `TC-*` annotation is instead routed by the TC's
+own declared `Level`, so a TC still recorded at `L4` / `L5` is answered from
+`tests/api/**` / `tests/e2e/**` and counted there (`QFAI-ATDD-112`). Do not
+strip those annotations to satisfy the ledger rule — that only removes coverage.
+Re-file the obligation upstream as `CON-API-*` or `US-*`, and **move the whole
+chain in one change**: the `EX-*` it derives from, the `BR-*` that EX
+concretizes, and the `AC-*` that BR answers, the way `catalog/test-layers.md`
+prescribes. Leaving the `AC-*` behind when that TC was its only cover is
+`QFAI-COV-201` — the re-filing then trades one error for another.
 
 Whenever practical, reference:
 
 - requirement IDs
 - spec section anchors
-- scenario titles
+- layered item IDs (`US-*`, `AC-*`, `BR-*`, `EX-*`, `TC-*`) and the contract IDs
+  the API layer answers (`CON-API-*`)
 
 ---
 
@@ -86,9 +119,29 @@ Non-discussion commands MUST minimize questions.
 
 Default policy:
 
-- Ask **at most 5** clarifying questions per skill invocation (unit below).
+- Ask **at most 5 clarifying questions per invocation**. The unit is one
+  top-level skill or command invocation: every `/qfai-*` stage listed in
+  `.qfai/assistant/constitution/workflow.md` → “Stages (canonical)”, and equally a non-stage command such as
+  `/qfai-configure` or `/web-research`. Each invocation spends its own budget and
+  the next one starts with a full budget. It is not per session and not per
+  conversation.
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
+
+### What spends the budget (MUST)
+
+- A **clarification** — a question asked to resolve ambiguity in the request,
+  the specs, or the repository — spends budget.
+- An **approval** — a question asked because a document requires a recorded
+  human decision before the work may proceed — does **not** spend budget.
+  Approvals are unbounded by construction: SDD triage requires an `Approved By`
+  on every approval-required row and puts no cap on rows, and the reviewer-gate
+  escalation exit requires a user decision per escalation
+  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`). Counting them would
+  make this article impossible to satisfy in the stage that asks the most.
+- Classify **each question, not the prompt**. A prompt that carries both spends
+  one unit per clarification it contains; only its approval questions are exempt.
+  Attaching an approval to a clarification does not buy the clarification back.
 
 ### Counting unit (MUST)
 
@@ -106,10 +159,10 @@ Default policy:
 - **Approval questions are exempt.** A question whose subject is a user decision
   the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
   destructive-operation confirmation, an escalation under
-  `shared-skill-delegation-baseline.md#round-budget-must` — is a decision, not a
-  clarification. Such questions are unbounded and MUST still be asked after the
-  budget is exhausted. Skipping a mandatory approval to stay under the budget
-  violates this article; it is not compliance with it.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`
+  — is a decision, not a clarification. Such questions are unbounded and MUST
+  still be asked after the budget is exhausted. Skipping a mandatory approval to
+  stay under the budget violates this article; it is not compliance with it.
 - **`hard-required` inputs are exempt — but only where the invocation needs
   them.** An input a skill's `Default Autopilot Policy` lists under
   `hard-required` has no default and MUST NOT be guessed once the budget is
@@ -127,7 +180,17 @@ Default policy:
   value the skill declares undefaultable is not something a run may invent
   because it was told not to ask.
 
-### Exhaustion (MUST)
+Stop conditions:
+
+- User says “stop” → abort the invocation; no further work or file changes.
+- User says “proceed / done” → clarification-exhausted mode for the rest of the
+  invocation. It waives clarifications only; it is **not** `--auto`, and the
+  mandatory approvals and needed `hard-required` inputs above MUST still be
+  asked.
+- Question budget is exhausted → clarification-exhausted mode for the rest of the
+  invocation.
+
+### On exhaustion (MUST)
 
 Exhaustion stops the questions, not the work: for the remainder of the
 invocation the agent is in **clarification-exhausted mode** — ask no further
@@ -154,15 +217,13 @@ clarification-exhausted mode. It ends the invocation: ask nothing further, do no
 further work, make no further file changes, and report what was completed and
 what remains.
 
-Stop conditions:
-
-- User says “stop” → abort the invocation; no further work or file changes.
-- User says “proceed / done” → clarification-exhausted mode for the rest of the
-  invocation. It waives clarifications only; it is **not** `--auto`, and the
-  mandatory approvals and needed `hard-required` inputs above MUST still be
-  asked.
-- Question budget is exhausted → clarification-exhausted mode for the rest of the
-  invocation.
+Do not ask a sixth clarification. Settle the remaining ambiguity the way `--auto`
+does: proceed with explicit assumptions, label them, and record them in the
+invocation's output — as Open Questions when the assumption is still unresolved.
+Exhaustion silences clarifications only. A **required approval is still asked**:
+it never spent budget, and Article X's `--auto` no-question mode is not in force
+here — only its assumption-recording behaviour is. Silently stopping is not a
+sanctioned move, and neither is asking a sixth clarification anyway.
 
 ---
 
@@ -231,7 +292,7 @@ Rules:
    `proceed` / `done` answer enters that same mode and is likewise not `--auto`;
    this rule is activated by the `--auto` flag alone.
 
-This article survives context compaction because `constitution.md` is a P1 reload target.
+This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 
 ---
 
@@ -239,10 +300,16 @@ This article survives context compaction because `constitution.md` is a P1 reloa
 
 All temporary files, scratch scripts, and intermediate build artifacts **MUST** be placed under the repository‑root `tmp/` directory.
 
+Scope: this article is about files written **into the working tree** — scratch
+scripts, intermediate build artifacts, downloaded fixtures, notes. A sandbox a
+test creates with `mkdtemp` under the OS temporary directory is **not** covered:
+it lives outside the repository, so it cannot put a file in any of the
+directories Rule 1 protects, and the test that created it removes it.
+
 Rules:
 
 1. **Never** create temporary files in the repository root, `src/`, `.qfai/specs/`, or any other production/artifact directory.
 2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories as needed (e.g., `tmp/glossary/`, `tmp/build/`).
 3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
 4. Clean up `tmp/` contents when the task that created them is complete.
-5. If a temporary file is found outside `tmp/`, treat it as a defect and move or delete it immediately.
+5. If a temporary file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox is not one — see Scope above.

@@ -9,9 +9,9 @@ Contracts are version-managed downstream execution truth and inputs:
 - `api/`: OpenAPI YAML
 - `db/`: SQL schema contracts
 - `ui/`: UI contract YAML
-- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as separate rubric / calibration contracts.
+- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`) and no longer authored as separate rubric / calibration contracts.
 
-Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files.
+Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`.qfai/assistant/constitution/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 
 ## Rules
 
@@ -19,7 +19,7 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 - UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
-- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work.
+- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
 - **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
   `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
   table necessarily becomes N cross-referencing files. State the resulting
@@ -134,7 +134,9 @@ satisfied by a file that cannot run.
   what exercises head-advance and expected-version guards; a single pass proves
   the first insert and nothing after it. Defects that appear only on traversal
   two are a normal share of the total, not an exotic case.
-- **Record it** in `.qfai/evidence/sdd-<spec-id>.md` as a line of the form:
+- **Record it** in `.qfai/evidence/sdd-<spec-id>.md`, under the
+  `## Contract executability` heading of `templates/evidence/sdd-spec.md`, as a
+  line of the form:
 
   ```
   - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>

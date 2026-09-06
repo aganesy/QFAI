@@ -152,9 +152,11 @@ describe("qfai-init.md matches what --upgrade-assistant-tree actually does", () 
     );
   });
 
-  // `report` prints copies as a count and enumerates paths only for skipped /
-  // removed, so a contract cannot send the operator to a "copied-path list".
-  it("does not point the operator at a copied-path list the run never prints", async () => {
+  // `report` now names every written path, so the contract may say so — but it
+  // still must not call that list a "copied-path list", and it must not sell it
+  // as the rollback set: the enumeration carries no Git status, so rollback
+  // still goes through `git status`.
+  it("describes the written-path list the run prints, and still routes rollback through git status", async () => {
     const contract = await readFile(contractPath, "utf-8");
     const source = await readFile(initSourcePath, "utf-8");
 
@@ -168,8 +170,14 @@ describe("qfai-init.md matches what --upgrade-assistant-tree actually does", () 
     // migration step's own rollback set.
     expect(contract).toMatch(/never the enclosing directory/);
 
-    expect(source).toMatch(/info\(`\s+created: \$\{copied\.length\}`\)/);
+    // The count and the enumeration the contract paragraph above names. Pinned
+    // together so the contract cannot keep describing a shape `report` dropped.
+    expect(source).toMatch(
+      /info\(`\s+\$\{dryRun \? "would write" : "written"\}: \$\{writtenPaths\.length\}`\)/,
+    );
+    expect(source).toMatch(/info\(dryRun \? " {2}would write paths:" : " {2}written paths:"\)/);
     expect(source).not.toMatch(/copied paths:/);
+    expect(contract).toMatch(/`written: N`/);
   });
 
   // `--upgrade-assistant-tree` falls through into the ordinary init flow, which

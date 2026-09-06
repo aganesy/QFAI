@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { validatePhaseOrdering } from "../../../src/core/validators/skill/phaseOrdering.js";
 
 const VALID_SKILL_FRAGMENT = `
-## Step 11.3 — Brand archetype selection
+## Required Process step 9 — Brand archetype selection
 
 ### Phase A (brand autonomous selection)
 
@@ -21,7 +21,7 @@ Apply selected archetype defaults and override with project constraints.
 `;
 
 const SWAPPED_FRAGMENT = `
-## Step 11.3 — Brand archetype selection
+## Required Process step 9 — Brand archetype selection
 
 ### Phase B (customization)
 

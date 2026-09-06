@@ -4,8 +4,9 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// Anchored to this file, not to `process.cwd()`: a runner launched from the
-// repo root resolves `../..` to the directory ABOVE the repo.
+// Anchored to this file, not to `process.cwd()`, for the same reason as the
+// reviewer round-budget suite: a runner launched from the repo root would
+// otherwise resolve `../..` above the repo.
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -28,14 +29,77 @@ function expectPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).toContain(unwrap(phrase));
 }
 
-/** The wrap-tolerant negative: a phrase this document must no longer carry. */
 function expectNoPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).not.toContain(unwrap(phrase));
 }
 
 const CONSTITUTION = "assistant/constitution/constitution.md";
-const COMMUNICATION = "assistant/constitution/communication.md";
 const OPERATING = "assistant/constitution/shared-skill-operating-baseline.md";
+
+describe("the clarification budget binds a stage", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: Article VI names the unit the budget is spent per`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "## Article VI — Clarification budget (avoid endless Q&A)");
+      expectPhrase(content, "**at most 5 clarifying questions per invocation**");
+      expectPhrase(content, "The unit is one\n  top-level skill or command invocation");
+      // The article binds every non-discussion command, so the unit cannot be a
+      // canonical stage: `/qfai-configure` and `/web-research` are neither.
+      expectPhrase(content, "`/qfai-configure` or `/web-research`");
+      expectPhrase(content, "It is not per session and not per\n  conversation.");
+      // "5 clarifying questions total" left the scope open to four readings.
+      expectNoPhrase(content, "clarifying questions total");
+    });
+
+    it(`${tree}: Article VI says approvals do not spend the budget`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "### What spends the budget (MUST)");
+      expectPhrase(content, "A **clarification**");
+      expectPhrase(content, "does **not** spend budget");
+      // The unbounded approval sources are named, so the carve-out is checkable
+      // rather than a general escape hatch.
+      expectPhrase(content, "`Approved By`");
+      // The heading gained "and convergence" upstream; the citation follows it
+      // rather than the name it had, which resolved to nothing.
+      expectPhrase(
+        content,
+        "shared-skill-delegation-baseline.md#round-budget-and-convergence-must",
+      );
+      // A mixed prompt is classified question by question, so one approval
+      // cannot carry an unbounded tail of clarifications past the budget.
+      expectPhrase(content, "Classify **each question, not the prompt**");
+      expectPhrase(content, "spends\n  one unit per clarification it contains");
+      expectNoPhrase(content, "A prompt that carries both is an approval");
+    });
+
+    it(`${tree}: Article VI defines what exhaustion requires`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      expectPhrase(content, "### On exhaustion (MUST)");
+      expectPhrase(content, "Do not ask a sixth clarification.");
+      expectPhrase(content, "Settle the remaining ambiguity the way `--auto`\ndoes");
+      expectPhrase(content, "record them in the\ninvocation's output");
+      expectPhrase(content, "as Open\nQuestions when the assumption is still unresolved");
+      // Exhaustion must not import Article X's blanket no-question mode, or a
+      // required approval would become unaskable and unskippable at once.
+      expectPhrase(content, "A **required approval is still asked**");
+    });
+
+    it(`${tree}: the operating baseline restates the budget where questions are asked`, async () => {
+      const content = await read(tree, OPERATING);
+      // Article X reaches every skill through this section; without a line here
+      // the budget reaches none of them.
+      expectPhrase(content, "## User Questions (AskUserQuestion Protocol)");
+      expectPhrase(content, "**at most 5 clarifying questions per invocation**");
+      expectPhrase(content, "is an **approval** and spends\n  nothing");
+      expectPhrase(content, "bundling one into a prompt does not exempt the clarifications");
+      expectPhrase(content, "On exhaustion, do not ask a sixth clarification");
+      expectPhrase(content, "a required approval may still be asked");
+      expectPhrase(content, "constitution.md#article-vi--clarification-budget-avoid-endless-qa");
+    });
+  }
+});
+
+const COMMUNICATION = "assistant/constitution/communication.md";
 const SDD = "assistant/skills/qfai-sdd/SKILL.md";
 const CONFIGURE = "assistant/skills/qfai-configure/SKILL.md";
 
@@ -58,7 +122,10 @@ describe("the clarification budget is countable", () => {
 
     it(`${tree}: Article VI says what exhaustion does`, async () => {
       const content = await read(tree, CONSTITUTION);
-      expectPhrase(content, "### Exhaustion (MUST)");
+      // main renamed this section `### On exhaustion (MUST)` while this branch
+      // was open, and this branch's paragraphs now sit inside it. Same content,
+      // the heading it is under.
+      expectPhrase(content, "### On exhaustion (MUST)");
       // "Stop condition" must not be readable as "abort the run".
       expectPhrase(content, "Exhaustion stops the questions, not the work");
       expectPhrase(content, "the agent is in **clarification-exhausted mode**");
@@ -131,7 +198,12 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "### What does not count (MUST)");
       expectPhrase(content, "**Approval questions are exempt.**");
       expectPhrase(content, "a per-row triage approval in `/qfai-sdd`");
-      expectPhrase(content, "shared-skill-delegation-baseline.md#round-budget-must");
+      // main renamed that heading to `#round-budget-and-convergence-must`, and
+      // pins the new anchor in its own case; a citation cannot be both.
+      expectPhrase(
+        content,
+        "shared-skill-delegation-baseline.md#round-budget-and-convergence-must",
+      );
       expectPhrase(content, "MUST still be asked after the\n  budget is exhausted");
       expectPhrase(content, "Skipping a mandatory approval to stay under the budget\n  violates");
     });
@@ -175,12 +247,17 @@ describe("the clarification budget is countable", () => {
 
     it(`${tree}: the shared baseline restates the budget for every skill`, async () => {
       const content = await read(tree, OPERATING);
-      expectPhrase(content, "**at most 5 per skill invocation**");
+      // The baseline says this per *invocation* now — main's wording, pinned by
+      // its own case. Same budget, same unit; one sentence states it.
+      expectPhrase(content, "**at most 5 clarifying questions per invocation**");
       expectPhrase(content, "counted\n  per question item rather than per AskUserQuestion call");
       expectPhrase(content, "proceeds with labelled assumptions instead of asking");
       expectPhrase(content, "Mandatory approval questions and `hard-required` inputs are exempt");
       expectPhrase(content, "if it stays missing, stop instead of\n  guessing");
-      expectPhrase(content, "See `constitution.md` Article VI.");
+      // The Citation Path Form rule landed on main while this branch was open:
+      // a constitution document is cited by its full path from the project root,
+      // so the bare name this pinned can no longer be written anywhere.
+      expectPhrase(content, "See `.qfai/assistant/constitution/constitution.md` Article VI.");
     });
 
     it(`${tree}: qfai-sdd exempts its unbounded per-row approvals`, async () => {
@@ -247,10 +324,7 @@ describe("the clarification budget is countable", () => {
       // section immediately below defines it per skill invocation, so the two
       // statements of one rule could be read as two rules.
       const content = await read(tree, CONSTITUTION);
-      expectPhrase(
-        content,
-        "- Ask **at most 5** clarifying questions per skill invocation (unit below).",
-      );
+      expectPhrase(content, "- Ask **at most 5 clarifying questions per invocation**.");
       expectPhrase(content, "**Five clarifying questions per skill invocation.**");
       expectNoPhrase(content, "- Ask **at most 5** clarifying questions total.");
     });
