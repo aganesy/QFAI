@@ -20,54 +20,65 @@ Upstream artifacts include, at minimum:
   reclassifies ONLY the pack: genuine upstream is still repaired upstream-first.
 
 - **test or production artifacts another spec's completed implement run
-  certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
-  on a `done` row. Changing one is not forbidden (the codebase is not
+  certifies** — a file named on a `done` row of another `tdd/test-list.md`: a
+  production module in that row's `Owning module` column, a test in its
+  `Test file` column. `Owning module` is the only column that holds a production
+  path, so a production file declared there is upstream even though no
+  `Test file` cell names it. Changing one is not forbidden (the codebase is not
   partitioned and duplication removal is mandated), but it must be recorded and
-  re-reviewed per
-  `skills/qfai-implement/references/cross-spec-ownership.md`. It becomes drift
-  in the full sense — STOP, Change Request, owner rerun — when the other spec's
-  obligation no longer holds rather than merely moving.
+  re-reviewed per `skills/qfai-implement/references/cross-spec-ownership.md`. It
+  becomes drift in the full sense — STOP, Change Request, owner rerun — when the
+  other spec's obligation no longer holds rather than merely moving.
 
 One file inside `.qfai/specs/**` is carved out of that last line:
-`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
-cells unconditionally, plus its `Test file` and `Selector` cells under the two
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence` cells
+unconditionally, plus its `Test file` and `Selector` cells under the two
 machine-checkable conditions in `#allowed-exceptions-minimal-whitelist`. Its
 **rows** — which obligations exist and what each covers — remain upstream.
 
-**Every artifact in this list requires an owner rerun by definition.** There is
-no downstream test for "is an owner rerun required here?" — being on this list
-is the answer, and the rerun is a _consequence_ of the artifact being upstream
-SSOT, never a precondition for the prohibition. A downstream phase that finds
-itself weighing whether the owner needs to be involved has already left its
-lane: it cannot see who owns the artifact, and working that out in the observed
-case required reading the agent roster and reasoning backwards from it.
+**Every artifact in this list requires an owner rerun by definition — except the code and test
+artifacts of the last bullet, which carry their own route in that bullet.** They are the one
+entry whose prohibition is conditional, because the codebase is not partitioned: while the other
+spec's obligation still holds, the record and re-review of `cross-spec-ownership.md` are the
+whole route, and the owner rerun is owed exactly when the edit becomes drift in the full sense
+(that bullet's last sentence). Reading the blanket rule over them instead demanded an owner rerun
+for every shared-file edit, which the cross-spec procedure does not perform and the mandated
+duplication removal cannot pay for. For every other entry there is no downstream test for "is an
+owner rerun required here?" — being on this list is the answer, and the rerun is a _consequence_
+of the artifact being upstream SSOT, never a precondition for the prohibition. A downstream phase
+that finds itself weighing whether the owner needs to be involved has already left its lane: it
+cannot see who owns the artifact, and working that out in the observed case required reading the
+agent roster and reasoning backwards from it.
 
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
-  `Evidence` cells unconditionally, append/update by `/qfai-implement`, plus two
-  cells that are writable **only** while a stated condition holds:
-  - the `Test file` cell, only while the seeded value is empty or a dash
-    placeholder;
-  - the `Selector` cell, only while the seeded value does not resolve against
-    the row's named test file — the validator's own `selectorResolves`
-    predicate is false.
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and `Evidence` cells
+  unconditionally, append/update by `/qfai-implement`, plus two cells that are writable **only**
+  while a stated condition holds:
+  - the `Test file` cell, only while the seeded value is empty or a dash placeholder;
+  - the `Selector` cell, only while the seeded value does not resolve against the row's named test
+    file — the validator's own `selectorResolves` predicate is false.
 
-  Both conditions are machine-checkable, so a reviewer verifies the precondition
-  instead of taking the writing stage's word for it, and both are one-way: once
-  the condition that authorised the write has ceased to hold — a `Test file` that
-  names a path, a `Selector` that resolves — rewriting it is no longer covered.
-  Every other
-  column of that file — `TC-Refs`, `Layer`, `US-Refs`, `CON-API-Refs` — and
-  every other file under `.qfai/specs/**`, stays upstream SSOT: adding, removing
-  or re-scoping a row is an upstream change and takes the
+  Both conditions are machine-checkable, so a reviewer verifies the precondition instead of taking
+  the writing stage's word for it, and both are one-way: once the condition that authorised the
+  write has ceased to hold — a `Test file` that names a path, a `Selector` that resolves —
+  rewriting it is no longer covered. Every other column of that file — `TC-Refs`, `Layer`,
+  `US-Refs`, `CON-API-Refs` — and every other file under `.qfai/specs/**`, stays upstream SSOT:
+  adding, removing or re-scoping a row is an upstream change and takes the
   `#when-drift-is-detected` path.
 
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
   anomaly Decision Record — `DR-NNNN-MMMM-<slug>.md` declared in that spec's `07_Decisions.md`, or `DR-NNNN-<slug>.md` declared in `_policies/08_Decisions.md`;
   deliberately **not** the CR's date form
+- **another spec's certified code or test artifact**, while that spec's obligation still holds and
+  on the conditions `#core-rule`'s last bullet states: the edit is recorded and re-reviewed per
+  `skills/qfai-implement/references/cross-spec-ownership.md`. The bullet, not this line, carries
+  the route; the entry is here because the codebase is not partitioned and duplication removal is
+  mandated, so treating every shared-file edit as needing approval would stop the work this
+  protocol asks for. Approval is owed the moment the obligation stops holding: the edit is then
+  drift in the full sense and takes `#when-drift-is-detected`.
 
 Any exception beyond this list requires explicit user approval.
 
@@ -85,17 +96,14 @@ The bullet that used to sit here — "progress status updates only when the proj
 workflow explicitly allows downstream updates" — could not rescue that, for two
 reasons:
 
-- **The condition had no referent.** `progress status`, `project workflow` and
-  `downstream update` each occurred exactly once in the whole shipped tree: that
-  line itself. Nothing defined what the project workflow is, where such a
-  permission is recorded, or what the default is, so in a freshly initialized project the
-  condition could never be satisfied.
-- **It was too narrow even if it had.** It covered "progress status", while
-  `qfai-implement`'s completion gate item 10 additionally requires the `Evidence`
-  column, and the skill's own hard rules forbid the substitute
-  ("status-only evidence … MUST be rejected"). The content declared mandatory and
-  non-substitutable was precisely the content no rule authorised anyone to
-  persist.
+- **The condition had no referent.** `progress status`, `project workflow` and `downstream update`
+  each occurred exactly once in the whole shipped tree: that line itself. Nothing defined what the
+  project workflow is, where such a permission is recorded, or what the default is, so in a freshly
+  initialized project the condition could never be satisfied.
+- **It was too narrow even if it had.** It covered "progress status", while `qfai-implement`'s
+  completion gate item 10 additionally requires the `Evidence` column, and the skill's own hard
+  rules forbid the substitute ("status-only evidence … MUST be rejected"). The content declared
+  mandatory and non-substitutable was precisely the content no rule authorised anyone to persist.
 
 So an agent obeying the protocol could not satisfy gate item 10, and an agent
 satisfying it was in drift. The entry above names the file and the three cells
@@ -106,14 +114,12 @@ unconditionally, which is what removes the choice.
 The deadlock that put the ledger on this list recurs one and two columns over,
 and two shipped validator rules are what create it:
 
-- `TDDLIST_TEST_FILE_MISSING` fires at **error** severity for a row whose
-  `Test file` cell is empty or a dash placeholder, once its `Status` is `green`,
-  `refactor`, `review-fix` or `done`.
-- `TDDLIST_SELECTOR_UNRESOLVED` fires when the `Selector` cell's text is not
-  found in the named test file, and its own remediation text says to update the
-  selector. The per-row checkpoint command is `<runner> <Test file> -t
-'<Selector>'`, so an unresolved selector also produces a run that selects
-  nothing while exiting 0.
+- `TDDLIST_TEST_FILE_MISSING` fires at **error** severity for a row whose `Test file` cell is empty
+  or a dash placeholder, once its `Status` is `green`, `refactor`, `review-fix` or `done`.
+- `TDDLIST_SELECTOR_UNRESOLVED` fires when the `Selector` cell's text is not found in the named
+  test file, and its own remediation text says to update the selector. The per-row checkpoint
+  command is `<runner> <Test file> -t '<Selector>'`, so an unresolved selector also produces a run
+  that selects nothing while exiting 0.
 
 A row is seeded with a descriptive selector and, commonly, no test file: the
 path is a downstream decision, and the test's title does not exist until the
