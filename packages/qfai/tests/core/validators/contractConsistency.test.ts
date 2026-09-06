@@ -487,6 +487,56 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
+    it("does not call it one contract when several declare an ENUM and one is mixed", async () => {
+      // The empty CHECK side is not evidence of a single contract. Here BOTH
+      // contracts declare an ENUM — one of them non-decisively, because its own
+      // file mixes the forms across tables — so `fromEnum` holds them all and
+      // the "same contract" branch would claim a pairing that is not settled.
+      const twoTables = [
+        "CREATE TYPE call_list_status AS ENUM ('pending', 'running', 'completed');",
+        "",
+        "CREATE TABLE call_lists (",
+        "  id uuid PRIMARY KEY,",
+        "  status call_list_status NOT NULL",
+        ");",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+      const enumOnlyElsewhere = [
+        "CREATE TYPE notification_status AS ENUM ('queued', 'sent');",
+        "",
+        "CREATE TABLE notifications (",
+        "  id uuid PRIMARY KEY,",
+        "  status notification_status NOT NULL",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0009-both.sql": twoTables,
+        "db-0011-notifications.sql": enumOnlyElsewhere,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("warning");
+      const remedy = issues[0]?.suggested_action ?? "";
+      // The single-contract sentence, not the words in it: the multi-contract
+      // wording says "one of them mixes the forms inside 同じ契約", which is
+      // true and must not be what this rejects.
+      expect(remedy).not.toContain("ENUM と CHECK が同じ契約");
+      // Both files named, and the reader sent to the Contracts 表 first —
+      // the contract has to be narrowed before the column can be.
+      expect(remedy).toContain("db-0009-both.sql");
+      expect(remedy).toContain("db-0011-notifications.sql");
+      expect(remedy).toContain("Contracts 表");
+      expect(remedy).not.toMatch(/\(\s*\)/);
+    });
+
     it("still raises to error when the redundant CHECK is on the only table", async () => {
       // #1100's case, and the reason the tie is broken on the table count
       // rather than on the mere presence of both forms: with one table there is

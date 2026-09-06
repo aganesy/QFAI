@@ -221,11 +221,25 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
     );
   }
   const fromCheck = dbFiles.filter((name) => !fromEnum.includes(name));
-  if (fromCheck.length === 0) {
+  // An empty CHECK side does NOT mean one contract. Every candidate can
+  // declare an ENUM while one of them is non-decisive because its own file
+  // mixes the two forms across tables, and then `fromEnum` holds them all. The
+  // count is what separates "the pairing is settled and the column is not"
+  // from "neither is settled", and only the first may say "the same contract".
+  if (fromCheck.length === 0 && dbFiles.length === 1) {
     return (
       `ENUM と CHECK が同じ契約 (${dbFiles.join(", ")}) の中に現れています — ` +
       "同名の列が複数のテーブルにある場合、その ENUM が束縛するのは API フィールドの列とは限りません。" +
       "対象のテーブルと列を 1 つに特定してから、ENUM 側なら値を追加、CHECK 側なら制約を広げるか API を訂正してください。"
+    );
+  }
+  if (fromCheck.length === 0) {
+    return (
+      `候補の契約 (${dbFiles.join(", ")}) はいずれも ENUM を宣言していますが、` +
+      "少なくとも 1 つは同じ契約の中で CHECK と混在しており、その ENUM が束縛するのは " +
+      "API フィールドの列とは限りません。" +
+      "まず、その entity を所有する spec の Contracts 表で対応する DB 契約を 1 つに絞り、" +
+      "その上で対象のテーブルと列を特定してください。"
     );
   }
   return (
