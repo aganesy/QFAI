@@ -57,6 +57,23 @@ describe.each(TREES)("%s", (tree) => {
     expect(card).toContain("the recorded command differs from the `GREEN command`");
   });
 
+  it("describes the closed gap in the past tense and names what closed it", async () => {
+    // The gate line that makes `Oracle proof` mandatory cites this file. A
+    // reader arriving through that citation must not be told, as present fact,
+    // that nothing asks for the thing they were just sent here to produce.
+    const doc = await read(tree, ORACLE);
+    expect(doc).not.toContain("Nothing in qfai asked this.");
+    expect(doc).toContain("Nothing in qfai asked this until completion item 5");
+    expect(doc).toContain("are what close that hole");
+  });
+
+  it("introduces the weak-oracle shapes without dating them to today's gates", async () => {
+    // "Each passes today's gates" contradicts the gate item that stops them.
+    const doc = await read(tree, ORACLE);
+    expect(doc).not.toContain("Each passes today's gates");
+    expect(doc).toContain("Each clears an exit-code-only GREEN");
+  });
+
   it("names the weak-oracle shapes rather than asking for a judgement call", async () => {
     const doc = await read(tree, ORACLE);
     expect(doc).toContain("Truthiness where the value is available");

@@ -260,6 +260,53 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.message).toContain("failed");
   });
 
+  it("raises an ENUM-backed contradiction to error", async () => {
+    // The severity is the point of #1100. A Postgres ENUM rejects an
+    // out-of-domain value at insert time, so the two contracts cannot both be
+    // implemented — and every gate qfai prescribes is `--fail-on error`, so at
+    // `warning` this never blocked anything and Postgres found it first.
+    const { api, db } = await seedPair(REF_ENUM_API, NAMED_TYPE_DB);
+    const issues = await validateContractConsistency([api], [db]);
+    expect(issues[0]?.severity).toBe("error");
+    // The message says which form the bound is, because that is what the
+    // severity turns on — a reader seeing `error` on one field and `warning`
+    // on another should not have to open the SQL to find out why.
+    expect(issues[0]?.message).toContain("ENUM");
+    // And the remedy names the canonical side rather than offering both
+    // directions symmetrically, which was the whole judgement call.
+    expect(issues[0]?.suggested_action).toContain("ENUM が正です");
+  });
+
+  it("keeps a CHECK-constraint contradiction a warning", async () => {
+    // A check constraint is a bound the DB currently asserts, not the shape of
+    // the column: it can be dropped, replaced, or declared `NOT VALID`. Raising
+    // it too would lose the distinction between "impossible" and "currently
+    // disallowed", which is the distinction the issue asked to keep.
+    const { api, db } = await seedPair(INLINE_ENUM_API, CHECK_IN_DB);
+    const issues = await validateContractConsistency([api], [db]);
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.message).toContain("CHECK");
+    // Both directions stay open here, and the remedy says how to choose.
+    expect(issues[0]?.suggested_action).toContain("Contracts 表");
+  });
+
+  it("takes the enum severity when both forms bound one field", async () => {
+    // The strictest constraint is the one an implementation has to satisfy, so
+    // a column that is an ENUM *and* carries a redundant CHECK is still
+    // impossible to violate.
+    const both = [
+      "CREATE TYPE order_status AS ENUM ('pending', 'paid');",
+      "CREATE TABLE orders (",
+      "  id uuid PRIMARY KEY,",
+      "  status order_status NOT NULL,",
+      "  CONSTRAINT status_ck CHECK (status IN ('pending', 'paid'))",
+      ");",
+    ].join("\n");
+    const { api, db } = await seedPair(REF_ENUM_API, both);
+    const issues = await validateContractConsistency([api], [db]);
+    expect(issues[0]?.severity).toBe("error");
+  });
+
   it("reports a $ref'd API enum against a CHECK-IN column", async () => {
     const { api, db } = await seedPair(REF_ENUM_API, CHECK_IN_DB);
     const issues = await validateContractConsistency([api], [db]);
