@@ -495,6 +495,7 @@ export const GATE_GROUP_FAMILIES = {
     // checked when nothing had looked.
     "QFAI-IMPLITE-*",
     "QFAI-SPACK-*",
+    "QFAI-SPECSECTION-*",
     "QFAI-COV-*",
     "QFAI-ID-*",
     "QFAI-LAYER-*",
@@ -1388,6 +1389,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every evidence pointer resolves: the owner file the row's `Layer` names, the row's own TDD item, a heading that is present, and a complete entry behind it.",
   "QFAI-CTYPE-004":
     "Every `### DL-` entry in a delta file carries the seven `#### Meta` keys `parseDeltaV1` reads, so the Change Type counters see it. An entry the parser skips is counted for nothing and leaves the summary describing less change than the file records.",
+  "QFAI-SPECSECTION-001":
+    "Every spec pack carries each heading `validation.require.specSections` lists, in its own Markdown or — for a layered pack — in the shared `_policies` pack.",
+  "QFAI-SPECSECTION-002":
+    "Every `validation.require.specSections` entry normalises to a comparable heading name, so a configured strict gate is never a no-op.",
 };
 
 /**

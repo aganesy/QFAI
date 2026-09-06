@@ -70,6 +70,7 @@ import {
   validateSpecIdLinkage,
   validateResearchSummary,
   validateRepositoryHygiene,
+  validateSpecSections,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
@@ -687,6 +688,11 @@ async function runSddValidators(
     // pipe silently shifts the columns every other validator reads.
     ...(await validateMarkdownTableArity(root, config)),
     ...(await validateStatusInSpecs(root, config)),
+    // `validation.require.specSections` is the operator's own strict
+    // required-heading list. It ships empty, so this is a no-op until it is
+    // set; once it is set the list has to bind, or `qfai.config.yaml` records
+    // a gate nothing applies.
+    ...(await validateSpecSections(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
