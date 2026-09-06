@@ -121,7 +121,7 @@ export function describeIncompleteRun(error: unknown, context: string): Error | 
       `${at}. This run is NOT a clean result; it is no result at all.\n` +
       "Check the path reported above. On a Windows git worktree, .claude/skills/* are FILE " +
       "symlinks pointing at directories and stat answers EPERM for every one of them — " +
-      "re-run `npx qfai init` inside the worktree in that case.",
+      "re-run `qfai init` inside the worktree in that case.",
     { cause: error },
   );
 }

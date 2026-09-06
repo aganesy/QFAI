@@ -288,7 +288,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "skills is not created yet, so the check was skipped (run 'qfai init')",
+          message:
+            "the skills directory has not been created yet, so the check was skipped " +
+            "(run 'qfai init')",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "skipped_missing_assets") {
