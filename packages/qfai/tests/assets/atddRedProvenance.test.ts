@@ -2838,7 +2838,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // And the consumer has an entry that accepts it without moving the row.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "**A mutation-only request wins over even that, and moves no row.**",
+      "**A mutation-only request wins over all three below, and moves no row.**",
     );
     expect(implement).toContain("Two places hold such an entry and both clear it");
   });
