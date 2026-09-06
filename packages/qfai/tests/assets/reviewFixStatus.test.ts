@@ -148,8 +148,11 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       );
       expect(reference).toContain("## A `REVISE` that needs no new production behaviour");
       expect(reference).toContain("**No round is opened.**");
+      // All three `Refactor verify` fields, the revision included: the rework
+      // moved the tree, so a stale address would put the re-review out of
+      // agreement with item 6 at gate item 10.
       expect(reference).toContain(
-        "refresh\n   `Refactor verify command` / `Refactor verify result`",
+        "refresh all three\n   `Refactor verify` fields — `command`, `result` and `revision`",
       );
       expect(reference).toContain("Which path applies is decided by the finding, not by the");
     });
