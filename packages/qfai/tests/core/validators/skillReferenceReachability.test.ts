@@ -494,6 +494,33 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
     }
   });
 
+  /**
+   * The same machine prefix, around a skillsDir that is INSIDE the project.
+   *
+   * Not a regression net for a bug that was ever live — it pins the boundary
+   * the fix chose. An in-project reference is cited relatively, so the path
+   * around the repository cannot appear in any citation of it, and judging it
+   * on that path would make every document in a project under `C:\Users\John
+   * Doe\` unscannable at once and put the whole tree through the by-path pass,
+   * which is |reachable| x |unscannable|. This asserts the ordinary graph still
+   * resolves with both an unscannable character and a space in the prefix.
+   */
+  it("judges an in-project reference on its project-relative spelling alone", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-inproject-"));
+    const enclosing = path.join(base, "John Doe~1");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const referencesDir = await writeSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      // `cited.md` and the `two-hop.md` it names both resolved by token scan.
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("keeps every shipped reference reachable from a SKILL.md, and readable", async () => {
     for (const root of SHIPPED_ROOTS) {
       const issues = await skillGraphIssues(root);
