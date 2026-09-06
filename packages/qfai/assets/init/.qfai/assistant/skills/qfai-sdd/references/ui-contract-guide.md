@@ -24,16 +24,26 @@ slot entry may be authored in one of two shapes:
      acceptance: order status flips to shipped
    ```
 
-   - `id` — short stable handle for the task (used by ATDD scaffolds).
+   - `id` — short stable handle for the task.
    - `label` — human-readable task name.
-   - `acceptance` — testable acceptance condition; anchors downstream
-     TODO assertions in ATDD scaffolding.
+   - `acceptance` — testable acceptance condition, written so a
+     reviewer can tell whether the task is actually done.
 
 A structured entry missing any of `id` / `label` / `acceptance`, or
 carrying any extra key (e.g. `priority`, `owner`), is rejected at
 validate time. The schema is intentionally closed (no
-`additionalProperties: true`) — see the related design decision in
-`_policies/08_Decisions.md` for rationale.
+`additionalProperties: true`) for two reasons: a fixed key set lets
+validate name a malformed task deterministically instead of accepting
+a mistyped or invented key in silence; and an open shape invites
+per-project field sprawl (`priority`, `owner`, …), which would leave
+the same contract shape meaning different things in different
+projects.
+
+Validate is currently the only consumer of a structured entry: it
+reads `label` for the empty-slot and count-band lanes, and requires
+`id` and `acceptance` to be present and non-empty. Nothing generates
+tests from them yet — requiring them now is what lets a generator be
+added later without re-authoring every contract.
 
 ## Recommended count band: 3..7
 

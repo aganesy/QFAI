@@ -13,56 +13,72 @@ Upstream artifacts include, at minimum:
 - `10_Plan.md` and other owner-phase planning outputs
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
-- outputs of discussion/sdd/review stages
+- outputs of the sdd and review stages. A **discussion pack is NOT upstream
+  SSOT** — it is non-normative discovery material, and `.qfai/specs/**` is the
+  behaviour and design SSOT it feeds. A defect found in one downstream is fixed
+  in the SDD-owned artifact, the discrepancy recorded in delta/evidence. This
+  reclassifies ONLY the pack: genuine upstream is still repaired upstream-first.
+
 - **test or production artifacts another spec's completed implement run
-  certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
-  on a `done` row. Changing one is not forbidden (the codebase is not
+  certifies** — a file named on a `done` row of another `tdd/test-list.md`: a
+  production module in that row's `Owning module` column, a test in its
+  `Test file` column. `Owning module` is the only column that holds a production
+  path, so a production file declared there is upstream even though no
+  `Test file` cell names it. Changing one is not forbidden (the codebase is not
   partitioned and duplication removal is mandated), but it must be recorded and
-  re-reviewed per
-  `skills/qfai-implement/references/cross-spec-ownership.md`. It becomes drift
-  in the full sense — STOP, Change Request, owner rerun — when the other spec's
-  obligation no longer holds rather than merely moving.
+  re-reviewed per `skills/qfai-implement/references/cross-spec-ownership.md`. It
+  becomes drift in the full sense — STOP, Change Request, owner rerun — when the
+  other spec's obligation no longer holds rather than merely moving.
 
 One file inside `.qfai/specs/**` is carved out of that last line:
-`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
-cells unconditionally, plus its `Test file` and `Selector` cells under the two
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence` cells
+unconditionally, plus its `Test file` and `Selector` cells under the two
 machine-checkable conditions in `#allowed-exceptions-minimal-whitelist`. Its
 **rows** — which obligations exist and what each covers — remain upstream.
 
-**Every artifact in this list requires an owner rerun by definition.** There is
-no downstream test for "is an owner rerun required here?" — being on this list
-is the answer, and the rerun is a _consequence_ of the artifact being upstream
-SSOT, never a precondition for the prohibition. A downstream phase that finds
-itself weighing whether the owner needs to be involved has already left its
-lane: it cannot see who owns the artifact, and working that out in the observed
-case required reading the agent roster and reasoning backwards from it.
+**Every artifact in this list requires an owner rerun by definition — except the code and test
+artifacts of the last bullet, which carry their own route in that bullet.** They are the one
+entry whose prohibition is conditional, because the codebase is not partitioned: while the other
+spec's obligation still holds, the record and re-review of `cross-spec-ownership.md` are the
+whole route, and the owner rerun is owed exactly when the edit becomes drift in the full sense
+(that bullet's last sentence). Reading the blanket rule over them instead demanded an owner rerun
+for every shared-file edit, which the cross-spec procedure does not perform and the mandated
+duplication removal cannot pay for. For every other entry there is no downstream test for "is an
+owner rerun required here?" — being on this list is the answer, and the rerun is a _consequence_
+of the artifact being upstream SSOT, never a precondition for the prohibition. A downstream phase
+that finds itself weighing whether the owner needs to be involved has already left its lane: it
+cannot see who owns the artifact, and working that out in the observed case required reading the
+agent roster and reasoning backwards from it.
 
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
-  `Evidence` cells unconditionally, append/update by `/qfai-implement`, plus two
-  cells that are writable **only** while a stated condition holds:
-  - the `Test file` cell, only while the seeded value is empty or a dash
-    placeholder;
-  - the `Selector` cell, only while the seeded value does not resolve against
-    the row's named test file — the validator's own `selectorResolves`
-    predicate is false.
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and `Evidence` cells
+  unconditionally, append/update by `/qfai-implement`, plus two cells that are writable **only**
+  while a stated condition holds:
+  - the `Test file` cell, only while the seeded value is empty or a dash placeholder;
+  - the `Selector` cell, only while the seeded value does not resolve against the row's named test
+    file — the validator's own `selectorResolves` predicate is false.
 
-  Both conditions are machine-checkable, so a reviewer verifies the precondition
-  instead of taking the writing stage's word for it, and both are one-way: once
-  the condition that authorised the write has ceased to hold — a `Test file` that
-  names a path, a `Selector` that resolves — rewriting it is no longer covered.
-  Every other
-  column of that file — `TC-Refs`, `Layer`, `US-Refs`, `CON-API-Refs` — and
-  every other file under `.qfai/specs/**`, stays upstream SSOT: adding, removing
-  or re-scoping a row is an upstream change and takes the
+  Both conditions are machine-checkable, so a reviewer verifies the precondition instead of taking
+  the writing stage's word for it, and both are one-way: once the condition that authorised the
+  write has ceased to hold — a `Test file` that names a path, a `Selector` that resolves —
+  rewriting it is no longer covered. Every other column of that file — `TC-Refs`, `Layer`,
+  `US-Refs`, `CON-API-Refs` — and every other file under `.qfai/specs/**`, stays upstream SSOT:
+  adding, removing or re-scoping a row is an upstream change and takes the
   `#when-drift-is-detected` path.
 
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
-  anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
-  Decision Record ID scheme in the spec's `07_Decisions.md`)
+  anomaly Decision Record — `DR-NNNN-MMMM-<slug>.md` declared in that spec's `07_Decisions.md`, or `DR-NNNN-<slug>.md` declared in `_policies/08_Decisions.md`;
+  deliberately **not** the CR's date form
+- **another spec's certified code or test artifact**, while that spec's obligation still holds and
+  on the conditions `#core-rule`'s last bullet states: the edit is recorded and re-reviewed per
+  `skills/qfai-implement/references/cross-spec-ownership.md`. The bullet, not this line, carries
+  the route; the entry is here because the codebase is not partitioned and duplication removal is
+  mandated, so treating every shared-file edit as needing approval would stop the work this
+  protocol asks for. Approval is owed the moment the obligation stops holding: the edit is then
+  drift in the full sense and takes `#when-drift-is-detected`.
 
 Any exception beyond this list requires explicit user approval.
 
@@ -71,7 +87,7 @@ Any exception beyond this list requires explicit user approval.
 `/qfai-implement` must write `tdd/test-list.md` after every phase transition,
 and the file lives inside `.qfai/specs/**`. The protocol never classified it in
 either direction, but `#core-rule`'s list is explicitly open-ended ("at minimum")
-and sweeps in "outputs of discussion/sdd/review stages" — and the ledger's schema
+and sweeps in "outputs of the sdd and review stages" — and the ledger's schema
 is documented in `skills/qfai-sdd/references/spec-traceability-rules.md`, an
 SDD-stage reference. On the natural reading the ledger _is_ an sdd-stage output,
 so "Downstream skills must not patch upstream SSOT directly" applied to it.
@@ -80,17 +96,14 @@ The bullet that used to sit here — "progress status updates only when the proj
 workflow explicitly allows downstream updates" — could not rescue that, for two
 reasons:
 
-- **The condition had no referent.** `progress status`, `project workflow` and
-  `downstream update` each occurred exactly once in the whole shipped tree: that
-  line itself. Nothing defined what the project workflow is, where such a
-  permission is recorded, or what the default is, so in a freshly initialized project the
-  condition could never be satisfied.
-- **It was too narrow even if it had.** It covered "progress status", while
-  `qfai-implement`'s completion gate item 10 additionally requires the `Evidence`
-  column, and the skill's own hard rules forbid the substitute
-  ("status-only evidence … MUST be rejected"). The content declared mandatory and
-  non-substitutable was precisely the content no rule authorised anyone to
-  persist.
+- **The condition had no referent.** `progress status`, `project workflow` and `downstream update`
+  each occurred exactly once in the whole shipped tree: that line itself. Nothing defined what the
+  project workflow is, where such a permission is recorded, or what the default is, so in a freshly
+  initialized project the condition could never be satisfied.
+- **It was too narrow even if it had.** It covered "progress status", while `qfai-implement`'s
+  completion gate item 10 additionally requires the `Evidence` column, and the skill's own hard
+  rules forbid the substitute ("status-only evidence … MUST be rejected"). The content declared
+  mandatory and non-substitutable was precisely the content no rule authorised anyone to persist.
 
 So an agent obeying the protocol could not satisfy gate item 10, and an agent
 satisfying it was in drift. The entry above names the file and the three cells
@@ -101,14 +114,12 @@ unconditionally, which is what removes the choice.
 The deadlock that put the ledger on this list recurs one and two columns over,
 and two shipped validator rules are what create it:
 
-- `TDDLIST_TEST_FILE_MISSING` fires at **error** severity for a row whose
-  `Test file` cell is empty or a dash placeholder, once its `Status` is `green`,
-  `refactor`, `review-fix` or `done`.
-- `TDDLIST_SELECTOR_UNRESOLVED` fires when the `Selector` cell's text is not
-  found in the named test file, and its own remediation text says to update the
-  selector. The per-row checkpoint command is `<runner> <Test file> -t
-'<Selector>'`, so an unresolved selector also produces a run that selects
-  nothing while exiting 0.
+- `TDDLIST_TEST_FILE_MISSING` fires at **error** severity for a row whose `Test file` cell is empty
+  or a dash placeholder, once its `Status` is `green`, `refactor`, `review-fix` or `done`.
+- `TDDLIST_SELECTOR_UNRESOLVED` fires when the `Selector` cell's text is not found in the named
+  test file, and its own remediation text says to update the selector. The per-row checkpoint
+  command is `<runner> <Test file> -t '<Selector>'`, so an unresolved selector also produces a run
+  that selects nothing while exiting 0.
 
 A row is seeded with a descriptive selector and, commonly, no test file: the
 path is a downstream decision, and the test's title does not exist until the
@@ -257,14 +268,12 @@ ratifies a comparison the author knew was fabricated.
    rerun executes or what it costs, and "rerun the owner skill" is the whole
    plan.
 
-5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
-   rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
-   changed or disappeared — and apply the upstream reset transition
-   (any status -> `todo`), recording the approved CR/DR ID in `DR-ID` — that
-   column carries both `DR-*` and `CR-*` references. The
-   sweep covers in-flight rows too: a `red` row whose obligation changed, and
-   an `exception` row whose anomaly the rerun resolved or superseded, reset the
-   same way. A row whose obligation was deleted outright is removed, not reset.
+5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation changed or
+   disappeared — and apply the upstream reset transition (any status -> `todo`), recording the approved CR/DR ID in `DR-ID` — that column carries both `DR-*` and
+   `CR-*` references. The sweep covers in-flight rows too: a `red` row whose obligation changed, and an `exception` row whose anomaly the rerun resolved or
+   superseded, reset the same way. A row whose obligation was deleted outright is removed, not reset — and removing it drops its `TDD-ID` out of the ledger's
+   maximum, so record that id as a tombstone bullet under the ledger's `## TDD-ID reservations` section
+   (`qfai-sdd/references/spec-traceability-rules.md`) or the next allocation reissues it.
 6. Resume the **blocked set of this CR** only after upstream artifacts are
    updated **and** the sweep has run. Resuming with a stale `done` row is
    resuming on a ledger that asserts something known to be false. Resume is
@@ -464,16 +473,17 @@ defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 
-- **Regenerable** — run logs, reports, and the remaining stage evidence.
-  Reproducible by rerunning the owner skill; not committed.
-- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`), durable
-  decision records (`.qfai/evidence/decisions/*.json`), and the per-item
-  RED/GREEN evidence every `test-list.md` `Evidence` anchor resolves against:
-  `.qfai/evidence/implement-<spec-id>.md` and `.qfai/evidence/atdd-<spec-id>.md`.
-  They carry user approval, or an observation that cannot be retaken — a RED is
-  recorded _before_ the code that makes it pass exists — so they are committed,
-  and the managed `.gitignore` block negates them after the ignore lines for
-  exactly that reason.
+- **Durable per-item TDD evidence** — `.qfai/evidence/implement-<spec-id>.md`
+  and `.qfai/evidence/atdd-<spec-id>.md`. Ledger `Evidence` cells point to
+  anchors in these files, and validation resolves those anchors on a fresh
+  clone, so the managed `.gitignore` block re-includes and commits them.
+- **Regenerable** — other stage logs, run logs, and reports. Reproducible by
+  rerunning the owner skill; not committed.
+- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
+  durable decision records (`.qfai/evidence/decisions/*.json`). They carry
+  user approval and cannot be regenerated, so they are committed. The managed
+  `.gitignore` block written by `npx qfai init` negates them after the ignore
+  lines for exactly this reason.
 
   **Committing them is a step, not a consequence.** A negation only stops git
   hiding a file; it does not stage one. Left untracked, the anchor resolves on
@@ -487,8 +497,8 @@ defect is gone with it. The drain is what pays for dropping the round.
   — diffs the branch against `baseBranch` and emits `QFAI-DRIFT-001` (`error`)
   for every changed file under `paths.contractsDir`, under `_policies/`, or
   matching a protected spec-pack filename. A Change Request at `Status:
-approved` that **names the changed path** silences it; an `open` CR does not,
-  because an open CR authorises nothing. The check does not run in the `sdd`
+approved` whose **`## Impact scope` names the changed path** silences it — not
+  a path named elsewhere in it, not a contract ID, and never an `open` CR. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set**

@@ -12,6 +12,7 @@ import {
   readdir,
   readFile,
   readlink,
+  realpath,
   rename,
   rm,
   rmdir,
@@ -28,7 +29,7 @@ import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
-import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
@@ -39,6 +40,7 @@ import {
   renderCodexAgentToml,
   type CodexAgentKind,
 } from "../../core/codexAgentToml.js";
+import { detectProjectLanguages, fillLanguageRules } from "../../core/instructionLanguageRules.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
@@ -48,9 +50,15 @@ import {
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
+  AGENT_ENTRY_POINT_FILES,
+  extractManagedRulesSection,
+  needsManagedRulesSection,
+} from "../../core/agentEntryPoints.js";
+import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  WORKLOG_ENTRY_STATUSES,
   hasInitMarkerSignature,
   joinAssistantAssetLayer,
   joinAssistantLayer,
@@ -134,6 +142,13 @@ export type InitOptions = {
   yes: boolean;
   upgradeAssistantTree?: boolean;
   /**
+   * `--verbose`: expand the `skipped` list in the run report. Off by default —
+   * a no-op re-run skips every shipped asset, and that list is the "nothing to
+   * do here" case, so the report names its count and points at this flag
+   * instead of printing several hundred paths.
+   */
+  verbose?: boolean;
+  /**
    * Overrides the running tool version for the deprecation-severity decision.
    * Tests need it to exercise both sides of a sunset; without it the only
    * observable behaviour is whatever side the shipped version happens to sit
@@ -156,11 +171,11 @@ export async function runInit(options: InitOptions): Promise<void> {
   // `qfai init` では宛先が暗黙になり、誤ったターミナルタブからの実行が
   // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
   // 中断・失敗した実行でも対象がスクロールバックに残る。
-  info(`qfai init: dest=${destRoot}`);
+  info(`qfai init: dest=${formatReportPath(destRoot)}`);
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。加えて qfai 提供の通常ファイル .github/copilot-instructions.md・.github/instructions/**（code-review / principles のレビュー指示）・統合ディレクトリの README.md も shipped テンプレートで再生成するため、これらへのローカル編集は失われます（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
     );
   }
 
@@ -378,6 +393,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.dryRun,
   );
+  // Runs AFTER the create-only root copy: the files it repairs are exactly the
+  // ones that copy skipped because the project already had them.
+  const entryPointRulesResult = await ensureAgentEntryPointRules(
+    rootAssets,
+    destRoot,
+    options.dryRun,
+  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -452,7 +474,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // These run AFTER copyTemplateTree so they can detect when the
   // asset templates already populated a layer (they fill in only
   // missing .gitkeep / README placeholders).
-  const assistantTreeResult = await seedAssistantLayers(destRoot, options.dryRun);
+  const assistantTreeResult = await seedAssistantLayers(destRoot, assistantAssets, options.dryRun);
   const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
 
   // Activation guidance for newly created instructions files
@@ -478,6 +500,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
+      ...entryPointRulesResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
@@ -493,14 +516,16 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
       ...legacyEvidenceIgnoreResult.skipped,
+      ...entryPointRulesResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
     ].filter((entry) => !rewrittenPaths.has(entry)),
-    [...removed, ...upgradeResult.removed],
+    [...removed, ...upgradeResult.removed, ...assistantTreeResult.removed],
     options.dryRun,
     "init",
     destRoot,
+    options.verbose ?? false,
   );
 
   for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
@@ -852,31 +877,24 @@ async function readTemplateReadme(filePath: string): Promise<string | null> {
 // 4-layer assistant-tree seed + project-root steering surface seed
 // ---------------------------------------------------------------------------
 
-async function seedAssistantLayers(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
-  const copied: string[] = [];
-  const skipped: string[] = [];
-
-  for (const layer of ASSISTANT_LAYERS) {
-    const layerDir = joinAssistantLayer(destRoot, layer);
-    const gitkeep = path.join(layerDir, ".gitkeep");
-    if (await pathExists(gitkeep)) {
-      skipped.push(gitkeep);
-      continue;
-    }
-    copied.push(gitkeep);
-    if (!dryRun) {
-      await mkdir(layerDir, { recursive: true });
-      await writeFile(gitkeep, assistantLayerGitkeepBody(layer), "utf-8");
-    }
-  }
-
-  return { copied, skipped };
-}
-
-function assistantLayerGitkeepBody(layer: AssistantLayer): string {
+/**
+ * The `.gitkeep` bodies a pre-fix `qfai init` wrote, per layer, as a matcher.
+ *
+ * Every project that ran one of those versions still carries them, and
+ * stopping the write does nothing for those projects: the file is skipped
+ * forever, and its body is a stale directory index. Matching the generator's
+ * output exactly is what makes removing it safe — anything else in that file
+ * is a user edit and is left alone.
+ *
+ * Two generator versions wrote this file. The first named the recut's internal
+ * cross-spec change id inside the parentheses; the second dropped it, because
+ * that id resolves to nothing outside this repository. Both are unedited
+ * generator output and both have to be removable, so the id is matched as an
+ * optional trailing clause rather than spelled out — writing it here would put
+ * an internal id back into the shipped bundle, which is exactly what dropping
+ * it was for.
+ */
+function legacyAssistantLayerGitkeepPattern(layer: AssistantLayer): RegExp {
   const purposes: Record<AssistantLayer, string> = {
     constitution:
       "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
@@ -885,14 +903,210 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
       "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
     process: "Workflow / process docs and migration memos (process/migrations/*).",
   };
-  return [
+  const template = [
     `# .qfai/assistant/${layer}/`,
     "",
     purposes[layer],
     "",
-    "Seeded by qfai init (4-layer assistant-tree recut).",
+    `Seeded by qfai init (4-layer assistant-tree recut${CHANGE_ID_SLOT}).`,
     "",
   ].join("\n");
+  const pattern = template
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(CHANGE_ID_SLOT, "(?:, [A-Z]{2,5}-[0-9]{1,4})?")
+    // A checkout with `core.autocrlf` on holds the same bytes with CRLF
+    // endings, so both line-ending forms count as "unedited".
+    .replace(/\n/g, "\\r?\\n");
+  return new RegExp(`^${pattern}$`);
+}
+
+/**
+ * Placeholder standing in for the optional change-id clause while the template
+ * is escaped. It carries no regex metacharacters, so escaping leaves it intact
+ * and it can be swapped for the real alternation afterwards.
+ */
+const CHANGE_ID_SLOT = "<change-id>";
+
+/**
+ * Ceiling for a `.gitkeep` read. The bodies this migration recognises are the
+ * generator's own five-line template, so anything past a kilobyte cannot be one
+ * and does not need to be in memory to prove it.
+ */
+const MAX_GITKEEP_BYTES = 4096;
+
+/**
+ * True when this `.gitkeep` is an unedited pre-fix `qfai init` placeholder.
+ *
+ * Read through `readBoundedRegularFile` rather than a bare `readFile`: this
+ * path is in a tree the adopter controls, and an unbounded read of a name that
+ * turns out to be a FIFO blocks `qfai init` forever, while a device or a
+ * multi-gigabyte file exhausts its memory — all to answer a question about a
+ * five-line placeholder. The helper refuses anything that is not a regular file
+ * within the ceiling, and every refusal lands on the conservative answer here:
+ * not provably the generator's output, so leave it alone.
+ */
+async function isLegacyGitkeep(gitkeep: string, layer: AssistantLayer): Promise<boolean> {
+  const bytes = await readBoundedRegularFile(gitkeep, MAX_GITKEEP_BYTES);
+  if (bytes === undefined) return false;
+  return legacyAssistantLayerGitkeepPattern(layer).test(bytes.toString("utf-8"));
+}
+
+/**
+ * True when every existing ancestor from `destRoot` down to `layerDir` is a
+ * real directory.
+ *
+ * `readBoundedRegularFile` refuses a `.gitkeep` that is itself a symlink, but
+ * nothing was checking the path ABOVE it. A project whose `.qfai/assistant/` is
+ * a symlink into a shared tree resolves every one of these calls through the
+ * link, and the migration's `rm` would then delete a file outside the
+ * repository — the one operation in this seeding pass that writes anywhere but
+ * the project. A populated link target also makes the preceding copy skip
+ * everything, so the deletion would be the ONLY effect the run had.
+ */
+async function layerPathHasNoSymlinkedAncestor(
+  destRoot: string,
+  layerDir: string,
+): Promise<boolean> {
+  const relative = path.relative(destRoot, layerDir);
+  let at = destRoot;
+  for (const segment of relative.split(path.sep).filter((part) => part.length > 0)) {
+    at = path.join(at, segment);
+    try {
+      const stats = await lstat(at);
+      if (stats.isSymbolicLink()) return false;
+    } catch (err: unknown) {
+      // Absent is fine — nothing to follow, and nothing to delete under it.
+      if (isEnoent(err)) continue;
+      // Anything else leaves the path unproven, which is the refusing side.
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Remove `gitkeep` only if the object being removed is the one whose body was
+ * verified, and report whether it went.
+ *
+ * Verifying a name and then unlinking that name are two resolutions of one
+ * string. An editor saving over the placeholder, or a concurrent `qfai init`,
+ * can replace the file in between, and the unlink then takes a file nothing
+ * checked — breaking the very promise this migration makes, that only an exact
+ * copy of the old generator output is deleted.
+ *
+ * Renaming the object aside first closes that: the rename moves whatever object
+ * holds the name, the name is then free, and anything a concurrent writer puts
+ * there afterwards is a new file this run never touches. The body is re-read
+ * from the quarantined object, so what is measured and what is deleted are the
+ * same inode.
+ *
+ * A rescued object is restored with `link` + `rm`, never `rename`, because
+ * `rename` would silently overwrite a file a concurrent run had already created
+ * at that name. If the name is taken, the newer file wins and the rescued one
+ * is left under its quarantine name rather than destroyed.
+ */
+async function removeLegacyGitkeep(gitkeep: string, layer: AssistantLayer): Promise<boolean> {
+  const quarantine = `${gitkeep}.qfai-legacy-${randomBytes(6).toString("hex")}`;
+  try {
+    await rename(gitkeep, quarantine);
+  } catch {
+    // Already gone, or not movable. Either way this run deletes nothing.
+    return false;
+  }
+  if (await isLegacyGitkeep(quarantine, layer)) {
+    await rm(quarantine, { force: true });
+    return true;
+  }
+  try {
+    await link(quarantine, gitkeep);
+    await rm(quarantine, { force: true });
+  } catch {
+    // The name is occupied again, or the link failed: leave the rescued object
+    // under its quarantine name. Losing a user's bytes is the one outcome this
+    // path must not have.
+  }
+  return false;
+}
+
+async function seedAssistantLayers(
+  destRoot: string,
+  assistantAssets: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+
+  for (const layer of ASSISTANT_LAYERS) {
+    const layerDir = joinAssistantLayer(destRoot, layer);
+    const gitkeep = path.join(layerDir, ".gitkeep");
+    const exists = await pathExists(gitkeep);
+    const isLegacy = exists && (await isLegacyGitkeep(gitkeep, layer));
+    // `.gitkeep` exists to keep an *empty* directory tracked. A layer the
+    // asset templates already filled needs none, so seeding one there only
+    // adds a file every reader is told to ignore. The asset side is checked
+    // as well so `--dry-run` reports what a real run would do: on a fresh
+    // directory copyTemplateTree has not written anything yet.
+    if ((await hasEntries(layerDir)) || (await hasEntries(path.join(assistantAssets, layer)))) {
+      if (!exists) {
+        // A placeholder that was never needed is neither created nor
+        // preserved, and listing its non-existent path under "skipped paths"
+        // would claim init protected a file that is not there.
+        continue;
+      }
+      if (isLegacy && (await layerPathHasNoSymlinkedAncestor(destRoot, layerDir))) {
+        // Populated layer, unedited legacy placeholder: delete it. Leaving it
+        // is what kept the stale body — and its internal change id — in every
+        // project that ever ran a pre-fix init.
+        if (dryRun) {
+          removed.push(gitkeep);
+          continue;
+        }
+        if (await removeLegacyGitkeep(gitkeep, layer)) {
+          removed.push(gitkeep);
+        } else {
+          // The object changed under us between the check and the move, so it
+          // is no longer the generator's output. It stays.
+          skipped.push(gitkeep);
+        }
+        continue;
+      }
+      // Report it as skipped only when an existing file is actually being
+      // left in place.
+      skipped.push(gitkeep);
+      continue;
+    }
+    if (exists && !isLegacy) {
+      // Empty layer, and the placeholder is already there and not the
+      // generator's: it is doing its job, or it is a user edit. Either way,
+      // leave it.
+      skipped.push(gitkeep);
+      continue;
+    }
+    // Written either because nothing is there, or to replace the legacy prose
+    // body with the empty placeholder an empty layer actually needs.
+    copied.push(gitkeep);
+    if (!dryRun) {
+      await mkdir(layerDir, { recursive: true });
+      // Genuinely empty: the file is a git placeholder, not a directory index.
+      await writeFile(gitkeep, "", "utf-8");
+    }
+  }
+
+  return { copied, skipped, removed };
+}
+
+/** True when `dir` exists and holds at least one entry. */
+async function hasEntries(dir: string): Promise<boolean> {
+  try {
+    const entries = await readdir(dir);
+    return entries.length > 0;
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return false;
+    }
+    throw err;
+  }
 }
 
 function buildProjectSteeringReadmeBody(): string {
@@ -942,10 +1156,13 @@ function buildProjectSteeringReadmeBody(): string {
 }
 
 function buildProjectSteeringEntryTemplate(): string {
-  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT) so the
-  // template cannot drift from the validator at seed time. An already-seeded
-  // template is create-only; later heading changes are reported by the drift
-  // notice in seedProjectSteering rather than written over the user's copy.
+  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS and the status
+  // enum from WORKLOG_ENTRY_STATUSES (both SSOT in assistantPaths.ts) so
+  // neither can drift from the validator at seed time. An already-seeded
+  // template is create-only; later heading or enum changes are reported by the
+  // drift notice in seedProjectSteering rather than written over the user's
+  // copy.
+  const statusEnum = WORKLOG_ENTRY_STATUSES.join(" | ");
   const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
     heading,
     "",
@@ -954,15 +1171,22 @@ function buildProjectSteeringEntryTemplate(): string {
   ]);
   return [
     "---",
-    "id: 2026-MM-DD-kebab-case-id   # required; kebab-case ASCII; matches filename stem",
-    "status: active                 # required; enum: active | handoff | archived",
-    "kind: decision                 # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
-    "created: YYYY-MM-DD            # required; ISO-8601 date",
-    "updated: YYYY-MM-DD            # required; ISO-8601 date; >= created",
-    'scope: global                  # required; "global" or "spec-NNNN"',
-    "blocking: false                # required; boolean",
-    'promote-to: null               # required; "spec-NNNN/07_Decisions.md" or null',
-    "links: []                      # required; array (may be empty)",
+    // ONE space before each `#`, not a padded column. The alignment reads better in
+    // this source and does not survive contact with a formatter: Prettier collapses a
+    // run of spaces before a YAML trailing comment, so the first `prettier --write`
+    // over an adopter's tree rewrites a file the adopter never touched. The seed is
+    // create-only and re-init compares it byte for byte, so from then on every run
+    // reports `_templates/entry.md differs from the seed this qfai release generates`
+    // — a drift notice about the formatter, printed forever, on a file nobody edited.
+    "id: 2026-MM-DD-kebab-case-id # required; kebab-case ASCII; matches filename stem",
+    `status: active # required; enum: ${statusEnum}`,
+    "kind: decision # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
+    "created: YYYY-MM-DD # required; ISO-8601 date",
+    "updated: YYYY-MM-DD # required; ISO-8601 date; >= created",
+    'scope: global # required; "global" or "spec-NNNN"',
+    "blocking: false # required; boolean",
+    'promote-to: null # required; "spec-NNNN/07_Decisions.md" or null',
+    "links: [] # required; array (may be empty)",
     "---",
     "",
     "# Title of the entry",
@@ -1651,6 +1875,7 @@ function classifyLegacySteeringEntry(relPath: string): { layer: AssistantLayer; 
     "requirements-decomposition",
     "communication",
     "thinking",
+    "review-convergence",
     "shared-skill-delegation-baseline",
     "shared-skill-operating-baseline",
   ]);
@@ -2045,6 +2270,8 @@ function rebuildManagedBlock(existingBlock: string): string {
 const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!change-request-*.md",
   "!decision-*.md",
+  "!implement-*.md",
+  "!atdd-*.md",
   "!coverage-depth-*.md",
   "!decisions/",
   "!decisions/**",
@@ -2105,6 +2332,149 @@ async function ensureLegacyEvidenceIgnoreNegations(
   return { copied: [target], skipped: [] };
 }
 
+// ---------------------------------------------------------------------------
+// AGENTS.md / CLAUDE.md — QFAI managed cross-AI rules section
+// ---------------------------------------------------------------------------
+
+/**
+ * Connect an already-present `AGENTS.md` / `CLAUDE.md` to the rule masters this
+ * run just seeded.
+ *
+ * The root templates are copied create-only, so in a repository that already
+ * had either file the copy skips it and `.agents/rules/**` is written with
+ * nothing pointing at it. Codex loads `AGENTS.md` and Claude Code loads
+ * `CLAUDE.md`; neither discovers a directory it is never told about, so the
+ * safety rules — the ones about where an agent may write and who decides a
+ * release version — silently applied to fresh projects only.
+ *
+ * The appended block is read out of the shipped template rather than composed
+ * here, so the file a fresh init receives and the file an existing project
+ * gains cannot word the same rules differently. Nothing outside the markers is
+ * read back or rewritten, and a run that finds the start marker (or the masters
+ * already cited by hand) writes nothing at all.
+ */
+async function ensureAgentEntryPointRules(
+  rootAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const name of AGENT_ENTRY_POINT_FILES) {
+    const target = path.join(destRoot, name);
+    const existing = await readTextFileIfPresent(target);
+    if (existing === null) {
+      // Absent: the create-only copy above owns this case, and on a dry run
+      // nothing has been written yet.
+      skipped.push(target);
+      continue;
+    }
+
+    const template = await readTextFileIfPresent(path.join(rootAssets, name));
+    const section = template === null ? null : extractManagedRulesSection(template);
+    if (section === null) {
+      // The shipped template lost its markers. Appending a guessed region of it
+      // would be worse than saying so: the project keeps a file that cites no
+      // rule, and now knows it.
+      error(
+        `  WARNING: ${name} は既存のため更新していません。テンプレートの managed section が見つからないので、` +
+          `\`.agents/rules/\` への参照を手動で追記してください（未参照のままだと共有ルールが AI のコンテキストに入りません）。`,
+      );
+      skipped.push(target);
+      continue;
+    }
+
+    if (!needsManagedRulesSection(existing, section)) {
+      skipped.push(target);
+      continue;
+    }
+
+    if (dryRun) {
+      info(`  would update: ${target} (append .agents/rules section)`);
+      copied.push(target);
+      continue;
+    }
+
+    // Exactly one blank line between the project's last line and the section,
+    // whatever the file happened to end with.
+    const body = existing.replace(/\s*$/, "");
+    const separator = body.length === 0 ? "" : "\n\n";
+    await writeFile(target, `${body}${separator}${section}\n`, "utf-8");
+    info(`  updated: ${target} (appended .agents/rules section; existing content kept)`);
+    copied.push(target);
+  }
+
+  return { copied, skipped };
+}
+
+/** File contents, or `null` when nothing is there. Other read faults throw. */
+async function readTextFileIfPresent(target: string): Promise<string | null> {
+  try {
+    return await readFile(target, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * One past the last line of the managed block that starts at `startIdx`.
+ *
+ * ## What this replaces, and the bug it closes
+ *
+ * Both callers used to walk forward while the line was KNOWN and stop at the first that was
+ * not. A line sitting inside the block that the current writer no longer emits and that was
+ * never registered as legacy therefore truncated the block at itself — and this repository had
+ * one, `.qfai/output/*`, written by an older release. The consequences compound:
+ *
+ *   - `extractManagedBlock` returned the marker plus one line, so the freshness check found the
+ *     governance negations "missing" and the early return never fired;
+ *   - `removeManagedBlock` stripped that same two-line prefix and left the rest in place;
+ *   - the rebuilt block — marker, the one line it saw, and every negation — went back in at the
+ *     old position, ABOVE the twenty lines that had never been removed.
+ *
+ * So every `qfai init` appended a second copy of the negations, and appended it above the
+ * ignore lines that cancel them, where git's last-match rule makes it inert. Noise that grows
+ * by a block per run, and noise is what makes a real change to `.gitignore` unreadable in
+ * review (#1168).
+ *
+ * ## The rule, and why it still protects a project's own lines
+ *
+ * The block is terminated by a blank line, by a comment that is not the marker, or by the end
+ * of the file — that is how it is written, and how a project's own section is separated from
+ * it. Inside that region the block ends at its LAST known line.
+ *
+ * Both halves matter. Tolerating unknown lines between known ones is what stops a retired line
+ * truncating the block. Ending at the last KNOWN line is what keeps the old protection: lines a
+ * project appended directly under the block, with no blank between, are still outside it, so
+ * they keep their position relative to the negations and git's last-match verdict for them does
+ * not change.
+ *
+ * An unknown line absorbed from between two known ones is not lost: `rebuildManagedBlock` keeps
+ * every block line that is neither the marker, a governance negation, nor a retired line, which
+ * is exactly what "the project's own ignore set" means there.
+ */
+function managedBlockEnd(
+  lines: readonly string[],
+  startIdx: number,
+  knownLines: ReadonlySet<string>,
+): number {
+  let lastKnown = startIdx; // the marker itself is always part of the block
+  for (let index = startIdx + 1; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.trim() === "" || line.trimStart().startsWith("#")) {
+      break;
+    }
+    if (knownLines.has(line)) {
+      lastKnown = index;
+    }
+  }
+  return lastKnown + 1;
+}
+
 /**
  * The QFAI managed block, or `""` when the marker is absent.
  *
@@ -2134,10 +2504,7 @@ function extractManagedBlock(content: string): string {
       (line, index) => index >= cursor && line.includes(QFAI_GITIGNORE_MARKER),
     );
     if (startIdx === -1) break;
-    let endIdx = startIdx + 1;
-    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-      endIdx += 1;
-    }
+    const endIdx = managedBlockEnd(lines, startIdx, knownLines);
     for (const line of lines.slice(startIdx, endIdx)) {
       // The marker itself is deduplicated with everything else, so a merged
       // block carries exactly one.
@@ -2173,12 +2540,9 @@ function removeManagedBlock(content: string): { stripped: string; blockAt: numbe
       blockAt = startIdx;
     }
 
-    let endIdx = startIdx + 1; // marker is always consumed
-
-    // Consume contiguous lines that belong to any known block line (order-independent)
-    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-      endIdx++;
-    }
+    // Through the last known line, tolerating a retired line the writer no longer
+    // emits. See {@link managedBlockEnd}.
+    let endIdx = managedBlockEnd(lines, startIdx, knownLines);
 
     // Also remove one trailing blank line if present
     if (endIdx < lines.length) {
@@ -2205,6 +2569,127 @@ function removeManagedBlock(content: string): { stripped: string; blockAt: numbe
   };
 }
 
+/**
+ * C0, DEL and C1 — the ranges a terminal reads as commands, not as text.
+ *
+ * A predicate rather than a character-class regex: the class is a
+ * `no-control-regex` violation, and spelling the ranges as numbers keeps them
+ * readable without an eslint suppression.
+ */
+function isControlChar(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return code < 0x20 || (code >= 0x7f && code <= 0x9f);
+}
+
+/**
+ * Renders one relative path for stdout.
+ *
+ * A path only reaches here from the filesystem, and on
+ * `--upgrade-assistant-tree` that includes names an untrusted repository chose:
+ * a legacy `instructions/` entry whose name carries a newline or an ANSI escape
+ * is carried through the migration into `copied` and printed verbatim, which is
+ * enough to forge the report's own headings or drive the terminal. A report
+ * whose purpose is reviewing changes before they happen must not be
+ * counterfeitable by the thing it reports on.
+ *
+ * Ordinary paths are returned untouched — quoting every line would churn the
+ * output for the case that is not a threat. Only a name that actually carries a
+ * control character is escaped, and then it is quoted so the escapes are read
+ * as one token.
+ */
+function formatReportPath(relative: string): string {
+  let escaped = "";
+  let sawControl = false;
+  for (const char of relative) {
+    if (isControlChar(char)) {
+      sawControl = true;
+      escaped += `\\x${(char.codePointAt(0) ?? 0).toString(16).padStart(2, "0")}`;
+    } else if (char === "\\" || char === '"') {
+      escaped += `\\${char}`;
+    } else {
+      escaped += char;
+    }
+  }
+  return sawControl ? `"${escaped}"` : relative;
+}
+
+/**
+ * Absolute paths as report-ready relative ones: deduplicated and sorted.
+ *
+ * `collectTemplateFiles()` accumulates `readdir()` results, whose order no
+ * filesystem guarantees, so two runs over the same tree could list the same
+ * write set in different orders — leaving a `--dry-run` preview that cannot be
+ * diffed against another checkout and snapshots that churn with no change in
+ * content. Sorting the relative form rather than the absolute one keeps the
+ * order the reader sees the order that is sorted.
+ *
+ * The relative form comes from `toRelativePath()` rather than `path.relative()`
+ * so a Windows run reports `.qfai/assistant/...` and not
+ * `.qfai\\assistant\\...`: the report is copied into issues and diffed between
+ * checkouts, so one separator on every platform is the only comparable form.
+ */
+function toReportPaths(paths: string[], baseDir: string): string[] {
+  return [...new Set(paths.map((absolute) => toRelativePath(baseDir, absolute)))].sort();
+}
+
+/**
+ * The skip set with everything the run wrote taken out of it.
+ *
+ * De-duplicating each list on its own only settles repeats *within* a list; the
+ * two lists can still name the same path. On a real `--upgrade-assistant-tree`
+ * run the migration writes its destination and books it into `copied`, and the
+ * template copy that follows finds that destination present and books the same
+ * path into `skipped` — so one path was reported as both written and skipped,
+ * and the skip count (the number shown when `--verbose` is off, and therefore
+ * the only thing most operators see) was too high by one per migrated file.
+ *
+ * A write beats a skip: some producer did act on the path, so the categories
+ * are resolved in the writer's favour rather than reported twice. `written` is
+ * already relative, deduplicated and sorted, so the survivors keep their order.
+ */
+function excludeWritten(skippedPaths: string[], writtenPaths: string[]): string[] {
+  const written = new Set(writtenPaths);
+  return skippedPaths.filter((relative) => !written.has(relative));
+}
+
+function listReportPaths(relativePaths: string[]): void {
+  for (const relative of relativePaths) {
+    info(`    - ${formatReportPath(relative)}`);
+  }
+}
+
+/**
+ * 実行レポート。詳細を出す価値があるのは `copied` の側である。
+ *
+ * `--dry-run` は「これから何に触れるのか」に答えるための機能なので、
+ * `copied` は `removed` と同じく全件列挙し、見出しも dryRun で言い分ける。
+ * 逆に `skipped` は「ここは何もすることがない」ケースであり、初期化済み
+ * ディレクトリへの no-op 再実行では同梱アセット全件がここに入る。既定は
+ * カウントのみに畳み、一覧は `--verbose` の背後に置く。
+ *
+ * 見出しが `written` / `would write` なのは、`copied` が新規作成だけの集合
+ * ではないため。`--force` の skills/agents 再生成や `.gitignore` の managed
+ * block 追記は既存ファイルの更新であり、`created` と呼ぶと dry-run の
+ * プレビューが破壊的な上書きを新規作成に見せてしまう。
+ *
+ * 各リストは列挙前に重複排除し、さらにソートする (`toReportPaths`)。例えば
+ * `--upgrade-assistant-tree --dry-run` では、移行処理が書き込みを抑止したまま
+ * 移行先を `copied` に積み、その移行先がまだ存在しないので後続のテンプレート
+ * コピーも同じパスを `copied` に積む。重複したまま出すと件数が実際の実行と
+ * ずれる。順序は `readdir()` 由来でどのファイルシステムも保証しないため、
+ * ソートしないと同じ書き込み集合でも一覧の並びが変わり、プレビューを別
+ * チェックアウトと差分比較できない。
+ *
+ * リスト内の重複排除だけではカテゴリ間の重複は残る。実行時の
+ * `--upgrade-assistant-tree` では移行処理が移行先を書いて `copied` に積み、
+ * 後続のテンプレートコピーがその移行先を既存とみなして `skipped` に積むため、
+ * 同一パスが written と skipped の両方に出て skipped 件数も膨らむ。書き込まれた
+ * パスは skip ではないので、`excludeWritten` で skipped から除外する。
+ *
+ * この 3 リストは `baseDir` 配下のパスだけを扱う。working tree 外への変更
+ * (`configureGitSymlinks` の `core.symlinks`) はここには入らないので、その
+ * 開示はその書き込み自身が行う。
+ */
 function report(
   copied: string[],
   skipped: string[],
@@ -2212,26 +2697,38 @@ function report(
   dryRun: boolean,
   label: string,
   baseDir: string,
+  verbose: boolean,
 ): void {
+  const writtenPaths = toReportPaths(copied, baseDir);
+  const skippedPaths = excludeWritten(toReportPaths(skipped, baseDir), writtenPaths);
+  const removedPaths = toReportPaths(removed, baseDir);
+
   // 宛先を必ず名指しする。相対パスだと素の実行で "." になり何も
   // 開示しないため、`doctor` の root= とは違い絶対パスを出す。
-  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${baseDir})`);
-  if (copied.length > 0) {
-    info(`  created: ${copied.length}`);
+  // Escaped like every path below it. `--dir` is operator-supplied and echoed
+  // verbatim here, so a destination carrying a newline or an ANSI sequence could
+  // forge report lines in the very report the escaping exists to make trustworthy.
+  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${formatReportPath(baseDir)})`);
+  if (writtenPaths.length > 0) {
+    info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
+    info(dryRun ? "  would write paths:" : "  written paths:");
+    listReportPaths(writtenPaths);
   }
-  if (skipped.length > 0) {
-    info(`  skipped: ${skipped.length}`);
-    info("  skipped paths:");
-    for (const skippedPath of skipped) {
-      info(`    - ${toRelativePath(baseDir, skippedPath)}`);
+  if (skippedPaths.length > 0) {
+    info(`  skipped: ${skippedPaths.length}`);
+    if (verbose) {
+      info("  skipped paths:");
+      listReportPaths(skippedPaths);
+    } else {
+      info("  (re-run with --verbose to list the skipped paths)");
     }
   }
-  if (removed.length > 0) {
-    info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
+  if (removedPaths.length > 0) {
+    info(
+      `  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removedPaths.length}`,
+    );
     info(dryRun ? "  would remove paths:" : "  removed paths:");
-    for (const removedPath of removed) {
-      info(`    - ${toRelativePath(baseDir, removedPath)}`);
-    }
+    listReportPaths(removedPaths);
   }
 }
 
@@ -2557,12 +3054,75 @@ async function syncIntegrationWrappers(
     }
   }
 
-  // Step 3.5: Distribute Copilot review instructions (create-only, force-disabled)
-  const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
+  // Step 3.5: Distribute Copilot review instructions (create-only, `--force` refreshes).
+  //
+  // These two files are qfai-authored review guidance shipped from `assets/`, not
+  // project content — the same category as `copilot-instructions.md` just above and
+  // as the `STANDARD_ASSET_PATHS` trees. Skipping them unconditionally meant a
+  // correction to the shipped template reached new projects and nobody else, with no
+  // command that would update an installed repository and no signal that it was
+  // running stale guidance. `--force` is the supported refresh path.
+  const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"] as const;
+  // Resolved ONCE, not per file: the answer is a property of the project, and asking twice
+  // reads the same manifests twice on a path that already touches the disk plenty.
+  const projectLanguages = await detectProjectLanguages(destRoot);
+  // Reclaim staging files an abnormally-terminated earlier run left here. A
+  // crash skips `replaceWithRegularFile`'s `finally`, and every run stages under
+  // a fresh name, so without this the orphans only accumulate in a tracked
+  // directory. Not under `--dry-run`, which promises to change nothing.
+  const instructionsDir = path.join(destRoot, ".github", "instructions");
+  if (!options.dryRun) {
+    await sweepStagedFiles(destRoot, instructionsDir);
+  }
+
   for (const fileName of instructionsFiles) {
-    const dest = path.join(destRoot, ".github", "instructions", fileName);
+    const dest = path.join(instructionsDir, fileName);
     const alreadyExists = await pathExists(dest);
-    if (alreadyExists) {
+    // An overwrite is only ours to perform when the entry it lands on lives
+    // inside the project. `pathExists` is lstat-based, so a leaf symlink is
+    // handled below by replacing the entry — but an **ancestor** symlink
+    // (`.github` or `.github/instructions` pointing at a shared directory)
+    // makes `dest` resolve to somebody else's file that lstat reports as an
+    // ordinary one. Before this loop honoured `--force` that file was skipped
+    // as pre-existing; refusing here keeps it that way. Creation is not
+    // gated: writing a file where none existed destroys nothing, and gating
+    // it would stop init from provisioning a deliberately shared directory.
+    const escapesProject =
+      alreadyExists && options.force && (await resolvesOutsideProject(destRoot, dest));
+    // What `--force` may replace is stated as an ALLOWLIST, not as a list of
+    // things to refuse. The contract is "update an existing instructions file
+    // or the symlink entry standing in for one", and only a regular file and a
+    // symlink are that. Everything else `lstat` can report is user data this
+    // command was never asked to destroy: a real directory holds actual files
+    // (a symlink to one reports as a link, not a directory), and a FIFO, a
+    // socket or a device node is replaced outright by the `rename` below —
+    // each of them was preserved as pre-existing before this loop honoured
+    // `--force`, and a refusal list would have had to name every one of them
+    // to keep it that way. Declining leaves the operator to resolve it.
+    // `undefined` covers both "not looked at" (no `--force`, or nothing there)
+    // and an `lstat` that failed after `pathExists` saw the entry — a vanished
+    // entry makes this a creation, which destroys nothing.
+    const existingKind = alreadyExists && options.force ? await safeLstat(dest) : undefined;
+    const isReplaceableEntry =
+      existingKind === undefined || existingKind.isFile() || existingKind.isSymbolicLink();
+    const refuseOverwrite = escapesProject || !isReplaceableEntry;
+    if (alreadyExists && (!options.force || refuseOverwrite)) {
+      if (escapesProject) {
+        info(
+          `  skipped: ${dest} はプロジェクト外へ解決します (--force でも上書きしません)。` +
+            `更新するにはリンク先で直接編集してください。`,
+        );
+      } else if (existingKind?.isDirectory() === true) {
+        info(
+          `  skipped: ${dest} はディレクトリです (--force でも削除しません)。` +
+            `配下の内容を退避してディレクトリを削除してから再実行してください。`,
+        );
+      } else if (!isReplaceableEntry) {
+        info(
+          `  skipped: ${dest} は通常ファイルでも symlink でもありません ` +
+            `(--force でも置き換えません)。該当エントリを退避してから再実行してください。`,
+        );
+      }
       skipped.push(dest);
     } else {
       copied.push(dest);
@@ -2571,7 +3131,14 @@ async function syncIntegrationWrappers(
         const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
         let content: string;
         try {
-          content = await readFile(templateSrc, "utf-8");
+          // The shipped template carries `<!-- qfai:language-rules -->`; what lands in the
+          // project must not. Filled with the rules for this project's language, or with the
+          // slot removed when there are none.
+          content = fillLanguageRules(
+            await readFile(templateSrc, "utf-8"),
+            fileName,
+            projectLanguages,
+          );
         } catch (err: unknown) {
           const code =
             typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
@@ -2581,7 +3148,7 @@ async function syncIntegrationWrappers(
               ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
           );
         }
-        await writeFile(dest, content, "utf-8");
+        await replaceWithRegularFile(dest, content);
       }
     }
   }
@@ -3187,6 +3754,229 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
 
 const UNREADABLE_OPEN_CODES = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENXIO"]);
 
+/**
+ * Whether `stat` can follow `linkPath`, i.e. whether the OS will resolve it.
+ *
+ * `EPERM` is the Windows answer for a FILE symlink whose target is a directory
+ * (#1095). Every other failure is left to the caller's existing handling: this
+ * asks one question and does not decide what an unreadable path means.
+ */
+async function isFollowable(linkPath: string): Promise<boolean> {
+  try {
+    await stat(linkPath);
+    return true;
+  } catch (error) {
+    return !isEperm(error);
+  }
+}
+
+/**
+ * Recreates an intact-but-unfollowable symlink, restoring it if that fails.
+ *
+ * The link is moved aside rather than deleted, for the reason
+ * {@link recreateFlattenedLink} gives: `EPERM` on Windows without Developer
+ * Mode leaves the wrapper absent, and an absent wrapper is the one state
+ * `QFAI-LINK-001` deliberately treats as benign — a project that predates a
+ * newly shipped skill looks the same. A wrong reparse type at least announces
+ * itself. Losing the entry would make the damage invisible to the gate whose
+ * remedy sent the operator here.
+ *
+ * The same three hazards the flattened path documents apply here, and are
+ * answered by the means that work on a symlink:
+ *
+ * - **What moved is verified, not what the caller saw.** `isFollowable`
+ *   inspected an inode that may no longer be at the pathname by the time
+ *   `rename` runs. A regular file another process wrote in that window would
+ *   have been moved aside and then deleted by the cleanup — losing a user's
+ *   file on an init with no `--force`.
+ * - **The restore claims the path atomically.** `rename` overwrites, so it
+ *   would destroy an entry created while this repair was in flight; `link`
+ *   refuses `EEXIST` but raises `EPERM` on a symlink. `symlink` does both —
+ *   refuses an occupied path, and reproduces the only content a symlink has,
+ *   its target.
+ * - **Cleanup is not the repair.** Once the new link stands, a failure to
+ *   remove the hold is a note.
+ */
+async function recreateUnfollowableLink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+): Promise<"created" | "skipped"> {
+  const hold = await claimHoldDir(linkPath);
+  const sidecar = path.join(hold, path.basename(linkPath));
+  try {
+    await rename(linkPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing moved, so the claim is a stray empty directory. Left behind it
+    // would push every later repair up the numbered candidates toward the
+    // ceiling and eventually refuse them all.
+    await rm(hold, { recursive: true, force: true }).catch(() => undefined);
+    throw renameErr;
+  }
+  if (!(await movedLinkNamesTarget(sidecar, target))) {
+    // Not the entry this repair was authorised to replace. It goes back by the
+    // same atomic claim the rollback uses, and the repair declines rather than
+    // recreating something over a path somebody else owns.
+    await restoreHeldLink({ hold, sidecar, linkPath, type });
+    return "skipped";
+  }
+  try {
+    await symlink(target, linkPath, type);
+  } catch (error: unknown) {
+    await restoreHeldLink({ hold, sidecar, linkPath, type, cause: error });
+    throw error;
+  }
+  await discardHold(hold, linkPath);
+  return "created";
+}
+
+/**
+ * Puts the held link back, or reports where it is when it cannot.
+ *
+ * `symlink` is the atomic claim: it refuses an occupied path, so a file another
+ * process created at `linkPath` survives instead of being overwritten by a
+ * `rename`. It reproduces the link's target, which is the whole of a symlink's
+ * content — the reparse type is the defect being repaired and is not worth
+ * restoring even when it could be.
+ *
+ * A restore that fails does not throw over its caller's error. It keeps the
+ * hold and says where the original is, because the pathname is empty at that
+ * moment and an operator who is not told would read the wrapper as simply gone.
+ */
+async function restoreHeldLink(args: {
+  hold: string;
+  sidecar: string;
+  linkPath: string;
+  type: "dir" | "file";
+  cause?: unknown;
+}): Promise<void> {
+  const { hold, sidecar, linkPath, type } = args;
+  const failure = await putBackHeldEntry(sidecar, linkPath, type);
+  if (failure === null) {
+    await discardHold(hold, linkPath);
+    return;
+  }
+  const occupied = (failure as NodeJS.ErrnoException | null)?.code === "EEXIST";
+  info(
+    [
+      occupied
+        ? `  note: ${linkPath} は別プロセスが作成した entry に占有されているため復元しませんでした。`
+        : `  note: ${linkPath} の復元に失敗しました: ${describeError(failure)}`,
+      `  note: 元の entry は次の場所に退避してあります: ${sidecar}`,
+    ].join("\n"),
+  );
+}
+
+/**
+ * Puts the held entry back at `linkPath`, or returns why it could not.
+ *
+ * The primitive depends on what is actually held, and both choices are forced:
+ *
+ * - a **symlink** goes back with `symlink`, the only non-overwriting way to
+ *   create one (`rename` overwrites; `link` raises `EPERM` on a symlink). An
+ *   `EEXIST` from it is the proof that another process took the pathname, which
+ *   is what makes the failed-recreate rollback safe.
+ * - **anything else** — a regular file another process wrote in the window
+ *   between the followability probe and the move — goes back with `rename`,
+ *   which is what moved it and the only thing that reproduces it. Reading the
+ *   target with `readlink` first and giving up when that failed left a user's
+ *   file inside a `.qfai-repair-*` directory instead of at its own path.
+ *
+ * `rename` overwrites, so it runs only while the pathname is still free. That
+ * check and the move are two operations and a race remains possible between
+ * them — but the alternative is either abandoning the entry or destroying
+ * whatever arrived, and an occupied path is reported rather than resolved.
+ */
+async function putBackHeldEntry(
+  sidecar: string,
+  linkPath: string,
+  type: "dir" | "file",
+): Promise<unknown> {
+  const held = await safeLstat(sidecar);
+  if (held?.isSymbolicLink() === true) {
+    const target = await readlink(sidecar).catch(() => null);
+    if (target === null) {
+      return new Error(`退避した symlink の target を読み取れません: ${sidecar}`);
+    }
+    return await symlink(target, linkPath, type).then(
+      () => null,
+      (err: unknown) => err,
+    );
+  }
+  if ((await safeLstat(linkPath)) !== undefined) {
+    const occupied: NodeJS.ErrnoException = new Error(
+      `${linkPath} は別の entry に占有されています`,
+    );
+    occupied.code = "EEXIST";
+    return occupied;
+  }
+  return await rename(sidecar, linkPath).then(
+    () => null,
+    (err: unknown) => err,
+  );
+}
+
+/**
+ * Removes the hold once the pathname is settled — a note on failure, never an
+ * error.
+ *
+ * The link is already in place by the time this runs, so an ACL, an antivirus
+ * hold or a transient I/O fault here is not the repair failing. Reporting it as
+ * one told the operator a repair had failed that had in fact succeeded.
+ */
+async function discardHold(hold: string, linkPath: string): Promise<void> {
+  try {
+    await rm(hold, { recursive: true, force: true });
+  } catch (cleanupErr: unknown) {
+    info(
+      `  note: 修復は成功しましたが退避先を削除できませんでした (${hold}): ` +
+        `${describeError(cleanupErr)} — ${linkPath} は修復済みです`,
+    );
+  }
+}
+
+/**
+ * Whether the entry now at `sidecar` is a symlink naming `target`.
+ *
+ * Asked after the move, on the inode this process actually holds. Before it,
+ * the answer describes whatever was at the pathname a moment ago.
+ */
+async function movedLinkNamesTarget(sidecar: string, target: string): Promise<boolean> {
+  const moved = await safeLstat(sidecar);
+  if (moved?.isSymbolicLink() !== true) return false;
+  const held = await readlink(sidecar).catch(() => null);
+  return held !== null && path.normalize(held) === path.normalize(target);
+}
+
+/**
+ * A directory beside `linkPath` that this call exclusively owns.
+ *
+ * {@link claimSidecar} cannot serve: it claims a FILE with `wx`, and `rename`
+ * onto an existing destination fails on Windows. Checking a name is free and
+ * then renaming onto it is the check-then-use shape the flattened path warns
+ * about. `mkdir` without `recursive` refuses `EEXIST` atomically, so the
+ * directory is the claim and the name inside it is unoccupied by construction.
+ *
+ * A PID alone is not unique: a second `runInit` in the same process, or a later
+ * one after PID reuse, would otherwise land on a hold an earlier failed repair
+ * left behind — and the success path removes it.
+ */
+async function claimHoldDir(linkPath: string): Promise<string> {
+  const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
+    try {
+      await mkdir(candidate);
+      return candidate;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
+    }
+  }
+  throw new Error(
+    `qfai init: 修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です`,
+  );
+}
+
 async function ensureSymlink(
   linkPath: string,
   target: string,
@@ -3201,7 +3991,46 @@ async function ensureSymlink(
       const isValid = path.normalize(currentTarget) === path.normalize(target);
 
       if (isValid && !options.force) {
-        return "skipped";
+        // The target string being right is not the same as the link working.
+        // On Windows a `git worktree add` writes these as FILE symlinks
+        // pointing at directories — at the moment git writes one its target
+        // does not yet exist in the new worktree and it has no reftype hint —
+        // and the OS will not follow that. `readlink` returns the correct
+        // target, so this branch declared the entry sound and changed nothing,
+        // while `qfai validate` reported it as damage. The remedy that finding
+        // prints is "re-run `qfai init`", which landed here and skipped: a
+        // finding an operator cannot clear by following it (#1095).
+        //
+        // Same conclusion as the flattened-link case below, for the same
+        // reason: `qfai init` is the one command that can repair this, so
+        // requiring `--force` — which nothing tells the operator — is not a
+        // remedy. Auto-repair is scoped to a link that is already ours and
+        // already names the right target; only its reparse type is wrong.
+        //
+        // Scoped to `type === "dir"`. An agent wrapper is a `type: "file"`
+        // link at a `.md` document, and git writes those with the right kind
+        // already — an `EPERM` on one is an ACL or filesystem failure, and
+        // recreating an identical link cannot clear it, so the next validate
+        // reports the same finding. Probing followability there would trade a
+        // visible wrapper for a churned one and no repair.
+        //
+        // `recreateFlattenedLink` is not the helper for this: it is for a
+        // regular FILE whose content is the target string, and its rollback is
+        // built on `link()` and a 4096-byte content check. Neither applies to a
+        // symlink — `link()` on one raises EPERM. But the rollback ITSELF does
+        // apply, and is done below: without it a failed recreate leaves the
+        // wrapper absent, which is the one state `QFAI-LINK-001` deliberately
+        // treats as benign, so the damage becomes invisible to the very gate
+        // that sent the operator here. `--force` has always had that gap, and
+        // an explicit operator action is not an argument for taking it
+        // automatically on every init.
+        if (type === "file" || (await isFollowable(linkPath))) {
+          return "skipped";
+        }
+        if (options.dryRun) {
+          return "created";
+        }
+        return await recreateUnfollowableLink(linkPath, target, type);
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
@@ -3827,6 +4656,158 @@ async function safeLstat(target: string): Promise<Stats | undefined> {
     return await lstat(target);
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * True when `target`'s **containing directory** resolves outside `destRoot`.
+ *
+ * `lstat` answers about the last path component only, so it cannot see an
+ * ancestor symlink: with `.github/instructions` pointing at a shared
+ * directory, `dest` is a perfectly ordinary file — one that belongs to
+ * whatever the link points at, not to this project. Both sides are
+ * `realpath`ed so a project reached through a symlink (`/tmp` on macOS, a
+ * junctioned checkout on Windows) is not mistaken for an escape.
+ *
+ * The leaf is deliberately not resolved: a symlink at `dest` itself is
+ * replaced as an entry by {@link replaceWithRegularFile}, which never writes
+ * through it, so it is not an escape.
+ *
+ * A `realpath` failure answers `true`. Not being able to prove the path stays
+ * inside the project is not a licence to overwrite it.
+ */
+async function resolvesOutsideProject(destRoot: string, target: string): Promise<boolean> {
+  let rootReal: string;
+  let parentReal: string;
+  try {
+    rootReal = await realpath(destRoot);
+    parentReal = await realpath(path.dirname(target));
+  } catch {
+    return true;
+  }
+  const relative = path.relative(rootReal, parentReal);
+  // Compare whole path segments. A prefix test on `".."` also matches a
+  // sibling directory whose name merely begins with two dots (`..rules`), and
+  // that one is inside the project: the escape is the `..` *segment*, not the
+  // characters. Getting this wrong skipped a legitimate refresh in silence.
+  const escapes = relative === ".." || relative.startsWith(`..${path.sep}`);
+  return escapes || path.isAbsolute(relative);
+}
+
+/** Marks a {@link replaceWithRegularFile} staging file. */
+const STAGING_INFIX = ".qfai-init-";
+
+/** The sibling path {@link replaceWithRegularFile} stages `dest` at. */
+function stagingPathFor(dest: string): string {
+  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${Date.now().toString(36)}`;
+}
+
+/**
+ * True for a basename {@link stagingPathFor} could have produced: a destination
+ * name, the infix, then the base-36 pid and timestamp.
+ *
+ * Read back through the same constant the writer uses, so the sweep cannot end
+ * up looking for a shape nothing writes — which would leave it passing while
+ * reclaiming nothing.
+ */
+function isStagingName(name: string): boolean {
+  const at = name.lastIndexOf(STAGING_INFIX);
+  if (at <= 0) return false;
+  return /^[0-9a-z]+-[0-9a-z]+$/.test(name.slice(at + STAGING_INFIX.length));
+}
+
+/**
+ * Remove staging files an earlier run left behind in `dir`.
+ *
+ * {@link replaceWithRegularFile} deletes its own staging file on every path
+ * that does not consume it — but `finally` is a JavaScript construct, and
+ * SIGINT, SIGKILL, a crashed process or a power loss ends the run without
+ * running one. The partial `.qfai-init-*` then stays in `.github/instructions/`,
+ * which is tracked, and because each run stages under a fresh `pid`-timestamp
+ * name nothing would ever reclaim it: repeated failures accumulate orphans
+ * until one is committed by accident.
+ *
+ * Sweeping at the start of the run is what makes those names reclaimable, and
+ * it is why staging can stay a **sibling** of its destination. `rename` is
+ * atomic only within one filesystem, so staging under a project-root `tmp/`
+ * would raise `EXDEV` wherever the two sit on different mounts — and the
+ * symlink retry in `replaceWithRegularFile` removes `dest` before its second
+ * `rename`, so that failure would destroy the very file the staging order
+ * exists to protect. A same-directory stage plus a sweep keeps the atomic
+ * replace and still leaves nothing behind.
+ *
+ * Only regular files whose name has the staging shape are removed, and only
+ * where the entry resolves inside the project: an orphan of ours is ours to
+ * reclaim, anything else in that directory is not.
+ */
+async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
+  let entries: Dirent[];
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return; // absent or unreadable — no orphan of ours is reachable there
+  }
+  for (const entry of entries) {
+    if (!isStagingName(entry.name)) continue;
+    const full = path.join(dir, entry.name);
+    if ((await safeLstat(full))?.isFile() !== true) continue;
+    if (await resolvesOutsideProject(destRoot, full)) continue;
+    // A leftover we cannot delete is not a reason to fail the whole init; the
+    // next run tries again, and nothing downstream depends on it being gone.
+    await rm(full, { force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * Write `content` at `dest` as a regular file, replacing whatever entry is
+ * already there.
+ *
+ * Written to a sibling temp path and `rename`d into place, for two reasons.
+ * `rename` acts on the entry rather than following it, so a symlink at `dest`
+ * is replaced instead of having its target rewritten — the file a link out of
+ * the project points at is one this command was never asked to touch. And the
+ * content exists in full before the entry is touched, so an `ENOSPC`, an ACL
+ * change or a transient I/O fault mid-write leaves the original in place; the
+ * earlier remove-then-write order made those failures destroy the existing
+ * entry with nothing to put back.
+ *
+ * The staged file is removed on every path that does not consume it, the
+ * initial write included: a `writeFile` that fails after committing some bytes
+ * still leaves a partial `.qfai-init-*` in a tracked directory, and one more
+ * on every retry.
+ *
+ * **Only a regular file or a symlink is replaced.** The caller allowlists those
+ * two before staging anything; this stays a second line. `rename` cannot
+ * replace a real directory anyway, and the recovery below is for a *symlink* —
+ * including a symlink to a directory, which `lstat` reports as a link. What
+ * `rename` *would* silently take is a FIFO, a socket or a device node, so the
+ * allowlist is what keeps those entries intact.
+ */
+async function replaceWithRegularFile(dest: string, content: string): Promise<void> {
+  const tempPath = stagingPathFor(dest);
+  let consumed = false;
+  try {
+    await writeFile(tempPath, content, "utf-8");
+    try {
+      await rename(tempPath, dest);
+      consumed = true;
+    } catch (err: unknown) {
+      const existing = await safeLstat(dest);
+      if (!existing?.isSymbolicLink()) {
+        throw err;
+      }
+      // Unlinking a symlink removes the link, never its target, and `rm`
+      // without `recursive` cannot take a populated directory even if the
+      // check above were ever wrong. The content is already on disk, so the
+      // retry is a metadata operation.
+      await rm(dest, { force: true });
+      await rename(tempPath, dest);
+      consumed = true;
+    }
+  } finally {
+    if (!consumed) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+    }
   }
 }
 
@@ -5188,15 +6169,16 @@ function buildCodexReadme(): string {
     "## Cross-AI rules (master)",
     "",
     "The authoritative rule set shared across all AI coding agents (Claude",
-    "Code / Codex / Copilot) lives under `.agents/rules/`. These files are",
-    "SSOT; tool-specific mirrors reference them.",
+    "Code / Codex / Copilot) lives under `.agents/rules/`, seeded by",
+    "`qfai init`. These files are SSOT; tool-specific instruction files",
+    "reference them instead of restating them.",
     "",
     "Key rules:",
     "",
     "- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.",
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
-    "- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.",
-    "- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.",
+    "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
+    "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
     "",
   ].join("\n");
 }
@@ -5279,16 +6261,16 @@ function buildCopilotInstructions(): string {
     "## Cross-AI rules (master)",
     "",
     "The authoritative rule set shared across all AI coding agents (Claude",
-    "Code / Codex / Copilot) lives under `.agents/rules/`. Tool-specific",
-    "mirrors (`.claude/rules/`, etc.) reference these masters; the",
-    "`.agents/rules/` files are SSOT.",
+    "Code / Codex / Copilot) lives under `.agents/rules/`, seeded by",
+    "`qfai init`. Tool-specific instruction files reference these masters;",
+    "the `.agents/rules/` files are SSOT.",
     "",
     "Key rules to follow:",
     "",
     "- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.",
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
-    "- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.",
-    "- `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.",
+    "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
+    "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
     "",
   ].join("\n");
 }

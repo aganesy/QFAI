@@ -13,6 +13,7 @@
  *    however correct the managed block was.
  */
 
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -124,6 +125,8 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
       for (const negation of [
         "!change-request-*.md",
         "!decision-*.md",
+        "!implement-*.md",
+        "!atdd-*.md",
         "!coverage-depth-*.md",
         "!decisions/",
         "!decisions/**",
@@ -135,6 +138,18 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
       // The rest of the file is the project's; the `*` stays.
       expect(after).toContain("*");
       expect(after).toContain("!README.md");
+
+      // The root negations cannot override this deeper file. Prove the migrated
+      // legacy rules make both durable per-item evidence homes visible to Git.
+      expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
+      for (const name of ["implement-spec-0001.md", "atdd-spec-0001.md"]) {
+        await writeFile(path.join(root, ".qfai", "evidence", name), "# evidence\n", "utf-8");
+        expect(
+          spawnSync("git", ["check-ignore", "--quiet", "--no-index", `.qfai/evidence/${name}`], {
+            cwd: root,
+          }).status,
+        ).toBe(1);
+      }
     });
   });
 
@@ -238,6 +253,122 @@ describe("--force regenerates the standard asset trees", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       expect(await readFile(agent, "utf-8")).toBe("# ours\n");
+    });
+  });
+});
+
+describe("a retired line inside the block does not truncate it", () => {
+  // #1168. Both block walks used to stop at the first line they did not recognise, and a line
+  // an older release wrote — registered neither in the current block nor as legacy — sits
+  // exactly there. This repository had one: `.qfai/output/*`, the legacy validate output dir,
+  // three lines into the block.
+  //
+  // What follows is not a cosmetic duplicate. The freshness check reads the block it extracted,
+  // so it found the governance negations "missing" and never took the early return; the strip
+  // removed the same truncated prefix and left the rest; and the rebuilt block went back in
+  // ABOVE the twenty lines nobody had removed. Git applies the LAST matching pattern, so the
+  // re-appended negations sit above the ignores that cancel them and do nothing at all — a
+  // block of inert lines added on every single run.
+  const RETIRED_INSIDE_BLOCK = ".qfai/output/*";
+
+  it("leaves a block carrying an unregistered line completely alone", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Put the retired line where an older release wrote it: inside the block, between two
+      // lines the current writer still emits.
+      const seeded = (await readGitignore(root))
+        .split(NL)
+        .flatMap((line) => (line === ".qfai/report/*" ? [line, RETIRED_INSIDE_BLOCK] : [line]))
+        .join(NL);
+      await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const after = await readGitignore(root);
+
+      expect(
+        after,
+        "the file must be untouched: every negation was already present and already last",
+      ).toBe(seeded);
+      expect(
+        after.split(NL).filter((line) => line === RETIRED_INSIDE_BLOCK),
+        "and the project's own retired line is kept, not stripped — age and intent cannot be " +
+          "told apart from the file, so it is treated as the project's",
+      ).toHaveLength(1);
+    });
+  });
+
+  it("appends each governance negation exactly once, however often init runs", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const seeded = (await readGitignore(root))
+        .split(NL)
+        .flatMap((line) => (line === ".qfai/report/*" ? [line, RETIRED_INSIDE_BLOCK] : [line]))
+        .join(NL);
+      await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const once = await readGitignore(root);
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const twice = await readGitignore(root);
+
+      expect(twice, "init must be idempotent on its own output").toBe(once);
+      for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+        expect(
+          twice.split(NL).filter((line) => line === negation),
+          `\`${negation}\` must appear once: a second copy above the ignores that cancel it is ` +
+            "inert under git's last-match rule, and grows by one block per run",
+        ).toHaveLength(1);
+      }
+      expect(twice.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
+    });
+  });
+
+  it("still leaves a project line written under the block outside it", async () => {
+    // The protection the old walk bought, kept. Widening it to tolerate unknown lines INSIDE
+    // the block must not swallow the lines a project appended directly under it with no blank
+    // between — hoisting one above the governance negations would flip git's verdict for the
+    // paths it covers, from ignored to tracked.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      // Deliberately NOT a `.qfai/**` path. A project line that re-ignores what a governance
+      // negation re-includes has its own designed behaviour — the block is rebuilt BELOW it, so
+      // the negations win again — and two rows above already pin that. This row is about the
+      // other case: an unrelated project line, where the block must stay where it is.
+      const PROJECT_LINE = "coverage-local/";
+      // TWO conditions, and the row was inert without either. A planted "absorb everything"
+      // walk survived each of the first two attempts at this fixture, which is the fixture
+      // reporting on itself rather than the walk being safe.
+      //
+      // 1. NO blank line between the block and the project's line. Appending to the file as
+      //    written leaves the block's own trailing blank in place, and the walk terminates
+      //    there whatever it does with unknown lines.
+      // 2. A governance negation REMOVED, so the freshness check fails and init actually
+      //    rewrites the file. With the file already fresh, an absorbing walk changes what init
+      //    computes and nothing about what it writes — the early return fires and the project
+      //    line stays put for a reason that has nothing to do with the walk.
+      const DROPPED = QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[1] ?? "";
+      const trimmed = (await readGitignore(root)).split(NL).filter((line) => line !== DROPPED);
+      while (trimmed.length > 0 && (trimmed[trimmed.length - 1] ?? "").trim() === "") {
+        trimmed.pop();
+      }
+      const seeded = `${trimmed.join(NL)}${NL}${PROJECT_LINE}${NL}`;
+      await writeFile(path.join(root, ".gitignore"), seeded, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const lines = (await readGitignore(root)).split(NL);
+
+      const project = lines.lastIndexOf(PROJECT_LINE);
+      const lastNegation = Math.max(
+        ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.map((negation) => lines.lastIndexOf(negation)),
+      );
+      expect(project, "the project's line must survive").toBeGreaterThan(-1);
+      expect(
+        project,
+        "and must stay BELOW the governance negations, where the project put it — git applies " +
+          "the last matching pattern, so moving it above them would silently start tracking " +
+          "files the project chose to ignore",
+      ).toBeGreaterThan(lastNegation);
     });
   });
 });
@@ -474,6 +605,30 @@ describe("a legacy evidence negation loses to a later glob too", () => {
       const lastMd = lines.lastIndexOf("*.md");
       expect(lines.lastIndexOf("!coverage-depth-*.md")).toBeGreaterThan(lastMd);
       expect(lines.lastIndexOf("!decision-*.md")).toBeGreaterThan(lastMd);
+    });
+  });
+
+  it("re-appends when a later canonical-name glob re-ignores per-item evidence", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await writeFile(
+        legacy,
+        ["*", "!implement-*.md", "!atdd-*.md", "implement-spec-*.md", "atdd-spec-*.md", ""].join(
+          NL,
+        ),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readFile(legacy, "utf-8")).split(NL).map((line) => line.trimEnd());
+      expect(lines.lastIndexOf("!implement-*.md")).toBeGreaterThan(
+        lines.lastIndexOf("implement-spec-*.md"),
+      );
+      expect(lines.lastIndexOf("!atdd-*.md")).toBeGreaterThan(lines.lastIndexOf("atdd-spec-*.md"));
     });
   });
 });

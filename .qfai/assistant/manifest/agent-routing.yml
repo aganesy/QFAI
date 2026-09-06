@@ -1,5 +1,42 @@
 schema_version: "1.0"
 
+# Contract with each skill's `roles:` frontmatter (validated by
+# `QFAI-AGENT-015` .. `QFAI-AGENT-019`):
+#
+# A skill's `roles:` is the closed set of agents it may dispatch, so it must be
+# a SUPERSET of every agent this manifest binds to that skill —
+# `mandatory_agents`, `conditional_agents`, `blocking_agents` and
+# `parallel_groups` across all of its phases — plus every reviewer its
+# `review_profile` selects. A missing `mandatory_agents` / `blocking_agents`
+# entry, or a missing `always_required` reviewer of that profile, is an error:
+# the run cannot finish without dispatching a role the skill never declared. A
+# missing `conditional_agents` / `parallel_groups` / `conditional_required`
+# entry is a warning.
+#
+# The reverse also holds: a declared role that neither this manifest nor the
+# skill's review profile selects is a stale grant and is reported as a warning.
+# The one exception is `orchestrator`, the invoking agent, which
+# `constitution/shared-skill-delegation-baseline.md` governs instead of any
+# routing phase.
+#
+# Both directions need a `roles:` list to compare, so a `roles:` key that is
+# not a list of agent ids is an error rather than "no declaration"
+# (`QFAI-AGENT-016`) — otherwise one notation slip disables the cross-check.
+# And a skill that declares `routing-profile:` but that this file routes
+# nothing to is an error too (`QFAI-AGENT-017`): a deleted or misspelled
+# `- skill:` block — or a `- skill:` header left with no usable `phases:` —
+# leaves a workflow that can dispatch no one. Skills with no
+# `routing-profile:` (`web-research`) are deliberately un-routed and exempt.
+# That `routing-profile:` must also name the same profile this file's
+# `review_profile:` gives the skill, and one `review-profiles.yml` defines
+# (`QFAI-AGENT-018`): otherwise the two sides state different review gates.
+# Both keys must be a non-empty profile name when present — a list or an empty
+# value is a shape error (`QFAI-AGENT-013` here, `QFAI-AGENT-016` in the skill)
+# rather than "no gate declared". Whenever the gate is in any of those states,
+# the roles cross-check above is skipped for that skill: the reviewer set it
+# would compare against is known to be partial, and reporting from it would
+# name roles that are in fact declared correctly.
+
 routing:
   - skill: qfai-discussion
     phases:
@@ -26,6 +63,18 @@ routing:
         rerun_policy: changed-scope-dependents
     review_profile: requirements-heavy
 
+  # The phase IDs below are spans over the nine stages and phases
+  # `skills/qfai-sdd/SKILL.md` `## Stage and Phase Order (Fixed)` declares — the
+  # two documents use different vocabularies on purpose. The mapping is
+  # normative and lives in `skills/qfai-sdd/SKILL.md`
+  # `### Routing Phase Crosswalk (Normative)`, together with the two exceptions
+  # that bound it (contract-scoped runs, no-argument batch fan-out). Without it
+  # an orchestrator cannot tell which of the nine phases a blocking agent gates,
+  # and two conforming runs can place the same blocking reviewer at different
+  # points. The spans scope blocking, not rerun: `rerun_policy` keeps the
+  # vocabulary defined at the bottom of this file, so a changed artifact re-runs
+  # its dependents in any span. Keep both sides in sync; the drift guard is
+  # `tests/assets/sddRoutingPhaseCrosswalk.test.ts`.
   - skill: qfai-sdd
     phases:
       - id: slice-and-scope
@@ -33,9 +82,18 @@ routing:
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner]
-        rerun_policy: failed-agents-only
+        # `requirements-analyst` writes the Triage table this phase's blocking
+        # planner judges, so a `REVISE` has to reach the author: under
+        # `failed-agents-only` only the planner would re-run, re-reading an
+        # unchanged table and returning the same verdict.
+        rerun_policy: changed-scope-dependents
       - id: design
-        mandatory_agents: [solution-architect, test-design-analyst]
+        # `requirements-analyst` is mandatory here as well as in
+        # `slice-and-scope`: `skills/qfai-sdd/SKILL.md` `Stage minimum roles`
+        # makes it the drafter of requirement-aligned spec content, which is
+        # Phase 2 Slice work inside this span, after Phase 0 froze the
+        # contracts. Span membership is a floor, not an exclusive assignment.
+        mandatory_agents: [solution-architect, test-design-analyst, requirements-analyst]
         conditional_agents: [qa-strategist, product-experience-architect]
         parallel_groups: []
         blocking_agents: [solution-architect]
@@ -62,13 +120,25 @@ routing:
   # self-attestation it exists to prevent.
   - skill: qfai-implement
     phases:
+      # Runs once, before any ledger row is touched: `delivery-planner` frames
+      # the invocation (risk tiers, T1 groups, dispatch, order) and blocks it
+      # when the plan is wrong, while `test-design-analyst` reports coverage /
+      # layer-ownership findings and does not block, because their repair is
+      # upstream. Written up in `qfai-implement/SKILL.md` under
+      # `### Phase: Stage 0 + Preflight + Plan` — a routed phase the skill body
+      # never named dispatched `test-design-analyst` with no task definition.
+      # `changed-scope-dependents`, not `failed-agents-only`: repairing a
+      # `delivery-planner` scope REVISE splits a selector, adds a row or moves
+      # an obligation reference, which changes the ledger `test-design-analyst`
+      # read — so its earlier PASS would otherwise stand over a ledger that no
+      # longer exists. Same reason the ATDD scope gate uses this policy.
       - id: plan
         iteration: per-invocation
         mandatory_agents: [delivery-planner, test-design-analyst]
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner]
-        rerun_policy: failed-agents-only
+        rerun_policy: changed-scope-dependents
       # The failing test exists and no production code does. This is the only
       # window in which "watch it fail" is a first-hand observation, so the
       # gatekeeper is mandatory AND blocking here: RED must be confirmed before
@@ -111,10 +181,17 @@ routing:
           - [frontend-engineer, backend-engineer]
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
+      # `acceptance-test-engineer` is **not** listed here. Acceptance tests are
+      # `/qfai-atdd`'s owned artifact and `qfai-implement/SKILL.md` Non-goals
+      # bar this skill from authoring them, so routing the role into this phase
+      # gave the manifest and the skill opposite instructions about the same
+      # agent — and licensed, one phase after the step 3b handback, exactly the
+      # edit that handback exists to prevent. The role reaches an `E2E` / `API`
+      # / `Integration` row through the `qfai-atdd` route below, never here.
       - id: test
         iteration: per-ledger-item
         mandatory_agents: []
-        conditional_agents: [acceptance-test-engineer, qa-strategist]
+        conditional_agents: [qa-strategist]
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents
@@ -128,7 +205,7 @@ routing:
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
         # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
-        # unconditional 11-point gate in qfai-implement/SKILL.md, and every DONE
+        # unconditional 12-point gate in qfai-implement/SKILL.md, and every DONE
         # rule in the skill and in shared-skill-delegation-baseline.md is phrased
         # over *blocking* reviewers. Listing it as mandatory-only let an item
         # reach `done` with the code-quality reviewer sitting at REVISE.
@@ -145,8 +222,10 @@ routing:
         blocking_agents: [test-design-analyst]
         rerun_policy: failed-agents-only
       # Stage gate P1b. `references/red-provenance.md` branch 1 requires
-      # `qa-gatekeeper` to confirm the RED *before any production code exists*,
-      # which is the same rule `qfai-implement` applies to its own rows — and
+      # `qa-gatekeeper` to confirm the RED while nothing makes that assertion
+      # pass — neither the step 1 seam nor an existing surface that implements
+      # the row's predicate wrongly does — which is the
+      # same rule `qfai-implement` applies to its own rows — and
       # there was no phase here to submit that to, so the instruction named a
       # routing phase this skill did not have. It must sit before
       # `implementation`: after the surfaces are built there is nothing left to
