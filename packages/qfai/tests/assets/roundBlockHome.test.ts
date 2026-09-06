@@ -31,7 +31,9 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const ATDD_SKILL = "assistant/skills/qfai-atdd/SKILL.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const ROUND_EVIDENCE = "assistant/skills/qfai-implement/references/round-evidence.md";
-const BASELINE = "assistant/constitution/shared-skill-delegation-baseline.md";
+// main moved the audited-evidence-hash procedure out of the baseline into its
+// own reference while this branch was open; the two rules below live there now.
+const AUDIT_HASH = "assistant/constitution/references/audited-evidence-hash.md";
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -93,7 +95,7 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   it("makes the completion-review subject extractable per row", async () => {
-    const baseline = flat(await read(tree, BASELINE));
+    const baseline = flat(await read(tree, AUDIT_HASH));
     expect(baseline).toContain(
       "from every `#### Round N` block nested in the row's `### <TDD-ID>` section",
     );
@@ -146,11 +148,14 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   it("tells the completion reviewer a `###` heading is a stop, not an absent field", async () => {
-    const baseline = flat(await read(tree, BASELINE));
+    const baseline = flat(await read(tree, AUDIT_HASH));
     expect(baseline).toContain(
       "A round heading left at `###` is unmigrated evidence, not an absent field: migrate or stop before hashing",
     );
-    expect(baseline).toContain("`../skills/qfai-implement/references/round-evidence.md`");
+    // One directory deeper than when this branch wrote it: the rule now lives in
+    // `constitution/references/`, and every other cross-tree pointer in that file
+    // climbs two levels.
+    expect(baseline).toContain("`../../skills/qfai-implement/references/round-evidence.md`");
   });
 
   it("declares no round heading at `###` anywhere in the assistant tree", async () => {

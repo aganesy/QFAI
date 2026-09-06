@@ -46,6 +46,13 @@
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
  *
+ * The capture fan-out is not the only writer of the scanned tree:
+ * `--emit-skeletons` also writes `<screenId>.html` into the SAME
+ * `.qfai/evidence/prototyping/iter-00/` directory (`iterationDir(0)`), not
+ * into the authored `.qfai/prototypes/` tree. A cycle-0 skeleton left in
+ * place is therefore scanned here like any captured snapshot, so its
+ * placeholder CSS must stay inside the DESIGN.md token set.
+ *
  * Because the input is the capture fan-out, the routing shape the generator
  * declares decides which screens this scanner ever sees. Under `--auto-serve`
  * that shape is SPA-style: `defaultServerRunner.ts#resolveServablePath` serves
@@ -56,6 +63,15 @@
  * 404, behind the path-traversal 403 guard. The routing-shapes list in
  * `generator-prompt.md` states the same contract for the generator; as the
  * paired halves of that SSOT, the two move together.
+ *
+ * Consumption: the violations this scanner returns are persisted as the
+ * `designMdViolations` array of `iter-NN/review.json`, which the generator
+ * reads back on every post-seed cycle (`generator-prompt.md#read-order`,
+ * item 4). That prompt line also states the cycle range it applies to, and
+ * the range is owned by `MAX_ITERATION_INDEX` in `./iteration.ts` — the
+ * single source for the iteration budget. Neither surface may restate the
+ * number independently; a correction on the prompt side is a correction of
+ * a restatement, not of this scanner's contract.
  *
  * Both trees are written by the CLI the prompt prescribes: the capture fan-out
  * by `npx qfai prototyping iterate --capture`, and this scanner runs under
