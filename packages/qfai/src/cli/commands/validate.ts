@@ -952,6 +952,19 @@ type UnevaluatedGates = {
   readonly fullCovered: readonly string[];
   /** Families only one stage's own profile ever runs, with that profile. */
   readonly stageOnly: readonly { readonly family: string; readonly profile: ValidationProfile }[];
+  /**
+   * Families the profile DOES wire in, whose own detectors cannot fire because
+   * their inputs are absent from this tree.
+   *
+   * A third axis rather than part of `fullCovered`, because the remedy that
+   * list carries — "run the full profile" — does not apply: a full scan wires
+   * the same detectors and its inputs are just as absent, so sending the reader
+   * there is advice that cannot be followed. It is also why they must survive
+   * the `fullCovered.length === 0` case: `full` and `verify` reach it, and
+   * dropping them there let the notice say a full run had evaluated every gate
+   * it covers while two of its detectors had structurally not run.
+   */
+  readonly preconditionGated: readonly string[];
 };
 
 /**
@@ -962,12 +975,13 @@ type UnevaluatedGates = {
  *
  * `unevaluatedSelfGovernance` carries the self-governance codes whose own
  * inputs are absent, so those detectors cannot fire whatever the project does
- * and their codes join the list even though the profile wires them in. It is
+ * and their codes are reported even though the profile wires them in. It is
  * per code, not per group: the two detectors read different files, and a tree
  * carrying one detector's inputs but not the other's would otherwise drop both
- * from the notice while one of them had structurally not run. They join
- * `fullCovered` rather than `stageOnly`: no profile owns them the way a
- * stage-only group is owned, so there is no `--profile` to send the reader to.
+ * from the notice while one of them had structurally not run. They are their
+ * own axis, `preconditionGated`: no profile owns them the way a stage-only
+ * group is owned, so there is no `--profile` to send the reader to, and a full
+ * scan is not the remedy either because it wires the same detectors.
  */
 function unevaluatedGates(
   profile: string,
@@ -975,11 +989,16 @@ function unevaluatedGates(
   unevaluatedSelfGovernance: readonly string[],
 ): UnevaluatedGates {
   if (!isKnownProfile(profile)) {
-    return { fullCovered: [], stageOnly: [] };
+    return { fullCovered: [], stageOnly: [], preconditionGated: [] };
   }
   const evaluated = new Set<GateGroup>(PROFILE_GATE_GROUPS[profile]);
   const fullCovered: string[] = [];
   const stageOnly: { family: string; profile: ValidationProfile }[] = [];
+  // Reported on every profile that wires the group in, `full` and `verify`
+  // included: the codes describe THIS tree, not this profile's composition.
+  const preconditionGated = evaluated.has("package-self-governance")
+    ? [...new Set(unevaluatedSelfGovernance)]
+    : [];
   const pushFullCovered = (family: string): void => {
     if (!fullCovered.includes(family)) fullCovered.push(family);
   };
@@ -1011,13 +1030,12 @@ function unevaluatedGates(
   }
   if (fullCovered.length === 0) {
     // A profile that runs every group a full scan covers is not partial, and
-    // this is the partial-profile list. Appending a precondition-gated group
-    // here would put "full is a partial profile" into the artifact. Stage-only
-    // families are a separate axis and are reported either way.
-    return { fullCovered, stageOnly };
-  }
-  if (evaluated.has("package-self-governance")) {
-    for (const family of unevaluatedSelfGovernance) pushFullCovered(family);
+    // this is the partial-profile list — appending anything here would put
+    // "full is a partial profile" into the artifact. The other two axes are
+    // reported either way, which is the point: `full` reaches this branch, and
+    // a precondition-gated detector that could not fire is a fact about the
+    // tree that its notice still has to carry.
+    return { fullCovered, stageOnly, preconditionGated };
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
@@ -1026,7 +1044,7 @@ function unevaluatedGates(
     // group `full` runs, so a full scan is the accurate remedy for all of them.
     for (const family of saasPackageSkippedGateFamilies()) pushFullCovered(family);
   }
-  return { fullCovered, stageOnly };
+  return { fullCovered, stageOnly, preconditionGated };
 }
 
 /**
@@ -1071,8 +1089,12 @@ function buildPartialProfileNotice(
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const { fullCovered, stageOnly } = unevaluatedGates(profile, scoped, unevaluatedSelfGovernance);
-  if (fullCovered.length === 0 && stageOnly.length === 0) {
+  const { fullCovered, stageOnly, preconditionGated } = unevaluatedGates(
+    profile,
+    scoped,
+    unevaluatedSelfGovernance,
+  );
+  if (fullCovered.length === 0 && stageOnly.length === 0 && preconditionGated.length === 0) {
     return null;
   }
   // A stage-only gate is unreachable from a full scan, so it is named with the
@@ -1085,13 +1107,25 @@ function buildPartialProfileNotice(
       : ` Stage-ownership gates no full scan runs: ${stageOnly
           .map((entry) => `${entry.family} (\`--profile ${entry.profile}\`)`)
           .join(", ")}.`;
+  // A precondition-gated detector is wired in and still did not run, so the
+  // remedy is neither a wider profile nor another one: its inputs are absent.
+  // Naming it in its own sentence is what keeps "evaluated every gate a full
+  // scan covers" from reading as coverage it does not have.
+  const preconditionSentence =
+    preconditionGated.length === 0
+      ? ""
+      : ` Wired in but not evaluable in this tree, because their own inputs are absent: ` +
+        `${preconditionGated.join(", ")}.`;
   const message =
     fullCovered.length === 0
-      ? `profile="${profile}" evaluated every gate a full scan covers.` + stageOnlySentence
+      ? `profile="${profile}" evaluated every gate a full scan covers.` +
+        stageOnlySentence +
+        preconditionSentence
       : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
         `${fullCovered.join(", ")}. A PASS here is not full-scan coverage — run ` +
         "`npx qfai validate --fail-on error` (full profile) before declaring completion." +
-        stageOnlySentence;
+        stageOnlySentence +
+        preconditionSentence;
   return profileNotice(message);
 }
 

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { runValidate } from "../../../../src/cli/commands/validate.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../../../src/core/gitignore.js";
+import { PACKAGE_SELF_GOVERNANCE_FAMILIES } from "../../../../src/core/validators/packageSelfGovernance.js";
 import type { ValidationProfile } from "../../../../src/core/types.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
@@ -290,6 +291,52 @@ describe("QFAI-PROFILE-001 never names a family the same run emitted", () => {
       });
     });
   }
+});
+
+describe("a detector whose inputs are absent is reported, whatever the profile", () => {
+  // `runPackageSelfGovernanceValidators` reads qfai's OWN package sources, so
+  // in a consuming repo — which is what every fixture here is — both detectors
+  // are structurally unevaluated however clean the project is.
+  //
+  // They belong to no other profile, and a full scan wires the same detectors
+  // against the same absent inputs, so neither "run --profile X" nor "run the
+  // full profile" is the remedy. That is why they are a third axis rather than
+  // part of either list.
+  it("names them for --profile full, which otherwise claims complete coverage", async () => {
+    await withProject(async (root) => {
+      const notice = await noticeFor(root, "full");
+
+      expect(notice?.message).toContain("evaluated every gate a full scan covers");
+      expect(notice?.message).toContain("Wired in but not evaluable in this tree");
+      for (const family of PACKAGE_SELF_GOVERNANCE_FAMILIES) {
+        expect(notice?.message, `${family} was dropped from the full-profile notice`).toContain(
+          family,
+        );
+      }
+    });
+  });
+
+  it("keeps them out of the run-the-full-profile list on a partial profile", async () => {
+    // The other half: on a partial profile the same codes must not be folded
+    // into "Hard gates NOT evaluated in this run", because that list's remedy
+    // is a full scan and a full scan cannot evaluate them either.
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        const notice = await noticeFor(root, "sdd");
+        const message = notice?.message ?? "";
+        const skipped = message.slice(
+          message.indexOf("Hard gates NOT evaluated in this run:"),
+          message.indexOf("A PASS here is not full-scan coverage"),
+        );
+
+        expect(skipped, "the skip-list is missing from the notice").not.toBe("");
+        for (const family of PACKAGE_SELF_GOVERNANCE_FAMILIES) {
+          expect(skipped, `${family} is in the run-the-full-profile list`).not.toContain(family);
+          expect(message, `${family} is missing from the notice entirely`).toContain(family);
+        }
+      });
+    });
+  });
 });
 
 describe("GATE_GROUP_FAMILIES files each family under the group that runs it", () => {
