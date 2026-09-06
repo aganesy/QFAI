@@ -32,14 +32,6 @@ function schemaWindowNote(severity: "warning" | "error"): string {
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
-/**
- * A fenced block inside the stored section — the prose around it is not data.
- *
- * Any info string, not `yaml` alone: the shipped template fences the summary as
- * ```yaml, but a pack that fences it bare or as ```yml carries the same data and
- * reading none of it would report every field missing.
- */
-const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
 /** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
 const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 /**
@@ -671,9 +663,48 @@ function storageSlotIssue(
 /**
  * The fenced YAML blocks of the stored section, or the whole section when it
  * carries none (packs written before the template shipped a fence).
+ *
+ * Walks with {@link parseFenceLine} rather than carrying a fence pattern of
+ * its own. A second rule is a second thing to keep in step, and the two had
+ * already drifted: this read a backtick fence at column 0, while the mask that
+ * decides where the section even STARTS takes CommonMark's 0-3 leading spaces
+ * and `~~~` as well. A pack indenting its fence by two spaces was inside the
+ * section and outside its payload, so the whole section — prose included —
+ * went to the YAML reader.
+ *
+ * A closing fence is the same marker, at least as long as the opener, and
+ * carries no info string: the same three conditions the mask applies.
  */
 function extractYamlPayload(section: string): string {
-  const blocks = [...section.matchAll(YAML_FENCE_RE)].map((match) => match[1] ?? "");
+  const blocks: string[] = [];
+  let open: { marker: string; length: number } | null = null;
+  let current: string[] = [];
+
+  for (const line of section.split("\n")) {
+    const fence = parseFenceLine(line);
+    if (!open) {
+      if (fence) {
+        open = { marker: fence.marker, length: fence.length };
+      }
+      continue;
+    }
+    if (
+      fence &&
+      fence.marker === open.marker &&
+      fence.length >= open.length &&
+      !fence.info.trim()
+    ) {
+      blocks.push(current.join("\n"));
+      current = [];
+      open = null;
+      continue;
+    }
+    current.push(line);
+  }
+  if (open && current.length > 0) {
+    blocks.push(current.join("\n"));
+  }
+
   return blocks.length > 0 ? blocks.join("\n") : section;
 }
 
