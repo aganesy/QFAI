@@ -1,5 +1,42 @@
 schema_version: "1.0"
 
+# Contract with each skill's `roles:` frontmatter (validated by
+# `QFAI-AGENT-015` .. `QFAI-AGENT-019`):
+#
+# A skill's `roles:` is the closed set of agents it may dispatch, so it must be
+# a SUPERSET of every agent this manifest binds to that skill —
+# `mandatory_agents`, `conditional_agents`, `blocking_agents` and
+# `parallel_groups` across all of its phases — plus every reviewer its
+# `review_profile` selects. A missing `mandatory_agents` / `blocking_agents`
+# entry, or a missing `always_required` reviewer of that profile, is an error:
+# the run cannot finish without dispatching a role the skill never declared. A
+# missing `conditional_agents` / `parallel_groups` / `conditional_required`
+# entry is a warning.
+#
+# The reverse also holds: a declared role that neither this manifest nor the
+# skill's review profile selects is a stale grant and is reported as a warning.
+# The one exception is `orchestrator`, the invoking agent, which
+# `constitution/shared-skill-delegation-baseline.md` governs instead of any
+# routing phase.
+#
+# Both directions need a `roles:` list to compare, so a `roles:` key that is
+# not a list of agent ids is an error rather than "no declaration"
+# (`QFAI-AGENT-016`) — otherwise one notation slip disables the cross-check.
+# And a skill that declares `routing-profile:` but that this file routes
+# nothing to is an error too (`QFAI-AGENT-017`): a deleted or misspelled
+# `- skill:` block — or a `- skill:` header left with no usable `phases:` —
+# leaves a workflow that can dispatch no one. Skills with no
+# `routing-profile:` (`web-research`) are deliberately un-routed and exempt.
+# That `routing-profile:` must also name the same profile this file's
+# `review_profile:` gives the skill, and one `review-profiles.yml` defines
+# (`QFAI-AGENT-018`): otherwise the two sides state different review gates.
+# Both keys must be a non-empty profile name when present — a list or an empty
+# value is a shape error (`QFAI-AGENT-013` here, `QFAI-AGENT-016` in the skill)
+# rather than "no gate declared". Whenever the gate is in any of those states,
+# the roles cross-check above is skipped for that skill: the reviewer set it
+# would compare against is known to be partial, and reporting from it would
+# name roles that are in fact declared correctly.
+
 routing:
   - skill: qfai-discussion
     phases:

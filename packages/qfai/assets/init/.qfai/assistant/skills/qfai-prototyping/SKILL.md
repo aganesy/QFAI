@@ -4,8 +4,15 @@ title: QFAI Prototyping (DESIGN.md-driven UX Loop)
 description: "Iterate one prototype through up to 10 cycles of generate-capture-review against a frozen DESIGN.md, focusing on information architecture, navigation flow, usability, and functionality."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-roles: [orchestrator, product-experience-architect, product-surface-reviewer, devops-ci-engineer]
-routing-profile: ui-surface-aware
+roles:
+  [
+    orchestrator,
+    product-experience-architect,
+    product-surface-reviewer,
+    devops-ci-engineer,
+    completion-reviewer,
+  ]
+routing-profile: ui-bearing
 mode: execution-focused
 ---
 

@@ -8,6 +8,14 @@ import type { QfaiConfig } from "../config.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
+import {
+  emptySkillRouting,
+  recordRoutedAgents,
+  validateSkillRoles,
+  type ProfileSelection,
+  type RoutingBinding,
+  type SkillRouting,
+} from "./skillRoles.js";
 import { exists, issue } from "./utils.js";
 
 /** The release `QFAI-AGENT-014` stops being a warning at. */
@@ -199,7 +207,7 @@ function checkDeveloperInstructions(
   );
 }
 
-export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
+export async function validateAgentDefinition(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
   const catalogPath = await resolveManifestFile(root, "agent-catalog.yml");
@@ -305,8 +313,17 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     }
   }
 
-  await validateRouting(routingPath, catalogIds, issues, root);
-  await validateProfiles(profilesPath, reviewerIds, issues, root);
+  const routing = await validateRouting(routingPath, catalogIds, issues, root);
+  const profiles = await validateProfiles(profilesPath, reviewerIds, issues, root);
+  // `undefined` means the manifest could not be parsed or has the wrong shape,
+  // which `QFAI-AGENT-007` / `QFAI-AGENT-009` already report. Cross-checking
+  // `roles:` against the empty result of that failure is not a weaker check but
+  // a wrong one: every skill would be told its routes are missing and every
+  // declared role called unreachable, sending the operator to seven `SKILL.md`
+  // files for one broken manifest.
+  if (routing !== undefined && profiles !== undefined) {
+    await validateSkillRoles(root, config, routing, profiles, issues);
+  }
 
   return issues;
 }
@@ -425,8 +442,12 @@ async function validateRouting(
   catalogIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<void> {
+): Promise<Map<string, SkillRouting> | undefined> {
   const rel = manifestRelativePath(routingPath, root);
+  // Collected during this walk rather than re-parsed by `validateSkillRoles`:
+  // the per-skill routed set is exactly what the walk already resolves, and a
+  // second parse could disagree with the one these findings came from.
+  const routed = new Map<string, SkillRouting>();
   try {
     const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -439,7 +460,7 @@ async function validateRouting(
           "agentDefinition.invalidRoutingShape",
         ),
       );
-      return;
+      return undefined;
     }
     const routingRoot = parsed as Record<string, unknown>;
     if (!Array.isArray(routingRoot.routing)) {
@@ -452,7 +473,7 @@ async function validateRouting(
           "agentDefinition.invalidRoutingShape",
         ),
       );
-      return;
+      return undefined;
     }
 
     for (const [routeIndex, route] of routingRoot.routing.entries()) {
@@ -460,6 +481,13 @@ async function validateRouting(
         continue;
       }
       const routeObj = route as Record<string, unknown>;
+      const routedEntry = collectRouteHeader(
+        routeObj,
+        routed,
+        issues,
+        rel,
+        formatSkillLabel(routeObj.skill, routeIndex),
+      );
       if (!Array.isArray(routeObj.phases)) {
         continue;
       }
@@ -540,6 +568,19 @@ async function validateRouting(
             );
           }
         }
+        // A field that is present but is not a list is dropped by both
+        // `validateAgentRefs` and `recordRoutedAgents`, so `mandatory_agents:
+        // completion-reviewer` used to route nobody and say nothing.
+        validateAgentFieldShapes(
+          rel,
+          phaseObj,
+          issues,
+          formatSkillLabel(routeObj.skill, routeIndex),
+          phaseIndex,
+        );
+        if (routedEntry) {
+          collectPhaseAgents(routedEntry, phaseObj, catalogIds);
+        }
       }
     }
   } catch {
@@ -552,6 +593,143 @@ async function validateRouting(
         "agentDefinition.routingParse",
       ),
     );
+    return undefined;
+  }
+  return routed;
+}
+
+/** The phase fields that name agents directly, in binding order. */
+const PHASE_AGENT_FIELDS = [
+  ["mandatory_agents", "required"],
+  ["blocking_agents", "required"],
+  ["conditional_agents", "conditional"],
+] as const;
+
+/**
+ * Register a routing entry under its skill name and remember the review
+ * profile it declares. Unnamed routes are skipped: there is no skill whose
+ * `roles:` they could be held against.
+ *
+ * Two `- skill:` blocks with the same name accumulate their phases and agents,
+ * but they cannot both own the review gate. Overwriting silently let the skill
+ * satisfy `QFAI-AGENT-019` / `-018` against the last block's profile alone
+ * while the first block's reviewers went unlisted, so a conflicting second
+ * declaration is recorded for `validateSkillRoles` to report and the first one
+ * stands.
+ *
+ * A `review_profile:` that is present but is not a usable name is reported
+ * here and flagged on the entry. Ignoring the value collected the route as one
+ * that declares no review gate at all, which is a different manifest: the
+ * skill then passed `QFAI-AGENT-019` / `-018` without any of the reviewers the
+ * broken key was meant to bind, and nothing named the key.
+ */
+function collectRouteHeader(
+  routeObj: Record<string, unknown>,
+  routed: Map<string, SkillRouting>,
+  issues: Issue[],
+  routingPathRel: string,
+  skillLabel: string,
+): SkillRouting | undefined {
+  if (typeof routeObj.skill !== "string" || routeObj.skill.length === 0) {
+    return undefined;
+  }
+  const entry = routed.get(routeObj.skill) ?? emptySkillRouting();
+  const declared = routeObj.review_profile;
+  if (typeof declared === "string" && declared.trim().length > 0) {
+    const profile = declared.trim();
+    if (entry.reviewProfile === undefined) {
+      entry.reviewProfile = profile;
+    } else if (entry.reviewProfile !== profile) {
+      entry.reviewProfileConflict ??= { first: entry.reviewProfile, second: profile };
+    }
+  } else if (declared !== undefined) {
+    entry.reviewProfileUnusable = true;
+    issues.push(
+      issue(
+        "QFAI-AGENT-013",
+        `${skillLabel} declares review_profile ${JSON.stringify(declared)}; expected the name of a review-profiles.yml profile`,
+        "error",
+        routingPathRel,
+        "agentDefinition.routingReviewProfileShape",
+      ),
+    );
+  }
+  routed.set(routeObj.skill, entry);
+  return entry;
+}
+
+/**
+ * Fold one phase's four agent fields into the skill's collected routed set.
+ *
+ * The phase counts toward `entry.phases` only when at least one usable agent
+ * id came out of it. `QFAI-AGENT-017` asks whether the manifest can dispatch
+ * anything inside the skill, and `- id: only` with no agent field — or one
+ * whose fields are all scalars — dispatches nobody however well-formed the
+ * phase object is.
+ */
+function collectPhaseAgents(
+  entry: SkillRouting,
+  phase: RoutingPhase,
+  catalogIds: Set<string>,
+): void {
+  let dispatchable = 0;
+  for (const [field, binding] of PHASE_AGENT_FIELDS) {
+    dispatchable += recordRoutedAgents(entry, phase[field], binding, catalogIds);
+  }
+  if (Array.isArray(phase.parallel_groups)) {
+    for (const group of phase.parallel_groups) {
+      dispatchable += recordRoutedAgents(entry, group, "conditional", catalogIds);
+    }
+  }
+  if (dispatchable > 0) {
+    entry.phases += 1;
+  }
+}
+
+/**
+ * Report a phase's agent field that is present but is not a list.
+ *
+ * Every reader of these fields — `validateAgentRefs`, `recordRoutedAgents` —
+ * starts with an `Array.isArray` guard and returns quietly, so a scalar
+ * (`mandatory_agents: completion-reviewer`) produced no finding anywhere while
+ * silently emptying the gate it was meant to declare.
+ */
+function validateAgentFieldShapes(
+  rel: string,
+  phase: RoutingPhase,
+  issues: Issue[],
+  skill: string,
+  phaseIndex: number,
+): void {
+  const report = (field: string, value: unknown): void => {
+    issues.push(
+      issue(
+        "QFAI-AGENT-013",
+        `${skill} phase[${phaseIndex}] declares ${field} ${JSON.stringify(value)}; expected a list of agent ids`,
+        "error",
+        rel,
+        "agentDefinition.routingAgentFieldShape",
+      ),
+    );
+  };
+  for (const [field] of PHASE_AGENT_FIELDS) {
+    const value = phase[field];
+    if (value !== undefined && !Array.isArray(value)) {
+      report(field, value);
+    }
+  }
+  const groups = phase.parallel_groups;
+  if (groups === undefined) {
+    return;
+  }
+  if (!Array.isArray(groups)) {
+    report("parallel_groups", groups);
+    return;
+  }
+  for (const group of groups) {
+    if (!Array.isArray(group)) {
+      report("parallel_groups entry", group);
+    }
   }
 }
 
@@ -594,8 +772,13 @@ async function validateProfiles(
   reviewerIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<void> {
+): Promise<Map<string, ProfileSelection> | undefined> {
   const rel = manifestRelativePath(profilesPath, root);
+  // A profile selects reviewers a phase list never names, so `QFAI-AGENT-019`
+  // and `QFAI-AGENT-015` need this side of the manifest too — the first before
+  // it can call a profile-selected reviewer undeclared, the second before it
+  // can call a declared role unreachable.
+  const selections = new Map<string, ProfileSelection>();
   try {
     const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -608,7 +791,7 @@ async function validateProfiles(
           "agentDefinition.invalidProfilesShape",
         ),
       );
-      return;
+      return undefined;
     }
     const profilesRoot = parsed as Record<string, unknown>;
     if (
@@ -625,7 +808,7 @@ async function validateProfiles(
           "agentDefinition.invalidProfilesShape",
         ),
       );
-      return;
+      return undefined;
     }
     const profiles = profilesRoot.profiles as Record<string, unknown>;
     for (const [profileName, profile] of Object.entries(profiles)) {
@@ -633,6 +816,21 @@ async function validateProfiles(
         continue;
       }
       const profileObj = profile as Record<string, unknown>;
+      // Before collecting: both readers below guard on `Array.isArray`, so
+      // `always_required: completion-reviewer` produced an empty selection set
+      // and no finding — a broken mandatory review gate that passed silently.
+      // The result is carried on the selection because a truncated reviewer
+      // list is not a short one: the roles cross-check has to know it is
+      // reading a floor before it tells a skill to drop a declared reviewer.
+      const shapesUsable = validateReviewerFieldShapes(profileObj, issues, profileName, rel);
+      selections.set(profileName, {
+        reviewers: collectProfileReviewers(
+          profileObj.always_required,
+          profileObj.conditional_required,
+          reviewerIds,
+        ),
+        incomplete: !shapesUsable,
+      });
       validateReviewerRefs(
         profileObj.always_required,
         reviewerIds,
@@ -660,7 +858,72 @@ async function validateProfiles(
         "agentDefinition.profilesParse",
       ),
     );
+    return undefined;
   }
+  return selections;
+}
+
+/**
+ * Every reviewer a profile can select, each kept with how firmly it binds:
+ * `always_required` is dispatched on every run, so omitting it from a skill's
+ * `roles:` is an error, while `conditional_required` is a warning.
+ *
+ * An id that is not a catalogued reviewer is left out: `QFAI-AGENT-010`
+ * already reports it, and keeping it would make `QFAI-AGENT-019` demand that
+ * every skill on the profile add the invalid id to its `roles:`.
+ */
+function collectProfileReviewers(
+  always: unknown,
+  conditional: unknown,
+  reviewerIds: Set<string>,
+): Map<string, RoutingBinding> {
+  const reviewers = new Map<string, RoutingBinding>();
+  for (const [value, binding] of [
+    [conditional, "conditional"],
+    [always, "required"],
+  ] as const) {
+    if (!Array.isArray(value)) {
+      continue;
+    }
+    for (const entry of value) {
+      if (typeof entry === "string" && entry.length > 0 && reviewerIds.has(entry)) {
+        reviewers.set(entry, binding);
+      }
+    }
+  }
+  return reviewers;
+}
+
+/**
+ * Report an `always_required` / `conditional_required` that is not a list.
+ *
+ * Returns whether every reviewer field was usable, so the caller can mark the
+ * selection it collects as a floor rather than the profile's full membership.
+ */
+function validateReviewerFieldShapes(
+  profileObj: Record<string, unknown>,
+  issues: Issue[],
+  profileName: string,
+  profilesPathRel: string,
+): boolean {
+  let usable = true;
+  for (const field of ["always_required", "conditional_required"] as const) {
+    const value = profileObj[field];
+    if (value === undefined || Array.isArray(value)) {
+      continue;
+    }
+    usable = false;
+    issues.push(
+      issue(
+        "QFAI-AGENT-009",
+        `review-profiles.yml profile "${profileName}" declares ${field} ${JSON.stringify(value)}; expected a list of reviewer ids`,
+        "error",
+        profilesPathRel,
+        "agentDefinition.invalidProfilesShape",
+      ),
+    );
+  }
+  return usable;
 }
 
 function formatSkillLabel(skill: unknown, routeIndex: number): string {
