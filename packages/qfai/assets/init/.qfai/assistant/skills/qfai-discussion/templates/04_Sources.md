@@ -14,7 +14,7 @@
 
 ## Research Summary
 
-Research-First Protocol output. Schema: `constitution/research-first-protocol.md`.
+Research-First Protocol output. Schema: `.qfai/assistant/constitution/research-first-protocol.md`.
 Replace every `[...]` placeholder with real research: validation rejects
 bracketed `title` / `url` / `reason` values and requires `published` to be a
 real `YYYY-MM-DD` date, so an unfilled block below reports errors rather than
@@ -167,7 +167,29 @@ research_summary:
 
 ## Competitive Reference Registry
 
-### Reference: [Product/Service Name]
+UI-bearing packs must register at least `uiux.competitive_refs_min` complete
+references (default: 3). Three blocks are pre-seeded below; copy another
+`### Reference:` block for each reference beyond that, and delete any block you
+do not use only if the remaining count still meets the minimum.
+
+Every bracketed value below is a placeholder and counts as unpopulated — replace
+all of them. `TBD`, `TODO`, `N/A`, and `-` are rejected the same way.
+
+### Reference: [Product/Service Name 1]
+
+- reference: [Product/Service Name or URL]
+- adopted_points: [What was adopted from this reference and why]
+- rejected_points: [What was not adopted and why]
+- local_translation: [How adopted points were adapted for this project]
+
+### Reference: [Product/Service Name 2]
+
+- reference: [Product/Service Name or URL]
+- adopted_points: [What was adopted from this reference and why]
+- rejected_points: [What was not adopted and why]
+- local_translation: [How adopted points were adapted for this project]
+
+### Reference: [Product/Service Name 3]
 
 - reference: [Product/Service Name or URL]
 - adopted_points: [What was adopted from this reference and why]

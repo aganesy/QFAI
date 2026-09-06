@@ -1121,8 +1121,8 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  * `ALLOWED_STEP_BODIES` is built on.
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
-  ["actions/checkout", "11d5960a326750d5838078e36cf38b85af677262"],
-  ["actions/setup-node", "49933ea5288caeca8642d1e84afbd3f7d6820020"],
+  ["actions/checkout", "fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"],
+  ["actions/setup-node", "a0853c24544627f65ddf259abe73b1d18a591444"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -1209,8 +1209,8 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-tests.yml", "65066af2617ec77f34dd47672854cec1e489847d432c7126b2b23f629e221ecc"],
-  ["qfai-validate.yml", "784b7028364bfc7d68955158536bcd1d910ec4e583d61a14aa14694e346fa075"],
+  ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
+  ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1242,30 +1242,82 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
   ".gitignore",
+  "AGENTS.md",
+  "CLAUDE.md",
   "DESIGN.md",
   "qfai.config.yaml",
 ]);
 
 /**
- * And the CONTENT of the four that are not workflows.
+ * And the CONTENT of the six that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
- * planted in the shipped `DESIGN.md` was invisible — four of the six were pinned by name only, which
- * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these four are
- * byte-pinned here, and between them every adopter-facing file this tree writes is pinned by content.
+ * planted in the shipped `DESIGN.md` was invisible — four of the six files then shipped were pinned by
+ * name only, which round 18's gate measured. The two workflows are byte-pinned by
+ * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
+ * this tree writes is pinned by content.
+ *
+ * The `.gitignore` digest moved once, deliberately: the atomic `.qfai/state.json` write leaves a
+ * staging directory behind when a run is killed mid-write, and `QFAI_STATE_SCRATCH_IGNORE`
+ * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
+ * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
+ * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
+ * rather than drift.
+ *
+ * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
+ * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
+ * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
+ * so their bytes are the reviewed surface.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
-    // Re-pinned when the version-discipline line stopped naming `packages/qfai/package.json#version`:
-    // that path exists only inside this monorepo, so the rule it stated was unresolvable in the tree
-    // it is written into. Reverting that one line reproduces the previous digest byte for byte, which
-    // is what makes this a review of one line rather than a re-blessing of the whole file.
+    // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
+    // prose lines now say the masters are seeded by `qfai init` rather than assumed to exist, and the
+    // two bullets that stated QFAI-internal policy were reworded: the version-discipline one named
+    // `packages/qfai/package.json#version`, a path that exists only inside this monorepo, and the
+    // distributed-surface one named QFAI's own identifiers — neither has a referent in the project
+    // the file is written into. Reverting those five lines reproduces the previous digest
+    // (`df81d579…`) byte for byte, which is what makes this a review of five lines rather than a
+    // re-blessing of the whole file.
     ".github/copilot-instructions.md",
-    "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
+    "439cbe672bff64e110b13440d86eb18cf83685f73f41ccb12947408b5cd80b46",
   ],
-  [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
+  // Re-derived for the MERGED managed block, which carries both sides' additions:
+  // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
+  // (`implement-*.md`, `atdd-*.md`) that arrived with it. Neither predecessor's
+  // digest describes the block that now ships, so this is one pin rather than
+  // two — the map is keyed by file name and cannot hold both.
+  //
+  // Derived by running `qfai init` into the E2E's temp root and reading what it
+  // wrote, which is how both predecessors were derived. Not copied from a
+  // failure message: the point of the pin is that somebody looked at the block.
+  [".gitignore", "f35a2624352ca319b3b53a6e9a556779877eef07c42338e85ab67afeef9bb832"],
+  ["AGENTS.md", "04061092ed7048349ad93404145a9e3d71cb7c21bd37f5a531d0cd61147b313d"],
+  ["CLAUDE.md", "040faf04c46b85d0064ca561ca813f66a3989b4f3ab44802f8c447908a0b455d"],
+  // Moved when the state lock joined `QFAI_GITIGNORE_BLOCK`: the lock now sits beside
+  // `.qfai/state.json` so that everyone who may write the state may also reap a lock a crash left
+  // behind, and a file init writes beside the state file is a file init must ignore. Re-derived
+  // rather than copied off the failure: dropping that one line from the tree init writes today
+  // reproduces the previous digest (`2cfeb083…`) byte for byte, which is what says the line is the
+  // whole change.
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
-  ["qfai.config.yaml", "3d7a886ec8c5e29b6c108d8954154915f1fda0e9c7ed568397d559dad2f25cd0"],
+  // Re-derived for the MERGED file, which carries both sides' edits: the three
+  // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
+  // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
+  // comment no longer calls the opt-out's waiver a requirement, AND the
+  // `atdd.scaffoldEscalateCycles` block this branch adds is present. Neither
+  // predecessor's digest describes what ships, and the map is keyed by file
+  // name, so this is one pin rather than two.
+  //
+  // Derived by running `qfai init` into the E2E's temp root and reading what it
+  // wrote, which is how both predecessors were derived — not copied from a
+  // failure message.
+  // Re-derived once more for the MERGED file: main dropped the three retired
+  // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
+  // comment, and this branch seeds `testFileGlobs`. Neither predecessor digest
+  // describes what ships. Taken by running `qfai init` into a temp root and
+  // hashing the file it wrote, which is how both predecessors were taken.
+  ["qfai.config.yaml", "ed3b8b5e22a67ba6a83a81aa1a83d0db8ca39ba5f262b68895135ef9a57acf90"],
 ]);
 
 /**
@@ -1377,8 +1429,14 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/distributed-surface.md",
+  "root/.agents/rules/root-additions-policy.md",
+  "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/version-discipline.md",
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
+  "root/AGENTS.md",
+  "root/CLAUDE.md",
   "root/DESIGN.md",
   "root/qfai.config.yaml",
   ".github/instructions/code-review.instructions.md",
@@ -1398,19 +1456,25 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * offset". It reached an adopter with every pin green.
  *
  * The property that separates it from everything legitimately here is not its name and not its
- * content: **it is that the init source ships DATA, and data has a data extension.** All 175 entries
- * are `.md`, `.yml`, `.yaml`, `.json`, `.sql` or `.sample`, 158 of them markdown, and none has ever
- * been extensionless. So the rule is an enumeration of what may ship rather than a list of what may
- * not — the same inversion the rest of this file is built on, arrived at three rounds late because
- * the earlier attempts kept enumerating the dangerous side, which cannot be finished.
+ * content: **it is that the init source ships DATA, and data has a data extension.** All 185 entries
+ * are `.md`, `.yml`, `.yaml`, `.json`, `.toml`, `.sql` or `.sample`, 159 of them markdown, and none
+ * has ever been extensionless. So the rule is an enumeration of what may ship rather than a list of
+ * what may not — the same inversion the rest of this file is built on, arrived at three rounds late
+ * because the earlier attempts kept enumerating the dangerous side, which cannot be finished.
  *
- * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost.
+ * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
+ * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
+ * the init payload so the paths its SKILL.md cites resolve in a consumer root, and a TOML config table
+ * is read by an MCP host, not executed. Adding one here also means adding it to the leakage smoke
+ * test's `TEXT_EXTENSIONS` — a shipped text format nothing scans is a distributed surface with no
+ * internal-ID guard over it.
  */
 export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
   ".md",
   ".yml",
   ".yaml",
   ".json",
+  ".toml",
   ".sql",
   ".sample",
 ]);
@@ -1575,7 +1639,7 @@ export function initMustNotShip(
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-tests.yml#detection",
-    '{"name":"Checkout with full history via actions/checkout 4.4.0","uses":"actions/checkout@11d5960a326750d5838078e36cf38b85af677262","with":{"persist-credentials":false,"fetch-depth":0}}',
+    '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1611,7 +1675,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 4.4.0","uses":"actions/checkout@11d5960a326750d5838078e36cf38b85af677262","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1631,7 +1695,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 4.4.0","uses":"actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",

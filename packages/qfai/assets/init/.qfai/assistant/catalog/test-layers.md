@@ -45,21 +45,20 @@ Rules:
   ID type. A `TC-*` is answered from the directory **its own declared `Level`**
   names, which for a correctly filed row is `<testsDir>/integration/**`; see
   [Annotation routing](#annotation-routing) for the full table and the
-  misplacement rules.
-  L4's goal is `CON-API-*` and L5's is `US-*` (see the layer definitions
-  below), so an oracle that lands at L4 or L5 means the obligation is misfiled:
-  record it as `CON-API-*` or `US-*` rather than leaving a `TC-*` row at a
-  layer whose goal is another ID type.
+  misplacement rules. L4's goal is `CON-API-*` and L5's is `US-*` (see the
+  layer definitions below), so an oracle that lands at L4 or L5 means the
+  obligation is misfiled: record it as `CON-API-*` or `US-*` rather than
+  leaving a `TC-*` row at a layer whose goal is another ID type.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
 
 ## How this file is consumed
 
-The layer set below is read by `core/layerPolicy.ts` and is the SSOT for two
-checks: `QFAI-EX-005` on the legacy spec-pack layout, and `QFAI-EX-105` on the
-layered layout `npx qfai init` produces. Until both consumed it, the file was
-read, reported on, and then ignored on every modern project.
+This file is the SSOT for the layer set below: `npx qfai validate` reads the layers
+from here and applies them to two checks — `QFAI-EX-005` on the legacy spec-pack
+layout, and `QFAI-EX-105` on the layered layout `npx qfai init` produces. Until both
+consumed it, the file was read, reported on, and then ignored on every modern project.
 
 - A file that yields no layers raises `QFAI-SPACK-090` (error) rather than
   silently widening to the built-in set.
@@ -287,7 +286,7 @@ and `**Unit and Component owe no ATDD annotation.**` above.
   - Scoping applies only when the project declares at least one UI-bearing
     spec. A project that has never declared a surface has not opted into
     surface typing, so the obligation stays project-wide for it.
-  - Do not create an E2E tree whose only purpose is to receive annotations.
+  - **Deferral.** A story whose acceptance cannot be observed at E2E in the current slice defers with a `- x-qfai-status: planned` meta line inside its own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) in `02_User-stories.md` — the same token the two contract kinds use. It leaves `QFAI-ATDD-111` and is reported as `QFAI-ATDD-118` (`info`); remove the marker when the slice is implemented. It counts only inside the story block it is written in, so one above the first `US-XXXX` heading defers nothing — one line must not drop the obligation for a whole file. It removes the test obligation, not the declaration. A deferred `US-*` stays a known ID, so an early E2E test is counted, not an unknown reference. This is per story, unlike the surface-type scoping above, a whole-spec property that would erase the siblings too. - Do not create an E2E tree whose only purpose is to receive annotations.
     That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
 
@@ -323,19 +322,19 @@ and `**Unit and Component owe no ATDD annotation.**` above.
     `qfai-atdd/SKILL.md` puts Unit and Component out of its scope, and the
     crosswalk above gives L1/L2 no mandated directory — only L3-L5 are
     directory-pinned and only those three roots are scanned.
-  - Previously L1/L2 fell through to `<testsDir>/integration/**` — the fallback for
-    a spec with no `Level` column at all — so every declared Unit and Component
-    TC was an `error` demanding an annotation in a directory this file says is
-    not its home. `QFAI-WAIVER-002` refuses waivers on `error` rules, so a
-    project that filed unit tests where L1's own entry says to had no exit, and
-    the only validator-clean path was duplicating every annotation into
-    `<testsDir>/integration/**` — the all-integration collapse named under
-    Anti-patterns below.
+  - Previously L1/L2 fell through to `<testsDir>/integration/**` — the fallback for a spec
+    with no `Level` column at all — so every declared Unit and Component TC was an `error`
+    demanding an annotation in a directory this file says is not its home. `QFAI-WAIVER-002`
+    refuses waivers on `error` rules, so a project that filed unit tests where L1's own entry
+    says to had no exit, and the only validator-clean path was duplicating every annotation
+    into `<testsDir>/integration/**` — the all-integration collapse named under Anti-patterns
+    below.
   - **They are still gated, by the other stage.** Every coverage-target `TC-*`
     owes a `tdd/test-list.md` row, and `TDDLIST_TC_NOT_COVERED` (`error`)
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
-- API obligations:
+
+- **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does, and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so `QFAI-ATDD-119` (`info`) names it — a legitimate placeholder that must not read as coverage. A repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-119` in `validate.spec-<id>.json`, because `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short. - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `<testsDir>/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
   - **Deferral.** `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) and
@@ -349,20 +348,18 @@ and `**Unit and Component owe no ATDD annotation.**` above.
       API-test obligation for every other `CON-API-*` the file declares.
     - Deferral removes the test obligation, not the declaration. A deferred
       `CON-API-*` stays a known ID, so writing its API test ahead of the slice
-      is fine and never raises `QFAI-ATDD-103`.
-    - Deferred IDs are recorded in `report/atdd-traceability/summary.{json,md}`
-      under `deferred.conApi`, so an empty `missing.conApi` can be told apart
-      from a project where every contract is still planned.
-- Forbidden references:
-  - `<testsDir>/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
-    declared `Level` is not L4/API**. A TC that declares an API-level
-    obligation belongs in `<testsDir>/api/**`, and its annotation there counts as
-    coverage. The rule exists to stop obligations drifting into the wrong
-    layer, not to make the correct layer unusable.
-  - `<testsDir>/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
-    declared `Level` is not L5/E2E**. Same reason as above: the routing rule
-    and the forbidden rule must agree, or the layer the routing selects
-    becomes unusable.
+      is fine and never raises `QFAI-ATDD-103`. - Deferred IDs are recorded in
+      `report/atdd-traceability/summary.{json,md}` under `deferred.conApi`, so an empty
+      `missing.conApi` can be told apart from a project where every contract is still planned.
+      - Forbidden references:
+  - `<testsDir>/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose declared
+    `Level` is not L4/API**. A TC that declares an API-level obligation belongs in
+    `<testsDir>/api/**`, and its annotation there counts as coverage. The rule exists to stop
+    obligations drifting into the wrong
+    layer, not to make the correct layer unusable. - `<testsDir>/e2e/**` must not include
+    `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose declared `Level` is not L5/E2E**. Same reason as
+    above: the routing rule and the forbidden rule must agree, or the layer the routing
+    selects becomes unusable.
   - `<testsDir>/integration/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC
     whose declared `Level` is not L3/Integration** (`QFAI-ATDD-123`). The rule
     is symmetric so "exactly one directory" holds in both directions: an
@@ -408,7 +405,7 @@ If an observed layer distribution looks wrong:
 3. Continue. The stage is not blocked.
 
 The record goes to evidence, not into the spec, on purpose.
-`constitution/drift-protocol.md` lists `*_delta.md` and the per-spec Open
+`.qfai/assistant/constitution/drift-protocol.md` lists `*_delta.md` and the per-spec Open
 Questions file among the upstream SSOT a downstream stage must not edit without
 explicit user approval, and whitelists `.qfai/evidence/**` append/update as an
 allowed exception. Pointing this step at the spec would send ATDD and implement
@@ -419,13 +416,19 @@ spec's own Open Questions file on a later run: `08_Open-questions.md` in a
 layered spec, `15_Open-questions.md` in a spec pack.
 (`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)
 
-A Change Request is reserved for `constitution/drift-protocol.md`-class events — an
-actual conflict with an upstream SSOT decision. A volume observation is not one, and it
-stays non-blocking either way. What differs is how much of it is measurable:
+A Change Request is reserved for `.qfai/assistant/constitution/drift-protocol.md`-class events
+— an actual conflict with an upstream SSOT decision. A volume observation is not
+one, and it stays non-blocking either way. What differs is how much of it is
+measurable:
 
 - **No configured guardrail.** qfai ships no default floor, ratio or threshold,
   and no validator emits a volume rule, so "unmet" is a judgement call with no
   tool-checkable meaning. Record the observation and the reasoning.
+- **A non-gating reference band.** `skills/qfai-atdd/references/volume-signals.md` publishes one
+  band per estimator signal (`E2E_s` / `API_s` / `INT_s`) so the judgement call above has something
+  to be judged against. That is all it is: no validator reads it, no value of it fails a run or
+  raises a Change Request, and a signal outside its band is recorded with its reason like any other
+  volume observation. It is not a configured threshold and does not become one by being observed.
 - **A configured guardrail.** When a project sets
   `validation.testStrategy.maxE2eScenarioRatio` or `maxE2eScenarioCount` to a
   non-null value, `report.ts` measures it and reports `ratioExceeded` /
