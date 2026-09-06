@@ -895,13 +895,34 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
   });
 
   it("hands a review-fix acceptance test back to the skill that owns it", async () => {
-    // `/qfai-implement` does not author those tests and its `red` phase has no
-    // `acceptance-test-engineer`, so a REVISE asking for a test change left
-    // the row at `review-fix` or had a production agent edit a test it does
-    // not own.
+    // A REVISE asking for a test change left the row at `review-fix` or had a
+    // production agent edit a test it does not own. The handback is justified
+    // by **ownership**, not by which agent this skill happens to route: the
+    // availability phrasing it used to carry ("its `red` phase has no
+    // `acceptance-test-engineer`") was scoped to one phase and stopped holding
+    // as soon as another phase routed that role.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("hand the acceptance test back to `/qfai-atdd` first");
-    expect(implement).toContain("has nobody here to do it");
+    expect(implement).toContain(
+      "an acceptance test is `/qfai-atdd`'s owned artifact and is **never edited in this skill**",
+    );
+    expect(implement).toContain("the rule is ownership, not who happens to be available");
+    expect(implement).not.toContain("has nobody here to do it");
+  });
+
+  it("states the same handback reason on the receiving side of the contract", async () => {
+    // The handback is a two-sided contract, and the receiving stage's two
+    // references are what its reader opens. While they still justified the
+    // return by "`/qfai-implement`'s `red` phase has no
+    // `acceptance-test-engineer`", the same routing change that invalidated the
+    // sending side would have left the receiver holding a reason that no longer
+    // held — with nothing in either file to say the rule is ownership.
+    for (const rel of [REVIEW_FIX, PROVENANCE]) {
+      const ref = flat(await read(tree, rel));
+      expect(ref, rel).toContain("an acceptance test is **this** skill's owned artifact");
+      expect(ref, rel).toContain("the rule is ownership, not who happens to be available");
+      expect(ref, rel).not.toContain("`red` phase has no `acceptance-test-engineer`");
+    }
   });
 
   it("keeps cross-spec obligations in the row's own evidence file", async () => {
