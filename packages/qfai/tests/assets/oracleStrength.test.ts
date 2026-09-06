@@ -57,6 +57,23 @@ describe.each(TREES)("%s", (tree) => {
     expect(card).toContain("the recorded command differs from the `GREEN command`");
   });
 
+  it("describes the closed gap in the past tense and names what closed it", async () => {
+    // The gate line that makes `Oracle proof` mandatory cites this file. A
+    // reader arriving through that citation must not be told, as present fact,
+    // that nothing asks for the thing they were just sent here to produce.
+    const doc = await read(tree, ORACLE);
+    expect(doc).not.toContain("Nothing in qfai asked this.");
+    expect(doc).toContain("Nothing in qfai asked this until completion item 5");
+    expect(doc).toContain("are what close that hole");
+  });
+
+  it("introduces the weak-oracle shapes without dating them to today's gates", async () => {
+    // "Each passes today's gates" contradicts the gate item that stops them.
+    const doc = await read(tree, ORACLE);
+    expect(doc).not.toContain("Each passes today's gates");
+    expect(doc).toContain("Each clears an exit-code-only GREEN");
+  });
+
   it("names the weak-oracle shapes rather than asking for a judgement call", async () => {
     const doc = await read(tree, ORACLE);
     expect(doc).toContain("Truthiness where the value is available");
@@ -70,6 +87,27 @@ describe.each(TREES)("%s", (tree) => {
     // That path already records a falsifiability mutation by the same method.
     const doc = await read(tree, ORACLE);
     expect(doc).toContain("That satisfies `Oracle proof`; do not do it twice");
+  });
+
+  it("exempts the falsifiability mutation from the ownership rejection", async () => {
+    // The trio breaks the predicate `Satisfied-by` names, which belongs to the
+    // sibling row by construction — read literally, the ownership criterion
+    // rejected every correctly executed `Unit` / `Component` branch-2 row, and
+    // `red-not-observable.md` forbids routing that case to `exception`.
+    const doc = await read(tree, ORACLE);
+    expect(doc).toContain(
+      "**On a _RED not observable_ row the predicate `Satisfied-by` names is the owned code for this check**",
+    );
+    expect(doc).toContain("Anything else is still out of bounds");
+  });
+
+  it("scopes the gatekeeper's carve-out to the evidence branch, not the `Layer`", async () => {
+    // Scoped to a handed-over row it reached only `E2E` / `API` / `Integration`,
+    // leaving the `Unit` / `Component` case the path was written for uncovered.
+    const card = await read(tree, GATEKEEPER);
+    expect(card).toContain(
+      "On a falsifiability row, **the predicate `Satisfied-by` names is the owned code**",
+    );
   });
 
   it("routes the equivalent-mutant case instead of deadlocking the implementer", async () => {

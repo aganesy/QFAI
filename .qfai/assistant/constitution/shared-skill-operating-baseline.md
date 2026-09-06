@@ -26,12 +26,22 @@ It is not where the detail lives.
   (and anchor, when the file covers more than one topic) so the reader is never
   left guessing where the rule went.
 
-A hard line ceiling backs this up: **500 lines per assistant asset file**, for
+A hard line ceiling backs this up: **800 lines per assistant asset file**, for
 every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as
 `content.split(/\r?\n/).length` — blank lines included. `npx qfai doctor`
 measures it and reports every file over the ceiling as `assets.lineBudget`. The
 ceiling is a backstop, not the rule: a file approaching it is a signal to move a
 section out, not to raise the number.
+
+It was raised from 500 once, and on measurement rather than on the "this file is
+long" claim the number exists to refuse: three skill bodies had converged on that
+ceiling, and the changes in flight against one of them added 161 lines to a body
+already at 498 — eleven of them crossing the ceiling on their own. The detail
+those bodies carry is required to sit in the body rather than behind a pointer,
+so splitting could not absorb it. Converging on the limit was itself the signal —
+a body at the ceiling stops shedding topics and starts packing them into longer
+lines, and a line count cannot see that. Raise it again only against evidence of
+that kind.
 
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
@@ -82,6 +92,18 @@ So for a machine-readable asset at the ceiling the remedy is, in order:
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
+- Spend **at most 5 clarifying questions per invocation**, the unit being one
+  top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
+  `/web-research`, …). Classify each question, not the prompt: a question asked
+  because a document requires a recorded human decision (an SDD triage
+  `Approved By`, a reviewer-gate escalation) is an **approval** and spends
+  nothing, and bundling one into a prompt does not exempt the clarifications
+  beside it. On exhaustion, do not ask a sixth clarification — proceed with
+  explicit, labelled assumptions and record them in the output, as `--auto`
+  does; a required approval may still be asked. See
+  `constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
+- When `--auto` is active, ask nothing: no AskUserQuestion, no plain-text question.
+  Proceed with explicit assumptions and record them in the outputs.
 
 ## Canonical qfai Launcher (Mandatory)
 
@@ -162,7 +184,7 @@ Rules:
 
 When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `shared-skill-delegation-baseline.md#verdict-vocabulary`):
 
-- inspect exit code, logs, `validate.json`, and cited files before reporting;
+- inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skills/qfai-verify/references/validate-json-schema.md`);
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
 - fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
 - **upstream spec/contract findings: never repair.** STOP and follow `.qfai/assistant/constitution/drift-protocol.md` (Change Request + owner-skill rerun) — **even when the fix looks local and non-destructive, and even when it is one token and obviously correct**. "Local and non-destructive" is a permission for the two classes above it; it is not a test that upstream artifacts can pass. Ownership, not size, decides;
@@ -171,7 +193,7 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
 - stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
-- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `shared-skill-delegation-baseline.md#round-budget-must`.
+- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `review-convergence.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 
@@ -221,5 +243,66 @@ Before declaring completion, you MUST:
 
 - resolve or explicitly defer undefined or ambiguous items with rationale;
 - verify every expected artifact exists and required sections are populated;
-- scan generated artifacts for unresolved placeholders such as `TBD`, `TODO`, `TBA`, `TBC`, `XXX`, `???`, `OQ`, `OPEN QUESTION`, `UNDEFINED`, and `PLACEHOLDER`;
-- run the smallest applicable smoke check, or state "not applicable" with a short rationale.
+- scan generated artifacts for unresolved placeholders — `TODO`, `TBA`, `TBC`, `XXX`, `???`, `UNDEFINED`, `PLACEHOLDER`, and **undocumented** `TBD` — under the two rules below;
+- run the smallest applicable smoke check and report its outcome. Only PASS satisfies this bullet: FAIL and UNRUN are blockers, so they go in a stop report with the reason, never next to a completion claim.
+
+The first three bullets are self-inspection: they are discharged by rereading
+what you just wrote, so an agent that hallucinated an artifact will confirm its
+own account of that artifact. The smoke check is the only bullet whose result
+can contradict that account, which is why it carries no waiver.
+
+**The smallest applicable smoke check** is the cheapest command that executes
+what this stage just produced and returns a pass/fail you did not author. Each
+skill names its own next to the `Follow` line that cites this section. A skill
+that names none has not been granted an exemption — it has an override left
+unfilled, and that is a finding to report, not a reason to skip the bullet.
+
+UNRUN is the same verdict `.qfai/assistant/constitution/quality.md` gives a gate
+with no discoverable command, and it means the same thing here: **not passed**.
+A smoke check that ran and failed is not passed either. Both stop the run: do
+not declare completion on a FAIL or an UNRUN — report the outcome as a blocker
+with the reason that makes it falsifiable later, and hand back the stop report
+instead of the completion claim.
+
+### What the placeholder scan does not flag
+
+**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: an
+Open Questions register row carrying its tracking fields — ID, owner, status,
+due — and the `Open Questions` heading, `OQ-ID` table header and empty-state row
+that the required `Open-questions.md` files ship with while recording zero open
+questions. Article II and `workflow.md` both end an unverifiable fact by
+recording an Open Question, so the tracked record they prescribe must never be
+reported as an unresolved placeholder. Everywhere else the two strings are still
+scanned: a bare `OQ` or `OPEN QUESTION` left as a value in generated spec prose
+or a contract field, or a row missing its owner, status or due date, is a hit
+like any other token.
+
+**A documented `TBD` is a compliant record.** `constitution.md` Article II and
+`thinking.md` require writing `TBD` together with a note of what evidence is
+missing, and `thinking.md` requires raising the matching Open Question for the
+same fact. Both halves together are the finished form, not an unfinished one; do
+not report it and do not delete it — deleting it destroys the record of the
+missing evidence, which is the whole point of the marker. A `TBD` missing either
+half — no note, or no Open Question — is a hit.
+
+### What a surviving hit obligates
+
+A hit is **reported, not silently cleared**, and **cleared by a re-scan, not by
+assertion**. Fix what you can, then run the scan again over the same artifacts:
+_resolved_ is the verdict for a hit the re-run no longer reports, and that re-run
+is its evidence. It is not available for a hit still present at that file and
+line — a token still readable there is unresolved whatever the report calls it.
+List every hit the re-scan still finds alongside the completion claim — file,
+line, token — and state for each one whether it is deferred with rationale or
+recorded as an Open Question. A completion claim that omits a surviving hit is
+invalid evidence under the rules above. Completion is blocked while a surviving
+hit is neither of the two.
+
+**Severity floor on the verdict.** _Deferred with rationale_ and _recorded as an
+Open Question_ are NOT available for a hit that stands in for a concrete
+security defect, data loss or corruption, or a correctness defect that would
+break a released contract. Such a hit is cleared only by a named fix or by
+dropping the item from scope; recording it and declaring completion anyway is
+prohibited, exactly as `shared-skill-delegation-baseline.md` withholds that same
+exit for that same class. While neither of the two remaining verdicts applies,
+completion stays blocked.

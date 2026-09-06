@@ -777,7 +777,7 @@ async function validateTestFileGlobsConfiguration(
       limit: 1,
     });
   } catch (error) {
-    // A scan that throws — an invalid pattern (`[" "]` is valid YAML but makes
+    // A scan that throws — an invalid pattern (`["\0"]` is valid YAML but makes
     // fast-glob throw) or a filesystem error — means the gate could not run at
     // all. Swallowing it returned "no finding", which reads as "configuration
     // fine" and let `--fail-on error` pass over a gate that never executed.

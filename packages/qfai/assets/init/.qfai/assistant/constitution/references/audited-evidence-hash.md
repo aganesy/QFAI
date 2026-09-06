@@ -81,7 +81,7 @@ procedure, in four steps:
      revision and the hash both unmoved. Gate item 10 also requires the
      verdict to name the `DR-ID` the row currently carries.
    - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
-     the GREEN subject plus `Refactor verify command` / `result`, the
+     the GREEN subject plus `Refactor verify command` / `result` / `revision`, the
      `Shared-artifact re-verify` block when the row has one — it records the
      earlier rows' re-runs and re-taken proofs, which these reviewers are the
      ones who audit, so leaving it out let it be edited or deleted without
