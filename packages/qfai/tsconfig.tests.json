@@ -57,6 +57,7 @@
     "tests/assets/layerCiLaneMapping.test.ts",
     "tests/assets/openQuestionRouting.test.ts",
     "tests/assets/outputLanguageSingleSource.test.ts",
+    "tests/assets/packGateQualifier.test.ts",
     "tests/assets/prototypingScopeFloorHome.test.ts",
     "tests/assets/repositoryAttributionGuard.test.ts",
     "tests/assets/researchFirstOwner.test.ts",
