@@ -416,7 +416,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai sdd <subcommand>` — currently only `preflight` is supported.
   if (command === "sdd") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "preflight") {
         options.sddAction = candidate;
       } else {
@@ -591,7 +591,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "text" || next === "json") {
             options.sddFormat = next;
           } else {
-            markInvalid(formatReason(next));
+            markInvalid(badValue("--format", next, "text|json"));
           }
           break;
         }
