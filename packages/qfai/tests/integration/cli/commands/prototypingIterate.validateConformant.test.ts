@@ -188,18 +188,13 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
     expect(parsed.iterations).toHaveLength(1);
     expect(parsed.iterations[0]?.commitSha).toBe("uncommitted");
     expect(parsed.iterations[0]?.reviewerId).toBe("iterate-seed");
-    // The seed iteration's `evidenceRefs` is the canonical
-    // `{ screenshot, html }` object form shared with the {@link
-    // Iteration} type, `buildEvaluatorReview`, and the ref-integrity
-    // validator (`validatePrototypingArtifactRefIntegrity`). When
-    // multiple screens are declared, the first declared screen's paths
-    // are used as the iteration-level representative — the reviewer
-    // overwrites this with the actually-reviewed surface on the first
-    // review pass.
-    expect(parsed.iterations[0]?.evidenceRefs).toEqual({
-      screenshot: ".qfai/evidence/prototyping/iter-00/home_page.png",
-      html: ".qfai/evidence/prototyping/iter-00/home_page.html",
-    });
+    // The seed cites NO evidence, declared screens or not. It is written
+    // before capture runs, so any ref it carried named a file that did not
+    // exist yet — and `validatePrototypingArtifactRefIntegrity` requires
+    // refs to resolve. A placeholder that is explicitly not a review does
+    // not get to cite evidence it has not seen; the reviewer's own refs
+    // arrive when it overwrites this entry.
+    expect(parsed.iterations[0]).not.toHaveProperty("evidenceRefs");
     expect(parsed.acceptedIterationIndex).toBe(0);
     expect(parsed.stopReason).toBe(null);
   });
@@ -222,27 +217,24 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
     });
     expect(exit).toBe(0);
     const { config } = await loadConfig(root);
-    // Write the placeholder evidence files the seed iteration points at
-    // (the default fallback `iter-NN/index.{png,html}` paths). The seed
-    // does this implicitly via `--capture`; without `--capture` the
-    // operator's workflow writes them before the first validate pass.
-    // This test pins the path-resolution contract — empty / missing
-    // fields would surface as `QFAI-PROT-009`.
-    const iterDir = path.join(root, ".qfai", "evidence", "prototyping", "iter-00");
-    await mkdir(iterDir, { recursive: true });
-    await writeFile(path.join(iterDir, "index.png"), "png");
-    await writeFile(path.join(iterDir, "index.html"), "<html></html>");
+    // NOTHING is written here, and that is the whole assertion. This case
+    // used to create `iter-00/index.png` and `iter-00/index.html` itself,
+    // under a comment claiming "the seed does this implicitly via
+    // `--capture`; without `--capture` the operator's workflow writes them".
+    // Both halves were false: capture writes `iter-NN/<screen>.{png,html}`
+    // per the plan's own `screenshotTemplate` and never `index.*`, and no
+    // shipped document asks the operator to author `index.*`. The test
+    // manufactured the postcondition it asserted, which is how #1073 shipped
+    // green while `validate` reported two QFAI-PROT-009 errors on every real
+    // run between `iterate` and the reviewer.
     const protoJsonRaw = await readFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       "utf-8",
     );
     const parsed = JSON.parse(protoJsonRaw) as {
-      iterations: Array<{ evidenceRefs: { screenshot: string; html: string } }>;
+      iterations: Array<Record<string, unknown>>;
     };
-    expect(parsed.iterations[0]?.evidenceRefs).toEqual({
-      screenshot: ".qfai/evidence/prototyping/iter-00/index.png",
-      html: ".qfai/evidence/prototyping/iter-00/index.html",
-    });
+    expect(parsed.iterations[0]).not.toHaveProperty("evidenceRefs");
     const issues = await validatePrototypingArtifactRefIntegrity(root, config);
     const errors = issues.filter((i) => i.severity === "error");
     expect(errors).toEqual([]);

@@ -432,6 +432,14 @@ async function validateDownstreamRefsForV1421(entry: SpecEntry): Promise<Issue[]
         check.filePath,
         "layeredTraceability.downstream",
         refs,
+        "canonical",
+        // The rule carried no remedy at all, and the sentence an author reaches
+        // for — 「per BR-0017-0004」 — is what trips it. Layered specs share
+        // entities, so deferring to the owner is a real relationship; the
+        // supported way to express it is the owner's contract id (#1101).
+        "同じレイヤー以上の ID を参照してください。別 spec が所有するルールに従う場合は、" +
+          "その spec の contract id (`CON-DB-*` / `CON-API-*` / `CON-UI-*`) を引用します — " +
+          "所有 spec は対象 spec の Contracts 表で特定できます。",
       ),
     );
   }

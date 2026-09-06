@@ -63,8 +63,13 @@ const FOUR_STATE_CHECK_RE = /\bfour_state_check\s*:/i;
  *
  * Treat `TODO`, `FIXME`, `XXX`, `TBD`, `<placeholder>`, and empty
  * (whitespace-only) values as unfilled.
+ *
+ * Exported so the Stage 0 steering scan in `assistantAssets.ts`
+ * (`QFAI-ASSETS-003`) reuses this spelling instead of introducing a
+ * third one. Non-global, so callers share it without `lastIndex`
+ * interference.
  */
-const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
+export const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
 const MAX_PRIMARY_STEPS_RE = /\bmax_primary_steps\s*:\s*(\d+)/i;
 
 export async function validateRenderCritique(root: string, config: QfaiConfig): Promise<Issue[]> {

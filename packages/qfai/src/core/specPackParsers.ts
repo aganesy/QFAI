@@ -187,8 +187,105 @@ const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
 
 /**
+ * Start of a CommonMark type-1 raw HTML block. These four tags are the ones
+ * whose contents are never parsed as Markdown, and the block runs to its
+ * closing tag regardless of blank lines — unlike `<div>` and friends, which end
+ * at a blank line and do let Markdown resume.
+ */
+const RAW_HTML_BLOCK_START = /^ {0,3}<(?:pre|script|style|textarea)(?=[\s/>]|$)/i;
+
+/** End of a type-1 raw HTML block: any of the four closing tags, per CommonMark. */
+const RAW_HTML_BLOCK_END = /<\/(?:pre|script|style|textarea)>/i;
+
+/**
+ * CommonMark's type-6 block-level tag names. A line opening or closing one of
+ * these starts a raw HTML block that runs to the next **blank line**, and
+ * Markdown does not resume inside it.
+ */
+const BLANK_TERMINATED_HTML_TAGS = [
+  "address",
+  "article",
+  "aside",
+  "base",
+  "basefont",
+  "blockquote",
+  "body",
+  "caption",
+  "center",
+  "col",
+  "colgroup",
+  "dd",
+  "details",
+  "dialog",
+  "dir",
+  "div",
+  "dl",
+  "dt",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "frame",
+  "frameset",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "head",
+  "header",
+  "hr",
+  "html",
+  "iframe",
+  "legend",
+  "li",
+  "link",
+  "main",
+  "menu",
+  "menuitem",
+  "nav",
+  "noframes",
+  "ol",
+  "optgroup",
+  "option",
+  "p",
+  "param",
+  "search",
+  "section",
+  "summary",
+  "table",
+  "tbody",
+  "td",
+  "tfoot",
+  "th",
+  "thead",
+  "title",
+  "tr",
+  "track",
+  "ul",
+] as const;
+
+/**
+ * Start of a CommonMark type-6 raw HTML block.
+ *
+ * Type 1 covers only `<pre>`, `<script>`, `<style>` and `<textarea>` — the four
+ * that run past blank lines to a closing tag. `<div>`, `<table>` and the rest
+ * end at a blank line instead, but until they do their contents are just as raw:
+ * a `## Risks` between `<div>` and the next blank line is not a heading, and
+ * reading it as one let a spec satisfy a required-heading gate with markup it
+ * never wrote as a section.
+ */
+const BLANK_TERMINATED_HTML_START = new RegExp(
+  `^ {0,3}</?(?:${BLANK_TERMINATED_HTML_TAGS.join("|")})(?:[\\s/>]|$)`,
+  "i",
+);
+
+/**
  * Blanks the regions of a spec document that are not the spec, preserving line
- * count: fenced code blocks, HTML comments, and top-level indented code blocks.
+ * count: fenced code blocks, HTML comments, raw HTML blocks, and top-level
+ * indented code blocks.
  *
  * These documents often illustrate their own format. Without this, an
  * illustrative `## Test Case Table` plus `TC-ID` table inside one is selected as
@@ -206,6 +303,11 @@ const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
  *
+ * **Raw HTML blocks are blanked too.** `<pre>`, `<script>`, `<style>` and
+ * `<textarea>` hold literal text, so a `## Risks` line inside one is not a
+ * heading and a `| TC-ID |` row inside one is not a table row — reading either
+ * as spec content lets a document satisfy a gate with markup it never wrote.
+ *
  * **Indented code is recognised only at the top level.** Under a list item,
  * four-space indentation is continuation rather than code, and telling the two
  * apart needs the list's content column. Rather than guess it, a block is code
@@ -217,6 +319,8 @@ export function maskNonSpecRegions(text: string): string {
   let open: { marker: string; length: number } | null = null;
   let inComment = false;
   let inIndentedCode = false;
+  let inRawHtml = false;
+  let inBlankTerminatedHtml = false;
   let listOpen = false;
   let prevBlank = true;
 
@@ -230,7 +334,26 @@ export function maskNonSpecRegions(text: string): string {
         return "";
       }
 
+      if (inRawHtml) {
+        // The closing-tag line belongs to the block, so it is blanked as well.
+        if (RAW_HTML_BLOCK_END.test(line)) {
+          inRawHtml = false;
+        }
+        return "";
+      }
+
       const blank = line.trim().length === 0;
+
+      if (inBlankTerminatedHtml) {
+        // The blank line ends the block and is itself outside it, so it is kept
+        // — it is what lets the next line open a paragraph or a heading again.
+        if (blank) {
+          inBlankTerminatedHtml = false;
+          prevBlank = true;
+          return line;
+        }
+        return "";
+      }
 
       if (inIndentedCode) {
         // A blank line does not end the block — an indented sample may contain
@@ -261,6 +384,19 @@ export function maskNonSpecRegions(text: string): string {
       const fence = FENCE_LINE.exec(masked.text)?.[1];
       if (fence) {
         open = { marker: fence.charAt(0), length: fence.length };
+        return "";
+      }
+
+      if (RAW_HTML_BLOCK_START.test(masked.text)) {
+        // A one-line `<pre>…</pre>` opens and closes on the same line.
+        inRawHtml = !RAW_HTML_BLOCK_END.test(masked.text);
+        return "";
+      }
+
+      // Checked after type 1, which wins where the two overlap, and after the
+      // fence check, so `<div>` inside a fenced sample is sample text.
+      if (BLANK_TERMINATED_HTML_START.test(masked.text)) {
+        inBlankTerminatedHtml = true;
         return "";
       }
       return masked.text;
