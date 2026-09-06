@@ -144,14 +144,117 @@ leave the suite green.
 So after the slices merge, and **independently of whether the merged suite
 passes**:
 
-1. For each slice, list the `src/` paths it actually touched
-   (`git diff --name-only <base>..<slice-head> -- <source root>`).
-2. Compare that list against the slice's declared `Owning module`.
-3. Report every touched path that no slice declared, and every path touched by
-   more than one slice, as a **deny-condition breach**. It is a breach whether
-   or not anything broke: the gate was passed on a claim that turned out to be
-   false, so the next authorization is being made on the same basis.
-4. A breach does not automatically roll back a green merge. It does require the
+1. For each slice, list the paths it actually touched under the production roots
+   `catalog/structure.md` declares — the `Production roots` field of its
+   `## Key packages / entrypoints` section, which Stage 0 already required be
+   read and refreshed against the repository
+   (`git diff --name-only <base>..<slice-head> -- <source root>`, substituting
+   `<source root>` from that field rather than assuming `src/`; a repo may
+   keep production code under `app/`, `lib/`, `internal/`, `cmd/` or
+   `packages/*/src`). The field holds **Git pathspecs, not only directory
+   names** — pass every entry through verbatim. A repo whose production code
+   sits at the repository root declares globs there (`*.go` alongside `cmd/`
+   and `internal/`; `*.py` alongside the package directory) precisely so this
+   pathspec never has to be a bare `.`, which would carry `go.mod`,
+   `package.json`, CI config, documentation and build output into the
+   production list and make step 5 report each of them as an undeclared seam
+   breach.
+   **A catalog written before that field existed carries no `Production roots`
+   line.** `assistant/catalog/**` is create-only, so upgrading the tool and
+   re-running `npx qfai init --force` refreshes `assistant/skills/**` and leaves
+   an installed project's catalog untouched: the policy arrives, the field does
+   not. Do not fall back to a literal `src/` — derive the roots once from that
+   catalog's `Core modules` and `CLI / service entry` values checked against the
+   repository listing, **write the derived `Production roots` line back into
+   `catalog/structure.md` in the same pass**, and reconcile against it. Every
+   later run then reads the field like any other.
+   **Re-establish the roots against the merged tree before using them.** Stage 0
+   refreshed that field before any slice ran, so a root a slice _created_ is not
+   in it — and the mis-read-root branch in step 3 does not catch that either,
+   because a slice that also touched a known root produces a non-zero diff and
+   never reaches it. Take the whole merged diff once with no pathspec
+   (`git diff --name-only <base>..<merge-head>`), and for every path outside the
+   declared roots decide whether it is shipped source. Add each new
+   shipped-source root to `Production roots`, write it back the same way, and
+   only then run the per-slice pathspec. Without this pass a slice can add a
+   whole directory of production code that no ownership comparison ever sees.
+2. Build **two lists with two commands** — the production list and the
+   test/fixture list. Not one list split in half: each needs its own pathspec.
+   The **production list** is step 1's pathspec with the test and fixture
+   patterns excluded:
+   `git diff --name-only <base>..<slice-head> -- <source root> ':(exclude)**/*.test.*' ':(exclude)**/*_test.go' ':(exclude)**/__tests__/**' ':(exclude)**/testdata/**'`
+   Step 1's pathspec is positive only, so a repo that colocates tests with
+   production code — `app/foo.test.ts` beside `app/foo.ts`, Go's `_test.go` in
+   the package it tests — otherwise lists them as touched production paths and
+   step 5 reports each one as an ownership breach. `Production roots` alone
+   cannot do this: the excluded files sit **inside** a declared root.
+   The **test/fixture list is a second command with its own positive
+   pathspec** — there is no such thing as inverting the first one. Git applies
+   exclude pathspecs after the non-exclude ones and, when there are no
+   non-exclude ones, to the whole tree (`git help glossary`, "pathspec"), so
+   adding a test glob beside `<source root>` unions the two and an
+   exclude-only pathspec just re-derives production. Name the test paths
+   positively instead:
+   `git diff --name-only <base>..<slice-head> -- 'tests/**' '**/*.test.*' '**/*_test.go' '**/__tests__/**' '**/testdata/**'`
+   taking the patterns from this repo's own test and fixture naming — the
+   `testFileGlobs` of `qfai.config.yaml` and the `Test file` column of the
+   dispatched rows — and extending them to whatever it actually uses.
+   **Derive it independently of `Production roots`, never by subtraction from
+   the production list.** That field excludes tests by construction, so in the
+   ordinary layout — production under `src/`, tests under `tests/` — step 1's
+   list never contained a test path to begin with, and filtering one out of the
+   other yields an empty test list on every run while step 6 reports a clean
+   check. Two slices both writing `tests/shared-helper.ts` or a shared fixture
+   outside every production root is a deny condition in its own right (see the
+   allow / deny conditions above), and the one the merged suite is least likely
+   to reveal: the writes can interleave into a file that still compiles and
+   still passes. Step 6 checks this list.
+3. A zero-path **production** list is not by itself evidence of a clean seam,
+   and it is not automatically a mis-read root either. **Settle it by
+   observation, not from the evidence blocks.** The per-item evidence contract
+   (`SKILL.md` "Per-item evidence contract", `references/round-evidence.md`)
+   records commands, results and revisions and no manifest of changed files;
+   `Refactor verify result` proves the suite was green, not what the refactor
+   edited. Asking a reader to confirm from those blocks that Refactor and every
+   review-fix round left production files untouched asks for a fact nothing
+   recorded — a worker who simply never mentions a production edit passes the
+   check. Take the slice's whole diff with **no pathspec** instead
+   (`git diff --name-only <base>..<slice-head>`): it covers every phase of the
+   slice — RED, Green, Refactor and each review-fix round — and depends on no
+   root, so neither an incomplete `Production roots` nor an unrecorded edit can
+   hide inside it.
+   - It is empty too: the slice changed nothing, and the empty production list
+     is sound. That is what a slice of falsifiability-path items looks like —
+     `references/red-not-observable.md` adds no production code and reverts its
+     mutation.
+   - It lists paths: classify each one as shipped source, as test or fixture,
+     or as neither (config, documentation, build output). Any shipped-source
+     path the production list did not carry is a **mis-read root** — or a
+     step 2 exclude pattern too broad for this repo. Correct
+     `Production roots` per step 1 or the pattern, write it back, and re-run
+     before continuing. The empty production list is legitimate only when no
+     listed path is shipped source.
+
+   Judge it on that diff rather than on the RED route because Refactor edits
+   shipped code by design and an `implementation-reviewer` REVISE for naming or
+   duplication takes the no-round path: both change production code with no RED
+   of their own, so a falsifiability-only RED never implied an empty production
+   diff.
+
+4. Compare the production list from step 2 against the slice's declared
+   `Owning module`.
+5. Report every touched production path that no slice declared, and every one
+   touched by more than one slice, as a **deny-condition breach**. It is a
+   breach whether or not anything broke: the gate was passed on a claim that
+   turned out to be false, so the next authorization is being made on the same
+   basis.
+6. Check the test and fixture list from step 2 separately, against each slice's
+   declared `Test file` rather than its `Owning module` — the ownership rule for
+   these paths is a different one. A path written by more than one slice is a
+   deny-condition breach on the same terms as above. Not being declared by any
+   slice is not a breach here: a slice legitimately writes fixtures its ledger
+   row does not name. Overlap is what this list is for.
+7. A breach does not automatically roll back a green merge. It does require the
    overlapping modules to be re-read for duplicated behaviour, and the finding
    to be recorded before `delivery-planner` authorizes another parallel run.
 
