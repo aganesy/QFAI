@@ -1,6 +1,6 @@
 import { defineWorkspace } from "vitest/config";
 
-import { projectKnobs } from "./vitest.knobs";
+import { SETUP_FILES, projectKnobs } from "./vitest.knobs";
 
 /**
  * The runner projects, each declaring the project-scoped half of the knob set.
@@ -18,6 +18,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "core",
       include: ["tests/core/**/*.test.ts"],
     },
@@ -25,6 +26,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "unit",
       include: ["tests/unit/**/*.test.ts"],
     },
@@ -32,6 +34,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "validators",
       include: ["tests/validators/**/*.test.ts"],
     },
@@ -39,6 +42,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "integration",
       include: [
         "tests/integration/**/*.test.ts",
@@ -51,6 +55,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "e2e",
       include: ["tests/e2e/**/*.test.ts", "tests/assets/**/*.test.ts"],
     },
@@ -58,6 +63,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "cli",
       include: ["tests/cli/**/*.test.ts"],
     },
@@ -65,6 +71,7 @@ export default defineWorkspace([
   {
     test: {
       ...projectKnobs,
+      setupFiles: SETUP_FILES,
       name: "scripts",
       include: ["tests/scripts/**/*.test.ts"],
     },

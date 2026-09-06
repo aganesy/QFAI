@@ -6,6 +6,7 @@ import {
   lstat,
   mkdtemp,
   mkdir,
+  readdir,
   readFile,
   readlink,
   rename,
@@ -14,7 +15,7 @@ import {
   writeFile,
   symlink,
 } from "node:fs/promises";
-import { execFile as execFileCb } from "node:child_process";
+import { execFile as execFileCb, spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -32,7 +33,10 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
-import { hasInitMarkerSignature } from "../../src/core/paths/assistantPaths.js";
+import {
+  WORKLOG_ENTRY_STATUSES,
+  hasInitMarkerSignature,
+} from "../../src/core/paths/assistantPaths.js";
 import {
   INTEGRATION_SURFACE_DIRS,
   validateIntegrationSurface,
@@ -59,6 +63,27 @@ const REQUIRED_SKILLS = [
 ];
 
 const execFile = promisify(execFileCb);
+
+/**
+ * The pre-fix `qfai init` placeholder body for an assistant layer, verbatim.
+ * Only an exact copy of this is removable, so the tests that exercise the
+ * migration have to write the real thing rather than an approximation.
+ */
+function legacyGitkeepBody(layer: "catalog" | "manifest"): string {
+  const purposes = {
+    catalog:
+      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
+    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+  } as const;
+  return [
+    `# .qfai/assistant/${layer}/`,
+    "",
+    purposes[layer],
+    "",
+    "Seeded by qfai init (4-layer assistant-tree recut).",
+    "",
+  ].join("\n");
+}
 
 /**
  * A wrapper body shaped like the ones qfai used to ship: the delegation line
@@ -99,6 +124,31 @@ function reportedPaths(output: string): string[] {
     .split("\n")
     .filter((line) => line.startsWith(bulletPrefix))
     .map((line) => line.slice(bulletPrefix.length).trim());
+}
+
+/**
+ * The bullet paths of one run-report section, named by its header line.
+ *
+ * `reportedPaths` above reads every bullet in the output, which stopped
+ * separating the sections once the report began enumerating written paths
+ * beside skipped ones. A claim about what a run *skipped* has to read the
+ * skipped list alone, or a path disclosed as written satisfies it too.
+ */
+function sectionPaths(output: string, header: string): string[] {
+  const lines = output.split("\n");
+  const start = lines.indexOf(header);
+  if (start === -1) {
+    return [];
+  }
+  const bulletPrefix = "    - ";
+  const paths: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (!line.startsWith(bulletPrefix)) {
+      break;
+    }
+    paths.push(line.slice(bulletPrefix.length).trim());
+  }
+  return paths;
 }
 
 async function expectSymlinkTarget(linkPath: string, expectedFragment: string): Promise<void> {
@@ -2380,8 +2430,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
       await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
 
+      // --verbose expands the skipped list; the default report is counts only.
       const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
 
       // Both files retain their original custom content
@@ -2401,22 +2452,233 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0003
-  it("--force does not override instructions", async () => {
+  it("--force refreshes instructions from the shipped template", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
-      await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
-      await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "stale-cr\n", "utf-8");
+      await writeFile(path.join(instrDir, "principles.instructions.md"), "stale-pr\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect(await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8")).toBe(
-        "custom-cr\n",
+      const codeReview = await readFile(
+        path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
       );
-      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toBe(
-        "custom-pr\n",
+      const principles = await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8");
+
+      expect(codeReview).not.toBe("stale-cr\n");
+      expect(codeReview).toContain("[BLOCKER]");
+      expect(principles).not.toBe("stale-pr\n");
+      expect(principles).toContain("YAGNI");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force replaces an instructions symlink instead of writing through it", async () => {
+    // `writeFile` follows a symlink, so refreshing without unlinking first
+    // would rewrite the link's target — a file outside the project that init
+    // was never asked to touch.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const escapee = path.join(outside, "shared-review-rules.md");
+      await writeFile(escapee, "someone-elses-file\n", "utf-8");
+      const linked = path.join(instrDir, "code-review.instructions.md");
+      try {
+        await symlink(escapee, linked, "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The link is gone, replaced by a regular file holding the template.
+      expect((await lstat(linked)).isSymbolicLink()).toBe(false);
+      expect(await readFile(linked, "utf-8")).toContain("[BLOCKER]");
+      // And the file the link pointed at is untouched.
+      expect(await readFile(escapee, "utf-8")).toBe("someone-elses-file\n");
+      // The staging file the replacement goes through is renamed, not left behind.
+      const leftovers = (await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"));
+      expect(leftovers).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
+    // `lstat` only answers about the last path component, so with
+    // `.github/instructions` pointing at a shared directory the destination
+    // looks like an ordinary file — one that belongs to whatever the link
+    // points at. Refresh must not follow the ancestor out of the project.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await mkdir(path.join(root, ".github"), { recursive: true });
+      await writeFile(path.join(outside, "code-review.instructions.md"), "shared-cr\n", "utf-8");
+      await writeFile(path.join(outside, "principles.instructions.md"), "shared-pr\n", "utf-8");
+      try {
+        await symlink(outside, path.join(root, ".github", "instructions"), "dir");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(outside, "code-review.instructions.md"), "utf-8")).toBe(
+        "shared-cr\n",
       );
+      expect(await readFile(path.join(outside, "principles.instructions.md"), "utf-8")).toBe(
+        "shared-pr\n",
+      );
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force does not delete a real directory standing where an instructions file goes", async () => {
+    // `rename` cannot replace a populated directory, and the recovery for that
+    // failure is meant for a *symlink* — which `lstat` reports as a link, not
+    // as a directory. Treating a real directory the same way turned "refresh
+    // the shipped instructions" into an unbounded `rm -r` of user data.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      const collision = path.join(instrDir, "code-review.instructions.md");
+      await mkdir(collision, { recursive: true });
+      await writeFile(path.join(collision, "notes.md"), "user-data\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The directory and everything under it survive untouched…
+      expect((await lstat(collision)).isDirectory()).toBe(true);
+      expect(await readFile(path.join(collision, "notes.md"), "utf-8")).toBe("user-data\n");
+      // …no staging file is left behind…
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual(
+        [],
+      );
+      // …and the sibling file, which has no collision, is still refreshed.
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
+        "YAGNI",
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--force does not replace a FIFO standing where an instructions file goes", async () => {
+    // The refusal was written as "not a directory", and `lstat` calls a FIFO,
+    // a socket and a device node none of those — so `rename` replaced the
+    // entry outright. Create-only kept every one of them; the allowlist keeps
+    // that true without having to enumerate the file types to refuse.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const fifo = path.join(instrDir, "code-review.instructions.md");
+      const made = spawnSync("mkfifo", [fifo]);
+      if (made.status !== 0) return; // no mkfifo on this platform — nothing to assert
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The FIFO is still a FIFO, not a template file…
+      expect((await lstat(fifo)).isFIFO()).toBe(true);
+      // …nothing was staged beside it…
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual(
+        [],
+      );
+      // …and a sibling with no collision is still refreshed, so the refusal is
+      // scoped to the entry rather than aborting the whole step.
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
+        "YAGNI",
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--force sweeps a staging file a killed run left in the tracked directory", async () => {
+    // `replaceWithRegularFile` cleans up its own staging file, but `finally` is
+    // a JavaScript construct: SIGKILL, a crash or a power loss ends the run
+    // without one. Every run stages under a fresh pid-timestamp name, so
+    // without a sweep the orphans only accumulate in a tracked directory until
+    // one is committed by accident.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      // The shape a killed run leaves: a destination name, the infix, then the
+      // base-36 pid and timestamp.
+      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      await writeFile(orphan, "half-written\n", "utf-8");
+      // An unrelated dotfile in the same directory must survive: the sweep is
+      // scoped to names this command could have written.
+      const bystander = path.join(instrDir, "notes.qfai-init-notes.md");
+      await writeFile(bystander, "keep\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual([
+        "notes.qfai-init-notes.md",
+      ]);
+      expect(await readFile(bystander, "utf-8")).toBe("keep\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--dry-run sweeps nothing", async () => {
+    // `--dry-run` promises to change nothing, and an orphan is still a change.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      await writeFile(orphan, "half-written\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: true, yes: true });
+
+      expect(await readFile(orphan, "utf-8")).toBe("half-written\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
+    // The escape check compared `path.relative(...)` with a `startsWith("..")`
+    // prefix, which also matches a directory merely *named* `..rules`. Link
+    // `.github/instructions` at one and the relative path is `..rules` — a
+    // path that never leaves the project, since the escape is the `..`
+    // segment, not the characters. The prefix test skipped the refresh, and
+    // silently: the "resolves outside" notice is only printed for a real
+    // escape, so nothing said why the file had not changed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const inProject = path.join(root, "..rules");
+      await mkdir(inProject, { recursive: true });
+      await writeFile(path.join(inProject, "code-review.instructions.md"), "stale-cr\n", "utf-8");
+      await mkdir(path.join(root, ".github"), { recursive: true });
+      try {
+        await symlink(inProject, path.join(root, ".github", "instructions"), "dir");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(
+        await readFile(path.join(inProject, "code-review.instructions.md"), "utf-8"),
+      ).toContain("[BLOCKER]");
     } finally {
       await removeTempTree(root);
     }
@@ -2468,13 +2730,14 @@ describe("qfai init", { timeout: 60000 }, () => {
       const output = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
-      expect(output).toContain("created:");
-      // Activation guidance proves instructions were included in created
+      expect(output).toContain("written:");
+      // Activation guidance proves instructions were included in the written set
       expect(output).toContain("Created the instructions files for Copilot code review.");
 
       // Case B: Both files exist — re-run
+      // The skipped list is behind --verbose; the counts alone cannot name a file.
       const output2 = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
       expect(output2).toContain("code-review.instructions.md");
       expect(output2).toContain("principles.instructions.md");
@@ -2908,10 +3171,13 @@ describe("qfai init", { timeout: 60000 }, () => {
       const firstRun = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
-      expect(firstRun).toMatch(/created:\s*\d+/);
+      // The heading is `written` (the list also carries overwrites), not `created`.
+      expect(firstRun).toMatch(/written:\s*\d+/);
+      expect(firstRun).toContain("DESIGN.md");
 
+      // --verbose expands the skipped list; without it the re-run reports counts only.
       const secondRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
       expect(secondRun).toContain("skipped paths:");
       expect(secondRun).toContain("DESIGN.md");
@@ -2938,8 +3204,10 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       await writeFile(legacyPath, "legacy workflow\n", "utf-8");
 
+      // `--verbose`: the skipped list is collapsed to a count by default, so the
+      // separator assertion below needs the expanded form to have anything to read.
       const skippedRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+        await runInit({ dir: root, force: false, dryRun: true, yes: true, verbose: true });
       });
       const removedRun = await captureStdout(async () => {
         await runInit({ dir: root, force: true, dryRun: true, yes: true });
@@ -2973,23 +3241,227 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0021 (TDD-0021): 4-layer asset-tree seed
-  it("TC-0003-0021 (TDD-0021): seeds .qfai/assistant/{constitution,manifest,catalog,process}/.gitkeep on fresh init", async () => {
+  it("TC-0003-0021 (TDD-0021): seeds the 4 assistant layers and leaves no .gitkeep in a populated layer", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-"));
+    const dryRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-dry-"));
+    const layers = ["constitution", "manifest", "catalog", "process"];
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      for (const layer of ["constitution", "manifest", "catalog", "process"]) {
-        const gitkeep = path.join(root, ".qfai", "assistant", layer, ".gitkeep");
-        const stat = await lstat(gitkeep);
-        expect(stat.isFile()).toBe(true);
-        const body = await readFile(gitkeep, "utf-8");
-        expect(body).toContain(`.qfai/assistant/${layer}/`);
-        // The seeded body lands in every consuming repo, so it must carry no
-        // QFAI-internal cross-spec change ID (`CHG-NNN`) — that ID resolves
-        // to nothing outside this repository's own `_policies/10_delta.md`.
-        expect(body).not.toMatch(/\bCHG-[0-9]+\b/);
+      const dryRun = await captureStdout(async () => {
+        await runInit({ dir: dryRoot, force: false, dryRun: true, yes: true });
+      });
+      const run = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      for (const layer of layers) {
+        const layerDir = path.join(root, ".qfai", "assistant", layer);
+        const entries = await readdir(layerDir);
+        // The shipped assets populate every layer, so a .gitkeep would keep
+        // nothing alive: init must not write one (and must never write a
+        // prose directory index under that filename).
+        expect(entries.length).toBeGreaterThan(0);
+        expect(entries).not.toContain(".gitkeep");
+
+        // A placeholder that was never needed is not a preserved file:
+        // neither run may report its path under "skipped paths".
+        const reported = path.join(".qfai", "assistant", layer, ".gitkeep");
+        expect(run).not.toContain(reported);
+        expect(dryRun).not.toContain(reported);
       }
     } finally {
       await removeTempTree(root);
+      await removeTempTree(dryRoot);
+    }
+  });
+
+  it("removes a pre-fix prose .gitkeep from a populated layer, and reports it", async () => {
+    // Stopping the write does nothing for a project that already ran an older
+    // init: the prose body — a stale directory index naming an internal change
+    // id — sat there forever, reported only as "skipped".
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const layer = path.join(root, ".qfai", "assistant", "constitution");
+      const gitkeep = path.join(layer, ".gitkeep");
+      const legacyBody = [
+        "# .qfai/assistant/constitution/",
+        "",
+        "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+        "",
+        "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+        "",
+      ].join("\n");
+      await writeFile(gitkeep, legacyBody, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      expect(output).toContain(path.join(".qfai", "assistant", "constitution", ".gitkeep"));
+      expect(output).toMatch(/removed legacy files/);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes the later prose .gitkeep that no longer names the change id", async () => {
+    // Two generator versions wrote this file: the first named the recut's
+    // internal cross-spec change id, the second dropped it. Dropping it only
+    // stopped new writes — a project that ran the in-between version still
+    // carries the body, so both forms have to be recognised as unedited
+    // generator output and removed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-noid-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
+      await writeFile(
+        gitkeep,
+        [
+          "# .qfai/assistant/manifest/",
+          "",
+          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+          "",
+          "Seeded by qfai init (4-layer assistant-tree recut).",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      expect(output).toMatch(/removed legacy files/);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("previews the legacy .gitkeep removal without performing it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-dry-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
+      await writeFile(
+        gitkeep,
+        [
+          "# .qfai/assistant/manifest/",
+          "",
+          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+          "",
+          "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(output).toMatch(/would remove legacy files/);
+      // The dry run reports it and leaves it on disk.
+      await access(gitkeep);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves a user-edited .gitkeep alone", async () => {
+    // Only the generator's exact output is removable. Anything else in that
+    // file is a deliberate edit, and deleting it would be data loss.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-edited-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const gitkeep = path.join(root, ".qfai", "assistant", "catalog", ".gitkeep");
+      await writeFile(gitkeep, "# our own note, do not delete\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(gitkeep, "utf-8")).toBe("# our own note, do not delete\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("does not delete a .gitkeep that is a symlink to a legacy body", async () => {
+    // The decision is about a five-line placeholder, but the read was
+    // unbounded and against a path the adopter controls, so it followed
+    // whatever the name resolved to. A symlink pointing at a legacy body read
+    // as "unedited generator output" and the link itself was then deleted. A
+    // regular-file reader refuses the symlink instead, which is the same
+    // refusal that keeps a FIFO from hanging `qfai init` in `open` and a
+    // multi-gigabyte file from being read into memory to answer a question
+    // about five lines.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-symlink-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
+      const gitkeep = path.join(layerDir, ".gitkeep");
+      const target = path.join(root, "our-placeholder");
+      await writeFile(target, legacyGitkeepBody("catalog"), "utf-8");
+      await rm(gitkeep, { force: true });
+      await symlink(target, gitkeep, "file");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await lstat(gitkeep)).isSymbolicLink()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("leaves no quarantine residue behind when it removes a legacy .gitkeep", async () => {
+    // Verifying a name and unlinking that name are two resolutions of one
+    // string, so the removal moves the object aside and re-reads it: what is
+    // measured and what is deleted are then the same inode. The move is an
+    // implementation detail, but a botched one would strand
+    // `.gitkeep.qfai-legacy-*` files in the adopter's tree, so the layer has to
+    // come out holding neither the placeholder nor any residue of moving it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-residue-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const layerDir = path.join(root, ".qfai", "assistant", "catalog");
+      const gitkeep = path.join(layerDir, ".gitkeep");
+      await writeFile(gitkeep, legacyGitkeepBody("catalog"), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      const left = await readdir(layerDir);
+      expect(left.filter((name) => name.startsWith(".gitkeep"))).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("refuses the legacy .gitkeep removal when an ancestor is a symlink", async () => {
+    // `.qfai/assistant/` pointing into a shared tree makes every check resolve
+    // through the link, and the removal would then delete a file outside the
+    // project. A populated link target also makes the copy skip everything, so
+    // the deletion would be the only effect the run had.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-symlink-"));
+    const shared = await mkdtemp(path.join(os.tmpdir(), "qfai-init-gitkeep-shared-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const assistant = path.join(root, ".qfai", "assistant");
+      // Move the real tree out to `shared` and leave a symlink behind.
+      await rename(assistant, path.join(shared, "assistant"));
+      await symlink(path.join(shared, "assistant"), assistant, "junction");
+
+      const outside = path.join(shared, "assistant", "catalog", ".gitkeep");
+      await writeFile(outside, legacyGitkeepBody("catalog"), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // Untouched: the file lives outside the repository.
+      expect(await readFile(outside, "utf-8")).toBe(legacyGitkeepBody("catalog"));
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(shared);
     }
   });
 
@@ -3011,6 +3483,60 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(tplBody).toMatch(/id:\s*2026-MM-DD-kebab-case-id/);
       expect(tplBody).toContain("kind: decision");
       expect(tplBody).toMatch(/promote-to:/);
+      // The status enum is derived from the same SSOT the validator reads
+      // (WORKLOG_ENTRY_STATUSES), so seed and validator cannot drift.
+      expect(tplBody).toContain(`enum: ${WORKLOG_ENTRY_STATUSES.join(" | ")}`);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // The seeded template's frontmatter survives a formatter, so the drift notice keeps meaning
+  // what it says.
+  //
+  // The seed is create-only and re-init compares it byte for byte against what this release
+  // generates. Column-aligned trailing comments are what breaks that pairing: Prettier collapses
+  // a run of spaces before a YAML `#`, so the first `prettier --write` over an adopter's tree
+  // rewrites a file the adopter never touched — and from then on **every** re-init reports
+  // `_templates/entry.md differs from the seed this qfai release generates`. A notice that fires
+  // forever on a file nobody edited is one a reader learns to skip, which costs the notice its
+  // one job: saying that a real seed change is waiting.
+  //
+  // Asserted as the PROPERTY rather than by running Prettier. Prettier is the repository's
+  // formatter and not this package's dependency; a test reaching up the workspace for it would
+  // couple the package suite to the monorepo layout for a claim the property states directly.
+  // The second half is what keeps the first honest — deleting every comment also satisfies
+  // "no run of spaces", and would pass a row that only forbade one.
+  it("TC-0003-0022 (TDD-0022): seeds a steering template whose frontmatter a formatter leaves alone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-fmt-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const body = await readFile(
+        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
+        "utf-8",
+      );
+      const lines = body.split(/\r?\n/);
+      const closing = lines.indexOf("---", 1);
+      expect(closing, "the seeded template must open with a frontmatter block").toBeGreaterThan(0);
+      const frontmatter = lines.slice(1, closing);
+
+      expect(
+        frontmatter.filter((line) => / {2,}/.test(line)),
+        "a run of spaces in the frontmatter is column alignment, and Prettier collapses it — " +
+          "which makes every later re-init report seed drift on a file nobody edited",
+      ).toEqual([]);
+
+      // Non-vacuity, both halves: the block was read, and it still carries the guidance the
+      // alignment existed to lay out.
+      expect(
+        frontmatter.length,
+        "the frontmatter must have lines for this to be about",
+      ).toBeGreaterThan(0);
+      expect(
+        frontmatter.filter((line) => line.includes(" # required;")).length,
+        "every field keeps its trailing `# required;` note: dropping the comments would satisfy " +
+          "the spacing claim above while removing what it protects",
+      ).toBe(frontmatter.length);
     } finally {
       await removeTempTree(root);
     }
@@ -3772,12 +4298,18 @@ describe("qfai init", { timeout: 60000 }, () => {
       await mkdir(path.dirname(marker), { recursive: true });
       await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
 
+      // `--verbose`: the skipped list is collapsed to a count by default and
+      // this test's whole subject is what that list contains. The report now
+      // enumerates written paths as well, so "absent from the output" no longer
+      // states the claim — read the skipped section on its own instead.
       const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
 
+      const readmeRelative = ".qfai/assistant/README.md";
       expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
-      expect(output).not.toContain(path.join(".qfai", "assistant", "README.md"));
+      expect(sectionPaths(output, "  skipped paths:")).not.toContain(readmeRelative);
+      expect(sectionPaths(output, "  written paths:")).toContain(readmeRelative);
     } finally {
       await removeTempTree(root);
     }

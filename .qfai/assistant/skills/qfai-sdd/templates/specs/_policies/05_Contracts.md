@@ -12,33 +12,33 @@
 0 items
 
 <!-- Example row (remove this comment block and add real rows when contracts exist):
-| DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | - | draft persistence |
+| DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | - | CON-API-0001 | draft persistence |
 -->
 
-| Short ID | Entity | Declared ID | File | Depends On | Purpose |
-| -------- | ------ | ----------- | ---- | ---------- | ------- |
+| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |
+| -------- | ------ | ----------- | ---- | ---------- | --------------- | ------- |
 
 ### API Contracts
 
 0 items
 
 <!-- Example row:
-| API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | CON-DB-0001 | create draft |
+| API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | CON-DB-0001 | CON-DB-0001 | create draft |
 -->
 
-| Short ID | Router | Declared ID | File | Depends On | Purpose |
-| -------- | ------ | ----------- | ---- | ---------- | ------- |
+| Short ID | Router | Declared ID | File | Depends On | Reconciled With | Purpose |
+| -------- | ------ | ----------- | ---- | ---------- | --------------- | ------- |
 
 ### UI Contracts
 
 0 items
 
 <!-- Example row:
-| UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | - | draft input form |
+| UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | - | - | draft input form |
 -->
 
-| Short ID | Screen | Declared ID | File | Depends On | Purpose |
-| -------- | ------ | ----------- | ---- | ---------- | ------- |
+| Short ID | Screen | Declared ID | File | Depends On | Reconciled With | Purpose |
+| -------- | ------ | ----------- | ---- | ---------- | --------------- | ------- |
 
 ## Mapping Rules
 
@@ -58,6 +58,17 @@
   `QFAI-CONTRACT-033` on a row whose cell is blank or disagrees with the file it
   names, `QFAI-CONTRACT-034` on a contract with no row in any table, and
   `QFAI-CONTRACT-035` on a row whose `File` does not declare that row's id.
+- `Reconciled With` lists the contracts this one was reconciled **against** in
+  Phase 0 Cross-contract Reconciliation — the pairing whose terminal states,
+  status values and error codes were compared — as `CON-*` ids, or `-` when
+  none. It is not apply order and must not be folded into `Depends On`: a pair
+  is reconciled in both directions and neither member applies first.
+- Without this column the pairing is unrecoverable. `QFAI-CONTRACT-040` matches
+  on normalized field names, so it cannot tell the contract you reconciled from
+  any other contract that happens to declare `status`, and
+  `/qfai-sdd --contract <CON-ID>` scopes its obligation reconciliation on this
+  pairing — under a `confirm-only` rerun, which writes nothing, it is the only
+  thing the scope can be read from.
 
 - If no contracts are needed, keep each table and state `0 items` explicitly.
 - `<slug>` must be kebab-case from entity/router/screen.

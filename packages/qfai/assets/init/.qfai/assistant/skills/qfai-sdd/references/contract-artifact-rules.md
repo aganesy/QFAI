@@ -9,9 +9,9 @@ Contracts are version-managed downstream execution truth and inputs:
 - `api/`: OpenAPI YAML
 - `db/`: SQL schema contracts
 - `ui/`: UI contract YAML
-- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as separate rubric / calibration contracts.
+- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`) and no longer authored as separate rubric / calibration contracts.
 
-Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files.
+Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`.qfai/assistant/constitution/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 
 ## Rules
 
@@ -19,7 +19,7 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 - UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
-- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work.
+- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
 - **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
   `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
   table necessarily becomes N cross-referencing files. State the resulting
@@ -112,8 +112,12 @@ Contracts are validated per file; agreement _between_ contracts is an authoring 
   own preconditions cannot hold on failure, and do not relabel a rejection as an expiry.
 - Resolve the contradiction in the contracts, in Phase 0. Never resolve it downstream by
   fabricating values that satisfy both.
-- Record the pairing you reconciled in `_policies/05_Contracts.md` so the scope is declared rather
-  than guessed.
+- Record the pairing you reconciled in the `Reconciled With` column of `_policies/05_Contracts.md`,
+  as `CON-*` ids or `-`, so the scope is declared rather than guessed. Nothing else recovers it
+  later: `Depends On` is apply order by its own definition, and `QFAI-CONTRACT-040` matches on
+  normalized field names, so neither can say which of several contracts declaring `status` this
+  pairing actually was. A later `/qfai-sdd --contract <CON-ID>` rerun reads that column to decide
+  what it has to reconcile.
 
 `QFAI-CONTRACT-040` mechanizes the state/status-domain part of this rule at `warning` severity. It
 is a partial check: error codes, response-status sets, and non-enum domains are still reconciled by
@@ -134,7 +138,9 @@ satisfied by a file that cannot run.
   what exercises head-advance and expected-version guards; a single pass proves
   the first insert and nothing after it. Defects that appear only on traversal
   two are a normal share of the total, not an exotic case.
-- **Record it** in `.qfai/evidence/sdd-<spec-id>.md` as a line of the form:
+- **Record it** in `.qfai/evidence/sdd-<spec-id>.md`, under the
+  `## Contract executability` heading of `templates/evidence/sdd-spec.md`, as a
+  line of the form:
 
   ```
   - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
@@ -161,6 +167,83 @@ and "Contracts-first" is only defensible if something later checks that the
 obligations are realizable. That check is this one, and it runs in **Phase 2c**,
 after Phase 2b and before Phase 3 Plan finalize — early enough that a contract
 change still flows into the plan and the delta.
+
+**In contract-scoped mode (`/qfai-sdd --contract <CON-ID>`) neither neighbour
+runs, so Phase 2c sits between Phase 0 and Phase 4**, scoped to the `BR` / `AC`
+of the specs that reference the contracts this run touched. That invocation inverts the
+ordering assumed above: the obligations already exist and the contract is what
+just changed, so the check is not a formality there — it is what makes the
+rerun safe. Dropping it closes a Change Request over obligations that may have
+stopped being realizable, with a delta entry saying the change was handled.
+Six things change with it, and all six are `MUST`:
+
+- **Target the obligations that already exist.** The per-obligation rules below
+  say "produced in Phase 2", and Phase 2 does not run in this mode. Read that
+  as the `BR` / `AC` the in-scope specs already hold; a literal reading gives an
+  empty set, and an empty set passes the phase without checking anything.
+- **Take the scope from what Phase 0 touched, not from the argument.** Phase 0's
+  mandatory Cross-contract Reconciliation may amend a contract the invocation
+  did not name — typically the paired DB contract of a named API contract, when
+  a state or status value moved. Every contract this run changed or re-adjusted
+  is in scope, and so is every spec referencing any of them, transitively. A
+  spec that references only the paired contract is exactly the one the named-ID
+  scope would miss. **Touched, not written**: under a `confirm-only` Change
+  Request the run writes nothing at all, so a write-keyed scope is empty and
+  the mandatory phase would confirm the Change Request without reading one
+  `BR` / `AC`. There, scope on the contracts Phase 0 _reconciled_ — the named
+  contract and every contract paired against it — and take the specs
+  referencing any of those. **Read the pairing, do not infer it.** It is the
+  `Reconciled With` column of `_policies/05_Contracts.md`, which Cross-contract
+  Reconciliation above requires be filled in when a pairing is reconciled.
+  Where that column is absent, because the index predates it, enumerate by the
+  rule `QFAI-CONTRACT-040` already applies instead: every contract declaring a
+  domain for a field whose normalized name (separators dropped, case folded)
+  matches one the named contract declares — all of them, not the one that looks
+  intended. `Depends On` is not that set, and neither is a judgement call: a
+  pair guessed per agent is a scope that differs per agent, which is the missed
+  spec this bullet exists to prevent.
+- **Re-expand the scope after every contract write this phase makes.** The
+  resolution rule below is contract-side, and the contract it amends need not
+  be one Phase 0 touched: repairing one spec's obligation can move a shared
+  contract that other, un-enumerated specs are the only referents of. Scope
+  computed once from Phase 0 leaves those obligations unread while Phase 4
+  closes the Change Request over them. After each contract write, recompute
+  the specs referencing every contract now in scope, and **re-reconcile every
+  obligation in scope, not only the ones that just entered** — the write was
+  made for one obligation and can break another that already passed against
+  the same contract, in that spec or in one enumerated earlier. Terminate on
+  the joint condition: repeat until a pass adds no spec **and** writes no
+  contract. Scope growth alone is the wrong bell, because a repair that breaks
+  a settled obligation adds no spec at all. A pass that keeps writing without
+  settling is two obligations contradicting each other over one contract, not
+  a loop to run again: halt and widen the Change Request.
+
+- **Repair only the contracts this run is approved to touch.** The two rules
+  above widen what is _read_ — every existing `BR` / `AC` an in-scope spec
+  holds — and those specs also name contracts this run never touched. A
+  mismatch against one of them is a real finding, but repairing it edits an
+  upstream artifact the Change Request's impact scope and approved actions
+  never listed, and the re-expansion above then pulls in that contract's own
+  referents: an approval for `A` grown into a rewrite of `B` and everything
+  downstream of it. The writable set is the contracts in scope — the ones
+  Phase 0 touched, plus a contract a repair to one of them must move with it to
+  keep Cross-contract Reconciliation true. A mismatch outside that set is
+  recorded and halts the rerun as its own Change Request; the closure never
+  grows through a contract no one approved.
+- **Resolve on the contract side; amending an obligation is out of write
+  scope.** The in-phase repair rule below assumes Phase 2, 2b and 3 still run
+  behind it. Here they do not, so a rewritten `BR` / `AC` leaves the `EX` / `TC`
+  in `06_Test-Cases.md`, the rows in `tdd/test-list.md` and `10_Plan.md` stating
+  the old obligation, and Phase 4 would close the Change Request over that gap.
+  When a mismatch cannot be resolved in the contract, halt and widen the Change
+  Request to a spec-scoped `/qfai-sdd <spec-id>` rerun instead.
+- **Under a `confirm-only` Change Request, run it read-only.**
+  `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` lets that mode write
+  nothing but the CR reference, so record no per-obligation outcome and repair
+  neither side. Reconcile, and halt on the first mismatch: a `confirm-only`
+  rerun cannot honestly confirm a contract whose approved obligations have
+  stopped being realizable, and the halt returns the question to the Change
+  Request, where `re-derive` is available.
 
 For every `BR` / `AC` produced in Phase 2:
 

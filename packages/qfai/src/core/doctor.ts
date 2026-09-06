@@ -45,6 +45,7 @@ import {
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
+import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 import {
   checkAssistantAssetLineBudget,
   type ExemptAssistantAsset,
@@ -104,6 +105,40 @@ async function exists(target: string): Promise<boolean> {
 
 function addCheck(checks: DoctorCheck[], check: DoctorCheck): void {
   checks.push(check);
+}
+
+/** `qfai validate` allocates one of these per run and never reuses one. */
+const RUN_LOG_DIR_RE = /^run-\d{17}$/u;
+
+/**
+ * Count of run-log directories at which the accumulation is worth
+ * mentioning. `outDir` is covered by the managed gitignore block, so
+ * `git status` never shows the growth and nothing else prompts a
+ * cleanup — this check is the only place the condition becomes visible
+ * before the directory is measured in tens of megabytes.
+ */
+const RUN_LOG_ADVISORY_COUNT = 50;
+
+async function buildRunLogVolumeCheck(root: string, outDirAbs: string): Promise<DoctorCheck> {
+  let count = 0;
+  try {
+    const names = await readdir(outDirAbs);
+    count = names.filter((name) => RUN_LOG_DIR_RE.test(name)).length;
+  } catch {
+    // Unreadable outDir is already reported by the `paths.outDir`
+    // check above; do not duplicate the finding here.
+    count = 0;
+  }
+  const crowded = count > RUN_LOG_ADVISORY_COUNT;
+  return {
+    id: "report.runLogs",
+    severity: crowded ? "info" : "ok",
+    title: "Validate run logs (outDir/run-*)",
+    message: crowded
+      ? `${count} run-* directories accumulated (> ${RUN_LOG_ADVISORY_COUNT}); run 'qfai doctor --clean' to prune the TTL-expired ones`
+      : `${count} run-* directories`,
+    details: { outDir: toRelativePath(root, outDirAbs), runLogCount: count },
+  };
 }
 
 function summarize(checks: DoctorCheck[]): DoctorData["summary"] {
@@ -227,6 +262,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
+
+    if (key === "outDir" && ok) {
+      addCheck(checks, await buildRunLogVolumeCheck(root, resolved));
+    }
 
     if (key === "skillsDir") {
       // Isolated, not awaited bare: `collectFiles` inside the diff rejects on
@@ -811,6 +850,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const matchedCount = scanResult.matchedFileCount;
     const truncated = scanResult.truncated;
 
+    // Globs that are set but collect nothing are `error`, not `warning`: the
+    // SC->Test gate is armed (`scMustHaveTest` with scenario files present) and
+    // matched no file, so it reports success while covering nothing — the
+    // "a gate that cannot run is a gate that silently passes" case. `validate`
+    // already calls this class an error (`QFAI-TRACE-124` /
+    // `traceability.layered.testFileGlobsNoMatch`) under the same precondition,
+    // and the two tools disagreeing meant `--fail-on error` on this one passed
+    // the exact misconfiguration the other fails. Unset globs stay `warning`
+    // here for the same reason `validate` keeps them a warning: a project that
+    // has not configured the gate yet has not broken it.
     const severity: DoctorSeverity =
       globs.length === 0
         ? "warning"
@@ -819,7 +868,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           : scenarioFiles.length > 0 &&
               config.validation.traceability.scMustHaveTest &&
               matchedCount === 0
-            ? "warning"
+            ? "error"
             : "ok";
 
     addCheck(checks, {
@@ -1937,29 +1986,6 @@ function relativizeMaybe(root: string, target: string): string {
   return path.isAbsolute(target) ? toRelativePath(root, target) || target : target;
 }
 
-const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
-  ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-  "**/.pnpm/**",
-  "**/tmp/**",
-  "**/.mcp-tools/**",
-];
-
-type OutDirCollision = {
-  outDir: string;
-  roots: string[];
-};
-
-type OutDirCollisionResult = {
-  monorepoRoot: string;
-  configRoots: string[];
-  collisions: OutDirCollision[];
-  scan: {
-    truncated: boolean;
-    matchedFileCount: number;
-    limit: number;
-  };
-};
-
 async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
   try {
     const result = await detectOutDirCollisions(root);
@@ -2006,63 +2032,4 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
       details: { error: String(error) },
     };
   }
-}
-
-async function detectOutDirCollisions(root: string): Promise<OutDirCollisionResult> {
-  const monorepoRoot = await findMonorepoRoot(root);
-  const configScan = await collectFilesByGlobs(monorepoRoot, {
-    globs: ["**/qfai.config.yaml"],
-    ignore: DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS,
-  });
-  const configPaths = configScan.files;
-  const configRoots = Array.from(
-    new Set(configPaths.map((configPath) => path.dirname(configPath))),
-  ).sort((a, b) => a.localeCompare(b));
-  const outDirToRoots = new Map<string, Set<string>>();
-
-  for (const configRoot of configRoots) {
-    const { config } = await loadConfig(configRoot);
-    const outDir = path.normalize(resolvePath(configRoot, config, "outDir"));
-    const roots = outDirToRoots.get(outDir) ?? new Set<string>();
-    roots.add(configRoot);
-    outDirToRoots.set(outDir, roots);
-  }
-
-  const collisions: OutDirCollision[] = [];
-  for (const [outDir, roots] of outDirToRoots.entries()) {
-    if (roots.size > 1) {
-      collisions.push({
-        outDir,
-        roots: Array.from(roots).sort((a, b) => a.localeCompare(b)),
-      });
-    }
-  }
-
-  return {
-    monorepoRoot,
-    configRoots,
-    collisions,
-    scan: {
-      truncated: configScan.truncated,
-      matchedFileCount: configScan.matchedFileCount,
-      limit: configScan.limit,
-    },
-  };
-}
-
-async function findMonorepoRoot(startDir: string): Promise<string> {
-  let current = path.resolve(startDir);
-  for (;;) {
-    const gitPath = path.join(current, ".git");
-    const workspacePath = path.join(current, "pnpm-workspace.yaml");
-    if ((await exists(gitPath)) || (await exists(workspacePath))) {
-      return current;
-    }
-    const parent = path.dirname(current);
-    if (parent === current) {
-      break;
-    }
-    current = parent;
-  }
-  return path.resolve(startDir);
 }
