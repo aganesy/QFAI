@@ -34,8 +34,8 @@ the item owns, and nothing downstream re-asks: coverage is annotation presence
 and the Depth Matrix counts case categories. A test that cannot fail otherwise
 clears every gate.
 
-Require an `Oracle proof` on each item **at a GREEN or completion gate**, and
-**reject** it when:
+Require an `Oracle proof` on each item that reached `red` **at a GREEN or
+completion gate**, and **reject** it when:
 
 - the mutation is outside the code the item owns — breaking a shared helper
   proves the helper is used, not that this test discriminates;
@@ -43,6 +43,37 @@ Require an `Oracle proof` on each item **at a GREEN or completion gate**, and
   export — that is a load failure, not a discriminating failure;
 - the failing output names a selector other than the row's;
 - the recorded command differs from the `GREEN command`.
+
+**A branch-3 `exception` is outside this requirement, at either gate.** Branch 3
+is reached only when neither a mutation nor an `equivalent-mutant` was
+available, so an `Oracle proof` is the one thing such a row cannot produce. It
+never reaches GREEN, and a user-approved `TDDLIST-001` waiver can carry it to
+the spec-level completion gate still holding no proof — do not REVISE it there
+for the absence. Judge it by "Branch 3 gets its own verdict" below, on its
+`DR-*`.
+
+**The status alone does not carry the exclusion; the `DR-*` does.** `exception`
+is reachable from **any** active status, so a row that reached `red`, proved its
+oracle and was parked by a failing checkpoint at `refactor -> exception` is an
+`exception` that already owed a proof — and owes it still. Apply the exclusion
+only where the `DR-*` records that **both** proof forms were unavailable, which
+is the finding that puts a row on branch 3. A `DR-*` recording any other anomaly
+leaves the row's `Oracle proof` obligation exactly where its `red` left it, and
+absence or invalidity is REVISE there as anywhere. A `DR-*` naming no
+unavailability at all is already REVISE under "Branch 3 gets its own verdict",
+so no row reaches a gate exempt on a record that does not say why.
+
+**And it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell.**
+`exception -> todo` **keeps** the anomaly's `DR-*`, and a row that enters
+`exception` again records a new one **appended, not substituted**
+(`../skills/qfai-implement/references/execution-ledger.md`). So a row once on
+branch 3, reset to `todo`, re-run to `red` and parked again by some unrelated
+checkpoint anomaly holds both records side by side, and a rule that asks only
+whether _a_ `DR-*` reports both forms unavailable exempts it on the older one —
+readmitting exactly the row that reached `red` and owes its proof, which is the
+hole the paragraph above closes. Read the **last appended** `DR-*`: the one the
+current `exception` was written with. An earlier branch-3 record describes an
+exception that is over and exempts nothing.
 
 **At a RED observation the proof is a plan, and a plan is enough.** Branch 1's
 RED is taken before any production behaviour exists, so there is nothing to
