@@ -64,6 +64,7 @@ coverage/
 .qfai/review/*
 .qfai/state.json
 *.qfai-state.tmp
+.qfai/state.json.lock
 !.qfai/
 !.qfai/evidence/
 !.qfai/decisions/
