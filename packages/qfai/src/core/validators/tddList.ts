@@ -3717,7 +3717,7 @@ async function validateSpecTddList(
     if (VALID_TIERS.has(tier.toLowerCase())) continue;
     issues.push(
       issue(
-        "TDDLIST_UNKNOWN_TIER",
+        "QFAI-TDDLIST-010",
         `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}".${unknownTierWindowNote}`,
         unknownTierSeverity,
         relPath,

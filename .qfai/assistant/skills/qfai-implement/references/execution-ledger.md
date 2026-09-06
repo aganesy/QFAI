@@ -84,7 +84,7 @@ consumer needs the answer _before_ it starts the row.
   ("Evidence cell contract" below), and it is written last, by the agent whose
   ceremony the tier was supposed to size. A tier kept there cannot be read
   before the work it governs, which is what made `T1` unreachable.
-- A value outside `T1` / `T2` / `T3` raises `TDDLIST_UNKNOWN_TIER` (error).
+- A value outside `T1` / `T2` / `T3` raises `QFAI-TDDLIST-010` (error).
   Blank buys the cheapest tier, so a mistyped one must not quietly buy it too.
 
 ## Declared seam column (optional, required for parallel dispatch)

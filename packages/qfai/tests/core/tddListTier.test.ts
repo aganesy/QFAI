@@ -73,8 +73,7 @@ const BARE_SEP = "| ------ | ------- | ----- | --------- | -------- | ------ | -
 const row = (tier: string): string =>
   `| TDD-0001 | TC-0001 | Unit | ${tier} | tests/a.test.ts | sel | todo | - | - |`;
 
-const tierIssues = (issues: Issues): Issues =>
-  issues.filter((i) => i.code === "TDDLIST_UNKNOWN_TIER");
+const tierIssues = (issues: Issues): Issues => issues.filter((i) => i.code === "QFAI-TDDLIST-010");
 
 describe("Tier", () => {
   it("is optional — a ledger without the column is valid", async () => {
@@ -145,7 +144,7 @@ describe("Tier", () => {
  * and shipping it straight at `error` turns an upgrade into a latched
  * `--fail-on error` gate for every row whose spelling misses.
  */
-describe("TDDLIST_UNKNOWN_TIER promotion window", () => {
+describe("QFAI-TDDLIST-010 promotion window", () => {
   const promotion = RULE_PROMOTIONS.tddListUnknownTier.promoteAt;
 
   async function findingAt(version: string): Promise<{ severity: string; message: string }> {

@@ -100,7 +100,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // list from its opening, so `Tier` joins the end of it.
       expect(rules).toMatch(/Optional columns:[^.]*`Tier`/);
       expect(rules).toContain("Legal values `T1`, `T2`, `T3`, or `-`");
-      expect(rules).toContain("raises `TDDLIST_UNKNOWN_TIER`");
+      expect(rules).toContain("raises `QFAI-TDDLIST-010`");
       // Optionality, value range and owner — all three, in the SSOT.
       expect(rules).toContain("seeded at Phase 2b beside `Layer` and never written by");
       expect(rules).toContain("Do not drop the column as non-standard");
