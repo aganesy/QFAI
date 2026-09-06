@@ -31,19 +31,23 @@
   - <convention 1>
   - <convention 2>
 
-## Quality gates (SSOT)
+## Quality gates
 
-- format: <formatter>
-- lint: <linter>
-- typecheck: <typecheck command>
-- test: <test runner>
+This file owns neither half of the gate set. The capabilities a gate set must
+cover are in `.qfai/assistant/constitution/quality.md`; the commands that
+satisfy them belong in
+`.qfai/assistant/catalog/tech.md#standard-commands-copy-paste`. Record project
+gate commands there, not here.
 
 ## How to run locally
 
+Setup and the QFAI launcher only. Project gate commands (build / test / lint /
+typecheck / format / pack) belong in
+`.qfai/assistant/catalog/tech.md#standard-commands-copy-paste`; do not repeat
+them here.
+
 ```bash
 <install command>
-<build command>
-<test command>
 npx qfai validate
 npx qfai doctor
 ```
