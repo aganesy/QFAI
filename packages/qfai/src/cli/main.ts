@@ -256,7 +256,11 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           process.exitCode = options.invalidExitCode;
           return;
         }
-        const resolvedRoot = await resolveRoot(options);
+        // `discussion ... --format json` writes its whole payload to
+        // stdout, so the defaultConfig notice has to go to stderr there —
+        // otherwise stdout is JSON-plus-a-Japanese-warning and no
+        // `JSON.parse` (or downstream jq) can read it.
+        const resolvedRoot = await resolveRoot(options, options.discussionFormat === "json");
         process.exitCode = await runDiscussion({
           root: resolvedRoot,
           action: options.discussionAction,
@@ -373,6 +377,7 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  discussion list              discussion pack を列挙（active pointer の pack に * を付与）
   discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
@@ -413,9 +418,9 @@ Options:
   --format <md|json>           report の出力形式
   --remove <surface-id>        prototyping rescope: 外す surface id (repeatable)
   --reason <delta-id>          prototyping rescope: 退役を決めた delta / decision id (必須)
-  --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
-  --active                     discussion list: active session pointer を表示
-  --strict                     validate: warning 以上で exit 1（--fail-on を別値で指定した場合は無効）
+  --format <text|json>         doctor / prototyping preflight / discussion list の出力形式
+  --active                     discussion list: pack 列挙ではなく active session pointer を表示
+  --strict                     validate: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件（--strict より優先）
@@ -458,7 +463,8 @@ Options:
 /**
  * `machineReadable` keeps stdout reserved for the payload when the command is
  * about to print JSON: the missing-config notice then goes to stderr so
- * `qfai <cmd> --format json` stays parseable.
+ * `qfai <cmd> --format json` stays parseable, and cannot be interleaved with
+ * the payload to break `JSON.parse` on the consumer side.
  */
 async function resolveRoot(
   options: { root: string; rootExplicit: boolean },

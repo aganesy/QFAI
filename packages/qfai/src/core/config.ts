@@ -216,6 +216,21 @@ export type ConfigLoadResult = {
   config: QfaiConfig;
   issues: Issue[];
   configPath: string;
+  /**
+   * The parsed YAML document, before normalization. `undefined` when the
+   * file is absent (`issues` empty) or could not be read / parsed at all
+   * (`issues` non-empty) — the two cases a caller distinguishes by the
+   * issue list.
+   *
+   * `issues` records *that* something was rejected but not *which* key,
+   * so it cannot answer "was the value I depend on honoured, or silently
+   * replaced by its default?". Normalization is per-key and independent,
+   * so an unrelated rejection (a bad `baseBranch`, say) says nothing
+   * about `paths.discussionDir`. A caller whose correctness hinges on one
+   * key reads it here and checks that key alone, rather than treating any
+   * issue anywhere in the file as a reason to distrust the whole config.
+   */
+  document?: unknown;
 };
 
 export type ConfigSearchResult = {
@@ -313,7 +328,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   }
 
   const normalized = normalizeConfig(parsed, configPath, issues, toolVersion);
-  return { config: normalized, issues, configPath };
+  return { config: normalized, issues, configPath, document: parsed };
 }
 
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {

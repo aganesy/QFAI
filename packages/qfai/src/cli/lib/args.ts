@@ -62,7 +62,7 @@ export type ParsedArgs = {
     discussionAction?: "list" | "use";
     /** --active for `qfai discussion list`. */
     discussionActive?: boolean;
-    /** --format <text|json> for `qfai discussion list --active`. */
+    /** --format <text|json> for `qfai discussion list [--active]`. */
     discussionFormat?: "text" | "json";
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;

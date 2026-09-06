@@ -634,13 +634,67 @@ function describeError(value: unknown): string {
  * when the file, the `discussion` object, or the `currentId` string is
  * absent / not a non-empty string.
  *
- * Callers that must distinguish an unset pointer from a corrupt state file
- * (because they fall back to an inferred pack when none is set) should use
- * {@link readDiscussionCurrentIdState} instead.
+ * Lossy on purpose: a caller that shows the pointer *as a fact about
+ * every pack* ("this one is active, those are not") cannot use it,
+ * because a state file it merely failed to read comes back looking
+ * exactly like a repository where no pointer was ever set. Those callers
+ * take {@link readDiscussionPointer} instead — or
+ * {@link readDiscussionCurrentIdState} when they need the unset/corrupt
+ * split with a `detail` string.
  */
 export async function readDiscussionCurrentId(root: string): Promise<string | null> {
-  const read = await readDiscussionCurrentIdState(root);
-  return read.kind === "set" ? read.currentId : null;
+  const pointer = await readDiscussionPointer(root);
+  return pointer.ok ? pointer.currentId : null;
+}
+
+/**
+ * The active-session pointer, or the reason it could not be established.
+ *
+ * `ok: true` with `currentId: null` is a determinate answer: no pointer
+ * is set (no state file, no `discussion` key, or an explicit `null`).
+ * `ok: false` means the answer is unknown — a present-but-unreadable
+ * state file, invalid JSON, or a `discussion` / `currentId` value of the
+ * wrong shape.
+ */
+export type DiscussionPointerRead =
+  | { ok: true; currentId: string | null }
+  | { ok: false; reason: string };
+
+export async function readDiscussionPointer(root: string): Promise<DiscussionPointerRead> {
+  // Ported to the `loadState` discriminated result main replaced
+  // `loadStateStrict` with. `detail` is the operator-facing sentence that
+  // names the file, which is what the old `reason` carried; the throwing
+  // `readStateStrict` is the wrong shape here because an unreadable file is
+  // one of this function's two reported outcomes, not an exception.
+  const loaded = await loadState(root);
+  if (loaded.kind === "unreadable") {
+    return { ok: false, reason: loaded.detail };
+  }
+  if (loaded.kind === "absent") {
+    return { ok: true, currentId: null };
+  }
+  const abs = stateAbsPath(root);
+  const discussion = loaded.state.discussion;
+  // An absent or explicitly-null `discussion` is "no pointer recorded",
+  // which is a determinate answer. Any other non-object is a corrupt
+  // record: we cannot say the pointer is unset, only that we cannot read it.
+  if (discussion === undefined || discussion === null) {
+    return { ok: true, currentId: null };
+  }
+  if (typeof discussion !== "object" || Array.isArray(discussion)) {
+    return { ok: false, reason: `${abs}#discussion is not an object.` };
+  }
+  const currentIdField = (discussion as Record<string, unknown>).currentId;
+  if (currentIdField === undefined || currentIdField === null) {
+    return { ok: true, currentId: null };
+  }
+  if (typeof currentIdField !== "string" || currentIdField.trim().length === 0) {
+    return {
+      ok: false,
+      reason: `${abs}#discussion.currentId is not a non-empty string.`,
+    };
+  }
+  return { ok: true, currentId: currentIdField };
 }
 
 /**
