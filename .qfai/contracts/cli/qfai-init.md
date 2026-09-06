@@ -72,15 +72,15 @@ Behavior:
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
-Relocates files from the two pre-recut surfaces the recut actually moved — `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*` — to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table.
+Copies files from the two pre-recut surfaces the recut actually moved — `.qfai/assistant/instructions/*` and `.qfai/assistant/steering/*` — into the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table. The pre-recut files stay where they are.
 
 `.qfai/assistant/manifest/*` is **not** walked, even though it is a pre-recut surface: its path is identical before and after the recut, so walking it would re-label freshly seeded canonical files as legacy content and emit spurious `W-USER-EDIT-PRESERVED` notes (`runUpgradeAssistantTree`'s `legacySurfaces`, `packages/qfai/src/cli/commands/init.ts`). The consequence is that a user-authored document sitting in a pre-recut `manifest/` is left exactly where it is — it is not re-classified into `catalog/` — and `qfai-configure` stays the supported entrypoint for that layer. Migrating stale _content_ inside those files is a separate concern and is not handled here.
 
 Behavior:
 
-- For each file in the relocation table, move the existing user-edited content to the new path.
+- For each file in the relocation table, copy the existing user-edited content to the new path. The original is left in place on purpose — see the deprecation-window bullet below and NFR-0002.
 - If a destination already exists with user edits, preserve the user-edited content and surface `W-USER-EDIT-PRESERVED` (REQ-0013).
-- After the move, run the `qfai init` default flow, which seeds a missing README / template and reports drift on an existing one (create-only, as above).
+- After the copy, run `qfai init` default flow, which seeds a missing README / template and reports drift on an existing one (create-only, as above).
 - Old paths are not deleted within the deprecation window (NFR-0002); they remain readable but emit `D-DEPRECATED-PATH` warnings during validate.
 
 Required preconditions:

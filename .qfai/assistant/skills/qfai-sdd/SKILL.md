@@ -123,6 +123,7 @@ Stage 1 collects each approval through AskUserQuestion as usual.
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/ui-contract-guide.md` (UI-bearing targets)
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
   - `.qfai/assistant/manifest/agent-catalog.yml`
   - `.qfai/assistant/manifest/agent-routing.yml`
@@ -240,7 +241,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
    - Never invent a layout for an artifact a template already covers.
 2. Always write the preflight summary before generating shared/spec artifacts. Write it run-scoped, at `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` with a `- run id:` line, and copy the same body to `.qfai/report/preflight_summary.md` as the latest-run pointer. Evidence cites the run-scoped path: the pointer is rewritten by every rerun, so a citation to it stops naming the preflight the cycle actually saw.
-3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
+3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`, and each UI contract YAML authored per `references/ui-contract-guide.md` (`primary_tasks` shape, the closed structured schema, and the `QFAI-AUD-001` / `QFAI-AUD-020` count-to-behavior table). UI-bearing targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
@@ -352,6 +353,7 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)
+- Target `spec-*/tdd/test-list.md`, seeded at Phase 2b (empty table only when the spec declares no coverage-target TC)
 - Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight/run-<timestamp>/preflight_summary.md`, plus the `.qfai/report/preflight_summary.md` pointer
