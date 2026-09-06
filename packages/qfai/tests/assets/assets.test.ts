@@ -2163,6 +2163,19 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
+  it("states the same ceiling in the shipped baseline authors read", async () => {
+    // The number is owned by `src/core/doctor/assetLineBudget.ts` and quoted in
+    // prose that ships to a `qfai init` project. Nothing tied the two together,
+    // so the constant could move while the baseline went on telling authors a
+    // different number - and for a project that has only the published package
+    // that prose is the only copy of the rule it can read.
+    const baseline = await readFile(
+      path.join(templateQfaiDir, "assistant", "constitution", "shared-skill-operating-baseline.md"),
+      "utf-8",
+    );
+    expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
+  });
+
   it("justifies every line-budget exemption and keeps it live", () => {
     // An exemption that no longer matches a shipped file is a stale licence:
     // it would silently cover a future file that happens to take the path.
