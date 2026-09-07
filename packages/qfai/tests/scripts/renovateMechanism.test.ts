@@ -133,6 +133,24 @@ function quotedFromConfig(pattern: RegExp): string {
 }
 
 /**
+ * The exact indentation a TOP-LEVEL key carries in the config.
+ *
+ * Two spaces, and matched exactly rather than as `\s*`. Review finding on #1236: an
+ * indentation-agnostic reader answers with a NESTED key of the same name, and every key these
+ * rows ask about is one a `packageRules` entry may legitimately carry — `.github/renovate.md`
+ * documents adding `automerge: false` under `packageRules` as the supported way to exempt one
+ * dependency, so the collision is the documented workflow rather than a hypothetical.
+ *
+ * The failure that buys is silent and in the accepting direction: delete the top-level
+ * `automerge: true`, leave a `packageRules` entry that carries `automerge: true`, and an
+ * indentation-agnostic read returns `"true"` for a config whose top-level policy is gone.
+ *
+ * Anchoring to the literal indentation is safe because `prettier -c .` runs in `pnpm ci:lint`
+ * over this file with `tabWidth: 2`, so the two spaces are enforced rather than assumed.
+ */
+const TOP_LEVEL_INDENT = "  ";
+
+/**
  * One BARE token captured out of the JSON5 config — a boolean, a number, `null`.
  *
  * The sibling above unescapes a quoted string; this returns the token as written, because what
@@ -141,14 +159,15 @@ function quotedFromConfig(pattern: RegExp): string {
  * across the difference that matters.
  */
 function tokenFromConfig(key: string): string {
-  const found = new RegExp(`^\\s*${key}:\\s*([^,\\n]+?),?\\s*$`, "m").exec(configText());
-  const token = found?.[1];
+  const pattern = new RegExp(`^${TOP_LEVEL_INDENT}${key}:\\s*([^,\\n]+?),?\\s*$`, "gm");
+  const found = [...configText().matchAll(pattern)];
   expect(
-    token,
-    `${CONFIG_REL} must declare \`${key}\` at the top level — this row reads the config's own ` +
-      "declaration rather than restating it, and an unmatched key means it read nothing",
-  ).toBeDefined();
-  return token ?? "";
+    found.length,
+    `${CONFIG_REL} must declare \`${key}\` exactly once at the top level — this row reads the ` +
+      "config's own declaration rather than restating it, so no match means it read nothing and " +
+      "two matches mean it cannot say which one it read",
+  ).toBe(1);
+  return found[0]?.[1] ?? "";
 }
 
 /** A JSON file in this repository, parsed. Unlike the config, these carry no JSON5 syntax. */
@@ -408,7 +427,12 @@ describe("only one of the two files schedules this bot", () => {
     //
     // GitHub bounds that delay nowhere, so no window is narrow enough to be safe and wide enough
     // to be a schedule. The cron is the schedule; this key must stay open.
-    const declared = quotedFromConfig(/^\s*schedule:\s*\[\s*("(?:[^"\\]|\\.)*")/m);
+    // Anchored to the top-level indentation for the reason `TOP_LEVEL_INDENT` gives: a
+    // `packageRules` entry may carry a `schedule` of its own, and an indentation-agnostic read
+    // would answer with that one.
+    const declared = quotedFromConfig(
+      new RegExp(`^${TOP_LEVEL_INDENT}schedule:\\s*\\[\\s*("(?:[^"\\\\]|\\\\.)*")`, "m"),
+    );
     expect(
       declared,
       "the top-level `schedule` in the config must stay unrestricted. A window here is only ever " +
