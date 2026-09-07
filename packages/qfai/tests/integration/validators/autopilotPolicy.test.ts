@@ -256,6 +256,56 @@ ${hardRequired}
     expect(finding?.message ?? "").toContain("companyName");
   });
 
+  it("reads a retired entry written after a blank line", async () => {
+    // A hand-edited or reformatted SKILL.md carries blank lines between
+    // bullets. Ending the bucket at one made inserting a blank line enough to
+    // hide everything below it.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n\n  - companyName\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("reads a retired entry written after a comment", async () => {
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n<!-- kept for the next release -->\n  - companyName"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("stops at the next bucket rather than reading its bullets", async () => {
+    // The bucket still ends somewhere. A bullet belonging to `ask-user` is not
+    // a hard-required entry, and reading it would report the wrong bucket.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- hard-required:
+  - brand intent
+  - \`primarySpecId\`
+- ask-user:
+  - companyName
+`,
+    );
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.map((i) => i.code)).toEqual([]);
+  });
+
   it("does not report the bucket twice when the bucket header itself is absent", async () => {
     await writeSkill(
       root,

@@ -186,7 +186,14 @@ export function collectHardRequiredEntries(content: string): string[] {
       entries[entries.length - 1] = `${entries[entries.length - 1]} ${carried}`;
       continue;
     }
-    break;
+    // The bucket ends at the next top-level bullet or the next heading, and
+    // nowhere else. Everything nested belongs to the bullet that is open, and
+    // `- hard-required:` stays open until one of those two closes it.
+    //
+    // Ending at anything else — a blank line, a comment, a line of prose —
+    // made a formatting edit enough to hide every entry below it, which is a
+    // hole in a check whose whole subject is what the bucket names.
+    if (/^[-*]\s/.test(line) || /^#{1,6}\s/.test(line)) break;
   }
   return entries;
 }
