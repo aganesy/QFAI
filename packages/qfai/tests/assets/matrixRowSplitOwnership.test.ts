@@ -102,8 +102,12 @@ describe.each(TREES)("%s", (tree) => {
     // both said "one row per coverage-target TC" with no split criterion — so a
     // matrix TC still reached RED as a single row by construction.
     const skill = await read(tree, SDD_SKILL);
-    expect(skill).toContain("**A matrix-shaped TC takes more than one row**");
-    expect(skill).toContain("one row per independently observable boundary");
+    // Phase 2b now seeds two TC groups, so the criterion is stated as a floor
+    // under the row count rather than as a sentence of its own.
+    expect(skill).toContain('"one row" is a floor');
+    expect(skill).toContain(
+      "a matrix-shaped TC is split one row per independently observable boundary",
+    );
 
     const template = await read(tree, TEMPLATE);
     expect(template).toContain("**matrix-shaped TC takes more than one row**");
