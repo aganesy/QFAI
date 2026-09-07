@@ -258,7 +258,7 @@ describe("a structurally broken target is a finding, not a crash", () => {
       expect(unfollowable?.severity).toBe("warning");
       // And it says so rather than repeating the claim it cannot make: the
       // document is in the tree, this path does not reach it.
-      expect(unfollowable?.message).toContain("canonical 側の文書は読める");
+      expect(unfollowable?.message).toContain("the instructions are in this tree");
       expect(unfollowable?.message).not.toContain("まったく適用されていません");
       expect(unfollowable?.suggested_action).toContain("git worktree");
     });

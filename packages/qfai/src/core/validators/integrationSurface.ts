@@ -1619,16 +1619,16 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `assistant 統合ディレクトリの wrapper が辿れません（${String(reachable.length)} 件）。**canonical 側の文書は読める**ので命令そのものはこのツリーにありますが、この経路からは読み込まれません: ${describe(reachable)}`,
+        `${String(reachable.length)} wrapper(s) in the assistant integration directories cannot be followed. The canonical documents behind them read fine, so the instructions are in this tree — this path does not reach them: ${describe(reachable)}`,
         "warning",
         reachable[0]?.relative,
         "integrationSurface.links",
         reachable.map((entry) => entry.relative),
         "change",
         [
-          "この形は `git worktree` で常に出ます。git は `.claude/skills/*` を、その target がまだ新しい worktree に存在しない時点で **ファイル** symlink としてディレクトリに向けて書くため、OS がそれを辿りません。primary checkout 側の同じパスは壊れていません。",
-          "その worktree で wrapper を貼り直すには、`git config core.symlinks true` が効いていることを確認したうえで該当パスを削除し、`npx qfai init` を実行してください。Windows では Developer Mode の有効化が必要な場合があります。",
-          "貼り直さない場合、その worktree の assistant はこれらの skill / agent を読み込みません。文書自体は `.qfai/assistant/**` にあるので、必要なら canonical のパスを直接開いてください。",
+          "This shape appears in every `git worktree`. Git writes each `.claude/skills/*` link as a FILE symlink to a directory — at the moment it writes it the target does not yet exist in the new worktree — and the OS will not follow that. The same paths in the primary checkout are intact.",
+          "To relink them in the worktree: confirm `git config core.symlinks true` is in effect, delete the paths named above, and run `qfai init`. Windows may also need Developer Mode enabled.",
+          "Left as they are, the assistant in that worktree does not load these skills or agents. The documents themselves are under `.qfai/assistant/**` and can be opened at the canonical path.",
         ].join("\n"),
         { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
       ),
