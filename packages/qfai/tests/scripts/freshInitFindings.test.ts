@@ -23,7 +23,6 @@ import {
   fingerprint,
   fingerprintReport,
   formatDiff,
-  // @ts-expect-error -- a plain .mjs script module with no type declarations.
 } from "../../../../scripts/fresh-init-findings.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
