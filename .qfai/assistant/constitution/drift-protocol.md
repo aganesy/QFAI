@@ -24,6 +24,14 @@ Upstream artifacts include, at minimum:
   behaviour and design SSOT it feeds. A defect found in one downstream is fixed
   in the SDD-owned artifact, the discrepancy recorded in delta/evidence. This
   reclassifies ONLY the pack: genuine upstream is still repaired upstream-first.
+- **the toolkit's own vendored rules** — `.qfai/assistant/constitution/**` and
+  `.qfai/assistant/catalog/**`. `npx qfai init` copies these into the project and QFAI owns them;
+  no phase of this project does. Editing one in place forks the rules the validators enforce, and
+  the fork is indistinguishable from shipped policy at the point of use — a downstream argument
+  then cites it by line number as though it were the release. Extending them is legal through the
+  overlay in `#allowed-exceptions-minimal-whitelist`; rewriting them is not.
+  `.qfai/assistant/manifest/**` is **not** on this list: `/qfai-configure` is the supported way to
+  edit those declarative files.
 
 - **test or production artifacts another spec's completed implement run
   certifies** — a file named on a `done` row of another `tdd/test-list.md`: a
@@ -94,6 +102,12 @@ agent roster and reasoning backwards from it.
   mandated, so treating every shared-file edit as needing approval would stop the work this
   protocol asks for. Approval is owed the moment the obligation stops holding: the edit is then
   drift in the full sense and takes `#when-drift-is-detected`.
+- **a `*.local.md` overlay beside a vendored toolkit rule** —
+  `.qfai/assistant/constitution/<name>.local.md` or `.qfai/assistant/catalog/<name>.local.md`.
+  `npx qfai init` never writes these and the provenance check never reports them, so a project can
+  add what it needs without editing a file QFAI owns and without the addition being lost on the
+  next upgrade. An overlay **adds**; it does not repeal. A project need that contradicts a shipped
+  rule is drift and takes the `#when-drift-is-detected` path.
 
 Any exception beyond this list requires explicit user approval.
 
@@ -602,6 +616,15 @@ re-freeze the lock to match the CRLF bytes.
 approved` whose **`## Impact scope` names the changed path** silences it — not
   a path named elsewhere in it, not a contract ID, and never an `open` CR. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
+- Vendored toolkit rules must not be edited in place. **This is detected.** `npx qfai validate`
+  hashes `.qfai/assistant/constitution/**` and `.qfai/assistant/catalog/**` and compares them with
+  the installed release and with the provenance record `.qfai/assistant/.assets.lock.json` that
+  `npx qfai init` writes. A file still holding what QFAI wrote, from an older release, is
+  `QFAI-ASSETS-004` and is refreshed by `npx qfai init --force`. A file matching neither the
+  release nor the record is `QFAI-ASSETS-005` — a local fork, left untouched by `--force` and
+  reported for a human merge. An added file that is not a `*.local.md` overlay is
+  `QFAI-ASSETS-006`, a shipped rule the project no longer has is `QFAI-ASSETS-007`, and a
+  comparison that could not be made at all is `QFAI-ASSETS-008`.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set** and report
   blockers. Work outside every open CR's blocked set proceeds; an unanswered decision is not a
