@@ -372,9 +372,73 @@ const CHAIN_DOT = String.raw`\s*\.\s*`;
  */
 const JS_STUB_PATTERN = new RegExp(
   String.raw`\b(it|test|describe)(?:${CHAIN_DOT}\w+)*?${CHAIN_DOT}(todo|skip)\b` +
-    `(?:(?:${CHAIN_DOT}\\w+)*\\s*\\(|(?:${CHAIN_DOT}\\w+)+\\s*\`)`,
+    `(?:((?:${CHAIN_DOT}\\w+)*)\\s*\\(|(?:${CHAIN_DOT}\\w+)+\\s*\`)`,
   "g",
 );
+
+/**
+ * The first character of the matched call's argument list, past any blanks.
+ *
+ * Sticky, so it reads at an offset without copying the rest of the file. Only
+ * that one character is needed, so it does not balance the argument list.
+ */
+const FIRST_ARGUMENT = /\s*(.?)/y;
+
+/**
+ * Whether a matched `.skip` is Playwright's runtime guard rather than a parked
+ * test.
+ *
+ * The two are one token apart in the source and opposite in meaning:
+ *
+ * | Written                       | Means                                    |
+ * | ----------------------------- | ---------------------------------------- |
+ * | `test.skip("name", fn)`       | the test is registered and never runs    |
+ * | `test.skip(cond, "reason")`   | the test runs and stops early if `cond`  |
+ * | `test.skip()`                 | the test runs and stops here             |
+ *
+ * The second and third forms are statements inside a running test body. The
+ * test is registered, reported and executed, so none of what this rule says
+ * about a parked test applies to them: there is no modifier to drop, and
+ * deleting the call removes a guard rather than restoring a test. Reporting
+ * them also leaves a repository with a legitimate guard no passing state once
+ * the promotion window closes, because an error cannot be waived.
+ *
+ * The forms are told apart by the first argument: a string literal is the
+ * test's name, and anything else — an identifier, a call, a negation, an
+ * environment lookup — is a condition evaluated at run time. No argument at
+ * all is the unconditional runtime form.
+ *
+ * A trailing chain (`test.skip.each(table)(...)`) is excluded: its first
+ * argument is the table, not a name, and the construct is a parked
+ * parameterized suite either way.
+ *
+ * `todo` has no runtime form, so this asks nothing about it.
+ */
+function isRuntimeSkip(
+  match: RegExpMatchArray,
+  argumentStart: number,
+  scannable: string,
+  content: string,
+): boolean {
+  if (match[2] !== "skip" || match[3] !== "") return false;
+
+  // The mask blanked comments and literals one character for one, so what is
+  // left at this offset is either the argument's own first character or the
+  // `,` / `)` that followed a blanked one.
+  FIRST_ARGUMENT.lastIndex = argumentStart;
+  const first = FIRST_ARGUMENT.exec(scannable)?.[1] ?? "";
+  if (first !== "," && first !== ")") {
+    // An expression, and an empty string only at end of file — a call whose
+    // argument list is never closed is not a parked test either.
+    return true;
+  }
+
+  // Blanks up to a `,` or `)`. A quote in the same span of the unmasked file
+  // is the name the mask took out; without one there was no argument, which
+  // is the zero-argument runtime form.
+  const blanked = content.slice(argumentStart, FIRST_ARGUMENT.lastIndex - first.length);
+  return !/['"`]/.test(blanked);
+}
 
 /**
  * A Python f-string opener: any prefix combination containing `f`, then the
@@ -564,9 +628,32 @@ const STUB_DIALECTS: readonly StubDialect[] = [
  * Neither can follow a code carried in a value, and a rule that is invisible to
  * the ratchet is one nothing holds to either contract.
  */
+/**
+ * A dialect covers a file extension, and one extension can be two runners.
+ *
+ * `.spec.ts` is a Playwright file as readily as a vitest one, and the finding
+ * tells the operator what a stub costs them — "silent in vitest/jest" of a
+ * Playwright spec names a runner the file never reaches. The import is the
+ * evidence: a Playwright test file has to bring `test` in from
+ * `@playwright/test`, and no other kind of file does.
+ *
+ * The config is not consulted. A `testDir` in `playwright.config.*` would have
+ * to be read, resolved and matched per file, and it answers a question the
+ * file itself already answers.
+ */
+const PLAYWRIGHT_IMPORT =
+  /\bfrom\s*(['"])@playwright\/test\1|\brequire\(\s*(['"])@playwright\/test\2/;
+
+/** The runner named in a finding about `content`. */
+function runnerOf(dialect: StubDialect, content: string): string {
+  return dialect.runner === "vitest/jest" && PLAYWRIGHT_IMPORT.test(content)
+    ? "Playwright"
+    : dialect.runner;
+}
+
 function stubIssue(
   relFile: string,
-  dialect: StubDialect,
+  runner: string,
   matchedKind: string,
   lineNumber: number,
   column: number,
@@ -583,7 +670,7 @@ function stubIssue(
     ? issue(
         "QFAI-TEST-003",
         `Skipped test found: ${where}. ` +
-          `A skipped test is silent in ${dialect.runner} and rots as missed work. ` +
+          `A skipped test is silent in ${runner} and rots as missed work. ` +
           `Drop the skip modifier to put it back in the run.` +
           skippedTestWindowNote(skippedTestSeverity),
         skippedTestSeverity,
@@ -606,7 +693,7 @@ function stubIssue(
     : issue(
         "QFAI-TEST-001",
         `Test stub found: ${where}. ` +
-          `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
+          `Stubs are silent in ${runner} and rot as missed work. ` +
           `Implement the body or delete the stub.`,
         "error",
         relFile,
@@ -656,6 +743,7 @@ function collectStubIssues(
   // scanned text is still a position in the file the finding names.
   const masked = dialect.mask(content);
   const scannable = dialect.narrow ? dialect.narrow(masked) : masked;
+  const runner = runnerOf(dialect, content);
   // matchAll yields matches in ascending offset order, so the line counter is
   // carried forward from the previous match instead of re-counting from the
   // top of the file: the whole scan stays linear however many stubs are found.
@@ -680,6 +768,9 @@ function collectStubIssues(
     if (!dialect.spansLines && match[0].includes("\n")) {
       continue;
     }
+    if (isRuntimeSkip(match, match.index + match[0].length, scannable, content)) {
+      continue;
+    }
     // The whitespace a fallback label carries can now include the newline the
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
@@ -687,7 +778,7 @@ function collectStubIssues(
     issues.push(
       stubIssue(
         relFile,
-        dialect,
+        runner,
         matchedKind,
         lineNumber,
         match.index - lineStart + 1,
