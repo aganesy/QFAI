@@ -810,7 +810,12 @@ export const GATE_GROUP_FAMILIES = {
   // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
   // `traceability-*` groups below split that prefix, and leaving the glob would
   // count every trace code in two groups at once.
-  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*", "QFAI-TEST-*"],
+  // Its own group rather than part of `tdd`: `runAtddValidators` runs the stub
+  // gate too, so a group that bundled it with the ledger families would report
+  // `QFAI-TEST-*` as unevaluated on a profile that does evaluate it. One
+  // validator emits all three codes, so the whole family moves together.
+  "test-stubs": ["QFAI-TEST-*"],
+  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*"],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
@@ -969,7 +974,9 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "traceability-layered",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["atdd-traceability", "atdd-scaffold"],
+  // `runAtddValidators` runs the stub gate over the acceptance-test
+  // directories it owns, so this profile evaluates `QFAI-TEST-*`.
+  atdd: ["atdd-traceability", "atdd-scaffold", "test-stubs"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group. It also calls
   // `validateContracts` and `validateTraceability`, which sdd shares, plus the
@@ -983,6 +990,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // validator, so it evaluates the seed shape the `sdd` profile also checks.
   tdd: [
     "tdd",
+    "test-stubs",
     "tdd-ledger-seed",
     "atdd-traceability",
     "drift",
@@ -1871,6 +1879,14 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-TDDLIST-011":
+    "Every ledger `Evidence` cell is written in the one shape the grammar admits, so the row's provenance, oracle, revision and anchor can each be read from the cell rather than inferred from prose.",
+  "QFAI-TDDLIST-012":
+    "Every ledger `Evidence` cell stays inside the 240-character cap: the cell is a pointer to the proof, and the commands and their output live in the evidence file its anchor names.",
+  "QFAI-TDDLIST-013":
+    "No ATDD-owned row records `RED:n-a`: its test is authored by `/qfai-atdd`, so it owes either an observed RED or the falsifiability argument that stands in for one.",
+  "QFAI-TDDLIST-014":
+    "Every ledger row carries exactly the cells its table's header declares, so no content sits past the last column where the per-column rules cannot read it.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications
