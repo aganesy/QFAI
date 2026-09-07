@@ -11,7 +11,7 @@
  * upgrade.
  */
 
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -56,7 +56,11 @@ const LAYOUT_FILES = {
     acceptance: "03_Acceptance-criteria.md",
     testCases: "06_Test-cases.md",
     rules: "04_Business-rules.md",
-    examples: "05_Examples-and-scenarios.md",
+    // Gherkin, not Markdown: `specLayout.ts` resolves this style's
+    // `examplesPath` to `05_Examples.feature`, so a Markdown fixture beside it
+    // is a file the validator never opens — which is how the earlier v1417 case
+    // passed while reading nothing.
+    examples: "05_Examples.feature",
   },
 } as const;
 
@@ -69,10 +73,7 @@ async function run(
     layout?: keyof typeof LAYOUT_FILES;
   } = {},
 ): Promise<Array<{ code: string; severity: string; message: string }>> {
-  const root = path.join(
-    os.tmpdir(),
-    `qfai-brref-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  );
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-brref-"));
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   const names = LAYOUT_FILES[options.layout ?? "v1421"];
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
@@ -128,6 +129,46 @@ const derivationTestCases = (exRef: string): string => `# 06 Test Cases
 | ----- | ----- | ------- | ------ | ---- |
 | TC-0001-0004 | L1 | AC-0001-0003 | ${exRef} | normal |
 `;
+
+/**
+ * The same two rules and one example, in the Gherkin layout's spelling.
+ *
+ * `v1417` / `v1416` put Examples in a `.feature` file: the EX id is an
+ * `@EX-NNNN` tag and its parent a `# Parent: BR-NNNN` comment, and both
+ * readers (`collectScenarioItems`, `collectMarkdownItems`) capture a four-digit
+ * id only — so these fixtures use the short spelling throughout, which
+ * `BR-Ref` admits.
+ */
+const GHERKIN_RULES = `# 04 Business rules
+
+## BR-0004: Fourth
+
+- Parent: AC-0003
+
+## BR-0005: Fifth
+
+- Parent: AC-0003
+`;
+
+const gherkinExamples = (brId: string): string => `Feature: Examples
+
+  @EX-0005
+  # Parent: ${brId}
+  Scenario: Fifth
+    Given in
+    Then out
+`;
+
+const GHERKIN_TEST_CASES = `# 06 Test cases
+
+## TC-0004: Fourth
+
+- Parent: EX-0005
+`;
+
+/** A row citing the TC the Gherkin fixtures declare. */
+const gherkinRow = (brRef: string): string =>
+  `| TDD-0001 | TC-0004 | ${brRef} | Unit | tests/a.test.ts | a | todo | - | - |\n`;
 
 describe("the ledger's review-group key is checked when it is declared", () => {
   it("says nothing about a key that names a declared BR", async () => {
@@ -386,5 +427,80 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     );
     expect(issues.map((i) => i.code)).not.toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
     expect(issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-BRREF-"))).toEqual([]);
+  });
+  it("derives the key on a Gherkin Examples layout too", async () => {
+    // `collectV1421LayerRefs` reads Markdown tables and `## <ID>` headings. On
+    // `v1417` / `v1416` the Examples layer is a `.feature` file, so it found no
+    // `EX` at all, `exToBrRefs` came back empty, and every derivation returned
+    // `null` — the check reported clean on the layouts it could not read, which
+    // is indistinguishable from finding nothing wrong.
+    const options = {
+      rules: GHERKIN_RULES,
+      examples: gherkinExamples("BR-0005"),
+      testCases: GHERKIN_TEST_CASES,
+      layout: "v1417" as const,
+    };
+    const issues = await run(`${WITH_KEY}\n${gherkinRow("BR-0004")}`, options);
+    const finding = issues.find((i) => i.code === "QFAI-BRREF-003");
+    expect(finding?.message).toContain("BR-0005");
+
+    // Over-correction pin: the derived key itself is silent on that layout.
+    const correct = await run(`${WITH_KEY}\n${gherkinRow("BR-0005")}`, options);
+    expect(correct.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
+  });
+
+  it("reads a declaration table whose header carries Markdown decoration", async () => {
+    // A shipped `04_Business-Rules.md` may legally write the column as
+    // `` `BR-ID` ``. Compared raw, that header matched nothing, the table read
+    // as auxiliary, the declared set came back empty — and every real key in
+    // the ledger was reported as declared nowhere.
+    const decorated = `# 04 Business Rules
+
+| \`BR-ID\` | Title | AC-Refs | Rule |
+| ------- | ----- | ------- | ---- |
+| BR-0001-0001 | First | AC-0001-0001 | A rule |
+`;
+    const issues = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, { rules: decorated });
+    expect(issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-BRREF-"))).toEqual([]);
+
+    // Over-correction pin: reading the table must not make it accept anything.
+    const undeclared = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`, { rules: decorated });
+    expect(undeclared.find((i) => i.code === "QFAI-BRREF-002")?.message).toContain("BR-0001-0009");
+  });
+
+  it("reports a lower-case spelling of a declared key", async () => {
+    // `volume-policy.md` opens and closes a T1 review group on the value **as
+    // recorded** and states no normalization, so `BR-0001-0001` and
+    // `br-0001-0001` are two keys there. Upper-casing before the shape check
+    // let both through and then split one review unit in two.
+    const issues = await run(`${WITH_KEY}\n${row("br-0001-0001")}`, { rules: RULES });
+    const finding = issues.find((i) => i.code === "QFAI-BRREF-001");
+    expect(finding?.message).toContain("br-0001-0001");
+    // And it is not also reported as undeclared: one finding per defect.
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
+  });
+
+  it("does not name an undeclared rule as the expected key", async () => {
+    // The derivation reached `BR-0001-0009` through the EX, which the Business
+    // Rules file does not declare. Naming it as the fix sent the operator into
+    // a round trip: adopting it produces `QFAI-BRREF-002`, and reverting
+    // produces this one. The upstream `EX` is the thing to repair, and
+    // `QFAI-COV-*` is what reports it.
+    const options = {
+      rules: DERIVATION_RULES,
+      examples: derivationExamples("BR-0001-0009"),
+      testCases: derivationTestCases("EX-0001-0005"),
+    };
+    const issues = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-BRREF-003");
+    // The ledger's own value is declared, so nothing else fires on the row.
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-BRREF-002");
+
+    // Over-correction pin: a declared derivation is still reported.
+    const declared = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, {
+      ...options,
+      examples: derivationExamples("BR-0001-0005"),
+    });
+    expect(declared.find((i) => i.code === "QFAI-BRREF-003")?.message).toContain("BR-0001-0005");
   });
 });

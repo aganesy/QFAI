@@ -55,7 +55,7 @@ import { resolveToolVersion } from "../version.js";
 // with. The review-group key is derived from those very edges, so re-parsing
 // the layer files here is how the derived key and the coverage graph would come
 // to disagree about what a `TC` reaches.
-import { collectV1421LayerRefs, type V1421LayerRefs } from "./layerCoverage.js";
+import { collectLayerRefs, type V1421LayerRefs } from "./layerCoverage.js";
 import { exists, isInside, issue, readSafe } from "./utils.js";
 
 /**
@@ -2403,7 +2403,7 @@ async function collectDeclaredBrIds(file: string): Promise<Set<string> | null> {
   }
   for (const table of parseAllMarkdownTables(text)) {
     const idIndex = table.headers.findIndex(
-      (header) => header.trim().toLowerCase() === BR_ID_COLUMN.toLowerCase(),
+      (header) => headerKey(header) === headerKey(BR_ID_COLUMN),
     );
     if (idIndex < 0) continue;
     for (const row of table.rows) {
@@ -2412,6 +2412,20 @@ async function collectDeclaredBrIds(file: string): Promise<Set<string> | null> {
     }
   }
   return declared;
+}
+
+/**
+ * A table header reduced to its letters and digits, so Markdown decoration on
+ * it cannot change which column a reader finds.
+ *
+ * A shipped Business Rules file may legally write the column as `` `BR-ID` ``,
+ * and the raw comparison skipped that whole table as auxiliary — leaving the
+ * declared set empty and every real `BR-Ref` reported as declared nowhere. The
+ * same reduction is what `contractReferences.ts` and `densityHints.ts` apply to
+ * their own headers.
+ */
+function headerKey(header: string): string {
+  return header.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 /**
@@ -2451,7 +2465,11 @@ function tcRefsOf(map: Map<string, Set<string>>, tcId: string): Set<string> {
  * one spelling: every row of it would be compared against ids its column can
  * never hold, and report a mismatch it cannot fix.
  */
-function deriveExpectedBrRef(refs: V1421LayerRefs, tcRefsCell: string): string | null {
+function deriveExpectedBrRef(
+  refs: V1421LayerRefs,
+  tcRefsCell: string,
+  declaredBrIds: ReadonlySet<string> | null,
+): string | null {
   const reached = new Set<string>();
   for (const raw of splitTcRefs(tcRefsCell)) {
     const tcId = raw.toUpperCase();
@@ -2475,7 +2493,17 @@ function deriveExpectedBrRef(refs: V1421LayerRefs, tcRefsCell: string): string |
       }
     }
   }
-  const candidates = [...reached].filter((id) => BR_ID_FORMAT.test(id)).sort();
+  const wellFormed = [...reached].filter((id) => BR_ID_FORMAT.test(id)).sort();
+  // The expected value has to be one the row could legally hold, and
+  // `QFAI-BRREF-002` refuses a `BR-*` the Business Rules file does not declare.
+  // Without this intersection an EX referencing a rule that was never declared
+  // made this check name that rule as the fix, and adopting it produced `-002`
+  // on the next run: a round trip with no ledger value able to end it. Where
+  // the reachable set is entirely undeclared the graph cannot name a legal key
+  // at all, so nothing is derived and the upstream `EX` is left as the thing to
+  // repair — `QFAI-COV-*` is what reports that.
+  const candidates =
+    declaredBrIds === null ? wellFormed : wellFormed.filter((id) => declaredBrIds.has(id));
   return candidates[0] ?? null;
 }
 
@@ -3943,7 +3971,11 @@ async function validateSpecTddList(
     // and `QFAI-BRREF-002` then went silent for every one of those packs —
     // reporting nothing being indistinguishable from finding nothing wrong.
     const declaredBrIds = await collectDeclaredBrIds(specEntry.businessRulesPath);
-    const layerRefs = await collectV1421LayerRefs(specEntry);
+    // Layout-aware: on `v1417` / `v1416` the Examples layer is a Gherkin
+    // `.feature` file, which the v1421 Markdown reader finds no `EX` in at all
+    // — so every derivation returned `null` there and `QFAI-BRREF-003` was
+    // silent on those packs rather than clean.
+    const layerRefs = await collectLayerRefs(specEntry);
     const brRefPromotion = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
     const brRefSeverity = newRuleSeverity(await resolveToolVersion(), brRefPromotion);
     const brRefWindowNote =
@@ -3957,7 +3989,14 @@ async function validateSpecTddList(
       // and either forms a review group of one that is reviewed alone. That is
       // the documented safe degradation, not a defect.
       if (brRef.length === 0 || brRef === "-") continue;
-      const token = brRef.toUpperCase();
+      // Not upper-cased first. `volume-policy.md` opens and closes a T1 review
+      // group on the value **as recorded** and states no normalization, so
+      // `BR-0001` and `br-0001` are two keys there however plainly they name
+      // one rule. Folding the case here let both through this check and then
+      // split one review unit in two, which is the property the column exists
+      // to carry. The canonical spelling is required instead, and reported by
+      // this rule when it is not used.
+      const token = brRef;
       if (!BR_ID_FORMAT.test(token)) {
         issues.push(
           issue(
@@ -3968,7 +4007,7 @@ async function validateSpecTddList(
             "tddList.brRefFormat",
             [brRef],
             "change",
-            `${BR_REF_COLUMN} は1行1件です。TC の \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、こうして得た \`BR-*\` の和集合（1件の \`EX\` が複数 \`BR\` を挙げる場合も含む）から最小番号の1件を書いてください。該当する BR がない行は \`-\`（空欄も同じ扱い）です。`,
+            `${BR_REF_COLUMN} は1行1件で、表記は \`BR-NNNN\` / \`BR-NNNN-NNNN\` の大文字のみです（レビュー群のキーは記載値そのままで比較するため、\`br-0001\` は別キーになります）。TC の \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、こうして得た \`BR-*\` の和集合（1件の \`EX\` が複数 \`BR\` を挙げる場合も含む）から最小番号の1件を書いてください。該当する BR がない行は \`-\`（空欄も同じ扱い）です。`,
           ),
         );
         continue;
@@ -3996,7 +4035,7 @@ async function validateSpecTddList(
       // Silent when the layer files reach nothing, and silent on `-` / empty,
       // which the column documents as the legal "not resolved" degradation
       // rather than a wrong key.
-      const expected = deriveExpectedBrRef(layerRefs, cell(ref, "TC-Refs"));
+      const expected = deriveExpectedBrRef(layerRefs, cell(ref, "TC-Refs"), declaredBrIds);
       if (expected !== null && expected !== token) {
         issues.push(
           issue(
