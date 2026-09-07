@@ -21,7 +21,7 @@
  * a missing root `DESIGN.md` once the project has UI contracts, which is the
  * point at which it genuinely owes one.
  */
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -96,10 +96,14 @@ describe("qfai init and root DESIGN.md", () => {
     // something that deletes it.
     const root = await freshInit();
     const authored = path.join(root, "DESIGN.md");
-    await writeFile(authored, '---\nbrand:\n  name: "Ours"\n---\n', "utf-8");
+    const content = '---\nbrand:\n  name: "Ours"\n---\n';
+    await writeFile(authored, content, "utf-8");
 
     await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-    expect(existsSync(authored)).toBe(true);
+    // The bytes, not the path: a truncation or a rewrite leaves the file
+    // there, and "the project keeps what it authored" is a claim about what
+    // is in it.
+    expect(await readFile(authored, "utf-8")).toBe(content);
   });
 });
