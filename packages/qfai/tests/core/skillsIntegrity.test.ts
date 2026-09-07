@@ -21,12 +21,18 @@ afterEach(() => {
  * Deliberately no `{ timeout: … }` here, and none on `validateSkillsIntegrity`
  * below.
  *
- * `vitest.knobs.ts` raised `testTimeout` to 120 s and measured why: "ninety-three
- * per cent of every CLI invocation is loading the 1.44 MB bundle", the pool is
- * ten workers, and "15 s was never a budget for this workload. It was a budget
- * for in-process tests, applied to a suite that is subprocess-bound." Both
- * blocks in this file re-imposed exactly that abandoned number, eight times
- * below the project's, on the file that calls `runInit` eleven times (#1218).
+ * Both blocks declared `{ timeout: 15000 }`, eight times below the project's
+ * `testTimeout`, on a file whose ten `runInit` calls each copy a 204-file
+ * template tree and spawn `git` three times for the symlink probe (#1218).
+ *
+ * `vitest.knobs.ts` is the precedent for inheriting rather than the reason: it
+ * raised `testTimeout` to 120 s and its measurement is about spawning the qfai
+ * binary — "ninety-three per cent of every CLI invocation is loading the 1.44 MB
+ * bundle" — which is a cost this file does not pay, because `runInit` is an
+ * in-process import here. What carries over is its conclusion, that "15 s was
+ * never a budget for this workload. It was a budget for in-process tests,
+ * applied to a suite that is subprocess-bound", and the argument below is this
+ * file's own numbers rather than that one's.
  *
  * Measured on this tree, no source change between the two runs:
  *
