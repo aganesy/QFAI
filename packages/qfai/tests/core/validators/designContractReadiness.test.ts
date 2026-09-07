@@ -1274,9 +1274,9 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
 // ---------------------------------------------------------------------------
 // QFAI-DCON-034 — unreplaced sample DESIGN.md.
 //
-// The sample gate has to fire BEFORE the UI-contract gate: `qfai init`
-// seeds the sample on day one, `contracts/ui/**` is authored later in SDD,
-// and Phase 0 freezes the file's sha256 in between.
+// The sample gate has to fire BEFORE the UI-contract gate: a copied sample
+// can be in place from the first commit, `contracts/ui/**` is authored later
+// in SDD, and Phase 0 freezes the file's sha256 in between.
 // ---------------------------------------------------------------------------
 
 /**

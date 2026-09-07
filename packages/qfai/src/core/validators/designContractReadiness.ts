@@ -509,12 +509,11 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  *     marker exists at Phase 0 while the contracts do not, and a gate that
  *     only fires after the contracts land can only report a freeze that
  *     already happened.
- *   - otherwise -> `warning`. Every `qfai init` seeds the sample,
- *     including into projects that never ship a UI and never freeze
- *     anything; turning that into a hard failure would break projects
- *     that never opted into the design surface at all. The warning still
- *     surfaces the condition from `qfai validate` on day one, which is
- *     what the shipped sample's own instructions promise.
+ *   - otherwise -> `warning`. A project that ships no UI freezes nothing,
+ *     so the sample costs it nothing yet; a hard failure would stop a
+ *     project that never opted into the design surface at all. The warning
+ *     still names the file, which is what the sample's own instructions
+ *     promise a reader.
  *
  * A missing DESIGN.md is not this gate's business (DCON-030 owns it, and
  * only for UI-bearing projects), so an unreadable file is silently
