@@ -91,12 +91,27 @@ describe("changelog language", () => {
     ).toEqual([]);
   });
 
+  it("reads Japanese out of a changelog that has some", () => {
+    // The positive control. Every case below passes when the scan finds
+    // nothing, so a scan that always finds nothing would pass the file
+    // regardless of its content. This puts a known changelog through the same
+    // two helpers instead of asserting that the real one still has Japanese —
+    // an assertion that would turn a completed migration into a failure.
+    const sample = ["# Changelog", "", "## [1.0.0] - 2026-01-01", "", "- 日本語の記述", ""].join(
+      "\n",
+    );
+
+    const sections = sectionOfEachLine(sample);
+    const found = findJapaneseTextLines(sample);
+
+    expect(found.map((line) => line.text)).toEqual(["- 日本語の記述"]);
+    // Line numbers are 1-based and the section array is indexed from 0, the
+    // same offset `japaneseBySection` applies.
+    expect(sections[(found[0]?.line ?? 0) - 1]).toBe("[1.0.0] - 2026-01-01");
+  });
+
   it("admits no Japanese line the allowlist does not name", async () => {
     const grouped = await japaneseBySection();
-    expect(
-      grouped.size,
-      "no Japanese found at all — is the changelog still there?",
-    ).toBeGreaterThan(0);
 
     const added: string[] = [];
     const migrated: string[] = [];

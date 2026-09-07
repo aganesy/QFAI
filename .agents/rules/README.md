@@ -25,8 +25,9 @@ directory; edit the master here.**
   `.claude/settings.json`.
 - `repository-language.md` — this repository is written in English.
   Operator-facing strings are enforced by
-  `packages/qfai/tests/unit/cliMessageLanguage.test.ts`; the rest is held
-  by review.
+  `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog
+  by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an
+  allowlist that may only shrink. The rest is held by review.
 
 ## Adding a new rule
 
