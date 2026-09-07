@@ -5,11 +5,19 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { GATE_GROUP_FAMILIES } from "../../src/cli/commands/validate.js";
+import { EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID } from "../../src/core/ruleIds.js";
 import { SAAS_PACKAGE_SKIPPED_GATE_FAMILIES } from "../../src/core/saasPackage/skippedGates.js";
 import { familyMatches } from "../helpers/gateFamilies.js";
 
 const SRC_ROOT = path.resolve(__dirname, "../../src");
 const DOC_PATH = path.resolve(__dirname, "../../docs/finding-codes.md");
+
+/**
+ * Wrap-tolerant containment: what the document says is the rule, the column it
+ * wraps at is not. Without this a sentence assertion fails on a reflow that
+ * changed no wording.
+ */
+const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 const TEST_STUB_VALIDATOR = path.resolve(__dirname, "../../src/core/validators/testTodoStubs.ts");
 
 /** The one grammar a new finding code may use — see `docs/finding-codes.md`. */
@@ -471,7 +479,7 @@ describe("finding code grammar", () => {
   it("tells a branch holding a frozen-family code what to do with it", async () => {
     // The registry does not grow, so such a branch renames. Without the steps,
     // the reader has to work out what a rename costs and what it may reuse.
-    const doc = await readFile(DOC_PATH, "utf-8");
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
 
     expect(doc).toContain("## A branch that already emits a frozen-family code");
     expect(doc).toContain("**Rename to `QFAI-<AREA>-<NNN>`**");
@@ -486,13 +494,28 @@ describe("finding code grammar", () => {
     // The alias is about waivers. The code is also an operator-facing
     // identifier in annotations and in `validate.json`, so a rename is a
     // behaviour change for anyone reading those.
-    const doc = await readFile(DOC_PATH, "utf-8");
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
 
     expect(doc).toContain("### Renaming a code that has shipped");
     expect(doc).toContain("The alias above covers waivers and nothing else.");
-    expect(doc).toContain("breaking for anyone\nidentifying findings by code");
+    expect(doc).toContain("breaking for anyone identifying findings by code");
     // And the deferred case stays the shapes the strip cannot reach.
     expect(doc).toContain("Renaming a legacy code whose shape is **not** `<AREA>-<NNN>`");
+  });
+
+  it("does not claim a screaming-snake code has no numbered id", async () => {
+    // It has one — `TDDLIST_EXCEPTION_PARKED` is published under `rule`
+    // `TDDLIST-001`. What the strip cannot do is derive that id from the code,
+    // which is a different statement and the one the step has to make.
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
+
+    expect(doc).not.toContain("has no numbered id to alias at all");
+    expect(doc).toContain("does not match at all, so no alias is derived from it");
+    expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED` is published under `rule` `TDDLIST-001`");
+    // And the source that pairing is read from, so the example cannot go stale
+    // silently.
+    expect(EXCEPTION_PARKED_CODE).toBe("TDDLIST_EXCEPTION_PARKED");
+    expect(EXCEPTION_PARKED_RULE_ID).toBe("TDDLIST-001");
   });
 
   it("keeps the documented strip in step with the one waivers.ts applies", async () => {

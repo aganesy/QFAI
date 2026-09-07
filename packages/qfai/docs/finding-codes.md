@@ -103,11 +103,14 @@ the branch renames.
    unrelated condition would let an existing waiver suppress the new finding.
    Search `src/core/ruleIds.ts` and every `Issue.rule` for the spelling
    `resolveRuleKeys` would derive, as well as for the code itself.
-4. **The strip is narrow.** It matches `QFAI-<AREA>-<NNN>` with a single
-   all-letter area, so `QFAI-CFG-LINK-001` strips to nothing, and a
-   screaming-snake code (`TDDLIST_EXCEPTION_PARKED`) has no numbered id to
-   alias at all. Renaming one of those needs an explicit alias — the work the
-   next section defers.
+4. **The strip is narrow.** It reads `code`, and matches `QFAI-<AREA>-<NNN>`
+   with a single all-letter area — so `QFAI-CFG-LINK-001` strips to nothing,
+   and a screaming-snake code (`TDDLIST_EXCEPTION_PARKED`) does not match at
+   all, so no alias is derived from it. Such a finding may still carry a
+   numbered id: `TDDLIST_EXCEPTION_PARKED` is published under
+   `rule` `TDDLIST-001`. That is a separately declared back-compat alias in
+   `ruleIds.ts`, not something the strip produces, so renaming one of these
+   needs an explicit alias — the work the next section defers.
 5. **Check whether the code already exists.** A family several branches reached
    for at once tends to have been settled by whichever landed first:
    `QFAI-TDDLIST-007` through `-010` are on the default branch already. Adopt
