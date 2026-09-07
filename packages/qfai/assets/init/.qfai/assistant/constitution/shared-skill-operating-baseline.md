@@ -117,9 +117,12 @@ There is one base, and it is the project root.
   decision:
   - `auto-decide` — the skill settles it without asking.
   - `ask-user` — the skill asks before acting.
-  - `hard-required` — no default is possible, so the value comes from the user
-    rather than from the agent. A repository-side derivation may narrow the
-    candidates; it never settles the value on the agent's own authority.
+  - `hard-required` — no default is possible, so a run may not proceed on a
+    guess. The value is either supplied by the user or read off evidence that
+    settles it. A `testFileGlobs` proposal is settled that way: a glob either
+    matches real files or it does not. `primarySpecId` is not, and a single
+    candidate does not settle it — which spec to work is a choice, and auto
+    discovery narrows the candidates without making it.
 
   What a missing hard-required value costs a run is below.
 
