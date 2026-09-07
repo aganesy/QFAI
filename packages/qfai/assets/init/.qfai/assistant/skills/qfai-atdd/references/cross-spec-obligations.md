@@ -166,13 +166,24 @@ different sibling specs arrive as one finding whose single `Contract ID` and
 into one row each. Write `None` when the scoped run exited 0 — an absent
 section after a run that exited 1 is unrecorded residue, not a clean run.
 
-| Field                       | Meaning                                                                                                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Finding`                   | the rule code that reported this contract — `QFAI-ATDD-113` or `QFAI-ATDD-115`; the same code repeats across rows when one finding aggregated several contracts |
-| `Contract ID`               | exactly one `CON-API-*` / `CON-DB-*` from that finding's `refs` — one ID per row, never a list                                                                  |
-| `Owning spec`               | every sibling spec that declares that contract, resolved above — never this spec, and never blank                                                               |
-| `Why not this stage's work` | one sentence tying the contract to that spec's scope, not to this run's convenience                                                                             |
-| `Closed by`                 | the owning spec's next `/qfai-atdd` run, or `/qfai-verify` for the repo-wide run at stage end                                                                   |
+| Field                       | Meaning                                                                                                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Finding`                   | the rule code that reported this obligation — `QFAI-ATDD-113`, `QFAI-ATDD-115` or `QFAI-TEST-001`; the same code repeats across rows when one finding aggregated several |
+| `Contract ID`               | exactly one `CON-API-*` / `CON-DB-*` from that finding's `refs` — one ID per row, never a list. `-` on a `QFAI-TEST-001` row, which names a file instead                 |
+| `Test file`                 | the stub's file and line on a `QFAI-TEST-001` row, `-` on a contract row                                                                                                 |
+| `Owning spec`               | every sibling spec that owns that contract or that file, resolved above — never this spec, and never blank                                                               |
+| `Why not this stage's work` | one sentence tying the obligation to that spec's scope, not to this run's convenience                                                                                    |
+| `Closed by`                 | the owning spec's next `/qfai-atdd` run, or `/qfai-verify` for the repo-wide run at stage end                                                                            |
+
+**A sibling's stub is a residue like a sibling's contract.** `QFAI-TEST-001` is
+filed against the test file, which no spec owns in the finding, so it survives
+`--spec` and reaches a scoped gate exit 1 — and this stage may not edit another
+spec's acceptance test, so without a row of its own the run had no way to finish
+at all. Its owner is resolved from the file rather than from the spec side: a
+file under the canonical `tests/<layer>/spec-NNNN/**` layout belongs to _that_
+spec, and otherwise the `QFAI:SPEC-NNNN:` annotation the stub carries names it.
+A stub file with neither is unattributable and stays **this** spec's, exactly as
+an unattributable contract does.
 
 `Owning spec` is the load-bearing field. "A contract elsewhere is uncovered" is
 not a record; "`CON-API-0004` is declared by spec-0004, whose ATDD stage has not
@@ -186,11 +197,12 @@ the `QFAI-ATDD-115` beside it:
 ```md
 ## Cross-spec obligations
 
-| Finding       | Contract ID  | Owning spec | Why not this stage's work                                                           | Closed by                    |
-| ------------- | ------------ | ----------- | ----------------------------------------------------------------------------------- | ---------------------------- |
-| QFAI-ATDD-113 | CON-API-0004 | spec-0004   | The endpoint is in spec-0004's slice; this spec declares no US or TC exercising it. | spec-0004's `/qfai-atdd` run |
-| QFAI-ATDD-113 | CON-API-0005 | spec-0005   | Same finding, different contract: spec-0005 binds it in its rule table.             | spec-0005's `/qfai-atdd` run |
-| QFAI-ATDD-115 | CON-DB-0007  | spec-0004   | The table is spec-0004's; this spec reads no row of it in any TC.                   | spec-0004's `/qfai-atdd` run |
+| Finding       | Contract ID  | Test file                            | Owning spec | Why not this stage's work                                                             | Closed by                    |
+| ------------- | ------------ | ------------------------------------ | ----------- | ------------------------------------------------------------------------------------- | ---------------------------- |
+| QFAI-ATDD-113 | CON-API-0004 | -                                    | spec-0004   | The endpoint is in spec-0004's slice; this spec declares no US or TC exercising it.   | spec-0004's `/qfai-atdd` run |
+| QFAI-ATDD-113 | CON-API-0005 | -                                    | spec-0005   | Same finding, different contract: spec-0005 binds it in its rule table.               | spec-0005's `/qfai-atdd` run |
+| QFAI-ATDD-115 | CON-DB-0007  | -                                    | spec-0004   | The table is spec-0004's; this spec reads no row of it in any TC.                     | spec-0004's `/qfai-atdd` run |
+| QFAI-TEST-001 | -            | tests/e2e/spec-0004/checkout.test.ts | spec-0004   | The file is under spec-0004's directory; this stage may not edit another spec's test. | spec-0004's `/qfai-atdd` run |
 ```
 
 ## Not the same as cross-spec code ownership

@@ -997,14 +997,23 @@ async function runTddValidators(
  * overlap is exact (same rule, file, line and construct), so it dedupes
  * cleanly instead.
  */
+const STUB_VALIDATOR_CODES = new Set(["QFAI-TEST-001", "QFAI-TEST-002", "QFAI-TEST-003"]);
+
 function dedupeStubFindings(issues: Issue[]): Issue[] {
   const seen = new Set<string>();
   return issues.filter((entry) => {
-    if (entry.code !== "QFAI-TEST-001" && entry.code !== "QFAI-TEST-002") return true;
+    // All three codes this validator emits, not only the first two: `full`
+    // runs it once per profile, so a `.skip` the two selections share was
+    // counted twice as `QFAI-TEST-003` — twice in the warning count and, after
+    // the promotion window closes, twice in the error count.
+    if (!STUB_VALIDATOR_CODES.has(entry.code)) return true;
     const key = [
       entry.code,
       entry.file ?? "",
       entry.loc?.line ?? "",
+      // Two stubs on one line are two findings. Without the column they share
+      // every other field and the second one was dropped.
+      entry.loc?.column ?? "",
       (entry.refs ?? []).join(","),
     ].join("\0");
     if (seen.has(key)) return false;

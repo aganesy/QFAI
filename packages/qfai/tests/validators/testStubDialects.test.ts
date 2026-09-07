@@ -292,6 +292,105 @@ describe("constructs that look like stubs but are not", () => {
   });
 });
 
+describe("a masking pass must not blank real code past its own construct", () => {
+  it("reads `rows <<ITEM` as an append, not an unterminated heredoc", async () => {
+    // `<<TAG` is both a heredoc opener and `Array#<<` applied to a constant.
+    // Read as a heredoc with no terminator, the body blanked to end of file and
+    // every stub after it vanished from the scan — a clean gate over a file
+    // nothing looked at.
+    await withTests(
+      {
+        "tests/a_spec.rb": [
+          "rows = []",
+          "rows <<ITEM",
+          "it 'x' do",
+          "  pending 'later'",
+          "end",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("still blanks a heredoc that does have its terminator", async () => {
+    await withTests(
+      {
+        "tests/b_spec.rb": [
+          "text = <<ITEM",
+          "  pending 'this is fixture prose, not a stub'",
+          "ITEM",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("blanks a C# verbatim string whole, line breaks included", async () => {
+    // `@"…"` may hold newlines, so the single-line `"` span ended it at the
+    // first break and re-exposed the rest of the fixture as code.
+    await withTests(
+      {
+        "tests/AT.cs": [
+          'var expected = @"first line',
+          "[Ignore] quoted inside expected output",
+          'last line";',
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("blanks a C# raw string whole, and stops at its own closing run", async () => {
+    await withTests(
+      {
+        "tests/BT.cs": [
+          'var expected = """',
+          "[Ignore] quoted inside expected output",
+          '""";',
+          '[Ignore("later")]',
+          "public void B() {}",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        // The fixture's `[Ignore]` is masked; the real attribute after the
+        // string's close is not — a mask that ran on would have hidden it.
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+        expect(await stubCodes(root)).toHaveLength(1);
+      },
+    );
+  });
+});
+
+describe("two stubs on one line are two findings", () => {
+  it("gives each occurrence its own column", async () => {
+    // `full` runs this validator once per profile and dedupes the overlap on
+    // (code, file, line, refs). Without the column the second stub on a line
+    // shared every field with the first and was dropped.
+    await withTests(
+      { "tests/a.test.ts": `it${TODO}('one'); it${TODO}('two');\n` },
+      async (root) => {
+        const found = (await validateTestTodoStubs(root, CONFIG)).filter(
+          (i) => i.code === "QFAI-TEST-001",
+        );
+        expect(found).toHaveLength(2);
+        const columns = found.map((i) => i.loc?.column);
+        expect(columns.every((c) => typeof c === "number")).toBe(true);
+        expect(new Set(columns).size).toBe(2);
+      },
+    );
+  });
+});
+
 describe("the opt-out still turns the whole validator off", () => {
   it("returns nothing when forbidTestTodoStubs is false", async () => {
     await withTests({ "tests/a.test.ts": JS_STUB }, async (root) => {

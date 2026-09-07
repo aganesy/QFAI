@@ -180,6 +180,13 @@ type NonCodeSyntax = {
    * carries the hashes; the closer is `"` followed by exactly those.
    */
   rawStringOpener?: RegExp;
+  /**
+   * An opener for a multi-line string whose closer follows from its own form
+   * rather than from a capture: C#'s `@"…"` and `"""…"""`. Tried before
+   * {@link NonCodeSyntax.spans}, so the single-line `"` span cannot claim the
+   * opening quote first.
+   */
+  longStringOpener?: RegExp;
 };
 
 const nonCodeSpan = (
@@ -309,9 +316,24 @@ const RUBY_NON_CODE: NonCodeSyntax = {
   heredocOpener: RUBY_HEREDOC_OPENER,
 };
 
+/**
+ * A C# verbatim (`@"…"`) or raw (`"""…"""`, any quote count from three) string.
+ *
+ * Both may hold line breaks, so the single-line `DOUBLE_QUOTED` span ends them
+ * at the first newline and re-exposes the rest of a fixture as code — an
+ * `[Ignore]` quoted inside expected output was reported as a real one. Matched
+ * ahead of the plain span, and sticky like the other computed openers.
+ *
+ * The closer is computed from the opener: a verbatim string ends at a `"` that
+ * is not doubled (`""` is an escaped quote inside one), and a raw string ends
+ * at a run of at least as many quotes as opened it.
+ */
+const CSHARP_LONG_STRING_OPENER = /@"|"{3,}/y;
+
 const CSHARP_NON_CODE: NonCodeSyntax = {
   lineComments: ["//"],
   spans: [BLOCK_COMMENT, DOUBLE_QUOTED],
+  longStringOpener: CSHARP_LONG_STRING_OPENER,
 };
 
 const STUB_DIALECTS: readonly StubDialect[] = [
@@ -405,6 +427,7 @@ function stubIssue(
   dialect: StubDialect,
   matchedKind: string,
   lineNumber: number,
+  column: number,
   isSkip: boolean,
   skippedTestSeverity: IssueSeverity,
 ): Issue {
@@ -452,7 +475,11 @@ function stubIssue(
           "If you need to temporarily opt out of this check, set " +
           "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
       );
-  found.loc = { line: lineNumber };
+  // The column is what separates two stubs written on one line. `full` runs
+  // this validator twice — once per profile — and dedupes the overlap; keyed on
+  // the line alone, `it.todo("a"); it.todo("b");` collapsed to a single finding
+  // and the second stub was reported nowhere.
+  found.loc = { line: lineNumber, column };
   return found;
 }
 
@@ -495,10 +522,18 @@ function collectStubIssues(
   // stopping at the first one on a line.
   let scanned = 0;
   let lineNumber = 1;
+  // Offset just past the last newline seen, so the column is one subtraction
+  // rather than a re-scan of the line.
+  let lineStart = 0;
   for (const match of scannable.matchAll(dialect.pattern)) {
     // Advanced before the newline gate below, so a rejected match still leaves
     // the counter on the offset it reached.
-    lineNumber += scannable.slice(scanned, match.index).split("\n").length - 1;
+    const between = scannable.slice(scanned, match.index);
+    const breaks = between.split("\n").length - 1;
+    lineNumber += breaks;
+    if (breaks > 0) {
+      lineStart = scanned + between.lastIndexOf("\n") + 1;
+    }
     scanned = match.index;
     if (!dialect.spansLines && match[0].includes("\n")) {
       continue;
@@ -507,7 +542,17 @@ function collectStubIssues(
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
     const isSkip = dialect.isSkip?.(match) === true;
-    issues.push(stubIssue(relFile, dialect, matchedKind, lineNumber, isSkip, skippedTestSeverity));
+    issues.push(
+      stubIssue(
+        relFile,
+        dialect,
+        matchedKind,
+        lineNumber,
+        match.index - lineStart + 1,
+        isSkip,
+        skippedTestSeverity,
+      ),
+    );
   }
   return issues;
 }
@@ -615,6 +660,13 @@ function maskNonCode(content: string, syntax: NonCodeSyntax): string {
       i = maskRawString(content, blank, i, raw);
       continue;
     }
+    const long = syntax.longStringOpener
+      ? matchLongStringOpener(content, i, syntax.longStringOpener)
+      : null;
+    if (long !== null) {
+      i = maskLongString(content, blank, i, long);
+      continue;
+    }
     const span = syntax.spans.find((candidate) => content.startsWith(candidate.open, i));
     i = span ? maskSpan(content, blank, i, span) : i + 1;
   }
@@ -702,7 +754,30 @@ function matchHeredocOpener(
   // alternation leaves its groups unmatched.
   const groups: Array<string | undefined> = match.slice(1);
   const tag = groups.find((group) => group !== undefined);
-  return tag === undefined ? null : { tag, length: match[0].length };
+  if (tag === undefined) return null;
+  // `<<TAG` with no squiggle, dash or quotes is the one form that is also a
+  // valid expression: `rows <<ITEM` pushes the constant `ITEM` onto `rows`.
+  // Read as a heredoc it has no terminator, the body blanks to end of file,
+  // and every real `pending` / `skip` after it disappears from the scan — a
+  // clean gate over a file nobody checked. So this form is only a heredoc when
+  // the file actually holds its terminator line; the unambiguous forms keep
+  // blanking to EOF, where an unterminated body is a syntax error rather than
+  // another reading.
+  const ambiguous = /^<<[A-Z_]/.test(match[0]);
+  if (ambiguous && !hasHeredocTerminator(content, opener.lastIndex, tag)) return null;
+  return { tag, length: match[0].length };
+}
+
+/** Whether a line holding exactly `tag` follows `from`. */
+function hasHeredocTerminator(content: string, from: number, tag: string): boolean {
+  let i = content.indexOf("\n", from);
+  while (i !== -1) {
+    const lineEnd = content.indexOf("\n", i + 1);
+    const line = content.slice(i + 1, lineEnd === -1 ? content.length : lineEnd);
+    if (line.trim() === tag) return true;
+    i = lineEnd;
+  }
+  return false;
 }
 
 /**
@@ -728,6 +803,66 @@ function maskHeredocBodies(
       i = lineBreak === -1 ? content.length : lineBreak + 1;
       if (line.trim() === tag) break;
     }
+  }
+  return i;
+}
+
+/** The opening delimiter of a C#-style long string, or `null`. */
+function matchLongStringOpener(content: string, start: number, opener: RegExp): string | null {
+  opener.lastIndex = start;
+  const match = opener.exec(content);
+  return match ? match[0] : null;
+}
+
+/**
+ * Blanks a verbatim or raw string whole, line breaks included; returns the
+ * index just past it.
+ *
+ * Unterminated, it blanks to end of file — the direction every other opener
+ * here takes, which can suppress a finding but never invent one.
+ */
+function maskLongString(
+  content: string,
+  blank: (index: number) => void,
+  start: number,
+  open: string,
+): number {
+  for (let k = start; k < start + open.length; k += 1) blank(k);
+  let i = start + open.length;
+  if (open === '@"') {
+    while (i < content.length) {
+      if (content[i] === '"') {
+        // `""` is one escaped quote inside a verbatim string, not the end.
+        if (content[i + 1] === '"') {
+          blank(i);
+          blank(i + 1);
+          i += 2;
+          continue;
+        }
+        blank(i);
+        return i + 1;
+      }
+      blank(i);
+      i += 1;
+    }
+    return i;
+  }
+  // A raw string closes on a run of at least as many quotes as opened it.
+  const quotes = open.length;
+  while (i < content.length) {
+    if (content[i] === '"') {
+      let run = 0;
+      while (content[i + run] === '"') run += 1;
+      if (run >= quotes) {
+        for (let k = i; k < i + run; k += 1) blank(k);
+        return i + run;
+      }
+      for (let k = i; k < i + run; k += 1) blank(k);
+      i += run;
+      continue;
+    }
+    blank(i);
+    i += 1;
   }
   return i;
 }
@@ -836,7 +971,7 @@ export async function validateTestTodoStubs(
     ]),
   );
 
-  const { files } = await collectFilesByGlobs(root, {
+  const { files, truncated, matchedFileCount, limit } = await collectFilesByGlobs(root, {
     globs: Array.from(globs),
     ignore: excludeGlobs,
     limit: DEFAULT_GLOB_FILE_LIMIT,
@@ -868,6 +1003,27 @@ export async function validateTestTodoStubs(
     }
 
     issues.push(...collectStubIssues(relFile, content, dialect, skippedTestSeverity));
+  }
+
+  if (truncated) {
+    // The third state a clean result can mean: the selection was cut at the
+    // limit and the files past it were never opened. Dropping `truncated` made
+    // that indistinguishable from a scanned-and-clean run, so a suite larger
+    // than the limit could carry a stub through `--fail-on error` untouched —
+    // the same non-result-read-as-result the other two forms of this code
+    // exist to prevent.
+    issues.push(
+      issue(
+        "QFAI-TEST-002",
+        `The stub scan matched ${matchedFileCount} files and stopped at the ${limit}-file limit, so the rest were not read. A clean result is not evidence that they hold no stub.`,
+        "info",
+        "qfai.config.yaml",
+        "validation.traceability.testFileGlobs",
+        ["validation.traceability.testFileGlobs"],
+        "canonical",
+        "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read.",
+      ),
+    );
   }
 
   if (unscannedExtensions.size > 0) {
