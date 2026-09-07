@@ -1,0 +1,11 @@
+{
+  "firecrawl": {
+    "command": "npx",
+    "args": ["-y", "firecrawl-mcp@3.11.0"],
+    "env": {
+      "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}",
+      "FIRECRAWL_API_URL": "https://api.firecrawl.dev"
+    },
+    "_comment": "Local npx mode is recommended for sensitive environments. For hosted mode use https://api.firecrawl.dev"
+  }
+}
