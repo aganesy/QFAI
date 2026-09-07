@@ -3581,6 +3581,11 @@ export async function validateTddList(
   config: QfaiConfig,
   options: TddListValidateOptions = {},
 ): Promise<Issue[]> {
+  // Scoped to this run, like every other cache here. The grammars are keyed by
+  // spec and layer class, so rows share them freely inside one walk; across
+  // walks the map only grows, and in a long-lived process — an editor server
+  // holding the validator open — that growth has no bound and no reader.
+  EVIDENCE_ROW_GRAMMARS.clear();
   const specsRoot = resolvePath(root, config, "specsDir");
   // Repo-relative, for a `git diff` pathspec. `QFAI-TDDLIST-009` asks whether
   // anything the observation covered has moved, and the code under test is
@@ -4060,6 +4065,14 @@ async function validateSpecTddList(
     // even when the table has no rows, to detect missing test entries.
   }
 
+  // The version every promotion window below is measured against, read once.
+  //
+  // `resolveToolVersion` resolves rather than rejects — its own read failures
+  // return `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates a windowed rule into a build
+  // failure.
+  const resolvedToolVersion = await resolveToolVersion();
+
   // Check 3c: a row may not carry cells the header does not declare.
   //
   // GFM renders the surplus nowhere and every rule here reads cells by header
@@ -4073,7 +4086,7 @@ async function validateSpecTddList(
   // read past the last declared column before this rule, so every surplus cell
   // a ledger accumulated arrives at once, including on rows already at `done`.
   const rowExtraCellsPromotion = RULE_PROMOTIONS.tddListRowExtraCells.promoteAt;
-  const rowExtraCellsSeverity = newRuleSeverity(await resolveToolVersion(), rowExtraCellsPromotion);
+  const rowExtraCellsSeverity = newRuleSeverity(resolvedToolVersion, rowExtraCellsPromotion);
   const rowExtraCellsWindowNote =
     rowExtraCellsSeverity === "warning"
       ? ` Reported as a warning until the ${rowExtraCellsPromotion} release, then an error`
@@ -4926,15 +4939,10 @@ async function validateSpecTddList(
   // upgrade into a latched gate for a consuming repository. It is a `warning`
   // until the pinned release and an `error` from that release onwards.
   //
-  // `resolveToolVersion` resolves rather than rejects — its own read failures
-  // return `"unknown"`, which the comparator reads as inside the window, so an
-  // unreadable version can never be what escalates this into a build failure.
-  //
   // The two anchor rules below run their own windows for the same reason. They
   // read a cell nothing read before, so on the release that introduces them
   // every ledger written under the old shape meets them at once — 29 rows in
   // this repository alone, all of them already at `done`.
-  const resolvedToolVersion = await resolveToolVersion();
   const windowNoteFor = (severity: "warning" | "error", promoteAt: string): string =>
     severity === "warning"
       ? ` Reported as a warning until the ${promoteAt} release, then an error`
