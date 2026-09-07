@@ -581,16 +581,28 @@ defect is gone with it. The drain is what pays for dropping the round.
 ### Line endings in the artifacts under review
 
 Every artifact `#core-rule` lists is shipped and maintained LF-normalised, and `npx qfai init` seeds
-a `.gitattributes` at the project root that keeps the paths QFAI owns — `.qfai/**`,
-`qfai.config.yaml`, `DESIGN.md` — that way. It sets no repository-wide rule on purpose: the rest of
-the tree keeps whatever line-ending policy the project already chose, so seeding the file never
-rewrites product code the framework does not own.
+a `.gitattributes` at the project root that keeps the paths QFAI owns that way. Five of them sit at
+the root and are named one by one, because a partial list migrates a partial set:
+
+| path                                  | seeded by             |
+| ------------------------------------- | --------------------- |
+| `.qfai/**`                            | every `npx qfai init` |
+| `qfai.config.yaml`                    | every `npx qfai init` |
+| `DESIGN.md`                           | the design stage      |
+| `.github/workflows/qfai-validate.yml` | the shipped lanes     |
+| `.github/workflows/qfai-tests.yml`    | the shipped lanes     |
+| `.github/workflows/qfai-docs.yml`     | the shipped lanes     |
+
+It sets no repository-wide rule on purpose: the rest of the tree keeps whatever line-ending policy
+the project already chose, so seeding the file never rewrites product code the framework does not
+own.
 
 Attributes do not reach backwards. A blob already committed as CRLF stays CRLF in the index no
 matter what the new file declares, so a repository that adopts QFAI after the fact migrates the
-protected paths once — `git add --renormalize .qfai` (and `qfai.config.yaml` / `DESIGN.md` if those
-were committed CRLF), recorded as its own commit. Skipping that step only defers the
-all-lines-changed diff to the day someone re-saves one of those files with LF endings.
+protected paths once — `git add --renormalize .qfai`, adding any of the five root paths above that
+were themselves committed CRLF — recorded as its own commit. Skipping that step only defers the
+all-lines-changed diff to the day someone re-saves one of those files with LF endings, and
+renormalising part of the set defers it for the rest.
 
 That seed is create-only, so a project that already had a `.gitattributes` keeps its own and a
 whole-file rewrite on Windows can still flip a protected blob from LF to CRLF. Such a diff reads as

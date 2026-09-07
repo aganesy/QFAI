@@ -140,8 +140,10 @@ describe("validateUpstreamSsotGuard", () => {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\r\nSELECT 2;\r\n",
     });
 
-    // Guard the premise: the CRLF really did land in the committed blob.
-    const named = execFileSync("git", ["diff", "--name-only", "base..HEAD"], {
+    // Guard the premise: the CRLF really did land in the committed blob. Read
+    // over the same three-dot range the guard itself uses, so the premise this
+    // case rests on is the one the code under test evaluates.
+    const named = execFileSync("git", ["diff", "--name-only", "base...HEAD"], {
       cwd: root,
       encoding: "utf-8",
     });

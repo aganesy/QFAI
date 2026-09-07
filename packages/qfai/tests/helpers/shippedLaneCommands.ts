@@ -1326,15 +1326,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // whose own digests never change, which is the one way a content pin can be
   // satisfied and still be wrong.
   //
-  // Re-pinned when the migration note grew to name every path this file fixes
-  // to LF, the three shipped workflows included. Naming only some of them left
-  // an adopter renormalising part of the set, and the rest producing the
-  // whole-file diff the note exists to prevent the first time one is saved.
+  // Its comments are English, like every other adopter-facing template `qfai
+  // init` writes. The rules a reader has to weigh are the ones this file scopes
+  // and the one-off renormalise it asks for, and a project reads them in the
+  // language its neighbours in the same seeded tree are written in.
   //
   // Derived by running `qfai init` into a temp root and hashing what it wrote.
-  // That comment is the whole delta: restoring the previous wording reproduces
-  // `60f0c7f8…` byte for byte.
-  [".gitattributes", "c428b147ee4624b9186cdf1968a164080dc99e9b11d947e4cafa5c72fcd4bf1d"],
+  // The comment block is the whole delta: the rule lines are byte-identical to
+  // the ones `c428b147…` covered.
+  [".gitattributes", "1512c4dc2f57fb6e73fd48f622f6b5dc9b121f8f7a52f9d6311f466f690159b1"],
   // Re-pinned when the managed block gained the three vendored-assistant
   // negations — `!.qfai/assistant/`, `!.qfai/assistant/**` and
   // `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
