@@ -1874,6 +1874,14 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-TDDLIST-011":
+    "Every ledger `Evidence` cell is written in the one shape the grammar admits, so the row's provenance, oracle, revision and anchor can each be read from the cell rather than inferred from prose.",
+  "QFAI-TDDLIST-012":
+    "Every ledger `Evidence` cell stays inside the 240-character cap: the cell is a pointer to the proof, and the commands and their output live in the evidence file its anchor names.",
+  "QFAI-TDDLIST-013":
+    "No ATDD-owned row records `RED:n-a`: its test is authored by `/qfai-atdd`, so it owes either an observed RED or the falsifiability argument that stands in for one.",
+  "QFAI-TDDLIST-014":
+    "Every ledger row carries exactly the cells its table's header declares, so no content sits past the last column where the per-column rules cannot read it.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications
