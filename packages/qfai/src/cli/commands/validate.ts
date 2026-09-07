@@ -1433,12 +1433,12 @@ function emitGitHubSummary(
   if (options.dropped > 0 || truncated.length > 0) {
     const details = [
       "qfai validate note:",
-      options.dropped > 0 ? `重複除外=${options.dropped}` : null,
+      options.dropped > 0 ? `deduped=${options.dropped}` : null,
       // PER LEVEL, because one number cannot express a per-level cap: a run with 5 errors and
       // 200 notices is complete on one level and truncated on the other, and a single
-      // `上限省略=195` reads as though something was lost everywhere.
+      // `omittedOverLimit=195` reads as though something was lost everywhere.
       truncated.length > 0
-        ? `上限省略=${truncated
+        ? `omittedOverLimit=${truncated
             .map((tally) => `${tally.level} ${tally.emitted}/${tally.total}`)
             .join(", ")}`
         : null,
@@ -1447,20 +1447,17 @@ function emitGitHubSummary(
       .join(" ");
     process.stdout.write(`${details}\n`);
     process.stdout.write(
-      `qfai validate note: GitHub は annotation を level ごと 10 件/step までしか表示しません。省略分は JSON に全件あります。\n`,
+      "qfai validate note: GitHub shows at most 10 annotations per level per step. " +
+        "Everything omitted is in the JSON in full.\n",
     );
   }
 
   const relative = toRelativePath(options.root, options.jsonPath);
-  process.stdout.write(
-    `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
-  );
-  process.stdout.write(
-    `qfai validate note: run-log は ${options.runLogPath} を参照してください。\n`,
-  );
+  process.stdout.write(`qfai validate note: see ${relative} or --format text for the details.\n`);
+  process.stdout.write(`qfai validate note: see ${options.runLogPath} for the run-log.\n`);
 
   process.stdout.write(
-    "qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。\n",
+    "qfai validate note: next, qfai report generates report.md (e.g. qfai report).\n",
   );
 }
 
@@ -1741,7 +1738,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-035":
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-040":
-    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
+    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
+  "QFAI-CONTRACT-041":
+    "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does

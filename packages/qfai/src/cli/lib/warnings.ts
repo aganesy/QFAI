@@ -117,11 +117,11 @@ export function describeIncompleteRun(error: unknown, context: string): Error | 
   if (detail === null) return null;
   const at = detail.path === undefined ? "" : ` (${detail.path})`;
   return new Error(
-    `${context}: ${detail.syscall} が ${detail.code} で失敗したため完走できませんでした` +
-      `${at}。この実行結果は「問題なし」ではなく「未判定」です。\n` +
-      "報告されたパスを確認してください。Windows の git worktree では " +
-      ".claude/skills/* が directory を指す FILE symlink になり stat が EPERM を返します — " +
-      "その場合は作業ツリーで `npx qfai init` を再実行してください。",
+    `${context}: could not finish — ${detail.syscall} failed with ${detail.code}` +
+      `${at}. This run is NOT a clean result; it is no result at all.\n` +
+      "Check the path reported above. On a Windows git worktree, .claude/skills/* are FILE " +
+      "symlinks pointing at directories and stat answers EPERM for every one of them — " +
+      "re-run `qfai init` inside the worktree in that case.",
     { cause: error },
   );
 }
@@ -171,14 +171,14 @@ export function buildIncompleteRunIssue(error: unknown, context: string): Issue 
     severity: "error",
     category: "canonical",
     message:
-      `${context}: 検証を完走できませんでした — ${code}${at}。` +
-      `この実行結果は「問題なし」ではなく「未判定」です: ${detail}`,
+      `${context}: validation could not run to completion — ${code}${at}. ` +
+      `This run is NOT a clean result; it is no result at all: ${detail}`,
     rule: "validate.runIncomplete",
     ...(typeof errno?.path === "string" ? { file: errno.path } : {}),
     suggested_action:
-      "報告されたパスを確認してください。Windows の git worktree では " +
-      ".claude/skills/* が directory を指す FILE symlink になり stat が EPERM を返します — " +
-      "その場合は作業ツリーで `qfai init` を再実行してください。",
+      "Check the path reported above. On a Windows git worktree, .claude/skills/* are FILE " +
+      "symlinks pointing at directories and stat answers EPERM for every one of them — " +
+      "re-run `qfai init` inside the worktree in that case.",
   };
 }
 
