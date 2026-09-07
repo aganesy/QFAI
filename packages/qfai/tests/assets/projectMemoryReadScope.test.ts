@@ -9,10 +9,12 @@
  * "generated, not authored". Only its `developer_instructions` field is
  * generated: `tests/codex/agents.test.ts` asserts that field stays identical to
  * `assistant/agents/<id>.md`, and nothing else in the entry is mirrored there.
- * `owned_artifacts`, `tool_profile`, `permission_profile`, and
- * `specialization_tags` live only in the catalog — `constitution/agent-selection.md`
- * names it SSOT alongside `agent-routing.yml` and `review-profiles.yml` — so the
- * scoping may drop the duplicated body and nothing more.
+ * The values of `owned_artifacts`, `tool_profile`, `permission_profile` and
+ * `specialization_tags` live only in the catalog; the card names those keys but
+ * carries none of them. `.qfai/assistant/constitution/agent-selection.md` names
+ * the catalog SSOT alongside `agent-routing.yml` and `review-profiles.yml`, and
+ * `.qfai/assistant/agents/<id>.md` the SSOT for the body. So the scoping may
+ * drop the duplicated body and nothing more.
  *
  * The article also fired at the same instant as `workflow.md`'s Stage 0
  * steering-refresh contract, overlapped it on `catalog/`, and neither cited the
