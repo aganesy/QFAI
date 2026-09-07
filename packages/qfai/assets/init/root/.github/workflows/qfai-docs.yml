@@ -416,6 +416,25 @@ jobs:
           # package resolves its platform binary in a postinstall script, and
           # without it the binary never lands.
           npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ @jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1
+          # QFAI itself, but only when your install did not already provide it.
+          #
+          # The two steps below run FILES out of the package rather than its
+          # `qfai` bin. A lane that invokes the bin through `npx` needs nothing
+          # on disk; naming a path inside the package needs it unpacked. And
+          # `qfai init` does not add QFAI to your manifest, so a repository set
+          # up with `npx qfai init` alone has no `node_modules/qfai` — these
+          # steps would fail on a missing module rather than on your documents.
+          #
+          # Guarded rather than unconditional, because a repository that DOES
+          # depend on QFAI has already installed the version it chose, and this
+          # lane must report that version's rules rather than quietly replace it
+          # with the newest one. Unpinned in the bootstrap case for the same
+          # reason a bare `npx qfai` is: with nothing in the manifest there is no
+          # version to honour, and pinning one here would freeze every adopter's
+          # docs lane at whatever release generated this file.
+          if [ ! -d node_modules/qfai ]; then
+            npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ qfai
+          fi
       - name: Check SDD document shape
         shell: bash
         run: |

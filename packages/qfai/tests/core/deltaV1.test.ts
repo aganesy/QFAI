@@ -316,4 +316,33 @@ describe("deltaV1 parser", () => {
     expect(entry?.verificationPlanItems).toEqual([]);
     expect(entry?.verificationPlanError).not.toBeNull();
   });
+
+  it("treats an empty fenced plan the same as an empty unfenced one", () => {
+    // An author who has not written the plan yet is in a legal state, and was
+    // told so only when they had NOT fenced the section. The extractor answered
+    // "empty block" and "no block here" with the same null, the caller read the
+    // second meaning and fell back to the raw body — fence markers included —
+    // and YAML failed on the markers. So fencing an empty section invented an
+    // error that unfencing it made disappear.
+    const fenced = parseDeltaV1(planDocument(["```yaml", "```"])).entries[0];
+    const bare = parseDeltaV1(planDocument([])).entries[0];
+
+    expect(fenced?.verificationPlanError).toBeNull();
+    expect(fenced?.verificationPlanItems).toEqual([]);
+    expect(fenced?.verificationPlanError).toBe(bare?.verificationPlanError);
+    expect(fenced?.verificationPlanItems).toEqual(bare?.verificationPlanItems);
+  });
+
+  it("does not mistake an empty fence for an absent one", () => {
+    // The other half of the same distinction. "No fenced block here" must keep
+    // meaning "read the text yourself" — every delta written before the fence
+    // was accepted relies on it — so the empty-block answer must not be the one
+    // that reaches the fallback. Asserted through a body a fence would hide:
+    // unfenced, the plan is truncated at its own comment, which is only
+    // observable if the raw text was read.
+    const entry = parseDeltaV1(planDocument(UNFENCED_PLAN)).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
+  });
 });

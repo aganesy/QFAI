@@ -313,7 +313,8 @@ function readHeadingBody(
 const FENCE_LINE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*(.*)$/;
 
 /**
- * The body of the first `yaml` / `yml` fenced block in `body`, or null.
+ * The body of the first `yaml` / `yml` fenced block in `body`, or null when
+ * there is no such block.
  *
  * Line-based rather than one regular expression over the whole string, and both
  * fence characters rather than backticks only. A single non-greedy
@@ -322,6 +323,14 @@ const FENCE_LINE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*(.*)$/;
  * at all — so its markers stayed in the text and the YAML parse failed on them —
  * and a nested ```` ``` ```` inside a wider block ended the match early. The
  * closer rule is CommonMark's: same character, at least as long, no info string.
+ *
+ * An EMPTY block returns the empty string, not null. The two answers mean
+ * different things to a caller that falls back to the raw body — "there is no
+ * fenced block here, read the text yourself" versus "there is one and the author
+ * left it empty" — and collapsing them handed the raw body, fence markers
+ * included, to a YAML parser that then failed on the markers. An empty section
+ * is a legal state, and it was reported as one only when the author had NOT
+ * fenced it.
  */
 function extractYamlCodeBlock(body: string): string | null {
   const lines = body.split(/\r?\n/);
@@ -346,8 +355,10 @@ function extractYamlCodeBlock(body: string): string | null {
     }
     collected.push(line);
   }
-  const value = collected.join("\n").trim();
-  return value.length > 0 ? value : null;
+  if (marker === null) {
+    return null;
+  }
+  return collected.join("\n").trim();
 }
 
 function parseYamlMeta(block: string | null): {

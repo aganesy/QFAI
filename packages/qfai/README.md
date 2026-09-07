@@ -451,7 +451,11 @@ runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
   it validates the Markdown around a fenced block and treats the block's body as
   opaque text. See "Document quality" below for what each half checks. It shares
   the validate lane's install and Node-version behaviour, including the same
-  pnpm precondition.
+  pnpm precondition. It runs files out of the QFAI package rather than the `qfai`
+  bin, so it needs the package on disk: when your install has not already put one
+  there it fetches QFAI itself, saving nothing to your manifest. If you do depend
+  on QFAI, the lane reports the rules of the version you pinned and never
+  replaces it.
 
 All three files are copied create-only — `qfai init` never overwrites an existing
 copy, not even with `--force` — so edit them freely. Deleting one is a choice

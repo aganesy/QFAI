@@ -1232,7 +1232,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
   ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
-  ["qfai-docs.yml", "d5c82db4a51e7f5923a930660cbc2805bed62feb4b71104cb9b7e4c92fec3d5d"],
+  ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1691,7 +1691,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body e915a4ba1f166d1dca656244dfe099dbbee79e5270730fac595ca9e0136a411f>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body b761d8e879323adfa7ac7e179e70eaca46078c9768673fd7e850d4d331296d29>"}',
   ],
   [
     "qfai-docs.yml#docs",
@@ -1935,9 +1935,19 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * approved. Versions are exact for the same reason the file digests are: an
  * unpinned install fetches whatever the registry calls latest at the moment the
  * job runs, and these three programs produce the lane's verdict.
+ *
+ * `qfai` is the one entry without a version, and the exception is narrow enough
+ * to state: it is THIS package, fetched only when the adopter's own install did
+ * not already provide it, so that the lane can run files out of it the way
+ * `qfai-validate.yml` runs `npx qfai`. A pin here would be this file's own
+ * release number frozen into every adopter's workflow at generation time, which
+ * is the opposite of what pinning the other three buys. It stays enumerated
+ * because the refusal it passes through is about WHICH package reaches a
+ * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
   "@jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1",
+  "qfai",
 ]);
 
 const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
