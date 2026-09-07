@@ -384,8 +384,21 @@ describe("generate-emitted-rule-codes.mjs", () => {
     const written = await readFile(output, "utf-8");
 
     expect(result.status).toBe(0);
-    expect(written).not.toContain("QFAI-EXAMPLE-100");
     expect(written).toContain('"QFAI-EXAMPLE-101"');
+
+    // Out of `EMITTED_RULE_CODES` — a waiver naming it can never match, and
+    // registering it would let an unmatchable waiver read as `active`.
+    const registered = written.slice(
+      written.indexOf("EMITTED_RULE_CODES"),
+      written.indexOf("ERROR_ONLY_RULE_CODES"),
+    );
+    expect(registered).not.toContain("QFAI-EXAMPLE-100");
+
+    // But NAMED, in its own list, so `applyWaivers` can say the true thing
+    // rather than calling it an unknown rule (#1110).
+    const postWaiver = written.slice(written.indexOf("POST_WAIVER_RULE_CODES"));
+    expect(postWaiver).toContain('"QFAI-EXAMPLE-100"');
+    expect(postWaiver).not.toContain('"QFAI-EXAMPLE-101"');
   });
 
   it("exits 2 on an unknown flag", () => {

@@ -179,7 +179,10 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(issues).toEqual([]);
   });
 
-  it("returns no issues when testFileGlobs is empty", async () => {
+  // `qfai init` ships `testFileGlobs: []`, so this is the state every fresh
+  // project starts in: no file is scanned and QFAI-TEST-001 cannot fire. The
+  // run must say so rather than read as a clean stub scan.
+  it("emits QFAI-TEST-002 instead of a clean result when testFileGlobs is empty", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -188,6 +191,48 @@ describe("spec-0004 validateTestTodoStubs", () => {
     );
 
     const issues = await validateTestTodoStubs(root, configWith({}, { testFileGlobs: [] }));
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    const finding = issues[0];
+    expect(finding?.severity).toBe("info");
+    // The file to edit is qfai.config.yaml. Filing it against `root` would let
+    // normalizeIssuePaths render it as `.`, blaming the repository root in
+    // validate.json / annotations / report hotspots, and no path-scoped waiver
+    // on qfai.config.yaml would match it.
+    expect(finding?.file).toBe("qfai.config.yaml");
+    expect(finding?.rule).toBe("validation.traceability.testFileGlobs");
+    expect(finding?.message).toContain("validation.traceability.testFileGlobs");
+    expect(finding?.suggested_action).toContain("qfai-configure");
+  });
+
+  // The config loader accepts a whitespace-only entry, and fast-glob matches
+  // nothing for it. A raw-length check read that as configured, so the scan ran
+  // over zero files and reported nothing at all — the same silent non-result as
+  // the empty array, reached through a value that looks configured.
+  it("emits QFAI-TEST-002 when testFileGlobs holds only blank entries", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["   ", ""] }),
+    );
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    expect(issues[0]?.file).toBe("qfai.config.yaml");
+  });
+
+  it("stays silent about empty testFileGlobs when the stub gate is off", async () => {
+    const root = await newTempDir();
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({ forbidTestTodoStubs: false }, { testFileGlobs: [] }),
+    );
     expect(issues).toEqual([]);
   });
 
@@ -251,5 +296,86 @@ describe("spec-0004 validateTestTodoStubs", () => {
       "tests/lines.test.ts",
     ]);
     expect(issues.map((issue) => issue.loc?.line)).toEqual([6, 9]);
+  });
+});
+
+describe("a stub token that is not executing code", () => {
+  // The detector is a line regex, so prose about a stub and a fixture string
+  // holding one both read as an executing stub. That is a false `error` on the
+  // one gate qfai has against unimplemented tests — and now that
+  // `--profile atdd` runs it, an acceptance test that merely *describes* the
+  // construct blocks a completion gate it has nothing to do with.
+  it("is ignored in a line comment, a block comment and a string literal", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/prose.test.ts",
+      [
+        "// it" + TODO + '("described, not executed");',
+        "/*",
+        " * describe" + TODO + '("still not executed");',
+        " */",
+        'const sample = "it' + TODO + '(\\"quoted\\")";',
+        "const template = `test" + TODO + '("interpolated")`;',
+        'it("real", () => expect(sample).toBeTruthy());',
+        "",
+      ].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(root, configWith());
+    expect(issues).toEqual([]);
+  });
+
+  it("does not hide a real stub sharing a line with a comment", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/mixed.test.ts",
+      ["  it" + TODO + '("real stub"); // it' + TODO + '("only mentioned")', ""].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(root, configWith());
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.loc?.line).toBe(1);
+    expect(issues[0]?.refs).toEqual(["it.todo"]);
+  });
+
+  it("is ignored in a Python docstring and in a comment", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/test_prose.py",
+      [
+        '"""',
+        "pytest.skip('documented, not executed')",
+        '"""',
+        "",
+        "# pytest.skip('commented out')",
+        "def test_a():",
+        "    assert True",
+        "",
+      ].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["tests/**/*"] }),
+    );
+    expect(issues.map((issue) => issue.code)).toEqual([]);
+  });
+
+  it("does not let an unterminated quote swallow a later stub", async () => {
+    // A single-line span must end at the line break: a stray apostrophe in a
+    // test title would otherwise blank the rest of the file.
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/apostrophe.test.ts",
+      ["const re = /don't/;", "it" + TODO + '("real stub");', ""].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(root, configWith());
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.loc?.line).toBe(2);
   });
 });

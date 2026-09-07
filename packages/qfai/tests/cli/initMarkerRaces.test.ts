@@ -121,7 +121,7 @@ describe("the assistant marker repair under concurrent writes", () => {
       );
 
       expect(await readFile(marker, "utf-8")).toBe(arrived);
-      expect(output).toContain("別のプロセスが置き換えた");
+      expect(output).toContain("another process replaced");
     });
   });
 
@@ -177,7 +177,7 @@ describe("the assistant marker repair under concurrent writes", () => {
       );
 
       expect(await readFile(marker, "utf-8")).toBe(LEGACY);
-      expect(output).toContain("状態を取得できませんでした");
+      expect(output).toContain("could not stat");
       expect(output).toContain("QFAI-LINK-001");
     });
   });
@@ -190,7 +190,7 @@ describe("the assistant marker repair under concurrent writes", () => {
       );
 
       expect(hasInitMarkerSignature(await readFile(markerPath(root), "utf-8"))).toBe(true);
-      expect(output).not.toContain("状態を取得できませんでした");
+      expect(output).not.toContain("could not stat");
       expect((await lstat(markerPath(root))).isFile()).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
