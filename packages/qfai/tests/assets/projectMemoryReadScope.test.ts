@@ -168,10 +168,26 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(cards.length, "no agent cards found").toBeGreaterThan(0);
 
     for (const card of cards) {
-      const body = flat(await readFile(path.join(dir, card), "utf-8"));
+      const raw = await readFile(path.join(dir, card), "utf-8");
+      const body = flat(raw);
       expect(body, `${card}: still globs the whole manifest tree`).not.toContain(
         ".qfai/assistant/{manifest,catalog}/",
       );
+      // Naming the two files is only half of it. `extractLiteralRequiredInputs`
+      // reads a bullet and its continuation lines as ONE item and drops the
+      // item whole if any of it carries a glob character, so a bullet that
+      // names these two beside `catalog/**` puts both behind the `*` and
+      // doctor never confirms either is on disk. A bullet that is nothing but
+      // the path is what it can check.
+      for (const required of [
+        ".qfai/assistant/manifest/agent-routing.yml",
+        ".qfai/assistant/manifest/review-profiles.yml",
+      ]) {
+        expect(
+          raw.split(/\r?\n/),
+          `${card}: ${required} shares a bullet, so doctor cannot check it exists`,
+        ).toContain(`- ${required}`);
+      }
       expect(body, `${card}: does not name agent-routing.yml`).toContain(
         ".qfai/assistant/manifest/agent-routing.yml",
       );

@@ -24,8 +24,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Inputs you must read
 
 - .qfai/assistant/constitution/\*\*
-- .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-  (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+- .qfai/assistant/manifest/agent-routing.yml
+- .qfai/assistant/manifest/review-profiles.yml
+- .qfai/assistant/catalog/\*\* and `.qfai/assistant/manifest/agent-catalog.yml`
+  (this role's own entry — `owned_artifacts`,
   `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
   Skip a `developer_instructions` body only when it matches the agent card already in
   context; when the two differ the card is the role contract and wins. See
