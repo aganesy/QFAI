@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolveDeclaredTcId,
   resolveParentTcId,
   splitTcRefs,
   isCoverageTargetLevel,
@@ -24,6 +25,43 @@ describe("resolveParentTcId", () => {
 
   it("is case-insensitive for TC prefix", () => {
     expect(resolveParentTcId("tc-0001-0002")).toBe("tc-0001");
+  });
+});
+
+describe("resolveDeclaredTcId", () => {
+  const declared = new Set(["TC-0001", "TC-0002-0003"]);
+
+  it("returns the token when the spec declares it", () => {
+    expect(resolveDeclaredTcId("TC-0001", declared)).toBe("TC-0001");
+  });
+
+  it("resolves a decomposition sub-ID to the declared parent", () => {
+    // The whole point: a ledger cites the parts, the spec declares the parent.
+    expect(resolveDeclaredTcId("TC-0001-0004", declared)).toBe("TC-0001");
+  });
+
+  it("prefers the token's own declaration over its parent's", () => {
+    // `TC-0002-0003` is declared in its own right, so it speaks for itself
+    // even though stripping a segment would also land on something.
+    expect(resolveDeclaredTcId("TC-0002-0003", declared)).toBe("TC-0002-0003");
+  });
+
+  it("normalizes case and surrounding whitespace", () => {
+    expect(resolveDeclaredTcId(" tc-0001-0004 ", declared)).toBe("TC-0001");
+  });
+
+  it("returns undefined when neither the token nor its parent is declared", () => {
+    expect(resolveDeclaredTcId("TC-0009-0001", declared)).toBeUndefined();
+  });
+
+  it("returns undefined for an over-long reference", () => {
+    // `resolveParentTcId` strips one segment, so without the shape gate this
+    // typo would speak for the real `TC-0002-0003`.
+    expect(resolveDeclaredTcId("TC-0002-0003-0005", declared)).toBeUndefined();
+  });
+
+  it("returns undefined for a token that is not a TC reference", () => {
+    expect(resolveDeclaredTcId("US-0001", declared)).toBeUndefined();
   });
 });
 
@@ -106,8 +144,12 @@ describe("isCoverageTargetLevel", () => {
     expect(isCoverageTargetLevel("smoke")).toBe(true);
   });
 
-  it("treats empty string as coverage target", () => {
-    expect(isCoverageTargetLevel("")).toBe(true);
+  it("excludes an undeclared Level, which QFAI-ATDD-112 owns", () => {
+    // Not the conservative reading of an unreadable cell — there is no cell to
+    // read. `resolveAtddHomeKind(undefined)` already routes such a TC to
+    // `tests/integration/**` at `error`, so claiming it here as well gave one
+    // TC two gates, two owners and two evidence files.
+    expect(isCoverageTargetLevel("")).toBe(false);
   });
 
   it("is case-insensitive", () => {

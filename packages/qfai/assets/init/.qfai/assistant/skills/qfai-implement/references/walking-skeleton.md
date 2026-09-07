@@ -23,7 +23,7 @@ it.** Against a running skeleton, `404 where the row asserts 200` is an
 assertion failure inside the row's own `Selector`, which is admissible under the
 unchanged criterion. Nothing in `red-admissibility.md` moves.
 
-Distinct from stage 4 of `constitution/workflow.md` ("Prototyping (optional):
+Distinct from stage 4 of `.qfai/assistant/constitution/workflow.md` ("Prototyping (optional):
 contract-aligned implementation skeleton"): that stage is optional, belongs to
 another skill, and is not a precondition of stage 6. This phase is neither
 optional nor deferrable.
@@ -202,7 +202,7 @@ the hard-coded identity. One entry per independently observable boundary, per
 **row** is upstream SSOT: this skill's carve-out is the `Status` / `DR-ID` /
 `Evidence` cells of rows that already exist, and "adding, removing or
 re-scoping a row is an upstream change"
-(`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). So the
+(`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). So the
 debt is discharged in two writes this skill _is_ allowed to make, both in the
 skeleton's commit:
 
@@ -210,7 +210,7 @@ skeleton's commit:
    boundary, each naming the obligation it defers **and the row or obligation
    that already carries it**; and
 2. a Change Request at `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` per
-   `constitution/drift-protocol.md#when-drift-is-detected`, listing **only the
+   `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`, listing **only the
    shortcuts that step 1 could not attribute to anything**.
 
 Attribute first, request second. Most shortcuts are already owned: an
@@ -251,12 +251,12 @@ On the third failure, **halt** — record the halt in `Skeleton result` and
 **classify the failure before raising anything**. Do not continue to
 `Phase: Red`.
 
-| Failure class                                                                                                   | What it is                                                           | What to do                                                                                                                                |
-| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Environment** — port already bound, missing dependency, wrong runtime version, absent credential              | the machine, not any artifact                                        | repair it, record the cause and the repair in `Skeleton result`, and report to the operator if it survives the repair. No Change Request. |
-| **Code** — syntax error, wiring mistake, the entrypoint the skeleton itself just wrote                          | the skeleton's own work, which this phase owns                       | fix it inside the phase. No Change Request.                                                                                               |
-| **Steering** — `catalog/tech.md` or `catalog/structure.md` names a start command or a path that is wrong        | stale steering, which Stage 0 already owns the refresh of            | refresh the steering file per Stage 0 and re-run. No Change Request.                                                                      |
-| **Upstream** — the declared entrypoint does not exist in the spec set, or the contract cannot start as declared | drift: an upstream artifact contradicts itself or the running system | **this** is the Change Request, per `constitution/drift-protocol.md#when-drift-is-detected`, with its drift class and its reproduction.   |
+| Failure class                                                                                                   | What it is                                                           | What to do                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Environment** — port already bound, missing dependency, wrong runtime version, absent credential              | the machine, not any artifact                                        | repair it, record the cause and the repair in `Skeleton result`, and report to the operator if it survives the repair. No Change Request.               |
+| **Code** — syntax error, wiring mistake, the entrypoint the skeleton itself just wrote                          | the skeleton's own work, which this phase owns                       | fix it inside the phase. No Change Request.                                                                                                             |
+| **Steering** — `catalog/tech.md` or `catalog/structure.md` names a start command or a path that is wrong        | stale steering, which Stage 0 already owns the refresh of            | refresh the steering file per Stage 0 and re-run. No Change Request.                                                                                    |
+| **Upstream** — the declared entrypoint does not exist in the spec set, or the contract cannot start as declared | drift: an upstream artifact contradicts itself or the running system | **this** is the Change Request, per `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`, with its drift class and its reproduction. |
 
 Only the last row produces a Change Request. A CR needs an upstream artifact to
 change, a drift class and an owner rerun; a port conflict supplies none of
@@ -300,7 +300,7 @@ in the ledger's `Evidence` cell, which is a pointer from an existing row to that
 row's own proof (`execution-ledger.md#evidence-cell-contract`) and which this
 phase has no row to hang off, since it runs before the first row is selected.
 `.qfai/evidence/**` is append/update for this skill under
-`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`.
+`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`.
 
 **This file is tracked, not ignored.** `npx qfai init`'s managed `.gitignore` block
 ignores `.qfai/evidence/*` and then negates this one path
@@ -437,7 +437,7 @@ because exactly one row's work stands between the last passing run and this one.
 
 ## Reached from `/qfai-atdd`
 
-Stage 5 (`/qfai-atdd`) runs before this skill (`constitution/workflow.md`
+Stage 5 (`/qfai-atdd`) runs before this skill (`.qfai/assistant/constitution/workflow.md`
 stages), and its P6 runtime-evidence gate needs the same running program this
 phase produces. On a fresh project there is no entrypoint yet and no ledger row
 to hand over — `red-provenance.md#a-spec-with-no-atdd-owned-rows` says zero

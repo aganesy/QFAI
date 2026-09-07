@@ -9,10 +9,19 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.
 - TypeScript: every async path must have explicit error handling.
 - Keep functions focused; extract when a function exceeds ~50 lines.
-- All temporary/scratch files go in `tmp/` (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
+- All temporary/scratch files go in `tmp/` — working-tree files only; a test's `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`).
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.
 - Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`).
+- SDD ドキュメントの構造 (章構成 / リスト / 表の必須列 / Gherkin / Mermaid) は
+  `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と
+  `pnpm lint:mermaid` が強制する。see `.claude/rules/document-schema.md`
+  (master: `.agents/rules/document-schema.md`).
+- Writing standard for PRs, issues, code comments and Markdown — plain wording,
+  no local identifiers, no account of how the work went: see
+  `.claude/rules/documentation-clarity.md` (master:
+  `.agents/rules/documentation-clarity.md`). The hooks in `.claude/settings.json`
+  restate it before a GitHub post and after a Markdown edit.
 - Version discipline: branch name pins `packages/qfai/package.json#version`.
   On a pinned branch (`feature/vX.Y.Z`) the pin acts as the user's release
   authorization — sync `package.json`, rename `## [Unreleased]` to

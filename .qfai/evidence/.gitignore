@@ -7,3 +7,5 @@
 !skeleton.md
 !decisions/
 !decisions/**
+!implement-*.md
+!atdd-*.md

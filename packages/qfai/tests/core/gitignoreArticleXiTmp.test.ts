@@ -120,14 +120,20 @@ describe("git honours the entry the block writes", () => {
 });
 
 describe("QFAI-REVIEW-008 nudges a project whose block predates the entry", () => {
-  /** A managed block from before `/tmp/` shipped: every other entry, no `tmp/`. */
+  /**
+   * A managed block from before `/tmp/` shipped: every other recommended entry,
+   * no `tmp/`.
+   *
+   * Subtracted from the constant rather than typed out. The recommended list
+   * grows — `*.qfai-state.tmp` joined it after this fixture was first written —
+   * and a hand-typed copy that falls one entry behind makes QFAI-REVIEW-008 fire
+   * for the entry it forgot, which is indistinguishable here from the `tmp/`
+   * notice these tests are actually about. Deriving it keeps `tmp/` the only
+   * variable in the fixture, which is the whole claim each assertion makes.
+   */
   const preTmpBlock = [
     QFAI_GITIGNORE_MARKER,
-    ".qfai/report/*",
-    ".qfai/evidence/*",
-    ".qfai/discussion/*",
-    ".qfai/review/*",
-    ".qfai/state.json",
+    ...QFAI_GITIGNORE_RECOMMENDED_ENTRIES.filter((entry) => entry !== ARTICLE_XI_TMP_ENTRY),
     "",
   ].join("\n");
 

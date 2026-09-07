@@ -2,6 +2,18 @@
 
 Use this file for the full completion logic behind `/qfai-discussion`.
 
+## All Packs
+
+Blocking for every pack, UI-bearing or not:
+
+1. The `## Research Summary` section of `04_Sources.md` is filled from an actual run of
+   `.qfai/assistant/constitution/research-first-protocol.md`, executed at the start of the session
+   (before Inception Deck and Story Workshop) so its findings feed the artifacts that follow —
+   no template placeholder is left,
+   `sources` / `best_practices` / `anti_patterns` / `reflection` are non-empty, every `source_id`
+   resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
+   `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
+
 ## UI-bearing Packs
 
 Completion is blocked until all are true:
@@ -48,7 +60,8 @@ so conditions 1 and 2 above do not apply to it:
 
 - No uiux sidecars required
 - No root `DESIGN.md` required
-- No additional UI-bearing completion conditions apply
+- No additional UI-bearing completion conditions apply; the `## All Packs` conditions above
+  (including the Research Summary) still block completion
 - `prototyping.yaml` is not required
 
 ## Notes

@@ -202,6 +202,63 @@ describe("validateIntegrationSurface read errors", () => {
 });
 
 describe("a structurally broken target is a finding, not a crash", () => {
+  it("reports EPERM instead of propagating it", async () => {
+    // #1095. `git worktree add` on Windows materialises every
+    // `.claude/skills/*` link as a FILE symlink pointing at a directory —
+    // because at the moment git writes it the target does not yet exist in the
+    // new worktree and it has no reftype hint — and Windows will not follow
+    // that. `readlink` returns the right target and `lstat` says symlink, so
+    // every lstat-based probe reports the tree healthy while `stat` on the same
+    // path raises EPERM.
+    //
+    // Re-thrown, that ended `qfai validate` with a bare
+    // `EPERM: operation not permitted, stat '...'` — no finding code, no
+    // `counts:` line, no `validate.json`. A gate with no verdict, on a
+    // precondition that reproduces in every Windows worktree.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      // Rejected by PATH, not blanket: a worktree makes the wrapper links
+      // wrong-type and leaves every other path readable. A blanket rejection
+      // also hits the canonical `SKILL.md`, a regular file, where EPERM means
+      // a permission failure and must keep propagating.
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        path.resolve(String(target)) === path.resolve(wrapper)
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
+      expect(issues[0]?.message).toContain("will not follow");
+    });
+  });
+
+  it("propagates EPERM on a path that is not a symlink", async () => {
+    // The other half of the rule, and the reason the conversion is confirmed
+    // against `lstat` rather than taken from the errno alone. `statOrNull` also
+    // inspects the canonical `SKILL.md`, a regular file: a permission or
+    // filesystem EPERM there is not "a symlink the OS will not follow", and
+    // reporting it as one would give a wrong diagnosis, a wrong repair, and
+    // would lose the propagation this module keeps deliberately.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        path.resolve(String(target)) === path.resolve(doc)
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      await expect(validateIntegrationSurface(root)).rejects.toMatchObject({ code: "EPERM" });
+    });
+  });
+
   it("reports ELOOP instead of propagating it", async () => {
     // `ELOOP` says the target is a symlink cycle — structural damage to the
     // thing this rule inspects, not a transient fault. Re-thrown, `qfai
@@ -239,6 +296,25 @@ describe("a nested SKILL.md is inspected on the same terms as the wrapper", () =
       const issues = await validateIntegrationSurface(root);
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
       expect(issues[0]?.message).toContain("its SKILL.md is a symlink cycle");
+    });
+  });
+});
+
+describe("EPERM outside the inspected path still propagates", () => {
+  it("does not fold an unrelated permission failure into a finding", async () => {
+    // The module's convention is that only damage to the path this rule
+    // inspects becomes a finding; a filesystem that is failing must not read as
+    // a clean surface. So EPERM is recognised at the wrapper `stat` and NOT
+    // turned into a blanket catch: `readdir` on the skills directory keeps
+    // propagating it, because a directory this rule cannot list is not a
+    // wrapper it can report.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const skills = path.join(root, ".claude", "skills");
+      await mkdir(skills, { recursive: true });
+      readdirSpy.mockImplementation(() => Promise.reject(errno("EPERM")));
+
+      await expect(validateIntegrationSurface(root)).rejects.toMatchObject({ code: "EPERM" });
     });
   });
 });
