@@ -358,7 +358,7 @@ describe(
       return count;
     }
 
-    it("exactly one job across the init-written set installs dependencies: the validate lane", async () => {
+    it("the init-written jobs that install dependencies are exactly the validate and docs lanes", async () => {
       const files = await initWorkflowSet();
       // Non-vacuity: the whole multi-file set is what is being counted.
       expect(
@@ -377,7 +377,20 @@ describe(
           }
         }
       }
-      expect(installing).toEqual([{ file: "qfai-validate.yml", jobId: "validate" }]);
+      // An ALLOW-LIST of installing jobs rather than a count, and the
+      // distinction is the point: a count of one was the whole assertion when
+      // one lane installed, and it would have been satisfied by the wrong lane
+      // installing while the right one stopped. Naming them says which.
+      //
+      // The docs lane installs for the same reason the validate lane does: it
+      // runs a program out of the adopter's `node_modules`, and the package has
+      // to be there first. The test lanes still install nothing — they are
+      // placeholders, and a placeholder that installed would be paying for a
+      // toolchain it never uses.
+      expect(installing).toEqual([
+        { file: "qfai-docs.yml", jobId: "docs" },
+        { file: "qfai-validate.yml", jobId: "validate" },
+      ]);
     });
 
     it("zero secret declarations, secret-context references and secrets: inherit across the set", async () => {

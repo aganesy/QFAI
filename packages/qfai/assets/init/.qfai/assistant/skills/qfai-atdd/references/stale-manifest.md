@@ -8,7 +8,7 @@ taking the `red` phase the update relies on.
 
 **Two files are stale, not one.** `agent-routing.yml` is the obvious one, and
 `agent-catalog.yml` carries each role's `developer_instructions` — the reviewer's
-own contract — which `constitution/agent-selection.md` treats as SSOT alongside
+own contract — which `.qfai/assistant/constitution/agent-selection.md` treats as SSOT alongside
 routing. An old catalog's `qa-gatekeeper` does not know that `Satisfied-by` takes
 a path and symbol, that an ATDD row's evidence lives in `atdd-<spec-id>.md`, that
 a RED-time Oracle proof is a plan, or that an item cycle is exempt from the

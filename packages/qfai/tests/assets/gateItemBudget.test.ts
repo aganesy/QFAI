@@ -22,6 +22,7 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const RECORD = "assistant/skills/qfai-implement/references/record-contract.md";
+const MIGRATION = "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -153,12 +154,16 @@ describe.each(TREES)("%s (the gate's attention budget)", (tree) => {
 
     expect(record).toContain("`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`");
     expect(record).toContain("**Identify it by a marker, not by its status**");
-    expect(record).toContain("**Write it once, from the history**");
-    expect(record).toContain("`Review pack seal` is recomputed here");
+    expect(record).toContain("Every `Review pack seal` the entry carries");
     expect(record).toContain("`Audited evidence hash` is **recomputed** here");
     expect(record).toContain(
-      "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+      "Of the item's four sub-agent observations (items 3, 5, 7, 8), **only items 7 and 8 judge the final tree**",
     );
+    // The fourth topic — writing the marker — is a one-off pass over an
+    // existing ledger rather than a rule a row is built against, so it is a
+    // phase's work and lives in its own reference. Whole there, not here.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**Write it once, from the history**");
   });
 
   it("routes the auditor to item 10's checks that are stated elsewhere", async () => {
@@ -176,14 +181,22 @@ describe.each(TREES)("%s (the gate's attention budget)", (tree) => {
     expect(record).toContain("`DR-ID` the row currently carries");
   });
 
-  it("dates the one-off migration instead of leaving it in the gate", async () => {
+  it("keeps the one-off migration out of the gate and out of the contract", async () => {
     // It is a pass over an existing ledger, not a rule a new row is built
-    // against — the reader who never had a pre-split row needs to know that
-    // from the heading.
+    // against, so neither the gate line nor the record contract carries the
+    // procedure. Both name who runs it, and the reference states what it is.
+    const items = gateItems(await read(tree, SKILL));
+    expect(items.get(10)).toContain("it never writes one");
+    expect(items.get(10)).toContain("`references/pre-split-evidence-migration.md`");
+
     const record = flat(await read(tree, RECORD));
-    expect(record).toMatch(
-      /## Migration: writing the marker \(one pass, opened \d{4}-\d{2}-\d{2}\)/,
-    );
-    expect(record).toContain("not a rule a new row is built against");
+    expect(record).toContain("## Who writes the marker");
+    expect(record).not.toContain("**Write it once, from the history**");
+
+    // The heading is where a reader who never had a pre-split row learns this
+    // is a one-off rather than a rule a new row is built against.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("# Pre-split evidence marker pass (one-time, per repository)");
+    expect(migration).toContain("runs **once per repository**, not once per session");
   });
 });

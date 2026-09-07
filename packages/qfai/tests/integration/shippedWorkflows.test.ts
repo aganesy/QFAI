@@ -316,15 +316,42 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   /** The three lockfile probes the branch selection detects. */
   const LOCKFILE_PROBES: readonly string[] = ["pnpm-lock.yaml", "yarn.lock", "package-lock.json"];
 
-  /** Steps whose run body invokes a package-manager install, per job. */
+  /**
+   * Steps whose run body installs THE PROJECT'S dependencies, per job.
+   *
+   * The five-branch obligation is about reading the adopter's lockfile, so the
+   * subject is the step that installs from their manifest. A lane may also
+   * install tools OF ITS OWN — the docs lane fetches the document-shape and
+   * diagram checkers — and that step reads no lockfile, has no branch to keep,
+   * and would fail all five markers if it were counted.
+   *
+   * `--no-save` is what separates them, and it separates them by definition
+   * rather than by naming: it means "install these, record nothing in the
+   * manifest", which is precisely what a project-dependency install can never
+   * be. A step whose install invocations ALL carry it is installing tools; one
+   * that has even a single install without it is installing the project and is
+   * held to the five branches.
+   *
+   * Deliberately not "does the body mention a lockfile": a project-install step
+   * that dropped every lockfile probe would then stop being classified at all,
+   * and the guard would fail open on the exact regression it exists to catch.
+   */
   function collectInstallSteps(doc: unknown): Array<{ jobId: string; run: string }> {
     const installs: Array<{ jobId: string; run: string }> = [];
     for (const { jobId, job } of collectJobs(doc)) {
       for (const step of collectSteps(job)) {
         const run = step["run"];
-        if (typeof run === "string" && /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/.test(run)) {
-          installs.push({ jobId, run });
+        if (typeof run !== "string") {
+          continue;
         }
+        const invocations = run.match(/\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b[^\n]*/g) ?? [];
+        if (invocations.length === 0) {
+          continue;
+        }
+        if (invocations.every((invocation) => invocation.includes("--no-save"))) {
+          continue;
+        }
+        installs.push({ jobId, run });
       }
     }
     return installs;

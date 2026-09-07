@@ -1,0 +1,56 @@
+# Document schema: `<specsDir>/spec-NNNN/06_Test-Cases.md`
+#
+# The cases that prove the examples and the acceptance criteria. `Level` is a
+# required column because the layer policy is what routes a case to a CI lane;
+# a case with no level runs nowhere in particular.
+
+structure:
+  - heading:
+      pattern: "^# 06 Test Cases.*"
+      regex: true
+    description: Verification cases with explicit references.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: >-
+          Why this file exists. Optional: it is an explanatory preamble, and a
+          pack that goes straight to its rows is not worse for it.
+        optional: true
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Level vocabulary$"
+          regex: true
+        description: The layer names this pack's cases are allowed to use.
+        optional: true
+        allow_additional: true
+
+      - heading:
+          pattern: '^## Test Case Table( \(required\))?$'
+          regex: true
+        description: >-
+          The cases. `AC-Refs` and `EX-Ref` are both required columns: a case
+          that references neither proves nothing traceable, which is the one
+          failure this table exists to prevent. `Level` is required because the
+          layer policy is what routes a case to a CI lane.
+
+          `Type` (normal / error / boundary) is NOT required. Two packs carry
+          it and the rest do not, and adding the column means classifying every
+          existing row — a judgement per row, which is not a thing a lint should
+          manufacture. The obligation to cover error paths and boundaries lives
+          in the template's Purpose text, where it is addressed to an author.
+
+          Optional as a SECTION, checked as a table when present.
+        optional: true
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - TC-ID
+              - Level
+              - AC-Refs
+              - EX-Ref

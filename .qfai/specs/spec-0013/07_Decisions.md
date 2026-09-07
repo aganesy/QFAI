@@ -2,6 +2,8 @@
 
 4 items.
 
+## Decisions
+
 ### DR-0013-0001: TDD Ledger Backfill from Migrated Coverage (v1.7.15)
 
 - Decision: TDD-0001..0010 のテストは既存実装 (v1.7.x) に対する backfill として Exception パターンで確定する
