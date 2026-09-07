@@ -264,7 +264,7 @@ export function changedFilesSince(
  * **Three-dot, matching {@link getChangedFilesAgainstBase}.** These paths are
  * subtracted from that function's set, so a removal listed against a different
  * pair of trees removes a path the set never held, or fails to remove one it
- * does — either way `dropPathsGoneAtHead` stops meaning what its caller reads it
+ * does — either way this function stops meaning what its caller reads it
  * to mean.
  */
 function getRemovedPathsAgainstBase(root: string, baseBranch: string): Set<string> {

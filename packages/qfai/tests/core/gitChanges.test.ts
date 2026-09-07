@@ -127,18 +127,24 @@ describe("getChangedFilesAgainstBase", () => {
     expect(changed.has("src/core/new.ts")).toBe(true);
   });
 
-  it("drops an ordinary deletion, whose path is equally gone", async () => {
+  it("drops an ordinary deletion and keeps the edit beside it", async () => {
     const root = await newRepo({
       "src/core/gone.ts": MODULE_BODY,
       "src/core/kept.ts": "export const kept = 1;\n",
     });
     git(root, "rm", "src/core/gone.ts");
-    git(root, "commit", "-m", "delete");
+    // Edited in the same commit, so it is in the diff and the subtraction has
+    // something to get wrong. Left untouched it is absent from the set either
+    // way, and the pin below would hold for a function that dropped
+    // everything.
+    await write(root, "src/core/kept.ts", "export const kept = 2;\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "delete one, edit the other");
 
     const changed = stillPresentOrThrow(root, "base");
     expect(changed.has("src/core/gone.ts")).toBe(false);
     // The over-correction pin: only the removed path goes.
-    expect(changed.has("src/core/kept.ts")).toBe(false);
+    expect(changed.has("src/core/kept.ts")).toBe(true);
   });
 
   it("reports a path git would quote, by the name it actually has", async () => {
