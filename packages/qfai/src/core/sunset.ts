@@ -138,6 +138,23 @@ export const RULE_PROMOTIONS = {
    */
   agentDeveloperInstructionsDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CONTRACT-041` — a `Derived (not stored):` declaration that does no
+   * work: one that does not parse, or one naming a value the API never asks
+   * for or the DB domain stores anyway.
+   *
+   * The window is not about a backlog — nobody has written this marker before,
+   * because the format ships with the rule. It is about the FORMAT being new.
+   * The first authors to use it are answering another finding voluntarily, and
+   * they will get the grammar wrong in exactly the ways the message exists to
+   * teach: a missing `from` clause, a half-written value list. Failing their
+   * run on a line they added to engage with the tool is the worst possible
+   * first experience of it, and the message says everything the error would.
+   *
+   * A minor is enough: by 1.12.0 the format has shipped and been read, and a
+   * declaration still wrong by then is one nobody checked.
+   */
+  derivedNotStoredDeclaration: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
+  /**
    * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
    * Contract sets written before the declaration was required state none, so
    * the rule lands on every one of them at once.
