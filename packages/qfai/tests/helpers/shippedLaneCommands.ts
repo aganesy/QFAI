@@ -1313,16 +1313,22 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
   ],
-  // Re-derived for the MERGED managed block, which carries both sides' additions:
-  // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
-  // (`implement-*.md`, `atdd-*.md`) that arrived with it. Neither predecessor's
-  // digest describes the block that now ships, so this is one pin rather than
-  // two — the map is keyed by file name and cannot hold both.
+  // Re-pinned when the managed block gained the three vendored-assistant
+  // negations — `!.qfai/assistant/`, `!.qfai/assistant/**` and
+  // `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
+  // `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
+  // (`git status --ignored`): without them the provenance record never reaches
+  // a fresh clone, and every untouched governed file from an older release then
+  // reads as a local fork; without the recursive one the record arrives and the
+  // rules it vouches for do not.
   //
-  // Derived by running `qfai init` into the E2E's temp root and reading what it
-  // wrote, which is how both predecessors were derived. Not copied from a
-  // failure message: the point of the pin is that somebody looked at the block.
-  [".gitignore", "f35a2624352ca319b3b53a6e9a556779877eef07c42338e85ab67afeef9bb832"],
+  // Derived by running `qfai init` into a temp root and reading what it wrote,
+  // which is how every predecessor was derived — not copied off a failure
+  // message. Those three lines are the whole delta: dropping exactly them from
+  // the file init writes today reproduces the previous digest
+  // `f35a2624…` byte for byte, which is what makes this a review of three lines
+  // rather than a re-blessing of the block.
+  [".gitignore", "4e72a478777a5b7b57550b9258c9095093f2c11bfdf9fc663e7eefdec2d49abf"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
