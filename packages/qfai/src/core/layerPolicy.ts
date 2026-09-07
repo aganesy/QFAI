@@ -121,7 +121,7 @@ export async function loadLayerPolicy(
         "specPack.layerPolicy",
         undefined,
         "change",
-        "`npx qfai init` を再実行して `catalog/test-layers.md` を配置してください。",
+        "`qfai init` を再実行して `catalog/test-layers.md` を配置してください。",
       ),
     ],
   };
