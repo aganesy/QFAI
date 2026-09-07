@@ -252,7 +252,7 @@ assert a cycle has run:
 | ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
 | `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
 | `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
-| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | warning             |
+| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | warning, then error |
 | `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | warning, then error |
 | `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error               |
 | `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
@@ -273,17 +273,17 @@ are accepted directly.
 ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate.
 
-Three findings are inside a **promotion window**: `TDDLIST_EVIDENCE_EMPTY`,
-`QFAI-TDDLIST-012` and `QFAI-TDDLIST-014` are reported as
+Four findings are inside a **promotion window**: `TDDLIST_EVIDENCE_EMPTY`,
+`QFAI-TDDLIST-011`, `QFAI-TDDLIST-012` and `QFAI-TDDLIST-014` are reported as
 warnings until the release each finding itself names, and as errors from that
 release onwards. Each rule is right and none is in doubt — but each also fires
 on ledgers written before the check existed, so an upgrade that started erroring
 on them would latch a gate that was passing. An empty cell was always wrong; the
-cap and the surplus column arrive with the change that made `Evidence` a
-pointer, so they land on every cell written while the column was documented as
-holding the commands and their output. The finding text states which release
-ends the window, so `--fail-on error` keeps working while the ledger shows the
-debt it will owe.
+grammar, the cap and the surplus column arrive with the change that made
+`Evidence` a pointer, so they land on every cell written while the column was
+documented as holding the commands and their output. The finding text states
+which release ends the window, so `--fail-on error` keeps working while the
+ledger shows the debt it will owe.
 
 **A row already at a terminal status satisfies this by backfilling the cell in
 place.** Writing the outcome and its evidence pointer into `Evidence` is not a

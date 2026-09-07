@@ -722,11 +722,17 @@ const EVIDENCE_CELL_MAX_CHARS = 240;
 /**
  * Waiver rule ids for `QFAI-TDDLIST-011` / `QFAI-TDDLIST-012`.
  *
- * Both are warnings for the reason `TDDLIST_EVIDENCE_STATUS_ONLY` is one:
+ * Both open as warnings for the reason `TDDLIST_EVIDENCE_STATUS_ONLY` is one:
  * every ledger written before the grammar existed holds free prose, and
  * turning all of it into build failures on upgrade is a migration, not a gate.
  * A project that has audited its legacy rows waives them per path instead of
  * rewriting evidence it can no longer reproduce.
+ *
+ * Both also carry a promotion window and become errors at the release each one
+ * names, and a waiver reaches a `warning` or an `info` and never an `error`.
+ * So the waiver is the migration's instrument, not a permanent settlement: a
+ * path waived here owes a conforming cell before that release, or the gate
+ * fails on it with the waiver still in place.
  */
 export const EVIDENCE_CELL_MALFORMED_RULE_ID = "QFAI-TDDLIST-011";
 export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "QFAI-TDDLIST-012";
