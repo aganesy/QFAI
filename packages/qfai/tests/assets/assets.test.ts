@@ -2709,6 +2709,23 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(classifyHardRequiredEntries(["unreviewedSecret"], "qfai-configure").unknown).toEqual([
       "unreviewedSecret",
     ]);
+    // The same smuggling the retired search closes, one set over: another
+    // skill's declared input written beside a common one. The allowed test
+    // asks only whether *some* permitted name is in the bullet, so the first
+    // half of each of these answers for the second.
+    for (const smuggled of [
+      "brand intent / `testFileGlobs`",
+      "brand intent, testFileGlobs",
+      "`primarySpecId` — a `testFileGlobs` proposal",
+    ]) {
+      expect(
+        classifyHardRequiredEntries([smuggled], "qfai-verify").unknown,
+        `a bullet carrying another skill's input must be reported: ${smuggled}`,
+      ).toEqual([smuggled]);
+      // And lawful for the skill that declares it, which is what keeps this a
+      // declaration rather than a ban.
+      expect(classifyHardRequiredEntries([smuggled], "qfai-configure").unknown).toEqual([]);
+    }
     expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent", "primaryspecid"]);
     expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname"]);
   });

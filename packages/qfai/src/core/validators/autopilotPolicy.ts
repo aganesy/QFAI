@@ -241,19 +241,29 @@ export function classifyHardRequiredEntries(
     ...HARD_REQUIRED_COMMON_ENTRIES,
     ...(skillId === undefined ? [] : (HARD_REQUIRED_SKILL_ENTRIES[skillId] ?? [])),
   ];
+  // The inputs this policy knows about but this skill may not name. A bullet
+  // holding one is reported however else it reads: the allowed test asks only
+  // whether *some* permitted name is in the bullet, so `brand intent —
+  // testFileGlobs` passes on its first half and carries the second in beside
+  // it. Hard-required is the bucket that stops a run, and an input smuggled
+  // into it is the widening this check exists to see.
+  const foreign = [
+    ...HARD_REQUIRED_COMMON_ENTRIES,
+    ...Object.values(HARD_REQUIRED_SKILL_ENTRIES).flat(),
+  ].filter((name) => !allowed.includes(name));
 
   const retired: string[] = [];
   const unknown: string[] = [];
   for (const entry of entries) {
     const normalized = normalizeHardRequiredEntry(entry);
-    // The retired search reads the whole bullet: a withdrawn name written in a
+    // Both whole-bullet searches, for the same reason: a name written in a
     // trailing clause — `brand intent — companyName` — is gone from the
     // reduced form, and that clause is one of the places it gets written.
     if (named(decorationOnly(entry), RETIRED_HARD_REQUIRED_ENTRIES)) {
       retired.push(entry);
       continue;
     }
-    if (!named(normalized, allowed)) {
+    if (named(decorationOnly(entry), foreign) || !named(normalized, allowed)) {
       unknown.push(entry);
     }
   }
