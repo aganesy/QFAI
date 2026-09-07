@@ -1155,12 +1155,30 @@ describe("hashDesignMd (TC-1.3.x)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sanity: the shipped DESIGN.md template parses + validates cleanly.
+// Sanity: the shipped DESIGN.md sample parses + validates cleanly.
 // ---------------------------------------------------------------------------
 
-describe("shipped DESIGN.md template", () => {
-  it("parses and validates the shipped assets/init/root/DESIGN.md", async () => {
-    const file = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+/**
+ * The sample brand the package ships.
+ *
+ * `qfai init` writes no root `DESIGN.md`: `/qfai-discussion` emits one, and
+ * only for a visual-prototyping surface. So the sample lives where the remedy
+ * text sends an author who needs it, and this is the copy the detector below
+ * has to recognise.
+ */
+const SHIPPED_DESIGN_MD_SAMPLE = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-prototyping",
+  "templates",
+  "DESIGN.md.sample",
+);
+
+describe("shipped DESIGN.md sample", () => {
+  it("parses and validates the shipped sample", async () => {
+    const file = SHIPPED_DESIGN_MD_SAMPLE;
     const text = await readFile(file, "utf-8");
     const result = parseDesignMd(text);
     expect("error" in result).toBe(false);
@@ -1175,39 +1193,26 @@ describe("shipped DESIGN.md template", () => {
 // ---------------------------------------------------------------------------
 
 describe("isUnreplacedDesignMdSample", () => {
-  const shippedSamplePaths = [
-    path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-    path.join(
-      getInitAssetsDir(),
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "templates",
-      "DESIGN.md.sample",
-    ),
-  ];
-
-  it.each(shippedSamplePaths)("flags the shipped sample at %s", async (file) => {
-    const text = await readFile(file, "utf-8");
+  it("flags the shipped sample", async () => {
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     expect(text).toContain(DESIGN_MD_SAMPLE_MARKER);
     expect(isUnreplacedDesignMdSample(text)).toBe(true);
   });
 
   it("flags a marker-less legacy copy of the shipped sample", async () => {
     // `qfai init` copies the root asset tree create-only — `--force`
-    // included — so a project initialized before the marker existed keeps a
-    // marker-less copy of root/DESIGN.md forever. Simulate that
-    // installed-base file by stripping the marker comment from the
-    // shipped sample.
-    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    // included — so the root `DESIGN.md` an older release seeded is kept
+    // whatever it holds, and a project initialized before the marker existed
+    // keeps that copy without one forever. Simulate that installed-base file
+    // by stripping the marker comment from the shipped sample.
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text.replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "");
     expect(legacy).not.toContain(DESIGN_MD_SAMPLE_MARKER);
     expect(isUnreplacedDesignMdSample(legacy)).toBe(true);
   });
 
   it("does not flag a sample whose brand name was replaced", async () => {
-    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text
       .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
       .replace('name: "Acme Ledger"', 'name: "Northwind Freight"');
@@ -1215,7 +1220,7 @@ describe("isUnreplacedDesignMdSample", () => {
   });
 
   it("does not flag a sample whose brand-philosophy body was rewritten", async () => {
-    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text
       .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
       .replace(
