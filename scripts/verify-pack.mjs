@@ -676,7 +676,17 @@ if (!existsSync(validateJsonPath)) {
   throw new Error("validate did not write .qfai/report/validate.json.");
 }
 const validateReport = JSON.parse(readFileSync(validateJsonPath, "utf-8"));
-const selfInflicted = (validateReport.issues ?? []).filter(
+// Stated rather than defaulted to an empty list. A report whose `issues` is
+// not a list is one this check cannot read, and reading it as "no findings"
+// gives the answer the check exists to withhold — the pass would then mean
+// the file was unreadable, and nothing would say so.
+if (!Array.isArray(validateReport.issues)) {
+  throw new Error(
+    `${validateJsonPath} has no \`issues\` array. The self-finding check reads that list, so a ` +
+      `report without one is unreadable rather than clean.`,
+  );
+}
+const selfInflicted = validateReport.issues.filter(
   (issue) => typeof issue?.file === "string" && issue.file.includes(seededReviewPackName),
 );
 if (selfInflicted.length > 0) {

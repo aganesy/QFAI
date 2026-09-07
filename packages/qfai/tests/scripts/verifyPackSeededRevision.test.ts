@@ -53,4 +53,17 @@ describe("the seeded review pack's revision", () => {
 
     expect(text).toContain("the seeded review pack produced findings about itself");
   });
+
+  it("stops on a report it cannot read rather than reading it as clean", async () => {
+    // The check's whole answer is "no finding names the fixture". A report
+    // whose `issues` is not a list gives that answer for free — and a default
+    // of `[]` is how it would: the pass would then mean the file was
+    // unreadable, with nothing saying so.
+    const text = await source();
+
+    expect(text).toContain("if (!Array.isArray(validateReport.issues))");
+    expect(text).toContain("unreadable rather than clean");
+    // The default that would have swallowed it.
+    expect(text).not.toContain("validateReport.issues ?? []");
+  });
 });
