@@ -17,6 +17,11 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と
   `pnpm lint:mermaid` が強制する。see `.claude/rules/document-schema.md`
   (master: `.agents/rules/document-schema.md`).
+- This repository is written in English: source, comments, Markdown,
+  `CHANGELOG.md`, commit messages, and pull request and issue text. It does not
+  fix the language an assistant replies in, nor what an adopter writes in their
+  own repository. See `.claude/rules/repository-language.md` (master:
+  `.agents/rules/repository-language.md`).
 - Writing standard for PRs, issues, code comments and Markdown — plain wording,
   no local identifiers, no account of how the work went: see
   `.claude/rules/documentation-clarity.md` (master:

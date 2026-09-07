@@ -40,7 +40,10 @@ export function initAssetsCandidates(baseDir: string): string[] {
  * continues instead of silently rooting the whole template system somewhere
  * arbitrary.
  */
-const INIT_ASSETS_SENTINELS = [path.join(".qfai", "assistant"), path.join("root", "DESIGN.md")];
+const INIT_ASSETS_SENTINELS = [
+  path.join(".qfai", "assistant"),
+  path.join("root", "qfai.config.yaml"),
+];
 
 function isInitAssetsDir(candidate: string): boolean {
   return INIT_ASSETS_SENTINELS.every((sentinel) => existsSync(path.join(candidate, sentinel)));
