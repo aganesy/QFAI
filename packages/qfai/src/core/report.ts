@@ -1696,12 +1696,16 @@ export function formatReportMarkdown(
       // Phase 2b never ran has no rows, so the line vanished exactly where it
       // had the most to say.
       const integrationTcsWithoutRow = spec.integrationTcsWithoutRow ?? [];
-      if (
-        (spec.integrationRowTotal !== undefined && spec.integrationRowTotal > 0) ||
-        integrationTcsWithoutRow.length > 0
-      ) {
+      // `?? 0` on both counts, not only on the gate: the second arm prints the
+      // line for a spec that OWES rows and has none, which is exactly the
+      // shape where a producer that never ran leaves both fields unset. The
+      // line then read `Integration rows (ATDD-owned): undefined (unfinished:
+      // undefined)` in the report this PR adds it to.
+      const integrationRowTotal = spec.integrationRowTotal ?? 0;
+      const integrationRowOpenCount = spec.integrationRowOpenCount ?? 0;
+      if (integrationRowTotal > 0 || integrationTcsWithoutRow.length > 0) {
         lines.push(
-          `- Integration rows (ATDD-owned): ${spec.integrationRowTotal} (unfinished: ${spec.integrationRowOpenCount})`,
+          `- Integration rows (ATDD-owned): ${integrationRowTotal} (unfinished: ${integrationRowOpenCount})`,
         );
       }
       if (integrationTcsWithoutRow.length > 0) {

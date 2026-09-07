@@ -256,6 +256,33 @@ describe("qfai report names the integration obligation, not only the rows that w
     expect(spec.integrationTcsWithoutRow).toEqual([]);
   });
 
+  it("renders 0 rather than undefined when the counts are absent from the spec", async () => {
+    // Both counts are optional on `ReportTddCoverageSpec` — deliberately, so
+    // `--format json` omits them rather than publishing a zero — while the
+    // line is printed whenever the spec merely OWES rows. A spec carrying
+    // `integrationTcsWithoutRow` with the counts unset therefore reached the
+    // template, and it rendered
+    // `Integration rows (ATDD-owned): undefined (unfinished: undefined)`.
+    //
+    // `collectTddCoverage` always sets them, which is why every end-to-end row
+    // in this file passes; this one produces a real report and then drops the
+    // two fields, which is the shape the type permits.
+    const rendered = await withSpec(
+      async (root) => {
+        const data = await createReportData(root);
+        for (const spec of data.tddCoverage?.specs ?? []) {
+          delete spec.integrationRowTotal;
+          delete spec.integrationRowOpenCount;
+        }
+        return formatReportMarkdown(data);
+      },
+      { testCases: L3_ONLY_TC_TABLE, tdd: ledger([]) },
+    );
+
+    expect(rendered).toContain("- Integration rows (ATDD-owned): 0 (unfinished: 0)");
+    expect(rendered).not.toContain("undefined");
+  });
+
   it("prints the missing-row line for a spec whose ledger seeds nothing", async () => {
     const rendered = await withSpec(
       async (root) => formatReportMarkdown(await createReportData(root)),

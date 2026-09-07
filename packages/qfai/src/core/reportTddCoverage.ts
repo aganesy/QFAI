@@ -250,10 +250,13 @@ export async function collectTddCoverage(
         // is not in — so the row would be walked and still reported nowhere.
         if (isAtddIntegrationRow(scan, row)) {
           integrationRowTotal += 1;
-          // Read here rather than from the coverage block below: that block is
-          // gated on `isCoverageBearingRow`, and an `Integration` row is not
-          // coverage-bearing, so the refs of the very rows this set is about
-          // never reach it.
+          // Read here rather than from the coverage block below. Not because
+          // the row is excluded there — `isCoverageBearingRow` declines only
+          // `e2e` / `api`, so an `Integration` row IS coverage-bearing — but
+          // because everything that block computes is scored against
+          // `unitComponentTcIds`, and an `L3` TC is not in it. The refs would
+          // be walked and land in no count, which is the same reason the
+          // roll-call above sits ahead of the predicate.
           for (const ref of splitTcRefs(row[scan.tcRefsIndex] ?? "")) {
             const upper = ref.toUpperCase();
             if (!isWellFormedTcRef(upper)) continue;
