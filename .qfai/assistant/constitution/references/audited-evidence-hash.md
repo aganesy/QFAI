@@ -48,9 +48,45 @@ procedure, in four steps:
      its obligation outside every hash), `RED test hash`, the row's own
      transient revision (`RED revision` or `Falsifiability revision`), and the
      RED pair with its `RED assertion-stripped result`, or the falsifiability
-     trio, with `RED failure mode`. **Not
+     trio, with `RED failure mode`, and `Resumed-from-blocked` where the
+     round carries one. **Not
      `Revision`**: it names the tree the GREEN landed at and does not exist
      yet, so including it made every correct RED PASS stale at GREEN.
+
+     **`Resumed-from-blocked (resumption M)` is in the subject of an
+     observation taken after resumption `M` and of no earlier one.** An
+     observation's subject is the fields it could read, and a RED verdict
+     recorded before the block never read a field the resumption wrote — so
+     including every one of them unconditionally staled each correct earlier
+     verdict the moment a later resumption was recorded, and did it on the
+     highest existing round too, where the resumption appends beside a verdict
+     that is already there.
+
+     **A moved run is hashed from its own `Interrupted RED (block M)` group and
+     nothing else** (`../../skills/qfai-implement/references/round-evidence.md`)
+     — the group's fields, plus the row identity every subject carries. Not the
+     round's live RED fields, which hold the fresh run; and not the resumption
+     field that moved it, which is the same field the paragraph above excludes.
+
+     `Resumed-from-blocked` is in the subject because the reviewer reads it:
+     it is what qualifies the self-reference
+     `../../skills/qfai-implement/references/red-not-observable.md` opens to a
+     resumed row, and which departure status it names decides whether the row
+     qualifies at all. A field a verdict depends on and the hash does not
+     cover can be added, removed or rewritten to another departure after the
+     `PASS` with the recomputation unmoved — which is how an approved upstream
+     reset would be dressed up as a resumption after the fact.
+
+     **A round that has moved its observation into the `Interrupted RED` group
+     is hashed from that group**
+     (`../../skills/qfai-implement/references/round-evidence.md`), field for
+     field, in whichever form it took. The move is what a resumption does to
+     the run a block interrupted, and it happens _after_ that run was
+     submitted and passed — so recomputing the old verdict against the round's
+     live RED fields reads the fresh run instead and reports a correct `PASS`
+     as stale, leaving the row no legal way to complete. The fresh observation
+     is a separate subject, hashed from the live fields as usual.
+
    - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair,
      `Oracle proof` and, where the row has one, `Replacement proof revision` —
      it addresses the tree a re-taken proof ran against, which the revision

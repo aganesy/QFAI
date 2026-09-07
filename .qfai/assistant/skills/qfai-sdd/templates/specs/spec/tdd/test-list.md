@@ -173,8 +173,8 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By |
-| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- |
+| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref |
+| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ |
 
 `Blocked-By` is an **optional** column, seeded here so a downstream `blocked`
 row never has to add one — and added to an already-seeded eight-column ledger by
@@ -183,10 +183,27 @@ Phase 2b's column migration, which runs whether or not this template was copied.
 cells unconditionally and never a row, and a `Status = blocked` row with no
 blocker named raises `TDDLIST_BLOCKED_MISSING_REF`.
 
+`BR-Ref` is **the one `BR-*` this row serves** — the T1 review-group key — and it is resolved here because this is the only phase where `03`, `04`, `05`
+and `06` are all open: read each TC's `EX-Ref` in `06_Test-Cases.md` and that
+`EX`'s `BR-Ref` in `05_Examples.md` — the edge that names the rule the test
+verifies — taking every `BR-*` listed there when one `EX` covers a cohesive
+rule bundle. Only a TC with no `EX-Ref` falls back to its `AC-Refs` and every
+`BR` whose `AC-Refs` names one of them in `04_Business-Rules.md`. Then take the
+union of everything reached and keep the **lowest-numbered** `BR-*` of it —
+across several `TC-Refs` and across a multi-`BR` `EX` alike — so the key is the
+same for whoever resolves it next. Write `-` when no `BR` reaches the row. An
+empty cell reads the same as `-`, and that row is reviewed alone.
+`npx qfai validate` recomputes this same derivation and reports
+`QFAI-BRREF-003` when the cell holds a different rule, so a key
+resolved by any other route is named rather than silently regrouping rows.
+`/qfai-implement` batches its T1 reviews on this value and can close no group
+without it. It is derived from upstream, not from run state, so a reseed
+re-resolves it — that is not the row rewrite the delta rule forbids.
+
 ## Schema
 
 The ledger schema — required columns, the optional `US-Refs` / `CON-API-Refs` /
-`Blocked-By` / `Owning module` columns, the `Status` vocabulary, and the
+`Blocked-By` / `Owning module` / `BR-Ref` columns, the `Status` vocabulary, and the
 `Evidence` cell contract — is defined in
 `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`.
 
