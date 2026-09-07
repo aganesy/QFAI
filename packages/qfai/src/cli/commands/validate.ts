@@ -1353,7 +1353,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-035":
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-040":
-    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
+    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
+  "QFAI-CONTRACT-041":
+    "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does
