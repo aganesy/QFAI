@@ -82,8 +82,58 @@ finding is waived by and `TDDLIST_EXCEPTION_PARKED` the `code` it prints (see
    (`QFAI-TEST-001`): a bare entry drifts the moment the gate gains a second
    code, which is exactly how both tables came to omit `QFAI-TEST-002`.
 
+## A branch that already emits a frozen-family code
+
+A branch written before the guard, or against an older copy of it, reaches
+review with a code the registry will not take. The registry does not grow, so
+the branch renames.
+
+1. **Rename to `QFAI-<AREA>-<NNN>`**, following "Adding a code". Reuse an
+   `<AREA>` that fits before adding one.
+2. **Keep the `<AREA>-<NNN>` suffix the old id had**, when the code being
+   renamed has one. `resolveRuleKeys` in `src/core/waivers.ts` adds a stripped
+   spelling of the emitted code to the keys a waiver may match on, so a finding
+   coded `QFAI-TDDLIST-007` also answers to `TDDLIST-007` and an existing
+   `.qfai/waivers.yml` entry keeps matching. Change the number —
+   `QFAI-TDDLIST-007` to `QFAI-TDDLIST-011` — and the alias becomes
+   `TDDLIST-011` rather than `TDDLIST-007`, which is the spelling the entry
+   names.
+3. **Check the stripped spelling for a collision, not only the full code.**
+   `TDDLIST-001` and `TDDLIST-002` are live rule ids with no
+   `QFAI-TDDLIST-00N` counterpart, so taking one of those numbers for an
+   unrelated condition would let an existing waiver suppress the new finding.
+   Search `src/core/ruleIds.ts` and every `Issue.rule` for the spelling
+   `resolveRuleKeys` would derive, as well as for the code itself.
+4. **The strip is narrow.** It reads `code`, and matches `QFAI-<AREA>-<NNN>`
+   with a single all-letter area — so `QFAI-CFG-LINK-001` strips to nothing,
+   and a screaming-snake code (`TDDLIST_EXCEPTION_PARKED`) does not match at
+   all, so no alias is derived from it. Such a finding may still carry a
+   numbered id: `TDDLIST_EXCEPTION_PARKED` is published under
+   `rule` `TDDLIST-001`. That is a separately declared back-compat alias in
+   `ruleIds.ts`, not something the strip produces, so renaming one of these
+   needs an explicit alias — the work `## Not covered here` defers.
+5. **Check whether the code already exists.** A family several branches reached
+   for at once tends to have been settled by whichever landed first:
+   `QFAI-TDDLIST-007` through `-010` are on the default branch already. Adopt
+   the landed spelling rather than minting a parallel one.
+
+### Renaming a code that has shipped
+
+The alias above covers waivers and nothing else. `issue.code` is written into
+the GitHub annotation each finding produces and into `validate.json`, so a
+consumer that greps a log, keys an alert on the code, or reads the JSON sees
+the new spelling and not the old one.
+
+So a rename is source-compatible for waivers and **breaking for anyone
+identifying findings by code**. Treat it as a behaviour change: say so in the
+release notes, name both spellings there, and give consumers the release the
+old one stops appearing in.
+
 ## Not covered here
 
-Renaming a legacy code to its canonical spelling needs an alias table with a
-deprecation window so existing `.qfai/waivers.yml` entries keep resolving. That
-migration, and publishing the inventory as a build artifact, are separate work.
+Renaming a legacy code whose shape is **not** `<AREA>-<NNN>` needs an alias
+table with a deprecation window, because the prefix strip above gives it
+nothing: a `.qfai/waivers.yml` entry written against `TDDLIST_EXCEPTION_PARKED`
+or `R-SKILL-MANIFEST-DRIFT` resolves through neither spelling once the code
+moves. That migration, and publishing the inventory as a build artifact, are
+separate work.
