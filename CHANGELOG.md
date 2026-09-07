@@ -1001,8 +1001,6 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   phase steps 3b and 5 decide it deterministically, and only the waiver that
   follows needs approval.
 
-### Changed
-
 - **`qfai --help` documents the per-command exit-code matrix, and an unknown
   command now exits 1.** The help output carried a `Commands:` and an
   `Options:` block and nothing else; exit codes appeared only incidentally
