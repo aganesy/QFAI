@@ -768,8 +768,6 @@ function collectStubIssues(
     if (!dialect.spansLines && match[0].includes("\n")) {
       continue;
     }
-    // The whitespace a fallback label carries can now include the newline the
-    // match spanned, and `refs` / the message are single-line surfaces.
     if (isRuntimeSkip(match, match.index + match[0].length, scannable, content)) {
       continue;
     }
