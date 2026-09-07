@@ -41,6 +41,7 @@ import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
+import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
@@ -366,6 +367,18 @@ export async function runInit(options: InitOptions): Promise<void> {
   // …and the summary counts them together, as one copy, which is what an operator sees.
   rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
   rootResult.skipped = [...workflowResult.skipped, ...rootResult.skipped];
+
+  // The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
+  // the stub scan behind `QFAI-TEST-001` pointed at nothing. Aim them at the files this
+  // repository already has.
+  //
+  // Only when THIS run wrote the file. The copy above is create-only, so a `qfai.config.yaml`
+  // it skipped is the adopter's — already tuned, perhaps by `/qfai-configure`, and rewriting a
+  // value they chose is not this command's to do.
+  const configPath = path.join(destRoot, "qfai.config.yaml");
+  if (!options.dryRun && rootResult.copied.includes(configPath)) {
+    await aimTestFileGlobsAtRepository(destRoot, configPath);
+  }
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -2260,6 +2273,77 @@ async function replaceFileAtomically(
   } catch (err: unknown) {
     // The temp file is this function's alone — leaving it behind would litter
     // the manifest directory with a partial YAML on every failed merge.
+    await rm(temp, { force: true });
+    throw err;
+  }
+}
+
+/**
+ * Point the freshly written config's `testFileGlobs` at this repository's tests.
+ *
+ * Best-effort, and silent when it finds nothing: the template's `[]` is a valid
+ * value that `QFAI-TEST-002` already explains, so a repository with no test file
+ * yet is left exactly as before. An I/O failure is the same case — the config is
+ * on disk and correct either way, and failing the whole init over a refinement
+ * would trade a working install for an empty one.
+ */
+async function aimTestFileGlobsAtRepository(root: string, configPath: string): Promise<void> {
+  try {
+    const derived = await deriveTestFileGlobs(root);
+    if (derived.length === 0) {
+      return;
+    }
+    const before = await readFile(configPath, "utf-8");
+    const after = withDerivedTestFileGlobs(before, derived);
+    if (after !== before) {
+      await writeConfigByRename(configPath, after);
+      info(
+        `config: aimed testFileGlobs at ${derived.length} test layout(s) found in this repository`,
+      );
+    }
+  } catch {
+    // Deliberately swallowed; see the docblock.
+  }
+}
+
+/**
+ * Replace `target` by rename, keeping its mode.
+ *
+ * Writing over the file truncates it first, so an `ENOSPC`, an `EIO` or a
+ * signal partway through leaves a half-written `qfai.config.yaml` and no copy
+ * of what it replaced — and every later `validate` and `doctor` run reads that
+ * file. The content goes to a temp file beside the target and is renamed over
+ * it, so any failure before the rename leaves the original exactly as it was.
+ * That is what makes the caller's swallowed error safe: the refinement is
+ * skipped, and the config that init already wrote stands.
+ *
+ * The narrower cousin of `replaceFileAtomically`, which additionally re-checks
+ * the directory and the file for concurrent change. Those checks guard a merge
+ * into a file the adopter owns; this one replaces a file the same init run
+ * created moments earlier, and there is no older content to lose.
+ */
+async function writeConfigByRename(target: string, content: string): Promise<void> {
+  const { mode } = await stat(target);
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+  try {
+    // `O_EXCL`: the temp name is ours or nothing is written. Created `0600` and
+    // widened once complete, so the content is never briefly readable under a
+    // mode the original did not carry.
+    const handle = await open(
+      temp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    try {
+      await handle.writeFile(content, "utf-8");
+      await handle.chmod(mode);
+    } finally {
+      await handle.close();
+    }
+    await rename(temp, target);
+  } catch (err: unknown) {
+    // The temp file is this function's alone — leaving it behind would litter
+    // the project root with a partial YAML on every failed refinement.
     await rm(temp, { force: true });
     throw err;
   }
