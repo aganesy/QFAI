@@ -23,7 +23,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   Existing Japanese is a backlog rather than permission. The English wording of
   several rules already exists — the shipped copies under
-  `assets/init/root/.agents/rules/` carry none.
+  `packages/qfai/assets/init/root/.agents/rules/` carry none.
 
 ## [1.11.0] - 2026-09-07
 

@@ -1,5 +1,10 @@
 /**
- * Meta-test: the changelog is written in one language.
+ * Meta-test: what is still being written in the changelog is written in
+ * English.
+ *
+ * The document as a whole is not, and this check does not claim it is. What it
+ * holds at zero is the part that is still open to writing; what already
+ * shipped is a backlog it names line by line. The split is set out below.
  *
  * `repository-language.md` says this repository is written in English, and
  * `cliMessageLanguage.test.ts` holds that for the strings `src/**` emits. It
