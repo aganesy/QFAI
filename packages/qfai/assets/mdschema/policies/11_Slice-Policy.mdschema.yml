@@ -1,0 +1,31 @@
+# Document schema: `<specsDir>/_policies/11_Slice-Policy.md`
+#
+# How requirements are cut into spec packs. The category table is the operative
+# part — it is what a triage decision is checked against — so it is required
+# and its rule column is named.
+
+structure:
+  - heading:
+      pattern: "^# 11 Slice Policy.*"
+      regex: true
+    description: The rule for cutting requirements into spec packs.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Principle.*"
+          regex: true
+        description: >-
+          The principle a triage decision is measured against. The heading tail
+          is open so a pack may append its own `(read first)` marker.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Slice categories$"
+          regex: true
+        description: One row per category, each naming the rule it slices by.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Category
+              - Slice Rule

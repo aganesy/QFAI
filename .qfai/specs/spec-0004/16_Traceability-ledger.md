@@ -1,5 +1,16 @@
 # 16 Traceability Ledger
 
+## Purpose
+
+Link each obligation in this spec to the implementation file that realizes it and
+the test file that proves it. `npx qfai validate` reads this file to enforce
+implementation integrity: when a spec's `03_Acceptance-Criteria.md` or
+`04_Business-Rules.md` changes on a branch, every implementation file linked from
+a changed spec must also have changed in that branch, otherwise `QFAI-TRACE-001`
+(severity `error`) fires.
+
+## Ledger Table (required when this file exists)
+
 | Requirement | Implementation File                                                                                                 | Test File                                                                                    |
 | ----------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | REQ-0013    | `packages/qfai/src/core/validate.ts`                                                                                | `packages/qfai/tests/core/validate.test.ts`                                                  |

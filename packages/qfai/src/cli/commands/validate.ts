@@ -549,7 +549,47 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run listed as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
-  "canonical-uix": ["UIX-VAL-*"],
+  // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
+  // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
+  // twelve belonged to two groups at once until this list replaced it (#1215).
+  //
+  // **No profile misreports them today**, and that was worth establishing
+  // before changing anything. `unevaluatedGates` walks the groups a profile
+  // does NOT run and reports their family PATTERNS, so a code in two groups is
+  // still reported exactly once, by whichever group is missing. An output error
+  // needs a profile that runs the narrow group WITHOUT the wildcard one, and
+  // `prototyping-skill` is reachable only from `runFullValidators`, which runs
+  // `canonical-uix` too.
+  //
+  // So this is a trap rather than a live bug — and the table's own comments are
+  // a record of that trap firing. `contracts` is enumerated because
+  // `QFAI-CONTRACT-*` "would swallow the sdd-only reference codes, letting a
+  // `tdd` run claim a hard gate it never reached"; `traceability-layered`
+  // because `QFAI-TRACE-*` "would count every trace code in two groups at
+  // once". Each was a divergence in the profile map away from the misreport
+  // this is shaped like, and each was repaired the same way. One group per
+  // code is the invariant all three preserve, and `gateGroupCoverage.test.ts`
+  // now states it, so the next divergence fails a lane instead of the notice.
+  //
+  // The family grammar has no negation, so the disjoint set is spelled out.
+  // Safe to maintain by hand only because the coverage case in that same file
+  // fails on a `UIX-VAL-` code no pattern here covers — the drift this list
+  // could otherwise accumulate is what that guard is for. No count is given
+  // here on purpose: the guard is what keeps the list complete, and a number
+  // in a comment would go stale without anything noticing.
+  "canonical-uix": [
+    "UIX-VAL-3LAYER-*",
+    "UIX-VAL-CLASSIFICATION-*",
+    "UIX-VAL-DIRECTION-*",
+    // Covers `UIX-VAL-DS-READ-ERROR`, `UIX-VAL-DS01` and `UIX-VAL-DS02`: the
+    // two numbered ones carry no separator, so a `-*` form would miss them.
+    "UIX-VAL-DS*",
+    "UIX-VAL-OQ-*",
+    "UIX-VAL-SCREEN-*",
+    "UIX-VAL-SIDECAR-*",
+    "UIX-VAL-T05",
+    "UIX-VAL-TREND-*",
+  ],
   sdd: [
     // `runSddValidators` dispatches the preflight input-source rule, so a
     // partial profile that skips the `sdd` group has not evaluated it either.
@@ -594,6 +634,15 @@ export const GATE_GROUP_FAMILIES = {
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
     "D-SURFACE-TYPE-MISSING",
+    // `validateLayeredTraceability`, dispatched from `runSddValidators` and
+    // nowhere else. Its other codes are filed under `traceability-layered`,
+    // which is a different module (`validators/traceability.ts`) despite the
+    // shared subject — so the underscore pair had no group and no profile
+    // reported them. `runLog.ts` counts them into `downstream_violations`,
+    // which is what made them look like run-log bookkeeping rather than a
+    // gate.
+    "TRACE_DOWNSTREAM_REF",
+    "TRACE_SHARED_SCOPE_VIOLATION",
   ],
   // Reviewer-gate detectors wired into `runSddValidators`. The `R-*` wildcard
   // this replaces made `--profile sdd` claim coverage of `detectMockHrefDrift`
@@ -642,6 +691,11 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     "QFAI-CONTRACT-040",
+    // `-041` shipped after this list did, and the explicit enumeration that
+    // keeps the wildcard from over-claiming is also what stops a new code
+    // joining on its own. It comes from the same `validateContractConsistency`
+    // as `-040`, so it has the same two profiles.
+    "QFAI-CONTRACT-041",
     "QFAI-DB-*",
   ],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not

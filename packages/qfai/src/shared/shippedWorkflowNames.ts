@@ -25,6 +25,7 @@
 export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>([
   "qfai-validate.yml",
   "qfai-tests.yml",
+  "qfai-docs.yml",
 ]);
 
 /**
