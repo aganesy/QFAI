@@ -43,9 +43,16 @@ name: Renovate
 # `BR-0017-0016`'s closed departure set untouched.
 on:
   schedule:
-    # Weekly, late Sunday UTC. The config narrows it further to `before 6am on monday` in
-    # Asia/Tokyo; this only has to fire inside the window the config declares.
-    - cron: "0 20 * * 0"
+    # Daily, and this cron is the ONLY schedule. `.github/renovate.json5` used to narrow it
+    # further to a one-hour window in Asia/Tokyo, and the first real run measured why that cannot
+    # work: the cron asked for 20:00 UTC and GitHub started the job at 21:55 UTC, past the window
+    # — a run that lands outside it creates nothing and reports success.
+    #
+    # 19:41 UTC is 04:41 in Asia/Tokyo. The minute is deliberately NOT :00: GitHub's own docs warn
+    # that runs scheduled on the hour compete with everyone else's and are delayed the most, and
+    # the 1h55m delay above was on a `0 20 * * 0`. Nothing downstream depends on the exact time
+    # any more, so this only has to be a quiet minute.
+    - cron: "41 19 * * *"
   workflow_dispatch:
     inputs:
       logLevel:

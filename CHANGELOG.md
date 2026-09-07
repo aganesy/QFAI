@@ -229,6 +229,27 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   失敗せず **branch を作り直す**。action bump を自動マージするたびに孤児 branch が
   残ることになる。lookup 1 回で通常ケースを塞いだ (force push はしていない)。
 
+- **Renovate を日次にし、設定側の実行時間帯を撤去した。** cron を
+  `0 20 * * 0` (週次) から `41 19 * * *` (日次 = Asia/Tokyo 04:41) に変更し、
+  `.github/renovate.json5` の `schedule` を `["before 6am on monday"]` から
+  `["at any time"]` にした。
+
+  **後者は cadence の変更ではなく、実測されたバグの修正である。** Renovate には
+  時計が 2 つある — workflow の cron (いつ bot が走るか) と config の `schedule`
+  (いつ branch を作ってよいか) — これを対で狭く設定していた。初回の実運転が
+  その帰結を測定した: cron は 20:00 UTC を要求し、GitHub がジョブを開始したのは
+  **21:55 UTC** = Asia/Tokyo 06:55 で、窓の 1 時間外である。窓の外に落ちた run は
+  何も作らずに success を返すので、**失敗が無言**で、「更新が無かった」と区別が
+  つかない。
+
+  GitHub はスケジュール遅延に上限を設けていない。そして日次化は窓を遅延に対して
+  相対的に小さくするので、状況は悪化する。したがって窓は廃止し、cron を唯一の
+  時計にした。`renovateMechanism.test.ts` が両側を固定している —
+  config 側の窓が開いたままであることと、cron が日次のままであること。
+
+  cron の分は :00 を避けた。GitHub 自身が「毎時 0 分のスケジュールは最も混雑し
+  遅延しやすい」と文書化しており、上の 1 時間 55 分は実際 `0 20 * * 0` で起きた。
+
 - **`.github/renovate.md` のトークン権限に `Workflows` が抜けていたのを直した。**
   fine-grained token の必要権限として Contents / Pull requests / Issues しか
   挙げていなかったが、workflow ファイルを含む commit の push は専用権限を要求

@@ -23,7 +23,22 @@
   ],
 
   timezone: "Asia/Tokyo",
-  schedule: ["before 6am on monday"],
+
+  // ONE schedule owns the cadence, and it is the workflow's cron — not this key.
+  //
+  // These two used to be a pair: the cron fired weekly and this narrowed it to `before 6am on
+  // monday`, "so it only has to fire inside the window the config declares". That arrangement is
+  // broken, and the first real run measured it. The cron asked for 20:00 UTC on 2026-09-06;
+  // GitHub started the job at 21:55 UTC — 06:55 in Asia/Tokyo, an hour PAST the window. A run
+  // that lands outside the window creates nothing and reports success, so the failure is silent
+  // and looks exactly like "there was nothing to update".
+  //
+  // GitHub does not bound scheduled-workflow delay, and the daily cron makes the window smaller
+  // relative to that delay rather than larger. So the narrow window is gone: this bot runs when
+  // the workflow runs it, which is the only schedule that can be observed from the run history.
+  // `at any time` is Renovate's default and is stated rather than omitted, because "no schedule"
+  // is the decision here, not an oversight.
+  schedule: ["at any time"],
 
   // ── Automerge: every update type, major included ─────────────────────────────────────────────
   //

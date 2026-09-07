@@ -398,6 +398,42 @@ describe("automerge is declared together with the check that decides whether any
   });
 });
 
+describe("only one of the two files schedules this bot", () => {
+  it("keeps the config's window open, so a delayed cron cannot land outside it", () => {
+    // MEASURED, not anticipated. The pair used to be a weekly cron plus `before 6am on monday`
+    // here, and the first real run asked for 20:00 UTC and started at 21:55 — 06:55 in
+    // Asia/Tokyo, past the window. Renovate creates nothing outside its schedule and the run
+    // still succeeds, so the whole failure is a green run that did nothing, indistinguishable
+    // from a green run with nothing to do.
+    //
+    // GitHub bounds that delay nowhere, so no window is narrow enough to be safe and wide enough
+    // to be a schedule. The cron is the schedule; this key must stay open.
+    const declared = quotedFromConfig(/^\s*schedule:\s*\[\s*("(?:[^"\\]|\\.)*")/m);
+    expect(
+      declared,
+      "the top-level `schedule` in the config must stay unrestricted. A window here is only ever " +
+        "reachable when the cron happens to fire inside it, and a run that misses it reports " +
+        "success having created nothing — pace this bot with the workflow's cron instead",
+    ).toBe("at any time");
+
+    // And the cron is a real one, on the daily shape this is written for. A cron that stopped
+    // firing daily would leave the claim above true and the bot idle.
+    const cron = triggers()["schedule"];
+    const entries = (Array.isArray(cron) ? cron : []).filter(isRecord);
+    expect(entries, "the workflow must still declare exactly one scheduled trigger").toHaveLength(
+      1,
+    );
+    const expression = String(entries[0]?.["cron"] ?? "");
+    const fields = expression.split(/\s+/);
+    expect(fields, `the cron \`${expression}\` must have the five standard fields`).toHaveLength(5);
+    expect(
+      fields.slice(2),
+      "day-of-month, month and day-of-week must all be `*`: anything else narrows the cadence " +
+        "below daily, and with the config's window gone this cron is the only thing pacing the bot",
+    ).toEqual(["*", "*", "*"]);
+  });
+});
+
 describe("the token the setup document asks for can do what the config asks of it", () => {
   it("names the workflow permission, because both the config and the re-pin write workflow files", () => {
     // The premise, read rather than assumed: the config really does manage workflow files. If a

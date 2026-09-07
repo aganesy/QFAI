@@ -99,7 +99,7 @@ running the bot the same way keeps it inside that.
 
 |               |                                                                                     |
 | ------------- | ----------------------------------------------------------------------------------- |
-| Schedule      | Before 6am Monday, Asia/Tokyo — branch creation only                                |
+| Schedule      | Daily, 04:41 Asia/Tokyo (`41 19 * * *`) — the workflow's cron, and nothing else     |
 | At most       | 10 open pull requests, 5 opened per hour                                            |
 | Age floor     | A release must be 3 days old before it is offered                                   |
 | Commit style  | `chore(deps): …`                                                                    |
@@ -117,6 +117,21 @@ else runs.
 
 The **Dependency dashboard** issue lists what is open and what has been detected. With nothing
 waiting on a human, it is the place to look when a dependency you expected to move has not moved.
+
+### Why the config declares no schedule of its own
+
+Renovate has two independent clocks — the workflow's `cron`, which decides when the bot runs, and
+the config's `schedule`, which decides when it may create branches. They used to be set as a pair
+here: a weekly cron, narrowed to `before 6am on monday`.
+
+The first real run measured why that does not work. The cron asked for 20:00 UTC on 2026-09-06 and
+GitHub started the job at **21:55 UTC** — 06:55 in Asia/Tokyo, an hour past the window. A run
+outside the window creates nothing and still reports success, so the failure is silent and reads
+exactly like "there was nothing to update".
+
+GitHub bounds that delay nowhere, and a daily cron makes the window smaller relative to the delay
+rather than larger. So the config's `schedule` is `at any time`, and the cron is the only clock.
+`renovateMechanism.test.ts` holds both halves: the window stays open, and the cron stays daily.
 
 ### Turning it off for one dependency
 
