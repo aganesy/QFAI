@@ -728,7 +728,7 @@ describe("the stage evidence's counts are derived, not typed", () => {
           .map(([root, count]) => `${root} ${String(count)}`)
           .join(", ")}). ` +
         `${branchOwesIt} ${nobodyOwesIt} ` +
-        "Either way the two suite totals beside that line are known-invalid until it lands",
+        "Either way the two suite totals beside that line are known-invalid until it lands.",
     ).toBe(measured);
   });
 
