@@ -348,14 +348,30 @@ describe("the own tree takes its Node version from one shared definition", () =>
     // either slot fails here: the property this row defends is that the shared definition is not
     // "the single place the whole tree is wrong from", and an expression reading a step output is
     // not a place anything can be wrong from — `engines.node` still is.
+    //
+    // `node-version-file` is guarded on the same step output, so exactly one of the two is
+    // non-empty on each path. Passing both unconditionally left `setup-node` to discard one by
+    // precedence and say so, on every run of the lane that exists to prove the floor.
     expect(
       sources,
       "the shared definition must read the version from a file and never from a literal of its own, or " +
         "it becomes the single place the whole tree is wrong from",
     ).toEqual([
       "node-version: ${{ steps.shim.outputs.version }}",
-      "node-version-file: package.json",
+      "node-version-file: ${{ steps.shim.outputs.version == '' && 'package.json' || '' }}",
     ]);
+
+    // And the guard is the *same* condition the floor path sets, so the two cannot both be
+    // non-empty. A guard on a different expression would pass the pin above while still
+    // handing `setup-node` two inputs.
+    const fileInput = sources.find((entry) => entry.startsWith("node-version-file: ")) ?? "";
+    const versionInput = sources.find((entry) => entry.startsWith("node-version: ")) ?? "";
+    const output = "steps.shim.outputs.version";
+    expect(versionInput, "the floor path must read the step output").toContain(output);
+    expect(
+      fileInput,
+      "the file input must be guarded on the same output the floor path sets, or both reach setup-node",
+    ).toContain(`${output} == ''`);
 
     // Set C, second clause: the named file carries what the indirection resolves through.
     const manifest: unknown = JSON.parse(
