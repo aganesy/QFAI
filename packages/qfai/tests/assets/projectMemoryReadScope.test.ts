@@ -202,4 +202,20 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       expect(body, `${skill}: does not scope the catalog read`).toContain("not the file whole");
     }
   });
+
+  it("scopes a skill's own read list too, not only its Inputs Priority", async () => {
+    // `Inputs Priority` is where the article's scope is restated, but a skill
+    // may also enumerate what it reads at Stage 0. A directory glob there
+    // pulls the mirrored bodies back in, and the article is then true of one
+    // list and false of the other in the same file.
+    const dir = path.join(repoRoot, tree, "assistant/skills");
+    const skills = (await readdir(dir)).filter((name) => name.startsWith("qfai-"));
+
+    for (const skill of skills) {
+      const body = flat(await readFile(path.join(dir, skill, "SKILL.md"), "utf-8"));
+      expect(body, `${skill}: reads the whole manifest directory`).not.toContain(
+        "files under `.qfai/assistant/{manifest,catalog}/`",
+      );
+    }
+  });
 });
