@@ -359,12 +359,18 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
   9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  // Re-pinned when the record rule moved to `references/record-contract.md`.
-  // The item now states the obligation, cites the rule, and says which pass
-  // writes the compatibility marker — the clauses it used to carry inline are
-  // in `GATE_ITEM_PARITY` with `source: "record"`, so both directions are
-  // still covered.
-  10: "58d821d6a6aafa51bca787bf281ae6a8ad67e40d7a1787ba0e2e18ff69267817",
+  // The item states the obligation, cites the rule in
+  // `references/record-contract.md`, and says which pass writes the
+  // compatibility marker. The clauses it used to carry inline are in
+  // `GATE_ITEM_PARITY` with `source: "record"`, so both directions are still
+  // covered.
+  //
+  // The digest is over the collapsed words, so punctuation moves it. This one
+  // was re-pinned for the comma in "until it has run, an unmarked legacy row
+  // …", which the sentence needs to say that the pass is what has run: without
+  // it the row reads as the pass's object, and the item reads the marker rather
+  // than running anything.
+  10: "622ff892a0713127336b00d7015660c4bf09a264b3142a5e9efc1a5722c8ed31",
   11: "a7470dc8a8e922a0ea06fd70b7703a2ea35e31eb79c27436f84c329d11dc9493",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
