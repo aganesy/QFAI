@@ -170,26 +170,26 @@ function describeDbDomain(domain: DbDomain): string {
   const sorted = [...domain.bindings].sort((a, b) => a.file.localeCompare(b.file));
   const first = sorted[0];
   if (sorted.length === 1 && first) {
-    return `DB 側の許容値: ${Array.from(first.values).sort().join(", ")}`;
+    return `DB domain: ${Array.from(first.values).sort().join(", ")}`;
   }
   const perFile = sorted
     .map((binding) => `${binding.file}: ${Array.from(binding.values).sort().join(", ")}`)
     .join("; ");
-  return `DB 側の許容値 (契約ごと): ${perFile}`;
+  return `DB domain, per contract: ${perFile}`;
 }
 
 /** Which form bounds the field, and — when the candidates disagree — whose. */
 function describeDbConstraint(domain: DbDomain): string {
   if (isEnumOnly(domain)) {
-    return "ENUM (insert 時に拒絶される物理制約)";
+    return "ENUM (a physical constraint: the insert is rejected)";
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
-    return "CHECK (現在の制約。drop / NOT VALID で外せる)";
+    return "CHECK (the bound the DB currently asserts; it can be dropped or declared NOT VALID)";
   }
   return (
-    `CHECK と ENUM の混在 — ENUM を宣言するのは ${fromEnum.join(", ")} です。` +
-    "同名列の ENUM は他テーブルの列を束縛するだけで、この API フィールドの insert を拒絶するとは限りません"
+    `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
+    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
   );
 }
 
@@ -208,16 +208,17 @@ function describeDbConstraint(domain: DbDomain): string {
 function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
   if (enumOnly) {
     return (
-      `DB 契約 (${dbFiles.join(", ")}) の ENUM が正です — ` +
-      "insert 時に拒絶される物理制約なので、この組み合わせを満たす実装は存在しません。" +
-      "ENUM に値を追加するか (マイグレーションを伴います)、API 側の terminal semantics を訂正してください。"
+      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - it is a physical ` +
+      "constraint that rejects the value at insert time, so no implementation satisfies both " +
+      "contracts. Add the value to the ENUM (this needs a migration), or correct the API " +
+      "contract's terminal semantics."
     );
   }
   if (fromEnum.length === 0) {
     return (
-      `DB 契約 (${dbFiles.join(", ")}) の CHECK 制約との不一致です — ` +
-      "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
-      "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。"
+      `A disagreement with the CHECK constraint in the DB contracts (${dbFiles.join(", ")}) - ` +
+      "widening the constraint (drop or redefine it) and correcting the API are both open. " +
+      "Which one is canonical is decided in the Contracts table of the spec that owns the entity."
     );
   }
   const fromCheck = dbFiles.filter((name) => !fromEnum.includes(name));
@@ -228,25 +229,26 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
   // from "neither is settled", and only the first may say "the same contract".
   if (fromCheck.length === 0 && dbFiles.length === 1) {
     return (
-      `ENUM と CHECK が同じ契約 (${dbFiles.join(", ")}) の中に現れています — ` +
-      "同名の列が複数のテーブルにある場合、その ENUM が束縛するのは API フィールドの列とは限りません。" +
-      "対象のテーブルと列を 1 つに特定してから、ENUM 側なら値を追加、CHECK 側なら制約を広げるか API を訂正してください。"
+      `ENUM and CHECK both appear in the same contract (${dbFiles.join(", ")}) - ` +
+      "where several tables carry a same-named column, that ENUM need not be the one bounding " +
+      "the API field. Identify the one table and column first, then add the value to the ENUM, " +
+      "or widen the CHECK, or correct the API."
     );
   }
   if (fromCheck.length === 0) {
     return (
-      `候補の契約 (${dbFiles.join(", ")}) はいずれも ENUM を宣言していますが、` +
-      "少なくとも 1 つは同じ契約の中で CHECK と混在しており、その ENUM が束縛するのは " +
-      "API フィールドの列とは限りません。" +
-      "まず、その entity を所有する spec の Contracts 表で対応する DB 契約を 1 つに絞り、" +
-      "その上で対象のテーブルと列を特定してください。"
+      `Every candidate contract (${dbFiles.join(", ")}) declares an ENUM, but at least one of ` +
+      "them mixes CHECK and ENUM within itself, so that ENUM need not be the one bounding the " +
+      "API field. Narrow the pairing to one DB contract in the Contracts table of the spec that " +
+      "owns the entity, then identify the table and column."
     );
   }
   return (
-    `ENUM を宣言しているのは ${fromEnum.join(", ")} で、CHECK で束縛する契約 ` +
-    `(${fromCheck.join(", ")}) も候補に含まれます — ` +
-    "照合はフィールド名のみなので、この API フィールドを束縛する契約がその ENUM とは限りません。" +
-    "まず、その entity を所有する spec の Contracts 表で、対応する DB 契約を 1 つに絞ってください。"
+    `The ENUM is declared by ${fromEnum.join(", ")}, and the contracts bounding it with a ` +
+    `CHECK (${fromCheck.join(", ")}) are candidates too - ` +
+    "the pairing is by field name alone, so the contract bounding this API field need not be " +
+    "the one with the ENUM. Narrow it to one DB contract in the Contracts table of the spec " +
+    "that owns the entity."
   );
 }
 
@@ -299,16 +301,17 @@ async function validateApiFileAgainstDb(
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
-        `API 契約が要求する ${api.fieldName} の値が、同名フィールドを宣言する DB 契約で表現できません: ` +
-          `${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
-          `DB 契約: ${dbFileList.join(", ")}; DB 側の制約: ${describeDbConstraint(db)})`,
+        `the API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
+          `field name cannot represent: ${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
+          `DB contracts: ${dbFileList.join(", ")}; DB bound: ${describeDbConstraint(db)})`,
         severity,
         file,
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
         mixedRemedy(enumOnly, dbFileList, enumContributors) +
-          "照合は明示的なペア宣言でなく、正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
+          " Pairing is by normalized field name across the DB contracts, not by an explicit " +
+          "pair declaration.",
       ),
     );
   }
