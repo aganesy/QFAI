@@ -24,6 +24,14 @@ Upstream artifacts include, at minimum:
   behaviour and design SSOT it feeds. A defect found in one downstream is fixed
   in the SDD-owned artifact, the discrepancy recorded in delta/evidence. This
   reclassifies ONLY the pack: genuine upstream is still repaired upstream-first.
+- **the toolkit's own vendored rules** — `.qfai/assistant/constitution/**` and
+  `.qfai/assistant/catalog/**`. `npx qfai init` copies these into the project and QFAI owns them;
+  no phase of this project does. Editing one in place forks the rules the validators enforce, and
+  the fork is indistinguishable from shipped policy at the point of use — a downstream argument
+  then cites it by line number as though it were the release. Extending them is legal through the
+  overlay in `#allowed-exceptions-minimal-whitelist`; rewriting them is not.
+  `.qfai/assistant/manifest/**` is **not** on this list: `/qfai-configure` is the supported way to
+  edit those declarative files.
 
 - **test or production artifacts another spec's completed implement run
   certifies** — a file named on a `done` row of another `tdd/test-list.md`: a
@@ -37,10 +45,11 @@ Upstream artifacts include, at minimum:
   other spec's obligation no longer holds rather than merely moving.
 
 One file inside `.qfai/specs/**` is carved out of that last line:
-`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence` cells
-unconditionally, plus its `Test file` and `Selector` cells under the two
-machine-checkable conditions in `#allowed-exceptions-minimal-whitelist`. Its
-**rows** — which obligations exist and what each covers — remain upstream.
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence` /
+`Blocked-By` cells unconditionally, plus its `Test file` and `Selector` cells
+under the two machine-checkable conditions in
+`#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist
+and what each covers — remain upstream.
 
 **Every artifact in this list requires an owner rerun by definition — except the code and test
 artifacts of the last bullet, which carry their own route in that bullet.** They are the one
@@ -59,9 +68,9 @@ agent roster and reasoning backwards from it.
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and `Evidence` cells
-  unconditionally, append/update by `/qfai-implement`, plus two cells that are writable **only**
-  while a stated condition holds:
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID`, `Evidence` and `Blocked-By`
+  cells unconditionally, append/update by `/qfai-implement`, plus two cells that are writable
+  **only** while a stated condition holds:
   - the `Test file` cell, only while the seeded value is empty or a dash placeholder;
   - the `Selector` cell, only while the seeded value does not resolve against the row's named test
     file — the validator's own `selectorResolves` predicate is false.
@@ -69,10 +78,18 @@ agent roster and reasoning backwards from it.
   Both conditions are machine-checkable, so a reviewer verifies the precondition instead of taking
   the writing stage's word for it, and both are one-way: once the condition that authorised the
   write has ceased to hold — a `Test file` that names a path, a `Selector` that resolves —
-  rewriting it is no longer covered. Every other column of that file — `TC-Refs`, `Layer`,
-  `US-Refs`, `CON-API-Refs` — and every other file under `.qfai/specs/**`, stays upstream SSOT:
-  adding, removing or re-scoping a row is an upstream change and takes the
-  `#when-drift-is-detected` path.
+  rewriting it is no longer covered.
+
+  `Blocked-By` is unconditional alongside the first three because `todo -> blocked` is an edge
+  `/qfai-implement` owns and `TDDLIST_BLOCKED_MISSING_REF` errors on a `blocked` row that names no
+  blocker, so a three-cell whitelist made an owned transition unwritable. The column itself is
+  seeded upstream by `/qfai-sdd` Phase 2b, so naming a blocker fills a cell rather than adding one:
+  a row whose ledger has no `Blocked-By` column cannot be parked here at all, and that is an
+  upstream change like any other table-shape write.
+
+  Every other column of that file — `TC-Refs`, `Layer`, `US-Refs`, `CON-API-Refs` — and every
+  other file under `.qfai/specs/**`, stays upstream SSOT: adding, removing or re-scoping a row is
+  an upstream change and takes the `#when-drift-is-detected` path.
 
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
@@ -85,6 +102,12 @@ agent roster and reasoning backwards from it.
   mandated, so treating every shared-file edit as needing approval would stop the work this
   protocol asks for. Approval is owed the moment the obligation stops holding: the edit is then
   drift in the full sense and takes `#when-drift-is-detected`.
+- **a `*.local.md` overlay beside a vendored toolkit rule** —
+  `.qfai/assistant/constitution/<name>.local.md` or `.qfai/assistant/catalog/<name>.local.md`.
+  `npx qfai init` never writes these and the provenance check never reports them, so a project can
+  add what it needs without editing a file QFAI owns and without the addition being lost on the
+  next upgrade. An overlay **adds**; it does not repeal. A project need that contradicts a shipped
+  rule is drift and takes the `#when-drift-is-detected` path.
 
 Any exception beyond this list requires explicit user approval.
 
@@ -111,7 +134,7 @@ explicitly allows downstream updates" — could not rescue that, for two reasons
   mandatory and non-substitutable was precisely the content no rule authorised anyone to persist.
 
 So an agent obeying the protocol could not satisfy gate item 10, and an agent satisfying it was in
-drift. The entry above names the file and the three cells unconditionally, which is what removes
+drift. The entry above names the file and the four cells unconditionally, which is what removes
 the choice.
 
 ### Why `Test file` and `Selector` are conditional
@@ -128,7 +151,7 @@ validator rules are what create it:
 
 A row is seeded with a descriptive selector and, commonly, no test file: the path is a downstream
 decision, and the test's title does not exist until the micro-cycle authors it. So the writing
-stage cannot hold the status the first three cells **do** authorise without also writing a cell
+stage cannot hold the status the first four cells **do** authorise without also writing a cell
 they do **not** — and the earlier status it would otherwise have to keep is false, because the row
 has already passed that phase. Seeding both cells upstream does not resolve it either: it would
 require inventing titles that implementers then match exactly, inverting the direction of
@@ -136,9 +159,14 @@ authority between the spec and the test.
 
 The conditions are what keep this narrow. They authorise **filling a placeholder and repairing an
 unresolvable selector**, never rewriting a cell that already resolves, and never touching the
-columns that carry the row's obligation identity. Decomposing an existing obligation across rows
-stays in remit for the executing stage; minting a new obligation id does not, and that line is
-unchanged.
+columns that carry the row's obligation identity. Decomposing an existing obligation across rows is
+**not** in remit either, and minting a new obligation id is not: rows are not on this whitelist at
+all, and the phase that owns them is `/qfai-sdd` Phase 2b
+(`../skills/qfai-sdd/references/sdd-phase-checklists.md`). The executing stage raises a Change
+Request naming the boundaries the row conflates and parks the row at `blocked` until that split
+lands. Reading decomposition as the executing stage's own write is what let a matrix row be
+re-scoped by the one role this whitelist grants no row write — obeying this line broke the
+whitelist above it, and obeying the whitelist left the row unsplittable by anyone.
 
 One limit is worth stating, because the `Selector` condition is narrower than it reads.
 `selectorResolves` is deliberately lenient: it accepts verbatim containment, then containment of
@@ -214,12 +242,49 @@ was fabricated.
    `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID pattern is
    `CR-\d{8}-\d{4}` and the file carries `ID`, `Status` (`open` / `approved` / `rejected` /
    `superseded`), `Approved by`, `Approved at` and `Approved option` so the approval is a record,
-   not a memory. Creating this file is the only write this step makes: the delta and Decisions
-   files the reference lands in — `spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec
-   artifact, `_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact, and the
+   not a memory. Creating this file is the only write this step makes **outside the raiser's own
+   whitelisted cells**: the delta and Decisions files the reference lands in —
+   `spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact,
+   `_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact, and the
    referencing specs' `09_delta.md` for a contract artifact, per the destination table in step 4 —
    are upstream SSOT, so the reference to this CR is written there by the owner skill in step 4,
-   never before approval. Contents:
+   never before approval.
+
+   The one exception is **parking this CR's blocked set in the execution ledger**, and it applies
+   only to a raiser that already owns those cells — `/qfai-implement` under
+   `#allowed-exceptions-minimal-whitelist`. Once the file exists, that raiser writes
+   `todo -> blocked` with this CR's ID in `Blocked-By` on **each row of the blocked set that is at
+   `todo`**, and writes nothing else: no other cell, no other file, and no row added, removed or
+   re-scoped.
+
+   **Only a `todo` row is parked, because only a `todo` row can be.** `todo -> blocked` is the
+   ledger's one inbound edge to `blocked`
+   (`../skills/qfai-implement/references/execution-ledger.md#allowed-transitions`), and a blocked
+   set routinely names rows past it — a post-RED scope gap is raised from a row at `red` or later, a
+   checkpoint regression from one at `done`. Writing the transition on those would be an illegal
+   move, and the two remaining shapes have their own answers:
+   - **A row another open `CR-*` already parked** keeps its `blocked` status and takes this CR's ID
+     **appended** to `Blocked-By`, which holds the set of blockers rather than one. Re-writing the
+     transition would report a move the row did not make, and replacing the cell would drop the
+     other CR's claim on it.
+   - **A row past `todo`, and a `done` row**, are named in this CR's blocked set and **left exactly
+     as they are** — no status write, no `Blocked-By` write. The raiser stops on that row and
+     returns a handoff note naming the CR rather than continuing its cycle, so the work in flight is
+     neither overwritten nor advanced past the conflict. What keeps the row out of the next run's
+     selection is the mandatory Change-Request preflight, which reads the open CRs before the ledger
+     (`../skills/qfai-implement/references/change-request-reset.md`): a row an open in-scope CR's
+     blocked set names is not selected. That is the same protection `blocked` gives a `todo` row,
+     taken from the CR file — which is already the record — instead of from a status the row cannot
+     legally hold. On approval the row leaves by the reset that step 4 authorises (`any status` ->
+     `todo`), which every one of these statuses admits; on `rejected` or `superseded` it resumes
+     from where it stopped. The parking belongs to this step rather than to step 4 for two reasons.
+     Step 3's wait for approval spans sessions, and a dependent row left at `todo` across it is
+     re-selected and its determination re-derived on every pass — the loop `blocked` exists to stop;
+     and after the owner rerun the write has no correct target, because that rerun may have
+     re-scoped the very row it was aimed at. A row whose ledger has no `Blocked-By` column cannot be
+     parked — adding the column is a table-shape write only `/qfai-sdd` Phase 2b may make — so that
+     ledger stops with a handoff note asking for the column migration and leaves its rows at `todo`;
+     blocking a row whose blocker cannot be written is `TDDLIST_BLOCKED_MISSING_REF`. Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
    - context — for intent drift, what conflicts; for defect drift, what the artifact declares and
      how it breaks that declaration
@@ -236,6 +301,7 @@ was fabricated.
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
+
 3. Wait for explicit user approval, then set `Status` and the approval fields. A defect-drift CR
    has no option set, so `Approved option` stays `-`; what is approved is the single correct fix
    under `## Proposed change`. The wait itself is not waived — the operator is ratifying the
@@ -525,6 +591,15 @@ defect is gone with it. The drain is what pays for dropping the round.
 approved` whose **`## Impact scope` names the changed path** silences it — not
   a path named elsewhere in it, not a contract ID, and never an `open` CR. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
+- Vendored toolkit rules must not be edited in place. **This is detected.** `npx qfai validate`
+  hashes `.qfai/assistant/constitution/**` and `.qfai/assistant/catalog/**` and compares them with
+  the installed release and with the provenance record `.qfai/assistant/.assets.lock.json` that
+  `npx qfai init` writes. A file still holding what QFAI wrote, from an older release, is
+  `QFAI-ASSETS-004` and is refreshed by `npx qfai init --force`. A file matching neither the
+  release nor the record is `QFAI-ASSETS-005` — a local fork, left untouched by `--force` and
+  reported for a human merge. An added file that is not a `*.local.md` overlay is
+  `QFAI-ASSETS-006`, a shipped rule the project no longer has is `QFAI-ASSETS-007`, and a
+  comparison that could not be made at all is `QFAI-ASSETS-008`.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set** and report
   blockers. Work outside every open CR's blocked set proceeds; an unanswered decision is not a
