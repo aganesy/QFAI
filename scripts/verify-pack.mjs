@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process";
+// `console` is a global at runtime, but the lane's `no-undef` does not know
+// that in a module. `node:console` exports the same instance as its default.
 import console from "node:console";
 import {
   existsSync,

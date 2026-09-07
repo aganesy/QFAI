@@ -35,14 +35,35 @@ export const BASELINE_PATH = path.join(
 /** Setting this to `1` rewrites the baseline instead of failing on a difference. */
 export const UPDATE_ENV = "QFAI_PACK_FINDINGS_UPDATE";
 
+/** The severities `validate.json` reports, and the only ones a baseline may hold. */
+const SEVERITIES = new Set(["info", "warning", "error"]);
+
 /**
  * One issue reduced to the three fields the baseline compares.
  *
- * `file` is optional in the report — a project-wide finding has none — so it
- * collapses to `-` rather than to `undefined`, which would sort and print
- * inconsistently across runtimes.
+ * `severity` and `code` are required and checked, because the update path
+ * writes whatever it is handed. A report that is not the shape this reads
+ * would be recorded as `undefined undefined -` and every later comparison
+ * would agree with it — a baseline that pins nothing while looking pinned. So
+ * a malformed issue stops the run and names itself instead.
+ *
+ * `file` is optional — a project-wide finding has none — so it collapses to
+ * `-` rather than to `undefined`, which would sort and print inconsistently
+ * across runtimes.
  */
 export function fingerprint(issue) {
+  if (issue === null || typeof issue !== "object") {
+    throw new Error(`validate.json holds an issue that is not an object: ${JSON.stringify(issue)}`);
+  }
+  if (typeof issue.code !== "string" || issue.code.length === 0) {
+    throw new Error(`validate.json holds an issue with no \`code\`: ${JSON.stringify(issue)}`);
+  }
+  if (!SEVERITIES.has(issue.severity)) {
+    throw new Error(
+      `validate.json holds an issue whose \`severity\` is not one of ` +
+        `${[...SEVERITIES].join(" / ")}: ${JSON.stringify(issue)}`,
+    );
+  }
   const file = typeof issue.file === "string" && issue.file.length > 0 ? issue.file : "-";
   return `${issue.severity} ${issue.code} ${file.split(path.sep).join("/")}`;
 }

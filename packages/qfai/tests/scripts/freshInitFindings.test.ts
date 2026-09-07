@@ -54,12 +54,22 @@ describe("fresh-init finding fingerprints", () => {
 
   it("gives a project-wide finding a file field anyway", () => {
     // `undefined` sorts and prints inconsistently; `-` is a value.
-    expect(fingerprint({ severity: "notice", code: "QFAI-SPACK-000" })).toBe(
-      "notice QFAI-SPACK-000 -",
+    expect(fingerprint({ severity: "info", code: "QFAI-SPACK-000" })).toBe("info QFAI-SPACK-000 -");
+    expect(fingerprint({ severity: "info", code: "QFAI-SPACK-000", file: "" })).toBe(
+      "info QFAI-SPACK-000 -",
     );
-    expect(fingerprint({ severity: "notice", code: "QFAI-SPACK-000", file: "" })).toBe(
-      "notice QFAI-SPACK-000 -",
-    );
+  });
+
+  it("refuses an issue it cannot fingerprint", () => {
+    // The update path writes whatever it is handed. A report that is not this
+    // shape would be recorded as `undefined undefined -`, and every later
+    // comparison would agree with it — a baseline that pins nothing while
+    // looking pinned.
+    expect(() => fingerprint(null)).toThrow(/not an object/);
+    expect(() => fingerprint({ severity: "info" })).toThrow(/no `code`/);
+    expect(() => fingerprint({ severity: "info", code: "" })).toThrow(/no `code`/);
+    expect(() => fingerprint({ code: "QFAI-A-001" })).toThrow(/severity/);
+    expect(() => fingerprint({ severity: "notice", code: "QFAI-A-001" })).toThrow(/severity/);
   });
 
   it("ignores the message, which carries counts that move on their own", () => {
@@ -77,15 +87,15 @@ describe("fresh-init finding fingerprints", () => {
 
 describe("comparing against the baseline", () => {
   it("passes when the tree reports exactly what is recorded", () => {
-    const recorded = ["notice QFAI-SPACK-000 -", "warning QFAI-DCON-034 DESIGN.md"];
+    const recorded = ["info QFAI-SPACK-000 -", "warning QFAI-DCON-034 DESIGN.md"];
 
     expect(diffFingerprints([...recorded], recorded)).toEqual({ added: [], missing: [] });
   });
 
   it("reports a finding the baseline does not name", () => {
     const diff = diffFingerprints(
-      ["notice QFAI-SPACK-000 -", "warning QFAI-NEW-001 a.md"],
-      ["notice QFAI-SPACK-000 -"],
+      ["info QFAI-SPACK-000 -", "warning QFAI-NEW-001 a.md"],
+      ["info QFAI-SPACK-000 -"],
     );
 
     expect(diff.added).toEqual(["warning QFAI-NEW-001 a.md"]);
@@ -122,11 +132,11 @@ describe("the failure text", () => {
   it("names both directions and how to accept the change", () => {
     const text = formatDiff({
       added: ["warning QFAI-NEW-001 a.md"],
-      missing: ["notice QFAI-OLD-002 -"],
+      missing: ["info QFAI-OLD-002 -"],
     });
 
     expect(text).toContain("warning QFAI-NEW-001 a.md");
-    expect(text).toContain("notice QFAI-OLD-002 -");
+    expect(text).toContain("info QFAI-OLD-002 -");
     expect(text).toContain(UPDATE_ENV);
     // The remedy has to say the baseline is committed, or a run that only
     // rewrites the file locally looks like the whole fix.
@@ -149,8 +159,10 @@ describe("the committed baseline", () => {
     };
 
     for (const entry of findings) {
+      // The three severities `validate.json` reports, and the only ones
+      // `fingerprint` will write.
       expect(entry, `${entry} is not "<severity> <code> <file>"`).toMatch(
-        /^(error|warning|notice|info) QFAI-[A-Z0-9-]+ \S+$/,
+        /^(error|warning|info) QFAI-[A-Z0-9-]+ \S+$/,
       );
     }
     expect(findings, "a sorted list keeps a re-record to the lines that changed").toEqual(
