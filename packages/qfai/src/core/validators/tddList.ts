@@ -166,7 +166,12 @@ const VALID_STATUSES = new Set([
  */
 const LIVE_LEDGER_STATUSES = Array.from(VALID_STATUSES).filter((status) => status !== "done");
 
-/** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
+/**
+ * The column naming what a `blocked` row is waiting on **and the status it was
+ * blocked at** — both halves, in one cell. Optional to this validator; required
+ * on a `blocked` row, where either half missing is
+ * `TDDLIST_BLOCKED_MISSING_REF`.
+ */
 const BLOCKED_BY_COLUMN = "Blocked-By";
 
 /**
@@ -237,13 +242,18 @@ const BLOCKED_DEPARTURE_STATUSES = new Set(
  * en dash and a plain hyphen are accepted beside the em dash the reference
  * prints, because the difference is a keyboard, not a meaning.
  *
+ * The status token admits digits so that a typo like `green2` reads as an
+ * unknown status rather than as no status at all: the cell has the shape, and
+ * saying the departure status is missing sends the author to the half that is
+ * there.
+ *
  * **It admits an empty blocker half**, which the emptiness check below then
  * names. Requiring a non-empty one made `— blocked at green` match nothing, so
  * a cell whose departure status is right there was told the departure status is
  * what is missing — and the remediation sent the author to add the half the
  * cell already had.
  */
-const BLOCKED_BY_DEPARTURE_RE = /^(.*)\s*[—–-]\s*blocked\s+at\s+([A-Za-z-]+)\s*$/i;
+const BLOCKED_BY_DEPARTURE_RE = /^(.*)\s*[—–-]\s*blocked\s+at\s+([A-Za-z0-9-]+)\s*$/i;
 
 /**
  * What a `Blocked-By` cell resolves to.
@@ -3982,7 +3992,7 @@ async function validateSpecTddList(
         "tddList.blockedBy",
         undefined,
         "change",
-        `Write both halves in ${BLOCKED_BY_COLUMN}. The blocker is a Change Request ID (\`CR-YYYYMMDD-NNNN\`), a contract path with a line (\`.qfai/contracts/db/CON-DB-0005.sql:2715\`), or a row in another spec (\`spec-0006:TDD-0034\`); after it write \`— blocked at <status>\` (${BLOCKED_DEPARTURE_LIST}), as in \`CR-20260421-0004 — blocked at green\`. The departure status is the only record a \`blocked\` row keeps of where it was stopped, and it decides which round the resumption writes into.`,
+        `Write both halves in ${BLOCKED_BY_COLUMN}. The blocker is a Change Request ID (\`CR-YYYYMMDD-NNNN\`), a contract path with a line (\`.qfai/contracts/db/CON-DB-0005.sql:2715\`), or a row in another spec (\`spec-0006:TDD-0034\`); after it, write \`— blocked at <status>\` (${BLOCKED_DEPARTURE_LIST}), as in \`CR-20260421-0004 — blocked at green\`. The departure status is the only record a \`blocked\` row keeps of where it was stopped, and it decides which round the resumption writes into.`,
       ),
     );
   }

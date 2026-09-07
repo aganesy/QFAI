@@ -94,9 +94,9 @@ to end.
   `RED test hash` and its manifest included**: those two pin the test content
   and the fixtures the run executed, and the fresh RED overwrites them like
   every other RED field, so moving the revision, command and result alone
-  preserves a run with no way left to say what it ran. **`RED
-assertion-stripped result` is in the mirror for the same reason and is not
-  optional**: `red-admissibility.md` criterion 4 makes it part of what the RED
+  preserves a run with no way left to say what it ran.
+  **`RED assertion-stripped result` is in the mirror for the same reason and is
+  not optional**: `red-admissibility.md` criterion 4 makes it part of what the RED
   gatekeeper judged, so a group without it preserves a run whose admissibility
   can no longer be re-checked. **A round whose RED observation was the
   falsifiability trio moves the trio, not a RED pair**:
