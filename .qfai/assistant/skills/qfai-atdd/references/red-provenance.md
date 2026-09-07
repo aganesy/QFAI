@@ -434,6 +434,29 @@ Read the row's entry and take the branch it names:
 
 **A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.** P1b fixes every row branch; the mutation needs production code this stage does not own, so `/qfai-implement` performs it at Phase Red step 3c and records it here. Treating the empty trio as a malformed handoff stopped the run on the first such row; deferring it left nobody able to produce the evidence, since the only phase with a production agent was waiting for it.
 
+## A split row comes back as a fresh handover
+
+`/qfai-implement` Phase Red step 3b judges the shape of the `Selector` this
+stage handed over, before it copies the cell into the ledger. A selector that
+accumulates unrelated boundaries is refused there: that skill raises a Change
+Request asking `/qfai-sdd` Phase 2b to split the row, parks the row at
+`blocked`, and copies nothing.
+
+**The tests that split row needs are this stage's to write, one per new row.**
+`/qfai-implement` authors no acceptance test, so a split leaves the new rows
+with none — and each is a `todo` row with `-` in `Test file` and `Selector`,
+exactly like any other Phase 2b seed. Take them the way the first pass takes a
+seeded row: one test per row, one branch per row, one entry per row.
+
+Nothing carries over from the refused handover except what it was refused for.
+The original entry describes a selector no row holds any more, so it is not
+re-used and not amended: its evidence names boundaries now spread across
+several rows, and a RED observed against the whole of it is the observation the
+refusal rejected. Re-run each new row's own selector for its own RED.
+
+The refused row itself needs nothing from this stage. Phase 2b re-scopes it,
+and its `Blocked-By` is cleared by the same write.
+
 ## A shared test artifact outlives the row that recorded it
 
 P1c closes one row before the next test is written, so a `done` row’s
