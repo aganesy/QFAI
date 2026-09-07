@@ -139,8 +139,9 @@ to end.
   `falsifiability` row's mutation run **is** that round's proof and is not
   repeated — the trio above stands in its place
 - `Round N: Review pack` — the `review-<timestamp>/` directory this round's
-  verdicts were written to, and `Round N: Review pack seal` beside it (hashing
-  procedure: `evidence-revision.md`). Each review creates a new pack, so a
+  verdicts were written to, and `Round N: Review pack seal` beside it (the procedure, its
+  subject and why the seal lives outside the pack:
+  `evidence-revision.md#review-pack-seal`). Each review creates a new pack, so a
   bare row-level hash left the completion gate unable to say which directory to
   recompute over — it either checked another round's pack or stopped a correct
   item. **One pair per review attempt, not one per round**: a `REVISE` that
