@@ -58,7 +58,7 @@ Before producing deliverables, read **project memory**:
    or customised project can then hold two different bodies for one role. So **skip that body
    only when it matches the card in context; when they differ, the catalog entry is the role
    contract and wins**, and the divergence is a stale manifest to repair
-   (`skills/qfai-atdd/references/stale-manifest.md`). Read the body on demand when no card is
+   (`.qfai/assistant/skills/qfai-atdd/references/stale-manifest.md`). Read the body on demand when no card is
    in context. Each `agents/<id>.md` card repeats this same scope in its own
    `## Inputs you must read`.)
 3. discussion pack in `.qfai/discussion/` (if present)
