@@ -60,7 +60,7 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
     });
 
     it(`${tree}: every all-required gate item this path touches is covered`, async () => {
-      // The 11-point gate is ALL-conditions-required, so covering only item 3
+      // The 12-point gate is ALL-conditions-required, so covering only item 3
       // still left the row unable to reach `done`.
       const skill = await read(tree, SKILL);
       expect(skill).toContain(
@@ -112,7 +112,9 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
 
       const reference = await read(tree, REFERENCE);
       expect(reference).toContain("**The `FINAL CHECKLIST` Red and Green boxes**");
-      expect(reference).toContain("**`project_memory` and `constitution/workflow.md`**");
+      expect(reference).toContain(
+        "**`project_memory` and `.qfai/assistant/constitution/workflow.md`**",
+      );
     });
 
     it(`${tree}: the evidence contract states the two forms are exclusive`, async () => {

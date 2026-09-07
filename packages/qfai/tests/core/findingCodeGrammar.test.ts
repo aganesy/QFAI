@@ -5,10 +5,19 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { GATE_GROUP_FAMILIES } from "../../src/cli/commands/validate.js";
+import { EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID } from "../../src/core/ruleIds.js";
 import { SAAS_PACKAGE_SKIPPED_GATE_FAMILIES } from "../../src/core/saasPackage/skippedGates.js";
+import { familyMatches } from "../helpers/gateFamilies.js";
 
 const SRC_ROOT = path.resolve(__dirname, "../../src");
 const DOC_PATH = path.resolve(__dirname, "../../docs/finding-codes.md");
+
+/**
+ * Wrap-tolerant containment: what the document says is the rule, the column it
+ * wraps at is not. Without this a sentence assertion fails on a reflow that
+ * changed no wording.
+ */
+const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 const TEST_STUB_VALIDATOR = path.resolve(__dirname, "../../src/core/validators/testTodoStubs.ts");
 
 /** The one grammar a new finding code may use — see `docs/finding-codes.md`. */
@@ -39,6 +48,7 @@ const SHARED_ISSUE_FACTORY = "issue";
 const KNOWN_LOCAL_FACTORIES: readonly string[] = [
   "canonicalIssue",
   "classificationIssue",
+  "competitiveIssue",
   "contractIssue",
   "makeIssue",
   "skillIssue",
@@ -80,7 +90,6 @@ const LEGACY_FINDING_CODES: readonly string[] = [
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-002",
   "QFAI-CFG-LINK-003",
-  "QFAI-UIUX-PERF",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
   "R-AUTOPILOT-POLICY-WIDENED",
@@ -361,18 +370,81 @@ async function emittedCodes(): Promise<string[]> {
   return (await scanSource()).codes;
 }
 
+/**
+ * A path as a comparable key, separators normalised.
+ *
+ * `ts.createSourceFile` normalises the name it is handed to forward slashes,
+ * and the keys this file resolves come from `path.resolve`. On POSIX those are
+ * the same string; on win32 they differ by every separator, so the lookup in
+ * {@link codesInFile} always missed and the guard below never ran on a Windows
+ * checkout while passing in CI (#1130). Normalised here rather than at
+ * `createSourceFile`, because `fileName` is TypeScript's to shape and a later
+ * version could normalise it differently — the test's own key is the test's.
+ *
+ * `\\` is folded unconditionally rather than via `path.sep`. Keyed on `path.sep`
+ * this function is the IDENTITY on POSIX, so removing it would leave every row
+ * green on Linux — the same one-platform blindness that let the defect live.
+ * The cost is that a POSIX filename containing a literal backslash would fold
+ * onto a different key; no file under `src/` has one, and a guard both
+ * platforms can verify is worth more than tolerating a name this scan will
+ * never see.
+ */
+function pathKey(file: string): string {
+  return file.replace(/\\/g, "/");
+}
+
 /** Every code one file can put on a finding, resolved against the whole tree. */
 async function codesInFile(file: string): Promise<string[]> {
   const scan = await scanSource();
-  const source = scan.sources.find((candidate) => candidate.fileName === file);
+  const key = pathKey(file);
+  // Both sides through the same function. Normalising the incoming key alone
+  // is sufficient today — `ts` already hands back forward slashes — so the
+  // second call changes no result and no row can distinguish it. It is
+  // insurance against a `ts` version that stops normalising, which is a
+  // dependency's choice rather than this repository's; read it as a hedge, not
+  // as something the suite verifies.
+  const source = scan.sources.find((candidate) => pathKey(candidate.fileName) === key);
   if (source === undefined) throw new Error(`not scanned: ${file}`);
   return [...collectCodes([source], scan.factories, scan.constants)];
 }
 
-/** `QFAI-TEST-*` matches `QFAI-TEST-002`; a bare `QFAI-TEST-001` does not. */
-function familyMatches(family: string, code: string): boolean {
-  return family.endsWith("*") ? code.startsWith(family.slice(0, -1)) : family === code;
-}
+/**
+ * The matcher itself, because it is the thing that can fail by matching
+ * nothing.
+ *
+ * The table entry below is the one `GATE_GROUP_FAMILIES.tdd` actually holds.
+ * Read as one pattern it satisfies neither arm — not a glob, and equal to no
+ * code — so every coverage claim built on it passed by checking nothing. The
+ * guard below is one of those claims; it survives today only because the codes
+ * it scans happen to be covered by a different, clean entry in the same array
+ * (#1200).
+ */
+describe("gate-family matching", () => {
+  const ANNOTATED = "TDDLIST_* (execution state)";
+
+  it("matches through an annotation after the pattern", () => {
+    expect(familyMatches(ANNOTATED, "TDDLIST_MISSING")).toBe(true);
+  });
+
+  it("still requires the prefix, so the annotation is not a wildcard", () => {
+    expect(familyMatches(ANNOTATED, "QFAI-TEST-001")).toBe(false);
+  });
+
+  it("keeps an exact entry exact", () => {
+    expect(familyMatches("QFAI-TRACE-002", "QFAI-TRACE-002")).toBe(true);
+    expect(familyMatches("QFAI-TRACE-002", "QFAI-TRACE-003")).toBe(false);
+  });
+
+  it("reads an annotated exact entry as that code, not as the whole cell", () => {
+    expect(familyMatches("QFAI-TRACE-002 (ledger shape)", "QFAI-TRACE-002")).toBe(true);
+  });
+
+  it("covers no code at all when the entry is only an annotation", () => {
+    // `startsWith("")` is true of every string, so an empty pattern would make
+    // a comment-only cell cover the entire finding surface.
+    expect(familyMatches("   ", "QFAI-TEST-001")).toBe(false);
+  });
+});
 
 describe("finding code grammar", () => {
   it("finds every factory a finding can be built through", async () => {
@@ -404,6 +476,94 @@ describe("finding code grammar", () => {
     expect(LEGACY_FINDING_CODES).toEqual([...new Set(LEGACY_FINDING_CODES)].sort());
   });
 
+  it("tells a branch holding a frozen-family code what to do with it", async () => {
+    // The registry does not grow, so such a branch renames. Without the steps,
+    // the reader has to work out what a rename costs and what it may reuse.
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
+
+    expect(doc).toContain("## A branch that already emits a frozen-family code");
+    expect(doc).toContain("**Rename to `QFAI-<AREA>-<NNN>`**");
+    expect(doc).toContain("**Keep the `<AREA>-<NNN>` suffix the old id had**");
+    expect(doc).toContain(
+      "**Check the stripped spelling for a collision, not only the full code.**",
+    );
+    expect(doc).toContain("**Check whether the code already exists.**");
+  });
+
+  it("says what the alias covers and what a shipped rename still breaks", async () => {
+    // The alias is about waivers. The code is also an operator-facing
+    // identifier in annotations and in `validate.json`, so a rename is a
+    // behaviour change for anyone reading those.
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
+
+    expect(doc).toContain("### Renaming a code that has shipped");
+    expect(doc).toContain("The alias above covers waivers and nothing else.");
+    expect(doc).toContain("breaking for anyone identifying findings by code");
+    // And the deferred case stays the shapes the strip cannot reach.
+    expect(doc).toContain("Renaming a legacy code whose shape is **not** `<AREA>-<NNN>`");
+  });
+
+  it("does not claim a screaming-snake code has no numbered id", async () => {
+    // It has one — `TDDLIST_EXCEPTION_PARKED` is published under `rule`
+    // `TDDLIST-001`. What the strip cannot do is derive that id from the code,
+    // which is a different statement and the one the step has to make.
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
+
+    expect(doc).not.toContain("has no numbered id to alias at all");
+    expect(doc).toContain("does not match at all, so no alias is derived from it");
+    expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED` is published under `rule` `TDDLIST-001`");
+    // And the source that pairing is read from, so the example cannot go stale
+    // silently.
+    expect(EXCEPTION_PARKED_CODE).toBe("TDDLIST_EXCEPTION_PARKED");
+    expect(EXCEPTION_PARKED_RULE_ID).toBe("TDDLIST-001");
+  });
+
+  it("keeps the documented strip in step with the one waivers.ts applies", async () => {
+    // Two statements of one rule is how the document would come to promise an
+    // alias the resolver does not give. The document states the shape in prose,
+    // so both are checked on the same boundary cases instead of by comparing
+    // the two spellings.
+    // The pattern is read off the AST, not matched as source text. A text match
+    // has to spell the whitespace, the semicolon and the escaping exactly as
+    // the file happens to be formatted, so a reflow that changes no behaviour
+    // fails it.
+    const waiversPath = path.resolve(SRC_ROOT, "core/waivers.ts");
+    const waivers = await readFile(waiversPath, "utf-8");
+    const source = ts.createSourceFile(waiversPath, waivers, ts.ScriptTarget.Latest, true);
+    let literal: string | undefined;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === "STRIPPED_CODE_RE"
+      ) {
+        const initializer = unwrapExpression(node.initializer);
+        if (initializer !== undefined && ts.isRegularExpressionLiteral(initializer)) {
+          literal = initializer.text;
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    expect(literal, "STRIPPED_CODE_RE is not a regular expression literal in waivers.ts").toBe(
+      "/^QFAI-([A-Z]+-\\d{3})$/",
+    );
+
+    // The very pattern the implementation declares, evaluated on the cases the
+    // document names — so the two cannot promise different aliases.
+    const body = literal?.slice(1, literal.lastIndexOf("/")) ?? "";
+    const re = new RegExp(body);
+    // What the document promises an alias for.
+    expect(re.exec("QFAI-TDDLIST-007")?.[1]).toBe("TDDLIST-007");
+    // And the two shapes it says get none.
+    expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
+    expect(re.test("TDDLIST_EXCEPTION_PARKED")).toBe(false);
+
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
+    expect(doc).toContain("`QFAI-CFG-LINK-001` strips to nothing");
+    expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED`");
+  });
+
   it("documents every frozen family in docs/finding-codes.md", async () => {
     const doc = await readFile(DOC_PATH, "utf-8");
     const prefixes = new Set(
@@ -413,17 +573,42 @@ describe("finding code grammar", () => {
     expect(undocumented).toEqual([]);
   });
 
+  it("looks a source up by a win32-shaped path on every platform", async () => {
+    // `ts.createSourceFile` normalises `fileName` to forward slashes and the
+    // keys this file resolves come from `path.resolve`, so on win32 the two
+    // differed by every separator: the lookup found nothing, the row below
+    // threw `not scanned:`, and CI stayed green because POSIX spells both the
+    // same way (#1130).
+    //
+    // Keyed on a literal backslash form so this row fails on POSIX too if the
+    // normalisation is removed. A guard only one platform can observe is what
+    // produced the defect.
+    const { sources } = await scanSource();
+    const source = sources.find((candidate) =>
+      candidate.fileName.endsWith("/core/validators/testTodoStubs.ts"),
+    );
+    expect(source).toBeDefined();
+    if (source === undefined) return;
+
+    await expect(codesInFile(source.fileName.replace(/\//g, "\\"))).resolves.toContain(
+      "QFAI-TEST-002",
+    );
+  });
+
   it("covers every code a gate emits with a family entry, not a bare code", async () => {
     // Both family tables listed `QFAI-TEST-001` alone while the gate also
     // emits `QFAI-TEST-002`, so the partial-profile notice under-stated what
-    // `--profile saas-package` and `--profile tdd` had skipped.
+    // `--profile saas-package` and the profiles that skip the stub gate had
+    // skipped. The gate group asked here is the one that *owns* the stub gate:
+    // `runAtddValidators` and `runTddValidators` both call it, so it sits in
+    // its own `test-stubs` group rather than inside `tdd`.
     const stubCodes = await codesInFile(TEST_STUB_VALIDATOR);
     expect(stubCodes).toContain("QFAI-TEST-002");
 
     const tables = {
       "skippedGates.validateTestTodoStubs":
         SAAS_PACKAGE_SKIPPED_GATE_FAMILIES.validateTestTodoStubs,
-      "GATE_GROUP_FAMILIES.tdd": GATE_GROUP_FAMILIES.tdd,
+      "GATE_GROUP_FAMILIES.test-stubs": GATE_GROUP_FAMILIES["test-stubs"],
     };
     const uncovered: string[] = [];
     for (const [table, families] of Object.entries(tables)) {

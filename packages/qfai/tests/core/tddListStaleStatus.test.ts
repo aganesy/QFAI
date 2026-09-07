@@ -221,4 +221,70 @@ describe("TDDLIST_SELECTOR_UNRESOLVED — Selector is finally read", () => {
       },
     );
   });
+
+  /**
+   * The JSON array form of `Selector` (`selector-granularity.md#entry-form`), read per element.
+   *
+   * Unsplit, an array reached the containment check as one long string: it matched nothing
+   * verbatim, and the last-identifier fallback then answered on the array's **last** element
+   * alone. So `["missing_test","existing_test"]` resolved on `existing_test` and reported nothing
+   * about the missing first one — a row could lose a test and keep a clean validate.
+   */
+  describe("a Selector holding a JSON array is read per element", () => {
+    it("reports the row when one element of the array names no test", async () => {
+      await withLedger(
+        [
+          `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | ["missing_test","test_reconcile_head"] | done | - | ev |`,
+        ],
+        { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues).length).toBe(1);
+        },
+      );
+    });
+
+    it("accepts the row when every element names a test", async () => {
+      await withLedger(
+        [
+          `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | ["renders the header","test_reconcile_head"] | done | - | ev |`,
+        ],
+        { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues)).toEqual([]);
+        },
+      );
+    });
+
+    // Over-correction pins. A bare cell is ONE entry whatever punctuation it
+    // holds, so neither of these may start being split.
+    it("does not split a bare cell on its commas", async () => {
+      // Read as one name this resolves by the last-identifier fallback, as it
+      // always has. Split on commas, "renders the header" would be an entry of
+      // its own and this would still pass — so the pin is the shape below,
+      // where a comma-split would invent an entry that resolves to nothing.
+      await withLedger(
+        [
+          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | absent_one, test_reconcile_head | done | - | ev |",
+        ],
+        { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues)).toEqual([]);
+        },
+      );
+    });
+
+    it("treats a cell that only looks like an array as a single entry", async () => {
+      // Opens with `[` but is not JSON, so § Entry form makes it one entry —
+      // and as one entry the last identifier still resolves it.
+      await withLedger(
+        [
+          "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | [case 3] test_reconcile_head | done | - | ev |",
+        ],
+        { "tests/a.test.ts": TEST_FILE },
+        (issues) => {
+          expect(unresolved(issues)).toEqual([]);
+        },
+      );
+    });
+  });
 });

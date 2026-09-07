@@ -73,6 +73,8 @@ describe("gitignorePatternMatches", () => {
 describe("negationSamplePath", () => {
   it.each([
     ["!coverage-depth-*.md", "coverage-depth-sample.md"],
+    ["!implement-*.md", "implement-spec-0001.md"],
+    ["!atdd-*.md", "atdd-spec-0001.md"],
     ["!decisions/", "decisions/sample"],
     ["!decisions/**", "decisions/sample/leaf"],
     ["!.qfai/evidence/decision-*.md", ".qfai/evidence/decision-sample.md"],
@@ -90,6 +92,11 @@ describe("negationsOutrankLaterIgnores", () => {
   it("rejects one a later double-star glob re-ignores", () => {
     const lines = ["!decision-*.md", "**/*.md"];
     expect(negationsOutrankLaterIgnores(lines, ["!decision-*.md"])).toBe(false);
+  });
+
+  it("rejects an evidence negation followed by a canonical-name re-ignore", () => {
+    const lines = ["!implement-*.md", "implement-spec-*.md"];
+    expect(negationsOutrankLaterIgnores(lines, ["!implement-*.md"])).toBe(false);
   });
 
   it("accepts a negation that is genuinely last", () => {

@@ -1,8 +1,22 @@
 # 10 Plan
 
-## Goal
+- Goal: keep prototyping SSOT aligned to the multi-spec, autonomous, reviewer-driven Playwright loop with qualitative-only convergence per CHG-002 (discussion-20260516144141078).
 
-- Keep prototyping SSOT aligned to the multi-spec, autonomous, reviewer-driven Playwright loop with qualitative-only convergence per CHG-002 (discussion-20260516144141078).
+## Implementation approach
+
+The shape of the change is a set of coupled edits across
+`core/prototyping/**` and the two CLI commands, taken together rather than
+one module at a time — the cycle budget, the per-spec evidence layout and the
+review payload schema are read by validators and fixtures that would otherwise
+disagree with the code mid-change. `Current State` records what is wired today,
+`Next Maintenance Steps` is the ordered walk, and the sections after them carry
+the per-change detail.
+
+The alternative considered was per-invocation primary-spec selection with a
+scripted interaction transcript and quantitative pass thresholds — the v2.0 /
+UX-loop shape. It was rejected in CHG-002 and its surfaces were purged rather
+than deprecated, because a quantitative threshold on a qualitative judgement
+reads as a measurement while being a vote.
 
 ## Current State
 
@@ -38,6 +52,26 @@
 5. Resolve `08_Open-questions.md` OQ-0012-0002..0005 (prototyping.json shape under per-spec namespace; pivotDirective retention vs supersede; critique-vs-`*Feel` schema cleanup; capture role removal in steering / agent-routing). v1.8.10 shipped with implementation that pre-empts the recommended dispositions — OQ-0012-0002 adopts (A) flat + spec discriminator as an interim until per-spec migration (TDD-0384), OQ-0012-0003 retains `pivotDirective` per recommendation (A), OQ-0012-0004 drops `critique` per recommendation (A) and the `*Feel` schema is in `evaluatorReview.ts`. Final OQ closure is the follow-up gate; the "before implementation lands" wording is superseded by "before next major release".
 6. Do not recreate standalone prototyping spec packs unless the product surface genuinely splits again; extend `spec-0012` instead.
 
+## Test approach
+
+| Layer | Where                                                   | What it proves                                                                   |
+| ----- | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| unit  | `packages/qfai/tests/core/prototyping/*.test.ts`        | Cycle budget, per-spec path helpers, license verification, review-payload schema |
+| cli   | `packages/qfai/tests/cli/commands/prototyping*.test.ts` | Hard-stop exit-code dispatch and per-spec certify aggregation                    |
+| e2e   | `packages/qfai/tests/e2e/prototypingFullLoop.test.ts`   | The loop end to end, cycle 0 through convergence                                 |
+
+Two boundaries need their own cases rather than a shared one:
+
+- The cycle terminator. `MAX_ITERATIONS = 10` and `MAX_ITERATION_INDEX = 9` are
+  one SSOT in `core/prototyping/iteration.ts`, and the off-by-one at `--cycle 9`
+  reaches two different branches depending on evaluation order — TDD-0436 pins
+  exit 65 from the `shouldStop` branch and asserts the cycle-mismatch message is
+  NOT the one emitted.
+- The hard-stop classes. Lock drift (2), reviewer session failure (64), license
+  verification (66) and mid-run spec-set change (2) share exit codes in pairs, so
+  a case asserting "it stopped" cannot tell two of them apart; each class asserts
+  its own discriminator.
+
 ## v1.9.2 Second-Wave maintenance steps (How-only)
 
 - REQ-0150 (`--emit-skeletons`, DR-0261 / DR-0273): in `cli/lib/args.ts` parse `--emit-skeletons` (boolean, opt-in) and `--skeleton-mode full|placeholder|stub` (default `placeholder`); in `core/prototyping/skeletonEmit.ts` (new) emit one token-styled placeholder HTML per `frozenSurfaceUnion` `screens[].id` reading DESIGN.md tokens, NO per-screen LLM call at cycle 0; ensure the convergence path populates `evidenceRefs[]` with both `screenshot` and `html` kinds for every union screen. Default (flag absent) preserves v1.9.1 emit path.
@@ -65,3 +99,13 @@ Coupled production wire-ins (no production caller yet; tests-only):
 - `reviewerDispatch.ts` — wire in alongside TDD-0401 (production runner injection).
 - `evaluatorReview.ts#parseEvaluatorReview` — wire in the same wave as TDD-0384 so per-`(spec, screen)` review.json schema fails fast at iterate/certify.
 - `handoff.ts#validateImageSources` — wire in once the prototype-handoff.yaml population path lands; until then `licenseVerify` consumes `prototyping.json#imageSources` directly.
+
+## Risk mitigation
+
+| Risk                                                                                                                                  | Likelihood / impact | Mitigation                                                                                                                                                                     | Trigger to act                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| The cycle budget is edited in a validator or a fixture instead of the single SSOT, so 10 and 15 coexist in the tree                   | med / high          | `MAX_ITERATIONS` / `MAX_ITERATION_INDEX` in `core/prototyping/iteration.ts` are the sole SSOT; the purge removes 15-magic from validators and fixtures atomically              | Any literal cycle count appears outside `iteration.ts`              |
+| The iter-dir layout is mixed — certify reads per-spec, iterate still writes flat — so evidence is written where certify will not look | high / high         | The mixed state is recorded rather than hidden (TDD-0384 is the migration row); certify gates on per-spec presence so the gap fails loudly                                     | Evidence is reported missing for a spec whose screens were reviewed |
+| A stock-photo fill lands with an unknown or non-allowlisted licence and ships in the handoff                                          | low / high          | `licenseVerify` runs against the cycle-0 frozen catalogue and hard-stops with exit 66; every fill records `{url, license, attribution, source}`                                | A fill appears with no `license` field                              |
+| Qualitative convergence is relaxed back into a numeric threshold because it is easier to compute                                      | med / high          | Convergence is the AND over `(spec, screen)` of all four axes exceptional plus empty `lap[]` and `designMdViolations[]`; the quantitative surfaces were purged, not deprecated | A pass-percentage appears anywhere on the convergence path          |
+| A destructive mutation runs unlogged, so an evidence tree cannot be reconstructed after a `--cycle 0 --force`                         | med / med           | `mutationLog.ts` is an append-only writer called from every destructive mutation; `R-EVIDENCE-MUTATION-UNLOGGED` (error) fires when one is missing                             | An iter-NN mutation lands with no writer call                       |

@@ -88,7 +88,7 @@ export function parseDeltaV1(text: string): ParsedDeltaV1 {
   const headings = parseHeadings(text);
   const sections = extractH2Sections(text);
   const hasDeltaHeading = headings.some(
-    (heading) => heading.level === 1 && normalizeHeading(heading.title).startsWith("delta"),
+    (heading) => heading.level === 1 && isDeltaTitle(heading.title),
   );
   const updateHistorySection = findSection(sections, "Update History");
   const decisionLogSection = findSection(sections, "Decision Log");
@@ -148,6 +148,35 @@ export function toDeltaMeta(record: Record<string, unknown>): DeltaMeta {
     scope: asStringArray(record.scope),
     notes: asString(record.notes),
   };
+}
+
+/** `date: YYYY-MM-DD`, as the shipped skeleton spells an unfilled date. */
+const DATE_PLACEHOLDER_RE = /^y{4}-m{2}-d{2}$/i;
+/** `<file / module this decision touches>`, as the skeleton spells free text. */
+const ANGLE_PLACEHOLDER_RE = /^<[^<>]*>$/;
+
+function isUnfilledValue(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed === "" || DATE_PLACEHOLDER_RE.test(trimmed) || ANGLE_PLACEHOLDER_RE.test(trimmed);
+}
+
+/**
+ * True when the entry is still the shipped skeleton rather than a decision.
+ *
+ * The delta template has to parse — an author copies it and fills it in — and
+ * it deliberately carries real `primary` / `tags` / `compat` values so the
+ * first copy teaches the vocabulary the report counts. That leaves `date`,
+ * `scope` and `notes` as the only evidence of whether anybody wrote anything,
+ * so those three decide it. Counting an untouched copy publishes
+ * `Initial 1 / @docs 1 / Improvement 1` for a spec whose decision log is empty,
+ * and a fabricated 1 also hides the "nothing was counted" disclosure that a
+ * real zero would raise.
+ */
+export function isPlaceholderDeltaMeta(meta: DeltaMeta): boolean {
+  if (isUnfilledValue(meta.date) || isUnfilledValue(meta.notes)) {
+    return true;
+  }
+  return meta.scope.length > 0 && meta.scope.every((item) => isUnfilledValue(item));
 }
 
 export function hasMigrationBullets(sectionBody: string | null): boolean {
@@ -280,10 +309,56 @@ function readHeadingBody(
   return lines.slice(startLine - 1, endLine).join("\n");
 }
 
+/** A fenced block's opening or closing line: the run, then the info string. */
+const FENCE_LINE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*(.*)$/;
+
+/**
+ * The body of the first `yaml` / `yml` fenced block in `body`, or null when
+ * there is no such block.
+ *
+ * Line-based rather than one regular expression over the whole string, and both
+ * fence characters rather than backticks only. A single non-greedy
+ * ```` ```…``` ```` match got two things wrong that matter now that
+ * `parseHeadings` skips fenced content properly: a `~~~yaml` block was not seen
+ * at all — so its markers stayed in the text and the YAML parse failed on them —
+ * and a nested ```` ``` ```` inside a wider block ended the match early. The
+ * closer rule is CommonMark's: same character, at least as long, no info string.
+ *
+ * An EMPTY block returns the empty string, not null. The two answers mean
+ * different things to a caller that falls back to the raw body — "there is no
+ * fenced block here, read the text yourself" versus "there is one and the author
+ * left it empty" — and collapsing them handed the raw body, fence markers
+ * included, to a YAML parser that then failed on the markers. An empty section
+ * is a legal state, and it was reported as one only when the author had NOT
+ * fenced it.
+ */
 function extractYamlCodeBlock(body: string): string | null {
-  const match = body.match(/```(?:yaml|yml)\s*([\s\S]*?)```/i);
-  const value = match?.[1]?.trim() ?? "";
-  return value.length > 0 ? value : null;
+  const lines = body.split(/\r?\n/);
+  let marker: string | null = null;
+  const collected: string[] = [];
+  for (const line of lines) {
+    const match = FENCE_LINE_RE.exec(line);
+    if (marker === null) {
+      if (match === null) continue;
+      const info = (match[2] ?? "").trim().toLowerCase();
+      if (info === "yaml" || info === "yml") {
+        marker = match[1] ?? "";
+      }
+      continue;
+    }
+    if (match !== null) {
+      const run = match[1] ?? "";
+      const info = (match[2] ?? "").trim();
+      if (info === "" && run[0] === marker[0] && run.length >= marker.length) {
+        break;
+      }
+    }
+    collected.push(line);
+  }
+  if (marker === null) {
+    return null;
+  }
+  return collected.join("\n").trim();
 }
 
 function parseYamlMeta(block: string | null): {
@@ -328,7 +403,19 @@ function parseVerificationPlan(body: string | null): {
     return { planHeadingLine: null, parseError: null, items: [] };
   }
   const planBody = readHeadingBody(lines, headings, planHeading, lines.length);
-  const yamlSource = planBody.trim();
+  // A fenced block wins over the raw body when one is present.
+  //
+  // Both spellings are accepted, and the unfenced one is not deprecated: it is
+  // what every document written before this read existed contains, and this
+  // parser runs over adopter trees it does not control.
+  //
+  // A fence is worth accepting because the unfenced form is not inert Markdown.
+  // A YAML comment indented by two spaces — `  # unit | integration | ...` — is
+  // a legal ATX heading under CommonMark, so an unfenced plan renders its own
+  // comments as top-level headings on GitHub. The shipped template hit exactly
+  // that. Reading the fence lets the template be correct Markdown without
+  // breaking a single document already in the wild.
+  const yamlSource = (extractYamlCodeBlock(planBody) ?? planBody).trim();
   if (yamlSource.length === 0) {
     return { planHeadingLine: planHeading.line, parseError: null, items: [] };
   }
@@ -401,6 +488,18 @@ function sanitizeMetaYaml(block: string): string {
   }
 
   return out.join("\n");
+}
+
+/**
+ * The shipped delta files are numbered (`# 09 Delta`, `# 18 Delta`) because every
+ * file in a spec pack follows the `NN Title` convention. Strip that leading
+ * ordinal before the prefix test, so the heading the templates ship and the
+ * heading this parser recognises are the same thing.
+ */
+function isDeltaTitle(title: string): boolean {
+  return normalizeHeading(title)
+    .replace(/^\d+\s+/, "")
+    .startsWith("delta");
 }
 
 function normalizeHeading(value: string): string {
