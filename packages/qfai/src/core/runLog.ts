@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "./config.js";
+import type { FailOn, QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import { findLatestPack } from "./packLocator.js";
 import { toRelativePath } from "./paths.js";
@@ -41,6 +41,12 @@ export async function writeValidateRunLog(input: {
   startedAt: Date;
   command?: string;
   status?: RunLogResultStatus;
+  /**
+   * この run の pass/fail を決めた実効しきい値。呼び出し側でフラグと config を
+   * 突き合わせた結果であり、成果物だけを読む下流が status の根拠を再現できる
+   * よう記録する。渡されなければ `null`。
+   */
+  failOn?: FailOn;
 }): Promise<ValidateRunLog> {
   const root = path.resolve(input.root);
   const outDir = resolvePath(root, input.config, "outDir");
@@ -75,6 +81,7 @@ export async function writeValidateRunLog(input: {
       status,
       errors: input.result.counts.error,
       warnings: input.result.counts.warning,
+      fail_on: input.failOn ?? null,
     },
   };
 

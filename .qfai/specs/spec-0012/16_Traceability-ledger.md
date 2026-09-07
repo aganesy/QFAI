@@ -1,5 +1,19 @@
 # 16 Traceability Ledger
 
+## Purpose
+
+Link each obligation in this spec to the implementation file that realizes it and
+the test file that proves it. `npx qfai validate` reads this file to enforce
+implementation integrity: when a spec's `03_Acceptance-Criteria.md` or
+`04_Business-Rules.md` changes on a branch, every implementation file linked from
+a changed spec must also have changed in that branch, otherwise `QFAI-TRACE-001`
+(severity `error`) fires.
+
+## Layer SSOT
+
+Where each layer of the prototyping surface currently lives. This is the
+entry point; the row-level obligations are in the ledger table below.
+
 | Layer                          | Current SSOT                                                                     |
 | ------------------------------ | -------------------------------------------------------------------------------- |
 | Skill                          | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md`     |
@@ -20,7 +34,7 @@
 | UI evidence validator          | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`                       |
 | Validate gate                  | `packages/qfai/src/core/validate.ts`                                             |
 
-## Requirement Mapping (primary SUT only)
+## Ledger Table (required when this file exists)
 
 This table records the **primary** code SUT for each REQ. Secondary
 SUTs and per-iter checks are reachable via the AC/BR-Refs in
@@ -28,7 +42,7 @@ SUTs and per-iter checks are reachable via the AC/BR-Refs in
 mean no machine SUT exists; the row notes how the requirement is
 otherwise enforced.
 
-| Requirement   | Primary SUT (Implementation)                                                                                                                           | Primary SUT (Test)                                                                                                                  |
+| Requirement   | Implementation File                                                                                                                                    | Test File                                                                                                                           |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | REQ-0012-0030 | `assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md` (skill prompt is SUT for generator pivot-directive contract)      | `tests/skill/prototypingSkill.test.ts` (skill asset / prompt assertions)                                                            |
 | REQ-0012-0031 | `packages/qfai/src/core/prototyping/evaluatorReview.ts` (4-axis schema + 200–500 word prose enforcement)                                               | `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`                                                                      |

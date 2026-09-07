@@ -20,12 +20,17 @@ import {
   REQUIRED_LAYERED_SHARED_FILES_V1421,
   REQUIRED_LAYERED_SPEC_FILES_V1421,
 } from "../../src/core/specLayout.js";
+import { validateTriageSection } from "../../src/core/validators/specPack.js";
 
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const TEMPLATES = "assistant/skills/qfai-sdd/templates/specs";
+const SKILL = "assistant/skills/qfai-sdd";
+const TEMPLATES = `${SKILL}/templates/specs`;
+
+const readSkillFile = (tree: string, rel: string): Promise<string> =>
+  readFile(path.join(repoRoot, tree, SKILL, rel), "utf-8");
 
 const listTemplates = (tree: string, sub: string): Promise<string[]> =>
   readdir(path.join(repoRoot, tree, TEMPLATES, sub));
@@ -126,6 +131,51 @@ describe("qfai-sdd ships a template for every required spec file", () => {
         const text = await readTemplate(tree, `_policies/${name}`);
         expect(text.match(/\b(?:US|AC|BR|EX|TC)-\d+/g) ?? [], name).toEqual([]);
       }
+    });
+
+    it(`${tree}: the delta templates state their multi-run layout`, async () => {
+      // `/qfai-sdd` re-runs against an existing spec, but the templates were
+      // single-shot, so operators invented dated `## Triage — <date>` headings.
+      // `QFAI-TRIAGE-*` binds to the first `## Triage` only, and every row under
+      // a duplicate heading is therefore never checked. The templates must state
+      // the per-run shape themselves.
+      for (const rel of ["spec/09_delta.md", "_policies/10_delta.md"]) {
+        const text = await readTemplate(tree, rel);
+
+        expect(text.match(/^## Triage\s*$/gm) ?? [], rel).toHaveLength(1);
+        expect(text.match(/^## Change Summary\s*$/gm) ?? [], rel).toHaveLength(1);
+        expect(text, rel).toMatch(/^### DELTA-\d{4} \(YYYY-MM-DD\)$/m);
+        expect(text, rel).toContain("never opens a second `## Triage` H2");
+      }
+    });
+
+    it(`${tree}: a re-run's H3 sub-section stays inside the graded ## Triage`, async () => {
+      // The H3 shape is only safe because a section ends at a heading of the
+      // same or higher level, so per-run sub-tables stay inside the extracted
+      // `## Triage`. Grade the shipped template, then grade it again with a
+      // second run appended the way the template tells operators to append it.
+      const text = await readTemplate(tree, "spec/09_delta.md");
+      const secondRun = [
+        "### DELTA-0002 (YYYY-MM-DD)",
+        "",
+        "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| REQ-0002 | second run | spec-0001 | UPDATE | APPEND | - | re-run |",
+        "",
+        "## Rationale",
+      ].join("\n");
+      const rerun = text.replace("## Rationale", secondRun);
+
+      expect(validateTriageSection(text, "spec-0001/09_delta.md")).toEqual([]);
+      expect(validateTriageSection(rerun, "spec-0001/09_delta.md")).toEqual([]);
+    });
+
+    it(`${tree}: Phase 4 states the re-run append rule`, async () => {
+      const checklist = await readSkillFile(tree, "references/sdd-phase-checklists.md");
+
+      expect(checklist).toContain(
+        "A re-run appends to the existing `## Triage`; never open a second `## Triage` H2.",
+      );
     });
   }
 });

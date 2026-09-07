@@ -1,0 +1,52 @@
+# Document schema: `<specsDir>/spec-NNNN/09_delta.md`
+#
+# What changed in this pack and why it was allowed to change.
+#
+# This is the one document in the pack that is append-only for the pack's whole
+# life, so it carries the shape that was current at each append: a bare triage
+# table early on, `### DELTA-NNNN (YYYY-MM-DD)` run sections in the template's
+# form, and dated `## <date> — <change>` sections in between. Pinning any one of
+# those would reject the file's own history, and rewriting history is exactly
+# what a change ledger must not do.
+#
+# So the requirement here is the one that holds across every era: a delta says
+# what changed, under a heading a reader can find. `Change Summary` and `Triage`
+# are the two headings that have carried that, and every pack in the tree has at
+# least one of them.
+
+structure:
+  - heading:
+      pattern: "^# 09 Delta.*"
+      regex: true
+    description: The change ledger for this spec pack.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## (Change Summary|Triage)$"
+          regex: true
+        description: >-
+          The change record. `Change Summary` states what changed and when;
+          `Triage` states which requirement drove it and who approved the
+          operation. A pack carries one or both, in either order.
+
+          Structure only, and optional at that. The per-run table's columns ARE
+          a contract — `Source`, `Operation`, `Approved By` — but which of the
+          ledger's eras a given run belongs to decides where that table sits,
+          and a shape lane that guessed wrong would demand the rewrite of an
+          immutable record.
+
+          Optional because entries are PREPENDED: the newest change is the first
+          heading, so requiring a named section to come first would fail every
+          pack the moment it records a change. What this lane holds the document
+          to is its H1 — four spellings of it existed (`# 09 delta`,
+          `# 09 Delta`, `# 09 Delta (Migration Record)`, a subject-suffixed one)
+          and a reader could not grep for the file's own title.
+        optional: true
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Update History$"
+          regex: true
+        description: The dated list of revisions to this pack.
+        optional: true
+        allow_additional: true

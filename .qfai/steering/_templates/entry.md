@@ -1,12 +1,13 @@
 ---
-id: entry-XXXX
-kind: decision
-status: active
-created: YYYY-MM-DDTHH:MM:SSZ
-updated: YYYY-MM-DDTHH:MM:SSZ
-links: []
-# promote-to: 07_Decisions.md   # uncomment when this entry should be
-#                              # promoted into the formal Decision log
+id: 2026-MM-DD-kebab-case-id # required; kebab-case ASCII; matches filename stem
+status: active # required; enum: active | handoff | archived
+kind: decision # required; see .qfai/assistant/catalog/worklog-entry.schema.md
+created: YYYY-MM-DD # required; ISO-8601 date
+updated: YYYY-MM-DD # required; ISO-8601 date; >= created
+scope: global # required; "global" or "spec-NNNN"
+blocking: false # required; boolean
+promote-to: null # required; "spec-NNNN/07_Decisions.md" or null
+links: [] # required; array (may be empty)
 ---
 
 # Title of the entry
@@ -14,25 +15,27 @@ links: []
 ## Context
 
 What triggered this entry? Reference any spec, contract, or external
-input that informs the decision/risk/blocker.
+input that informs the entry.
 
-## State
+<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->
+<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->
 
-What is the current state? (mandatory for `handoff` entries)
+## State of the task
 
-## Constraints
+(Mandatory for kind: handoff. See contract for guidance.)
 
-What constraints apply? (mandatory for `handoff` entries)
+## Next single action
 
-## Next action
+(Mandatory for kind: handoff. See contract for guidance.)
 
-What is the next action / what would unblock this? (mandatory for
-`handoff` entries)
+## Constraints to preserve
 
-## Open Questions
+(Mandatory for kind: handoff. See contract for guidance.)
 
-Any open questions? (mandatory for `handoff` entries)
+## Open questions
 
-## References
+(Mandatory for kind: handoff. See contract for guidance.)
 
-Links, files, decisions. (mandatory for `handoff` entries)
+## References to consult first
+
+(Mandatory for kind: handoff. See contract for guidance.)

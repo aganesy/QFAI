@@ -15,7 +15,7 @@
  * a spelling one accepts and the other rejects makes a legitimate observation
  * unrecordable: an uncommitted GREEN writes `working-tree+<hash>` into both,
  * and a ledger grammar that forbade `+` turned every such row into
- * `TDDLIST_EVIDENCE_CELL_MALFORMED` while the review gate called the identical
+ * `QFAI-TDDLIST-011` while the review gate called the identical
  * string correct.
  */
 export const REVISION_FORM_SOURCE = "(?:[0-9a-fA-F]{7,64}|working-tree\\+[0-9a-fA-F]{64})";

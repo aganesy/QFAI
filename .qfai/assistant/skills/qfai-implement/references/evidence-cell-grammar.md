@@ -45,7 +45,7 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
   row's `TDD-ID` lowercased — the slug of the section both skills require per
   row. An anchor into another spec's file, into the file of the stage that did
   not author the test, or at another row's section, is
-  `TDDLIST_EVIDENCE_CELL_MALFORMED` — it names proof that was never taken for
+  `QFAI-TDDLIST-011` — it names proof that was never taken for
   this row. The fragment is required — a pointer to the file alone does not
   say which item's proof to read. A row whose `TDD-ID` is missing or malformed
   has no fragment to bind to, so only the file is checked there;
@@ -66,7 +66,7 @@ The marker is legal in **exactly one** place: after an `implement-` anchor on
 an `E2E` / `API` row. Item 10 scopes the marker pass to those two layers, so it
 licenses nothing on an `Integration` row — that layer has no pre-split form to
 grandfather — and it licenses nothing on a row already pointing at the file it
-owns. Anywhere else it is `TDDLIST_EVIDENCE_CELL_MALFORMED`: item 10 reads the
+owns. Anywhere else it is `QFAI-TDDLIST-011`: item 10 reads the
 marker to tell a legacy row from a current one, so a row that may carry it for
 no reason is a row that may claim to be legacy.
 
