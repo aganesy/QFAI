@@ -94,7 +94,36 @@ afterEach(async () => {
   }
 });
 
-describe("run-pr-merge plan", { timeout: 30000 }, () => {
+/**
+ * Deliberately no `{ timeout: … }` here, and none on the pagination block below.
+ *
+ * Both declared 30 s, a quarter of the project's `testTimeout`, on a file that
+ * shells out to the `run-pr-merge` script. `vitest.knobs.ts` raised that value
+ * to 120 s and recorded why — "ninety-three per cent of every CLI invocation is
+ * loading the 1.44 MB bundle", the pool is ten workers, and "15 s was never a
+ * budget for this workload. It was a budget for in-process tests, applied to a
+ * suite that is subprocess-bound." A local quarter of the measured value is the
+ * same mistake at a different scale (#1233).
+ *
+ * Observed, one full `core` run on a clean tree:
+ *
+ * ```text
+ * ❯ tests/core/prMergePlan.test.ts (4 tests | 1 failed) 91079ms
+ *   FAIL run-pr-merge pagination
+ *          > detects unresolved threads split across multiple GraphQL pages
+ *     → Test timed out in 30000ms.
+ * ```
+ *
+ * `30000ms` is this block's own number rather than the project's, which is what
+ * identifies the override as the cause. One of the cases that PASSED in the same
+ * run took 22231 ms, so the file was sitting at three quarters of its ceiling
+ * while green — the margin was gone before anything failed.
+ *
+ * `prFixMonitor.test.ts` is the same harness with three spawn sites and declares
+ * `{ timeout: 120000 }`. Inheriting reaches the same value without a second copy
+ * to update when `CR-20260823-0001` lets the knobs file lower it.
+ */
+describe("run-pr-merge plan", () => {
   it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
     const result = await runPrMerge({
       scenario: makeScenario({
@@ -129,7 +158,7 @@ describe("run-pr-merge plan", { timeout: 30000 }, () => {
   });
 });
 
-describe("run-pr-merge pagination", { timeout: 30000 }, () => {
+describe("run-pr-merge pagination", () => {
   it("detects unresolved threads split across multiple GraphQL pages", async () => {
     const thread1 = makeThread();
     const thread2: FakeThread = { ...makeThread(), id: "PRRT_kwDOQuL-page2" };
