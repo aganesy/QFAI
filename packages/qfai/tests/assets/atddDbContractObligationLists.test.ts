@@ -1,18 +1,15 @@
 /**
- * `CON-DB` coverage is a blocking obligation (`QFAI-ATDD-115`, `error`), and it
- * cannot be spec-scoped away, yet `/qfai-atdd` stated it only once — in Success
- * Criteria. Every other enumeration of the obligation set stopped at `CON-API`:
+ * `CON-DB` coverage is a blocking obligation (`QFAI-ATDD-115`, `error`) that no
+ * spec scope can waive, so every enumeration of the obligation set names it —
  * the reviewer gate, the mandatory-obligation bullets, Mandatory Output 3, the
  * Volume Signals line, the not-done test, Completion Criteria step 1, the rerun
- * action and `project_memory`.
+ * action, `project_memory`, and the role cards of the agents this stage routes.
  *
- * So the three checklists a human or agent consults to *avoid* an uncovered DB
- * contract were the three that omitted it: a `completion-reviewer` following
- * the reviewer gate literally returns `PASS` on a spec the very next command —
- * `qfai validate --profile atdd --fail-on error --spec <id>` — exits 1 on.
- *
- * These tests pin `CON-DB` into every one of those lists, in both the shipped
- * asset tree and its generated root mirror.
+ * A list that stops at `CON-API` is a list its reader treats as complete. The
+ * three checklists consulted in order to *avoid* an uncovered DB contract are
+ * the ones that decide whether `completion-reviewer` returns `PASS` on a spec
+ * the very next command — `qfai validate --profile atdd --fail-on error --spec
+ * <id>` — exits 1 on.
  */
 
 import { readFile } from "node:fs/promises";
@@ -148,6 +145,18 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     expect(atdd).toContain("all required CON-DB (QFAI-ATDD-115");
   });
 
+  it("the blocking reviewer's own coverage list names CON-DB", async () => {
+    // `agent-routing.yml` makes `qa-gatekeeper` mandatory and blocking in the
+    // ATDD review, and its card is what that turn is taken against. Listing
+    // the traceability coverage it verifies as `US/TC/CON-API` left the one
+    // reviewer who can stop the stage not looking for the obligation the gate
+    // fails on.
+    const card = await readAt(tree, "assistant/agents/qa-gatekeeper.md");
+    expect(card).toContain("traceability-based coverage (US/TC/CON-API/CON-DB existence)");
+    expect(card).not.toContain("traceability-based coverage (US/TC/CON-API existence)");
+    expect(await catalogInstructions(tree, "qa-gatekeeper")).toContain("US/TC/CON-API/CON-DB");
+  });
+
   it("no obligation enumeration stops at CON-API any more", async () => {
     // The regression this file exists to stop: a list that ends at `CON-API`
     // is a list a reader treats as complete.
@@ -162,6 +171,7 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
       "`tests/api/**` must cover all required `CON-API-*`. -",
       "layer-pinned for US and CON-API",
       "Unknown references (`US/TC/CON-API` not declared)",
+      "this spec's `US` / `TC` / `CON-API` annotations",
     ]) {
       expect(atdd).not.toContain(stale);
     }

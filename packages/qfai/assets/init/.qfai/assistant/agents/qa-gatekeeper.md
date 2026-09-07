@@ -295,7 +295,7 @@ does not ratify item scope and does not clear the completion gate.
 
 ## Test Case Quality Depth Check (MUST)
 
-In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
+In addition to traceability-based coverage (US/TC/CON-API/CON-DB existence), verify the **depth** of test cases:
 
 - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
   Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
