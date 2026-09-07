@@ -705,8 +705,10 @@ describe("the stage evidence's counts are derived, not typed", () => {
         "that count and nothing else pins them",
     ).not.toBeNull();
 
-    // The repair is the same either way; WHOSE it is, is not, and the message
-    // used to state only the first case. "Land it in the same commit as the
+    // Two readers hit this, and the command they run is the same for both. What
+    // differs is RESPONSIBILITY: one of them changed a callsite and owes the
+    // re-pin, the other inherited the drift from a merge and owes nothing. The
+    // message used to address only the first. "Land it in the same commit as the
     // callsite edit" is advice a reader cannot follow when their branch has no
     // callsite edit — which is the case this fires in most often, because a
     // MERGE moves the total while both parent tips are individually correct
