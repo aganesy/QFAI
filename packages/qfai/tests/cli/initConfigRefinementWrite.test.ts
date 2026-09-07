@@ -49,9 +49,13 @@ let root: string;
 beforeEach(async () => {
   renameSpy.mockReset();
   writeFileSpy.mockReset();
-  renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
-  writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
-    actual.writeFile(...args),
+  // The parameter tuples of the functions being wrapped. `never[]` is not a
+  // tuple, so a spread of it into a fixed-arity call is a type error.
+  renameSpy.mockImplementation((actual: FsPromises, ...args: Parameters<FsPromises["rename"]>) =>
+    actual.rename(...args),
+  );
+  writeFileSpy.mockImplementation(
+    (actual: FsPromises, ...args: Parameters<FsPromises["writeFile"]>) => actual.writeFile(...args),
   );
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-config-write-"));
   await mkdir(path.join(root, "tests", "unit"), { recursive: true });
