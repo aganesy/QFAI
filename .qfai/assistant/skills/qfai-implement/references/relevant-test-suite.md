@@ -93,7 +93,12 @@ row, so verification has to happen while the row is still `refactor`:
 - run the checkpoint at the end of Refactor, after the reviewers return PASS;
 - PASS -> `refactor -> done`;
 - FAIL -> `refactor -> exception` with a DR-ID, and the regression is filed as
-  a new `todo` row carrying the failing selector.
+  a new `todo` row carrying the failing selector — **filed upstream, not here**:
+  raise a Change Request per
+  `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` and
+  `/qfai-sdd` Phase 2b seeds that row
+  (`../../qfai-sdd/references/sdd-phase-checklists.md`). This skill owns cells,
+  never rows.
 
 Rows already `done` from earlier boundaries are never re-opened. Spec completion
 stays blocked until the new row reaches `done`, because "Checkpoint verification
