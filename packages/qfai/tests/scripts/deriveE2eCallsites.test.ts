@@ -14,15 +14,17 @@
  * be checked and the split would not.
  */
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
+// A `file:` URL rather than the path: an absolute Windows path starts with a
+// drive letter, which an import specifier reads as a scheme.
 const mod = await import(
-  path.join(repoRoot, "scripts", "derive-e2e-callsites.mjs").replace(/\\/g, "/")
+  pathToFileURL(path.join(repoRoot, "scripts", "derive-e2e-callsites.mjs")).href
 );
 const { deriveE2eCallsites, formatRecordLine, parseRecordLine } = mod;
 
