@@ -579,7 +579,7 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(perSpec).toMatch(/^3\. The project's static gates/m);
       expect(perSpec).toContain("npx qfai validate --profile tdd --fail-on error --spec");
       expect(flat(perSpec)).toContain(
-        "the spec-level set is step 2 above plus steps 3 and 4 below",
+        "the spec-level set is step 2 above plus steps 3, 4 and 5 below",
       );
     }
   });

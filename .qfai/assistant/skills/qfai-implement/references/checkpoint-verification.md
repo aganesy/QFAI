@@ -165,9 +165,10 @@ weaken the profile to clear it.
 
 The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
 under parallel slices the ledger order does not identify one either. So step 1 is dropped, and the
-two spec-wide commands are added: the spec-level set is step 2 above plus steps 3 and 4 below.
+three spec-wide commands are added: the spec-level set is step 2 above plus steps 3, 4 and 5 below.
 Everything step 1 would have proved is already covered by the full suite. Steps 3 and 4 run at this
-boundary and only at it — it is the boundary whose owner can act on what they report.
+boundary and only at it — it is the boundary whose owner can act on what they report. Step 5 also
+runs at a per-item boundary, under the condition it states.
 
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check. **These take no `--spec`**, and a repository's own gates are whole-tree by construction —
@@ -202,13 +203,6 @@ boundary and only at it — it is the boundary whose owner can act on what they 
    treating them as still-blocking reports a failure this run cannot see. Record the finding, its owning spec and why it
    is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
    report the checkpoint as passed.
-
-## Verification command set (per spec)
-
-The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
-under parallel slices the ledger order does not identify one either. So step 1 is dropped and one
-step the per-item set has no need of is added: the spec-level set is steps 2, 3 and 4, plus step 5
-below. Everything step 1 would have proved is already covered by the full suite.
 
 5. **The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is
    `applicable`** — re-run from `.qfai/evidence/skeleton.md` and appended there with its own

@@ -53,7 +53,7 @@ first spec proved the API server has proved nothing about its worker.
 So: enumerate the entrypoints `catalog/structure.md` declares and that the
 in-scope specs reach, and run the phase for each one that the evidence file has
 no passing record for. A queued spec that shares an entrypoint already proven
-does not repeat it (`../SKILL.md` Completion step 4); a queued spec that reaches
+does not repeat it (`volume-policy.md#advancing-the-queue`); a queued spec that reaches
 a **different** entrypoint runs the phase for that one before its first row.
 
 ## Exit criterion
@@ -140,17 +140,22 @@ satisfies it, though, never the stored record: see `#evidence`.
    user or a deployment would run, not a test harness that constructs the
    application object in-process. Constructing it in-process is exactly the
    evasion the 577-green-tests-and-no-entrypoint case was made of.
-3. **Reaches the surface one declared `US-*` names, over the real transport the
-   entrypoint speaks** — a socket for a service, stdio for a CLI, the queue for
-   a worker — and asserts that reachability alone: the request was served by the
-   process the entrypoint started. It asserts nothing about that `US-*`'s
-   outcome; asserting the outcome would need the predicate Bound 1 forbids.
+3. **Reaches the surface one declared boot obligation names, over the real
+   transport the entrypoint speaks** — a socket for a service, stdio for a CLI,
+   the queue for a worker — and asserts that reachability alone: the request was
+   served by the process the entrypoint started. The obligation is a `US-*`, or
+   a `CON-API-*` on an API entrypoint, exactly as the exit criterion above says.
+   It asserts nothing about that obligation's outcome; asserting the outcome
+   would need the predicate Bound 1 forbids.
    **Any answer that process gives counts** — the sentinel of a seam authored
    here, or the real response of a surface that already worked.
 4. **Exits non-zero on any failure**, including a start-up timeout. A script
    that reports a failure on stdout and exits 0 proves nothing.
-5. **Names the `US-*` whose surface it reaches**, so the phase's evidence points
-   at an obligation rather than at "it booted".
+5. **Names the boot obligation whose surface it reaches** — the `US-*`, or the
+   `CON-API-*` on an API entrypoint — so the phase's evidence points at an
+   obligation rather than at "it booted". Requiring a `US-*` here alone left a
+   contract-only API, which declares no user story, with no script this
+   contract admits and no way past the phase.
 6. **Stops what it started, on every exit path** — success, failure and
    timeout alike, via `trap` / `finally` or the runtime's equivalent, and the
    script asserts before it returns that no child it launched is still running.
@@ -331,6 +336,7 @@ The fields:
 | `Skeleton entrypoint` | the declared entrypoint, as a command                                                                                  |
 | `Skeleton US`         | the boot obligation whose surface the smoke script reaches — a `US-*`, or a `CON-API-*` on an API entrypoint           |
 | `Skeleton command`    | the smoke-script invocation, in a form that **re-runs** — secrets referenced (`$QUEUE_URL`), never inlined or redacted |
+| `Skeleton script`     | the committed script's path and the SHA-256 of its bytes, as `<path>@<sha256>`                                         |
 | `Skeleton result`     | its output and **exit status**, verbatim, secret values redacted                                                       |
 | `Skeleton gatekeeper` | the `qa-gatekeeper` verdict on that run — `PASS` required when applicable                                              |
 | `Skeleton debt`       | the shortcuts enumerated, and the `CR-*` raised to add their rows                                                      |
@@ -388,6 +394,20 @@ it re-enters the 3-cycle budget with a fresh `qa-gatekeeper` judgement, because
 a `PASS` recorded against a command that is no longer the one on disk is a
 verdict about something else. Record the resolution in `Skeleton result` so the
 disagreement is visible rather than silently repaired.
+
+**The script's bytes are bound too, not only the path and the arguments.**
+Resolving the path leaves the body free: a later commit that rewrites the same
+script to `exit 0` keeps `catalog/tech.md` and `Skeleton command` agreeing, the
+mismatch above never fires, the re-run exits 0, and the old
+`Skeleton gatekeeper: PASS` carries a product that no longer starts. So
+`Skeleton script` records the path **and** the SHA-256 of the committed
+script's bytes, and the re-run recomputes it. A hash that has moved makes the
+entrypoint **unproven** exactly as a moved command does — the 3-cycle budget
+and a fresh `qa-gatekeeper` judgement, not an automatic re-record. The verdict
+is about the script that ran, and a different script is a different run.
+
+A hash that has moved is not by itself a fault: editing the smoke script is
+ordinary work. What it is, is a verdict that has not been taken yet.
 
 **On every later invocation, read this file first.** An entrypoint with no
 section runs the phase. An entrypoint whose latest recorded `Skeleton result` is

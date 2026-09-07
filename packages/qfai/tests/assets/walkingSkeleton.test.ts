@@ -355,7 +355,10 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain("**Starts the system the way the entrypoint declares it**");
       expect(doc).toContain("not a test harness that constructs the application object in-process");
       expect(doc).toContain("**Exits non-zero on any failure**, including a start-up timeout");
-      expect(doc).toContain("**Names the `US-*` whose surface it reaches**");
+      // The obligation, not the story: an API entrypoint declares its boot
+      // obligation as a `CON-API-*` and has no `US-*` to name.
+      expect(doc).toContain("**Names the boot obligation whose surface it reaches**");
+      expect(doc).toContain("the `CON-API-*` on an API entrypoint");
     });
 
     it(`${tree}: the phase leaves recordable evidence`, async () => {
@@ -417,7 +420,10 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain("returns the entrypoint to this phase's 3-cycle budget");
 
       // The command set itself has to carry it, or the rule has no runner.
-      expect(checkpoint).toContain("the spec-level set is steps 2, 3 and 4, plus step 5");
+      // One section defines the per-spec set, so the smoke re-run is step 5 of it
+      // rather than an addition under a second heading of the same name.
+      expect(checkpoint).toContain("the spec-level set is step 2 above plus steps 3, 4 and 5");
+      expect(checkpoint.match(/## Verification command set \(per spec\)/g)).toHaveLength(1);
       expect(checkpoint).toContain(
         "**The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is `applicable`**",
       );

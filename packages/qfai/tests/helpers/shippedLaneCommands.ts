@@ -1316,9 +1316,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned when `Phase: Skeleton` added `!.qfai/evidence/skeleton.md` to
   // `QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`: the shipped `.gitignore` IS the
   // generated managed block, so a governance negation moves this digest by
-  // construction. The phase enumerates its `Skeleton debt` into that file and
-  // every later invocation reads the recorded exit status, so ignored it holds
-  // only in the working directory that ran the phase.
+  // construction. The phase enumerates its `Skeleton debt` into that file, and
+  // every later invocation reads the recorded exit status to decide whether an
+  // entrypoint is already proven. If the file is ignored, both facts exist only
+  // in the working directory that ran the phase.
   //
   // Derived by running `init` into a fresh root on this tree, not re-typed off
   // a failure message. That one line is the whole delta: dropping it from what

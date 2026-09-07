@@ -1824,6 +1824,15 @@ agents:
       unavailability, is still REVISE — this is a third form of evidence, not an
       exemption from having any.
 
+      **This file is the contract; `manifest/agent-catalog.yml` carries a copy.**
+      `npx qfai init --force` refreshes `assistant/agents/**` and deliberately leaves
+      `assistant/manifest/**` alone, so an upgraded project can hold a catalog block
+      that predates a phase the shipped skills already route to. Where the two
+      disagree, or where the catalog describes no gate for a phase this role is
+      routed to, read this file. A catalog block older than the routing table is a
+      stale copy, never a narrower contract — reading it as one puts a mandatory
+      blocking role into the Stop condition on a phase it is required to pass.
+
       **The Skeleton observation gate reads a different set.**
       `/qfai-implement`'s `Phase: Skeleton` runs **before the first ledger row is
       selected** (`.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md`),
@@ -1834,6 +1843,7 @@ agents:
 
       - `.qfai/evidence/skeleton.md`, the section of the entrypoint under judgement —
         `Skeleton verdict`, `Skeleton entrypoint`, `Skeleton US`, `Skeleton command`,
+        `Skeleton script` (path and the SHA-256 of the committed script's bytes),
         `Skeleton result` (its output **and exit status**), `Skeleton debt`,
         `Skeleton cycles`;
       - the committed smoke script `catalog/tech.md` names, and `catalog/structure.md`
