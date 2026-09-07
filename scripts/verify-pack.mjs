@@ -681,7 +681,10 @@ execFileSync(
 // this same gate, run with `--fail-on error` against this same sandbox.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
-  throw new Error("validate did not write .qfai/report/validate.json.");
+  throw new Error(
+    `validate wrote no ${validateJsonPath}. The forecast reads the findings that run produced, ` +
+      `so it has nothing to read without it.`,
+  );
 }
 const awaitingPromotion = findingsAwaitingPromotion(
   JSON.parse(readFileSync(validateJsonPath, "utf-8")).issues ?? [],

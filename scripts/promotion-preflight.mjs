@@ -28,7 +28,7 @@ export const LEDGER_REL = "packages/qfai/src/core/sunset.ts";
 /** The finding code an entry's doc comment names first, in backticks. */
 const CODE_IN_DOC = /`(QFAI-[A-Z0-9-]+|[A-Z][A-Z0-9_]+)`/;
 
-/** The leading block comment of `node`, or an empty string. */
+/** Every leading comment of `node` joined, or an empty string when it has none. */
 function docCommentOf(node, source) {
   const text = source.getFullText();
   const ranges = ts.getLeadingCommentRanges(text, node.getFullStart()) ?? [];

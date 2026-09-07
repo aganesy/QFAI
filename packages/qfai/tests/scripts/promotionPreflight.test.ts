@@ -14,7 +14,7 @@
  * for it and the ledger guard requires every promoted code to take its severity
  * from there.
  */
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -147,5 +147,16 @@ describe("the findings a promotion will escalate", () => {
     expect(message).toContain(
       "QFAI-ASSETS-003 a.md — error from 1.12.0 (steeringCatalogPlaceholders)",
     );
+  });
+});
+
+describe("the report the forecast reads", () => {
+  it("names the file it looked for when the run wrote none", async () => {
+    // The sandbox is a temporary directory a run makes and removes, so the
+    // relative path alone does not say where to look.
+    const script = await readFile(path.join(repoRoot, "scripts", "verify-pack.mjs"), "utf-8");
+
+    expect(script).toContain("`validate wrote no ${validateJsonPath}.");
+    expect(script).not.toContain('throw new Error("validate did not write');
   });
 });
