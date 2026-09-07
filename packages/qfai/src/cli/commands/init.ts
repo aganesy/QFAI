@@ -175,7 +175,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。加えて qfai 提供の通常ファイル .github/copilot-instructions.md・.github/instructions/**（code-review / principles のレビュー指示）・統合ディレクトリの README.md も shipped テンプレートで再生成するため、これらへのローカル編集は失われます（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
+      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md, .github/instructions/** (the code-review / principles review instructions) and each integration directory's README.md from the shipped templates, so local edits to those are lost (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
   }
 
@@ -222,7 +222,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const workflowsDirIsOwn = workflowAncestorsBefore !== undefined;
   if (!workflowsDirIsOwn) {
     error(
-      ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
+      "Skipped writing the shipped workflows: .github or .github/workflows is a symlink, and its target can point outside this repository. Replace it with a real directory and re-run.",
     );
   }
   // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
@@ -309,7 +309,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     settled === undefined;
   if (workflowsSwapped) {
     error(
-      ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
+      ".github or .github/workflows was swapped for another directory while the copy was running. The shipped workflows that were written may have landed outside this repository, so they are not recorded in provenance (following the swapped-in target to delete them would break the very policy of not following links). Check that `.github/workflows` is a real directory and that no unexpected files were created, then re-run.",
     );
     workflowResult.copied = [];
   }
@@ -485,10 +485,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   );
   if (instructionsCreated && !options.dryRun) {
     info("");
-    info("Copilot コードレビュー用 instructions を作成しました。");
-    info("有効化: PR コメントで '@github-copilot review' を実行するか、");
-    info("GitHub Actions ワークフローで自動レビューを設定してください。");
-    info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+    info("Created the instructions files for Copilot code review.");
+    info("To enable it: comment '@github-copilot review' on a PR, or");
+    info("configure automatic review in a GitHub Actions workflow.");
+    info("Reference: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
   report(
@@ -624,8 +624,8 @@ async function ensureAssistantMarker(
     }
     warn(
       [
-        `WARN: ${dest} の状態を取得できませんでした（${describeError(err)}）。`,
-        `      qfai init のマーカーは書き込まれていないため、QFAI-LINK-001 は引き続き「未初期化」と判定します。パーミッションを確認して qfai init を再実行してください。`,
+        `WARN: could not stat ${dest} (${describeError(err)}).`,
+        `      The qfai init marker was not written, so QFAI-LINK-001 still reads this project as uninitialised. Check the permissions and run qfai init again.`,
       ].join("\n"),
     );
     return [];
@@ -651,8 +651,8 @@ async function ensureAssistantMarker(
   if (merged.byteLength > ASSISTANT_README_MAX_BYTES) {
     warn(
       [
-        `WARN: ${dest} に qfai init のマーカーを書き込めません（既存の内容と結合すると ${String(ASSISTANT_README_MAX_BYTES)} bytes の上限を超えます）。`,
-        `      既存の内容は変更していません。プロジェクト固有の注記を別ファイルへ移して短くしてから qfai init を再実行してください。`,
+        `WARN: cannot write the qfai init marker to ${dest} (merging it with the existing content would exceed the ${String(ASSISTANT_README_MAX_BYTES)} byte ceiling).`,
+        `      The existing content is unchanged. Move this project's own notes into another file to shorten it, then run qfai init again.`,
       ].join("\n"),
     );
     return [];
@@ -663,7 +663,7 @@ async function ensureAssistantMarker(
       // Somebody else put a different file at the pathname while this ran.
       // Theirs is the newer decision; overwriting it is not this repair's call.
       warn(
-        `WARN: ${dest} は qfai init の実行中に別のプロセスが置き換えたため、マーカーの書き込みを見送りました。qfai init を再実行してください。`,
+        `WARN: another process replaced ${dest} while qfai init was running, so the marker was not written. Run qfai init again.`,
       );
       return [];
     }
@@ -672,11 +672,11 @@ async function ensureAssistantMarker(
 }
 
 /** Heading the previous README's text is filed under. */
-const PRESERVED_BODY_HEADING = "## qfai init が置き換える前の README";
+const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
 
 const PRESERVED_BODY_NOTE = [
-  "以下は `qfai init` がこのファイルにマーカーを書き込む前からあった内容です。",
-  "プロジェクト固有の注記が含まれている可能性があるため保持しています。不要であれば削除してください。",
+  "The following was in this file before `qfai init` wrote its marker into it.",
+  "It is kept because it may hold notes that belong to this project. Delete it if you do not need it.",
 ].join("\n");
 
 /**
@@ -2378,8 +2378,9 @@ async function ensureAgentEntryPointRules(
       // would be worse than saying so: the project keeps a file that cites no
       // rule, and now knows it.
       error(
-        `  WARNING: ${name} は既存のため更新していません。テンプレートの managed section が見つからないので、` +
-          `\`.agents/rules/\` への参照を手動で追記してください（未参照のままだと共有ルールが AI のコンテキストに入りません）。`,
+        `  WARNING: ${name} already exists and was left unchanged. The shipped template has no ` +
+          `managed section, so add a reference to \`.agents/rules/\` by hand (while it is unreferenced, ` +
+          `the shared rules never reach the AI's context).`,
       );
       skipped.push(target);
       continue;
@@ -2917,8 +2918,8 @@ async function gitSymlinksEnabled(
 
 /** Disclosed when the local pin is in place but something outranks it. */
 const WORKTREE_OVERRIDE_NOTE =
-  "  warning: core.symlinks の実効値は false のままです（worktree スコープの上書き）。" +
-  "解除するには linked worktree で `git config --worktree core.symlinks true` を実行してください。";
+  "  warning: the effective value of core.symlinks is still false (a worktree-scope override). " +
+  "To clear it, run `git config --worktree core.symlinks true` in the linked worktree.";
 
 /**
  * Configures `core.symlinks`, the one change init makes outside the working
@@ -2958,10 +2959,10 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       [
-        "git config --local core.symlinks true の設定に失敗しました。",
-        "手動で以下を実行してください:",
+        "Failed to set git config --local core.symlinks true.",
+        "Run the following manually:",
         "  git config --local core.symlinks true",
-        `原因: ${detail}`,
+        `Cause: ${detail}`,
       ].join("\n"),
     );
   }
@@ -3109,18 +3110,18 @@ async function syncIntegrationWrappers(
     if (alreadyExists && (!options.force || refuseOverwrite)) {
       if (escapesProject) {
         info(
-          `  skipped: ${dest} はプロジェクト外へ解決します (--force でも上書きしません)。` +
-            `更新するにはリンク先で直接編集してください。`,
+          `  skipped: ${dest} resolves outside the project (not overwritten, even with --force). ` +
+            `Edit it at the link target to update it.`,
         );
       } else if (existingKind?.isDirectory() === true) {
         info(
-          `  skipped: ${dest} はディレクトリです (--force でも削除しません)。` +
-            `配下の内容を退避してディレクトリを削除してから再実行してください。`,
+          `  skipped: ${dest} is a directory (not deleted, even with --force). ` +
+            `Move its contents aside, delete the directory, then re-run.`,
         );
       } else if (!isReplaceableEntry) {
         info(
-          `  skipped: ${dest} は通常ファイルでも symlink でもありません ` +
-            `(--force でも置き換えません)。該当エントリを退避してから再実行してください。`,
+          `  skipped: ${dest} is neither a regular file nor a symlink ` +
+            `(not replaced, even with --force). Move that entry aside, then re-run.`,
         );
       }
       skipped.push(dest);
@@ -3144,8 +3145,8 @@ async function syncIntegrationWrappers(
             typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
           const detail = err instanceof Error ? err.message : String(err);
           throw new Error(
-            `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
-              ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
+            `Failed to read the instructions template: ${templateSrc}` +
+              ` (${code ?? detail}). Check that the package is installed correctly.`,
           );
         }
         await replaceWithRegularFile(dest, content);
@@ -3358,10 +3359,10 @@ async function findUnsafeWrapperComponent(
       return undefined;
     }
     if (stats.isSymbolicLink()) {
-      return `${current} が symlink のため生成先として使えません`;
+      return `${current} is a symlink, so it cannot be used as an output location`;
     }
     if (!stats.isDirectory()) {
-      return `${current} がディレクトリではありません`;
+      return `${current} is not a directory`;
     }
   }
   return undefined;
@@ -3443,7 +3444,7 @@ async function planCodexAgentProfile(
     return { status: "unavailable", reason: markdown.reason };
   }
   if (markdown.status === "absent") {
-    return { status: "unavailable", reason: "canonical markdown が見つかりません" };
+    return { status: "unavailable", reason: "canonical markdown not found" };
   }
 
   const rendered = renderCodexAgentToml(markdown.content, kind, agentName);
@@ -3458,8 +3459,8 @@ function classifyFailureReason(agentName: string, classification: AgentClassific
     return classification.unusable;
   }
   return classification.rejected.has(agentName)
-    ? `agent-catalog.yml の ${agentName} の kind が不正です`
-    : `agent-catalog.yml に ${agentName} の kind がありません`;
+    ? `agent-catalog.yml declares an invalid kind for ${agentName}`
+    : `agent-catalog.yml declares no kind for ${agentName}`;
 }
 
 /**
@@ -3515,7 +3516,7 @@ type AgentClassification = {
  * of. A project initialised by an older release keeps its catalog verbatim, so
  * returning the first non-empty map left every agent a later release added
  * permanently un-classified — markdown and two wrappers written, Codex profile
- * skipped as "kind がありません" forever.
+ * skipped as "declares no kind" forever.
  *
  * It fills in **only** those, though. An ID the project names without a usable
  * `kind` is a broken local statement about that agent, and answering it with
@@ -3542,7 +3543,7 @@ async function loadAgentClassification(
     return {
       kinds: new Map(),
       rejected: new Set(),
-      unusable: "agent-catalog.yml を agents リストとして読めません",
+      unusable: "agent-catalog.yml cannot be read as an agents list",
     };
   }
 
@@ -3573,7 +3574,7 @@ async function removeSymlinkAt(target: string): Promise<void> {
 }
 
 const NON_REGULAR_DESTINATION =
-  "通常ファイル以外のエントリ（FIFO / ソケット / デバイス）が存在するため生成できません";
+  "a non-regular entry (FIFO / socket / device) is in the way, so nothing can be generated here";
 
 /**
  * Why this destination cannot take generator output, or `undefined`.
@@ -3595,7 +3596,9 @@ function describeUnwritableDestination(stats: Stats | undefined): string | undef
   if (stats === undefined || stats.isFile() || stats.isSymbolicLink()) {
     return undefined;
   }
-  return stats.isDirectory() ? "ディレクトリが存在するため生成できません" : NON_REGULAR_DESTINATION;
+  return stats.isDirectory()
+    ? "a directory is in the way, so nothing can be generated here"
+    : NON_REGULAR_DESTINATION;
 }
 
 /**
@@ -3719,7 +3722,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
     if (hasErrnoCode(err) && UNREADABLE_OPEN_CODES.has(err.code)) {
       return {
         status: "rejected",
-        reason: `${filePath} は通常ファイルとして開けません (${err.code})`,
+        reason: `${filePath} cannot be opened as a regular file (${err.code})`,
       };
     }
     throw err;
@@ -3727,7 +3730,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
   try {
     const stats = await handle.stat();
     if (!stats.isFile()) {
-      return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
+      return { status: "rejected", reason: `${filePath} is not a regular file` };
     }
     const chunks: Buffer[] = [];
     let total = 0;
@@ -3741,7 +3744,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
       if (total > MAX_CANONICAL_INPUT_BYTES) {
         return {
           status: "rejected",
-          reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+          reason: `${filePath} exceeds the ${MAX_CANONICAL_INPUT_BYTES} byte ceiling`,
         };
       }
       chunks.push(chunk.subarray(0, bytesRead));
@@ -3860,9 +3863,9 @@ async function restoreHeldLink(args: {
   info(
     [
       occupied
-        ? `  note: ${linkPath} は別プロセスが作成した entry に占有されているため復元しませんでした。`
-        : `  note: ${linkPath} の復元に失敗しました: ${describeError(failure)}`,
-      `  note: 元の entry は次の場所に退避してあります: ${sidecar}`,
+        ? `  note: ${linkPath} was not restored — another process created an entry there first.`
+        : `  note: could not restore ${linkPath}: ${describeError(failure)}`,
+      `  note: the original entry is held here: ${sidecar}`,
     ].join("\n"),
   );
 }
@@ -3896,7 +3899,7 @@ async function putBackHeldEntry(
   if (held?.isSymbolicLink() === true) {
     const target = await readlink(sidecar).catch(() => null);
     if (target === null) {
-      return new Error(`退避した symlink の target を読み取れません: ${sidecar}`);
+      return new Error(`Cannot read the held symlink's target: ${sidecar}`);
     }
     return await symlink(target, linkPath, type).then(
       () => null,
@@ -3904,9 +3907,7 @@ async function putBackHeldEntry(
     );
   }
   if ((await safeLstat(linkPath)) !== undefined) {
-    const occupied: NodeJS.ErrnoException = new Error(
-      `${linkPath} は別の entry に占有されています`,
-    );
+    const occupied: NodeJS.ErrnoException = new Error(`${linkPath} is occupied by another entry`);
     occupied.code = "EEXIST";
     return occupied;
   }
@@ -3929,8 +3930,8 @@ async function discardHold(hold: string, linkPath: string): Promise<void> {
     await rm(hold, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
     info(
-      `  note: 修復は成功しましたが退避先を削除できませんでした (${hold}): ` +
-        `${describeError(cleanupErr)} — ${linkPath} は修復済みです`,
+      `  note: the repair succeeded but the hold could not be deleted (${hold}): ` +
+        `${describeError(cleanupErr)} — ${linkPath} is repaired`,
     );
   }
 }
@@ -3973,7 +3974,7 @@ async function claimHoldDir(linkPath: string): Promise<string> {
     }
   }
   throw new Error(
-    `qfai init: 修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です`,
+    `qfai init: cannot reserve a hold for the repair: ${base} and every numbered candidate already exist`,
   );
 }
 
@@ -4084,10 +4085,10 @@ async function ensureSymlink(
       if (isEpermOnWindows(err)) {
         throw new Error(
           [
-            "symlink の作成に失敗しました (EPERM)。",
-            "Windows では Developer Mode を有効にする必要があります:",
-            "  設定 > システム > 開発者向け > 開発者モード を ON",
-            "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+            "Failed to create a symlink (EPERM).",
+            "On Windows, Developer Mode has to be enabled:",
+            "  Settings > System > For developers > Developer Mode: ON",
+            "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
           ].join("\n"),
         );
       }
@@ -4162,7 +4163,7 @@ async function openSidecar(linkPath: string): Promise<{ path: string; handle: Fi
     }
   }
   throw new Error(
-    `修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です。前回の修復が残した .qfai-repair-* を確認して退避してください。`,
+    `Cannot reserve a sidecar path for the repair: ${base} and every numbered candidate already exists. Check for .qfai-repair-* files left behind by an earlier repair and move them aside.`,
   );
 }
 
@@ -4203,9 +4204,9 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     if (original === null) {
       throw new Error(
         [
-          `退避したファイルを復元できません（種別が変わったか、上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes を超えています）: ${linkPath}`,
-          `このファイルシステムでは hard link を作成できず、内容のコピーはその上限までに制限しています。`,
-          `元のファイルは次の場所にあります: ${sidecar}`,
+          `Cannot restore the sidecar file (its kind changed, or it exceeds the ${String(SIDECAR_COPY_MAX_BYTES)} byte ceiling): ${linkPath}`,
+          `This filesystem cannot create hard links, so the content copy is capped at that ceiling.`,
+          `The original file is here: ${sidecar}`,
         ].join("\n"),
         { cause: linkErr },
       );
@@ -4235,14 +4236,14 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
       );
       throw new Error(
         [
-          `退避したファイルのパーミッションを復元できなかったため、復元を取り消しました: ${linkPath}`,
-          `原因: ${describeError(modeErr)}`,
+          `Rolled the restore back because the sidecar file's permissions could not be restored: ${linkPath}`,
+          `Cause: ${describeError(modeErr)}`,
           ...(removeErr === null
             ? []
             : [
-                `作成済みの復元先を削除できませんでした（権限が元と異なります）: ${describeError(removeErr)}`,
+                `Could not remove the restore destination that had already been created (its permissions differ from the original): ${describeError(removeErr)}`,
               ]),
-          `元のファイル（パーミッションを含む）は次の場所にあります: ${sidecar}`,
+          `The original file, permissions included, is here: ${sidecar}`,
         ].join("\n"),
         { cause: modeErr },
       );
@@ -4315,10 +4316,10 @@ async function recreateFlattenedLink(
     if (restoreErr === null) throw readErr;
     throw new Error(
       [
-        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
-        `退避したファイルの読み取りに失敗しました: ${describeError(readErr)}`,
-        `復元にも失敗しました: ${describeError(restoreErr)}`,
-        `元のファイルは次の場所にあります: ${sidecar}`,
+        `Failed to repair the flattened symlink: ${linkPath}`,
+        `Failed to read the sidecar file: ${describeError(readErr)}`,
+        `The restore failed as well: ${describeError(restoreErr)}`,
+        `The original file is here: ${sidecar}`,
       ].join("\n"),
       { cause: readErr },
     );
@@ -4362,29 +4363,29 @@ async function recreateFlattenedLink(
     // sidecar — a path is more use than a copy pasted into an error message.
     const restored =
       restoreError === undefined
-        ? "元のファイルは復元しました。"
+        ? "The original file was restored."
         : [
             occupied
-              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。`
-              : `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
-            `元の内容は次の場所に退避してあります: ${sidecar}`,
-            "内容:",
+              ? `${linkPath} holds a file created by another process, so it was not restored (an overwrite is avoided).`
+              : `Restoring the original file failed as well: ${describeError(restoreError)}`,
+            `The original content is kept here: ${sidecar}`,
+            "Content:",
             original,
           ].join("\n");
     if (isEpermOnWindows(err)) {
       throw new Error(
         [
-          `平坦化された symlink の修復に失敗しました (EPERM): ${linkPath}`,
+          `Failed to repair the flattened symlink (EPERM): ${linkPath}`,
           restored,
-          "Windows では Developer Mode を有効にする必要があります:",
-          "  設定 > システム > 開発者向け > 開発者モード を ON",
-          "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+          "On Windows, Developer Mode has to be enabled:",
+          "  Settings > System > For developers > Developer Mode: ON",
+          "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
         ].join("\n"),
       );
     }
     if (restoreError !== undefined) {
       throw new Error(
-        [`平坦化された symlink の修復に失敗しました: ${linkPath}`, restored].join("\n"),
+        [`Failed to repair the flattened symlink: ${linkPath}`, restored].join("\n"),
         { cause: err },
       );
     }
@@ -4404,7 +4405,7 @@ async function recreateFlattenedLink(
   const stillOurs = await readPinnedRegularFile(sidecar, 4096).catch(() => null);
   if (stillOurs === null || toComparableTarget(stillOurs) !== toComparableTarget(target)) {
     info(
-      `  note: 修復は成功しましたが、退避ファイルの内容が検査時から変わっていたため削除していません: ${sidecar}`,
+      `  note: the repair succeeded, but the sidecar file was left in place because its content changed since it was inspected: ${sidecar}`,
     );
     info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
     return "created";
@@ -4413,7 +4414,7 @@ async function recreateFlattenedLink(
     await rm(sidecar, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
     info(
-      `  note: 修復は成功しましたが退避ファイルを削除できませんでした: ${sidecar} (${describeError(cleanupErr)})`,
+      `  note: the repair succeeded, but the sidecar file could not be removed: ${sidecar} (${describeError(cleanupErr)})`,
     );
   }
   info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
@@ -5430,14 +5431,14 @@ async function removeJudgedAgentWrapper(entryPath: string, target: string): Prom
     } catch (restoreErr: unknown) {
       throw new Error(
         [
-          `退役 wrapper の削除を中止しましたが、退避したファイルを元に戻せませんでした: ${entryPath}`,
-          `原因: ${describeError(restoreErr)}`,
-          `元のファイルは次の場所にあります: ${sidecar}`,
+          `Aborted the retired-wrapper deletion but could not put the moved file back: ${entryPath}`,
+          `Cause: ${describeError(restoreErr)}`,
+          `The original file is at: ${sidecar}`,
         ].join("\n"),
         { cause: restoreErr },
       );
     }
-    info(`  note: ${entryPath} は検査後に内容が変わったため削除していません`);
+    info(`  note: ${entryPath} changed after it was checked, so it was not deleted`);
     return false;
   }
   // A symlink or a small regular file — that is all the check above accepts —

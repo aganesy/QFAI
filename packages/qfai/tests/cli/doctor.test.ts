@@ -319,7 +319,7 @@ describe("doctor", { timeout: 60000 }, () => {
       const skillsCheck = findCheck(parsed.checks, "paths.skillsDir");
 
       expect(promptsCheck?.severity).toBe("warning");
-      expect(promptsCheck?.message).toContain("設定で指定されています");
+      expect(promptsCheck?.message).toContain("is set in the config");
       expect(skillsCheck?.details?.path).toBe(".qfai/assistant/legacy-prompts");
     } finally {
       await rm(root, { recursive: true, force: true });

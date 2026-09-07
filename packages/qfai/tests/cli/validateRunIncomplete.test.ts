@@ -105,7 +105,9 @@ describe("describeIncompleteRun", () => {
     expect(described?.message).toContain("EPERM");
     expect(described?.message).toContain("stat");
     expect(described?.message).toContain(".claude\\skills\\qfai-sdd");
-    expect(described?.message).toContain("未判定");
+    // The verdict clause, in the language `cli-ux-guidelines.md` pins for
+    // operator-facing strings: "this run is NOT a clean result".
+    expect(described?.message).toContain("NOT a clean result");
   });
 
   it("keeps the original as `cause`", () => {
@@ -178,7 +180,9 @@ describe("the boundary is wired into every command", () => {
   it("says the run is undetermined, not that it is clean", async () => {
     runReportSpy.mockRejectedValueOnce(libuvError("EPERM", "stat", "/p/.qfai"));
 
-    await expect(run(["report", "--root", process.cwd()], process.cwd())).rejects.toThrow(/未判定/);
+    await expect(run(["report", "--root", process.cwd()], process.cwd())).rejects.toThrow(
+      /NOT a clean result/,
+    );
   });
 
   it("passes a command's own refusal through unchanged", async () => {

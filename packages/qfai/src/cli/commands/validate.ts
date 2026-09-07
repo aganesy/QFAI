@@ -1045,12 +1045,12 @@ function emitGitHubSummary(
   if (options.dropped > 0 || truncated.length > 0) {
     const details = [
       "qfai validate note:",
-      options.dropped > 0 ? `重複除外=${options.dropped}` : null,
+      options.dropped > 0 ? `deduped=${options.dropped}` : null,
       // PER LEVEL, because one number cannot express a per-level cap: a run with 5 errors and
       // 200 notices is complete on one level and truncated on the other, and a single
-      // `上限省略=195` reads as though something was lost everywhere.
+      // `omittedOverLimit=195` reads as though something was lost everywhere.
       truncated.length > 0
-        ? `上限省略=${truncated
+        ? `omittedOverLimit=${truncated
             .map((tally) => `${tally.level} ${tally.emitted}/${tally.total}`)
             .join(", ")}`
         : null,
@@ -1059,20 +1059,17 @@ function emitGitHubSummary(
       .join(" ");
     process.stdout.write(`${details}\n`);
     process.stdout.write(
-      `qfai validate note: GitHub は annotation を level ごと 10 件/step までしか表示しません。省略分は JSON に全件あります。\n`,
+      "qfai validate note: GitHub shows at most 10 annotations per level per step. " +
+        "Everything omitted is in the JSON in full.\n",
     );
   }
 
   const relative = toRelativePath(options.root, options.jsonPath);
-  process.stdout.write(
-    `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
-  );
-  process.stdout.write(
-    `qfai validate note: run-log は ${options.runLogPath} を参照してください。\n`,
-  );
+  process.stdout.write(`qfai validate note: see ${relative} or --format text for the details.\n`);
+  process.stdout.write(`qfai validate note: see ${options.runLogPath} for the run-log.\n`);
 
   process.stdout.write(
-    "qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。\n",
+    "qfai validate note: next, qfai report generates report.md (e.g. qfai report).\n",
   );
 }
 

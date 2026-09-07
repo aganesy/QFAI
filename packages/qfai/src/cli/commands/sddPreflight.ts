@@ -163,7 +163,7 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
     const configErrors = issues.filter((issue) => issue.severity === "error");
     if (configErrors.length > 0) {
       writeErr(
-        `qfai sdd preflight: ${toRelative(options.root, configPath)} を読み込めません（既定値へのフォールバックは行いません）:`,
+        `qfai sdd preflight: cannot read ${toRelative(options.root, configPath)} (no fallback to the defaults):`,
       );
       for (const issue of configErrors) {
         writeErr(`  - ${issue.message}`);
@@ -180,7 +180,7 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     if (err instanceof ResolveActiveDiscussionPackError) {
-      writeErr(`qfai sdd preflight: active discussion-pack を解決できません: ${message}`);
+      writeErr(`qfai sdd preflight: cannot resolve the active discussion-pack: ${message}`);
       return 1;
     }
     writeErr(`qfai sdd preflight: preflight failed: ${message}`);

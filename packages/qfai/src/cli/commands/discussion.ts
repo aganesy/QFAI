@@ -68,21 +68,21 @@ function untrustedRootReason(document: unknown, issues: string[]): string | unde
     return issues.length > 0 ? issues.join("; ") : undefined;
   }
   if (!isRecord(document)) {
-    return "設定ファイルのトップレベルがマッピングではないため paths.discussionDir を読み取れません。";
+    return "The config file's top level is not a mapping, so paths.discussionDir cannot be read.";
   }
   const paths = document.paths;
   if (paths === undefined || paths === null) {
     return undefined;
   }
   if (!isRecord(paths)) {
-    return "paths がマッピングではないため paths.discussionDir を読み取れません。";
+    return "paths is not a mapping, so paths.discussionDir cannot be read.";
   }
   const discussionDir = paths.discussionDir;
   if (discussionDir === undefined || discussionDir === null) {
     return undefined;
   }
   if (typeof discussionDir !== "string" || discussionDir.trim().length === 0) {
-    return "paths.discussionDir は空でない文字列である必要があります。";
+    return "paths.discussionDir must be a non-empty string.";
   }
   return undefined;
 }
@@ -330,9 +330,9 @@ async function runListPacks(
     // looking but wrong candidate set under exit 0.
     writeErr(
       [
-        `qfai discussion list: ${configPath} から paths.discussionDir を確定できないため一覧を中止しました。`,
+        `qfai discussion list: cannot determine paths.discussionDir from ${configPath}, so the listing was refused.`,
         `  - ${rootUntrusted}`,
-        "設定を修正してから再実行してください。",
+        "Fix the config and re-run.",
       ].join("\n"),
     );
     return 1;
@@ -345,7 +345,7 @@ async function runListPacks(
     // a list verb is no place to hide a broken config file.
     writeErr(
       [
-        `qfai discussion list: ${configPath} に設定エラーがあります (一覧は続行します)。`,
+        `qfai discussion list: ${configPath} has config errors (the listing continues).`,
         ...configIssues.map((message) => `  - ${message}`),
       ].join("\n"),
     );
@@ -358,9 +358,9 @@ async function runListPacks(
     writeErr(
       [
         `qfai discussion list: ${pointer.reason}`,
-        "どの pack が active かを確定できないため一覧を中止しました。",
-        "state ファイルを修復するか削除し (削除は pointer 未設定と同義)、" +
-          "qfai discussion use <id> で設定し直してください。",
+        "Cannot determine which pack is active, so the listing was refused.",
+        "Repair or delete the state file (deleting it means no pointer is set), " +
+          "then set it again with qfai discussion use <id>.",
       ].join("\n"),
     );
     return 1;

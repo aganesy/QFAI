@@ -373,7 +373,7 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     const output = await captureStdout(async () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
     });
-    expect(output).toContain("ディレクトリ");
+    expect(output).toContain("a directory is in the way");
     expect((await lstat(target)).isDirectory()).toBe(true);
     // The run went on: the agent sorted after the conflict was regenerated.
     expect(await readFile(neighbour, "utf-8")).not.toContain('description = "stale"');
@@ -402,7 +402,7 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
     });
 
-    expect(output).toContain("通常ファイル以外");
+    expect(output).toContain("a non-regular entry");
     expect((await lstat(target)).isFIFO()).toBe(true);
     // The run went on: the agent sorted after the conflict was regenerated.
     expect(await readFile(neighbour, "utf-8")).not.toContain('description = "stale"');
@@ -423,7 +423,7 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     const output = await captureStdout(async () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
     });
-    expect(output).toContain("通常ファイル");
+    expect(output).toContain("regular file");
     await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -446,7 +446,7 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     const output = await captureStdout(async () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
     });
-    expect(output).toContain("上限");
+    expect(output).toContain("byte ceiling");
     await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
       code: "ENOENT",
     });
