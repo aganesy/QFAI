@@ -1155,7 +1155,7 @@ describe("hashDesignMd (TC-1.3.x)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sanity: the shipped DESIGN.md template parses + validates cleanly.
+// Sanity: the shipped DESIGN.md sample parses + validates cleanly.
 // ---------------------------------------------------------------------------
 
 /**
@@ -1176,7 +1176,7 @@ const SHIPPED_DESIGN_MD_SAMPLE = path.join(
   "DESIGN.md.sample",
 );
 
-describe("shipped DESIGN.md template", () => {
+describe("shipped DESIGN.md sample", () => {
   it("parses and validates the shipped sample", async () => {
     const file = SHIPPED_DESIGN_MD_SAMPLE;
     const text = await readFile(file, "utf-8");

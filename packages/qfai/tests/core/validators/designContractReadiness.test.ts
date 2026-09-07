@@ -1309,8 +1309,9 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
     expect(dcon034).toHaveLength(1);
     expect(dcon034[0]?.file).toBe("DESIGN.md");
-    // Warning, not error: every `qfai init` seeds this file, including
-    // into projects that never ship a UI and never reach Phase 0.
+    // Warning, not error: a project that ships no UI freezes nothing, so the
+    // sample costs it nothing yet. An error would stop a project that never
+    // opted into the design surface at all.
     expect(dcon034[0]?.severity).toBe("warning");
   });
 

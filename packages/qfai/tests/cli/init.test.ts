@@ -3081,7 +3081,7 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  // TC-1.4.1 — fresh init creates DESIGN.md at root with template byte content
+  // TC-1.4.1 — fresh init writes no DESIGN.md at root
   it("writes no DESIGN.md at root (TC-1.4.1)", async () => {
     // `/qfai-discussion` emits the brand SSOT, and only for a
     // visual-prototyping surface. Seeding it here put the file in every
