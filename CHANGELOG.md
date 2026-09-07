@@ -4,6 +4,27 @@
 
 ## [Unreleased]
 
+### Added
+
+- **A rule stating that this repository is written in English**
+  (`.agents/rules/repository-language.md`). The language of the tree was
+  settled one surface at a time. Operator-facing strings in
+  `packages/qfai/src/**` are pinned to English by `cli-ux-guidelines.md` and
+  held by a meta-test against a shrinking allowlist; comments, documents,
+  tests and this file had no rule to point at, so each change decided for
+  itself.
+
+  The rule covers what this repository stores and ships. It does not fix the
+  language an assistant replies in, which follows the user, nor what an adopter
+  writes in their own repository. For that reason it is a master only: like
+  `document-schema.md` it is absent from
+  `packages/qfai/assets/init/root/.agents/rules/`, so `qfai init` does not
+  carry it into a project that has made a different choice.
+
+  Existing Japanese is a backlog rather than permission. The English wording of
+  several rules already exists — the shipped copies under
+  `assets/init/root/.agents/rules/` carry none.
+
 ## [1.11.0] - 2026-09-07
 
 ### Added
