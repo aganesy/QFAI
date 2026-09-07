@@ -340,7 +340,7 @@ describe("a stub token that is not executing code", () => {
     expect(issues[0]?.refs).toEqual(["it.todo"]);
   });
 
-  it("is ignored in a Python docstring and comment, but not in the body", async () => {
+  it("is ignored in a Python docstring and in a comment", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
