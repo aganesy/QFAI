@@ -108,12 +108,20 @@ const BUCKET_HEADERS = {
 } as const;
 
 /**
- * The bullet with its decoration removed and nothing else, so every name it
- * writes is still in the result — including one in a trailing clause.
+ * The bullet with its decoration removed and nothing else — backticks,
+ * emphasis and repeated whitespace go, and every name the bullet writes stays,
+ * including one in a trailing clause.
+ *
+ * That is what the retired-name search reads, because a retired name is
+ * usually written in exactly such a clause.
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
+export function decorationOnly(bullet: string): string {
+  return bullet.replace(/[`*_]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 /**
  * Reduce one hard-required bullet to the identifier it names, so a comparison
  * against the allowed entries reads the name and not the decoration around it.
@@ -134,10 +142,6 @@ const BUCKET_HEADERS = {
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
-export function decorationOnly(bullet: string): string {
-  return bullet.replace(/[`*_]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
-}
-
 export function normalizeHardRequiredEntry(bullet: string): string {
   return bullet
     .replace(/[`*_]/g, "")
@@ -256,11 +260,14 @@ export type AutopilotPolicyParseResult = {
   };
   /** Auto-decide entries that DON'T match an allowed token (widening). */
   widenedTokens: string[];
-  /** Hard-required bullets naming something outside the pinned set. */
+  /** Hard-required bullets naming an entry this policy has retired. */
   hardRequiredRetired: string[];
-  /** Bullets naming anything else the skill may not carry. */
+  /**
+   * Hard-required bullets naming an entry that is neither common to every
+   * skill nor declared for this one. Narrowing is not reported: a bucket may
+   * name fewer entries than the set allows.
+   */
   hardRequiredUnknown: string[];
-  /** Pinned hard-required entries no bullet names. */
 };
 
 /**
