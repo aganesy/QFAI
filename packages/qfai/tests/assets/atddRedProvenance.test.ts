@@ -1474,8 +1474,8 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
   });
 
   it("gives the uncommitted-advance refusal a remedy in its report line", async () => {
-    // A refusal naming no way out leaves the operator with a row that cannot
-    // finish and no statement of what would let it.
+    // A refusal that names no way out leaves the operator with a row that
+    // cannot finish and nothing saying how to finish it.
     const migration = flat(await read(tree, MIGRATION));
     expect(migration).toContain(
       "**Report it in one line — the row, that its advance is uncommitted, and the way out: commit the ledger and re-run this pass**",
