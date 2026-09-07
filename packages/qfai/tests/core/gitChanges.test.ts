@@ -93,12 +93,36 @@ describe("getChangedFilesAgainstBase", () => {
     git(root, "mv", "src/core/old.ts", "src/core/new.ts");
     git(root, "commit", "-m", "move");
 
-    const changed = changedFilesOrThrow(root, "base", { dropRenameSources: true });
+    const changed = changedFilesOrThrow(root, "base", { dropPathsGoneAtHead: true });
     expect(changed.has("src/core/old.ts")).toBe(false);
     expect(changed.has("src/core/new.ts")).toBe(true);
   });
 
-  it("keeps an ordinary deletion, which is not a rename source", async () => {
+  it("drops a move git scores as a delete plus an add, not as a rename", async () => {
+    // Rename detection is a similarity score, so a file moved and rewritten in
+    // one commit falls under the threshold. Subtracting only detected renames
+    // left this source in the set, and a ledger row still naming it read as
+    // "implementation modified" — the false negative the option exists to stop.
+    const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
+    git(root, "rm", "src/core/old.ts");
+    await write(root, "src/core/new.ts", "export const rewrittenBeyondRecognition = 42;\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "move and rewrite");
+
+    // The premise: git really does not call this a rename.
+    const renames = execFileSync(
+      "git",
+      ["diff", "-M", "--diff-filter=R", "--name-only", "base...HEAD"],
+      { cwd: root, encoding: "utf-8" },
+    );
+    expect(renames.trim()).toBe("");
+
+    const changed = changedFilesOrThrow(root, "base", { dropPathsGoneAtHead: true });
+    expect(changed.has("src/core/old.ts")).toBe(false);
+    expect(changed.has("src/core/new.ts")).toBe(true);
+  });
+
+  it("drops an ordinary deletion, whose path is equally gone", async () => {
     const root = await newRepo({
       "src/core/gone.ts": MODULE_BODY,
       "src/core/kept.ts": "export const kept = 1;\n",
@@ -106,8 +130,20 @@ describe("getChangedFilesAgainstBase", () => {
     git(root, "rm", "src/core/gone.ts");
     git(root, "commit", "-m", "delete");
 
-    const changed = changedFilesOrThrow(root, "base", { dropRenameSources: true });
-    expect(changed.has("src/core/gone.ts")).toBe(true);
+    const changed = changedFilesOrThrow(root, "base", { dropPathsGoneAtHead: true });
+    expect(changed.has("src/core/gone.ts")).toBe(false);
+    // The over-correction pin: only the removed path goes.
+    expect(changed.has("src/core/kept.ts")).toBe(false);
+  });
+
+  it("keeps every removed path for the caller that did not ask", async () => {
+    const root = await newRepo({ "src/core/gone.ts": MODULE_BODY });
+    git(root, "rm", "src/core/gone.ts");
+    git(root, "commit", "-m", "delete");
+
+    // The drift guard wants it: an artifact removed from under its protected
+    // path is exactly what it exists to notice.
+    expect(changedFilesOrThrow(root, "base").has("src/core/gone.ts")).toBe(true);
   });
 });
 
@@ -150,6 +186,40 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     git(root, "mv", "src/core/old.ts", "src/core/new.ts");
     git(root, "add", "-A");
     git(root, "commit", "-m", "revise the rule and move the module");
+
+    const issues = await validateTraceabilityIntegrity(root, config);
+    const stale = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+    expect(stale).toHaveLength(1);
+    expect(stale[0]?.file).toBe("src/core/old.ts");
+  });
+
+  // Same staleness, reached by the move rename detection does not score. The
+  // set that subtracted only detected renames kept this source, so the row
+  // reading it as "implementation modified" passed.
+  it("reports a row pointing at a move git calls a delete plus an add", async () => {
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
+      "src/core/old.ts": MODULE_BODY,
+    });
+    await write(
+      root,
+      ".qfai/specs/spec-0001/04_Business-Rules.md",
+      "# BR\n\n- BR-0001-0001: revised\n",
+    );
+    git(root, "rm", "src/core/old.ts");
+    await write(root, "src/core/new.ts", "export const rewrittenBeyondRecognition = 42;\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "revise the rule, move and rewrite the module");
+
+    // The premise: git really does not call this a rename.
+    const renames = execFileSync(
+      "git",
+      ["diff", "-M", "--diff-filter=R", "--name-only", "base...HEAD"],
+      { cwd: root, encoding: "utf-8" },
+    );
+    expect(renames.trim()).toBe("");
 
     const issues = await validateTraceabilityIntegrity(root, config);
     const stale = issues.filter((entry) => entry.code === "QFAI-TRACE-001");

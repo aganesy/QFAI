@@ -104,17 +104,26 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * detection prints `old => new` in the path column) and makes a moved artifact
  * report both endpoints, which is what a drift guard wants to see.
  *
- * `dropRenameSources` is for the caller that wants the opposite. Asking "was
- * the file this ledger row points at modified?" is answered wrongly by a
- * rename's **source**: that path no longer exists, and finding it in the set
- * let a ledger still naming it pass as though its implementation had been
- * touched. The sources are listed separately and subtracted, so the drift guard
- * keeps both endpoints and the traceability check sees only the destination.
+ * `dropPathsGoneAtHead` is for the caller that wants the opposite. Asking "was
+ * the file this ledger row points at modified?" is answered wrongly by any path
+ * the branch **removed**: it no longer exists, and finding it in the set let a
+ * ledger still naming it pass as though its implementation had been touched.
+ * The removed paths are listed separately and subtracted, so the drift guard
+ * keeps both endpoints of a move and the traceability check sees only what is
+ * still there.
+ *
+ * Keyed on removal rather than on rename detection, because rename detection is
+ * a similarity score. A file moved and substantially rewritten in one commit
+ * falls under the threshold and is reported as a delete plus an add, so a set
+ * that subtracted only detected renames left that source behind — and a ledger
+ * row still naming it passed. So does a plain deletion, whose path is equally
+ * gone. Removal is the property the caller is actually asking about, and it is
+ * not a heuristic.
  */
 export function getChangedFilesAgainstBase(
   root: string,
   baseBranch: string,
-  options: { dropRenameSources?: boolean } = {},
+  options: { dropPathsGoneAtHead?: boolean } = {},
 ): Set<string> | null {
   const output = gitStdout(root, [
     "diff",
@@ -149,9 +158,9 @@ export function getChangedFilesAgainstBase(
     changed.add(normalizeRepoPath(file));
   }
 
-  if (options.dropRenameSources === true) {
-    for (const source of getRenameSourcesAgainstBase(root, baseBranch)) {
-      changed.delete(source);
+  if (options.dropPathsGoneAtHead === true) {
+    for (const removed of getRemovedPathsAgainstBase(root, baseBranch)) {
+      changed.delete(removed);
     }
   }
   return changed;
@@ -224,49 +233,39 @@ export function changedFilesSince(
 }
 
 /**
- * The **from** side of every rename between `baseBranch` and `HEAD`.
+ * Every path present on `baseBranch` and gone at `HEAD`.
  *
- * Listed on its own rather than by parsing rename rows out of the main diff:
- * with rename detection on, `--numstat` writes the pair into the path column as
- * `old => new`, and abbreviates a shared prefix to `dir/{old => new}.ts`, which
- * is not a format worth reconstructing a path from. `--name-status -z` under
- * `--diff-filter=R` emits the two paths as separate NUL-terminated records
- * instead, so each entry is exactly `R<score>`, from, to.
+ * `--diff-filter=D` under `--no-renames` is the whole answer: with rename
+ * detection off a rename is a deletion plus an addition, so the sources of
+ * detected renames, the sources of moves too rewritten to be detected as one,
+ * and plain deletions all arrive as `D` rows. One list, no similarity score.
  *
- * `-M` is explicit because a consumer may have `diff.renames` turned off.
+ * `--name-only -z` is used so a path holding a quote or a non-ASCII byte comes
+ * back verbatim rather than in git's C-style quoted form.
  *
- * **Three-dot, matching {@link getChangedFilesAgainstBase}.** The sources are
- * subtracted from that function's set, so a rename listed against a different
+ * **Three-dot, matching {@link getChangedFilesAgainstBase}.** These paths are
+ * subtracted from that function's set, so a removal listed against a different
  * pair of trees removes a path the set never held, or fails to remove one it
- * does — either way `dropRenameSources` stops meaning what its caller reads it
+ * does — either way `dropPathsGoneAtHead` stops meaning what its caller reads it
  * to mean.
  */
-function getRenameSourcesAgainstBase(root: string, baseBranch: string): Set<string> {
+function getRemovedPathsAgainstBase(root: string, baseBranch: string): Set<string> {
   const output = gitStdout(root, [
     "diff",
-    "-M",
-    "--diff-filter=R",
-    "--name-status",
+    "--no-renames",
+    "--diff-filter=D",
+    "--name-only",
     "-z",
     `${baseBranch}...HEAD`,
   ]);
-  const sources = new Set<string>();
+  const removed = new Set<string>();
   if (output === null) {
-    return sources;
+    return removed;
   }
-
-  const records = output.split("\0");
-  for (let index = 0; index + 2 < records.length; index += 3) {
-    // A record that is not the expected `R<score>` means the layout is not what
-    // this parse assumes, so stop rather than subtract a path read at the wrong
-    // offset — dropping a real change is the worse failure of the two.
-    if (!/^R\d*$/.test(records[index] ?? "")) {
-      break;
-    }
-    const from = records[index + 1] ?? "";
-    if (from.length > 0) {
-      sources.add(normalizeRepoPath(from));
+  for (const record of output.split("\0")) {
+    if (record.length > 0) {
+      removed.add(normalizeRepoPath(record));
     }
   }
-  return sources;
+  return removed;
 }
