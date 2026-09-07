@@ -104,32 +104,23 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * detection prints `old => new` in the path column) and makes a moved artifact
  * report both endpoints, which is what a drift guard wants to see.
  *
- * `dropPathsGoneAtHead` is for the caller that wants the opposite. Asking "was
- * the file this ledger row points at modified?" is answered wrongly by any path
- * the branch **removed**: it no longer exists, and finding it in the set let a
- * ledger still naming it pass as though its implementation had been touched.
- * The removed paths are listed separately and subtracted, so the drift guard
- * keeps both endpoints of a move and the traceability check sees only what is
- * still there.
+ * `-z` because the path column is otherwise C-quoted under the default
+ * `core.quotePath`: a path with a non-ASCII character arrives wrapped in quotes
+ * with its bytes octal-escaped, and that string matches no file on disk. It
+ * would then reach the per-path confirmation below as a pathspec matching
+ * nothing, read as clean, and drop out of the result — silently exempting
+ * exactly the artifacts a non-English project names.
  *
- * Keyed on removal rather than on rename detection, because rename detection is
- * a similarity score. A file moved and substantially rewritten in one commit
- * falls under the threshold and is reported as a delete plus an add, so a set
- * that subtracted only detected renames left that source behind — and a ledger
- * row still naming it passed. So does a plain deletion, whose path is equally
- * gone. Removal is the property the caller is actually asking about, and it is
- * not a heuristic.
+ * A caller that asks "was the file this row points at modified?" wants
+ * {@link withoutPathsGoneAtHead} over this set.
  */
-export function getChangedFilesAgainstBase(
-  root: string,
-  baseBranch: string,
-  options: { dropPathsGoneAtHead?: boolean } = {},
-): Set<string> | null {
+export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> | null {
   const output = gitStdout(root, [
     "diff",
     "--ignore-cr-at-eol",
     "--no-renames",
     "--numstat",
+    "-z",
     `${baseBranch}...HEAD`,
   ]);
   if (output === null) {
@@ -137,12 +128,13 @@ export function getChangedFilesAgainstBase(
   }
 
   const changed = new Set<string>();
-  for (const raw of output.split("\n")) {
-    const line = raw.replace(/\r$/, "");
-    if (line.length === 0) {
+  // Under `-z` a record is `added TAB deleted TAB path`, NUL-terminated, and
+  // the path is raw. `--no-renames` rules out the two-path rename record.
+  for (const record of output.split("\0")) {
+    if (record.length === 0) {
       continue;
     }
-    const fields = line.split("\t");
+    const fields = record.split("\t");
     if (fields.length < 3) {
       continue;
     }
@@ -158,12 +150,38 @@ export function getChangedFilesAgainstBase(
     changed.add(normalizeRepoPath(file));
   }
 
-  if (options.dropPathsGoneAtHead === true) {
-    for (const removed of getRemovedPathsAgainstBase(root, baseBranch)) {
-      changed.delete(removed);
-    }
-  }
   return changed;
+}
+
+/**
+ * `changed` without the paths this branch removed.
+ *
+ * Asking "was the file this ledger row points at modified?" is answered wrongly
+ * by any path the branch **removed**: it no longer exists, and finding it in the
+ * set let a ledger still naming it pass as though its implementation had been
+ * touched. A separate function rather than an option on the listing above,
+ * because the same caller needs both sets — the raw one says which spec
+ * directories the branch touched, deletions included, and pruning that would
+ * hide a spec deleted whole.
+ *
+ * Keyed on removal rather than on rename detection, because rename detection is
+ * a similarity score. A file moved and substantially rewritten in one commit
+ * falls under the threshold and is reported as a delete plus an add, so a set
+ * that subtracted only detected renames left that source behind — and a ledger
+ * row still naming it passed. So does a plain deletion, whose path is equally
+ * gone. Removal is the property the caller is actually asking about, and it is
+ * not a heuristic.
+ */
+export function withoutPathsGoneAtHead(
+  root: string,
+  baseBranch: string,
+  changed: ReadonlySet<string>,
+): Set<string> {
+  const kept = new Set(changed);
+  for (const removed of getRemovedPathsAgainstBase(root, baseBranch)) {
+    kept.delete(removed);
+  }
+  return kept;
 }
 
 /**

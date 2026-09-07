@@ -14,7 +14,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
-import { getChangedFilesAgainstBase } from "../../src/core/gitChanges.js";
+import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../../src/core/gitChanges.js";
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
 
 const tempDirs: string[] = [];
@@ -67,12 +67,17 @@ afterEach(async () => {
  * with a `base` ref, so a `null` here is a broken fixture rather than the case
  * under test, and it fails loudly instead of narrowing away with `?.`.
  */
-function changedFilesOrThrow(...args: Parameters<typeof getChangedFilesAgainstBase>): Set<string> {
-  const changed = getChangedFilesAgainstBase(...args);
+function changedFilesOrThrow(root: string, baseBranch: string): Set<string> {
+  const changed = getChangedFilesAgainstBase(root, baseBranch);
   if (changed === null) {
     throw new Error("getChangedFilesAgainstBase could not diff the fixture repository");
   }
   return changed;
+}
+
+/** What a caller asking "was this row's implementation modified?" reads. */
+function stillPresentOrThrow(root: string, baseBranch: string): Set<string> {
+  return withoutPathsGoneAtHead(root, baseBranch, changedFilesOrThrow(root, baseBranch));
 }
 
 describe("getChangedFilesAgainstBase", () => {
@@ -93,7 +98,7 @@ describe("getChangedFilesAgainstBase", () => {
     git(root, "mv", "src/core/old.ts", "src/core/new.ts");
     git(root, "commit", "-m", "move");
 
-    const changed = changedFilesOrThrow(root, "base", { dropPathsGoneAtHead: true });
+    const changed = stillPresentOrThrow(root, "base");
     expect(changed.has("src/core/old.ts")).toBe(false);
     expect(changed.has("src/core/new.ts")).toBe(true);
   });
@@ -117,7 +122,7 @@ describe("getChangedFilesAgainstBase", () => {
     );
     expect(renames.trim()).toBe("");
 
-    const changed = changedFilesOrThrow(root, "base", { dropPathsGoneAtHead: true });
+    const changed = stillPresentOrThrow(root, "base");
     expect(changed.has("src/core/old.ts")).toBe(false);
     expect(changed.has("src/core/new.ts")).toBe(true);
   });
@@ -130,10 +135,41 @@ describe("getChangedFilesAgainstBase", () => {
     git(root, "rm", "src/core/gone.ts");
     git(root, "commit", "-m", "delete");
 
-    const changed = changedFilesOrThrow(root, "base", { dropPathsGoneAtHead: true });
+    const changed = stillPresentOrThrow(root, "base");
     expect(changed.has("src/core/gone.ts")).toBe(false);
     // The over-correction pin: only the removed path goes.
     expect(changed.has("src/core/kept.ts")).toBe(false);
+  });
+
+  it("reports a path git would quote, by the name it actually has", async () => {
+    // Under the default `core.quotePath` a non-ASCII path is C-quoted in the
+    // listing — wrapped in quotes with its bytes octal-escaped — and that
+    // string matches no file. Reading it as the path exempted every artifact a
+    // non-English project names from every diff-gated check downstream.
+    const root = await newRepo({ "src/core/kept.ts": "export const kept = 1;\n" });
+    await write(root, ".qfai/contracts/db/\u5951\u7d04.sql", "SELECT 1;\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "add a contract with a non-ASCII name");
+
+    // The premise: git really does quote it.
+    const quoted = execFileSync("git", ["diff", "--numstat", "base...HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(quoted).toContain("\\");
+
+    expect(changedFilesOrThrow(root, "base").has(".qfai/contracts/db/\u5951\u7d04.sql")).toBe(true);
+  });
+
+  it("keeps an empty file whose name git would quote", async () => {
+    // The `0 0` row is confirmed by a second per-path diff, and a quoted name
+    // reaches it as a pathspec matching nothing — read as clean, dropped.
+    const root = await newRepo({ "src/core/kept.ts": "export const kept = 1;\n" });
+    await write(root, ".qfai/contracts/db/\u7a7a.sql", "");
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "add an empty contract with a non-ASCII name");
+
+    expect(changedFilesOrThrow(root, "base").has(".qfai/contracts/db/\u7a7a.sql")).toBe(true);
   });
 
   it("keeps every removed path for the caller that did not ask", async () => {
@@ -225,6 +261,26 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     const stale = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
     expect(stale).toHaveLength(1);
     expect(stale[0]?.file).toBe("src/core/old.ts");
+  });
+
+  // Pruning the removed paths before deriving the spec set hid the deletion
+  // that most needs reporting: the spec's own BR/AC file is gone, so nothing
+  // named the spec, and the code for "its ledger can no longer be read" never
+  // fired.
+  it("reports a spec directory the branch deleted whole", async () => {
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+      "src/core/module.ts": MODULE_BODY,
+    });
+    git(root, "rm", "-r", ".qfai/specs/spec-0001");
+    git(root, "commit", "-m", "delete the spec");
+
+    const issues = await validateTraceabilityIntegrity(root, config);
+    const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
+    expect(uninspectable).toHaveLength(1);
+    expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
   });
 
   it("passes a ledger row updated to the rename's destination", async () => {

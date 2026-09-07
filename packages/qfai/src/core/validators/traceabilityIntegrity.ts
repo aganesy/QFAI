@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { getChangedFilesAgainstBase } from "../gitChanges.js";
+import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable, type MarkdownTable } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
@@ -273,20 +273,27 @@ export async function validateTraceabilityIntegrity(
   const baseBranch = config.baseBranch ?? "origin/main";
   const specsDir = resolvePath(root, config, "specsDir");
 
-  let changedFiles: Set<string> | null = null;
+  // Two sets from one diff, and the difference between them matters.
+  //
+  // `changedImplFiles` drops the paths the branch removed: a path that is gone
+  // cannot be the implementation this ledger row still points at, and counting
+  // it as "modified" let a row that was never updated for the removal pass
+  // `QFAI-TRACE-001` in silence — the one case where the ledger is provably
+  // stale. Removal, not rename detection: a move too rewritten to score as a
+  // rename, and a plain deletion, leave the row equally stale.
+  //
+  // `changedSpecIds` is derived from the **undropped** set, because a spec
+  // deleted whole is a change to that spec. Pruning first left its BR/AC files
+  // out, so `changedSpecIds` came back empty and `QFAI-TRACE-003` — which
+  // exists to report a spec whose ledger can no longer be read — never fired
+  // for the deletion that most needs it.
+  let changedImplFiles: Set<string> | null = null;
   let changedSpecIds = new Set<string>();
   if (includeImplementationDiff) {
-    // A path the branch removed is gone, so it cannot be the implementation
-    // this ledger row still points at. Counting it as "modified" let a row
-    // that was never updated for the removal pass `QFAI-TRACE-001` in silence —
-    // the one case where the ledger is provably stale. Removal, not rename
-    // detection: a move too rewritten to score as a rename, and a plain
-    // deletion, leave the row equally stale.
-    changedFiles = getChangedFilesAgainstBase(root, baseBranch, {
-      dropPathsGoneAtHead: true,
-    });
+    const changedFiles = getChangedFilesAgainstBase(root, baseBranch);
     if (changedFiles) {
       changedSpecIds = findChangedSpecDirs(changedFiles, config.paths.specsDir);
+      changedImplFiles = withoutPathsGoneAtHead(root, baseBranch, changedFiles);
     } else {
       issues.push(
         issue(
@@ -321,12 +328,12 @@ export async function validateTraceabilityIntegrity(
       issues.push(ledger.issue);
       continue;
     }
-    if (!changedFiles || !changedSpecIds.has(specId)) {
+    if (!changedImplFiles || !changedSpecIds.has(specId)) {
       continue;
     }
 
     for (const entry of ledger.entries) {
-      if (!changedFiles.has(normalizePath(entry.implFile))) {
+      if (!changedImplFiles.has(normalizePath(entry.implFile))) {
         issues.push(
           issue(
             "QFAI-TRACE-001",

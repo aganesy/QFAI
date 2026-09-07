@@ -16,6 +16,28 @@ import { validateTraceabilityIntegrity } from "../../src/core/validators/traceab
 import type { QfaiConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
+/**
+ * A fake `git` answering each listing this validator runs on its own terms.
+ *
+ * One canned string for every call made the two listings indistinguishable, so
+ * the removal listing received numstat rows and read them as paths — and no
+ * test could describe a branch that removed anything. Both listings are `-z`,
+ * so both are NUL-terminated and carry the path raw.
+ *
+ * `changed` holds `--numstat` records (`added TAB deleted TAB path`);
+ * `removed` holds the paths this branch deleted.
+ */
+function mockGit(listings: { changed?: string[]; removed?: string[] } = {}): void {
+  const terminated = (records: readonly string[]): string =>
+    records.map((record) => `${record}\0`).join("");
+  vi.mocked(execFileSync).mockImplementation((...call: unknown[]): string => {
+    const argv = Array.isArray(call[1]) ? call[1].map(String) : [];
+    if (argv.includes("--diff-filter=D")) return terminated(listings.removed ?? []);
+    if (argv.includes("--numstat")) return terminated(listings.changed ?? []);
+    return "";
+  });
+}
+
 const stubConfig: QfaiConfig = {
   paths: {
     contractsDir: ".qfai/contracts",
@@ -93,7 +115,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git diff shows BR file changed but NOT the implementation file
-    vi.mocked(execFileSync).mockReturnValue("1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n");
+    mockGit({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBeGreaterThanOrEqual(1);
@@ -134,9 +156,9 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Git diff shows BOTH the spec BR file AND the implementation file changed
-    vi.mocked(execFileSync).mockReturnValue(
-      "1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n1\t1\tsrc/core/someModule.ts\n",
-    );
+    mockGit({
+      changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md", "1\t1\tsrc/core/someModule.ts"],
+    });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toEqual([]);
@@ -184,9 +206,9 @@ describe("ledger reads only the first Markdown table", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // The real linked implementation changed; the retired path did not.
-    vi.mocked(execFileSync).mockReturnValue(
-      "1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n1\t1\tsrc/core/someModule.ts\n",
-    );
+    mockGit({
+      changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md", "1\t1\tsrc/core/someModule.ts"],
+    });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toEqual([]);
@@ -210,7 +232,7 @@ describe("ledger reads only the first Markdown table", () => {
     ].join("\n");
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
-    vi.mocked(execFileSync).mockReturnValue("1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n");
+    mockGit({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     const trace001 = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
@@ -242,7 +264,7 @@ describe("TDD-0013: ledger absent", () => {
     await seedLayeredSpec(specDir);
     // No ledger file created
 
-    vi.mocked(execFileSync).mockReturnValue("1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n");
+    mockGit({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.length).toBe(1);
@@ -306,9 +328,9 @@ describe("TDD-0014: evidence without Diff Context", () => {
     await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
 
     // Both spec and impl in diff
-    vi.mocked(execFileSync).mockReturnValue(
-      "1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n1\t1\tsrc/core/someModule.ts\n",
-    );
+    mockGit({
+      changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md", "1\t1\tsrc/core/someModule.ts"],
+    });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     // No errors — the validator doesn't require Diff Context to exist
@@ -373,7 +395,7 @@ describe("ledger presence is checked without a branch diff", () => {
 
   it("emits QFAI-TRACE-002 for every ledger-less spec when the diff is empty", async () => {
     await seedSpecDirs("spec-0001", "spec-0002");
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     const missing = issues.filter((entry) => entry.code === "QFAI-TRACE-002");
@@ -385,7 +407,7 @@ describe("ledger presence is checked without a branch diff", () => {
   it("checks specs the diff never mentions", async () => {
     await seedSpecDirs("spec-0001", "spec-0002");
     // Only spec-0001 is in the diff; spec-0002's missing ledger is still a fact.
-    vi.mocked(execFileSync).mockReturnValue("1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md\n");
+    mockGit({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     const files = issues
@@ -405,7 +427,7 @@ describe("ledger presence is checked without a branch diff", () => {
       ledger,
       "utf-8",
     );
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toHaveLength(1);
@@ -428,7 +450,7 @@ describe("ledger presence is checked without a branch diff", () => {
       "utf-8",
     );
     // A change somewhere else entirely: no BR/AC moved, so nothing is owed.
-    vi.mocked(execFileSync).mockReturnValue("1\t1\tREADME.md\n");
+    mockGit({ changed: ["1\t1\tREADME.md"] });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toEqual([]);
@@ -438,7 +460,7 @@ describe("ledger presence is checked without a branch diff", () => {
     await seedSpecDirs("spec-0001");
     await mkdir(path.join(tmpRoot, ".qfai", "specs", "_policies"), { recursive: true });
     await mkdir(path.join(tmpRoot, ".qfai", "specs", "spec-XXXX"), { recursive: true });
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toHaveLength(1);
@@ -446,7 +468,7 @@ describe("ledger presence is checked without a branch diff", () => {
   });
 
   it("reports no issues when specsDir does not exist", async () => {
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toEqual([]);
   });
@@ -490,7 +512,7 @@ describe("an unavailable diff is reported, not swallowed", () => {
   });
 
   it("does not emit QFAI-TRACE-003 when git answers with an empty diff", async () => {
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues.some((entry) => entry.code === "QFAI-TRACE-003")).toBe(false);
   });
@@ -536,7 +558,7 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
       ].join("\n"),
       "utf-8",
     );
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toEqual([]);
@@ -550,7 +572,7 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
     const specDir = path.join(specsRoot, "spec-0001");
     await seedLayeredSpec(specDir);
     await mkdir(path.join(specDir, "16_Traceability-ledger.md"), { recursive: true });
-    vi.mocked(execFileSync).mockReturnValue("");
+    mockGit();
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toHaveLength(1);
@@ -574,7 +596,7 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
       "utf-8",
     );
     // Exactly what `/qfai-sdd` leaves behind: BR/AC moved, implementation not.
-    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+    mockGit({ changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md"] });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig, {
       includeImplementationDiff: false,
@@ -601,12 +623,12 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
     // enumerated for it. Silence here would let both QFAI-TRACE-001 and
     // QFAI-TRACE-002 vanish for the deleted spec.
     await seedLayeredSpec(path.join(specsRoot, "spec-0001"));
-    vi.mocked(execFileSync).mockReturnValue(
-      [
+    mockGit({
+      changed: [
         "1\t1\t.qfai/specs/spec-0002/04_Business-Rules.md",
         "1\t1\t.qfai/specs/spec-0002/01_Spec.md",
-      ].join("\n"),
-    );
+      ],
+    });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     const removed = issues.find(
@@ -632,14 +654,40 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
       ].join("\n"),
       "utf-8",
     );
-    vi.mocked(execFileSync).mockReturnValue(
-      ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md", "1\t1\tsrc/core/someModule.ts"].join(
-        "\n",
-      ),
-    );
+    mockGit({
+      changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md", "1\t1\tsrc/core/someModule.ts"],
+    });
 
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
     expect(issues).toEqual([]);
+  });
+
+  it("reads a removed implementation as removed, not as modified", async () => {
+    // The row's file is in the diff because the branch DELETED it. Reading the
+    // listing alone made the stalest possible ledger — one still naming a path
+    // that no longer exists — the single case that passed.
+    const specDir = path.join(specsRoot, "spec-0001");
+    await seedLayeredSpec(specDir);
+    await writeFile(
+      path.join(specDir, "16_Traceability-ledger.md"),
+      [
+        "# Traceability Ledger",
+        "",
+        "| BR/AC | Implementation File | Test File |",
+        "| --- | --- | --- |",
+        "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      ].join("\n"),
+      "utf-8",
+    );
+    mockGit({
+      changed: ["1\t1\t.qfai/specs/spec-0001/04_Business-Rules.md", "0\t9\tsrc/core/someModule.ts"],
+      removed: ["src/core/someModule.ts"],
+    });
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    const stale = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+    expect(stale).toHaveLength(1);
+    expect(stale[0]?.file).toBe("src/core/someModule.ts");
   });
 
   it("does not emit QFAI-TRACE-003 for sdd when git cannot answer", async () => {

@@ -1562,9 +1562,9 @@ export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
  * The dotfiles the rule above cannot see, enumerated by WHOLE NAME.
  *
  * `path.extname(".gitattributes")` is `""` — a leading dot with nothing after it is not an extension
- * to node — so the extension set alone reads a seeded `.gitattributes` as the same extensionless file
- * round 20's payload was. Widening the extension set with `""` would answer that by admitting every
- * extensionless file, which is the guard, deleted.
+ * to node — so the extension set alone reads a seeded `.gitattributes` as an extensionless file, which
+ * is the kind this guard refuses. Widening the extension set with `""` would answer that by admitting
+ * every extensionless file, which is the guard, deleted.
  *
  * A dotfile's whole basename IS its kind: `.gitattributes` names a git data format as exactly as `.md`
  * names markdown, and it is a closed name rather than an open class. `bootstrap` still has no token and
