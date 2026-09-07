@@ -306,17 +306,18 @@ function unreadableDerivedDeclaration(
 ): Issue {
   return issue(
     "QFAI-CONTRACT-041",
-    `\`Derived (not stored):\` 宣言が解析できません: ${line}`,
+    `a \`Derived (not stored):\` declaration does not parse: ${line}`,
     declarationSeverity,
     file,
     "contracts.crossContract.derivedNotStored",
     [line],
     "canonical",
-    "書式は `-- Derived (not stored): <列名> = <値>, <値> from <導出元>` です。" +
-      "`from` 以降 (何から導出するか) は必須で、省略すると宣言として読まれません — " +
-      "値だけ書けるようにすると、この marker は答えではなく黙らせる手段になります。" +
-      "値の並びは 1 つでも空要素があれば宣言全体が無効になります (書きかけの宣言が" +
-      "完成したものとして読まれないため)。",
+    "The form is `-- Derived (not stored): <column> = <value>, <value> from <inputs>`. " +
+      "The `from` clause - what the values are computed from - is required; without it the " +
+      "line is not read as a declaration at all, because a marker that needs only the values " +
+      "would be a way to silence this rule rather than a way to answer it. One empty element " +
+      "in the value list invalidates the whole declaration, so that a half-written one is " +
+      "never read as finished.",
   );
 }
 
@@ -349,22 +350,27 @@ function staleDerivedDeclarations(
       issues.push(
         issue(
           "QFAI-CONTRACT-041",
-          `\`Derived (not stored): ${declaration.fieldName}\` が挙げる値が何も裏付けていません: ` +
+          `a \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
+            "do nothing: " +
             unused.join(", ") +
-            (stored.length > 0 ? ` (DB 側が格納できる: ${stored.join(", ")})` : "") +
-            (unasked.length > 0 ? ` (API 契約が要求していない: ${unasked.join(", ")})` : ""),
+            (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
+            (unasked.length > 0
+              ? ` (the API contract does not require: ${unasked.join(", ")})`
+              : ""),
           declarationSeverity,
           declaration.file,
           "contracts.crossContract.derivedNotStored",
           [declaration.fieldName, ...unused],
           "canonical",
           (stored.length > 0
-            ? "DB 側のドメインがその値を格納できるので、`格納しない` という宣言と矛盾しています — " +
-              "宣言を削るか、格納しないのであれば DB 側のドメインからその値を外してください。"
+            ? "The DB domain can store that value, which contradicts the claim that it is " +
+              "not stored - drop the declaration, or, if it really is not stored, remove the " +
+              "value from the DB domain."
             : "") +
             (unasked.length > 0
-              ? "API 契約がその値を要求していないので、この宣言は何も免除していません — " +
-                "API 側に値を足す予定なら宣言はそのままで構いませんが、そうでなければ削ってください。"
+              ? "The API contract does not require that value, so the declaration exempts " +
+                "nothing. Keep it if the value is about to be added to the API; otherwise " +
+                "drop it."
               : ""),
         ),
       );

@@ -632,8 +632,8 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("解析できません");
-        expect(declaration[0]?.suggested_action).toContain("`from` 以降");
+        expect(declaration[0]?.message).toContain("does not parse");
+        expect(declaration[0]?.suggested_action).toContain("The `from` clause");
         // And the values it tried to cover are still reported.
         expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-040")).toHaveLength(1);
       });
@@ -680,8 +680,10 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("DB 側が格納できる: active");
-        expect(declaration[0]?.suggested_action).toContain("矛盾しています");
+        expect(declaration[0]?.message).toContain("the DB can store: active");
+        expect(declaration[0]?.suggested_action).toContain(
+          "contradicts the claim that it is not stored",
+        );
       });
 
       it("reports a declaration covering a value the API never asks for", async () => {
@@ -692,7 +694,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("API 契約が要求していない: retired");
+        expect(declaration[0]?.message).toContain("the API contract does not require: retired");
         // `standby` did work, so it is not named as stale.
         expect(declaration[0]?.message).not.toContain("standby");
       });
