@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-09-07
+
 ### Added
 
 - **Mermaid 図の構文チェックレーン (`packages/qfai/assets/scripts/check-mermaid.mjs`)。** markdownlint
