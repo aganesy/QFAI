@@ -113,7 +113,16 @@ There is one base, and it is the project root.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
-- The three buckets of a skill's `## Default Autopilot Policy` say who settles a decision: `auto-decide` = the skill settles it without asking; `ask-user` = the skill asks before acting; `hard-required` = no default is possible, so the value comes from the user rather than from the agent — a repository-side derivation may narrow the candidates but never settles the value on the agent's own authority. What a missing one costs a run is below.
+- The three buckets of a skill's `## Default Autopilot Policy` say who settles a
+  decision:
+  - `auto-decide` — the skill settles it without asking.
+  - `ask-user` — the skill asks before acting.
+  - `hard-required` — no default is possible, so the value comes from the user
+    rather than from the agent. A repository-side derivation may narrow the
+    candidates; it never settles the value on the agent's own authority.
+
+  What a missing one costs a run is below.
+
 - Spend **at most 5 clarifying questions per invocation**, the unit being one
   top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
   `/web-research`, …), counted per question item rather than per

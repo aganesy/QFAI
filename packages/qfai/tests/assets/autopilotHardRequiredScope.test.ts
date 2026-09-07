@@ -86,10 +86,10 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const baseline = await read(tree, BASELINE);
     expect(baseline).toContain("## User Questions (AskUserQuestion Protocol)");
     expect(baseline).toContain(
-      "`hard-required` = no default is possible, so the value comes from the user rather than from the agent",
+      "`hard-required` — no default is possible, so the value comes from the user rather than from the agent",
     );
     expect(baseline).toContain(
-      "a repository-side derivation may narrow the candidates but never settles the value on the agent's own authority",
+      "A repository-side derivation may narrow the candidates; it never settles the value on the agent's own authority",
     );
   });
 
@@ -97,8 +97,8 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // A definition of one bucket alone would not separate it from `auto-decide`,
     // which is the distinction the collision turned on.
     const baseline = await read(tree, BASELINE);
-    expect(baseline).toContain("`auto-decide` = the skill settles it without asking");
-    expect(baseline).toContain("`ask-user` = the skill asks before acting");
+    expect(baseline).toContain("`auto-decide` — the skill settles it without asking.");
+    expect(baseline).toContain("`ask-user` — the skill asks before acting.");
   });
 });
 
