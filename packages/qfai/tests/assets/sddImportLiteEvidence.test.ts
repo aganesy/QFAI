@@ -255,6 +255,66 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       }
     });
 
+    it(`${tree}: an ID-less source gets numbered in the evidence, not pointed at a document`, async () => {
+      // A `## Sources` anchor names a document, so every item drawn from that
+      // document carries the same right half and the pair stops resolving to
+      // one requirement. An excerpt with no IDs is the common case, so without
+      // somewhere to mint them the route has no writable Source at all.
+      const trace = flat(await read(tree, TRACE_REL));
+      expect(trace).toContain("`IMP-001`, `IMP-002`");
+      expect(trace).toContain("A `## Sources` anchor is not a substitute");
+      // The list has to live in the evidence file: it is written once per run
+      // and never rewritten, which is what keeps a number stable.
+      const template = flat(await read(tree, TEMPLATE_REL));
+      expect(template).toContain("## Imported requirements");
+      expect(template).toContain("import-lite-<ts>#IMP-001");
+      // Both item templates have to name the minted form, or an agent reading
+      // only the template it is filling in still has no value to write.
+      for (const rel of [US_REL, AC_REL]) {
+        expect(flat(await read(tree, rel)), `${rel} does not name the minted ID`).toContain(
+          "`## Imported requirements` assigns",
+        );
+      }
+    });
+
+    it(`${tree}: an incomplete pack neither opens this route nor gets repaired`, async () => {
+      // Stage 0 holds a pack to be non-normative: an incomplete one does not
+      // stop the stage, and repairing it to pass a gate is forbidden. A rule
+      // here saying "complete the pack" contradicts both.
+      const skill = flat(await read(tree, SKILL_REL));
+      expect(skill).toContain("the pack is present, so this route never opens for it");
+      expect(skill).toContain("Neither repair the pack nor write import-lite evidence beside it");
+      expect(skill).not.toContain("complete the pack, never import-lite past it");
+      // The Stage 0 rule this has to agree with.
+      expect(skill).toContain(
+        "an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage",
+      );
+    });
+
+    it(`${tree}: the AC template's own Source line covers the import-lite route`, async () => {
+      // Every line in a Gherkin block is a `#` comment, so an aside beside the
+      // fillable one reads as decoration. The alternative has to say that the
+      // value above is the thing being replaced.
+      const ac = flat(await read(tree, AC_REL));
+      expect(ac).toContain(
+        "On an imported spec set with no pack, replace that value with import-lite-YYYYMMDDhhmmssSSS#REQ-XXXX",
+      );
+      // `-` is reserved for an item with no ancestor at all. Licensing it for
+      // "no discussion ancestor" hands it to every item on this route.
+      // Asserted in fragments: the sentence wraps, and `flat` collapses the
+      // whitespace but leaves the blockquote marker each line begins with.
+      expect(ac).toContain("Use `-` only when the");
+      expect(ac).toContain("AC has no ancestor on either route");
+      expect(ac).not.toContain("has no discussion ancestor");
+    });
+
+    it(`${tree}: the run stamp is written one way throughout the skill`, async () => {
+      const skill = await read(tree, SKILL_REL);
+      // One placeholder spelling, defined where a reader first meets it.
+      expect(skill).not.toContain("import-lite-<17-digit timestamp>");
+      expect(flat(skill)).toContain("`<ts>` is the 17-digit run stamp");
+    });
+
     it(`${tree}: Stage 1 has a defined intake when Stage 0 took the import-lite route`, async () => {
       // The Stage 0 exception continues without a pack, so the Stage 1 Inputs
       // list must say what stands in for `06_REQ.md` / `07_NFR.md`.

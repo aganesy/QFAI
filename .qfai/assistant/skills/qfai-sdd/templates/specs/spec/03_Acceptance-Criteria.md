@@ -10,7 +10,7 @@
 ```gherkin
 # AC-0001
 # Source: discussion-YYYYMMDDhhmmssSSS#DAC-001-01
-# (imported spec set, no pack: import-lite-YYYYMMDDhhmmssSSS#REQ-XXXX)
+# On an imported spec set with no pack, replace that value with import-lite-YYYYMMDDhhmmssSSS#REQ-XXXX
 Scenario: <scenario title>
   Given <precondition>
   When <action>
@@ -24,13 +24,15 @@ Scenario: <scenario title>
 > Write it as `<pack-id>#<discussion-id>`: the pack directory name under `.qfai/discussion/`,
 > then the discussion criterion ID inside it, joined by `#`. Both halves are required —
 > every pack numbers its criteria from `DAC-001-01`, so a bare `DAC-001-01` cannot say which
-> pack it came from, and two packs updating the same spec would collide. Use `-` when the AC
-> has no discussion ancestor. Keep the discussion ID verbatim; do not paraphrase it into prose.
+> pack it came from, and two packs updating the same spec would collide. Use `-` only when the
+> AC has no ancestor on either route — an imported spec set has one, described below. Keep the
+> discussion ID verbatim; do not paraphrase it into prose.
 >
 > An imported spec set with no discussion pack has no pack half to write: use the evidence pair
 > `import-lite-<ts>#<REQ-ID>` — the basename of the import-lite evidence file Stage 0 wrote, minus
-> the `.md`, then the requirement ID as the imported material names it (its `## Sources` anchor when
-> that material has no IDs). See `references/spec-traceability-rules.md`. `-` stays reserved for an
+> the `.md`, then the requirement ID as the imported material names it, or the `IMP-NNN` the
+> evidence file's `## Imported requirements` assigns when that material has no IDs.
+> See `references/spec-traceability-rules.md`. `-` stays reserved for an
 > AC with no ancestor at all; never invent a discussion ID for a pack that does not exist.
 >
 > Packs written before the `D` prefix carry unprefixed IDs (`AC-001-01`). Copy those verbatim

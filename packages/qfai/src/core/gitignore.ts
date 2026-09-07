@@ -141,6 +141,15 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // regenerable logs and stay ignored.
   "!.qfai/evidence/implement-*.md",
   "!.qfai/evidence/atdd-*.md",
+  // The import-lite record. On the route where a spec set arrives without a
+  // discussion pack, this file is the only thing standing in for the pack: it
+  // carries the sources and the excerpt Stage 1 reads as its requirement
+  // intake, and it is what `validateDiscussionPackReadiness` accepts in place
+  // of the pack it cannot find. Ignored, it exists only on the machine that
+  // wrote it — the fresh clone CI builds from has neither the evidence nor a
+  // pack, so `QFAI-DPACK-001` fires on every imported spec set, and the
+  // provenance every US and AC on that route cites points at nothing.
+  "!.qfai/evidence/import-lite-*.md",
   // The Coverage Depth Matrix and the justification behind each `❌` cell.
   // `/qfai-atdd` makes "no unjustified ❌ cells" both a Definition-of-Done
   // condition and a Not-done criterion, and `qa-gatekeeper` REVISEs a missing

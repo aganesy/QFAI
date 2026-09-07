@@ -49,7 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Take a source inventory. A discussion pack is **optional, non-normative reference material** here — sources, requirement seeds, UX exploration and provenance IDs — not an upstream SSOT, so an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage. Do NOT edit, repair or re-run a pack to make this stage's gate pass: the correction belongs in the SDD-owned spec, policy or contract artifact, with the source discrepancy recorded in delta/evidence. Stop only when there is no usable source at all — no pack, no import-lite input, and no explicit user requirement. A product decision that cannot be inferred safely still goes to the user, and the answer is recorded in SDD artifacts rather than back-propagated into the pack.
-When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
+When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<ts>.md` from `templates/evidence/import-lite.md` before editing any spec (`<ts>` is the 17-digit run stamp; see Evidence below for the full naming rule), filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
@@ -550,7 +550,9 @@ no `<paths.discussionDir>/discussion-*/` pack directory at all, create
 from `templates/evidence/import-lite.md` and record where the requirements actually came from. That
 is the documented route for a spec set imported from outside QFAI, and it satisfies
 `QFAI-IMPLITE-001` without fabricating a discussion pack. A pack that exists but is incomplete is
-not this case: the Stage 0 stop rule still applies — complete the pack, never import-lite past it.
+not this case — the pack is present, so this route never opens for it. Stage 0 handles it the way
+it handles any non-normative source: record what is missing and carry on. Neither repair the pack
+nor write import-lite evidence beside it.
 
 The `-<ts>` suffix is what makes one file per import run possible. The check does also accept a copy
 kept under the template's own name (`import-lite.md`), but that is a single fixed path, so a second

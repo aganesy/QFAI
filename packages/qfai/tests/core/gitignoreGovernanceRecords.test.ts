@@ -89,6 +89,18 @@ describe("the managed block keeps governance records tracked", () => {
     expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/implement-*.md");
     expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/atdd-*.md");
   });
+
+  it("re-includes the import-lite record, the only input source on that route", () => {
+    // A spec set imported without a discussion pack has no pack to commit, so
+    // this file is the whole of its provenance. Ignored, the fresh clone CI
+    // builds from has neither, and `QFAI-DPACK-001` fires on a route the
+    // skill documents as supported.
+    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/import-lite-*.md");
+    expect(lines.indexOf("!.qfai/evidence/import-lite-*.md")).toBeGreaterThan(
+      lines.indexOf(".qfai/evidence/*"),
+    );
+  });
 });
 
 describe("git honours the managed block against a broad pre-existing rule", () => {
@@ -111,6 +123,11 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // Evidence anchor against.
     ".qfai/evidence/implement-spec-0001.md",
     ".qfai/evidence/atdd-spec-0001.md",
+    // The stand-in for a discussion pack on the imported-spec-set route, named
+    // with the canonical 17-digit run stamp, and the template-named copy the
+    // check also accepts.
+    ".qfai/evidence/import-lite-20260101000000000.md",
+    ".qfai/evidence/import-lite.md",
   ];
 
   async function isIgnored(root: string, relativePath: string): Promise<boolean> {

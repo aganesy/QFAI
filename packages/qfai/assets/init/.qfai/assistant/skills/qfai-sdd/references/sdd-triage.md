@@ -129,7 +129,9 @@ and that none were added or dropped — in the `Rationale` column of the
    Item provenance follows the input: US and AC rows this route adds or
    changes carry `Source: import-lite-<ts>#<REQ-ID>` — the evidence file's
    basename without the `.md`, then the requirement ID as the imported
-   material names it — in place of the `<pack-id>#<discussion-id>` pair.
+   material names it, or the `IMP-NNN` its `## Imported requirements`
+   assigns when the material has none — in place of the
+   `<pack-id>#<discussion-id>` pair.
    The form is defined in `spec-traceability-rules.md`; never record `-`
    here, and never invent a discussion ID for a pack that does not exist.
 2. `_policies/03_Capabilities.md` (CAP catalog).

@@ -2867,6 +2867,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // fresh clone and CI that the root negation was added for saw neither file.
   "!implement-*.md",
   "!atdd-*.md",
+  // The import-lite record, for the same reason: on a spec set that arrived
+  // without a discussion pack it is the only input source in the repository,
+  // and the nested `*` hides it from the fresh clone that CI validates.
+  "!import-lite-*.md",
 ];
 
 async function ensureLegacyEvidenceIgnoreNegations(

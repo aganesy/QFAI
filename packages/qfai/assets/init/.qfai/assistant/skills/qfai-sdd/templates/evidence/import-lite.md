@@ -40,6 +40,17 @@ all; a copy still on its `<...>` placeholders records nothing and is not accepte
 <paste if available>
 ```
 
+## Imported requirements
+
+Number the requirements read out of the sources and the excerpt, one per line, when the imported
+material has no IDs of its own. US and AC items cite these as the right half of their `Source`
+pair (`import-lite-<ts>#IMP-001`). Leave the list empty when the material numbers its own
+requirements — items cite those IDs directly. This file is written once and never rewritten, so a
+number here keeps meaning the same requirement.
+
+- IMP-001: <requirement as the source states it>
+- IMP-002: <requirement as the source states it>
+
 ## Assumptions / Missing information
 
 - <missing item 1>

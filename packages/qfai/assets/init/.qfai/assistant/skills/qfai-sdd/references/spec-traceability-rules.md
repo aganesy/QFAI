@@ -160,8 +160,13 @@ one.
   the evidence pair instead: `import-lite-<ts>#<REQ-ID>`, e.g.
   `import-lite-20260415101112123#REQ-0007` (the same 17-digit stamp form as a pack). The left half is the basename of the
   `.qfai/evidence/import-lite-<ts>.md` file Stage 0 wrote, minus the `.md`; the right half is
-  the requirement ID as the imported material names it, or — when that material carries no IDs
-  — the source anchor the evidence's `## Sources` cites, verbatim. Both halves stay required
+  the requirement ID as the imported material names it. Material that carries no IDs of its own
+  — a pasted excerpt is the usual case — is numbered in the evidence file instead: Stage 0
+  lists what it read under `## Imported requirements` as `IMP-001`, `IMP-002`, … and items cite
+  those. The numbering has to live there rather than in the spec, because the evidence file is
+  written once per run and never rewritten, so `IMP-001` keeps meaning one line of one import.
+  A `## Sources` anchor is not a substitute: it names a document, so every item drawn from that
+  document would carry the same right half and the pair would stop resolving. Both halves stay required
   for the same reason as the pack form: the evidence half is what makes the requirement half
   resolvable, since a second import run restarts from the same external numbering. `-` remains
   reserved for items with no ancestor of either kind; an import-lite item has one, so it never

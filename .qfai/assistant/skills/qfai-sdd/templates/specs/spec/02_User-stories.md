@@ -36,8 +36,9 @@
 >
 > **Imported spec sets (no discussion pack)** carry the evidence pair instead:
 > `import-lite-<ts>#<REQ-ID>` — the basename of the import-lite evidence file Stage 0 wrote,
-> minus the `.md`, then the requirement ID as the imported material names it (its `## Sources`
-> anchor when that material has no IDs). Both halves stay required. See
+> minus the `.md`, then the requirement ID as the imported material names it, or the `IMP-NNN`
+> the evidence file's `## Imported requirements` assigns when that material has no IDs of its
+> own. Both halves stay required. See
 > `references/spec-traceability-rules.md`. Do not write `-` here and do not invent a discussion
 > ID: on this route no pack exists to hold one.
 >
