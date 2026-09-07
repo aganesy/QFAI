@@ -1622,7 +1622,7 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`references/pre-split-evidence-migration.md`");
     expect(implement).toContain(
-      "until it has run an unmarked legacy row is reported rather than accepted",
+      "until it has run, an unmarked legacy row is reported rather than accepted",
     );
     const migration = flat(await read(tree, MIGRATION));
     expect(migration).toContain("**Write it once, from the history**");

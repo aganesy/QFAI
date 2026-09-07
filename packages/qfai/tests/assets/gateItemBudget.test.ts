@@ -1,6 +1,6 @@
 /**
  * The 12-point gate spends its reader's attention on the software, not on the
- * record (#500).
+ * record.
  *
  * Item 10 — evidence-file bookkeeping — was 3,907 of the gate's 5,857
  * characters: 66.7%. Items 3 and 5, RED admissibility and GREEN plus the oracle
