@@ -149,12 +149,25 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
   });
 
   it("gives every emitted code at most one gate group", () => {
-    // The other direction of the same claim, and the less dangerous error: a
-    // code in two groups is reported as unevaluated whenever EITHER is absent
-    // from the profile, so a profile that ran one of them is told it did not.
-    // `canonical-uix: ["UIX-VAL-*"]` did this to all twelve `UIX-VAL-SKILL-*`
-    // codes, which `prototyping-skill` owns (#1215).
-    const groups = Object.entries(GATE_GROUP_FAMILIES) as [string, readonly string[]][];
+    // The other direction of the same claim, and the one that is a trap rather
+    // than a live defect. `unevaluatedGates` walks the groups a profile does
+    // NOT run and reports their family PATTERNS, so a code in two groups is
+    // still reported exactly once — by whichever group is missing. Misreporting
+    // needs a profile that runs the narrow group WITHOUT the wildcard one.
+    //
+    // No profile does today: `canonical-uix: ["UIX-VAL-*"]` swallowed all
+    // twelve `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns (#1215), and
+    // `prototyping-skill` is reachable only from `runFullValidators`, which
+    // runs `canonical-uix` too. So this case is asserted for the divergence
+    // that has not happened yet.
+    //
+    // It is worth asserting because it has happened twice on other prefixes,
+    // and both repairs are in the table as comments: `QFAI-CONTRACT-*` "would
+    // swallow the sdd-only reference codes, letting a `tdd` run claim a hard
+    // gate it never reached", and `QFAI-TRACE-*` "would count every trace code
+    // in two groups at once". Three instances of one shape, each found by
+    // reading rather than by a lane.
+    const groups: [string, readonly string[]][] = Object.entries(GATE_GROUP_FAMILIES);
     const shared = EMITTED_RULE_CODES.map((code) => ({
       code,
       owners: groups

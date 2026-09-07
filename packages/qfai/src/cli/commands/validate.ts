@@ -550,17 +550,32 @@ export const GATE_GROUP_FAMILIES = {
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
   // Enumerated rather than `UIX-VAL-*`, because that glob is a PREFIX of every
-  // `UIX-VAL-SKILL-*` code and `prototyping-skill` owns those. With both
-  // entries matching them, all twelve belonged to two groups at once, and
-  // `QFAI-PROFILE-001` derives its skip-set as `full groups - profile groups`:
-  // a profile that ran `prototyping-skill` and not this group was told the
-  // twelve were skipped when they had run (#1215).
+  // `UIX-VAL-SKILL-*` code and `prototyping-skill` owns those, so all twelve
+  // belonged to two groups at once (#1215).
+  //
+  // **No profile misreports them today**, and that was worth establishing
+  // before changing anything. `unevaluatedGates` walks the groups a profile
+  // does NOT run and reports their family PATTERNS, so a code in two groups is
+  // still reported exactly once, by whichever group is missing. An output error
+  // needs a profile that runs the narrow group WITHOUT the wildcard one, and
+  // `prototyping-skill` is reachable only from `runFullValidators`, which runs
+  // `canonical-uix` too.
+  //
+  // So this is a trap rather than a live bug — and the table's own comments are
+  // a record of that trap firing. `contracts` is enumerated because
+  // `QFAI-CONTRACT-*` "would swallow the sdd-only reference codes, letting a
+  // `tdd` run claim a hard gate it never reached"; `traceability-layered`
+  // because `QFAI-TRACE-*` "would count every trace code in two groups at
+  // once". Each was a divergence in the profile map away from the misreport
+  // this is shaped like, and each was repaired the same way. One group per
+  // code is the invariant all three preserve, and `gateGroupCoverage.test.ts`
+  // now states it, so the next divergence fails a lane instead of the notice.
   //
   // The family grammar has no negation, so the disjoint set is spelled out.
-  // Nine patterns for 29 codes, and the enumeration is safe to maintain by hand
-  // because `gateGroupCoverage.test.ts` fails on a `UIX-VAL-` code that no
-  // pattern here covers — the drift this list could otherwise accumulate is the
-  // one that guard exists for.
+  // Nine patterns for 29 codes, safe to maintain by hand only because the
+  // coverage case in that same file fails on a `UIX-VAL-` code no pattern here
+  // covers — the drift this list could otherwise accumulate is what that guard
+  // is for.
   "canonical-uix": [
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",
