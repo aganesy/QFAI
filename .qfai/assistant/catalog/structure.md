@@ -13,6 +13,9 @@
 - Package(s) of interest: <list packages>
 - CLI / service entry: <entrypoint files>
 - Core modules: <key module directories>
+- Project scripts: <directory holding committed operational scripts — the
+  smoke script `skills/qfai-implement/references/walking-skeleton.md` requires
+  lives here>
 - Production roots: <every shipped-source path, exhaustively, as Git
   pathspecs — a directory where the whole directory is source (`src/`, `app/`,
   `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not.

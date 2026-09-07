@@ -45,4 +45,6 @@ cover; a capability with no entry here is UNRUN.
 - Build: `<build command>`
 - Pack / distribution: `<pack command>` (when publishing or distribution
   matters)
+- Smoke: `<command that starts the system and proves it answers>` (the
+  `Skeleton command` of `skills/qfai-implement/references/walking-skeleton.md`)
 - Validate: `npx qfai validate --fail-on error --format github`

@@ -52,12 +52,18 @@ const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
 /**
- * Every non-null object can be read by a string key, and what comes back is
- * `unknown` until something checks it. Saying so is what lets the field reads
- * below be written as a loop rather than as one branch per key name.
+ * A YAML mapping: every non-null object can be read by a string key, and what
+ * comes back is `unknown` until something checks it. Saying so is what lets the
+ * field reads below be written as a loop rather than as one branch per key
+ * name.
+ *
+ * An array is excluded. It satisfies the two `typeof` conditions, so a phase
+ * written as a sequence by mistake would be read as a mapping with none of the
+ * fields present — accepted silently, and reported later as a phase nobody can
+ * find rather than as the malformed entry it is.
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** One routing phase, or a thrown error naming the field that is not one. */
 function toPhase(value: unknown, where: string): Phase {
@@ -119,6 +125,30 @@ async function implementPhases(tree: string): Promise<Phase[]> {
  * which the sentence happened to break.
  */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
+describe("toPhase (what the routing reader accepts as a phase)", () => {
+  // A sequence satisfies both `typeof value === "object"` and `value !== null`,
+  // so without the array check a phase written as one is read as a mapping
+  // holding none of the fields — accepted here, and reported downstream as a
+  // phase nobody can find rather than as the malformed entry it is.
+  it("refuses a phase written as a sequence", () => {
+    expect(() => toPhase([], "routing phase 0")).toThrow("routing phase 0 is not a mapping");
+  });
+
+  it("reads the fields of a phase written as a mapping", () => {
+    expect(toPhase({ id: "skeleton", iteration: "per-invocation" }, "routing phase 0")).toEqual({
+      id: "skeleton",
+      iteration: "per-invocation",
+    });
+  });
+
+  it("refuses a field of the wrong shape rather than dropping it", () => {
+    expect(() => toPhase({ id: 3 }, "routing phase 0")).toThrow("`id` is not a string");
+    expect(() => toPhase({ mandatory_agents: "qa-gatekeeper" }, "routing phase 0")).toThrow(
+      "`mandatory_agents` is not a list of names",
+    );
+  });
+});
 
 describe("qfai-implement has a phase whose exit criterion is that the product runs", () => {
   for (const tree of QFAI_TREES) {
@@ -399,7 +429,13 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain(
         "**This phase is a precondition of the existing RED rule, not a relaxation of it.**",
       );
-      expect(doc).toContain("Nothing in `red-admissibility.md` moves");
+      expect(doc).toContain("Nothing in that reference moves");
+      // The example only holds once the route is registered. Stated without
+      // that, it read as licence to record any 404 as a RED — including the
+      // one `red-admissibility.md` calls a missing seam, which is the case
+      // this phase exists to supply first.
+      expect(unwrap(doc)).toContain("Once the route the row exercises is **registered**");
+      expect(unwrap(doc)).toContain("A 404 from a route that is registered nowhere");
 
       // The missing-seam ruling now names the case it keeps producing.
       expect(admissibility).toContain("the absent seam is frequently the **program itself**");

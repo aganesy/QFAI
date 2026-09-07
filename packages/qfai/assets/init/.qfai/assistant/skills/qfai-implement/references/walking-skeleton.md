@@ -19,9 +19,12 @@ rather than a RED. So those rows cannot be started, and the framework is right
 to say so — the seam they are missing is the program itself.
 
 **This phase is a precondition of the existing RED rule, not a relaxation of
-it.** Against a running skeleton, `404 where the row asserts 200` is an
-assertion failure inside the row's own `Selector`, which is admissible under the
-unchanged criterion. Nothing in `red-admissibility.md` moves.
+it.** Once the route the row exercises is **registered** — which is part of what
+this phase supplies — `404 where the row asserts 200` is an assertion failure
+inside the row's own `Selector`, and admissible under the unchanged criterion. A
+404 from a route that is registered nowhere is the other thing: a missing seam,
+which `red-admissibility.md` refuses as a RED and this phase exists to supply
+before one is taken. Nothing in that reference moves.
 
 Distinct from stage 4 of `.qfai/assistant/constitution/workflow.md` ("Prototyping (optional):
 contract-aligned implementation skeleton"): that stage is optional, belongs to
@@ -120,10 +123,11 @@ that never runs `--force` adds it there the same way.
 `applicable`, the phase's routing entry (`manifest/agent-routing.yml`, phase
 `skeleton`) lists the gatekeeper **mandatory** and blocking, and its `PASS` on
 the recorded run is required before `Phase: Red` starts — recorded in
-`Skeleton gatekeeper` (`#evidence`). Conditional was not enough: a blocking
-list only stops the REVISE of an agent the orchestrator already chose, so a
-gatekeeper never routed left the phase passing on its author's own account of
-the smoke run, which is the self-attestation the `red` gate exists to prevent.
+`Skeleton gatekeeper` (`#evidence`). Mandatory rather than conditional, because
+a blocking list only stops the REVISE of an agent the orchestrator already
+chose: a gatekeeper left unrouted leaves the phase passing on its author's own
+account of the smoke run, which is the self-attestation the `red` gate exists to
+prevent.
 `not applicable` is the one verdict that routes nobody — there is no run to
 judge — and it is still written down.
 
@@ -133,9 +137,11 @@ satisfies it, though, never the stored record: see `#evidence`.
 
 ## The smoke-script contract
 
-1. **Committed**, at the path `catalog/structure.md` gives for project scripts,
-   and invocable by a single command taken from
-   `catalog/tech.md#standard-commands-copy-paste`.
+1. **Committed**, at the path `catalog/structure.md` gives under
+   `Project scripts`, and invocable by the `Smoke` entry of
+   `catalog/tech.md#standard-commands-copy-paste`. Both slots ship in those
+   templates; a project that has not filled them in yet fills them here, rather
+   than inventing a location this phase alone knows.
 2. **Starts the system the way the entrypoint declares it** — the same command a
    user or a deployment would run, not a test harness that constructs the
    application object in-process. Constructing it in-process is exactly the
@@ -414,6 +420,16 @@ is about the script that ran, and a different script is a different run.
 
 A hash that has moved is not by itself a fault: editing the smoke script is
 ordinary work. What it is, is a verdict that has not been taken yet.
+
+**The hash binds what the run executes, not only the file that starts it.** A
+smoke script that delegates — to a `package.json` script, to another committed
+helper, to a module it imports — puts the behaviour being proved outside its own
+bytes, and a dependency edited to a no-op leaves the recorded hash matching
+while the product stops starting. So `Skeleton script` records a path and a
+SHA-256 **per committed file the run executes**, the entry script first. Where
+the delegation leaves the repository — a globally installed tool, a container
+image — no hash can reach it: name that dependency in `Skeleton debt`, because
+an unbounded one is a shortcut this phase enumerates rather than one it hides.
 
 **On every later invocation, read this file first.** An entrypoint with no
 section runs the phase. An entrypoint whose latest recorded `Skeleton result` is
