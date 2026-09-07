@@ -497,18 +497,28 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     // UNKNOWN — not absent. Treating the two alike sent the gate to the latest
     // pack, which is a pack nobody selected: a project whose state file pins an
     // older, incomplete pack would have been told its research was in order.
-    const template = await readShippedTemplate();
-    const root = await seedPack(fillEveryPlaceholder(template), "discussion-20260202000000000");
+    //
+    // The pack is seeded with the template UNFILLED, which is what makes the
+    // second half of this row mean something: a fallback would read it and
+    // report its placeholders, so "no finding but -020" is evidence that no
+    // pack was read at all. Seeded filled, the fallback produces nothing
+    // either way and the assertion passes on a validator that still falls
+    // back — measured: the lossy read reports eight findings here
+    // (`-004`, `-005`, `-006`, `-010`, `-018` x2, `-019`, `-021`) and no `-020`.
+    const root = await seedPack(await readShippedTemplate(), "discussion-20260202000000000");
     await writeFile(path.join(root, ".qfai", "state.json"), "{ not json", "utf-8");
 
     const issues = await validateResearchSummary(root, defaultConfig);
+    const codes = issues.map((item) => item.code);
     const broken = issues.find((item) => item.code === "QFAI-RESEARCH-020");
 
     expect(broken, "an unreadable state file must be reported, not papered over").toBeDefined();
     expect(broken?.message).toContain("state.json");
-    // And the fallback must not have run: no per-file finding may name the pack
-    // the corrupt pointer did not select.
-    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-016");
+    // Nothing but the broken pointer: every other code here would have to come
+    // from a pack this run was not entitled to read.
+    expect(codes, "the fallback read a pack the corrupt pointer did not select").toEqual([
+      "QFAI-RESEARCH-020",
+    ]);
   });
 
   it("validates only 04_Sources.md inside a pack", async () => {

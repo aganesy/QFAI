@@ -708,11 +708,13 @@ function storageSlotIssue(
  * A closing fence is the same marker, at least as long as the opener, and
  * carries no info string: the same three conditions the mask applies.
  *
- * Only a block whose opener names YAML is collected. Every fence is still
- * tracked so its body cannot be mistaken for one: a mermaid diagram, or a
- * markdown paste of the blank template, is prose the section happens to carry,
- * and reading it as data reported placeholders the real summary had already
- * filled in.
+ * Only a block whose opener is **YAML or unlabelled** is collected — the info
+ * words {@link YAML_INFO_WORDS} admits, which are `yaml`, `yml` and the empty
+ * string, because a pack that fences the same data bare carries it too. Every
+ * other fence is still tracked so its body cannot be mistaken for one: a
+ * mermaid diagram, or a markdown paste of the blank template, is prose the
+ * section happens to carry, and reading it as data reported placeholders the
+ * real summary had already filled in.
  */
 function extractYamlPayload(section: string): string {
   const blocks: string[] = [];
