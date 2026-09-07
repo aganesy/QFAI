@@ -93,7 +93,7 @@ export async function validateFrozenSurfaceReachability(
       "prototyping.frozenSurfaceUnreachable",
       [...missing],
       "canonical",
-      "Run `npx qfai prototyping rescope --remove <id> --reason <delta-id>` for each id above, " +
+      "Run `qfai prototyping rescope --remove <id> --reason <delta-id>` for each id above, " +
         "citing the decision that retired it. If the surface was NOT meant to be retired, " +
         "restore its UI-bearing marker instead — `rescope` refuses a surface that still " +
         "resolves, so it cannot be used to drop one by mistake. The cycle-0 `--force` reset " +
