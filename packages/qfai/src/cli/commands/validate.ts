@@ -594,6 +594,15 @@ export const GATE_GROUP_FAMILIES = {
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
     "D-SURFACE-TYPE-MISSING",
+    // `validateLayeredTraceability`, dispatched from `runSddValidators` and
+    // nowhere else. Its other codes are filed under `traceability-layered`,
+    // which is a different module (`validators/traceability.ts`) despite the
+    // shared subject — so the underscore pair had no group and no profile
+    // reported them. `runLog.ts` counts them into `downstream_violations`,
+    // which is what made them look like run-log bookkeeping rather than a
+    // gate.
+    "TRACE_DOWNSTREAM_REF",
+    "TRACE_SHARED_SCOPE_VIOLATION",
   ],
   // Reviewer-gate detectors wired into `runSddValidators`. The `R-*` wildcard
   // this replaces made `--profile sdd` claim coverage of `detectMockHrefDrift`
@@ -642,6 +651,11 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     "QFAI-CONTRACT-040",
+    // `-041` shipped after this list did, and the explicit enumeration that
+    // keeps the wildcard from over-claiming is also what stops a new code
+    // joining on its own. It comes from the same `validateContractConsistency`
+    // as `-040`, so it has the same two profiles.
+    "QFAI-CONTRACT-041",
     "QFAI-DB-*",
   ],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not
