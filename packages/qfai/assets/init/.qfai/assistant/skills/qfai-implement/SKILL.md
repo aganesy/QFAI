@@ -43,7 +43,7 @@ When no explicit argument is given, detect the candidate specs — **active spec
 
 ### User Selection Flow
 
-- Single spec: announce the detected spec and proceed; ask for confirmation only when the scope is ambiguous. One unambiguous candidate settles `primarySpecId`, which is why the hard-required entry is scoped to the branch this flow cannot settle (see `## Default Autopilot Policy`).
+- Single spec: announce the detected spec and require the user to confirm it before the first TDD item. Auto-discovery narrows the candidates; it does not supply the value. `primarySpecId` is hard-required, and one candidate being the only one is not the user having named it (see `## Default Autopilot Policy`).
 - Multiple specs: display the candidates and require the user to choose one spec, or to confirm an ordered queue processed one spec at a time.
 - Zero specs: stop and ask the user to provide the target spec explicitly. **An explicitly named spec that is retired stops the same way** — the argument selects a spec, it does not waive the lifecycle check: report the `Status:` it declares and, for `superseded`, its `Superseded-by` successor, and ask the user to name a row in that successor's ledger instead.
 
@@ -508,7 +508,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `primarySpecId` (only when Spec Auto-Discovery cannot resolve one — zero candidates, or a selection the user has not made; a single unambiguous candidate is announced and proceeds, so it is not a required input)
+  - `primarySpecId` (when absent from inputs — Spec Auto-Discovery narrows the candidates but does not settle the value, so a single candidate is announced for the user to confirm rather than proceeded on)
 
 A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 

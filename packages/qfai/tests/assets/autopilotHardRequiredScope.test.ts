@@ -1,18 +1,21 @@
 /**
- * `/qfai-implement` shipped two rules for one invocation.
+ * One invocation, one answer about `primarySpecId`.
  *
- * `## Default Autopilot Policy` lists `primarySpecId` (when absent from
- * inputs) in the `hard-required` bucket — the bucket whose other members
- * (`companyName`, brand intent) cannot be derived from the repository at all,
- * so a hard-required value is one the agent may not supply for itself.
- * `## Spec Auto-Discovery Protocol` > `### User Selection Flow` covered exactly
- * that condition and let the single-spec branch announce and proceed.
+ * Two sections of `/qfai-implement` state what happens when Spec
+ * Auto-Discovery finds exactly one candidate: the `hard-required` bucket of
+ * `## Default Autopilot Policy`, and `### User Selection Flow` under
+ * `## Spec Auto-Discovery Protocol`. A bare invocation reads both, so they
+ * have to agree — otherwise the run's behaviour depends on which section the
+ * agent read last.
  *
- * The governing decision keeps `primarySpecId` hard-required, so the
- * single-spec branch is the side that moves: auto-discovery narrows the
- * candidates, the user still supplies the value. `hard-required` also gets a
- * definition beside the buckets' only other home so the next collision is
- * decidable from the text.
+ * The answer is the governing decision's: `hard-required` means no default is
+ * possible and the value is supplied before proceeding. Auto-discovery narrows
+ * the candidates; being the only candidate is not the same as the user having
+ * named it. So a lone candidate is announced for confirmation, not proceeded
+ * on, and both sections say that.
+ *
+ * These cases pin both statements, and the absence of the readings that let
+ * one of them settle the value alone.
  */
 
 import { readFile } from "node:fs/promises";
@@ -38,9 +41,9 @@ const read = async (tree: string, rel: string): Promise<string> =>
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("keeps the hard-required entry at full strength and points at the protocol", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("`primarySpecId` (only when Spec Auto-Discovery cannot resolve one");
+    expect(skill).toContain("`primarySpecId` (when absent from inputs");
     expect(skill).toContain(
-      "a single unambiguous candidate is announced and proceeds, so it is not a required input)",
+      "a single candidate is announced for the user to confirm rather than proceeded on)",
     );
   });
 
@@ -52,20 +55,22 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const skill = await read(tree, SKILL);
 
     expect(skill).toContain(
-      "Single spec: announce the detected spec and proceed; ask for confirmation only when the scope is ambiguous",
+      "Single spec: announce the detected spec and require the user to confirm it before the first TDD item",
     );
-    expect(skill).toContain(
-      "One unambiguous candidate settles `primarySpecId`, which is why the hard-required entry is scoped to the branch this flow cannot settle",
-    );
-    // The reading the bucket rules out, in the words the flow used to carry.
-    expect(skill).not.toContain("a lone candidate narrows the choice but never settles it");
+    expect(skill).toContain("Auto-discovery narrows the candidates; it does not supply the value");
+    expect(skill).toContain("one candidate being the only one is not the user having named it");
   });
 
   it("leaves no carve-out that lets auto-discovery settle the value alone", async () => {
     // The collision was textual: whichever section the agent read last won.
     const skill = await read(tree, SKILL);
     expect(skill).not.toContain("auto-discovery does not resolve exactly one candidate");
-    expect(skill).not.toContain("ask for confirmation when scope is ambiguous");
+    // Coarse on purpose: pinning a whole sentence passes again the moment the
+    // carve-out is reworded. "scope is ambiguous" was the condition this file
+    // removed — the document defines no criterion for it, so a run could claim
+    // either answer and be right.
+    expect(skill).not.toContain("scope is ambiguous");
+    expect(skill).not.toContain("so it is not a required input");
   });
 
   it("keeps the two branches auto-discovery cannot settle asking", async () => {
