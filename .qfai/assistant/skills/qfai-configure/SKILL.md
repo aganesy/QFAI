@@ -334,10 +334,10 @@ Every 5 major actions, pause and restate:
    - `.qfai/assistant/catalog/tech.md`
    - `.qfai/assistant/catalog/product.md`
    - any additional file under `.qfai/assistant/catalog/`, and
-     `manifest/agent-routing.yml` / `manifest/review-profiles.yml`. Not
-     `manifest/agent-catalog.yml` whole — read the acting role's entry from
-     it when a role needs one, because its `developer_instructions` bodies
-     mirror the agent cards and reading both is the same text twice
+     `manifest/agent-routing.yml` / `manifest/review-profiles.yml`. From
+     `manifest/agent-catalog.yml` read the acting role's entry when a role
+     needs one, not the whole file — its `developer_instructions` bodies
+     mirror the agent cards, so reading both is the same text twice
      (`.qfai/assistant/constitution/constitution.md` Article III)
 
 2. Read **project constitution / instructions** (if present):

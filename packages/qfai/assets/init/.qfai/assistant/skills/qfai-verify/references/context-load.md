@@ -5,9 +5,10 @@
    - `.qfai/assistant/catalog/tech.md`
    - `.qfai/assistant/catalog/product.md`
    - any additional file under `.qfai/assistant/catalog/`, and
-     `manifest/agent-routing.yml` / `manifest/review-profiles.yml`. Not
-     `manifest/agent-catalog.yml` whole — read the acting role's entry from it when a
-     role needs one (`.qfai/assistant/constitution/constitution.md` Article III)
+     `manifest/agent-routing.yml` / `manifest/review-profiles.yml`. From
+     `manifest/agent-catalog.yml` read the acting role's entry when a role
+     needs one, not the whole file
+     (`.qfai/assistant/constitution/constitution.md` Article III)
 
 2. Read **project constitution / instructions** (if present):
    - `.qfai/assistant/constitution/constitution.md`
