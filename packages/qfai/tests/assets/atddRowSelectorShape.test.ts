@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
@@ -84,7 +84,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
 
     const section = flat(subsection(provenance, "## A split row comes back as a fresh handover"));
     expect(section).toContain(
-      "**The tests that split row needs are this stage's to write, one per new row.**",
+      "**The tests a split row needs are this stage's to write, one per new row.**",
     );
     expect(section).toContain("one test per row, one branch per row, one entry per row");
   });

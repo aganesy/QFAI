@@ -442,7 +442,7 @@ accumulates unrelated boundaries is refused there: that skill raises a Change
 Request asking `/qfai-sdd` Phase 2b to split the row, parks the row at
 `blocked`, and copies nothing.
 
-**The tests that split row needs are this stage's to write, one per new row.**
+**The tests a split row needs are this stage's to write, one per new row.**
 `/qfai-implement` authors no acceptance test, so a split leaves the new rows
 with none — and each is a `todo` row with `-` in `Test file` and `Selector`,
 exactly like any other Phase 2b seed. Take them the way the first pass takes a
