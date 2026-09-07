@@ -1291,10 +1291,17 @@ describe("qfai-implement gate arity naming", () => {
   it("defers to Phase Red step 1 for selection order", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
-      expect(skill).toContain("**It runs last, and it reorders nothing.**");
-      expect(skill).toContain("Phase Red step 1 owns selection precedence and this step restates");
-      expect(skill).toContain("that end condition is a return to the caller");
+      expect(skill).toContain(
+        "**It does not run on every invocation, and it reorders nothing in Phase Red.**",
+      );
+      // The condition is readable in preflight. Stating it as "Phase Red runs
+      // its queues first and comes back" described a control flow the phase
+      // order forbids: this step is inside Stage 0, ahead of Phase Red.
+      expect(skill).toContain("three facts readable here, before Phase Red is reached");
       expect(skill).toContain("FAILs it on an obligation the row does not own");
+      // Nor does it pre-empt an open group: that Fill is a selection among
+      // `todo` rows, which this step never touches.
+      expect(skill).toContain("It pre-empts no open group either");
       // A row an unresolved Change Request names may not move, whatever its
       // status, so the resume is not the one selection that ignores that.
       expect(skill).toContain("**A row an unresolved `CR-*` names is not resumed.**");
