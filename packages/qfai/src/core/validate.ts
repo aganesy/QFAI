@@ -381,8 +381,7 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * without its own dependencies silently ran the enclosing checkout's binary —
  * another branch, another lockfile — and the run said nothing about it. The
  * version was reachable only inside `validate.json`, which the README calls
- * internal, so no gate and no pasted evidence block could tell the two apart
- * (#1096).
+ * internal, so no gate and no pasted evidence block could tell the two apart.
  *
  * `info`, at every site, and deliberately off P7's promotion ladder. The same
  * path test catches a deliberate global install and a dependency hoisted to a
@@ -405,7 +404,7 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   // answered it. `QFAI-TOOL-001` cannot carry this — it is `info` because the
   // path test alone admits a deliberate global install and a monorepo hoist,
   // and those are correct operation. Splitting the code rather than promoting
-  // it is what keeps both statements true (#1108).
+  // it is what keeps both statements true.
   if (located.declaredElsewhere) {
     const promoteAt = RULE_PROMOTIONS.toolResolvedAgainstDeclaration.promoteAt;
     const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
@@ -609,7 +608,7 @@ async function runDiscussionValidators(
     // profile as its gate, so the gate has to be able to see whether the file
     // it mandates parses. Only the parse half — the lock comparison is
     // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
-    // later stages (#1098).
+    // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
     ...(await validateDiscussionPackReadiness(root, config)),
@@ -822,7 +821,7 @@ async function runPrototypingValidators(
     // A screen retired mid-loop leaves `frozenSurfaceUnion` naming a spec that
     // no longer resolves, and nothing said so: `iterate`'s drift hard-stop only
     // fires when EVERY UI signal is gone, so the partial case reported
-    // `error=0` over a loop describing a screen that does not exist (#1099).
+    // `error=0` over a loop describing a screen that does not exist.
     ...(await validateFrozenSurfaceReachability(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),

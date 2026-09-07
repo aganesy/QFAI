@@ -433,8 +433,8 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   keeps the anomaly's DR-ID alongside the reset ID. A reset without a recorded
   approval is a backward transition and is prohibited.
 - `exception` -> `todo` — **anomaly resolved**, the item re-enters the cycle
-  from the start. This is the exit `exception` previously lacked; without it a
-  parked item could never be un-parked without a lifecycle violation. Distinct
+  from the start. Without this exit a parked item could never be un-parked
+  without a lifecycle violation. Distinct
   from the upstream reset above: nothing upstream changed, so it needs no CR/DR
   approval — the anomaly's own DR-ID stays in place.
 - A reset row is at `todo`, so it owes no test file until it reaches `green`.

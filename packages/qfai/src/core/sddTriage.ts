@@ -94,7 +94,7 @@ export function subOp(op: TriageOp): TriageUpdateSubOp | null {
  * Stop tokens are stripped from `tokenize` output so that subject overlap
  * scoring is dominated by content nouns rather than connectives.
  *
- * Design note (PR #206 review #15): `remove` and `delete` are included on
+ * Design note: `remove` and `delete` are included on
  * purpose. The classifier already routes "removal-shaped" REQs through
  * the `removalHint` branch, so the verbs themselves should not bias
  * subject-overlap scoring on the additive path. As a side effect, a
@@ -146,7 +146,7 @@ const STOP_TOKENS = new Set([
  *
  * Splits on any character that is not a Unicode letter or number using
  * the `\p{L}\p{N}` property escapes (Node 18+, requires the `u` flag).
- * That covers (PR #206 review #12, #23):
+ * That covers:
  *
  * - ASCII alphanumerics and Latin-1 supplement
  * - Hiragana, Katakana (full + half-width), CJK Unified Ideographs
@@ -198,22 +198,21 @@ interface SubjectCandidate {
  * 1. Higher `score` wins (more shared subject tokens).
  * 2. Smaller `acCount` wins. Rationale: a spec with more append headroom
  *    is preferred so the cascade does not pile onto an already-large
- *    spec that would soon trip the SPLIT threshold. Trade-off (PR #206
- *    review #6): when two specs share the subject equally but the
- *    capability owner is the larger one, this tie-breaker may route
- *    the REQ onto the smaller peripheral spec. The
+ *    spec that would soon trip the SPLIT threshold. Trade-off: when two
+ *    specs share the subject equally but the capability owner is the
+ *    larger one, this tie-breaker may route the REQ onto the smaller
+ *    peripheral spec. The
  *    capability-exact-match branch in `classifyTriage` short-circuits
  *    before this fallback runs whenever the REQ carries a capability,
  *    so the divergence only appears for capability-less REQs that
  *    still token-overlap with both specs. A size-threshold breach is only
- *    a `size signal: ...` rationale note (it never escalates to SPLIT), so
+ *    a `size signal:...` rationale note (it never escalates to SPLIT), so
  *    the agent driving Stage 1 is expected to verify the proposed primary
  *    spec against the impact cascade before persisting.
  * 3. Lexicographically smaller `specId` wins. This keeps the result
  *    deterministic for any input order, provided the comparator below
  *    is fed a stable iteration. `bestSubjectMatch` snapshots the input
- *    via spread + sort to avoid relying on caller iteration order
- *    (PR #206 review #27).
+ *    via spread + sort to avoid relying on caller iteration order.
  *
  * Returns a negative number when `a` is preferred over `b`, positive
  * when `b` is preferred, and zero only when both candidates would tie
@@ -239,10 +238,10 @@ function compareSubjectCandidates(a: SubjectCandidate, b: SubjectCandidate): num
  *
  * Tie-breaking: see `compareSubjectCandidates`. The function snapshots
  * the input and sorts by `specId` before scoring so that the result is
- * deterministic regardless of caller iteration order (PR #206 review
- * #27 — `collectSpecSummaries` already returns a sorted array, but the
- * type signature does not advertise that, so this guards against
- * accidental shuffles in fixtures or future callers).
+ * deterministic regardless of caller iteration order. `collectSpecSummaries`
+ * already returns a sorted array, but the type signature does not advertise
+ * that, so this guards against accidental shuffles in fixtures or future
+ * callers.
  *
  * Returns `undefined` when no token overlap exists with any active spec
  * — that is the only condition under which `classifyTriage` proposes
@@ -302,7 +301,7 @@ export function bestSubjectMatch(
  * specs, and `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN`
  * per spec, so a count-driven SPLIT of a single-capability spec raises
  * `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error` and has no legal end
- * state. Size breaches surface as a `size signal: ...` rationale that asks
+ * state. Size breaches surface as a `size signal:...` rationale that asks
  * for a capability-ownership review; only that review can propose SPLIT.
  *
  * The classifier output is a *proposal*. The agent driving Stage 1 Triage
@@ -311,7 +310,7 @@ export function bestSubjectMatch(
  * MODIFY/REMOVE in support of the primary change.
  */
 /**
- * The `size signal: ...` note for any row, or `undefined` when no target
+ * The `size signal:...` note for any row, or `undefined` when no target
  * breaches a threshold.
  *
  * One formatter for every operation. The breach detail — which specs, which
@@ -392,7 +391,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       }
       const target = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
       if (target) {
-        // Symmetry with the additive path (PR #206 review #3): the size
+        // Symmetry with the additive path: the size
         // breach is reported on the row, but it no longer decides the
         // operation. A count-driven SPLIT of a single-capability spec is
         // illegal — `validateSpecSplitByCapability` raises QFAI-SPLIT-102/104
@@ -423,7 +422,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
         // genuine product removal. Emit DELETE with a placeholder
         // rationale that surfaces the burden of proof to the agent
         // driving Stage 1 Triage, mirroring the CREATE placeholder
-        // pattern (PR #206 review LW-I): the triage row is presented
+        // pattern: the triage row is presented
         // for manual review + AskUserQuestion approval rather than
         // as a confident classification.
         //
@@ -497,7 +496,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
     // CREATE rationale is intentionally a placeholder. The agent driving
     // Stage 1 Triage MUST replace it with a real `CAP-NNNN` reference
     // before persisting, otherwise QFAI-TRIAGE-006 will reject the row
-    // (PR #206 review #13). Surfacing the placeholder verbatim makes
+    // Surfacing the placeholder verbatim makes
     // the required follow-up explicit instead of letting the row look
     // ready to ship.
     rows.push({
@@ -547,8 +546,7 @@ export const TRIAGE_NO_EXISTING_SPEC_LEGACY = "(none)";
  * pack). Without this, the persisted delta.md row would break GFM
  * table parsing — `parseAllMarkdownTables` would split on the literal
  * pipe and `validators/specPack.ts` would misalign column → row,
- * letting QFAI-TRIAGE-* validators silently miss the row
- * (PR #206 review LMAJOR / Lsbk).
+ * letting QFAI-TRIAGE-* validators silently miss the row.
  *
  * Escapes:
  * - `|` → `\|` (GFM table escape)
@@ -563,8 +561,7 @@ export const TRIAGE_NO_EXISTING_SPEC_LEGACY = "(none)";
  * do not pre-escape `\` here, so cells like Windows paths
  * (`C:\Users\foo`) or regex literals (`\d+`, `(?<=foo)\bbar`) round-trip
  * unchanged through render → parse. Adding `\` → `\\` here without a
- * matching `\\` → `\` in the parser would silently double backslashes
- * (PR #206 review NkNm / NkzP / Nk-A / NptA).
+ * matching `\\` → `\` in the parser would silently double backslashes.
  *
  * The contract is also declared at the spec level for the SDD skill
  * (Stage 1 Triage business rules) and exercised end-to-end by the

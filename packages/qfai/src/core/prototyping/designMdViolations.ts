@@ -410,7 +410,7 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
   return lowercaseValues(Object.values(dm.visual.colors));
 }
 
-// Strip `box-shadow: ...;` declarations from a CSS region before
+// Strip `box-shadow:...;` declarations from a CSS region before
 // literal color scanning. Without this, color literals inside a
 // registered shadow value would either (a) be flagged spuriously
 // when scanColors recognized the rgba/hex inside the shadow value
@@ -478,8 +478,8 @@ const INLINE_STYLE_RE = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 // `<body>`) are collected separately and filtered against Tailwind
 // preflight signatures so the operator's own stylesheet authored in
 // `<head><style>` is still scanned for non-DESIGN.md color literals
-// (previously the entire `<head>` region was skipped, allowing color
-// drift in head stylesheets to bypass `designMdViolations`).
+// (skipping the entire `<head>` region would let color drift in head
+// stylesheets bypass `designMdViolations`).
 //
 // When no `<body>` element is present (e.g. a fragment under test),
 // fall back to scanning the full input so the legacy regression
@@ -504,7 +504,7 @@ function narrowToBody(html: string): string {
 // Primary signatures (either alone is sufficient):
 //   - `/* tailwindcss v` or `/*! tailwindcss v` — Tailwind banner
 //     comment (CDN + standalone CLI both emit this).
-//   - `*, ::before, ::after` followed by `box-sizing` — the
+//   - `*,::before,::after` followed by `box-sizing` — the
 //     preflight universal-reset selector (signature unique to the
 //     preflight block).
 //
@@ -512,13 +512,12 @@ function narrowToBody(html: string): string {
 // NOT a primary signature anymore. An operator who copy-pastes a
 // single `--tw-ring-offset-width: 0px;` declaration into a head
 // stylesheet would otherwise mask color literals in the same block.
-// The `--tw-*: ...` declaration family is still stripped from the
+// The `--tw-*:...` declaration family is still stripped from the
 // scan surface by `SHADOW_DECL_STRIP_RE` so legitimate
 // Tailwind runtime values still don't surface as DESIGN.md drift —
 // the loss of `--tw-` as a block-level classifier is therefore
-// recovered at the declaration-level strip pass. See PR #210
-// wave-14 architecture-reviewer thread for the false-negative
-// rationale (`--tw-` block-level alone is too broad).
+// recovered at the declaration-level strip pass. `--tw-` alone is too
+// broad as a block-level classifier and would produce false negatives.
 const TAILWIND_BANNER_RE = /\/\*!?\s*tailwindcss\s+v/i;
 const TAILWIND_UNIVERSAL_RESET_RE = /\*,\s*::before,\s*::after\s*\{[^}]*box-sizing/i;
 

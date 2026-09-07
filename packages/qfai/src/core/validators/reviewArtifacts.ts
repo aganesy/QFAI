@@ -140,7 +140,7 @@ export async function validateReviewArtifacts(
   }
 
   if (!hasQfaiGitignore) {
-    // Fallback: also accept legacy subdirectory .gitignore
+    // Fallback: also accept a legacy subdirectory .gitignore
     const legacyGitignorePath = path.join(reviewRoot, ".gitignore");
     let hasLegacyGitignore = false;
     try {
@@ -498,8 +498,7 @@ function targetViolations(parsed: Record<string, unknown>, selection: PackSelect
  * not a present, parseable summary making the whole declaration answers `false`, so the default is the
  * strict one. The schema pass reports the malformedness on its own code.
  *
- * **All three parts are required**, and the first version required only the middle one. Review finding
- * [22] on PR #794 named both holes it left:
+ * **All three parts are required.** Requiring only the middle one leaves two holes:
  *
  * - a `version: "1.0"` pack, whose reviewer list is `roster`, could carry an unrelated empty
  *   `reviewers` array beside a full roster and skip `QFAI-REVIEW-005` with no report files at all;
@@ -607,7 +606,7 @@ async function validateSummarySchema(
   // `revision` addresses the state the verdicts describe. A verdict that names
   // no revision cannot be re-checked, cannot be invalidated by a later commit,
   // and cannot be distinguished from a stale one — which is what made
-  // "Stale evidence ... MUST NOT be reused" unenforceable. It is optional in
+  // "Stale evidence... MUST NOT be reused" unenforceable. It is optional in
   // the schema (existing packs predate it) but reported when absent, and a
   // present-but-malformed value is an error like any other field.
   const revision = parsed.revision;

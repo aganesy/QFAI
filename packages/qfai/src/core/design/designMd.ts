@@ -824,10 +824,9 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
 /**
  * Strict-parse a DESIGN.md `string[]` field. Returns `{ value }` on
  * success or `{ error }` when the input is not an array or contains
- * a non-string entry. Previously the parser silently filtered
- * non-strings and accepted scalars, which let malformed authoring
- * hash into the DESIGN.md lock while downstream consumers saw a
- * different brand context.
+ * a non-string entry. Silently filtering non-strings or accepting
+ * scalars would let malformed authoring hash into the DESIGN.md lock
+ * while downstream consumers saw a different brand context.
  *
  * Used by:
  *   - `audience.emotion` / `audience.do_not_look_like` (codex 8A6f)

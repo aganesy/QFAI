@@ -51,11 +51,11 @@ import { issue } from "./utils.js";
 /**
  * Stub constructs, keyed by the file extensions that use them.
  *
- * The detector used to be one constant matching `it.todo(` / `test.todo(` /
- * `describe.todo(`. File selection is stack-agnostic — it honours
- * `validation.traceability.testFileGlobs` — so on a Python, Go, Java, Rust,
- * Ruby or C# repository this validator opened and read every test file and
- * then returned a clean result that meant nothing. `qfai-implement` puts that
+ * One constant matching `it.todo(` / `test.todo(` / `describe.todo(` alone
+ * would open and read every test file on a Python, Go, Java, Rust, Ruby or
+ * C# repository and return a clean result that meant nothing, since file
+ * selection is stack-agnostic — it honours
+ * `validation.traceability.testFileGlobs`. `qfai-implement` puts that
  * clean result on its FINAL CHECKLIST and builds a completion prohibition on
  * top of it, so a repository full of `pytest.skip` placeholders cleared the
  * only gate qfai has against exactly that.

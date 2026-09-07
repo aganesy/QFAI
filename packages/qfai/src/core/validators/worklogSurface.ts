@@ -111,7 +111,7 @@ export async function validateWorklogSurface(
   for (const entry of entries) {
     if (entry.frontmatter === null) {
       // Parse failure → emit schema finding. If the body carries the
-      // <<unreadable: ...>> sentinel from collectEntries, surface the
+      // <<unreadable:...>> sentinel from collectEntries, surface the
       // underlying read error message instead of the generic phrase.
       const unreadableMatch = /^<<unreadable: ([\s\S]*?)>>$/.exec(entry.body);
       const message = unreadableMatch
@@ -603,12 +603,12 @@ async function collectEntries(dir: string, baseRoot: string): Promise<ParsedEntr
 function parseEntry(text: string): { frontmatter: Frontmatter | null; body: string } {
   // Strip an optional UTF-8 BOM (Windows editors commonly write it)
   // before parsing; without this a valid frontmatter file saved with
-  // BOM is reported as W-WORKLOG-SCHEMA (P2 from PR #209 review).
+  // BOM is reported as W-WORKLOG-SCHEMA.
   const stripped = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   // Tolerate CRLF line endings (Windows-authored entries) by accepting
   // \r?\n at every delimiter position. Without this, frontmatter saved
   // with CRLF would be silently misparsed and reported as
-  // W-WORKLOG-SCHEMA even when valid (P2 from PR #209 review).
+  // W-WORKLOG-SCHEMA even when valid.
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(stripped);
   if (!match) {
     return { frontmatter: null, body: text };

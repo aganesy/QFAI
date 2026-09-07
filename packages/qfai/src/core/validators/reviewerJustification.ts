@@ -68,10 +68,10 @@ type ReviewerFinding = {
  * now escapes what it emits, which is the fix for every producer; this is the other half, and
  * it is worth having: a payload carrying a newline is corrupt whoever eventually renders it.
  *
- * Scanned by CODE POINT rather than matched by a regular expression. The pattern needed an
- * `eslint-disable` for `no-control-regex`, and `.instruction/00_universal/quality.md` forbids
- * adding one of those without the user asking for it — a rule this change had broken. Reading
- * the code points needs no suppression and says the same thing more directly.
+ * Scanned by CODE POINT rather than matched by a regular expression. A regular expression for
+ * this needs an `eslint-disable` for `no-control-regex`, which `.instruction/00_universal/quality.md`
+ * forbids adding without the user asking for it. Reading the code points needs no suppression
+ * and says the same thing more directly.
  *
  * @param value the field as the lane reported it
  * @returns whether it carries a C0 control character or DEL
