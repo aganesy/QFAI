@@ -13,6 +13,13 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
 
+import {
+  findingsAwaitingPromotion,
+  formatAwaitingPromotion,
+  LEDGER_REL,
+  readRulePromotions,
+} from "./promotion-preflight.mjs";
+
 function toPosix(p) {
   return p.split(path.sep).join("/");
 }
@@ -630,6 +637,27 @@ if (existsSync(skillsLocalDir)) {
   throw new Error("init --force generated deprecated .qfai/assistant/skills.local directory.");
 }
 
+// Stand in for the `/qfai-configure` run a project makes before it gates. The
+// four Stage 0 catalogs ship as placeholders, and `qfai init` copies them
+// verbatim: a sandbox that never fills them is a project that never ran Stage
+// 0, and gating one of those at `--fail-on error` measures the fixture rather
+// than the package. Every angle-bracket slot becomes a value, and every bare
+// TODO / TBD goes, which is what the rule reads.
+for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
+  const catalogPath = path.join(outputDir, ".qfai", "assistant", "catalog", catalogFile);
+  const before = readFileSync(catalogPath, "utf-8");
+  const after = before
+    .replace(/<(?!\/|!)[^<>\n]+>/g, "verify-pack fixture value")
+    .replace(/\b(?:TODO|TBD)\b/g, "verify-pack fixture value");
+  if (after === before) {
+    throw new Error(
+      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this ` +
+        "stands in for, so a copy with none means the fixture is measuring nothing.",
+    );
+  }
+  writeFileSync(catalogPath, after);
+}
+
 execFileSync(
   "node",
   [cliPath, "validate", "--root", outputDir, "--fail-on", "error", "--format", "github"],
@@ -637,6 +665,22 @@ execFileSync(
     stdio: "inherit",
   },
 );
+
+// A rule inside a promotion window is a warning today and an error from the
+// release its pin names, and the severity follows the version of the tool that
+// is running. So a pin is otherwise only observed on the release it blocks:
+// this same gate, run with `--fail-on error` against this same sandbox.
+const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
+if (!existsSync(validateJsonPath)) {
+  throw new Error("validate did not write .qfai/report/validate.json.");
+}
+const awaitingPromotion = findingsAwaitingPromotion(
+  JSON.parse(readFileSync(validateJsonPath, "utf-8")).issues ?? [],
+  await readRulePromotions(path.join(root, LEDGER_REL)),
+);
+if (awaitingPromotion.length > 0) {
+  throw new Error(formatAwaitingPromotion(awaitingPromotion));
+}
 
 execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
   stdio: "inherit",

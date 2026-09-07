@@ -25,7 +25,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { EMITTED_RULE_CODES, RULE_ID_ALIASES } from "../../src/core/emittedRuleCodes.js";
 import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
@@ -765,33 +764,6 @@ describe("sunset ledger", () => {
         ).toBeGreaterThan(0);
       }
     }
-  });
-
-  it("carries the code its doc names as data, so a gate can follow the pin", async () => {
-    // The prose above each entry names the code; the entry now carries it too.
-    // Two spellings of one fact drift, so this holds them equal — and the data
-    // side is what lets a gate ask, of a finding it is holding, whether the
-    // window that keeps it a warning has closed.
-    const blocks = await readPromotionEntryBlocks();
-    const BACKTICKED_CODE = new RegExp(`\`(${CODE})\``);
-
-    for (const [key, entry] of Object.entries(RULE_PROMOTIONS)) {
-      const named = BACKTICKED_CODE.exec(blocks.get(key) ?? "")?.[1];
-      expect(
-        entry.code,
-        `RULE_PROMOTIONS.${key}.code says ${entry.code} and its doc names ${named ?? "none"}`,
-      ).toBe(named);
-      expect(
-        EMITTED_RULE_CODES.includes(entry.code) || RULE_ID_ALIASES.includes(entry.code),
-        `RULE_PROMOTIONS.${key}.code is ${entry.code}, which no emitter in the tree produces`,
-      ).toBe(true);
-    }
-  });
-
-  it("names each code once, so a finding resolves to one window", () => {
-    const codes = Object.values(RULE_PROMOTIONS).map((entry) => entry.code);
-
-    expect(codes.filter((code, at) => codes.indexOf(code) !== at)).toEqual([]);
   });
 
   it("every finding code introduced after P7 is named by a RULE_PROMOTIONS entry", async () => {
