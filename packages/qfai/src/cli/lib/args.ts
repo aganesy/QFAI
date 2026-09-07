@@ -167,6 +167,12 @@ export type ParsedArgs = {
     handoffAction?: "upgrade";
     /** Positional `<legacy-file>` for `qfai handoff upgrade`. */
     handoffLegacyFile?: string;
+    /** Subcommand for `qfai sdd <preflight>`. */
+    sddAction?: "preflight";
+    /** --format <text|json> for `qfai sdd preflight`. */
+    sddFormat?: "text" | "json";
+    /** Repeatable `--assume <text>` for `qfai sdd preflight` (carry-over open questions). */
+    sddAssumptions: string[];
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
     /** `--spec <id>` value for `qfai atdd scaffold`. */
@@ -236,6 +242,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     guardrailsPaths: [],
     validateSpecIds: [],
     reportSpecIds: [],
+    sddAssumptions: [],
     help: false,
     version: false,
     unknownFlags: [],
@@ -406,6 +413,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
+  // `qfai sdd <subcommand>` — currently only `preflight` is supported.
+  if (command === "sdd") {
+    const candidate = args[0];
+    if (isSubcommandToken(candidate)) {
+      if (candidate === "preflight") {
+        options.sddAction = candidate;
+      } else {
+        markInvalid(subcommandReason("sdd", candidate));
+      }
+      args.shift();
+    }
+  }
+
   // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
   if (command === "atdd") {
     const candidate = args[0];
@@ -567,6 +587,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           }
           break;
         }
+        if (command === "sdd") {
+          if (next === "text" || next === "json") {
+            options.sddFormat = next;
+          } else {
+            markInvalid(badValue("--format", next, "text|json"));
+          }
+          break;
+        }
         if (!applyFormatOption(command, next, options)) {
           markInvalid(formatReason(next));
         }
@@ -640,12 +668,23 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--fail-on"));
           break;
         }
-        // usage(): validate / doctor / prototyping preflight のみが
+        // usage(): validate / doctor / prototyping preflight / sdd preflight のみが
         // failOn を読む。report 等に付けても runReport は無視するため拒否。
-        if (command !== "validate" && command !== "doctor" && !ownedByPrototyping("preflight")) {
+        // `sdd` は preflight しか subcommand を持たず、subcommand なしの
+        // `qfai sdd` は末尾の guard が既に markInvalid() するため、ここは
+        // command 名だけで足りる (runSddPreflightCommand が `never` を exit 0
+        // として読む)。
+        if (
+          command !== "validate" &&
+          command !== "doctor" &&
+          command !== "sdd" &&
+          !ownedByPrototyping("preflight")
+        ) {
           markInvalid(notValidHere("--fail-on"));
           break;
         }
+        // 不正値を黙って捨てると、`--fail-on neve` のような typo が
+        // 「既定の失敗閾値」として通り、利用者に説明のないまま CI が落ちる。
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
         } else {
@@ -987,6 +1026,21 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
+      case "--assume": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--assume"));
+          break;
+        }
+        if (command === "sdd") {
+          // Repeatable: `--assume A --assume B` は preflight summary の
+          // `Open Questions (Carry-over)` にそのまま並ぶ。
+          options.sddAssumptions.push(next);
+        } else {
+          markInvalid(notValidHere("--assume"));
+        }
+        break;
+      }
       case "--scope": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -1092,6 +1146,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid(subcommandReason("atdd", null));
   }
+  if (command === "sdd" && !options.help && !options.sddAction) {
+    markInvalid(subcommandReason("sdd", null));
+  }
   // init 以外の全コマンドは `--root` を「対象ディレクトリ」として読む。
   // init だけが `--dir` しか見ないため、`--root` を渡すと値が捨てられ
   // cwd が初期化されていた。init でも `--root` を出力先のエイリアスと
@@ -1110,6 +1167,7 @@ const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["audit", "log"],
   ["handoff", "upgrade"],
   ["atdd", "scaffold"],
+  ["sdd", "preflight"],
 ]);
 
 /**

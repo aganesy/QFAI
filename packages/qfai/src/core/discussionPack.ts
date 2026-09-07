@@ -92,8 +92,21 @@ export function isPrototypingRequiredForDiscussionPack(
 const PLACEHOLDER_LINE_RE =
   /^(?:[-*]\s*)?(?:tbd|todo|none|n\/a|placeholder|\(placeholder\)|to be defined|to be updated|<[^>]+>)\.?$/i;
 
+export type InspectDiscussionPackOptions = {
+  /**
+   * Absolute path of the pack to inspect. Defaults to the newest pack under
+   * `discussionRoot`. Callers that honor the runtime-state pointer
+   * (`.qfai/state.json#discussion.currentId`) pass the pack it selects, so an
+   * operator who pinned an older pack with `npx qfai discussion use <id>` is
+   * not silently judged against the newest one. Legacy / dangerous pack-name
+   * scanning still covers every pack under the root either way.
+   */
+  selectedPackDir?: string;
+};
+
 export async function inspectLatestDiscussionPack(
   discussionRoot: string,
+  options: InspectDiscussionPackOptions = {},
 ): Promise<DiscussionPackReadiness> {
   const packs = await findPacks(discussionRoot, "discussion");
   const legacyPackNames = packs
@@ -104,7 +117,12 @@ export async function inspectLatestDiscussionPack(
     .filter((pack) => pack.isDangerous)
     .map((pack) => pack.name)
     .sort((left, right) => left.localeCompare(right));
-  const latest = selectLatestPack(packs);
+  const requestedPackDir =
+    options.selectedPackDir === undefined ? null : path.resolve(options.selectedPackDir);
+  const latest =
+    requestedPackDir === null
+      ? selectLatestPack(packs)
+      : packs.find((pack) => path.resolve(pack.path) === requestedPackDir);
   const latestPackDir = latest?.path ?? null;
   const latestPackName = latest?.name ?? null;
   if (!latestPackDir) {

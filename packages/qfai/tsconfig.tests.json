@@ -95,6 +95,7 @@
     "tests/assets/uiContractGuideReachability.test.ts",
     "tests/assets/verifyEvidenceSections.test.ts",
     "tests/assets/verifyJsonWritePath.test.ts",
+    "tests/cli/commands/sddPreflight.test.ts",
     "tests/cli/commands/validateTextFormat.test.ts",
     "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/githubAnnotationCap.test.ts",
