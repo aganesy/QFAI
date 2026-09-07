@@ -30,6 +30,6 @@ rows `n-a: cli-only pack` rather than leaving the bundle incomplete — see
 
 - [ ] Root `DESIGN.md` aligns with surface type and project constraints (skip on a cli-only pack, which authors none)
 - [ ] Reference pool is complete and translated into local design decisions
-- [ ] Evaluator scoring covers all four canonical UX axes (information architecture / navigation flow / usability / functionality) — fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
+- [ ] Evaluator scoring covers all four canonical UX axes (information architecture / navigation flow / usability / functionality) — fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`)
 - [ ] One-lineage handling is explicit (latest iteration accepted; no best-of-history)
 - [ ] Screen contracts cover all required states

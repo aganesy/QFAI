@@ -37,8 +37,8 @@ The following files are NOT part of the canonical family and must NOT be created
 
 - `30_option_comparison.md` — replaced by root `DESIGN.md`
 - `31_selected_anchor_screen.md` — replaced by root `DESIGN.md`
-- `33_exploration_rubric.md` — replaced by `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
-- `34_evaluator_calibration.md` — replaced by `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
+- `33_exploration_rubric.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`)
+- `34_evaluator_calibration.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`)
 - `40_contracts.md` — replaced by `40_screen_contracts.md`
 - `50_review_bundle.md` — replaced by `50_review_input_bundle.md`
 - `60_critique_loop.md` — removed (critique integrated into review bundle)

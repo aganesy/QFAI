@@ -40,6 +40,7 @@ type Phase = {
   id?: string;
   iteration?: string;
   mandatory_agents?: string[];
+  conditional_agents?: string[];
   blocking_agents?: string[];
 };
 
@@ -52,7 +53,7 @@ async function implementPhases(rel: string): Promise<Phase[]> {
 }
 
 describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
-  it("routes qa-gatekeeper into a phase where no production code exists yet", async () => {
+  it("routes qa-gatekeeper into a phase where the row's predicate does not exist yet", async () => {
     const phases = await implementPhases(rel);
     const red = phases.find((p) => p.id === "red");
     expect(red, "no `red` phase: the RED observation has nowhere to happen").toBeDefined();
@@ -86,6 +87,28 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
     expect(build?.blocking_agents ?? []).toContain("qa-gatekeeper");
   });
 
+  it("routes no acceptance-test-engineer into any phase of this skill", async () => {
+    // The `test` phase listed it as a conditional agent while the skill's
+    // Non-goals bar this skill from authoring acceptance tests, so the manifest
+    // and the skill gave opposite instructions about the same role — and the
+    // phase right after Phase Red's handback licensed exactly the edit that
+    // handback exists to prevent. No step in the skill enters `test`, so the
+    // role's answer here is "nothing", and it is routed by `qfai-atdd` instead.
+    const phases = await implementPhases(rel);
+    for (const phase of phases) {
+      expect(phase.mandatory_agents ?? [], `phase ${phase.id ?? "?"}`).not.toContain(
+        "acceptance-test-engineer",
+      );
+      expect(phase.conditional_agents ?? [], `phase ${phase.id ?? "?"}`).not.toContain(
+        "acceptance-test-engineer",
+      );
+    }
+    // The phase itself stays — removing it would drop `qa-strategist` too.
+    expect(phases.find((p) => p.id === "test")?.conditional_agents ?? []).toContain(
+      "qa-strategist",
+    );
+  });
+
   it("declares the micro-cycle phases as per-ledger-item, not per-invocation", async () => {
     const phases = await implementPhases(rel);
     for (const id of ["red", "build", "test", "review"]) {
@@ -99,11 +122,20 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
 });
 
 describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) => {
-  it("tells Phase: Red to obtain confirmation before production code exists", async () => {
+  it("tells Phase: Red to obtain confirmation while nothing makes the assertion pass", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
+    // Not "before any code implementing the row's predicate exists": that
+    // phrasing excluded the row `red-provenance.md` branch 1 sends here from
+    // its own step 2 note — an existing surface that implements the predicate
+    // wrongly, where a correct test fails on its first run. The predicate is
+    // written there, so the producer could not submit the handoff the gate is
+    // required to PASS.
     expect(flat).toContain(
-      "Submit that run to `qa-gatekeeper` and obtain confirmation **before** any production code exists",
+      "Submit that run to `qa-gatekeeper` and obtain confirmation **while no implementation makes that assertion pass** — the step 3a seam does not, it implements none, and neither does a surface that already exists and implements the row's predicate wrongly",
+    );
+    expect(flat).not.toContain(
+      "obtain confirmation **before** any code implementing the row's predicate exists",
     );
   });
 
@@ -112,11 +144,35 @@ describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) =>
     expect(skill.replace(/\s+/g, " ")).toContain("iteration: per-ledger-item");
   });
 
+  it("drops acceptance-test-engineer from `roles:` and says why in the roster", async () => {
+    // It was declared in the frontmatter and named exactly once in the body —
+    // to say it was unavailable. The roster documented seven roles and not
+    // this one, so nothing in the skill described what the routed role could
+    // do, while the Non-goals forbade the only thing it does.
+    const skill = await readFile(path.join(repoRoot, rel), "utf-8");
+    const frontmatter = skill.slice(0, skill.indexOf("\n---", 4));
+    expect(frontmatter).not.toContain("acceptance-test-engineer");
+    const flat = skill.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      "`acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`",
+    );
+  });
+
   it("splits the handoff contract into a RED and a GREEN submission", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
+    // Scoped to what makes the row's assertion pass, not to "no production
+    // code exists" and not to "no code implementing the predicate exists":
+    // Phase Red step 3a puts the seam in the production tree *before* the RED
+    // is taken, and an existing surface that implements the predicate wrongly
+    // has that predicate written already. Both older phrasings made the
+    // contract unsatisfiable for a row the gate is required to PASS.
     expect(flat).toContain(
-      "submits the RED run to `qa-gatekeeper` **while no production code exists**",
+      "submits the RED run to `qa-gatekeeper` **while no implementation makes that assertion pass — neither the Phase Red step 3a seam nor a surface that already exists and implements the row's predicate wrongly does**",
+    );
+    expect(flat).not.toContain("**while no production code exists**");
+    expect(flat).not.toContain(
+      "**before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
     );
     // The old text asked for one combined "RED/GREEN execution evidence"
     // submission, which is only satisfiable after the fact.
