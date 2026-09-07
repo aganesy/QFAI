@@ -252,7 +252,7 @@ assert a cycle has run:
 | ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
 | `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
 | `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
-| `TDDLIST-007`                  | the cell does not match the grammar above                                               | warning             |
+| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | warning             |
 | `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | warning, then error |
 | `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error               |
 | `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
@@ -296,7 +296,7 @@ the cell at that entry. The cell stays a pointer — prose about a missing run i
 payload, and the section above says why a payload in the cell corrupts the ledger.
 
 `QFAI-TDDLIST-007` is a warning for the same reason, and is waived under that
-code — the stripped `QFAI-TDDLIST-011` spelling resolves to it too. Every completion
+code — the stripped `TDDLIST-007` spelling resolves to it too. Every completion
 check hangs off the anchor, so a `done` row whose cell is only an outcome —
 command-shaped, so the status-only rule passes over it — claimed completion with
 no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by

@@ -3294,7 +3294,7 @@ export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
  *
  * Canonical `QFAI-<AREA>-<NNN>`, so the code itself is the waiver key
  * (`resolveRuleKeys` in `core/waivers.ts`), which also accepts the stripped
- * `QFAI-TDDLIST-011` spelling. The `rule` field carries the dotted rule path
+ * `TDDLIST-007` spelling. The `rule` field carries the dotted rule path
  * instead, matching this check's sibling `tddList.evidenceAnchorResolves`.
  *
  * Every completed-evidence check below hangs off an anchor, so a `done` row
@@ -4939,10 +4939,7 @@ async function validateSpecTddList(
   // until this change, so the cells that outgrow the cap are the cells written
   // to the contract of their day.
   const evidenceOversizePromotion = RULE_PROMOTIONS.tddListEvidenceCellOversize.promoteAt;
-  const evidenceOversizeSeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    evidenceOversizePromotion,
-  );
+  const evidenceOversizeSeverity = newRuleSeverity(resolvedToolVersion, evidenceOversizePromotion);
   const evidenceOversizeWindowNote =
     evidenceOversizeSeverity === "warning"
       ? ` Reported as a warning until the ${evidenceOversizePromotion} release, then an error`
