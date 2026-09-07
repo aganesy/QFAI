@@ -2259,15 +2259,18 @@ a merge can invalidate has no author to hold responsible for it.
 
 Re-measured for this commit by a separate walk of the two include roots — not by calling into
 `stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
-readings agree: **937** (`tests/assets` 767, `tests/e2e` 170).
+readings agree: **1728** (`tests/assets` 1558, `tests/e2e` 170).
 
-e2e callsites at this tree: 1731
+e2e callsites at this tree: 1736
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. The seventh INSTANCE is
 the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
-are not the same event: the merge is what carried 932 into a 937 tree, and re-recording 937 is what
-corrects it. Neither total can be derived by a test — deriving them would mean running the suite from
+are not the same event: the merge is what carried a count from one parent into a tree that holds both
+parents' callsites, and re-recording the derived count is what corrects it. The numbers are left out
+of this sentence on purpose — naming them here is a second literal only a merge can invalidate, which
+is the defect the paragraph above describes. The line above carries the value; this says what happened
+to it. Neither total can be derived by a test — deriving them would mean running the suite from
 inside it — but the thing that INVALIDATES them can be: a commit that changes an `it` / `test`
 callsite under the e2e project's two include globs.
 `stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
