@@ -200,7 +200,10 @@ describe("importLite profile wiring", () => {
   it("qfai-sdd Stage 0 tells the agent how to produce the evidence file", async () => {
     const skill = await readFile(SKILL_MD, "utf-8");
     expect(skill).toContain("QFAI-IMPLITE-001");
-    expect(skill).toContain(".qfai/evidence/import-lite-<17-digit timestamp>.md");
+    // The name and what fills its placeholder, so the agent can build it
+    // without leaving the step. `<ts>` is the spelling used throughout.
+    expect(skill).toContain(".qfai/evidence/import-lite-<ts>.md");
+    expect(skill).toContain("`<ts>` is the 17-digit run stamp");
     expect(skill).toContain("templates/evidence/import-lite.md");
   });
 });
@@ -862,7 +865,10 @@ describe("import-lite in the shipped Stage 0 guidance", () => {
     const body = stageZero.slice(0, stageZero.indexOf("\n## Stage 1"));
 
     expect(body).toContain("templates/evidence/import-lite.md");
-    expect(body).toContain(".qfai/evidence/import-lite-<17-digit timestamp>.md");
+    // The playbook is reached on its own, so it defines the placeholder too.
+    // Flattened: the sentence is the rule, the column it wraps at is not.
+    expect(body).toContain(".qfai/evidence/import-lite-<ts>.md");
+    expect(body.replace(/\s+/g, " ")).toContain("`<ts>` is the 17-digit run stamp");
     expect(body).toContain("QFAI-IMPLITE-001");
   });
 
