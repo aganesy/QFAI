@@ -141,6 +141,9 @@ describe('"relevant test suite" is defined and bounded', () => {
       expect(section).toContain("run the checkpoint at the end of Refactor");
       expect(section).toContain("FAIL -> `refactor -> exception` with a DR-ID");
       expect(section).toContain("filed as a new `todo` row");
+      // The row is upstream-owned: this skill raises the CR, Phase 2b seeds it.
+      expect(section).toContain("**filed upstream, not here**");
+      expect(section).toContain("This skill owns cells, never rows.");
       expect(section).toContain("Rows already `done` from earlier boundaries are never re-opened");
       // Refactor step 5 must not mark `done` before verifying.
       expect(skill).toContain("run checkpoint verification **while the item is still `refactor`**");

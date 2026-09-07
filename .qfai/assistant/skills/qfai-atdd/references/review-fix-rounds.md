@@ -130,6 +130,20 @@ available, so it survives a routing change. The three branches above define the
   guess when two rows could own one:
   `../../qfai-implement/references/round-evidence.md` defines both halves.
 
+  **Read the row's marker before that file name.** A row carrying
+  `Pre-split-evidence: implement` keeps `.qfai/evidence/implement-<spec-id>.md`
+  — gate item 10 selects that entry for it, and so do the three blocking
+  reviewers, by the same marker-first order the phase-evidence, checkpoint and
+  cross-spec rules on the `/qfai-implement` side already state. This is a
+  second writing path into the same entry, reached only from that skill's
+  Phase Red step 3b, and it was the one still choosing by `Layer` alone: a
+  marked legacy row sent here for a test edit had its new round written where
+  nothing reads it, so item 10 saw an entry with no round `N+1` while the
+  ledger said `review-fix`, and putting the ATDD file in the `Evidence` cell
+  instead would contradict the marker — leaving the rework no way to finish in
+  either direction. The round number, the shape and everything below are
+  unchanged; only which file the block is appended to depends on the marker.
+
   **Which N.** The REVISE closed the round it was given on, so a fresh RED
   opens the **next** one — round `N+1` where `N` is the round the reviewer
   ruled on. Writing it into the reviewer's own round mixed the original
