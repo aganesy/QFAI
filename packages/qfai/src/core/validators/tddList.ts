@@ -190,8 +190,14 @@ const BLOCKED_DEPARTURE_STATUSES = new Set(
  * (`spec-0006:TDD-0034`), and anchoring on the first would cut it in half. An
  * en dash and a plain hyphen are accepted beside the em dash the reference
  * prints, because the difference is a keyboard, not a meaning.
+ *
+ * **It admits an empty blocker half**, which the emptiness check below then
+ * names. Requiring a non-empty one made `— blocked at green` match nothing, so
+ * a cell whose departure status is right there was told the departure status is
+ * what is missing — and the remediation sent the author to add the half the
+ * cell already had.
  */
-const BLOCKED_BY_DEPARTURE_RE = /^(.*\S)\s*[—–-]\s*blocked\s+at\s+([A-Za-z-]+)\s*$/i;
+const BLOCKED_BY_DEPARTURE_RE = /^(.*)\s*[—–-]\s*blocked\s+at\s+([A-Za-z-]+)\s*$/i;
 
 /**
  * What a `Blocked-By` cell resolves to.
@@ -3744,9 +3750,15 @@ async function validateSpecTddList(
     const where = `in tdd/test-list.md for spec-${specNumber} (${ref.label})`;
     let message: string;
     if (parsed.reason === "missing-blocker") {
+      // Three states, three sentences. A cell reading `— blocked at green` is
+      // not empty, and calling it empty sent the author to the half it already
+      // had; the parse admits that shape now, so the message can name the half
+      // that is actually absent.
       message = !hasBlockedByColumn
         ? `Status=blocked ${where} but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker and the status the row was blocked at`
-        : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty ${where}. Name the blocker and the status the row was blocked at`;
+        : blockedBy.trim().length === 0 || blockedBy.trim() === "-"
+          ? `Status=blocked but ${BLOCKED_BY_COLUMN} is empty ${where}. Name the blocker and the status the row was blocked at`
+          : `Status=blocked but ${BLOCKED_BY_COLUMN} names no blocker ${where}: "${blockedBy}". Name what the row is waiting on ahead of the "— blocked at <status>" half`;
     } else if (parsed.reason === "missing-departure-status") {
       message = `Status=blocked but ${BLOCKED_BY_COLUMN} names no departure status ${where}: "${blockedBy}". Append "— blocked at <status>" (${BLOCKED_DEPARTURE_LIST})`;
     } else {
@@ -3762,7 +3774,7 @@ async function validateSpecTddList(
         "tddList.blockedBy",
         undefined,
         "change",
-        `${BLOCKED_BY_COLUMN} 列には停止要因と離脱時ステータスの両方を記載してください: 停止要因は Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。その後ろに \`— blocked at <status>\`（${BLOCKED_DEPARTURE_LIST}）を続けます（例: \`CR-20260421-0004 — blocked at green\`）。離脱時ステータスは \`blocked\` 行が保持する唯一の記録で、再開時にどのラウンドへ書くかを決めます。`,
+        `Write both halves in ${BLOCKED_BY_COLUMN}. The blocker is a Change Request ID (\`CR-YYYYMMDD-NNNN\`), a contract path with a line (\`.qfai/contracts/db/CON-DB-0005.sql:2715\`), or a row in another spec (\`spec-0006:TDD-0034\`); after it write \`— blocked at <status>\` (${BLOCKED_DEPARTURE_LIST}), as in \`CR-20260421-0004 — blocked at green\`. The departure status is the only record a \`blocked\` row keeps of where it was stopped, and it decides which round the resumption writes into.`,
       ),
     );
   }

@@ -13,7 +13,7 @@
  * row there would silently close the obligation.
  */
 
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -32,11 +32,10 @@ const EIGHT_COL = `# TDD Execution Ledger
 | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
 | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |`;
 
-async function run(ledger: string): Promise<Array<{ code: string; severity: string }>> {
-  const root = path.join(
-    os.tmpdir(),
-    `qfai-blocked-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  );
+async function run(
+  ledger: string,
+): Promise<Array<{ code: string; severity: string; message: string }>> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-blocked-"));
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   try {
@@ -50,7 +49,7 @@ async function run(ledger: string): Promise<Array<{ code: string; severity: stri
     }
     await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
     const issues = await validateTddList(root, defaultConfig);
-    return issues.map((i) => ({ code: i.code, severity: i.severity }));
+    return issues.map((i) => ({ code: i.code, severity: i.severity, message: i.message }));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -165,11 +164,31 @@ describe("TDDLIST_BLOCKED_MISSING_REF — the departure-status half", () => {
     expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_MISSING_REF");
   });
 
-  it("errors when the departure status stands alone with no blocker", async () => {
+  for (const dash of ["—", "–", "-"]) {
+    it(`names the missing blocker when only the departure status is there ("${dash}")`, async () => {
+      // Asserting the code alone let this report the wrong half: the parse
+      // required a non-empty blocker, so the cell fell through to
+      // "names no departure status" — about the half it already had.
+      const issues = await run(
+        `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | ${dash} blocked at green |\n`,
+      );
+      const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_MISSING_REF");
+      expect(found?.severity).toBe("error");
+      expect(found?.message).toContain("names no blocker");
+      expect(found?.message).not.toContain("names no departure status");
+      expect(found?.message).not.toContain("is empty");
+    });
+  }
+
+  it("still calls an empty cell empty", async () => {
+    // The over-correction pin for the line above: the three states have three
+    // sentences, and widening the parse must not merge two of them.
     const issues = await run(
-      `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | — blocked at green |\n`,
+      `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | - |\n`,
     );
-    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_MISSING_REF");
+    expect(issues.find((i) => i.code === "TDDLIST_BLOCKED_MISSING_REF")?.message).toContain(
+      "is empty",
+    );
   });
 
   it("still says nothing about a non-blocked row carrying a bare value", async () => {
