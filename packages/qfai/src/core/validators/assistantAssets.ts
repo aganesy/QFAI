@@ -888,11 +888,11 @@ const CITATION_SEGMENT_SOURCE = String.raw`(?:[\p{L}\p{N}\p{M}._~-]|%[0-9A-Fa-f]
 /**
  * The path-ish tokens {@link resolveCitations} will try to resolve, in order.
  *
- * Exported for the reason `collectSqlDomainBounds` is: the token is the unit
- * the defect lives in, and every end-to-end reading of it passes through two
- * fallbacks that can cover a wrong token up. A case on the reachability graph
- * passes against the broken pattern — measured — so it could not have pinned
- * this.
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface. The token is the unit the defect lives in, and every
+ * end-to-end reading of it passes through two fallbacks that can cover a wrong
+ * token up. A case on the reachability graph passes against the broken pattern
+ * — measured — so it could not have pinned this.
  */
 export function citationTokensIn(content: string): string[] {
   return [...content.matchAll(DOCUMENT_CITATION_PATTERN)].map((match) => match[0]);
