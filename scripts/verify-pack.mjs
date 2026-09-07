@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import console from "node:console";
 import {
   existsSync,
   lstatSync,
@@ -12,6 +13,16 @@ import {
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
+
+import {
+  BASELINE_PATH,
+  UPDATE_ENV,
+  diffFingerprints,
+  fingerprintReport,
+  formatDiff,
+  readBaseline,
+  writeBaseline,
+} from "./fresh-init-findings.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -637,6 +648,27 @@ execFileSync(
     stdio: "inherit",
   },
 );
+
+// The run above only has to exit zero, which says nothing about what it
+// reported. Compare the findings against the recorded set, in both directions.
+const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
+if (!existsSync(validateJsonPath)) {
+  throw new Error("validate did not write .qfai/report/validate.json.");
+}
+const freshFindings = fingerprintReport(JSON.parse(readFileSync(validateJsonPath, "utf-8")));
+
+if (process.env[UPDATE_ENV] === "1") {
+  writeBaseline(freshFindings);
+  console.log(
+    `Recorded ${freshFindings.length} findings in ${toPosix(path.relative(root, BASELINE_PATH))}.`,
+  );
+} else {
+  const findingsDiff = diffFingerprints(freshFindings, readBaseline());
+  if (findingsDiff.added.length > 0 || findingsDiff.missing.length > 0) {
+    throw new Error(formatDiff(findingsDiff));
+  }
+  console.log(`A fresh init validates to the recorded ${freshFindings.length} findings.`);
+}
 
 execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
   stdio: "inherit",
