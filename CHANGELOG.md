@@ -4,6 +4,32 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`QFAI-CONTRACT-036` — a `db/` contract's foreign keys are checked against
+  its `-- Depends on:` line** (#1290). Three rules read that line: one requires
+  it to be present, one requires the ids in it to resolve, one compares it with
+  the contract index. None reads the SQL under it, so a contract set whose
+  stated apply order does not work satisfies every gate, and the failure arrives
+  as a missing relation in whatever run first applies it.
+
+  A `REFERENCES` clause names a table, a `CREATE TABLE` names the table it
+  makes, and both are in files the validator already reads. When the referenced
+  table belongs to another contract, that contract must appear in the
+  declaration. No database is involved.
+
+  Narrow on purpose:
+
+  | Case                                                  | Reported                         |
+  | ----------------------------------------------------- | -------------------------------- |
+  | Foreign key to another contract's table, not declared | yes                              |
+  | Foreign key to a table the same file creates          | no — nothing to apply first      |
+  | Foreign key to a table no contract in the set creates | no — no contract to name         |
+  | Table two contracts both create                       | no — the parent is not derivable |
+
+  A warning until the 1.13.0 release and an error from there. The condition is
+  invisible today, so a project carrying it has never been told.
+
 ## [1.11.0] - 2026-09-07
 
 ### Added

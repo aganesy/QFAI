@@ -690,6 +690,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-020",
     "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
+    // `validateDbContractApplyOrder`, composed by `validateContracts` beside
+    // `-031` and reachable from the same two profiles.
+    "QFAI-CONTRACT-036",
     "QFAI-CONTRACT-040",
     // `-041` shipped after this list did, and the explicit enumeration that
     // keeps the wildcard from over-claiming is also what stops a new code
