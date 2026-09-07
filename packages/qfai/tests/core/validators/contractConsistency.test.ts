@@ -443,9 +443,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain(
-        "ENUM (a physical constraint: the value is rejected at insert time)",
-      );
+      expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
     /**
@@ -562,9 +560,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain(
-        "ENUM (a physical constraint: the value is rejected at insert time)",
-      );
+      expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
     it("does not let a commented-out CREATE TABLE make one table look like two", async () => {

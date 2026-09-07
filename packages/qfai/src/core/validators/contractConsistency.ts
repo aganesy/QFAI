@@ -213,7 +213,7 @@ function describeDbDomain(domain: DbDomain): string {
 /** Which form bounds the field, and — when the candidates disagree — whose. */
 function describeDbConstraint(domain: DbDomain): string {
   if (isEnumOnly(domain)) {
-    return "ENUM (a physical constraint: the value is rejected at insert time)";
+    return "ENUM (a physical constraint: the insert is rejected)";
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
@@ -224,7 +224,7 @@ function describeDbConstraint(domain: DbDomain): string {
   }
   return (
     `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
-    "An ENUM on a same-named column bounds that table's column, so it need not reject the value this API field allows"
+    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
   );
 }
 
@@ -243,11 +243,10 @@ function describeDbConstraint(domain: DbDomain): string {
 function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
   if (enumOnly) {
     return (
-      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - ` +
-      "it is a physical constraint that rejects the value at insert time, " +
-      "so no implementation satisfies both contracts. " +
-      "Add the value to the ENUM (this needs a migration), " +
-      "or correct the API contract's terminal semantics."
+      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - it is a physical ` +
+      "constraint that rejects the value at insert time, so no implementation satisfies both " +
+      "contracts. Add the value to the ENUM (this needs a migration), or correct the API " +
+      "contract's terminal semantics."
     );
   }
   if (fromEnum.length === 0) {
@@ -307,7 +306,7 @@ function unreadableDerivedDeclaration(
 ): Issue {
   return issue(
     "QFAI-CONTRACT-041",
-    `A \`Derived (not stored):\` declaration does not parse: ${line}`,
+    `a \`Derived (not stored):\` declaration does not parse: ${line}`,
     declarationSeverity,
     file,
     "contracts.crossContract.derivedNotStored",
@@ -351,7 +350,7 @@ function staleDerivedDeclarations(
       issues.push(
         issue(
           "QFAI-CONTRACT-041",
-          `A \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
+          `a \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
             "do nothing: " +
             unused.join(", ") +
             (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
@@ -445,7 +444,7 @@ async function validateApiFileAgainstDb(
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
-        `The API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
+        `the API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
           `field name cannot represent: ${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
           `DB contracts: ${dbFileList.join(", ")}; DB constraint: ${describeDbConstraint(db)})`,
         severity,
