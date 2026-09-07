@@ -3354,7 +3354,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     }
     const notObservable = flat(await read(tree, NOT_OBSERVABLE));
     expect(notObservable).toContain(
-      "**Two `Integration` rows are outside that set, and the sibling is required on both.**",
+      "**Two kinds of `Integration` row are outside that set, and the sibling is required on both.**",
     );
     expect(notObservable).toContain("`Pre-split-evidence: implement`");
     // Over-correction pin: the reason Integration was admitted in the first

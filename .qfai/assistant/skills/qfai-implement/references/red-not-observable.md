@@ -68,8 +68,8 @@ for the natural RED and let the row proceed to `green` and `done`:
    one correct handoff read as `todo -> red` or as a blocking `exception`
    depending on which file the agent opened.
 
-   **Two `Integration` rows are outside that set, and the sibling is required
-   on both.** "Handed over by `/qfai-atdd`" is the condition, and the `Layer` is
+   **Two kinds of `Integration` row are outside that set, and the sibling is
+   required on both.** "Handed over by `/qfai-atdd`" is the condition, and the `Layer` is
    only its usual proxy — so where the two part, follow the handover. A row
    carrying `Pre-split-evidence: implement` (gate item 10) predates the split
    and was never handed over; a row whose `TC-Refs` name only TCs that declare

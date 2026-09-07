@@ -1032,8 +1032,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(provenance).toContain("`Layer = Integration` rows are tracked there");
       const gatekeeper = await read(tree, "assistant/agents/qa-gatekeeper.md");
-      // The layer alone is only the usual proxy for the condition: two
-      // `Integration` rows are never handed over, and they owe the sibling.
+      // The layer alone is only the usual proxy for the condition: two kinds of
+      // `Integration` row are never handed over, and they owe the sibling.
       expect(gatekeeper).toContain(
         "On an `E2E` / `API` / `Integration` row handed over by `/qfai-atdd`, `Satisfied-by` need not be a sibling `TDD-NNNN`",
       );
