@@ -173,7 +173,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
 - Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`, `Tier`, `BR-Ref`. `Blocked-By`
-  names what a `blocked` row is waiting on and is required on those rows.
+  names what a `blocked` row is waiting on **and the status the row was blocked at**
+  (`CR-20260421-0004 — blocked at green`), and is required on those rows;
+  `TDDLIST_BLOCKED_MISSING_REF` errors on either half.
   `Owning module` declares the production module the row will write, is filled at
   Phase 2b alongside the row itself, and is what the parallel-dispatch gate is evaluated
   against before RED: a ledger with no `Owning module` column supports parallel dispatch
