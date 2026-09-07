@@ -17,6 +17,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { collectHeadingSlugs as headingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
+import { escapeRegExp } from "../../src/core/regex.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
@@ -86,10 +87,6 @@ function section(markdown: string, heading: string): string {
 function wrapTolerant(text: string, flags = ""): RegExp {
   const escaped = text.trim().split(/\s+/).map(escapeRegExp).join("\\s+");
   return new RegExp(escaped, flags);
-}
-
-function escapeRegExp(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 const STAGES_WITHOUT_A_DRAIN = [
