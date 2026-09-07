@@ -307,6 +307,293 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.severity).toBe("error");
   });
 
+  /**
+   * The pairing is by field NAME across every DB contract; the severity and
+   * the domain are then attributed to one specific API field. Merging the
+   * bindings before that attribution let a `status` ENUM on an unrelated table
+   * decide the severity of a `status` column bounded by a plain CHECK — and
+   * the message asserted `insert 時に拒絶される物理制約` of a field that has no
+   * such constraint (#1162, reported against published 1.10.2).
+   */
+  describe("a field name several contracts declare", () => {
+    const SIM_LINE_API = [
+      "openapi: 3.0.3",
+      "components:",
+      "  schemas:",
+      "    SimLine:",
+      "      type: object",
+      "      properties:",
+      "        status:",
+      "          type: string",
+      "          enum: [active, inactive, in_call, standby, powered_off, error]",
+      "",
+    ].join("\n");
+
+    /** The contract that actually bounds `sim_lines.status`: a plain CHECK. */
+    const SIM_LINES_DB = [
+      "CREATE TABLE sim_lines (",
+      "  id uuid PRIMARY KEY,",
+      "  status TEXT NOT NULL",
+      "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+      ");",
+      "",
+    ].join("\n");
+
+    /** A different table, in a different contract, whose column is also `status`. */
+    const CALL_LISTS_DB = [
+      "CREATE TYPE call_list_status AS ENUM ('pending', 'running', 'completed');",
+      "",
+      "CREATE TABLE call_lists (",
+      "  id uuid PRIMARY KEY,",
+      "  status call_list_status NOT NULL",
+      ");",
+      "",
+    ].join("\n");
+
+    async function seedMany(
+      apiYaml: string,
+      dbByName: Record<string, string>,
+    ): Promise<{ api: string; dbs: string[] }> {
+      const root = await newTempDir();
+      const api = path.join(root, "api-0003-sim-lines.yaml");
+      await writeFile(api, apiYaml, "utf-8");
+      const dbs: string[] = [];
+      for (const [name, sql] of Object.entries(dbByName)) {
+        const target = path.join(root, name);
+        await writeFile(target, sql, "utf-8");
+        dbs.push(target);
+      }
+      return { api, dbs };
+    }
+
+    it("stays a warning when one candidate binding is a CHECK", async () => {
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0002-call-lists.sql": CALL_LISTS_DB,
+        "db-0003-sim-lines.sql": SIM_LINES_DB,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues).toHaveLength(1);
+      // `standby` and `powered_off` are in neither domain, so the finding is
+      // real — it is the SEVERITY that was borrowed from another table.
+      expect(issues[0]?.message).toContain("powered_off, standby");
+      expect(issues[0]?.severity).toBe("warning");
+    });
+
+    it("does not claim a physical constraint the field does not have", async () => {
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0002-call-lists.sql": CALL_LISTS_DB,
+        "db-0003-sim-lines.sql": SIM_LINES_DB,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.message).not.toContain("insert 時に拒絶される物理制約");
+      // Names the contract the ENUM came from, so the reader can see it is not
+      // the one bounding their field. Read off the constraint clause alone:
+      // every contract's path appears earlier in the message, so a whole-
+      // message assertion would pass on either name.
+      const message = issues[0]?.message ?? "";
+      const constraintClause = message.slice(message.indexOf("DB 側の制約: "));
+      expect(constraintClause).toContain("CHECK と ENUM の混在");
+      expect(constraintClause).toContain("db-0002-call-lists.sql");
+      expect(constraintClause).not.toContain("db-0003-sim-lines.sql");
+      expect(issues[0]?.suggested_action).toContain("db-0002-call-lists.sql");
+      expect(issues[0]?.suggested_action).toContain("db-0003-sim-lines.sql");
+    });
+
+    it("attributes the allowed values per contract, not as one domain", async () => {
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0002-call-lists.sql": CALL_LISTS_DB,
+        "db-0003-sim-lines.sql": SIM_LINES_DB,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      // A flat union reported `completed`, `pending`, `running` as allowed
+      // values for `SimLine.status`, which accepts four. The breakdown is what
+      // lets a reader see which side each value came from.
+      expect(issues[0]?.message).toContain("DB 側の許容値 (契約ごと)");
+      expect(issues[0]?.message).toContain("db-0002-call-lists.sql: completed, pending, running");
+      expect(issues[0]?.message).toContain(
+        "db-0003-sim-lines.sql: active, error, in_call, inactive",
+      );
+    });
+
+    it("still raises to error when every candidate binding is an ENUM", async () => {
+      // The mix is what removes the claim. Where nothing can store the value,
+      // the finding #1100 raised is unchanged.
+      const OTHER_ENUM_DB = [
+        "CREATE TYPE sim_line_status AS ENUM ('active', 'inactive', 'in_call', 'error');",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status sim_line_status NOT NULL",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0002-call-lists.sql": CALL_LISTS_DB,
+        "db-0003-sim-lines.sql": OTHER_ENUM_DB,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain("ENUM (insert 時に拒絶される物理制約)");
+    });
+
+    /**
+     * The same conflation, one level down: `collectSqlDomainBounds` keys on the
+     * column NAME, so two tables in ONE contract that each have a `status`
+     * column collapse to a single bound with `enumBacked` OR-ed — and the
+     * per-contract split above cannot see inside it.
+     */
+    it("stays a warning when the two forms are on different tables in one contract", async () => {
+      const twoTables = [
+        "CREATE TYPE call_list_status AS ENUM ('pending', 'running', 'completed');",
+        "",
+        "CREATE TABLE call_lists (",
+        "  id uuid PRIMARY KEY,",
+        "  status call_list_status NOT NULL",
+        ");",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0009-both.sql": twoTables });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.severity).toBe("warning");
+      // The ENUM is still named: it is what the reader has to look at to settle
+      // which table the API field pairs with.
+      const message = issues[0]?.message ?? "";
+      expect(message.slice(message.indexOf("DB 側の制約: "))).toContain("CHECK と ENUM の混在");
+
+      // The remedy points at the TABLE, because the contract is already
+      // settled — there is only one. The cross-contract wording would have
+      // named "the contracts that bound it with a CHECK" and had none to list,
+      // so it printed empty brackets at a reader looking for a file name.
+      const remedy = issues[0]?.suggested_action ?? "";
+      expect(remedy).toContain("ENUM と CHECK が同じ契約");
+      expect(remedy).toContain("対象のテーブルと列を 1 つに特定");
+      expect(remedy).not.toMatch(/\(\s*\)/);
+    });
+
+    it("does not call it one contract when several declare an ENUM and one is mixed", async () => {
+      // The empty CHECK side is not evidence of a single contract. Here BOTH
+      // contracts declare an ENUM — one of them non-decisively, because its own
+      // file mixes the forms across tables — so `fromEnum` holds them all and
+      // the "same contract" branch would claim a pairing that is not settled.
+      const twoTables = [
+        "CREATE TYPE call_list_status AS ENUM ('pending', 'running', 'completed');",
+        "",
+        "CREATE TABLE call_lists (",
+        "  id uuid PRIMARY KEY,",
+        "  status call_list_status NOT NULL",
+        ");",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+      const enumOnlyElsewhere = [
+        "CREATE TYPE notification_status AS ENUM ('queued', 'sent');",
+        "",
+        "CREATE TABLE notifications (",
+        "  id uuid PRIMARY KEY,",
+        "  status notification_status NOT NULL",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0009-both.sql": twoTables,
+        "db-0011-notifications.sql": enumOnlyElsewhere,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("warning");
+      const remedy = issues[0]?.suggested_action ?? "";
+      // The single-contract sentence, not the words in it: the multi-contract
+      // wording says "one of them mixes the forms inside 同じ契約", which is
+      // true and must not be what this rejects.
+      expect(remedy).not.toContain("ENUM と CHECK が同じ契約");
+      // Both files named, and the reader sent to the Contracts 表 first —
+      // the contract has to be narrowed before the column can be.
+      expect(remedy).toContain("db-0009-both.sql");
+      expect(remedy).toContain("db-0011-notifications.sql");
+      expect(remedy).toContain("Contracts 表");
+      expect(remedy).not.toMatch(/\(\s*\)/);
+    });
+
+    it("still raises to error when the redundant CHECK is on the only table", async () => {
+      // #1100's case, and the reason the tie is broken on the table count
+      // rather than on the mere presence of both forms: with one table there is
+      // one column of that name, so the CHECK is redundant on the ENUM column
+      // and the value is refused at insert time either way.
+      const oneTable = [
+        "CREATE TYPE sim_line_status AS ENUM ('active', 'inactive', 'in_call', 'error');",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status sim_line_status NOT NULL,",
+        "  CONSTRAINT sim_lines_status_ck",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": oneTable });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain("ENUM (insert 時に拒絶される物理制約)");
+    });
+
+    it("does not let a commented-out CREATE TABLE make one table look like two", async () => {
+      const oneTable = [
+        "-- CREATE TABLE archived_sim_lines (status TEXT);",
+        "CREATE TYPE sim_line_status AS ENUM ('active', 'inactive', 'in_call', 'error');",
+        "",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status sim_line_status NOT NULL,",
+        "  CONSTRAINT sim_lines_status_ck",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+      const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": oneTable });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("error");
+    });
+
+    it("keeps the single-contract message flat", async () => {
+      const { api, dbs } = await seedMany(SIM_LINE_API, {
+        "db-0003-sim-lines.sql": SIM_LINES_DB,
+      });
+
+      const issues = await validateContractConsistency([api], dbs);
+
+      expect(issues[0]?.severity).toBe("warning");
+      expect(issues[0]?.message).toContain("DB 側の許容値: active, error, in_call, inactive");
+      expect(issues[0]?.message).not.toContain("契約ごと");
+    });
+  });
+
   it("reports a $ref'd API enum against a CHECK-IN column", async () => {
     const { api, db } = await seedPair(REF_ENUM_API, CHECK_IN_DB);
     const issues = await validateContractConsistency([api], [db]);
