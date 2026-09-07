@@ -664,12 +664,22 @@ if (process.env[UPDATE_ENV] === "1") {
   console.log(
     `Recorded ${freshFindings.length} findings in ${toPosix(path.relative(root, BASELINE_PATH))}.`,
   );
-} else {
+}
+
+// Held rather than thrown at the comparison. `report` and `doctor` read the
+// same sandbox, and their output is what a reader opens to see why the set
+// moved — so failing before them costs the run the evidence it was collecting.
+// Printed here as well, because a later step can fail first and this has to
+// survive that.
+let baselineDiff = null;
+if (process.env[UPDATE_ENV] !== "1") {
   const findingsDiff = diffFingerprints(freshFindings, readBaseline());
   if (findingsDiff.added.length > 0 || findingsDiff.missing.length > 0) {
-    throw new Error(formatDiff(findingsDiff));
+    baselineDiff = formatDiff(findingsDiff);
+    console.error(baselineDiff);
+  } else {
+    console.log(`A fresh init validates to the recorded ${freshFindings.length} findings.`);
   }
-  console.log(`A fresh init validates to the recorded ${freshFindings.length} findings.`);
 }
 
 execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
@@ -683,3 +693,7 @@ if (!existsSync(reportPath)) {
 execFileSync("node", [cliPath, "doctor", "--root", outputDir, "--fail-on", "error"], {
   stdio: "inherit",
 });
+
+if (baselineDiff !== null) {
+  throw new Error(baselineDiff);
+}

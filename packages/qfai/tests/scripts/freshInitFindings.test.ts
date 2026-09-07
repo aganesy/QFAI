@@ -174,4 +174,22 @@ describe("the committed baseline", () => {
       "scripts/fresh-init-findings.json",
     );
   });
+
+  it("fails the run after the steps that explain the change, not before them", () => {
+    // `report` and `doctor` read the same sandbox the comparison read, and
+    // their output is what a reader opens to see why the set moved. Throwing
+    // at the comparison ends the run holding only the fingerprint list.
+    const script = readFileSync(path.join(repoRoot, "scripts", "verify-pack.mjs"), "utf-8");
+
+    expect(script).toContain("baselineDiff = formatDiff(findingsDiff)");
+    // Printed where it is found as well, since a later step can fail first.
+    expect(script).toContain("console.error(baselineDiff)");
+    // And the throw is the last thing the script does.
+    expect(
+      script
+        .trimEnd()
+        .endsWith("if (baselineDiff !== null) {\n  throw new Error(baselineDiff);\n}"),
+    ).toBe(true);
+    expect(script).not.toContain("throw new Error(formatDiff(findingsDiff))");
+  });
 });
