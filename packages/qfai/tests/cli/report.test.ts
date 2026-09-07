@@ -57,13 +57,17 @@ async function writeValidationFixture(
  *
  * Measured worst case, slowest first:
  *
+ * Each command selects the slice a CI job selects, plus the two flags that
+ * make per-case durations visible. The selection is CI's; the flags are the
+ * measurement's, and `test:cli` / `test` carry neither.
+ *
  * ```text
- * # the shape the `test (cli)` job runs
+ * # the slice `test (cli)` runs
  * vitest run --project cli --silent --reporter=verbose
  *   report(md)                                                   2874ms
  *   runs report with --run-validate                              2570ms
  *
- * # every project in one process, as node-floor runs it — the heaviest load
+ * # every project in one process, the slice node-floor runs — the heaviest load
  * vitest run --silent --reporter=verbose
  *   keeps sibling specs out of the scoped report body            4149ms
  *   scopes input, output and spec-pack artifacts to --spec       3630ms
