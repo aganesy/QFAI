@@ -120,7 +120,7 @@ describe("qfai --help exit-code section", () => {
     const certifyRow = section.slice(section.indexOf("prototyping certify"));
 
     expect(certifyRow).toMatch(
-      new RegExp(`${EXIT_CODES.prototypingConverged} = [^]*?flat layout 非対応`),
+      new RegExp(`${EXIT_CODES.prototypingStop} = [^]*?flat layout 非対応`),
     );
   });
 
@@ -334,10 +334,15 @@ describe("qfai --help exit-code section", () => {
     const section = help.slice(help.indexOf("Exit codes:"));
     const peekRow = section.slice(section.indexOf("prototyping iterate --check-convergence"));
 
-    // `-1` never reaches the runner: parseNonNegativeInteger rejects it, so
-    // the row must not fold it into the 未収束 / range-error 2.
-    expect(peekRow).toMatch(new RegExp(`${EXIT_CODES.findings} = --cycle が非負整数でない`));
+    // `-1` never reaches the runner: parseNonNegativeInteger rejects it before
+    // peek, while `10` is rejected by the runner. Both stop at `inputError` —
+    // a rejected value is a CLI-arg error on every command — so what the row
+    // has to keep apart is the two CAUSES, not two codes. It said 1 for the
+    // first, which is the number the parser never returns.
+    expect(peekRow).toContain("--cycle が非負整数でない");
+    expect(peekRow).toContain("CLI 引数エラー");
     expect(peekRow).toContain("10 以上の非負整数");
+    expect(peekRow).not.toMatch(new RegExp(`${EXIT_CODES.findings} = --cycle`));
   });
 
   it("returns the CLI-arg-error code for a negative --check-convergence cycle", async () => {
@@ -433,7 +438,7 @@ describe("qfai --help exit-code section", () => {
     const section = formatExitCodesSection();
 
     expect(section.startsWith("Exit codes:")).toBe(true);
-    expect(section).toContain(`${EXIT_CODES.prototypingConverged} =`);
+    expect(section).toContain(`${EXIT_CODES.prototypingStop} =`);
     expect(section).toContain(`${EXIT_CODES.prototypingBudgetExhausted} =`);
     expect(section).toContain(`${EXIT_CODES.prototypingLicenseFailure} =`);
   });

@@ -750,7 +750,7 @@ export async function runPrototypingCertify(
       // screen"). Returning 2 (input error) here would split the same
       // coverage rejection across two exit codes and break operator
       // workflows that key on 64 for missing review.json gaps.
-      return EXIT_CODES.prototypingConverged;
+      return EXIT_CODES.prototypingStop;
     } else {
       if (!hasPerSpecLayout) {
         // Single-spec run on the flat layout: the gate is NOT skipped
@@ -930,7 +930,7 @@ export async function runPrototypingCertify(
         // declared screen" → exit 64; returning 2 (input error) here
         // would split the same coverage rejection across two exit
         // codes and break operator workflows that key on 64.
-        return EXIT_CODES.prototypingConverged;
+        return EXIT_CODES.prototypingStop;
       }
       if (invalidPayloads.length > 0) {
         reportPayloadFailures(
@@ -944,7 +944,7 @@ export async function runPrototypingCertify(
         // one — the (spec, screen) pair carries no parsable review —
         // so it shares the coverage rejection code (exit 64) instead
         // of introducing a third exit code for the same class.
-        return EXIT_CODES.prototypingConverged;
+        return EXIT_CODES.prototypingStop;
       }
       // A schema-valid payload copied in from another screen, another
       // spec, or an earlier cycle parses cleanly while reviewing
@@ -963,7 +963,7 @@ export async function runPrototypingCertify(
         );
         // Same class as a missing payload: the pair still carries no
         // review of ITS OWN surface.
-        return EXIT_CODES.prototypingConverged;
+        return EXIT_CODES.prototypingStop;
       }
       // `reviewerGate.result === "PASS"` is a summary claim (gated
       // above); the per-screen payloads are the evidence behind it.
@@ -987,7 +987,7 @@ export async function runPrototypingCertify(
         // Non-converged per-screen evidence is the same evidence-gap
         // class as a missing or unparsable payload: the pair has no
         // review that supports certification.
-        return EXIT_CODES.prototypingConverged;
+        return EXIT_CODES.prototypingStop;
       }
     }
   }

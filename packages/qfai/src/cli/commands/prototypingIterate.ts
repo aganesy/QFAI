@@ -2777,7 +2777,7 @@ function emitStop(reason: StopReason): number {
         "layoutAntiPatternsDetected=[], designMdViolations=[]). " +
         "Run `qfai prototyping certify` to seal the run.",
     );
-    return EXIT_CODES.prototypingConverged;
+    return EXIT_CODES.prototypingStop;
   }
   if (reason === "license-verify-fail") {
     // License verify failure already emits its own diagnostic upstream;

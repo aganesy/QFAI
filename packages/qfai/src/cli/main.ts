@@ -47,6 +47,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "doctor",
   "guardrails",
   "audit",
+  "sdd",
   "atdd",
   "handoff",
   "discussion",

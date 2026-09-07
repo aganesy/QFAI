@@ -1017,9 +1017,10 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   different things depending on the command. Alongside it, a mistyped
   top-level command (`qfai vlaidate`, with or without `--help`) now sets exit
   code 1 instead of printing usage and exiting 0, so a typo is detectable from
-  CI. The `guardrails`-only usage-error code (`2` where every other command
-  returns `1`) is documented rather than changed — unifying it would break
-  existing callers.
+  CI. That is a different row from a CLI-arg error — an unknown flag or a
+  rejected value — which `parseArgs` returns `2` for on every command, the code
+  `.qfai/contracts/cli/qfai-init.md` reserves for it; the block states both, so
+  a caller can tell a mistyped command name from a mistyped flag.
 
 ### Fixed
 

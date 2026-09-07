@@ -50,14 +50,24 @@ export const EXIT_CODES = {
    */
   inputError: 2,
   /**
-   * prototyping: STOP — iterate は収束 (全 4 軸 exceptional)、
-   * certify は review.json のカバレッジ不足に同じ拒否クラスとして使う。
-   * certify のカバレッジ不足には、multi-spec frozen set を legacy flat
-   * layout の accepted iteration で証明しようとした layout 非互換
-   * (per-spec layout への移行、または frozen set の単一 spec 化が必要) も
-   * 含まれる。
+   * prototyping: STOP — 「これ以上ループを回しても結果が変わらない」ことを
+   * 証拠が示した、という 1 つの拒否クラス。同じ番号がコマンドによって別の
+   * 事象を指すため、名前は事象ではなくクラスを指している:
+   *
+   * - iterate: 収束 (全 4 軸 exceptional)。ループとしては成功側の終端。
+   * - certify: review.json のカバレッジ不足。multi-spec frozen set を legacy
+   *   flat layout の accepted iteration で証明しようとした layout 非互換
+   *   (per-spec layout への移行、または frozen set の単一 spec 化が必要) も
+   *   ここに含む。
+   *
+   * `prototypingConverged` という名前だった: certify 側の 5 箇所は収束を
+   * 意味しないので、次に 64 を返す分岐を足す人を誤らせる。
+   *
+   * 65 / 66 が別定数なのは同じ理由の裏返しで、あちらは原因が 1 つに定まる
+   * (バジェット枯渇 / license-verify 失敗)。64 だけがコマンド横断の
+   * 「証拠による終端」クラスとして CLI contract に予約されている。
    */
-  prototypingConverged: 64,
+  prototypingStop: 64,
   /** prototyping iterate: STOP — バジェット (max iterations) 枯渇。 */
   prototypingBudgetExhausted: 65,
   /** prototyping iterate: STOP — license-verify 失敗。 */
@@ -110,7 +120,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = 継続 (次 cycle へ) / UI-bearing spec なしの no-op 終了,`,
       `${EXIT_CODES.inputError} = 入力 / lock drift エラー, または実行時エラー`,
       `      (--auto-serve のサーバ起動失敗, --capture の runner 拒否 / I/O 失敗),`,
-      `${EXIT_CODES.prototypingConverged} = STOP: 収束 (全 4 軸 exceptional),`,
+      `${EXIT_CODES.prototypingStop} = STOP: 収束 (全 4 軸 exceptional),`,
       `${EXIT_CODES.prototypingBudgetExhausted} = STOP: バジェット枯渇 (max iterations),`,
       `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify 失敗`,
     ],
@@ -119,10 +129,9 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     label: "prototyping iterate --check-convergence",
     lines: [
       `${EXIT_CODES.ok} = 収束済み,`,
-      `${EXIT_CODES.findings} = --cycle が非負整数でない (-1 / 1.5 / abc — パーサが値を拒否し,`,
-      `      peek に到達せず使用法エラーとして停止),`,
       `${EXIT_CODES.inputError} = 未収束 (prototyping.json の欠落 / 破損を含む),`,
-      `      または --cycle 範囲エラー (10 以上の非負整数は peek せず入力エラーとして停止)`,
+      `      --cycle が非負整数でない (-1 / 1.5 / abc — パーサが値を拒否し peek に到達しない`,
+      `      CLI 引数エラー), または --cycle 範囲エラー (10 以上の非負整数は peek せず停止)`,
     ],
   },
   {
@@ -133,7 +142,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `      証明書 I/O の例外),`,
       `${EXIT_CODES.inputError} = 入力エラー / 品質ゲート拒否 (validate エラー, verify 不合格,`,
       `      DESIGN.md 違反) / --check の証明書 digest・gate mismatch,`,
-      `${EXIT_CODES.prototypingConverged} = カバレッジ不足 (review.json 欠落 /`,
+      `${EXIT_CODES.prototypingStop} = カバレッジ不足 (review.json 欠落 /`,
       `      multi-spec frozen set × flat layout 非対応)`,
     ],
   },
