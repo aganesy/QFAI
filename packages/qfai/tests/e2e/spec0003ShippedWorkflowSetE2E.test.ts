@@ -47,6 +47,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 
 const ORCHESTRATOR = "qfai-tests.yml";
 const VALIDATE = "qfai-validate.yml";
+const DOCS = "qfai-docs.yml";
 
 /** The initialised project, built once for the whole file. */
 let projectPromise: Promise<string> | undefined;
@@ -281,8 +282,13 @@ describe(
       }
       // The loop above is only an oracle while it has something to iterate: a delivery that dropped
       // every checkout step would otherwise satisfy it silently.
+      // One per job that reads the tree: the validate lane, the docs lane, and
+      // the orchestrator's detection job. The number is asserted rather than
+      // merely required to be non-zero because the loop above is only an oracle
+      // while it has something to iterate — a delivery that dropped every
+      // checkout step would otherwise satisfy it silently.
       expect(checkouts, "no delivered job checks out — the assertion above ran over nothing").toBe(
-        2,
+        3,
       );
     });
 
@@ -785,6 +791,7 @@ describe(
         expect(delivered).toEqual([
           "adopter-own.yml",
           "qfai-adopter-authored.yml",
+          DOCS,
           ORCHESTRATOR,
           VALIDATE,
         ]);

@@ -56,7 +56,7 @@ export type AssistantAssetsLock = {
  * `review-gate.rules.yml` and `spec_required_files.json`, and a pattern that
  * accepted any extension read `review-gate.local.yml` as an overlay — so a
  * non-markdown normative file added beside them dropped out of the record
- * entirely and out of `QFAI-ASSETS-005` with it.
+ * entirely and out of `QFAI-ASSETS-006` with it.
  */
 const LOCAL_OVERLAY_PATTERN = /\.local\.md$/i;
 
@@ -81,7 +81,7 @@ export const ASSISTANT_STAGING_PREFIX = ".qfai-staging-";
  * Only these are skipped. Excluding every dotted name instead was a hole the
  * size of the check: `constitution/.policy.md` is as normative as its
  * undotted sibling, and a blanket `startsWith(".")` let one be added without
- * `QFAI-ASSETS-005` ever seeing it — the exact bypass this record exists to
+ * `QFAI-ASSETS-006` ever seeing it — the exact bypass this record exists to
  * close. `*.local.md` is the one sanctioned way to add a file here.
  */
 const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
@@ -99,7 +99,7 @@ const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
  *
  * Matching the prefix alone excluded any name that merely begins with it, so
  * `constitution/.qfai-staging-project-rule.md` was a normative file the record
- * never saw and `QFAI-ASSETS-005` never reported — an addition dressed as
+ * never saw and `QFAI-ASSETS-006` never reported — an addition dressed as
  * qfai's own scaffolding. Only a name qfai could actually have produced is
  * treated as scaffolding.
  *
@@ -108,7 +108,7 @@ const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
  * always opens with `4` and the fourth with `8`, `9`, `a` or `b`. Accepting any
  * hex there let a name qfai can never generate —
  * `.qfai-staging-00000000-0000-0000-0000-000000000000.tmp`, the nil UUID — pass
- * as scaffolding, which is a permanent normative file that `QFAI-ASSETS-005`
+ * as scaffolding, which is a permanent normative file that `QFAI-ASSETS-006`
  * would never see.
  */
 const ASSISTANT_STAGING_BASENAME_PATTERN = new RegExp(
@@ -138,7 +138,7 @@ function isUngovernedManagementFile(basename: string): boolean {
  * Nesting is accepted because the governed layers are `constitution/**` and
  * `catalog/**`: a project that adds `constitution/custom/rule.md` is adding a
  * normative file, and a key shape that stopped at one level put that file
- * outside the record — and outside `QFAI-ASSETS-005` with it.
+ * outside the record — and outside `QFAI-ASSETS-006` with it.
  */
 export function isGovernedAssistantLockKey(key: string): boolean {
   const [layer, ...rest] = key.split("/");
@@ -412,7 +412,7 @@ const OPEN_READ_NOFOLLOW_FLAGS =
  * The walk descends: the governed layers are `constitution/**` and
  * `catalog/**`, so a project that puts a normative file in
  * `constitution/custom/rule.md` has added one. Skipping subdirectories left
- * that file out of the record and out of `QFAI-ASSETS-005` — a directory was
+ * that file out of the record and out of `QFAI-ASSETS-006` — a directory was
  * all it took to add an unreported rule beside the ones qfai owns.
  *
  * Only real directories are descended into. A symlinked directory is not part
@@ -446,7 +446,7 @@ async function collectGovernedFilesUnder(
   // links — only a scan root arrives here unexamined.
   if (isLayerRoot && !(await isRealDirectoryOrAbsent(directory))) {
     throw new Error(
-      `${directory} は実ディレクトリではないため、governed layer として走査できません（symlink / junction 等の可能性があります）。`,
+      `${directory} is not a real directory, so it cannot be walked as a governed layer (it may be a symlink or a junction).`,
     );
   }
   let entries: Dirent[];
@@ -510,7 +510,7 @@ export async function buildShippedAssistantHashes(
     );
     if (hash === null) {
       throw new Error(
-        `qfai の配布アセット ${relative} を読み取れませんでした（インストールが不完全です）。`,
+        `qfai's shipped asset ${relative} could not be read (the installation is incomplete).`,
       );
     }
     hashes[relative] = hash;
@@ -570,10 +570,10 @@ export async function readAssistantAssetsLockStatus(
     handle = await open(assistantAssetsLockPath(assistantRoot), OPEN_READ_FLAGS);
     const pinned = await handle.stat();
     if (!pinned.isFile()) {
-      return { kind: "unreadable", reason: "通常ファイルではありません" };
+      return { kind: "unreadable", reason: "not a regular file" };
     }
     if (pinned.size > MAX_ASSISTANT_ASSETS_LOCK_BYTES) {
-      return { kind: "unreadable", reason: "上限サイズを超えています" };
+      return { kind: "unreadable", reason: "larger than the size limit" };
     }
     raw = await handle.readFile("utf-8");
   } catch (error: unknown) {
@@ -591,10 +591,10 @@ export async function readAssistantAssetsLockStatus(
   try {
     parsed = parseAssistantAssetsLock(JSON.parse(raw));
   } catch {
-    return { kind: "unreadable", reason: "JSON として読めません" };
+    return { kind: "unreadable", reason: "not readable as JSON" };
   }
   return parsed === null
-    ? { kind: "unreadable", reason: "provenance record の形をしていません" }
+    ? { kind: "unreadable", reason: "not shaped like a provenance record" }
     : { kind: "lock", lock: parsed };
 }
 

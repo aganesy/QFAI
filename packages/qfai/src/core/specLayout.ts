@@ -2,6 +2,12 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
+import {
+  isLifecycleDeclarationComplete,
+  parseSpecLifecycle,
+  type SpecLifecycle,
+  type SpecStatus,
+} from "./parse/spec.js";
 
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
 // Canonical: catalog/ — registry artifacts (filename lists, lookup
@@ -141,6 +147,19 @@ export type SpecEntry = {
   layout: SpecLayoutKind;
   layeredStyle: LayeredStyle | null;
   specNumber: string;
+  /**
+   * The spec's lifecycle, read from the `Status:` bullet of its header block —
+   * present only when the declaration is one a caller may act on.
+   *
+   * Absent for a spec with no bullet, an unparseable value, an unreadable spec
+   * file, a retirement missing the companion field it requires
+   * (`Superseded-by` / `Deprecated-at`), or a `Superseded-by` that names no
+   * spec able to inherit the work — a spec that does not exist, the spec
+   * itself, or one that is itself retired. Every one of those is reported by
+   * its own rule (`QFAI-STATUS-001` … `-006`), and a caller that branches on
+   * the lifecycle must treat them all as still current.
+   */
+  status?: SpecStatus;
   // Backwards-compatible field name. Points to `.qfai/specs/_policies`.
   sharedDir: string;
   requiredFiles: Partial<Record<RequiredSpecPackFile, string>>;
@@ -266,7 +285,91 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
       });
     }),
   );
-  return entries.sort((a, b) => a.dir.localeCompare(b.dir));
+  // Every spec's declaration is read before any of them is resolved: a
+  // `superseded` spec retires only if some *other*, still-current spec is
+  // there to inherit its work, and that is a question about the neighbour's
+  // declaration, not its own.
+  const declarations = new Map<string, SpecLifecycle | undefined>();
+  await Promise.all(
+    entries.map(async (entry) => {
+      declarations.set(`spec-${entry.specNumber}`, await readSpecLifecycle(entry.specMetaPath));
+    }),
+  );
+  const withStatus = entries.map((entry) => {
+    const status = resolveSpecStatus(`spec-${entry.specNumber}`, declarations);
+    return status === undefined ? entry : { ...entry, status };
+  });
+  return withStatus.sort((a, b) => a.dir.localeCompare(b.dir));
+}
+
+/**
+ * Read one spec's lifecycle declaration from disk, as written.
+ *
+ * A spec file that cannot be read yields no declaration rather than an
+ * exception: the layout collector is the entry point for the very validators
+ * that report a missing or unreadable spec file, so throwing here would replace
+ * those findings with a crash.
+ */
+async function readSpecLifecycle(specMetaPath: string): Promise<SpecLifecycle | undefined> {
+  let md: string;
+  try {
+    md = await readFile(specMetaPath, "utf-8");
+  } catch {
+    return undefined;
+  }
+  return parseSpecLifecycle(md);
+}
+
+/**
+ * The lifecycle a caller may act on, or `undefined` when the spec has to keep
+ * being treated as current.
+ *
+ * An absent or unparseable `Status:` yields nothing, and so does an incomplete
+ * retirement — see {@link isLifecycleDeclarationComplete}. The gate lives here
+ * rather than in each consumer so that every reader of `SpecEntry.status`
+ * retires a spec on the same evidence.
+ *
+ * `superseded` additionally requires a successor that can actually inherit the
+ * work — one declaring `Status: active` for itself. SUPERSEDE retires a spec by
+ * moving its obligations to another one, so a `Superseded-by` that names
+ * nothing, names the spec itself, or names a spec that is retired or declares
+ * no readable lifecycle means the obligations moved nowhere — and demoting
+ * the ledger would drop every outstanding row out of the gate with no spec
+ * left owing it. `QFAI-STATUS-004` reports a dangling reference, but only
+ * under `--profile full`; `--profile tdd` runs `validateTddList` without
+ * `validateSpecPacks`, and that is the profile the completion gate uses.
+ */
+function resolveSpecStatus(
+  specId: string,
+  declarations: ReadonlyMap<string, SpecLifecycle | undefined>,
+): SpecStatus | undefined {
+  const lifecycle = declarations.get(specId);
+  if (lifecycle === undefined || !isLifecycleDeclarationComplete(lifecycle)) {
+    return undefined;
+  }
+  if (lifecycle.status !== "superseded") {
+    return lifecycle.status;
+  }
+  const successorId = lifecycle.supersededBy;
+  if (successorId === undefined || successorId === specId) {
+    return undefined;
+  }
+  // Only an explicit `Status: active` successor is accepted. A successor that
+  // declares a retirement of its own is not the spec the work landed on —
+  // whether or not that declaration is complete enough to retire the successor
+  // in turn — and neither is one whose lifecycle could not be read at all: a
+  // missing, unreadable or unparseable `01_Spec.md` is a directory nobody has
+  // shown to be current, and `readSpecLifecycle` reports every one of those the
+  // same way, as no declaration. Trusting the directory's mere existence would
+  // demote the source's whole ledger on the strength of a folder name.
+  // Following the chain instead would have to handle cycles; refusing here
+  // needs no such reasoning, and the operator's fix is the same either way:
+  // point `Superseded-by` at the spec that owns the work now.
+  const successor = declarations.get(successorId);
+  if (successor === undefined || successor.status !== "active") {
+    return undefined;
+  }
+  return "superseded";
 }
 
 export async function collectMissingRequiredFiles(

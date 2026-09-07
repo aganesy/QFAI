@@ -279,6 +279,74 @@ describe("applyWaivers", () => {
     }
   });
 
+  it("says a post-waiver rule cannot be suppressed rather than calling it unknown", async () => {
+    // `applyWaivers` runs inside `core/validate.ts`, and `src/cli/` appends
+    // findings afterwards — so a waiver naming one can never match, whatever it
+    // is called. The old message said `未知の rule`, which sent the operator
+    // looking for a typo that is not there, and the remedy differs: a typo is
+    // corrected, this waiver is removed (#1110).
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-06",
+          "    rule: QFAI-SCAN-001",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "post-waiver rule test"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, []);
+
+      const finding = result.issues.find((item) => item.code === "QFAI-WAIVER-004");
+      expect(finding).toBeDefined();
+      // The rule exists; what it cannot do is be waived.
+      expect(finding?.message).not.toContain("未知の rule");
+      expect(finding?.message).toContain("存在しますが waiver では抑制できません");
+      expect(finding?.message).toContain("削除");
+      expect(result.waivers.active.some((item) => item.id === "WVR-20260208-06")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still calls a genuinely unknown rule unknown", async () => {
+    // The negative control. Without it, a change that reported every
+    // unmatchable waiver as post-waiver would pass the row above.
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-07",
+          "    rule: QFAI-NOT-A-RULE-999",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "unknown rule control"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, []);
+
+      const finding = result.issues.find((item) => item.code === "QFAI-WAIVER-004");
+      expect(finding).toBeDefined();
+      expect(finding?.message).toContain("未知の rule");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("excludes blocked waivers from active list", async () => {
     const root = await createRoot();
     try {
@@ -536,6 +604,37 @@ describe("applyWaivers", () => {
     }
   });
 
+  // `QFAI-CTYPE-004` is raised by `report`, never by `validate`. Without a
+  // static entry every `qfai validate` run would call the waiver an unknown
+  // rule, even though `qfai report` applies it on the very same tree.
+  it("accepts a waiver for a rule only the report emits", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-01",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "delta is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
   // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
   // no finding. Without a static entry a legitimate global waiver for a
@@ -709,6 +808,52 @@ describe("applyWaivers", () => {
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
       expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The shipped `execution-ledger.md` tells a project still migrating its
+  // ledger onto pointers to waive the missing-anchor rule, and names both
+  // spellings. The canonical `QFAI-TDDLIST-007` replaced a pre-grammar
+  // `TDDLIST-007` rule id, so the stripped alias has to keep resolving — the
+  // waiver files written against the old spelling are the ones that instruction
+  // produced.
+  it.each([
+    ["QFAI-TDDLIST-007", "the code the CLI prints"],
+    ["TDDLIST-007", "the back-compat stripped alias"],
+  ])("waives the missing evidence anchor by %s (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-15",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "ledger still migrating onto pointers"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [
+        buildIssue({
+          code: "QFAI-TDDLIST-007",
+          rule: "tddList.evidenceAnchorPresent",
+          file: path.join(root, ".qfai", "specs", "spec-0001", "tdd", "test-list.md"),
+        }),
+      ]);
+
+      const finding = result.issues.find((item) => item.code === "QFAI-TDDLIST-007");
+      expect(finding?.suppressed).toBe(true);
+      expect(result.waivers.suppressed.total).toBe(1);
+      // The id is real, so the engine must not report it as naming no rule.
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -919,6 +1064,103 @@ describe("applyWaivers", () => {
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-005")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `ROW_SCOPED_RULES` can only speak for a rule whose findings are *all* rows.
+  // A rule that raises both — `QFAI-CTYPE-004` names one `### DL-` entry when
+  // there is one and the whole file when there is not — has to be separated
+  // per finding, or a `scope.paths` waiver written for the file-wide one takes
+  // every row in that file with it, this run's and every later run's.
+  it("keeps a paths-only waiver away from the findings that name a row", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-02",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "delta is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "09_delta.md"',
+          "",
+        ].join("\n"),
+      );
+
+      const deltaFile = path.join(root, ".qfai", "specs", "spec-0001", "09_delta.md");
+      const findings: Issue[] = [
+        buildIssue({ code: "QFAI-CTYPE-004", rule: "CTYPE-004", file: deltaFile }),
+        buildIssue({
+          code: "QFAI-CTYPE-004",
+          rule: "CTYPE-004",
+          dlId: "DL-0002",
+          file: deltaFile,
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+      const kept = result.issues.filter((item) => item.code === "QFAI-CTYPE-004");
+
+      // The file-wide finding is the one this waiver names, and the only one it
+      // may reach.
+      expect(kept.map((item) => [item.dl_id, item.suppressed ?? false])).toEqual([
+        [undefined, true],
+        ["DL-0002", false],
+      ]);
+      expect(result.waivers.suppressed.total).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reaches a row the waiver named in match.dl_ids", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-03",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          "    match:",
+          '      dl_ids: ["DL-0002"]',
+          '    reason: "delta entry is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "09_delta.md#DL-0002"',
+          "",
+        ].join("\n"),
+      );
+
+      const deltaFile = path.join(root, ".qfai", "specs", "spec-0001", "09_delta.md");
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-CTYPE-004",
+          rule: "CTYPE-004",
+          dlId: "DL-0002",
+          file: deltaFile,
+        }),
+        buildIssue({
+          code: "QFAI-CTYPE-004",
+          rule: "CTYPE-004",
+          dlId: "DL-0003",
+          file: deltaFile,
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+      const kept = result.issues.filter((item) => item.code === "QFAI-CTYPE-004");
+
+      expect(kept.map((item) => [item.dl_id, item.suppressed ?? false])).toEqual([
+        ["DL-0002", true],
+        ["DL-0003", false],
+      ]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

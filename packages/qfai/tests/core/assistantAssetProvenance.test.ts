@@ -56,11 +56,11 @@ const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promot
 
 /** The family the pin governs — not the two existence probes above it. */
 const PROVENANCE_CODES = new Set([
-  "QFAI-ASSETS-003",
   "QFAI-ASSETS-004",
   "QFAI-ASSETS-005",
   "QFAI-ASSETS-006",
   "QFAI-ASSETS-007",
+  "QFAI-ASSETS-008",
 ]);
 
 async function expectedProvenanceSeverity(): Promise<"warning" | "error"> {
@@ -103,9 +103,9 @@ describe("assistant asset provenance", () => {
   it("reports nothing when the vendored tree matches the installed release", async () => {
     const root = await makeProject();
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-003");
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-004");
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-005");
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
   });
 
   it("flags a locally edited catalog file as a fork", async () => {
@@ -114,7 +114,7 @@ describe("assistant asset provenance", () => {
     await writeFile(target, `${await readFile(target, "utf-8")}\n- project-only rule\n`, "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const forked = issues.filter((found) => found.code === "QFAI-ASSETS-004");
+    const forked = issues.filter((found) => found.code === "QFAI-ASSETS-005");
     expect(forked).toHaveLength(1);
     expect(forked[0]?.severity).toBe(await expectedProvenanceSeverity());
     expect(forked[0]?.file).toContain("test-layers.md");
@@ -136,8 +136,8 @@ describe("assistant asset provenance", () => {
     });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).toContain("QFAI-ASSETS-003");
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-004");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-004");
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-005");
   });
 
   it("never reports a *.local.md overlay, and does report an unshipped sibling", async () => {
@@ -146,11 +146,11 @@ describe("assistant asset provenance", () => {
     await writeFile(path.join(catalogDir, "test-layers.local.md"), "# L1/L2 overlay\n", "utf-8");
 
     let issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-005");
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
 
     await writeFile(path.join(catalogDir, "project-layers.md"), "# not an overlay\n", "utf-8");
     issues = await validateAssistantAssets(root, defaultConfig);
-    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain("project-layers.md");
   });
@@ -191,10 +191,10 @@ describe("assistant asset provenance", () => {
     const expected = await expectedProvenanceSeverity();
     expect(codesOf(issues)).toEqual(
       expect.arrayContaining([
-        "QFAI-ASSETS-003",
         "QFAI-ASSETS-004",
         "QFAI-ASSETS-005",
         "QFAI-ASSETS-006",
+        "QFAI-ASSETS-007",
       ]),
     );
     expect(issues.map((found) => found.severity)).toEqual(issues.map(() => expected));
@@ -215,7 +215,7 @@ describe("assistant asset provenance", () => {
     await rm(target);
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
     expect(missing).toHaveLength(1);
     expect(missing[0]?.severity).toBe(await expectedProvenanceSeverity());
     expect(missing[0]?.file).toContain("quality.md");
@@ -227,7 +227,7 @@ describe("assistant asset provenance", () => {
     await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-007");
   });
 
   it("does not double-report the two files the existence probes already own", async () => {
@@ -239,7 +239,7 @@ describe("assistant asset provenance", () => {
     const issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).toContain("QFAI-ASSETS-001");
     expect(codesOf(issues)).toContain("QFAI-ASSETS-002");
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-007");
   });
 
   it("treats only *.local.md as an overlay, not every *.local.* sibling", async () => {
@@ -248,7 +248,7 @@ describe("assistant asset provenance", () => {
     await writeFile(path.join(catalogDir, "review-gate.local.yml"), "rules: []\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain("review-gate.local.yml");
   });
@@ -260,7 +260,7 @@ describe("assistant asset provenance", () => {
     await writeFile(path.join(constitutionDir, ".policy.md"), "# hidden rule\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain(".policy.md");
   });
@@ -335,7 +335,7 @@ describe("assistant asset provenance", () => {
     const plainLock = await readAssistantAssetsLock(assistantDir);
     expect(plainLock?.files["constitution/quality.md"]).toBeUndefined();
     expect(codesOf(await validateAssistantAssets(root, defaultConfig))).toContain(
-      "QFAI-ASSETS-006",
+      "QFAI-ASSETS-007",
     );
 
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
@@ -439,7 +439,7 @@ describe("assistant asset provenance", () => {
       // a FIFO blocks until a writer appears, hanging `validate` outright.
       expect(await hashAssistantAssetFile(governed)).toBeNull();
       expect(codesOf(await validateAssistantAssets(root, defaultConfig))).toContain(
-        "QFAI-ASSETS-006",
+        "QFAI-ASSETS-007",
       );
     },
     15000,
@@ -544,7 +544,7 @@ describe("assistant asset provenance", () => {
     await writeFile(path.join(nested, "note.local.md"), "# overlay\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain("rule.md");
   });
@@ -696,7 +696,7 @@ describe("assistant asset provenance", () => {
     // The probe found the legacy copy, so it says nothing — and that is exactly
     // why the absence has to be reported here.
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
-    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
     expect(missing).toHaveLength(1);
     expect(missing[0]?.file).toContain(path.join("constitution", "drift-protocol.md"));
   });
@@ -715,7 +715,7 @@ describe("assistant asset provenance", () => {
     await symlink(outside, path.join(assistantDir, "catalog"), "junction");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
+    const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-008");
     expect(unverifiable).toHaveLength(1);
     expect(unverifiable[0]?.severity).toBe(await expectedProvenanceSeverity());
     // Silence was the bug: an inability to compare is not a clean tree.
@@ -739,7 +739,7 @@ describe("assistant asset provenance", () => {
     );
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain(`${ASSISTANT_STAGING_PREFIX}project-rule.md`);
   });
@@ -754,7 +754,7 @@ describe("assistant asset provenance", () => {
     await writeFile(path.join(constitutionDir, nilUuidName), "# not scaffolding\n", "utf-8");
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-006");
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain(nilUuidName);
   });
@@ -777,7 +777,7 @@ describe("assistant asset provenance", () => {
       // reports nothing at all.
       expect(await hashAssistantAssetFile(target)).toBeNull();
       const issues = await validateAssistantAssets(root, defaultConfig);
-      const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+      const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
       expect(missing).toHaveLength(1);
       expect(missing[0]?.file).toContain("test-layers.md");
     },
@@ -799,7 +799,7 @@ describe("assistant asset provenance", () => {
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
-    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
     // Once, against the layer — not once per shipped rule it used to hold.
     expect(missing).toHaveLength(1);
     expect(missing[0]?.rule).toBe("assistantAssets.missingVendoredLayer");
@@ -815,7 +815,7 @@ describe("assistant asset provenance", () => {
     await mkdir(path.join(assistantDir, "skills"), { recursive: true });
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-006");
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-007");
   });
 
   // A shipped file the install lost is not a rule the release withdrew. The
@@ -964,7 +964,7 @@ describe("assistant asset provenance", () => {
       await symlink(outside, path.join(root, ".qfai"));
 
       const issues = await validateAssistantAssets(root, defaultConfig);
-      const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
+      const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-008");
       expect(unverifiable).toHaveLength(1);
       expect(unverifiable[0]?.severity).toBe(await expectedProvenanceSeverity());
     },
@@ -991,7 +991,7 @@ describe("assistant asset provenance", () => {
 
     const issues = await validateAssistantAssets(root, defaultConfig);
     expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
-    expect(codesOf(issues)).toContain("QFAI-ASSETS-007");
+    expect(codesOf(issues)).toContain("QFAI-ASSETS-008");
   });
 
   // …and a project that genuinely has no record is still not reported for it.

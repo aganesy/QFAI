@@ -117,18 +117,40 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   // (2) offending validator-output profile (scope),
   // (3) option-B contract clause violated.
   const message =
-    `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${verifyRel} ` +
-    `with scope="${scopeRaw}" while a prototyping loop is iterating ` +
-    `(canonical ${PROTOTYPING_JSON_REL} has stopReason=null). ` +
-    `Option-B forbids the prototyping certify gate from depending on /qfai-atdd or ` +
+    `R-CERTIFY-VERIFY-CIRCULAR: ${verifyRel} records scope="${scopeRaw}" while a ` +
+    `prototyping loop is iterating (canonical ${PROTOTYPING_JSON_REL} has ` +
+    `stopReason=null), so \`qfai prototyping certify\` will refuse it: option-B ` +
+    `forbids the prototyping certify gate from depending on /qfai-atdd or ` +
     `/qfai-implement validator outputs (justification: certify=${verifyRel}, ` +
-    `profile=${scopeRaw}, contract=option-B phase-isolation clause).`;
+    `profile=${scopeRaw}, contract=option-B phase-isolation clause). ` +
+    `This is not a defect in the run that wrote it — a full-profile run records ` +
+    `scope="${scopeRaw}" truthfully. Before certifying, close the loop and re-run ` +
+    `/qfai-verify for Work Order H so the file records scope="prototyping".`;
 
   return [
     issue(
+      // `info`, not `error`. The rule exists to stop `prototyping certify`
+      // sealing a certificate from a wrong-phase verdict, and
+      // `prototypingCertify.ts` already refuses a non-prototyping scope with
+      // exit 2 — its own comment says this finding "keeps the certify command
+      // self-contained instead of relying on a downstream validate pass".
+      //
+      // At `error` in a repo-wide `validate` it made `/qfai-verify`'s
+      // Completion Contract unsatisfiable outside Work Order H: the skill MUSTs
+      // a `verify.json` whose `scope` "names the stage this run actually
+      // covered — never a stage you did not run", so an ordinary full-profile
+      // run has to write `scope: "full"`, and writing it turned `error=0` into
+      // `error=1`. A loop stays open for weeks while other stages run, and
+      // waivers are restricted to `warning` / `info`, so there was no exit
+      // (#1097).
+      //
+      // A `scope: "full"` verdict on disk is not damage. Consuming it in
+      // `certify` is, and `certify` refuses. The observation is still worth
+      // making — it tells the operator certification will be refused until the
+      // loop closes — which is what `info` is for.
       "R-CERTIFY-VERIFY-CIRCULAR",
       message,
-      "error",
+      "info",
       verifyRel,
       "reviewerGate.certifyVerifyCircular",
     ),

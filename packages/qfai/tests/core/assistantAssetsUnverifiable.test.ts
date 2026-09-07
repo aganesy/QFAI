@@ -31,7 +31,7 @@ const { newRuleSeverity, RULE_PROMOTIONS } = await import("../../src/core/sunset
 const { resolveToolVersion } = await import("../../src/core/version.js");
 
 /**
- * `QFAI-ASSETS-007` ships behind `RULE_PROMOTIONS.assistantAssetProvenance`
+ * `QFAI-ASSETS-008` ships behind `RULE_PROMOTIONS.assistantAssetProvenance`
  * with the rest of the family, so the severity follows the pin rather than a
  * literal written here.
  */
@@ -82,13 +82,13 @@ describe("assistant asset provenance against an unreadable install", () => {
     );
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
+    const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-008");
     expect(unverifiable).toHaveLength(1);
     expect(unverifiable[0]?.severity).toBe(await expectedProvenanceSeverity());
     expect(unverifiable[0]?.rule).toBe("assistantAssets.unverifiableProvenance");
     // The three provenance verdicts are unreachable without a shipped set, so
     // none of them may be claimed either way.
-    for (const code of ["QFAI-ASSETS-003", "QFAI-ASSETS-004", "QFAI-ASSETS-005"]) {
+    for (const code of ["QFAI-ASSETS-004", "QFAI-ASSETS-005", "QFAI-ASSETS-006"]) {
       expect(issues.map((found) => found.code)).not.toContain(code);
     }
   });
