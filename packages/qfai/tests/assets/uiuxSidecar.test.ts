@@ -123,6 +123,13 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("local_translation");
   });
 
+  it("04_Sources.md は既定の competitive_refs_min 件分の参照ブロックを備える", async () => {
+    const content = await readCoreTemplate("04_Sources.md");
+    const blocks = content.match(/^###\s+Reference:/gim) ?? [];
+    expect(blocks.length).toBeGreaterThanOrEqual(3);
+    expect(content).toContain("uiux.competitive_refs_min");
+  });
+
   it("04_Sources.md の Trend Scan は廃止済み TRD-XX / 未採番 UIX-VAL-T01 を要求しない", async () => {
     // Trend Scan は `uiux/20_trend_scan.md` から 04_Sources.md へ移設され、
     // 同じ recut で `TRD-XX` 評価軸スキームは廃止された

@@ -32,7 +32,7 @@ A run with no in-scope CR at all does nothing here and proceeds unchanged.
 
 **A row named in an open in-scope CR's blocked set is not selected**, whatever
 its status. A `todo` row carries that as `blocked` in the ledger, parked by the
-raiser at `drift-protocol.md` step 2; a row past `todo`, and a `done` row, could
+raiser at `.qfai/assistant/constitution/drift-protocol.md` step 2; a row past `todo`, and a `done` row, could
 not be parked at all, because `todo -> blocked` is the only inbound edge there
 is (`execution-ledger.md#allowed-transitions`). Reading the CR files here — the
 record the parking is derived from — gives those rows the same protection
@@ -120,7 +120,7 @@ completion:
 - when `Status` is `approved`, `Applied at` is populated — approval alone does
   not release the gate. It is set only after the owner-skill rerun in "Approved
   actions" completed and upstream artifacts are updated, which is when
-  `constitution/drift-protocol.md` resumes downstream work.
+  `.qfai/assistant/constitution/drift-protocol.md` resumes downstream work.
 
 ## Ordering against the drift protocol
 

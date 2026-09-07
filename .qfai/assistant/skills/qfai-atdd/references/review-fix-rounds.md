@@ -1,10 +1,12 @@
 # A `review-fix` row comes back here for a new RED
 
 `/qfai-implement` Phase Red step 3b sends a `review-fix` row back when the
-blocking reviewer's REVISE asks for a change to the acceptance test itself: that
-skill does not author these tests and its `red` phase has no
-`acceptance-test-engineer`. The three branches above define the **first**
-handoff of a `todo` row, so this one needs its own contract.
+blocking reviewer's REVISE asks for a change to the acceptance test itself: an
+acceptance test is **this** skill's owned artifact and is never edited there
+(that skill's Non-goals), whatever `agent-routing.yml` routes into any
+`qfai-implement` phase — the rule is ownership, not who happens to be
+available, so it survives a routing change. The three branches above define the
+**first** handoff of a `todo` row, so this one needs its own contract.
 
 - **Invocation.** Named by `TDD-ID`, with the reviewer's REVISE and its round
   number. The row stays at `review-fix` throughout — this stage writes no
@@ -63,7 +65,7 @@ handoff of a `todo` row, so this one needs its own contract.
     test as it was. `../../qfai-implement/references/evidence-revision.md` makes a later change to the test
     invalidate exactly that evidence, so leaving them alone either stalls the
     repair for ever or pairs an old observation with a new test hash. The revision of the tree that proof ran against is recorded **by the stage
-    that runs it**, in a field of its own — `Replacement proof revision` — and
+    that runs it**, in a field of its own — `Round N: Replacement proof revision`, a round field because the replacement happens per round (`../../qfai-implement/references/round-evidence.md`) — and
     **not over `RED revision`**. On an `observed-red` row that RED is the
     natural failure taken before the production code existed, and the round
     block still describes it; overwriting its revision with the tree a later
@@ -104,11 +106,29 @@ handoff of a `todo` row, so this one needs its own contract.
     new production behaviour is not this case — that one's corrected test fails,
     and the branch above applies.
 
-- **Where it goes.** A `### Round N` block in
+- **Where it goes.** A `#### Round N` block **nested inside the row's own
+  `### TDD-NNNN` section** under `## Ledger rows advanced` in
   `.qfai/evidence/atdd-<spec-id>.md`, in the shape
-  `../../qfai-implement/references/round-evidence.md` defines. Not a second
-  `## Ledger rows advanced` entry: that section is the record of a first
-  handoff, and appending to it would read as one.
+  `../../qfai-implement/references/round-evidence.md` defines. One heading
+  level below the row, because that nesting is the whole of the attribution:
+  written at `###` the block is the row section's _sibling_ and terminates it,
+  two rows reworked in one cycle then leave two `### Round 2` blocks with
+  nothing tying either to a `### TDD-NNNN`, and the reviewer hashing a
+  completion-review subject has to guess which row a block belongs to. Appended
+  at the end of the file it is worse than ambiguous: it lands under
+  `## Final status`, the one section every audit subject excludes, so the
+  rework evidence a second reviewer most needs pinned is covered by no hash at
+  all, silently. Not a second `### TDD-NNNN` entry for the same row: that entry
+  is the record of a first handoff, and a duplicate of it would read as one.
+  The row already has an entry; the round goes inside it.
+
+  **A round this file already holds at `###`.** The contract above said `###`
+  until this rule, and a row interrupted mid-rework comes back carrying blocks
+  in that shape. Re-nest them under their rows **before** writing this round —
+  otherwise the completion reviewer, extracting `#### Round N`, hashes a
+  subject that silently omits every earlier round. Stop and report rather than
+  guess when two rows could own one:
+  `../../qfai-implement/references/round-evidence.md` defines both halves.
 
   **Which N.** The REVISE closed the round it was given on, so a fresh RED
   opens the **next** one — round `N+1` where `N` is the round the reviewer

@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { collectHeadingSlugs as headingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
@@ -54,37 +55,6 @@ const REVIEWER_AGENTS = [
 ];
 
 const DEFECT_CLASSES = ["defect:correctness", "defect:security", "defect:code-quality"] as const;
-
-/**
- * Simplified GitHub heading slug: lowercase, drop punctuation, spaces to
- * hyphens. It covers the ASCII headings these documents use and does not model
- * GitHub's Unicode normalization or emoji handling.
- */
-function slugify(heading: string): string {
-  return heading
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-/**
- * Anchor set for a document, including GitHub's duplicate disambiguation: the
- * first heading with a given slug keeps it and each later repeat gets a `-1`,
- * `-2`, … suffix in document order. Without that, a second heading that slugs
- * the same as an earlier one would make this test call a working link broken.
- */
-function headingSlugs(markdown: string): Set<string> {
-  const occurrences = new Map<string, number>();
-  const slugs = new Set<string>();
-  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
-    const base = slugify(match[1] ?? "");
-    const seen = occurrences.get(base) ?? 0;
-    occurrences.set(base, seen + 1);
-    slugs.add(seen === 0 ? base : `${base}-${seen}`);
-  }
-  return slugs;
-}
 
 /**
  * The body of one `###` section, so a rule can be asserted against the section
@@ -350,7 +320,18 @@ describe("reviewer finding provenance", () => {
     }
     // The gate recomputes the superseding hash and both seals.
     expect(skill).toMatch(/compared against \*\*that\*\* hash and not the superseded original/);
-    expect(skill.replace(/\s+/g, " ")).toContain("beside the round's `Review pack seal`");
+    // The review pack and its seal are per review ATTEMPT, not per round: a
+    // `REVISE` and the `PASS` answering it sit inside one round and seal two
+    // packs (`references/round-evidence.md`), so gate item 10 names the
+    // attempt's seal. The property pinned here is the one that matters and is
+    // unchanged — the re-attestation seal is recomputed BESIDE the review pack
+    // seal rather than instead of it — and the second assertion keeps the gate
+    // reaching every seal the entry carries rather than only the latest.
+    const flatSkill = skill.replace(/\s+/g, " ");
+    expect(flatSkill).toContain("beside the attempt's `Review pack seal`");
+    expect(flatSkill).toContain(
+      "Every `Review pack seal` the entry carries — one per review attempt",
+    );
     // The pack layout recognizes the shape, so it is not an ad-hoc directory.
     expect(layout).toMatch(/record re-attestation/i);
     expect(layout).toMatch(/not a round/);
@@ -383,7 +364,11 @@ describe("reviewer finding provenance", () => {
     // A stage without a drain does not lose the finding — it keeps the class it
     // would otherwise have had.
     expect(baseline).toMatch(/keeps the class it would otherwise have had/);
-    expect(drift).toMatch(/blocking under the rule it names/);
+    // `\s+` between every word for the same reason the two pins above use it: the phrase sits in a
+    // hard-wrapped paragraph, and the line-ceiling guard on `drift-protocol.md` moves the wrap
+    // point. A pin with a literal space silently asserts today's column as well as the words, and
+    // reddens on a re-wrap that changed no prose.
+    expect(drift).toMatch(/blocking\s+under\s+the\s+rule\s+it\s+names/);
   });
 
   it("names the queue's home from each stage's own evidence file, not a pattern", async () => {

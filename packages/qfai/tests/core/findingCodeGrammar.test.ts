@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { GATE_GROUP_FAMILIES } from "../../src/cli/commands/validate.js";
 import { SAAS_PACKAGE_SKIPPED_GATE_FAMILIES } from "../../src/core/saasPackage/skippedGates.js";
+import { familyMatches } from "../helpers/gateFamilies.js";
 
 const SRC_ROOT = path.resolve(__dirname, "../../src");
 const DOC_PATH = path.resolve(__dirname, "../../docs/finding-codes.md");
@@ -39,6 +40,7 @@ const SHARED_ISSUE_FACTORY = "issue";
 const KNOWN_LOCAL_FACTORIES: readonly string[] = [
   "canonicalIssue",
   "classificationIssue",
+  "competitiveIssue",
   "contractIssue",
   "makeIssue",
   "skillIssue",
@@ -80,7 +82,6 @@ const LEGACY_FINDING_CODES: readonly string[] = [
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-002",
   "QFAI-CFG-LINK-003",
-  "QFAI-UIUX-PERF",
   "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
   "R-AUTOPILOT-POLICY-WIDENED",
@@ -361,18 +362,81 @@ async function emittedCodes(): Promise<string[]> {
   return (await scanSource()).codes;
 }
 
+/**
+ * A path as a comparable key, separators normalised.
+ *
+ * `ts.createSourceFile` normalises the name it is handed to forward slashes,
+ * and the keys this file resolves come from `path.resolve`. On POSIX those are
+ * the same string; on win32 they differ by every separator, so the lookup in
+ * {@link codesInFile} always missed and the guard below never ran on a Windows
+ * checkout while passing in CI (#1130). Normalised here rather than at
+ * `createSourceFile`, because `fileName` is TypeScript's to shape and a later
+ * version could normalise it differently — the test's own key is the test's.
+ *
+ * `\\` is folded unconditionally rather than via `path.sep`. Keyed on `path.sep`
+ * this function is the IDENTITY on POSIX, so removing it would leave every row
+ * green on Linux — the same one-platform blindness that let the defect live.
+ * The cost is that a POSIX filename containing a literal backslash would fold
+ * onto a different key; no file under `src/` has one, and a guard both
+ * platforms can verify is worth more than tolerating a name this scan will
+ * never see.
+ */
+function pathKey(file: string): string {
+  return file.replace(/\\/g, "/");
+}
+
 /** Every code one file can put on a finding, resolved against the whole tree. */
 async function codesInFile(file: string): Promise<string[]> {
   const scan = await scanSource();
-  const source = scan.sources.find((candidate) => candidate.fileName === file);
+  const key = pathKey(file);
+  // Both sides through the same function. Normalising the incoming key alone
+  // is sufficient today — `ts` already hands back forward slashes — so the
+  // second call changes no result and no row can distinguish it. It is
+  // insurance against a `ts` version that stops normalising, which is a
+  // dependency's choice rather than this repository's; read it as a hedge, not
+  // as something the suite verifies.
+  const source = scan.sources.find((candidate) => pathKey(candidate.fileName) === key);
   if (source === undefined) throw new Error(`not scanned: ${file}`);
   return [...collectCodes([source], scan.factories, scan.constants)];
 }
 
-/** `QFAI-TEST-*` matches `QFAI-TEST-002`; a bare `QFAI-TEST-001` does not. */
-function familyMatches(family: string, code: string): boolean {
-  return family.endsWith("*") ? code.startsWith(family.slice(0, -1)) : family === code;
-}
+/**
+ * The matcher itself, because it is the thing that can fail by matching
+ * nothing.
+ *
+ * The table entry below is the one `GATE_GROUP_FAMILIES.tdd` actually holds.
+ * Read as one pattern it satisfies neither arm — not a glob, and equal to no
+ * code — so every coverage claim built on it passed by checking nothing. The
+ * guard below is one of those claims; it survives today only because the codes
+ * it scans happen to be covered by a different, clean entry in the same array
+ * (#1200).
+ */
+describe("gate-family matching", () => {
+  const ANNOTATED = "TDDLIST_* (execution state)";
+
+  it("matches through an annotation after the pattern", () => {
+    expect(familyMatches(ANNOTATED, "TDDLIST_MISSING")).toBe(true);
+  });
+
+  it("still requires the prefix, so the annotation is not a wildcard", () => {
+    expect(familyMatches(ANNOTATED, "QFAI-TEST-001")).toBe(false);
+  });
+
+  it("keeps an exact entry exact", () => {
+    expect(familyMatches("QFAI-TRACE-002", "QFAI-TRACE-002")).toBe(true);
+    expect(familyMatches("QFAI-TRACE-002", "QFAI-TRACE-003")).toBe(false);
+  });
+
+  it("reads an annotated exact entry as that code, not as the whole cell", () => {
+    expect(familyMatches("QFAI-TRACE-002 (ledger shape)", "QFAI-TRACE-002")).toBe(true);
+  });
+
+  it("covers no code at all when the entry is only an annotation", () => {
+    // `startsWith("")` is true of every string, so an empty pattern would make
+    // a comment-only cell cover the entire finding surface.
+    expect(familyMatches("   ", "QFAI-TEST-001")).toBe(false);
+  });
+});
 
 describe("finding code grammar", () => {
   it("finds every factory a finding can be built through", async () => {
@@ -411,6 +475,28 @@ describe("finding code grammar", () => {
     );
     const undocumented = [...prefixes].sort().filter((prefix) => !doc.includes(`\`${prefix}\``));
     expect(undocumented).toEqual([]);
+  });
+
+  it("looks a source up by a win32-shaped path on every platform", async () => {
+    // `ts.createSourceFile` normalises `fileName` to forward slashes and the
+    // keys this file resolves come from `path.resolve`, so on win32 the two
+    // differed by every separator: the lookup found nothing, the row below
+    // threw `not scanned:`, and CI stayed green because POSIX spells both the
+    // same way (#1130).
+    //
+    // Keyed on a literal backslash form so this row fails on POSIX too if the
+    // normalisation is removed. A guard only one platform can observe is what
+    // produced the defect.
+    const { sources } = await scanSource();
+    const source = sources.find((candidate) =>
+      candidate.fileName.endsWith("/core/validators/testTodoStubs.ts"),
+    );
+    expect(source).toBeDefined();
+    if (source === undefined) return;
+
+    await expect(codesInFile(source.fileName.replace(/\//g, "\\"))).resolves.toContain(
+      "QFAI-TEST-002",
+    );
   });
 
   it("covers every code a gate emits with a family entry, not a bare code", async () => {

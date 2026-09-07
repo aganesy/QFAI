@@ -4,7 +4,7 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
 ## Stage order
 
-1. **Stage 0 - Preflight** (discussion-pack completeness)
+1. **Stage 0 - Preflight** (source inventory; see Stage 0 below)
 2. **Stage 1 - Triage** (operation classification, see `sdd-triage.md`)
 3. **Phase 0 - Contracts-first**
 4. **Phase 1 - Outline**
@@ -16,20 +16,39 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
 ## Stage 0: Preflight
 
-1. Identify the latest discussion-pack.
-2. Stop if required files are missing.
-3. Stop if blocking OQ remain.
-4. Stop if a **visual-prototyping** UI-bearing pack is missing valid
-   `prototyping.yaml`. A pack is visual-prototyping when its `01_Context.md`
-   classification names `web`, `mobile`, `desktop` or `mixed` as
-   `primary_surface` or in `secondary_surfaces`. A cli-only pack
-   (`primary_surface: cli` with no visual `secondary_surfaces`) emits no
-   `prototyping.yaml` — `/qfai-prototyping` rejects `cli` as an execution
-   surface — so its absence is not a blocker there.
+1. Identify the latest discussion-pack, if there is one.
+2. Note which of its files are missing, and any blocking OQ, as reference-quality
+   facts — they are recorded, not blocking. A pack is non-normative reference
+   material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
+   re-run it to make this gate pass; a correction it implies belongs in the
+   SDD-owned artifact, with the discrepancy noted in delta/evidence.
+3. Stop only when there is no usable source at all: no pack, no import-lite
+   input, and no explicit user requirement.
+4. **Report — do not stop —** when `prototyping.yaml` is present in the latest UI-bearing pack
+   and does not parse against the schema in
+   `.qfai/assistant/skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
+   Record the file and what failed to parse, and continue; `/qfai-prototyping` is where an
+   unusable recommendation actually bites, and it re-reads the file.
+
+   A malformed optional artifact is **not** a Stage 0 blocker, and making it one would put this
+   skill at odds with the runtime: `runSddPreflight` returns `status: "ready"` with zero blockers
+   for a `prototyping.yaml` carrying an invalid mode, a scalar block or a null block, and the
+   acceptance criterion it implements says side-artifact state alone does not block SDD. Two
+   entry points that disagree means whether SDD can proceed depends on which one you came in
+   through, and a project holding an old-format file could not run `/qfai-sdd` at all.
+
+   Absence is legal and must not stop Stage 0: `/qfai-discussion` emits the file only when the
+   pack is UI-bearing on a **visual-prototyping** surface — its `01_Context.md` classification
+   names `web`, `mobile`, `desktop` or `mixed` as `primary_surface` or in `secondary_surfaces` —
+   **and** an explicit prototyping recommendation is useful, so a complete UI-bearing pack may
+   legitimately omit it. A cli-only pack (`primary_surface: cli` with no visual
+   `secondary_surfaces`) emits none at all: `/qfai-prototyping` rejects `cli` as an execution
+   surface. Never author one to clear this gate — a recommendation the discussion did not make is
+   a fabricated rationale record.
 
 ### Import-lite entrypoint (no discussion-pack at all)
 
-Steps 1-2 assume a pack exists. When the project has **no** discussion-pack
+Step 1 assumes a pack exists. When the project has **no** discussion-pack
 whatsoever and specs already exist, do not stop — record the input source
 instead and continue:
 
@@ -57,6 +76,10 @@ rather than falling back here. Validator: `QFAI-IMPLITE-001`.
    `UPDATE:REMOVE` rows wherever existing AC/BR reference the changed
    concept. The same `Source` ID may legitimately appear on multiple rows.
 4. Obtain AskUserQuestion approval for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows.
+   Under `--auto` ask nothing and do not self-approve: those rows stay unapproved and
+   trip the stop condition below, no `CAP-NNNN` is written to
+   `_policies/03_Capabilities.md` on their behalf, and the batch stops whole rather
+   than running its approval-free rows ahead of the gate.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
 6. Stop entry to Phase 0 until every approval-required row has an
    approver recorded and every CREATE row cites a registered CAP
@@ -76,4 +99,11 @@ Detailed procedure: `sdd-triage.md`.
 - Missing Contract Index alignment
 - Unresolvable preflight blockers
 - Triage rows requiring approval but lacking `Approved By`
+  - Repair: obtain the approval through AskUserQuestion, record the approver in
+    `Approved By`, and rerun the stage. Under `--auto` the row leaves `--auto`
+    scope and no question may be asked at all
+    (`../SKILL.md#--auto-and-approval-required-rows`): keep `Approved By` as
+    `-`, write a `consultation-needed` work-log entry naming every unapproved
+    row, and hand the run back for a rerun without `--auto` — never synthesize
+    an approver.
 - Validate errors that point to unresolved source-layer gaps

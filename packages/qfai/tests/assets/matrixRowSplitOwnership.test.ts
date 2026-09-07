@@ -308,7 +308,10 @@ describe.each(TREES)("%s", (tree) => {
 
     const template = await read(tree, TEMPLATE);
     // Seeded by the row owner, so blocking a row fills a cell, never adds a column.
-    expect(template).toContain("| Status | DR-ID | Evidence | Blocked-By |");
+    // The seeded header carries the column; its position is not the claim —
+    // main's ledger grew US-Refs / CON-API-Refs / Owning module between
+    // `Evidence` and it.
+    expect(template).toContain("| Blocked-By |");
     expect(template).toContain("`Blocked-By` is an **optional** column, seeded here");
   });
 
