@@ -698,13 +698,15 @@ describe("the stage evidence's counts are derived, not typed", () => {
     const measured = await deriveE2eCallsites();
     const recorded = await recordedE2eCallsites();
 
-    expect(
-      recorded,
-      "the record must state its own e2e callsite count and its per-root split, in the form " +
-        "`e2e callsites at this tree: N (<root> N, …)`. A line this cannot parse reads as no line " +
-        "at all, because half a measurement is not one",
-    ).not.toBeNull();
-    if (recorded === null) return;
+    // The absence check is written as a branch because it is also what narrows
+    // the reader's `… | null` for the comparison below.
+    if (recorded === null) {
+      expect.fail(
+        "the record must state its own e2e callsite count and its per-root split, in the form " +
+          "`e2e callsites at this tree: N (<root> N, …)`. A line this cannot parse reads as no " +
+          "line at all, because half a measurement is not one",
+      );
+    }
 
     // Two readers hit this, and the command they run is the same for both. What
     // differs is RESPONSIBILITY: one of them changed a callsite and owes the
