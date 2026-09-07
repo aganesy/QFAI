@@ -1,5 +1,24 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0015-0001: Agent Catalog
+- US-0015-0002: Standard Agent Contract
+- US-0015-0003: Orchestrator Protocol
+- US-0015-0004: Devils-Advocate Reviewer
+- US-0015-0005: Pattern-Doubler Reviewer
+- US-0015-0006: All-Reviewer FAIL Obligation
+- US-0015-0007: Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check
+- US-0015-0008: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`
+- US-0015-0009: SKILL.md `## Default Autopilot Policy` section
+- US-0015-0010: Envelope-deviation `AskUserQuestion` audit-log
+- US-0015-0011: Cross-skill `handoff.yaml` schema
+- US-0015-0012: New Reviewer-Gate finding-code catalog
+- US-0015-0013: `qfai audit log` CLI surface
+- US-0015-0014: Cross-skill handoff legacy adapter helper
+- US-0015-0015: Cross-skill documentation realignment to implementation
+- US-0015-0016: Reviewer-Gate ingests workflow-hygiene and shipped-shape drift
+
 ## US-0015-0001: Agent Catalog
 
 As a QFAI maintainer, I want a catalog of 19 consolidated sub-agents with ID, mission, and category, so that agent delegation is standardized across all skills.
