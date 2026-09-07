@@ -523,13 +523,36 @@ describe("finding code grammar", () => {
     // alias the resolver does not give. The document states the shape in prose,
     // so both are checked on the same boundary cases instead of by comparing
     // the two spellings.
-    const waivers = await readFile(path.resolve(SRC_ROOT, "core/waivers.ts"), "utf-8");
-    const stripped = /const STRIPPED_CODE_RE = (\/\^QFAI-\(\[A-Z\]\+-\\d\{3\}\)\$\/);/.exec(
-      waivers,
+    // The pattern is read off the AST, not matched as source text. A text match
+    // has to spell the whitespace, the semicolon and the escaping exactly as
+    // the file happens to be formatted, so a reflow that changes no behaviour
+    // fails it.
+    const waiversPath = path.resolve(SRC_ROOT, "core/waivers.ts");
+    const waivers = await readFile(waiversPath, "utf-8");
+    const source = ts.createSourceFile(waiversPath, waivers, ts.ScriptTarget.Latest, true);
+    let literal: string | undefined;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === "STRIPPED_CODE_RE"
+      ) {
+        const initializer = unwrapExpression(node.initializer);
+        if (initializer !== undefined && ts.isRegularExpressionLiteral(initializer)) {
+          literal = initializer.text;
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    expect(literal, "STRIPPED_CODE_RE is not a regular expression literal in waivers.ts").toBe(
+      "/^QFAI-([A-Z]+-\\d{3})$/",
     );
-    expect(stripped, "STRIPPED_CODE_RE is not in the shape the document describes").not.toBeNull();
 
-    const re = new RegExp("^QFAI-([A-Z]+-\\d{3})$");
+    // The very pattern the implementation declares, evaluated on the cases the
+    // document names — so the two cannot promise different aliases.
+    const body = literal?.slice(1, literal.lastIndexOf("/")) ?? "";
+    const re = new RegExp(body);
     // What the document promises an alias for.
     expect(re.exec("QFAI-TDDLIST-007")?.[1]).toBe("TDDLIST-007");
     // And the two shapes it says get none.

@@ -94,9 +94,10 @@ the branch renames.
    renamed has one. `resolveRuleKeys` in `src/core/waivers.ts` adds a stripped
    spelling of the emitted code to the keys a waiver may match on, so a finding
    coded `QFAI-TDDLIST-007` also answers to `TDDLIST-007` and an existing
-   `.qfai/waivers.yml` entry keeps matching. Change the number — `TDDLIST-007`
-   to `QFAI-TDDLIST-011` — and the alias becomes `TDDLIST-011`, which that
-   entry does not name.
+   `.qfai/waivers.yml` entry keeps matching. Change the number —
+   `QFAI-TDDLIST-007` to `QFAI-TDDLIST-011` — and the alias becomes
+   `TDDLIST-011` rather than `TDDLIST-007`, which is the spelling the entry
+   names.
 3. **Check the stripped spelling for a collision, not only the full code.**
    `TDDLIST-001` and `TDDLIST-002` are live rule ids with no
    `QFAI-TDDLIST-00N` counterpart, so taking one of those numbers for an
@@ -110,7 +111,7 @@ the branch renames.
    numbered id: `TDDLIST_EXCEPTION_PARKED` is published under
    `rule` `TDDLIST-001`. That is a separately declared back-compat alias in
    `ruleIds.ts`, not something the strip produces, so renaming one of these
-   needs an explicit alias — the work the next section defers.
+   needs an explicit alias — the work `## Not covered here` defers.
 5. **Check whether the code already exists.** A family several branches reached
    for at once tends to have been settled by whichever landed first:
    `QFAI-TDDLIST-007` through `-010` are on the default branch already. Adopt
