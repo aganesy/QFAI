@@ -431,6 +431,17 @@ describe("only one of the two files schedules this bot", () => {
       "day-of-month, month and day-of-week must all be `*`: anything else narrows the cadence " +
         "below daily, and with the config's window gone this cron is the only thing pacing the bot",
     ).toEqual(["*", "*", "*"]);
+
+    // …and the setup document quotes the cron it is describing. Review on this change found
+    // `.github/renovate.md` still opening with "opened weekly" after the cron had become daily —
+    // a reader is told one cadence by the prose and another by the table, and neither is checked
+    // by anything. Requiring the expression itself to appear makes a cron edit that leaves the
+    // document behind fail here rather than mislead whoever reads it next.
+    expect(
+      readFileSync(path.join(REPO_ROOT, ".github/renovate.md"), "utf-8"),
+      `.github/renovate.md must quote the cron it describes (\`${expression}\`), so a change to ` +
+        "the schedule cannot leave the document describing the previous one",
+    ).toContain(expression);
   });
 });
 

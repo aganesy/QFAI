@@ -34,7 +34,7 @@
         "executionMode": "update"
       },
       "prBodyNotes": [
-        "**This bump also has to refresh the QFAI assistant tree.** If the diff below contains only the manifest and the lockfile, the regeneration step did not run — run `npx qfai init --force` on this branch, commit the result, and merge the two together. If the regenerated tree is already here, this pull request is complete and only needs a review."
+        "**This bump also has to refresh the QFAI assistant tree.** If the diff below contains only the manifest and the lockfile, the regeneration step did not run — run `npx --yes qfai@{{{newVersion}}} init --force` on this branch, commit the result, and merge the two together. The version is pinned to the one this pull request installs, and not left to `npx qfai`: an unpinned run fetches whatever the registry calls latest at that moment, which regenerates the tree from a version this branch is not adopting. If the regenerated tree is already here, this pull request is complete and only needs a review."
       ]
     }
   ]

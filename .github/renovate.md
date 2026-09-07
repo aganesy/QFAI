@@ -1,6 +1,6 @@
 # Renovate
 
-Dependency updates arrive as pull requests, opened weekly by this repository's own workflow — and
+Dependency updates arrive as pull requests, opened daily by this repository's own workflow — and
 merged by it. **Every update type is automerged, major included, and nothing waits for a review.**
 The only thing between a dependency bump and `main` is `ci-pass`.
 
@@ -106,7 +106,7 @@ running the bot the same way keeps it inside that.
 | Grouping      | Every GitHub Action in one pull request, monorepo packages by monorepo              |
 | Automerged    | **Everything** — patch, minor, major, digest, lockfile, `engines`, `packageManager` |
 | Merge gate    | `ci-pass`, and nothing else. No review, no approval, no dashboard tick              |
-| Merged when   | As soon as the checks pass — not on the next weekly run                             |
+| Merged when   | As soon as the checks pass — not on the next scheduled run                          |
 | Not held back | Vulnerability alerts: no schedule, no age floor, opened immediately                 |
 
 Nothing is held back for approval any more. `engines.node` and `packageManager` used to sit on the

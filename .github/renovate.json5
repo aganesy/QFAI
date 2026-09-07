@@ -54,8 +54,9 @@
   automerge: true,
   automergeType: "pr",
   // Platform-native automerge — GitHub merges the moment the required checks pass, rather than
-  // Renovate merging on its next run. With the weekly schedule above, Renovate-side automerge
-  // would park a green pull request for up to a week; this is not a preference but the
+  // Renovate merging on its next run. Renovate-side automerge would park a green pull request
+  // until the workflow's cron comes round again, which is a day under the schedule this file is
+  // written for and was a week under the one it replaced. This is not a preference but the
   // difference between the policy working and the policy reading as if it worked.
   platformAutomerge: true,
   // STATED rather than left to its default, because it is the one knob that would quietly undo
