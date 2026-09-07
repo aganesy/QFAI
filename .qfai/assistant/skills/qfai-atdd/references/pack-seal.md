@@ -24,7 +24,10 @@ fresh — this stage does not declare completion on it.
 
 When the last reviewer response lands, and **before this stage writes its
 verdict**, hash the pack this stage opened — `.qfai/review/review-<timestamp>/`,
-whole — by the same procedure.
+whole — by the stage-review audit-hash procedure
+(`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`),
+the one the section above applies to the evidence file. Only the subject
+differs: there it is the evidence file, here the pack.
 
 Record it **outside the pack** in the stage evidence file's `## Final status`:
 
