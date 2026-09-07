@@ -51,16 +51,18 @@ Before producing deliverables, read **project memory**:
    commander named in `constitution/agent-selection.md`, which no routing phase or review
    profile lists, so it is never reached as a "routed role" — and for every routed role:
    `owned_artifacts`, `tool_profile`, `permission_profile`, and `specialization_tags` are SSOT
-   and appear in no agent card, so never skip them. Only the entry's `developer_instructions`
-   body is a generated mirror of `.qfai/assistant/agents/<id>.md`, and **the mirror can be
-   stale**: `npx qfai init --force` regenerates the card while deliberately leaving `manifest/`
-   alone, so a taxonomy tuned through `/qfai-configure` survives an upgrade — and an upgraded
-   or customised project can then hold two different bodies for one role. So **skip that body
-   only when it matches the card in context; when they differ, the catalog entry is the role
-   contract and wins**, and the divergence is a stale manifest to repair
+   whose values live nowhere else, so never skip them. Only the entry's
+   `developer_instructions` body is a generated mirror of `.qfai/assistant/agents/<id>.md`, and
+   **the mirror can be stale**: `npx qfai init --force` regenerates the card while deliberately
+   leaving `manifest/` alone, so a taxonomy tuned through `/qfai-configure` survives an upgrade
+   — and an upgraded project can then hold two different bodies for one role. So **skip that
+   body only when it matches the card in context; when they differ, the card is the role
+   contract and wins**, as `.qfai/assistant/constitution/agent-selection.md` states and
+   `QFAI-AGENT-014` repairs — the catalog body is derived from the card, never the other way
+   round — and the divergence is a stale mirror to repair
    (`.qfai/assistant/skills/qfai-atdd/references/stale-manifest.md`). Read the body on demand when no card is
-   in context. Each `agents/<id>.md` card repeats this same scope in its own
-   `## Inputs you must read`.)
+   in context. Each `agents/<id>.md` card repeats the `developer_instructions` half of this in
+   its own `## Inputs you must read`; the full scope is stated here.)
 3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)

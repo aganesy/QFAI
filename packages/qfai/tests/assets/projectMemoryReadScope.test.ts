@@ -84,15 +84,29 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("only lets the skip stand when the card and the catalog body agree", async () => {
     // `init --force` regenerates the card and deliberately leaves `manifest/`
     // alone so a taxonomy tuned through `/qfai-configure` survives, so the two
-    // bodies can differ in an upgraded or customised project. Skipping on the
-    // card's mere presence then drops the role contract the catalog carries.
+    // bodies can differ in an upgraded project. Skipping on the card's mere
+    // presence then reads whichever body happened to be in context.
     const article = articleIII(await read(tree, CONSTITUTION));
     expect(article).toContain("the mirror can be");
     expect(article).toContain(
-      "skip that body only when it matches the card in context; when they differ, the catalog entry is the role contract and wins",
+      "skip that body only when it matches the card in context; when they differ, the card is the role contract and wins",
     );
     expect(article).toContain("stale-manifest.md");
     expect(article).not.toContain("skip that body when the card is already in context");
+  });
+
+  it("names the card as the winner, the direction the rest of the toolkit takes", async () => {
+    // `agent-selection.md` makes the card's body the source and the catalog
+    // entry a derived copy, and the repair for a divergence rewrites the
+    // catalog from the card. A rule here naming the catalog the winner would
+    // have a run adopt one body while validate repairs towards the other.
+    const article = articleIII(await read(tree, CONSTITUTION));
+    expect(article).toContain("the card is the role contract and wins");
+    expect(article).not.toContain("the catalog entry is the role contract");
+
+    const selection = await read(tree, "assistant/constitution/agent-selection.md");
+    expect(selection).toContain("`.qfai/assistant/agents/<id>.md` である");
+    expect(selection).toContain("QFAI-AGENT-014");
   });
 
   it("still mandates the authored project memory it always did", async () => {
@@ -166,7 +180,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
         "Skip a `developer_instructions` body only when it matches the agent card already in context",
       );
       expect(body, `${card}: does not say which side wins on divergence`).toContain(
-        "when the two differ the catalog entry is the role contract and wins",
+        "when the two differ the card is the role contract and wins",
       );
       // `doctor`'s `extractLiteralRequiredInputs` (src/core/doctor.ts) treats a
       // bullet that starts with "." and carries no glob character as a literal
@@ -199,7 +213,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       if (!body.includes("agent-catalog.yml")) {
         continue;
       }
-      expect(body, `${skill}: does not scope the catalog read`).toContain("not the file whole");
+      expect(body, `${skill}: does not scope the catalog read`).toContain("not the whole file");
     }
   });
 
