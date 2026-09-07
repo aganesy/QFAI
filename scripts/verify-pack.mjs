@@ -588,8 +588,37 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
-const seededReviewPackDir = path.join(outputDir, ".qfai", "review", "review-20260216000000000");
+const seededReviewPackName = "review-20260216000000000";
+const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
+
+/**
+ * The commit this run is gating, named by the seeded pack's `revision`.
+ *
+ * The sandbox lives under this repository's own work tree, so the check behind
+ * that field resolves the value against this repository. A placeholder resolves
+ * to nothing and reports a warning on every release run — one no change to the
+ * product can remove, in the list a reader scans before shipping — and the
+ * branch that runs when a revision *does* resolve never runs at all.
+ *
+ * `HEAD` is also what the pack means: its verdict describes the tree being
+ * validated, and that tree is this checkout.
+ */
+function headCommit() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    throw new Error(
+      "git rev-parse HEAD failed, so the seeded review pack cannot name the commit this run " +
+        "is gating. Run verify-pack from a git checkout.",
+    );
+  }
+}
+const seededRevision = headCommit();
 writeFileSync(
   path.join(seededReviewPackDir, "review_request.md"),
   [
@@ -620,7 +649,7 @@ writeFileSync(
       // by the current one.
       revision_form: "content-hash",
       // Declaring the contract means the tree has to be named too.
-      revision: "0000000000000000000000000000000000000000",
+      revision: seededRevision,
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
         kind: "discussion",
@@ -652,19 +681,44 @@ execFileSync(
   },
 );
 
-// The run above only has to exit zero, which says nothing about what it
-// reported. Compare the findings against the recorded set, in both directions.
+// Two questions of the same report. The run above only has to exit zero, which
+// says nothing about what it reported, and `--fail-on error` lets a warning
+// past — so the seeded review pack can be the subject of one while the run
+// stays green, and the finding set can move in either direction unnoticed.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
   throw new Error(
-    `validate wrote no ${validateJsonPath}. The comparison below reads the findings that run ` +
-      `produced, so it has nothing to read without it.`,
+    `validate wrote no ${validateJsonPath}. The checks below read the findings that run ` +
+      `produced, so they have nothing to read without it.`,
   );
 }
-const freshFindings = fingerprintReport(
-  parseValidateReport(readFileSync(validateJsonPath, "utf-8"), validateJsonPath),
+const validateReport = parseValidateReport(
+  readFileSync(validateJsonPath, "utf-8"),
   validateJsonPath,
 );
+// Stated rather than defaulted to an empty list. A report whose `issues` is
+// not a list is one this check cannot read, and reading it as "no findings"
+// gives the answer the check exists to withhold — the pass would then mean
+// the file was unreadable, and nothing would say so.
+if (!Array.isArray(validateReport.issues)) {
+  throw new Error(
+    `${validateJsonPath} has no \`issues\` array. The self-finding check reads that list, so a ` +
+      `report without one is unreadable rather than clean.`,
+  );
+}
+const selfInflicted = validateReport.issues.filter(
+  (issue) => typeof issue?.file === "string" && issue.file.includes(seededReviewPackName),
+);
+if (selfInflicted.length > 0) {
+  throw new Error(
+    "the seeded review pack produced findings about itself:\n" +
+      selfInflicted
+        .map((issue) => `  ${issue.severity} ${issue.code} ${issue.file}: ${issue.message}`)
+        .join("\n"),
+  );
+}
+
+const freshFindings = fingerprintReport(validateReport, validateJsonPath);
 
 if (process.env[UPDATE_ENV] === "1") {
   writeBaseline(freshFindings);
