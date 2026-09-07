@@ -183,7 +183,7 @@ test until it fails in order to manufacture a RED. See `references/red-not-obser
 
 ### Completion
 
-1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — three of the four cells the Drift Protocol carve-out covers unconditionally, and the ones gate item 10 reads. `Test file` and `Selector` are covered too, but only while their stated condition still holds, so fill a placeholder or repair an unresolvable selector when you reach it rather than at the end.
+1. After processing all items, update `test-list.md` with final Status, DR-ID, Evidence and Blocked-By values — the four cells the Drift Protocol carve-out covers unconditionally, and the ones gate item 10 reads. **`Blocked-By` is required on a row left at `blocked` and blank on every other row**: `TDDLIST_BLOCKED_MISSING_REF` errors on a `blocked` row that names no blocker, and a stale blocker left on a row that has since moved is the same defect read the other way. `Test file` and `Selector` are covered too, but only while their stated condition still holds, so fill a placeholder or repair an unresolvable selector when you reach it rather than at the end.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them as **blocking output**, not as an
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR

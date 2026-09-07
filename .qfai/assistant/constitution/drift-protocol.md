@@ -223,13 +223,13 @@ was fabricated.
    `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID pattern is
    `CR-\d{8}-\d{4}` and the file carries `ID`, `Status` (`open` / `approved` / `rejected` /
    `superseded`), `Approved by`, `Approved at` and `Approved option` so the approval is a record,
-   not a memory. Creating this file is the only write this step makes: the delta and Decisions
-   files the reference lands in — `spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec
-   artifact, `_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact, and the
+   not a memory. Creating this file is the only write this step makes **outside the raiser's own
+   whitelisted cells**: the delta and Decisions files the reference lands in —
+   `spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact,
+   `_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact, and the
    referencing specs' `09_delta.md` for a contract artifact, per the destination table in step 4 —
    are upstream SSOT, so the reference to this CR is written there by the owner skill in step 4,
-   never before approval. Creating this file is the only write this step makes **outside the
-   raiser's own whitelisted cells**.
+   never before approval.
 
    The one exception is **parking this CR's blocked set in the execution ledger**, and it applies
    only to a raiser that already owns those cells — `/qfai-implement` under

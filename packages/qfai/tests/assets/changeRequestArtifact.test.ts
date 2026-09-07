@@ -206,7 +206,9 @@ describe("a Change Request is a defined artifact", () => {
       // CR's blocked set in the execution ledger — so it is asserted flattened
       // and paired with the bound that keeps the two SSOT files out of it.
       expect(flat(drift)).toContain(
-        "Creating this file is the only write this step makes **outside the raiser's own whitelisted cells**.",
+        // One statement, not two: the clause and the destination list are the
+        // same sentence now, so the needle stops at the clause.
+        "Creating this file is the only write this step makes **outside the raiser's own whitelisted cells**:",
       );
       expect(flat(drift)).toContain(
         "writes nothing else: no other cell, no other file, and no row added",

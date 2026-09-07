@@ -212,7 +212,9 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain(
       "update `test-list.md` **Status and Evidence** after each phase completes",
     );
-    expect(skill).toContain("final Status, DR-ID and Evidence values");
+    // `Blocked-By` joined the unconditional set, so Completion names four
+    // cells now — the wording moved with the carve-out it mirrors.
+    expect(skill).toContain("final Status, DR-ID, Evidence and Blocked-By values");
   });
 });
 
@@ -254,7 +256,7 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     expect(skill, "the Completion heading moved").toContain(heading);
     const completion = skill.slice(skill.indexOf(heading));
     expect(completion).toContain(
-      "final Status, DR-ID and Evidence values — three of the four cells the Drift Protocol carve-out covers unconditionally",
+      "final Status, DR-ID, Evidence and Blocked-By values — the four cells the Drift Protocol carve-out covers unconditionally",
     );
     expect(completion).toContain(
       "`Test file` and `Selector` are covered too, but only while their stated condition still holds",
