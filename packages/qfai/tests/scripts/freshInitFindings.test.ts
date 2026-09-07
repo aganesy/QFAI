@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   BASELINE_PATH,
+  UNPINNED_CODES,
   UPDATE_ENV,
   diffFingerprints,
   fingerprint,
@@ -82,6 +83,30 @@ describe("fresh-init finding fingerprints", () => {
 
   it("reads a report that found nothing as an empty set", () => {
     expect(fingerprintReport({ issues: [] })).toEqual([]);
+  });
+
+  it("leaves out a code that reports on the checkout rather than on the tree", () => {
+    // The sandbox is created inside this repository's work tree, so the diff
+    // behind `QFAI-TRACE-003` resolves against the enclosing checkout: it fires
+    // where the base ref was never fetched and stays silent where it was. Same
+    // tool, same `init` output, two answers — so recording it would pin how the
+    // repository was cloned.
+    const report = {
+      issues: [
+        { severity: "info", code: "QFAI-TRACE-003" },
+        { severity: "info", code: "QFAI-TRACE-003", file: ".qfai/specs/spec-0001" },
+        { severity: "warning", code: "QFAI-ASSETS-003", file: ".qfai/a.md" },
+      ],
+    };
+
+    expect(fingerprintReport(report)).toEqual(["warning QFAI-ASSETS-003 .qfai/a.md"]);
+  });
+
+  it("still refuses a malformed issue carrying a code it would leave out", () => {
+    // The shape check runs on the whole report, not on the part the pin keeps.
+    // Dropping first would let a report be unreadable in the one place nothing
+    // reads it back.
+    expect(() => fingerprintReport({ issues: [{ code: "QFAI-TRACE-003" }] })).toThrow(/severity/);
   });
 
   it.each([
@@ -196,6 +221,14 @@ describe("reading the baseline", () => {
     // tree really has as newly arrived, which is a diff nobody can act on.
     expect(() => parseBaseline(text, "baseline.json")).toThrow(/baseline\.json/);
   });
+
+  it("refuses a baseline naming a code the comparison leaves out", () => {
+    // Such a line can never be matched, so it reports as gone on every run and
+    // no change to the tree removes it. Named where the fix is to strike it.
+    const text = JSON.stringify({ findings: ["info QFAI-TRACE-003 -"] });
+
+    expect(() => parseBaseline(text, "baseline.json")).toThrow(/QFAI-TRACE-003/);
+  });
 });
 
 describe("the committed baseline", () => {
@@ -222,6 +255,21 @@ describe("the committed baseline", () => {
     expect(findings, "a sorted list keeps a re-record to the lines that changed").toEqual(
       [...findings].sort(),
     );
+  });
+
+  it("names none of the codes the comparison leaves out", () => {
+    // Read off the set rather than spelled here: a code added to it has to be
+    // struck from the committed file in the same change, or the pin starts
+    // reporting a finding that no longer appears on every run.
+    const { findings } = JSON.parse(readFileSync(BASELINE_PATH, "utf-8")) as {
+      findings: string[];
+    };
+
+    for (const entry of findings) {
+      expect(UNPINNED_CODES, `${entry} is recorded but never read`).not.toContain(
+        entry.split(" ")[1],
+      );
+    }
   });
 
   it("sits beside the script that reads it", () => {

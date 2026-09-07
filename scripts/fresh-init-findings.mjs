@@ -21,6 +21,13 @@
  *
  * The comparison is a multiset: a code that legitimately fires twice for one
  * file is listed twice, and a third occurrence reports as new.
+ *
+ * ## What the baseline leaves out
+ *
+ * A rule whose answer comes from somewhere other than the tree `init` wrote —
+ * see {@link UNPINNED_CODES}. Recording one would pin a property of the machine
+ * the run happens on, and the pin would then fail on every machine that differs
+ * while the tool and the tree are identical.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -37,6 +44,29 @@ export const UPDATE_ENV = "QFAI_PACK_FINDINGS_UPDATE";
 
 /** The severities `validate.json` reports, and the only ones a baseline may hold. */
 const SEVERITIES = new Set(["info", "warning", "error"]);
+
+/**
+ * Codes the baseline does not record, whatever the run reports.
+ *
+ * The subject of this pin is the tree `qfai init` writes. `QFAI-TRACE-003`
+ * answers a different question: it reports on the git checkout the validate run
+ * happens inside. The sandbox is created under this repository's own work tree,
+ * so the diff behind that rule resolves against this checkout — and it fires
+ * both when the base ref is absent, which it is in every shallow clone, and
+ * when the branch changed a spec the sandbox does not carry. One `init` output
+ * therefore produces the finding on one machine and not on the next, so the
+ * pin would record how the repository was fetched rather than what the tool
+ * wrote.
+ *
+ * Dropping it here removes it from the comparison only. The run still reports
+ * it, and it is still read by everything that reads a validate report.
+ */
+export const UNPINNED_CODES = new Set(["QFAI-TRACE-003"]);
+
+/** The code in a line `fingerprint` wrote. */
+function codeOf(entry) {
+  return entry.split(" ")[1] ?? "";
+}
 
 /**
  * One issue reduced to the three fields the baseline compares.
@@ -69,13 +99,17 @@ export function fingerprint(issue) {
 }
 
 /**
- * Every issue in a `validate.json`, fingerprinted and sorted.
+ * Every issue in a `validate.json`, fingerprinted and sorted, less the codes
+ * {@link UNPINNED_CODES} names.
  *
  * The shape is checked for the same reason the baseline's is: `issues` is a
  * required field of the report, so a value that is not a list is a file this
  * cannot read. Read as an empty list instead, a truncated report would record
  * or match "the tree produces nothing" — the one answer the comparison exists
  * to withhold.
+ *
+ * Every issue is fingerprinted before any is dropped, so the shape check runs
+ * on the whole report rather than on the part of it the pin keeps.
  */
 export function fingerprintReport(report, where = "validate.json") {
   if (typeof report !== "object" || report === null || !Array.isArray(report.issues)) {
@@ -84,7 +118,10 @@ export function fingerprintReport(report, where = "validate.json") {
         `without one is unreadable rather than clean.`,
     );
   }
-  return report.issues.map(fingerprint).sort();
+  return report.issues
+    .map(fingerprint)
+    .filter((entry) => !UNPINNED_CODES.has(codeOf(entry)))
+    .sort();
 }
 
 /**
@@ -196,6 +233,18 @@ export function parseBaseline(text, where = BASELINE_PATH) {
     throw new Error(
       `${where}: every entry is the \`<severity> <code> <file>\` line \`fingerprint\` writes, and ` +
         `${String(wrong.length)} is not a string: ${shown}${rest}.`,
+    );
+  }
+  // A code the comparison drops can never match, so a baseline naming one
+  // reports it as gone on every run and no change to the tree removes it.
+  // Named here, where the fix is to strike the line, rather than left to
+  // surface as a finding that disappeared.
+  const unpinned = parsed.findings.filter((entry) => UNPINNED_CODES.has(codeOf(entry)));
+  if (unpinned.length > 0) {
+    throw new Error(
+      `${where} records ${unpinned.join(", ")}, which the comparison does not read: that rule ` +
+        `reports on the checkout the run happens in rather than on the tree init wrote. Remove ` +
+        `the line.`,
     );
   }
   return parsed.findings;
