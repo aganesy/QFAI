@@ -336,7 +336,7 @@ the heading cannot:
   The matrix and its per-`❌` justifications live in that committed file;
   restating them here would lose them.
 - **Cross-spec obligations** — one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding: `QFAI-ATDD-113` / `-115` aggregate every uncovered contract into one finding's `refs`, so split them into a row each. `None` when the run exited 0. It is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
-- **Final status** — the verdict and its confirmer, plus `Review pack:` and `Review pack seal:` for the P8 pack this stage opened (`references/pack-seal.md#seal-the-p8-pack`). This section is excluded from the P8 audit subject, which is why the seal can be written here without staling the verdict.
+- **Final status** — the verdict and its confirmer, plus `Review pack:` and `Review pack seal:` for the P8 pack this stage opened (`references/pack-seal.md#seal-the-p8-pack`). This section is excluded from the P8 audit subject, which is why the seal can be written here without making the verdict stale.
 
 Template:
 
