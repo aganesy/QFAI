@@ -155,11 +155,13 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     // still reported exactly once — by whichever group is missing. Misreporting
     // needs a profile that runs the narrow group WITHOUT the wildcard one.
     //
-    // No profile does today: `canonical-uix: ["UIX-VAL-*"]` swallowed all
-    // twelve `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns (#1215), and
+    // No profile did, in the instance this case was written for.
+    // `canonical-uix` HELD `["UIX-VAL-*"]`, which swallowed all twelve
+    // `UIX-VAL-SKILL-*` codes that `prototyping-skill` owns (#1215) — and
     // `prototyping-skill` is reachable only from `runFullValidators`, which
-    // runs `canonical-uix` too. So this case is asserted for the divergence
-    // that has not happened yet.
+    // runs `canonical-uix` too, so nothing misreported. The same commit
+    // replaced that glob with an enumeration, so the overlap is gone and this
+    // case is asserted for the divergence that has not happened yet.
     //
     // It is worth asserting because it has happened twice on other prefixes,
     // and both repairs are in the table as comments: `QFAI-CONTRACT-*` "would

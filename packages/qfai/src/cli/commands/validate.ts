@@ -549,9 +549,9 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run listed as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
-  // Enumerated rather than `UIX-VAL-*`, because that glob is a PREFIX of every
-  // `UIX-VAL-SKILL-*` code and `prototyping-skill` owns those, so all twelve
-  // belonged to two groups at once (#1215).
+  // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
+  // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
+  // twelve belonged to two groups at once until this list replaced it (#1215).
   //
   // **No profile misreports them today**, and that was worth establishing
   // before changing anything. `unevaluatedGates` walks the groups a profile
