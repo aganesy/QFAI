@@ -581,8 +581,37 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
-const seededReviewPackDir = path.join(outputDir, ".qfai", "review", "review-20260216000000000");
+const seededReviewPackName = "review-20260216000000000";
+const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
+
+/**
+ * The commit this run is gating, named by the seeded pack's `revision`.
+ *
+ * The sandbox lives under this repository's own work tree, so the check behind
+ * that field resolves the value against this repository. A placeholder resolves
+ * to nothing and reports a warning on every release run — one no change to the
+ * product can remove, in the list a reader scans before shipping — and the
+ * branch that runs when a revision *does* resolve never runs at all.
+ *
+ * `HEAD` is also what the pack means: its verdict describes the tree being
+ * validated, and that tree is this checkout.
+ */
+function headCommit() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    throw new Error(
+      "git rev-parse HEAD failed, so the seeded review pack cannot name the commit this run " +
+        "is gating. Run verify-pack from a git checkout.",
+    );
+  }
+}
+const seededRevision = headCommit();
 writeFileSync(
   path.join(seededReviewPackDir, "review_request.md"),
   [
@@ -613,7 +642,7 @@ writeFileSync(
       // by the current one.
       revision_form: "content-hash",
       // Declaring the contract means the tree has to be named too.
-      revision: "0000000000000000000000000000000000000000",
+      revision: seededRevision,
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
         kind: "discussion",
@@ -675,19 +704,47 @@ execFileSync(
   },
 );
 
+// Two questions of the same report, asked of the file rather than the console:
+// `--fail-on error` lets a warning past, so the run stays green while the list
+// a reader scans before shipping carries an entry no change to the product can
+// remove.
+//
 // A rule inside a promotion window is a warning today and an error from the
 // release its pin names, and the severity follows the version of the tool that
 // is running. So a pin is otherwise only observed on the release it blocks:
-// this same gate, run with `--fail-on error` against this same sandbox.
+// this same gate, run against this same sandbox. And the seeded review pack
+// must not be the reason for a finding about itself.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
   throw new Error(
-    `validate wrote no ${validateJsonPath}. The forecast reads the findings that run produced, ` +
-      `so it has nothing to read without it.`,
+    `validate wrote no ${validateJsonPath}. The checks below read the findings that run ` +
+      `produced, so they have nothing to read without it.`,
+  );
+}
+const validateReport = JSON.parse(readFileSync(validateJsonPath, "utf-8"));
+// Stated rather than defaulted to an empty list. A report whose `issues` is
+// not a list is one these checks cannot read, and reading it as "no findings"
+// gives the answer they exist to withhold — the pass would then mean the file
+// was unreadable, and nothing would say so.
+if (!Array.isArray(validateReport.issues)) {
+  throw new Error(
+    `${validateJsonPath} has no \`issues\` array. These checks read that list, so a report ` +
+      `without one is unreadable rather than clean.`,
+  );
+}
+const selfInflicted = validateReport.issues.filter(
+  (issue) => typeof issue?.file === "string" && issue.file.includes(seededReviewPackName),
+);
+if (selfInflicted.length > 0) {
+  throw new Error(
+    "the seeded review pack produced findings about itself:\n" +
+      selfInflicted
+        .map((issue) => `  ${issue.severity} ${issue.code} ${issue.file}: ${issue.message}`)
+        .join("\n"),
   );
 }
 const awaitingPromotion = findingsAwaitingPromotion(
-  JSON.parse(readFileSync(validateJsonPath, "utf-8")).issues ?? [],
+  validateReport.issues,
   await readRulePromotions(path.join(root, LEDGER_REL)),
 );
 if (awaitingPromotion.length > 0) {
