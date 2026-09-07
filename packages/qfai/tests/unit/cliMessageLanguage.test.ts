@@ -188,6 +188,12 @@ describe("operator-facing CLI message language", () => {
       // still point at the source.
       const offenders: string[] = [];
       for (const [rel, source] of await srcSources()) {
+        // The scan is what costs; the strip is what costs most. A file whose
+        // raw text has no `npx qfai ` anywhere cannot produce an offender
+        // after the strip either, since stripping only removes text.
+        if (!source.includes("npx qfai ")) {
+          continue;
+        }
         stripComments(source)
           .split(/\r?\n/)
           .forEach((line, index) => {
