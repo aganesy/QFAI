@@ -92,6 +92,12 @@ while the row is still `refactor`:
 
 - run the checkpoint at the end of Refactor, after the reviewers return PASS;
 - the outcome and its handling are defined once, in
-  `checkpoint-verification.md#pass-criteria`.
+  `checkpoint-verification.md#pass-criteria`. Where a FAIL leaves a regression
+  that needs a row of its own, that row is **filed upstream, not here**: raise a
+  Change Request per
+  `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` and
+  `/qfai-sdd` Phase 2b seeds it
+  (`../../qfai-sdd/references/sdd-phase-checklists.md`). This skill owns cells,
+  never rows.
 
 Rows already `done` from earlier boundaries are never re-opened.

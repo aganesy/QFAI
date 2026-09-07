@@ -1261,7 +1261,7 @@ describe("qfai-implement gate arity naming", () => {
       // a `todo` row itself — it takes the drift path and the owner's rerun.
       expect(reference).toContain("**Do not add a row here.**");
       expect(reference).toContain(
-        "`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`",
+        "`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`",
       );
       expect(reference).toContain("#when-drift-is-detected");
 
