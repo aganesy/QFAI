@@ -101,7 +101,7 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
       expect(section).toContain("**What it counts.**");
       expect(section).toContain("Gherkin scenarios parsed out of each spec's Examples file");
       expect(section).toContain("the `Layer` column of every active spec's `tdd/test-list.md`");
-      expect(section).toContain("`report.testStrategy.layerSource` names which one");
+      expect(section).toContain("`testStrategy.layerSource` names which one");
       expect(section).not.toContain("never inspect `<testsDir>/e2e/**` or any other code test");
 
       // What it still does not count, which is the honest half of the old claim.

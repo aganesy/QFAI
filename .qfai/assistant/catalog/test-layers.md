@@ -465,7 +465,7 @@ measurable:
   from whichever of two sources the project actually has: Gherkin scenarios
   parsed out of each spec's Examples file and bucketed by their `@layer-*` tags,
   or — where no Gherkin parses — the `Layer` column of every active spec's
-  `tdd/test-list.md`. `report.testStrategy.layerSource` names which one produced
+  `tdd/test-list.md`. `testStrategy.layerSource` names which one produced
   the numbers (`scenario-tags` / `ledger-layer` / `none`), and the evidence entry
   should carry it so the count is not read as coming from somewhere it did not.
 
