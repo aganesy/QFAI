@@ -84,7 +84,7 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // A `completion-reviewer` works from this bullet and nothing else.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers `CON-DB`,",
+      "coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`)",
     );
   });
 
@@ -95,19 +95,21 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // sits on the 500-line ceiling `assets.test.ts` enforces.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "`tests/api/**` must cover all required `CON-API-*`, and `tests/integration/**` all required `CON-DB-*` (`QFAI-ATDD-115`)",
+      "`tests/integration/**` must cover all required `CON-DB-*` (`QFAI-ATDD-115`)",
     );
     // The deferral form travels with the obligation: a reader who only meets
     // the rule here must still learn it has an out-of-slice escape.
-    expect(atdd).toContain("`-- x-qfai-status: planned`, never left uncovered.");
+    expect(atdd).toContain("`-- x-qfai-status: planned` on its own file, never left uncovered.");
   });
 
   it("Mandatory Output 3, the not-done test and Completion Criteria step 1 all list it", async () => {
     const atdd = flat(await read(tree));
     expect(atdd).toContain("Coverage obligations checklist (`US` / `TC` / `CON-API` / `CON-DB`)");
-    expect(atdd).toContain("Any required `US` / `TC` / `CON-API` / `CON-DB` remains uncovered.");
     expect(atdd).toContain(
-      "Confirm required `US` / `TC` / `CON-API` / `CON-DB` coverage is complete.",
+      "Any required `US` / `TC` remains uncovered, or any required `CON-API` / `CON-DB` **this spec owns** does.",
+    );
+    expect(atdd).toContain(
+      "Confirm required `US` / `TC` / `CON-API` / `CON-DB` coverage is complete for the obligations this spec owns",
     );
     expect(atdd).toContain(
       "close uncovered `US` / `TC` / `CON-API` / `CON-DB` obligations and rerun validation",
@@ -130,9 +132,11 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // `CON-DB` work was estimated without counting any of it.
     const atdd = flat(await read(tree));
     // Which CON-DB are counted is pinned separately, below.
-    expect(atdd).toContain("Integration = required `TC-*` plus **active** `CON-DB-*` —");
+    expect(atdd).toContain(
+      "plus the **active** `CON-DB-*` this spec references — active meaning the contract does not declare `-- x-qfai-status: planned`",
+    );
     expect(atdd).toContain("| Integration | #TC + #CON-DB active |");
-    expect(atdd).toContain("`CON-DB` in Integration.");
+    expect(atdd).toContain("`L3`/no-`Level` TCs + active `CON-DB-*`");
   });
 
   it("project_memory restates it for an agent that never opens the body", async () => {
@@ -234,19 +238,27 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
   it("counts the active CON-DB, not every declared one", async () => {
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "Integration = required `TC-*` plus **active** `CON-DB-*` — active meaning the contract does **not** declare `-- x-qfai-status: planned`",
+      "plus the **active** `CON-DB-*` this spec references — active meaning the contract does not declare `-- x-qfai-status: planned`",
     );
     expect(atdd).toContain("carries no `QFAI-ATDD-115` obligation in this slice");
-    // The regression: "declared" swept the deferred contracts back in.
-    expect(atdd).not.toContain("Integration = required `TC-*` plus declared `CON-DB-*`.");
+    // The regression: an unqualified count sweeps the deferred contracts back
+    // in, and the deferral sentence beside it has to name this row too.
+    expect(atdd).not.toContain("plus the `CON-DB-*` this spec references.");
+    expect(atdd).toContain(
+      "the `CON-API-*` and `CON-DB-*` rows drop every contract deferred with `x-qfai-status: planned`",
+    );
   });
 
   it("says the same thing in the estimator table the stage must output", async () => {
     // The prose and the required table are two statements of one count; a
     // reader filling the table works from the table alone.
     const atdd = flat(await read(tree));
-    expect(atdd).toContain("| Integration | #TC + #CON-DB active | INT_s | test cases + active DB");
-    expect(atdd).not.toContain("| #TC + #CON-DB | INT_s | test cases + DB contracts |");
+    expect(atdd).toContain(
+      "| Integration | #TC + #CON-DB active | INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |",
+    );
+    // The regression: a Raw count of `#TC` alone sizes the layer that owes the
+    // DB work without counting any of it.
+    expect(atdd).not.toContain("| Integration | #TC | INT_s |");
   });
 
   it("completes the zero-row enumeration in the reference an implementer reads", async () => {
@@ -266,13 +278,11 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     expect(provenance).not.toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` clean");
   });
 
-  it("keeps the reason in the table a reader fills in", async () => {
-    // The prose no longer has room for the rationale (the shipped SKILL.md is
-    // at its 500-line ceiling), so the Notes column carries it.
+  it("says why the deferred ones are out, beside the count itself", async () => {
+    // A reader who meets the count and not the reason fills it in from "every
+    // declared", which is the overcount this row exists to prevent.
     const atdd = flat(await read(tree));
-    expect(atdd).toContain(
-      "| test cases + active DB contracts | deferred contracts owe no test here, so counting them oversizes the slice |",
-    );
+    expect(atdd).toContain("which carries no `QFAI-ATDD-115` obligation in this slice");
   });
 
   it.each(["test-design-analyst", "qa-strategist"])(

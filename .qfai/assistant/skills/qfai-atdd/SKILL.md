@@ -251,17 +251,17 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 
 ## Volume Signals (mandatory, not gates)
 
-Every row counts this spec's own obligations: E2E = required `US-*`, API = required `CON-API-*`, meaning the `CON-API-*` this spec references that are not deferred, Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`) plus the `CON-DB-*` this spec references. `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to. Read `required` per ID kind from Coverage obligations — the `US-*` row is surface-scoped and the `CON-API-*` row drops every contract deferred with `x-qfai-status: planned`, so filling either in from "every declared" overstates the Raw count before a single test is written.
+Every row counts this spec's own obligations: E2E = required `US-*`, API = required `CON-API-*`, meaning the `CON-API-*` this spec references that are not deferred, Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`) plus the **active** `CON-DB-*` this spec references — active meaning the contract does not declare `-- x-qfai-status: planned`, which carries no `QFAI-ATDD-115` obligation in this slice. `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to. Read `required` per ID kind from Coverage obligations — the `US-*` row is surface-scoped and the `CON-API-*` and `CON-DB-*` rows drop every contract deferred with `x-qfai-status: planned`, so filling either in from "every declared" overstates the Raw count before a single test is written.
 Contract references come from the SSOT the spec carries — `Contract-Refs` in `04_Business-Rules.md`, plus a `QFAI-CONTRACT-REF` line in `01_Spec.md` when there is one — never the ledger; a contract deferred with `x-qfai-status: planned` owes no test, so exclude it from the count and name it in `Notes`.
 `E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**. A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
 
 ### Estimator output table (required)
 
-| Layer       | Raw count | Signal | Evidence                                | Notes |
-| ----------- | --------: | -----: | --------------------------------------- | ----- |
-| E2E         |       #US |  E2E_s | user stories + `L5` TCs                 |       |
-| API         |      #CON |  API_s | active `CON-API-*` + `L4` TCs           |       |
-| Integration |       #TC |  INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |       |
+| Layer       |            Raw count | Signal | Evidence                                | Notes |
+| ----------- | -------------------: | -----: | --------------------------------------- | ----- |
+| E2E         |                  #US |  E2E_s | user stories + `L5` TCs                 |       |
+| API         |                 #CON |  API_s | active `CON-API-*` + `L4` TCs           |       |
+| Integration | #TC + #CON-DB active |  INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |       |
 
 ## Scaffolding
 
