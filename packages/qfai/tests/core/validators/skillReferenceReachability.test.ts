@@ -555,20 +555,22 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
   });
 
   /**
-   * A tilde in a path segment stops the token scan, and the by-path pass does
-   * not always cover for it.
+   * A citation whose path carries a tilde, which this branch made the token
+   * scan able to span.
    *
-   * `CITATION_SEGMENT_SOURCE` admits `[\p{L}\p{N}\p{M}._-]`, so `~` ends a
-   * token: `references/notes~1.md` yields `1.md`, and an absolute citation
-   * through a tilde-bearing directory yields the tail after it. Neither
-   * resolves under any base.
+   * BEFORE the fix, `CITATION_SEGMENT_SOURCE` admitted only
+   * `[\p{L}\p{N}\p{M}._-]`, so `~` ended a token: `references/notes~1.md`
+   * yielded `1.md`, and an absolute citation through a tilde-bearing directory
+   * yielded the tail after it. Neither resolved under any base.
    *
-   * The fallback saves it only when the TARGET's own path is unscannable, and
-   * here it is not: the project-relative spelling is clean, so the file never
-   * joins `unscannableTargets` and nothing looks for it by path. The citation
-   * is absolute because the author wrote it that way, which is ordinary — and
-   * on Windows it is what `path.join` hands them, since `os.tmpdir()` is the
-   * 8.3 short form whenever the profile name exceeds eight characters (#1211).
+   * This case passed then too — hence the title. The `skillsDirPrefix` recovery
+   * in `resolveCitationToken` finds `.qfai/assistant/skills/` still present in
+   * the truncated tail and resolves from there, which is why the token being
+   * wrong was not a false finding. It stays as the net for that cover: the
+   * citation is absolute because the author wrote it that way, which is
+   * ordinary — and on Windows it is what `path.join` hands them, since
+   * `os.tmpdir()` is the 8.3 short form whenever the profile name exceeds eight
+   * characters (#1211).
    *
    * The `~` is written into the directory this creates, so a Linux-only matrix
    * runs it too.
@@ -617,6 +619,11 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
    * The same character in the file's OWN name, which is the half with no
    * Windows in it at all: `~` is a legal filename character and backup
    * conventions produce it routinely.
+   *
+   * This one passed before the fix as well, through the other cover: a target
+   * whose own name carries the tilde is unscannable, so it joins
+   * `unscannableTargets` and the by-path pass resolves it. The net is for that
+   * cover.
    */
   it("resolves a relative citation of a tilde name (net: the by-path pass covers it)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-tildename-"));
