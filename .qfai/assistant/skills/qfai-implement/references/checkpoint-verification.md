@@ -237,8 +237,10 @@ against a default-quiet one. A step
 outside the applicable set is not owed, and its absence is not a partial run. A partial run of the
 applicable set is not a pass.
 
-Any non-zero exit is a FAIL. **FAIL handling is defined here and nowhere else**, in one branch per
-boundary:
+Any non-zero exit is a FAIL, with one exception, stated below: step 4 alone may be judged on a
+measured delta instead (`#the-one-substitution-a-measured-delta-for-step-4`). Every other command in
+the set is settled by its exit code. **FAIL handling is defined here and nowhere else**, in one
+branch per boundary:
 
 - **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
   does **not** go to `exception`: that status parks the row as an anomaly whose completion then
