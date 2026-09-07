@@ -67,6 +67,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         // Optional, but only `/qfai-sdd` can author it: see
         // `tests/assets/parallelSeamDeclaration.test.ts`.
         "Owning module",
+        // Optional, but seeded by Phase 2b, which owns the rows. That is what
+        // lets `/qfai-implement` — the owner of the cells, not the rows — write
+        // a `blocked` row's blocker without adding a column to do it.
+        "Blocked-By",
         // The T1 review-group key, and an optional column like the three above
         // it — so it sits with them rather than beside `TC-Refs` it derives
         // from. Position is free; `validateTddList` resolves by name.
