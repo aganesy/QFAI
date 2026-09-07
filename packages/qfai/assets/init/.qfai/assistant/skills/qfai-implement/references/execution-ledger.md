@@ -194,7 +194,8 @@ widened to carry it, and who seeds the two layer columns:
 The `Evidence` cell is a **pointer**, not the payload.
 
 `.qfai/evidence/implement-<spec-id>.md` is the home — for every row this skill
-runs itself; the E2E/API/Integration rows use `atdd-<spec-id>.md`, see
+runs itself; the **ATDD-owned** rows use `atdd-<spec-id>.md`, which is the
+`E2E` / `API` / `Integration` rows less the two exceptions that stay here, see
 "ATDD-owned rows" below — of the per-item evidence contract — the RED/GREEN
 commands, their output, and the reviewer verdicts. The ledger cell records
 the outcome and says where to read the proof:

@@ -1671,7 +1671,8 @@ agents:
       own, which is the outcome the last sentence of
       `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` names;
       that file
-      carries the same two exceptions and this one restates neither.
+      carries the same two exceptions, and `qfai-implement/SKILL.md` is where both are
+      defined — the paragraph above applies them here rather than settling them.
 
       **A commit id alone does not answer it — REVISE.** A commit that touched
       several routes and a helper names no single predicate, so the ownership check

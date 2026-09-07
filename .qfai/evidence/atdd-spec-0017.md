@@ -2191,8 +2191,8 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-**And a third time, from a merge rather than a commit.** Bringing `main` into
-`fix/issue-530-atdd-owned-layer-set` (issue #530, "Integration belongs to the ATDD-owned layer set")
+**And a third time, from a merge rather than a commit.** Bringing `main` into a branch that
+moves `Integration` into the ATDD-owned layer set
 carried that branch's `+17` `it` callsites in `tests/assets/atddRedProvenance.test.ts` into the e2e
 project's globs, taking the count from 925 to 942 — re-derived with the guard's own `CALLSITE` rule at
 each endpoint: 915 at the merge base, 925 at `main`, 932 on the branch, 942 at the merge, and

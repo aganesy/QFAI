@@ -3110,7 +3110,12 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The ledger reference stated the same split twice more in two layers, in
     // the very section that defines the set as three.
     const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain("the E2E/API/Integration rows use `atdd-<spec-id>.md`");
+    // And the summary decides the file by the ATDD-owned set rather than by
+    // `Layer`, because the two exceptions this branch adds stay on the
+    // implement side with an `E2E`-set `Layer`.
+    expect(ledger).toContain(
+      "the **ATDD-owned** rows use `atdd-<spec-id>.md`, which is the `E2E` / `API` / `Integration` rows less the two exceptions that stay here",
+    );
     expect(ledger).toContain(
       "`atdd-<spec-id>.md` holds `## Ledger rows advanced` for the `E2E` / `API` / `Integration` rows",
     );

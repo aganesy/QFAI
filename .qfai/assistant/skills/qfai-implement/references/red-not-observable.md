@@ -131,8 +131,9 @@ for the natural RED and let the row proceed to `green` and `done`:
    reason the field was widened does not hold, and accepting a bare path and
    symbol on them is precisely the "ordinary TDD row reaching `done` with no
    production change and no sibling" the sentence above refuses. Both
-   exceptions are defined once, in `qfai-implement/SKILL.md`; `qa-gatekeeper`
-   applies this rule and restates neither.
+   exceptions are defined once, in `qfai-implement/SKILL.md`, which is what
+   both this file and `../../../agents/qa-gatekeeper.md` apply: each states the
+   condition it has to judge, and neither is the definition.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as
