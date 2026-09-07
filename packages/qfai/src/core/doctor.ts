@@ -280,7 +280,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           severity: "warning",
           title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "skills を検査できませんでした（ディレクトリまたはファイルの読み取りに失敗）。権限とパスを確認してください。",
+            "Could not inspect skills (reading a directory or a file failed). Check the permissions and the path.",
           details: { skillsDir: toRelativePath(root, resolved) },
         });
       } else if (diff.status === "skipped_missing_skills") {
@@ -288,7 +288,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "skills が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+          message:
+            "the skills directory has not been created yet, so the check was skipped " +
+            "(run 'qfai init')",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "skipped_missing_assets") {
@@ -296,8 +298,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "init assets が見つからないため検査をスキップしました（インストール状態を確認してください）",
+          message: "init assets not found, so the check was skipped (check the installation)",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "ok") {
@@ -305,7 +306,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "ok",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "標準 assets と一致しています",
+          message: "Matches the standard assets",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else {
@@ -318,13 +319,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           severity: "warning",
           title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "標準資産 '.qfai/assistant/skills/**' が改変されています。skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+            "The standard assets under '.qfai/assistant/skills/**' have been modified. Editing skills directly is discouraged (an update or a re-init can overwrite them).",
           details: {
             skillsDir: toRelativePath(root, diff.skillsDir),
             missing: diff.missing,
             extra: diff.extra,
             changed: diff.changed,
-            nextActions: ["必要なら qfai init --force で skills を標準状態へ戻す"],
+            nextActions: [
+              "If needed, run qfai init --force to restore skills to their standard state",
+            ],
           },
         });
       }
@@ -663,10 +666,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     severity: deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
     message: deprecatedPromptsConfigured
-      ? "promptsDir は deprecated です。設定で指定されています（skillsDir へ移行してください）"
+      ? "promptsDir is deprecated and is set in the config (migrate to skillsDir)"
       : deprecatedPromptsExists
-        ? "promptsDir は deprecated です。存在しても検証では使用されません（skillsDir を使用してください）"
-        : "promptsDir は deprecated です（未作成で問題ありません）",
+        ? "promptsDir is deprecated; even when it exists it is not used by validation (use skillsDir)"
+        : "promptsDir is deprecated (not being created is fine)",
     details: {
       path: toRelativePath(root, deprecatedPromptsDir),
       configured: deprecatedPromptsConfigured,
@@ -950,8 +953,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "info",
       title,
-      message:
-        "assistant assets が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+      message: "Skipped: no assistant assets have been created yet (run 'qfai init')",
       details,
     };
   }
@@ -961,7 +963,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
-      message: `${report.scanned} 件の assistant asset がいずれも ${report.maxLines} 行以内です${exemptNote}`,
+      message: `all ${report.scanned} assistant assets are within ${report.maxLines} lines${exemptNote}`,
       details,
     };
   }
@@ -971,14 +973,14 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 
   if (report.status === "incomplete") {
     const incompleteActions = [
-      "読み取れなかったパスの権限・存在を確認してから doctor を再実行する",
+      "check that the unreadable paths exist and are readable, then run doctor again",
     ];
     return {
       id: "assets.lineBudget",
       severity: "warning",
       title,
       message:
-        `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした: ` +
+        `${unmeasured} assistant assets could not be read, so their line counts were not checked: ` +
         `${formatMessagePaths(unmeasuredPaths)}${exemptNote}${formatNextActionHint(incompleteActions)}`,
       details: {
         ...details,
@@ -989,7 +991,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 
   const unmeasuredNote =
     unmeasured > 0
-      ? `（ほかに ${unmeasured} 件は読み取れず未検査: ${formatMessagePaths(unmeasuredPaths)}）`
+      ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
   const nextActions = assetLineBudgetNextActions(report.oversized);
   return {
@@ -997,7 +999,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     severity: "warning",
     title,
     message:
-      `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています: ` +
+      `${report.oversized.length} assistant assets exceed ${report.maxLines} lines: ` +
       `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
       formatNextActionHint(nextActions),
     details: {
@@ -1058,7 +1060,9 @@ function formatMessagePaths(paths: ReadonlyArray<string>): string {
  * see exactly one line per finding.
  */
 function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>): string {
-  return oversized.map((entry) => `${escapeForMessage(entry.path)} (${entry.lines} 行)`).join(", ");
+  return oversized
+    .map((entry) => `${escapeForMessage(entry.path)} (${entry.lines} lines)`)
+    .join(", ");
 }
 
 /**
@@ -1074,14 +1078,14 @@ function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string
     return "";
   }
   const entries = exempt
-    .map((entry) => `${escapeForMessage(entry.path)}（${escapeForMessage(entry.reason)}）`)
+    .map((entry) => `${escapeForMessage(entry.path)} (${escapeForMessage(entry.reason)})`)
     .join(", ");
-  return `（検査対象外 ${exempt.length} 件: ${entries}）`;
+  return ` (${exempt.length} exempt from the check: ${entries})`;
 }
 
 /** Appends the repair guidance so text readers get it, not only JSON readers. */
 function formatNextActionHint(actions: ReadonlyArray<string>): string {
-  return actions.length > 0 ? ` — 対処: ${actions.join(" / ")}` : "";
+  return actions.length > 0 ? ` — next: ${actions.join(" / ")}` : "";
 }
 
 /**
@@ -1097,11 +1101,11 @@ function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>):
   const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
   const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
   if (hasSkillAsset) {
-    actions.push("超過した skill の1トピックを、その skill 配下の references/ に移す");
+    actions.push("move one topic out of the oversized skill into that skill's own references/");
   }
   if (hasOtherAsset) {
     actions.push(
-      "skill 以外の資産（constitution/ catalog/ manifest/ など）は同じレイヤー内でトピック単位に分割し、参照元のパスを更新する",
+      "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
     );
   }
   return actions;
@@ -1148,7 +1152,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
       id: "agents.frontmatter",
       severity: "warning",
       title: "Agent frontmatter",
-      message: "agent ディレクトリを列挙できませんでした（権限またはロックを確認してください）",
+      message: "Could not enumerate the agent directory (check the permissions or a lock)",
       details: { path: toRelativePath(root, agentsDir) },
     };
   }
@@ -1194,7 +1198,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
       id: "agents.frontmatter",
       severity: "warning",
       title: "Agent frontmatter",
-      message: `agent 定義を読み取れず検査できませんでした (count=${unreadableFiles.length}): ${formatMessagePaths(unreadableFiles)}`,
+      message: `Agent definitions could not be read, so they were not checked (count=${unreadableFiles.length}): ${formatMessagePaths(unreadableFiles)}`,
       details: { count: markdownFiles.length, unreadableFiles },
     };
   }

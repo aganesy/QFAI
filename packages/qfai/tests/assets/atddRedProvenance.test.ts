@@ -468,7 +468,12 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // could not reach `done` however correct its RED and GREEN were.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("the evidence file its `Layer` owns");
-    expect(implement).toContain("`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row");
+    // `Integration` is in the enumeration too: `/qfai-sdd` Phase 2b seeds
+    // those rows and `/qfai-atdd` authors their tests, so their evidence lives
+    // in the same file an `E2E` row's does.
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
     expect(implement).toContain(
       "The item's evidence file (item 10) is appended with **every routed reviewer's** verdict",
     );
@@ -724,14 +729,20 @@ describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tre
     const shared = flat(
       await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
     );
+    // All three ATDD-owned layers, `Integration` included: `/qfai-sdd` Phase 2b
+    // seeds a `Layer = Integration` row per integration-level TC and
+    // `/qfai-atdd` hands it over with its provenance, so its surface reaches
+    // this branch on exactly the terms an `E2E` one does. Naming only `E2E` /
+    // `API` here — while `red-provenance.md` and `qa-gatekeeper.md` below both
+    // accept the form on an Integration row — made one correct handoff resolve
+    // to `todo -> red` or to a blocking `exception` depending on which file the
+    // agent read.
     expect(shared).toContain(
-      "accepted only on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`",
+      "accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed over by `/qfai-atdd`",
     );
     // And still refused elsewhere: widening it for every row would let an
     // ordinary TDD row reach `done` with no production change and no sibling.
-    expect(shared).toContain(
-      "On a `Unit` / `Component` / `Integration` row it is **not** accepted",
-    );
+    expect(shared).toContain("On a `Unit` / `Component` row it is **not** accepted");
 
     const gatekeeper = flat(await read(tree, GATEKEEPER));
     expect(gatekeeper).toContain(

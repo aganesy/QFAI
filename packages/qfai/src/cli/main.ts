@@ -374,94 +374,95 @@ function usage(): string {
   return `qfai <command> [options]
 
 Commands:
-  init                         テンプレを生成
-  validate                     仕様/契約/参照の検査
-  report                       検証結果と集計を出力
-  doctor                       設定/パス/出力前提の診断
-  guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
-  discussion list              discussion pack を列挙（active pointer の pack に * を付与）
-  discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
-  discussion use <id>          active discussion session pointer を設定
-  audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
-  handoff upgrade <legacy>     legacy handoff ファイルを canonical .qfai/handoff.yaml に変換 (CLI-HANDOFF)
-  sdd preflight                /qfai-sdd Stage 0 ゲート（active discussion-pack 選択 / REQ 件数 / blocker 判定）を実行し .qfai/report/preflight_summary.md を生成
-  atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
-  prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
-  prototyping iterate          single-thread evolution loop の cycle 確定
-  prototyping certify [--check]         completion-certificate.json を生成 / 検証
-                                        [--scope <saas-package|full>] scope 限定 certificate を発行
-                                        [--upgrade-scope full] scope 限定 certificate を full DONE に昇格
-  prototyping show-spec                 解決された primary prototyping spec を出力
+  init                         Generate the template tree
+  validate                     Check specs, contracts and references
+  report                       Emit validation results and aggregates
+  doctor                       Diagnose config, paths and output preconditions
+  guardrails                   Extract / check Decision Guardrails (list|extract|check)
+  discussion list              List the discussion packs (the active pointer's pack is marked with *)
+  discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
+  discussion use <id>          Set the active discussion session pointer
+  audit log [filters]          List the decision log under .qfai/evidence/decisions/ (--scope/--operator/--clause + --format table|json)
+  handoff upgrade <legacy>     Convert a legacy handoff file into the canonical .qfai/handoff.yaml (CLI-HANDOFF)
+  sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
+  atdd scaffold --spec <id>    Generate per-TC test skeletons from a spec's Test-Cases (idempotent + N-cycle escalation)
+  prototyping preflight        Diagnose prototyping preconditions (spec/ui/design contracts/roles/browser/targetUrl)
+  prototyping iterate          Commit one cycle of the single-thread evolution loop
+  prototyping certify [--check]         Generate / verify completion-certificate.json
+                                        [--scope <saas-package|full>] issue a scope-limited certificate
+                                        [--upgrade-scope full] promote a scope-limited certificate to full DONE
+  prototyping show-spec                 Print the resolved primary prototyping spec
   prototyping rescope --remove <id> --reason <delta-id>
-                                        frozenSurfaceUnion から退役した surface を外す
-                                        (loop は現 cycle のまま。まだ解決する surface は拒否)
+                                        Drop a retired surface from frozenSurfaceUnion
+                                        (the loop stays on its current cycle; a surface still being resolved is refused)
 
 Options:
-  --root <path>   対象ディレクトリ（init では --dir 未指定時の出力先として扱う）
-  --dir <path>    init の出力先 (init 専用。--root と併用した場合は --dir が優先)
-  --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents、および symlink assets（.agents/.claude/.github/.codex）の生成物を上書き
-                  （生成物には各ツリーの README.md と、qfai 提供の .github/copilot-instructions.md・.github/instructions/** を含む。specs/contracts/steering と assistant/manifest/** は上書きしない）
-                  上書きだけでなく削除も行う: 過去の qfai が .claude/commands/ と .github/prompts/ に置いた
-                  wrapper と、出荷されなくなった skill 用に qfai が置いた wrapper（symlink 化以前の
-                  実ディレクトリを含む）を削除します。所有権は名前ではなくファイルの中身で判定するため
-                  自作の command / prompt / skill は残りますが、symlink には中身がないので、引退済みの
-                  QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
-                  .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
-  --force         handoff upgrade: 既存の .qfai/handoff.yaml を上書き（上書き前に .backup-<ISO> へ退避）
-  --force         prototyping iterate --cycle 0: 既存 iter-00 の再シードに必須。iter-00 を
-                  iter-00.backup-<ISO> へ退避してから stale な iter-NN を掃除（未指定なら
-                  exit 2 で拒否）
-  --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
-  --yes           doctor --autoremediate: 対話確認をスキップ（それ以外では無効）
-  --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
-                              (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
-  --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: 変更を行わず表示のみ
-  --verbose       init: 実行レポートの skipped パス一覧を展開（既定は件数のみ）
-  --format <text|github>       validate の出力形式
-  --format <md|json>           report の出力形式
-  --remove <surface-id>        prototyping rescope: 外す surface id (repeatable)
-  --reason <delta-id>          prototyping rescope: 退役を決めた delta / decision id (必須)
-  --format <text|json>         doctor / prototyping preflight / discussion list の出力形式
-  --active                     discussion list: pack 列挙ではなく active session pointer を表示
-  --strict                     validate: warning 以上で exit 1
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
-  --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
-  --fail-on <error|warning|never>  validate: 失敗条件（--strict より優先）
-  --fail-on <error|warning|never>  doctor / prototyping preflight: 失敗条件（既定は validation.failOn、同梱既定値は error）
-  --fail-on <error|warning|never>  sdd preflight: 失敗条件（never は blocked でも exit 0。preflight は warning 段を持たないため warning は error と同義）
-  --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
-  --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
-  --in <path>                   report: validate.json の入力先（configより優先）
-  --run-validate                report: validate を実行してから report を生成
-  --base-url <url>              report: 基準URL
-  --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
-  --max <number>                guardrails extract: 最大件数
-  --keyword <text>              guardrails list/extract: キーワードフィルタ
-  --format <text|json>          guardrails list/extract/check: 出力形式（既定 text）
-  --target-url <url>            prototyping preflight/iterate: 評価対象の URL
+  --root <path>   Target directory (for init, the output directory when --dir is absent)
+  --dir <path>    init: output directory (init only; --dir wins when both are given)
+  --force         init: overwrite .qfai/assistant/{skills,agents}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
+                  (that output includes each tree's README.md and the qfai-provided .github/copilot-instructions.md and .github/instructions/**; specs/contracts/steering and assistant/manifest/** are never overwritten)
+                  It deletes as well as overwrites: the wrappers a past qfai placed in
+                  .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
+                  that are no longer shipped (including the real directories from before they
+                  became symlinks). Ownership is decided by a file's content and not by its name,
+                  so your own command / prompt / skill files survive; a symlink has no content of
+                  its own, so one you published under a retired QFAI skill name is deleted (its
+                  target .qfai/assistant/skills/<id>/ stays, so you can re-link it).
+  --force         handoff upgrade: overwrite an existing .qfai/handoff.yaml (the previous file is saved to .backup-<ISO> first)
+  --force         prototyping iterate --cycle 0: required to re-seed an existing iter-00. Moves iter-00
+                  to iter-00.backup-<ISO>, then clears the stale iter-NN (without it the run is
+                  refused with exit 2)
+  --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
+  --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
+  --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
+                              (legacy .qfai/assistant/{instructions,steering}/ -> constitution/manifest/catalog/process/)
+  --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: show what would change without writing anything
+  --verbose       init: expand the run report's skipped-path list (counts only by default)
+  --format <text|github>       validate: output format
+  --format <md|json>           report: output format
+  --remove <surface-id>        prototyping rescope: surface id to drop (repeatable)
+  --reason <delta-id>          prototyping rescope: the delta / decision id that retired it (required)
+  --format <text|json>         doctor / prototyping preflight / discussion list: output format
+  --active                     discussion list: show the active session pointer instead of listing packs
+  --strict                     validate: exit 1 on warning or worse
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: select the validation profile
+  --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
+  --fail-on <error|warning|never>  validate: failure threshold (takes precedence over --strict)
+  --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)
+  --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
+  --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
+  --out <path>                  report/doctor/prototyping preflight: output path (a relative path is resolved against --root)
+  --in <path>                   report: validate.json input path (takes precedence over the config)
+  --run-validate                report: run validate first, then generate the report
+  --base-url <url>              report: base URL
+  --path <path>                 guardrails: target file/directory (repeatable)
+  --max <number>                guardrails extract: maximum number of entries
+  --keyword <text>              guardrails list/extract: keyword filter
+  --format <text|json>          guardrails list/extract/check: output format (default text)
+  --target-url <url>            prototyping preflight/iterate: URL under evaluation
   --cycle <number>              prototyping iterate: cycle index (0..9)
-  --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
-  --capture                     prototyping iterate: opt-in な PNG/HTML キャプチャ (default OFF; Playwright を dynamic import)
-  --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
-  --license-patch <file>        prototyping iterate: 任意 cycle で add-only なライセンス allowlist パッチを適用 (cycle 0 限定ではない; audit ledger に追記し以降の cycle で replay。sourceHosts は replay 対象外)
-  --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
-  --emit-skeletons              prototyping iterate --cycle 0: frozenSurfaceUnion の screen ごとに placeholder HTML を出力 (default OFF; opt-in)
-  --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
-  --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration は soft-rubric gates のみ warning へ medium relaxation)
-  --scope <value>               audit log: scope フィールドで filter
-  --scope <saas-package|full>   prototyping certify: scope 限定 certificate を発行 (saas-package は notes[] に skip 対象 gate を列挙)
-  --upgrade-scope full          prototyping certify: scope 限定 certificate を full DONE に昇格 (validate --profile saas-package の signal を再評価)
-  --operator <value>            audit log: operatorIdentity フィールドで filter
-  --clause <substring>          audit log: envelopeContractClause で substring filter
-  --clean                       doctor: TTL 超過 review pack を _archive/ へ退避し、TTL 超過 validate run log (outDir/run-*) を削除 (最新 N 件は常に保持; --dry-run 併用可)
-  --autoremediate               doctor: install + clean + config-fill をまとめて実行
-  --assume <text>               sdd preflight: carry-over の open question / 前提を summary に記録 (複数指定可)
-  --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
-  --spec <id>                   validate/report: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
-                                 指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
-                                 report: 既定の入出力も validate.spec-<ids>.json / report.spec-<ids>.md へ切り替える
-  -h, --help      ヘルプ表示
-  -V, --version   バージョン表示（インストール済み qfai の版番を stdout に出力）
+  --check-convergence           prototyping iterate: peek at a converged loop state without re-running it (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
+  --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; Playwright is imported dynamically)
+  --auto-serve                  prototyping iterate: opt-in in-process local HTTP server (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE is a refusal)
+  --license-patch <file>        prototyping iterate: apply an add-only license allowlist patch on any cycle (not cycle 0 only; appended to the audit ledger and replayed on later cycles. sourceHosts are not replayed)
+  --primary-spec-id <value>     prototyping iterate: pick the primary spec explicitly when several UI-bearing specs exist
+  --emit-skeletons              prototyping iterate --cycle 0: emit a placeholder HTML per frozenSurfaceUnion screen (default OFF; opt-in)
+  --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: output mode (default placeholder)
+  --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration relaxes soft-rubric gates only, to warning at medium)
+  --scope <value>               audit log: filter on the scope field
+  --scope <saas-package|full>   prototyping certify: issue a scope-limited certificate (saas-package lists the skipped gates in notes[])
+  --upgrade-scope full          prototyping certify: promote a scope-limited certificate to full DONE (re-evaluates the validate --profile saas-package signal)
+  --operator <value>            audit log: filter on the operatorIdentity field
+  --clause <substring>          audit log: substring filter on envelopeContractClause
+  --clean                       doctor: move review packs past their TTL into _archive/, and delete validate run logs (outDir/run-*) past their TTL (the newest N are always kept; combinable with --dry-run)
+  --autoremediate               doctor: run install + clean + config-fill together
+  --assume <text>               sdd preflight: record a carried-over open question / assumption in the summary (repeatable)
+  --spec <id>                   atdd scaffold: target spec (e.g. spec-0006)
+  --spec <id>                   validate/report: restrict to the given spec (repeatable; e.g. --spec 0003 --spec spec-0004)
+                                 Excludes spec-owned findings and specs-coverage report output for every other spec
+                                 report: also switches the default input/output to validate.spec-<ids>.json / report.spec-<ids>.md
+  -h, --help      Show this help
+  -V, --version   Show the version (prints the installed qfai's version to stdout)
 `;
 }
 
@@ -481,7 +482,7 @@ async function resolveRoot(
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    const notice = `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`;
+    const notice = `qfai: qfai.config.yaml not found; falling back to defaultConfig (root=${search.root})`;
     if (machineReadable) {
       error(notice);
     } else {

@@ -403,11 +403,35 @@ const LOCK_PATIENCE_MS = 15_000;
  * carries the object. What the holder must not do is read the name once, during that window, and
  * conclude it was dispossessed.
  *
- * Well under `LOCK_STALE_MS`: this is the width of another process's move-and-restore, not a
- * second helping of patience. Only an object whose `dev`/`ino` match what was staged is ever
- * accepted, so re-reading admits nothing a single read would not.
+ * Only an object whose `dev`/`ino` match what was staged is ever accepted, so re-reading admits
+ * nothing a single read would not.
+ *
+ * ## Why it is 5s and not 1s
+ *
+ * It was 1s, sized as "the width of another process's move-and-restore" — and that width is not
+ * a property of the move. It is a property of how long the reclaimer waits to be scheduled, and
+ * a CI runner sharing a box with six other vitest projects moves it. A run that exceeded the
+ * budget was told `the provenance lock was replaced between publishing it and reading it back`
+ * and failed, about a lock that had been restored under it, on a documentation-only pull request
+ * (#1190).
+ *
+ * What this budget covers is now only the window in which the name yields NO OBJECT: any object
+ * at the name answers the question immediately, matching or not. "No object" is what `lstat`
+ * failing looks like, and the read does not sort the failures — an `ENOENT` from the move window
+ * and an `EACCES` on a lock directory this account cannot stat both arrive as `undefined`. The
+ * second is not transient and will spend the whole budget before failing; that is the honest
+ * outcome for a name this process cannot read, and it is bounded.
+ *
+ * Either way the only thing a longer wait blocks is this run. It costs no OTHER writer anything:
+ * in the move window nobody holds the lock, and in the unreadable case this process was never
+ * going to hold it. So the budget has to be long enough to outlast a scheduling delay rather
+ * than a syscall.
+ *
+ * The ceiling is `LOCK_STALE_MS`, and it stays well under it: a holder that spent its whole
+ * staleness window confirming would be reclaimable the moment it started work. Half of it leaves
+ * the heartbeat — which runs throughout, on `LOCK_HEARTBEAT_MS` — several renewals of margin.
  */
-const LOCK_CONFIRM_MS = 1_000;
+const LOCK_CONFIRM_MS = 5_000;
 
 /**
  * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
@@ -784,10 +808,15 @@ async function publishLock(staging: string, lockDir: string): Promise<boolean> {
  * name, same inode, because a `rename` carries the object. A single read taken inside that
  * window sees `ENOENT` and reports a replacement that never happened.
  *
- * So the name is re-read until it answers with the staged object, bounded by `LOCK_CONFIRM_MS`.
- * Nothing is loosened: only an object whose `dev` and `ino` equal the staged one is accepted, so
- * a lock genuinely taken over by somebody else still ends the acquisition — a few polls later
- * instead of on the first read.
+ * So the name is re-read while it answers with NOTHING, bounded by `LOCK_CONFIRM_MS`. An object
+ * at the name ends the loop whichever object it is: the staged one is this holder's lock, and a
+ * different one is somebody else's, which is the dispossession being tested for. No object is the
+ * only reading that is not yet an answer — and that covers a failed `lstat` of any kind, not only
+ * `ENOENT`, which is why {@link LOCK_CONFIRM_MS} is described in those terms.
+ *
+ * Nothing is loosened — only an object whose `dev` and `ino` equal the staged one is accepted —
+ * and the genuine dispossession is now reported on the read that sees it rather than after a
+ * budget spent re-reading the same foreign inode.
  */
 async function confirmPublishedLock(
   lockDir: string,
@@ -799,8 +828,14 @@ async function confirmPublishedLock(
     const published = new Date();
     await utimes(path.join(lockDir, marker), published, published).catch(() => undefined);
     const arrived = await lstat(lockDir).catch(() => undefined);
-    if (arrived !== undefined && arrived.dev === staged.dev && arrived.ino === staged.ino) {
-      return true;
+    if (arrived !== undefined) {
+      // An object is AT the name, so the question is answered either way and
+      // there is nothing left to wait for. Matching identity is this holder's
+      // lock; a different one is somebody else's, which is the dispossession
+      // this function reports — and reporting it here rather than at the
+      // deadline gives the answer as soon as the evidence exists instead of
+      // after a budget spent re-reading the same foreign inode.
+      return arrived.dev === staged.dev && arrived.ino === staged.ino;
     }
     if (Date.now() >= deadline) {
       return false;

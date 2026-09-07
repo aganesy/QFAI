@@ -465,6 +465,16 @@ active `CON-API-*` belong to other specs. A spec with an **active** obligation
 **it owns** finds a row, and this stage's primary procedure enumerates it and
 builds the handoff from it.
 
+**The `Integration` rows are a different case: they are already there.** Phase 2b
+seeds a `Layer = Integration` row per integration-level `TC-*` too — every
+`Level` whose annotation routes to `tests/integration/**` under `QFAI-ATDD-112`:
+`L3`, `integration`, a blank cell, a spelling that names no layer (`smoke`), and
+`system` / `acceptance`. On a spec whose TCs are all integration-level, a first
+run finds them seeded at `todo`, and they are this run's rows to give provenance
+to — the three branches below apply to them exactly as they do to an `E2E` row.
+Reporting them as "zero rows, nothing to do" leaves `/qfai-implement` Phase Red
+step 3b with no handoff to consume and every one of them stuck at `todo`.
+
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
