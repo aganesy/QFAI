@@ -1326,8 +1326,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //   and the rules it vouches for do not.
   // - `!.qfai/evidence/skeleton.md`. `Phase: Skeleton` enumerates its
   //   `Skeleton debt` into that file, and every later invocation reads the
-  //   recorded exit status to decide whether an entrypoint is already proven.
-  //   Ignored, both facts exist only in the working directory that ran it.
+  //   record to find the entrypoint's smoke command, re-runs it, and decides
+  //   from THAT exit status whether the entrypoint is still proven.
+  //   Ignored, both the debt and the command exist only in the working
+  //   directory that ran the phase.
   //
   // Derived by running `qfai init` into a temp root and reading what it wrote,
   // which is how every predecessor was derived — not copied off a failure

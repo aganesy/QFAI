@@ -51,9 +51,17 @@ type Phase = {
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
+/**
+ * Every non-null object can be read by a string key, and what comes back is
+ * `unknown` until something checks it. Saying so is what lets the field reads
+ * below be written as a loop rather than as one branch per key name.
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 /** One routing phase, or a thrown error naming the field that is not one. */
 function toPhase(value: unknown, where: string): Phase {
-  if (typeof value !== "object" || value === null) {
+  if (!isRecord(value)) {
     throw new Error(`${where} is not a mapping`);
   }
   const phase: Phase = {};
@@ -87,22 +95,15 @@ function toPhase(value: unknown, where: string): Phase {
  */
 async function implementPhases(tree: string): Promise<Phase[]> {
   const parsed: unknown = parseYaml(await read(tree, ROUTING));
-  const routing =
-    typeof parsed === "object" && parsed !== null && "routing" in parsed
-      ? parsed.routing
-      : undefined;
+  const routing = isRecord(parsed) ? parsed.routing : undefined;
   if (!Array.isArray(routing)) {
     throw new Error(`${tree}: agent-routing.yml has no routing list`);
   }
   const route: unknown = routing.find(
-    (entry: unknown) =>
-      typeof entry === "object" &&
-      entry !== null &&
-      "skill" in entry &&
-      entry.skill === "qfai-implement",
+    (entry: unknown) => isRecord(entry) && entry.skill === "qfai-implement",
   );
-  if (typeof route !== "object" || route === null || !("phases" in route)) {
-    throw new Error(`${tree}: agent-routing.yml has no qfai-implement route with phases`);
+  if (!isRecord(route)) {
+    throw new Error(`${tree}: agent-routing.yml has no qfai-implement route`);
   }
   const phases: unknown = route.phases;
   if (!Array.isArray(phases)) {
