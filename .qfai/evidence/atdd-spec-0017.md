@@ -2262,7 +2262,7 @@ Re-measured for this commit by a separate walk of the two include roots — not 
 readings agree. The total is on the maintained line below; `node ./scripts/derive-e2e-callsites.mjs`
 prints it with its per-root split.
 
-e2e callsites at this tree: 1744
+e2e callsites at this tree: 1746
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. The seventh INSTANCE is
