@@ -676,76 +676,44 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // project's two globs owes a row. So the last row's callsite figure is compared with the measured
     // one: a commit that adds a callsite reddens this until its row is written, and until then the total
     // beside it is known to be wrong rather than assumed to be right.
-    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-
-    // The globs are the e2e project's, read from the workspace file rather than assumed, because a
-    // guard over "the e2e project's callsites" that hardcodes the directories is one include away from
-    // measuring something else.
     //
-    // That comment was FALSE for three rounds: the globs were read, asserted non-empty and then never
-    // used, while the walk below iterated two hardcoded directory names — the exact failure the sentence
-    // claims is prevented, in the file whose subject is claims of that kind. The roots are derived from
-    // the globs now, so a third include added to the project changes what this measures.
-    const workspace = await source("packages/qfai/vitest.workspace.ts");
-    // The `e2e` project's OWN include list, not every glob in the file: the first version of this
-    // repair matched `tests/…` anywhere and measured the whole tests tree, 4562 against 880. The
-    // block is found by the project name, which is the thing the record's rule names.
-    const project = /name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/.exec(workspace);
-    expect(
-      project,
-      "the workspace must declare an `e2e` project with an include list",
-    ).not.toBeNull();
-    // EVERY include is read, and one this pattern cannot parse is reported rather than dropped.
-    // Silently skipping one would take the walk back to measuring less than the project runs, which
-    // is the failure the derivation replaced — a guard that narrows itself is worse than one that
-    // hardcodes, because the hardcoding is visible.
-    const declared = [...(project?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(
-      (match) => match[1] ?? "",
-    );
-    const globs = declared
-      .map((include) => /^(tests\/[^"*]+)\/\*/.exec(include)?.[1])
-      .filter((root): root is string => root !== undefined);
-    expect(
-      declared.length - globs.length,
-      `an include this walk cannot turn into a root: ${JSON.stringify(declared)}`,
-    ).toBe(0);
-    expect(globs.length, "the e2e project must declare its includes").toBeGreaterThan(0);
-    const roots = [...new Set(globs)].map((glob) => `packages/qfai/${glob}`).sort();
+    // The record is read through `recordedE2eCallsites()` rather than through
+    // `source()` here, so the line's shape is stated in one place — the
+    // derivation module — instead of in a regex on each side of the check.
+    //
+    // The derivation is imported, not re-implemented. It used to live inline
+    // here, and because nothing shipped it, every contributor this row
+    // reddened re-derived it from the prose above — #1065 recorded eight doing
+    // that independently in one sweep, and noted that whoever resolves the
+    // resulting merge conflict sees two plausible integers with no hint that
+    // the answer is neither of them.
+    //
+    // `scripts/derive-e2e-callsites.mjs` is now the one implementation, and
+    // `scripts/pin-stage-evidence-counts.mjs` writes what it returns. This row
+    // still checks the COMMITTED LITERAL against the tree — sharing the
+    // derivation does not make it self-referential, because the literal is not
+    // derived from anything at read time.
+    const { deriveE2eCallsites, recordedE2eCallsites } =
+      await import("../../../../scripts/derive-e2e-callsites.mjs");
+    const { total: measured, perRoot } = await deriveE2eCallsites();
+    const recorded = await recordedE2eCallsites();
 
-    const CALLSITE_LINE = /^[ \t]*(?:it|test)(?:\.\w+)*\s*\(/;
-    let measured = 0;
-    for (const dir of roots) {
-      const walk = async (at: string): Promise<void> => {
-        for (const entry of await readdir(at, { withFileTypes: true })) {
-          const full = path.join(at, entry.name);
-          if (entry.isDirectory()) {
-            await walk(full);
-            continue;
-          }
-          if (!/\.test\.ts$/.test(entry.name)) continue;
-          const text = await readFile(full, "utf8");
-          measured += text.split(/\r?\n/).filter((line) => CALLSITE_LINE.test(line)).length;
-        }
-      };
-      await walk(path.join(ROOT, dir));
-    }
-
-    // Compared against a line describing the WORKING TREE, not against the table's last row. A row
-    // cannot name the commit it is written in — that is round 10's `m1`, and pointing this guard at the
-    // last row would have made it red at exactly the commit that corrects it, or made the row false.
-    // The table stays as history, where every row names a revision a reader can check; what has to be
-    // current is the count the two totals are valid FOR, which is a property of the tree.
-    const stated = /^e2e callsites at this tree: (\d+)$/m.exec(evidence);
     expect(
-      stated,
+      recorded,
       "the record must state its own e2e callsite count, in the form " +
-        "`e2e callsites at this tree: N`, because the two suite totals above it are only valid for that " +
-        "count and nothing else pins them",
+        "`e2e callsites at this tree: N`, because the two suite totals above it are only valid for " +
+        "that count and nothing else pins them",
     ).not.toBeNull();
+
     expect(
-      Number(stated?.[1]),
-      `the record states ${stated?.[1] ?? "?"} e2e callsites; the tree holds ${String(measured)}. ` +
-        "A commit that changes one invalidates both suite totals, which is the defect six rounds have " +
+      recorded,
+      `the record states ${String(recorded)} e2e callsites; the tree holds ${String(measured)} ` +
+        `(${Object.entries(perRoot)
+          .map(([root, count]) => `${root} ${String(count)}`)
+          .join(", ")}). ` +
+        "Run `node scripts/pin-stage-evidence-counts.mjs` and land it in the same commit as the " +
+        "callsite edit; the two suite totals beside that line are known-invalid until then. A " +
+        "commit that changes one invalidates both totals, which is the defect six rounds have " +
         "reported and five repairs have re-typed",
     ).toBe(measured);
   });

@@ -294,6 +294,74 @@ describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both ax
   });
 });
 
+describe("the knob set stays portable, because a fixture spreads it into a foreign root", () => {
+  it("holds no root-relative path", async () => {
+    // `spec0017RunnerParallelismE2E` writes a fixture project into a `mkdtemp` root and spreads
+    // `projectKnobs` into its config VERBATIM — that is what the suite is for, since it exists to
+    // reproduce the declared knobs and measure what the runner does with them.
+    //
+    // So every value here has to mean the same thing in a root that is not this one. A
+    // `setupFiles: ["./tests/setup/…"]` resolves against the FIXTURE root, where the file does not
+    // exist, and all four slot files failed to collect — the measurement never ran, and the
+    // failure named the fixture rather than the knob that broke it. That is the shape this row
+    // catches: not "setupFiles is absent" but "nothing here is root-relative".
+    //
+    // Where a path-valued option belongs is beside the projects, in `vitest.workspace.ts`, which
+    // no fixture copies. `SETUP_FILES` is exported for that and the row below checks it arrives.
+    const knobs: unknown = await import("../../vitest.knobs");
+    const projectKnobs = isRecord(knobs) ? knobs["projectKnobs"] : undefined;
+    expect(isRecord(projectKnobs), "vitest.knobs must export projectKnobs").toBe(true);
+
+    const relative: string[] = [];
+    const walk = (value: unknown, at: string): void => {
+      if (typeof value === "string") {
+        if (/^\.{1,2}\//.test(value)) relative.push(`${at}: ${value}`);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => {
+          walk(item, `${at}[${String(index)}]`);
+        });
+        return;
+      }
+      if (isRecord(value)) {
+        for (const [key, item] of Object.entries(value)) walk(item, `${at}.${key}`);
+      }
+    };
+    walk(projectKnobs, "projectKnobs");
+
+    expect(
+      relative,
+      "a relative path in the shared knob set resolves against whichever root spreads it, and one " +
+        "of those roots is a temp directory holding none of this repository's files",
+    ).toEqual([]);
+
+    // Non-vacuity: the walk must have seen the knobs, or an empty result means nothing.
+    expect(
+      Object.keys(isRecord(projectKnobs) ? projectKnobs : {}).length,
+      "the knob set must be non-empty for this to be about",
+    ).toBeGreaterThan(0);
+  });
+
+  it("gives every project the per-file setup, at the site the fixture does not copy", async () => {
+    const { projects } = await load();
+    expect(projects.length, "the workspace must declare projects").toBeGreaterThan(0);
+
+    const missing = projects
+      .filter((project) => {
+        const declared = project["setupFiles"];
+        return !Array.isArray(declared) || declared.length === 0;
+      })
+      .map(nameOf);
+    expect(
+      missing,
+      "the annotation suppressor patches `process.stdout` per FILE, and `pool: forks` with " +
+        "`isolate: true` gives every file its own process — a project without it leaks real " +
+        "GitHub annotations from whatever fixture it validates (#1160)",
+    ).toEqual([]);
+  });
+});
+
 describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry settings", () => {
   it("declares no retry in the resolved configuration and holds no retry setting in any runner file", async () => {
     // CLAIM 1 — structural, over both halves of the split. `retry` is the runner's key;

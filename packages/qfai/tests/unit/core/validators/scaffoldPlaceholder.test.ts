@@ -267,6 +267,52 @@ describe("validateScaffoldPlaceholder", () => {
     }
   });
 
+  // Pin: one state-write failure disables the counter writes for the
+  // REST of the pass. `updateState` waits out its whole lock budget
+  // before it fails, so retrying per TC would multiply that wait by
+  // the number of unfilled placeholders — a repo with 100 of them
+  // would stall for minutes and then emit exactly the same fail-soft
+  // findings.
+  it("stops writing counters after the first state-write failure in a pass", async () => {
+    const escalationMod = await import("../../../../src/core/atdd/scaffoldEscalation.js");
+    const recordSpy = vi
+      .spyOn(escalationMod, "recordValidateCycle")
+      .mockRejectedValue(new Error("qfai: state lock ... is still held after 5000ms"));
+    const resetSpy = vi.spyOn(escalationMod, "resetValidateCycle");
+    try {
+      await seedScaffold("spec-0008", "TC-0008-0001", placeholderBodyFor("TC-0008-0001"));
+      await seedScaffold("spec-0008", "TC-0008-0002", placeholderBodyFor("TC-0008-0002"));
+      await seedScaffold("spec-0008", "TC-0008-0003", placeholderBodyFor("TC-0008-0003"));
+      // Two tracked-but-unobserved keys: the reset sweep would visit
+      // both, and each visit is another full lock wait.
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "state.json"),
+        JSON.stringify({
+          atdd: {
+            scaffoldValidateCycles: { "spec-0008:TC-0008-0008": 1, "spec-0008:TC-0008-0009": 1 },
+          },
+        }),
+        "utf-8",
+      );
+
+      const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+
+      // Every placeholder is still reported (fail-soft), but only the
+      // first one paid for a lock wait.
+      expect(issues.filter((i) => i.code === "D-SCAFFOLD-PLACEHOLDER")).toHaveLength(3);
+      expect(recordSpy).toHaveBeenCalledTimes(1);
+      // The reset sweep must not restart the same wait either.
+      expect(resetSpy).not.toHaveBeenCalled();
+      for (const finding of issues.filter((i) => i.code === "D-SCAFFOLD-PLACEHOLDER")) {
+        expect(finding.message).toMatch(/counter unavailable/);
+      }
+    } finally {
+      recordSpy.mockRestore();
+      resetSpy.mockRestore();
+    }
+  });
+
   // Pin: stale counters from a previous run are reset when the
   // placeholder is no longer observed this pass. This preserves the
   // "consecutive" semantics — an operator who fills the placeholder

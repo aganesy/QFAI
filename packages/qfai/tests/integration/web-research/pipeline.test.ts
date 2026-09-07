@@ -15,7 +15,11 @@ const skillDir = path.join(
   "skills",
   "web-research",
 );
-const mcpTemplateDir = path.join(repoRoot, "packages", "qfai", "assets", "mcp-templates");
+// The MCP templates live inside the skill that documents them, so `qfai init`
+// copies them into the consumer root alongside SKILL.md. Held outside the init
+// payload they shipped in the npm tarball but never reached a project, leaving
+// SKILL.md's "Configuration templates:" pointers unresolvable for consumers.
+const mcpTemplateDir = path.join(skillDir, "mcp-templates");
 
 async function readSkill(): Promise<string> {
   return readFile(path.join(skillDir, "SKILL.md"), "utf-8");

@@ -50,13 +50,15 @@
 
 ## AC-0004-0012
 
-- `layoutAntiPatternsDetected` is an array of strings drawn from the whitelist `{lap-001-orphan-page, lap-002-deadend-flow, lap-003-hidden-state, lap-004-missing-wayfinding, lap-005-input-trap, lap-006-modal-dead-zone, lap-007-untargetable-affordance, lap-008-no-back-affordance}`.
-- Any unknown token rejects the review.json with `QFAI-PROT-002` at error severity.
+- `layoutAntiPatternsDetected` is an array of strings drawn from the whitelist in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is the SSOT the validator resolves against (`loadKnownLapIds`): `{lap-001-saas-dashboard, lap-002-card-grid-sidebar, lap-003-saas-table-tabs, lap-004-bento-grid, lap-005-centered-hero, lap-006-overcrowded-sidebar, lap-007-state-not-represented, lap-008-no-back-affordance}`. Six are scoped `layout` and two (`lap-007`, `lap-008`) `semantic`; each entry carries the regex that detects it, so adding or renaming one is a change to that file and this list follows it.
+- Any token absent from that registry rejects the review.json with `QFAI-PROT-002` at error severity.
+- An earlier revision of this criterion listed eight different IDs — `lap-001-orphan-page`, `lap-002-deadend-flow`, `lap-003-hidden-state`, `lap-004-missing-wayfinding`, `lap-005-input-trap`, `lap-006-modal-dead-zone`, `lap-007-untargetable-affordance` — naming navigation and interaction defects rather than layout archetypes. Seven of the eight had no counterpart in the registry, so every one of them was rejected by the shipped gate while every ID the gate accepts violated this criterion (#1105). The registry is canonical: it is what the validator reads, and each entry carries a working detector. Whether the navigation-defect family is separately worth detecting is a product question, recorded in `08_Open-questions.md` rather than settled here.
 
 ## AC-0004-0013
 
-- `designMdViolations` is an array of objects with shape `{category: "color"|"font"|"radius"|"shadow", expected: string, found: string, location: string}`.
-- Any extra field, missing field, or out-of-enum `category` rejects the review.json with `QFAI-PROT-002` at error severity.
+- `designMdViolations` is an array of objects with shape `{kind: "color"|"font"|"radius"|"shadow", found: string}` — the shape `core/validators/prototypingEvidence.ts` checks (`isViolationArray`, and `DESIGN_MD_VIOLATION_KINDS` for the enum).
+- A missing `kind`, a missing `found`, or an out-of-enum `kind` rejects the review.json with `QFAI-PROT-002` at error severity. Extra fields do **not** reject: the shipped check reads the two it requires and ignores the rest.
+- An earlier revision named the key `category` and required `expected` and `location` too, with any extra field rejecting. None of that is what the validator does, so a payload written to this criterion was rejected on `kind` and a payload written to the validator violated the criterion (#1105). The enum itself was already right. Whether a reviewer should have to supply `expected` and `location` — information the shipped check drops — is a product question, recorded in `08_Open-questions.md`.
 
 ## AC-0004-0014
 

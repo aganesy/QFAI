@@ -203,7 +203,13 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 
   it("TC-1.1.9: input with UTF-8 BOM still parses", () => {
-    const result = parseDesignMd("﻿" + VALID_SAMPLE);
+    const result = parseDesignMd(
+      // The BOM is the SUBJECT here, so it is written as an escape rather
+      // than typed: a literal one is invisible in a diff, and the guard that
+      // now scans the whole tree for exactly this character would report the
+      // fixture as a finding (#1202).
+      "\uFEFF" + VALID_SAMPLE,
+    );
     expect("error" in result).toBe(false);
     if ("error" in result) return;
     expect(result.data.brand.name).toBe("Acme Ledger");

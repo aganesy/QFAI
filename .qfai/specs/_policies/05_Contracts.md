@@ -92,7 +92,7 @@ QFAI 自体は外部公開 API を持たない。
 
 - CLI-INIT / CLI-VAL / CLI-WLOG を新設。CHG-003 が導入する surface delta はこの 3 contract に集約される。
 - `packages/qfai/src/core/paths/assistantPaths.ts` は TS module 形式の SSOT であり、別途 yaml/md contract は不要。`assistantPaths.ts` をハードコード文字列で迂回することは NFR-0001 違反となる。
-- `.qfai/steering/` (work-log surface, project-root) は配布物 (`packages/qfai/package.json#files`) に含まれない。`assets/init/.qfai/steering/{README.md,.gitkeep,_templates/entry.md}` のみ配布される。
+- `.qfai/steering/` (work-log surface, project-root) は配布物 (`packages/qfai/package.json#files`) に含まれない。seed される `README.md` / `.gitkeep` / `_templates/entry.md` は静的アセットではなく `packages/qfai/src/cli/commands/init.ts` が生成するため、`assets/` 配下のファイルとしてではなく `dist/` 内の文字列リテラルとしてのみ配布される (`.gitkeep` の body は空文字列リテラル)。詳細は `.qfai/contracts/cli/qfai-init.md#distributed-surface-obligations`。
 - 旧 path layout は 1 minor release の deprecation window 中は受理されるが `D-DEPRECATED-PATH` warning を発する。sunset version は migration memo に明記される。
 
 ## CHG-005 — qfai-prototyping defect remediation (2026-05-24)
