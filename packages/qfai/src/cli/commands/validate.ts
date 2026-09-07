@@ -549,7 +549,31 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run listed as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
-  "canonical-uix": ["UIX-VAL-*"],
+  // Enumerated rather than `UIX-VAL-*`, because that glob is a PREFIX of every
+  // `UIX-VAL-SKILL-*` code and `prototyping-skill` owns those. With both
+  // entries matching them, all twelve belonged to two groups at once, and
+  // `QFAI-PROFILE-001` derives its skip-set as `full groups - profile groups`:
+  // a profile that ran `prototyping-skill` and not this group was told the
+  // twelve were skipped when they had run (#1215).
+  //
+  // The family grammar has no negation, so the disjoint set is spelled out.
+  // Nine patterns for 29 codes, and the enumeration is safe to maintain by hand
+  // because `gateGroupCoverage.test.ts` fails on a `UIX-VAL-` code that no
+  // pattern here covers — the drift this list could otherwise accumulate is the
+  // one that guard exists for.
+  "canonical-uix": [
+    "UIX-VAL-3LAYER-*",
+    "UIX-VAL-CLASSIFICATION-*",
+    "UIX-VAL-DIRECTION-*",
+    // Covers `UIX-VAL-DS-READ-ERROR`, `UIX-VAL-DS01` and `UIX-VAL-DS02`: the
+    // two numbered ones carry no separator, so a `-*` form would miss them.
+    "UIX-VAL-DS*",
+    "UIX-VAL-OQ-*",
+    "UIX-VAL-SCREEN-*",
+    "UIX-VAL-SIDECAR-*",
+    "UIX-VAL-T05",
+    "UIX-VAL-TREND-*",
+  ],
   sdd: [
     // `runSddValidators` dispatches the preflight input-source rule, so a
     // partial profile that skips the `sdd` group has not evaluated it either.

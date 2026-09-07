@@ -148,6 +148,33 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     ).toEqual([]);
   });
 
+  it("gives every emitted code at most one gate group", () => {
+    // The other direction of the same claim, and the less dangerous error: a
+    // code in two groups is reported as unevaluated whenever EITHER is absent
+    // from the profile, so a profile that ran one of them is told it did not.
+    // `canonical-uix: ["UIX-VAL-*"]` did this to all twelve `UIX-VAL-SKILL-*`
+    // codes, which `prototyping-skill` owns (#1215).
+    const groups = Object.entries(GATE_GROUP_FAMILIES) as [string, readonly string[]][];
+    const shared = EMITTED_RULE_CODES.map((code) => ({
+      code,
+      owners: groups
+        .filter(([, families]) => families.some((family) => familyMatches(family, code)))
+        .map(([group]) => group),
+    }))
+      .filter((entry) => entry.owners.length > 1)
+      .map((entry) => `${entry.code} -> ${entry.owners.join(", ")}`)
+      .sort();
+
+    expect(
+      shared,
+      `emitted code claimed by more than one gate group: ${shared.join("; ")} — ` +
+        "`QFAI-PROFILE-001` reports a code as skipped when ANY group holding it is absent from " +
+        "the profile, so a shared code is reported skipped by a profile that ran it. The family " +
+        "grammar has no negation: where one group's prefix swallows another's, spell the narrower " +
+        "set out",
+    ).toEqual([]);
+  });
+
   it("drops an exemption once a group starts covering its code", () => {
     // The other direction, and the one an exemption list rots in. A code that
     // gained a family is now reported by the notice, and the entry claiming it
