@@ -46,7 +46,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-s
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/constitution/*`
-- P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View). **Read its lifecycle before anything else and stop on a retired spec.** A spec is retired by a **complete** declaration in that header block: a top-level `Status: superseded` whose `Superseded-by:` names a spec that exists and itself declares `Status: active`, or `Status: deprecated` / `Status: removed` with a `Deprecated-at:` that is a real calendar date — the same resolution `validate` performs. Its `test-list.md` rows below are history, not obligations: `npx qfai validate` and `npx qfai report` have already dropped them, and `/qfai-implement` refuses the handoff for a retired spec, so writing acceptance tests from them produces work nobody owes and a handoff nobody will take. Report the declared `Status:` (and, for `superseded`, its successor) and ask for a row in the inheritor's ledger instead. An **incomplete** declaration is not a retirement and does not stop this run: the ledger still gates, so proceed and report the incomplete declaration
 - P4: specs/contracts obligations
   - `.qfai/specs/<spec-id>/02_User-stories.md` (US)
@@ -119,7 +119,7 @@ Use the shared schema.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned`, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either; that table is reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input — every active `BR-ID` it declares owns a row, whether the declaration is a Rule Table row or a `BR-*` heading carrying no retiring `Status:`, and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
-  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` is recorded one row per contract under `## Cross-spec obligations` with a named sibling owner. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` is recorded one row per obligation under `## Cross-spec obligations` with a named sibling owner — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -300,7 +300,8 @@ Notes:
 - Evidence file exists and includes work orders + reviewer notes.
 - Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
 - Completion is approved by a reviewer who did not implement tests.
-- **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix, by the stage-review procedure that produced it (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); a mismatch means the evidence moved after the verdict. **Seal the P8 pack too**: when the last reviewer response lands, and before this stage writes its verdict, hash the pack this stage opened — `.qfai/review/review-<timestamp>/`, whole — by the same procedure, and record it **outside the pack** in the stage evidence file's `## Final status` as `Review pack:` (that path) and `Review pack seal:` (that hash). That section is the one part excluded from the P8 audit subject, so writing it there does not stale the verdict, and it exists even on a spec with no ATDD-owned rows — where there is no item evidence entry to hold the seal at all. At completion, recompute the seal over the recorded path and compare it with the **recorded** value — `../qfai-implement/references/evidence-revision.md` states that rule once and it applies here: `## Final status` is outside every audit subject and outside the working-tree revision, so an expected value read from the working tree could be rewritten in the same pass that edited the pack, and every recomputation would still agree, and check that `## Final status` says what that pack says. The recording and the recomputation must be two moments: a value computed from the pack at completion always matches itself whatever was edited in between, and the stage hash covers the evidence but not the verdict, so a `REVISE` edited to `PASS` in the response, the summary and the status together left every recomputation unchanged. On a spec with no ATDD-owned rows `/qfai-implement`'s gate item 10 never runs, so without this the stored hash was written by P8 and read by nobody — and the evidence tree is out of the working-tree revision, so a later edit moved nothing else either.
+- **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix — a mismatch means the evidence moved after the verdict (`references/pack-seal.md#recompute-the-p8-audit-hash-before-declaring-completion`).
+- **The P8 review pack is sealed, and its seal is re-checked at completion against the recorded value** — `Review pack:` and `Review pack seal:` in the stage evidence file's `## Final status`, recorded before this stage writes its verdict (`references/pack-seal.md#seal-the-p8-pack`) and recomputed against that recorded value at completion (`references/pack-seal.md#recompute-the-seal-at-completion-against-the-recorded-value`).
 
 ## Not-done criteria
 
@@ -321,7 +322,7 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Three of them carry a contract
+Required sections: the template below is the list. Four of them carry a contract
 the heading cannot:
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
@@ -335,6 +336,7 @@ the heading cannot:
   The matrix and its per-`❌` justifications live in that committed file;
   restating them here would lose them.
 - **Cross-spec obligations** — one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding: `QFAI-ATDD-113` / `-115` aggregate every uncovered contract into one finding's `refs`, so split them into a row each. `None` when the run exited 0. It is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
+- **Final status** — the verdict and its confirmer, plus `Review pack:` and `Review pack seal:` for the P8 pack this stage opened (`references/pack-seal.md#seal-the-p8-pack`). This section is excluded from the P8 audit subject, which is why the seal can be written here without making the verdict stale.
 
 Template:
 
@@ -374,6 +376,9 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 ## Gaps / Open risks
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
+
+Review pack: `.qfai/review/review-<timestamp>/`
+Review pack seal: <sha256>
 ```
 
 ## ATDD Work Orders (mandatory)

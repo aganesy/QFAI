@@ -55,6 +55,7 @@ import {
   formatJapaneseLine,
   listSourceFiles,
   relativeToPosix,
+  stripComments,
 } from "../helpers/japaneseMessageScan.js";
 
 import { SRC_JAPANESE_ALLOWLIST } from "./cliMessageLanguage.allowlist.js";
@@ -94,6 +95,25 @@ async function readSources(files: readonly string[], from: string): Promise<[str
   );
 }
 
+/**
+ * Every file under `src/`, read once for the whole file.
+ *
+ * Two cases below walk the same tree, and reading it twice doubles the I/O
+ * this file's timeout is sized for. The promise is created on first use and
+ * reused, so the second case gets the first one's result.
+ */
+let srcSourcesPromise: Promise<[string, string][]> | undefined;
+function srcSources(): Promise<[string, string][]> {
+  srcSourcesPromise ??= (async () => {
+    const files = await listSourceFiles(SRC_DIR);
+    if (files.length === 0) {
+      throw new Error(`no sources found under ${SRC_DIR}`);
+    }
+    return readSources(files, SRC_DIR);
+  })();
+  return srcSourcesPromise;
+}
+
 describe("operator-facing CLI message language", () => {
   it(
     "keeps every string emitted from src/cli in English",
@@ -115,16 +135,44 @@ describe("operator-facing CLI message language", () => {
     expect(reportJapaneseLines(relativeToPosix(PACKAGE_ROOT, DOCTOR_TS), source)).toEqual([]);
   });
 
+  /**
+   * What the allowlist is allowed to weigh. Translating a message lowers it;
+   * only a merge taking the base's own entries raises it.
+   *
+   * Every other assertion here compares the list against the sources, so the
+   * list is exact — but only in one direction. Adding an entry for a message
+   * that is really in the tree satisfies all of them, and the lane goes green:
+   * the guard then reads "no Japanese nobody bothered to list" rather than "no
+   * new Japanese", which is a much weaker claim and the one the list exists to
+   * avoid making.
+   *
+   * A merge absorbing the base's new messages is the case that legitimately
+   * adds entries, and it still moves this number — which is the point. The
+   * addition stops being an invisible edit inside a 700-line data file and
+   * becomes a line a reviewer is asked about.
+   */
+  const ALLOWLISTED_MESSAGE_COUNT = 775;
+
+  it("holds the allowlist to a count that only a reviewed change moves", () => {
+    const counted = Object.values(SRC_JAPANESE_ALLOWLIST).reduce(
+      (total, entries) => total + entries.length,
+      0,
+    );
+    expect(
+      counted,
+      counted > ALLOWLISTED_MESSAGE_COUNT
+        ? "the allowlist grew. A new operator-facing message must be English (cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, raise this number in the same change so the addition is reviewed"
+        : "the allowlist shrank — lower this number in the same change, so the migration's progress cannot be spent on a later addition",
+    ).toBe(ALLOWLISTED_MESSAGE_COUNT);
+  });
+
   it(
     "admits no Japanese message under src that the allowlist does not name",
     async () => {
-      const files = await listSourceFiles(SRC_DIR);
-      expect(files.length).toBeGreaterThan(0);
-
       const added: string[] = [];
       const migrated: string[] = [];
       const seen = new Set<string>();
-      for (const [rel, source] of await readSources(files, SRC_DIR)) {
+      for (const [rel, source] of await srcSources()) {
         seen.add(rel);
         const diff = diffAgainstAllowlist(
           rel,
@@ -146,6 +194,51 @@ describe("operator-facing CLI message language", () => {
         migrated,
         "allowlist entries whose message is gone — delete them, do not leave a reusable slot",
       ).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps the launcher out of a runtime message, and in the guidelines",
+    async () => {
+      // A running qfai does not know which entry point started it — an `npx`
+      // prefix, a package script, or a global bin — so a message naming one
+      // launcher is wrong for the other two. Shipped docs take the opposite
+      // rule and `canonicalQfaiLauncher.test.ts` enforces it there.
+      const guidelines = await readFile(GUIDELINES_MD, "utf-8");
+      expect(guidelines).toContain("## Command Invocation");
+      expect(guidelines).toContain("`npx qfai <subcommand>`");
+      expect(guidelines).toContain("`qfai <subcommand>`");
+
+      // Comments explain the implementation and are not read by an operator,
+      // so they are removed first — with the same TypeScript scanner the
+      // Japanese scan uses, for the reason this file's header gives. A
+      // line-start test cannot do it: `emit(msg); // npx qfai validate` is a
+      // comment on a code line, and would be reported as a runtime message.
+      // Stripping replaces a comment with spaces, so the line numbers below
+      // still point at the source.
+      const offenders: string[] = [];
+      for (const [rel, source] of await srcSources()) {
+        // The scan is what costs; the strip is what costs most. A file whose
+        // raw text has no `npx qfai ` anywhere cannot produce an offender
+        // after the strip either, since stripping only removes text.
+        if (!source.includes("npx qfai ")) {
+          continue;
+        }
+        stripComments(source)
+          .split(/\r?\n/)
+          .forEach((line, index) => {
+            // The generated-file header is documentation in the reader's tree,
+            // so it takes the documentation rule. It survives the strip: it is
+            // a `#` comment inside a TypeScript string, not a TypeScript one.
+            if (!line.includes("npx qfai ") || line.includes("# Generated by")) {
+              return;
+            }
+            offenders.push(`${rel}:${index + 1}`);
+          });
+      }
+
+      expect(offenders, "runtime message naming a launcher").toEqual([]);
     },
     SCAN_TIMEOUT_MS,
   );
