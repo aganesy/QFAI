@@ -101,7 +101,12 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       expectPhrase(signals, "would read `E2E_s` 100 / `INT_s` 0");
 
       const skill = await read(tree, SKILL);
-      expectPhrase(skill, "plus the `CON-DB-*` this spec references");
+      // Qualified the same way `volume-signals.md` states it two assertions
+      // above: `QFAI-ATDD-115` fires on the active contracts only, so a skill
+      // line reading "the `CON-DB-*` this spec references" sizes the row for
+      // tests the slice must not write.
+      expectPhrase(skill, "plus the **active** `CON-DB-*` this spec references");
+      expect(flat(skill)).toContain("| #TC + #CON-DB active |");
       expect(flat(skill)).toContain("| `L3`/no-`Level` TCs + active `CON-DB-*` |");
     });
 
