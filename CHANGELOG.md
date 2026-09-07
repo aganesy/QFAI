@@ -1,6 +1,6 @@
 # Changelog
 
-この変更履歴は Keep a Changelog と Semantic Versioning に基づきます。
+This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 

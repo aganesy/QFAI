@@ -38,17 +38,21 @@ least.
 
 ## Enforcement
 
-One surface is checked today.
-`packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md` pins
-operator-facing strings in `packages/qfai/src/**` to English, and
-`packages/qfai/tests/unit/cliMessageLanguage.test.ts` holds them against
-`cliMessageLanguage.allowlist.ts`. An unlisted Japanese line fails. A message
-that has been translated is struck from the list rather than left as a slot
-something else can take.
+Two surfaces are checked today. Both work the same way: an unlisted Japanese
+line fails, and a line that has been translated is struck from the list rather
+than left as a slot something else can take.
 
-That allowlist covers operator-facing strings only. Comments, documents, tests
-and `CHANGELOG.md` have no check, so on those surfaces the rule is held by
-review.
+| Surface                                           | Pinned by                                                                | Held against                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Operator-facing strings in `packages/qfai/src/**` | `packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md` | `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and its allowlist |
+| `CHANGELOG.md`                                    | this rule                                                                | `packages/qfai/tests/unit/changelogLanguage.test.ts` and its allowlist  |
+
+The changelog check is keyed by release section, so `## [Unreleased]` — where
+every entry is written before it ships — is held at zero rather than
+allowlisted. Released sections carry the backlog.
+
+Comments, other documents, tests and workflow files have no check, so on those
+surfaces the rule is held by review.
 
 ## Existing content
 
