@@ -33,3 +33,4 @@ Key rules to follow:
 - `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.
 - `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
 - `.agents/rules/version-discipline.md` — release version numbers are the project maintainer's call; never select or bump one independently.
+- `.agents/rules/documentation-clarity.md` — plain, minimal writing in PRs, issues, comments and Markdown; no local identifiers, no account of how the work went.

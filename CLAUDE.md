@@ -17,6 +17,11 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と
   `pnpm lint:mermaid` が強制する。see `.claude/rules/document-schema.md`
   (master: `.agents/rules/document-schema.md`).
+- Writing standard for PRs, issues, code comments and Markdown — plain wording,
+  no local identifiers, no account of how the work went: see
+  `.claude/rules/documentation-clarity.md` (master:
+  `.agents/rules/documentation-clarity.md`). The hooks in `.claude/settings.json`
+  restate it before a GitHub post and after a Markdown edit.
 - Version discipline: branch name pins `packages/qfai/package.json#version`.
   On a pinned branch (`feature/vX.Y.Z`) the pin acts as the user's release
   authorization — sync `package.json`, rename `## [Unreleased]` to

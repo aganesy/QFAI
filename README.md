@@ -718,6 +718,29 @@ it carries the delegation line to the canonical document of the same name, or is
 if you publish a canonical skill of your own under a name QFAI itself once shipped, `--force` removes
 that link. Your `.qfai/assistant/skills/` entry is untouched; re-create the link to publish it again.
 
+### Cross-AI rules and the writing reminder
+
+`npx qfai init` seeds `.agents/rules/**`, the rule set every AI coding agent in
+the project shares, and points `AGENTS.md` and `CLAUDE.md` at it. One of those
+rules, `documentation-clarity.md`, sets the writing standard for pull requests,
+issues, code comments and Markdown: no project-local identifiers, no account of
+how the work went, cut to what a reader outside the team can follow.
+
+Claude Code is reminded of it at the two moments it matters, through hooks in
+`.claude/settings.json`:
+
+| Moment                                                           | Hook        |
+| ---------------------------------------------------------------- | ----------- |
+| Posting a pull request, issue or review through the GitHub tools | PreToolUse  |
+| Writing or editing a Markdown file                               | PostToolUse |
+
+A project without a settings file receives the whole shipped one. A project that
+already has settings keeps them: only the hook entries are added, after whatever
+is already there, and a second run adds nothing. A settings file that is not
+readable JSON is left untouched and reported. Each hook runs `node` directly and
+prints one fixed message — no shell, no file reads, no network. Remove the
+entries to turn the reminder off; the rule still applies.
+
 ## Contributing (for QFAI maintainers)
 
 This repository is a monorepo, and the distributable package is under `packages/qfai`.

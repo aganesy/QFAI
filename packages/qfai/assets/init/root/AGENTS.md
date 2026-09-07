@@ -17,6 +17,7 @@ the master rather than this file.
 - `.agents/rules/root-additions-policy.md` — never add root-level files or directories without explicit user approval.
 - `.agents/rules/distributed-surface.md` — keep internal identifiers and private version markers out of published files.
 - `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.
+- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.
 
 This section, markers included, is the only part `npx qfai init` writes. A
 repository that already had an `AGENTS.md` gets it appended once; a later run
