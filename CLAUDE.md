@@ -13,6 +13,10 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Do not create new directories or files at the repository root without explicit user approval; editing existing root files is allowed (see `.claude/rules/root-additions-policy.md`, master: `.agents/rules/root-additions-policy.md`).
 - Traceability chain (REQ -> Spec -> Code -> Test) must be maintained; TDD-IDs and TC-Refs must not collide or reference unregistered entries.
 - Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`).
+- SDD ドキュメントの構造 (章構成 / リスト / 表の必須列 / Gherkin / Mermaid) は
+  `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と
+  `pnpm lint:mermaid` が強制する。see `.claude/rules/document-schema.md`
+  (master: `.agents/rules/document-schema.md`).
 - Version discipline: branch name pins `packages/qfai/package.json#version`.
   On a pinned branch (`feature/vX.Y.Z`) the pin acts as the user's release
   authorization — sync `package.json`, rename `## [Unreleased]` to

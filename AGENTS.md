@@ -58,6 +58,8 @@ QFAI パッケージの版番号 (`X.Y.Z`) を AI が独断で選んではいけ
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
+- `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
+  `packages/qfai/assets/mdschema/**` が SSOT)
 
 `.claude/rules/` はこれらへの symlink (Windows 環境では Git の
 `core.symlinks=true` 設定 + Developer Mode が必要。それ以外の場合は

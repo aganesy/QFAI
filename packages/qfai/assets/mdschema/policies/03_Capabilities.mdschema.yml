@@ -1,0 +1,38 @@
+# Document schema: `<specsDir>/_policies/03_Capabilities.md`
+#
+# The capability catalogue. Each row binds a capability to the spec that
+# realises it, which is what makes the CAP -> spec direction of the
+# traceability chain walkable.
+
+structure:
+  - heading:
+      pattern: "^# 03 Capabilities.*"
+      regex: true
+    description: Capability catalogue and the ordering rule behind it.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Capability order rule$"
+          regex: true
+        description: How capabilities are ordered and why, as a list.
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## CAP Catalog$"
+          regex: true
+        description: >-
+          One row per capability, each stating what it solves.
+
+          `CAP ID` and the statement are the required columns. The binding to a
+          spec pack is NOT required here: each pack already declares it in
+          `01_Spec.md` as `Parent: CAP-NNNN`, and that direction is the one a
+          reader follows. A second copy of the mapping in this table is a second
+          thing to keep true.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - CAP ID
+              - Statement (what)
