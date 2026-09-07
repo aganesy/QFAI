@@ -1,5 +1,5 @@
 /**
- * Archetype tie-breaker for Step 11.3 Phase A autonomous selection.
+ * Archetype tie-breaker for Required Process step 9 Phase A autonomous selection.
  *
  * When two or more archetypes share the same aggregate taste-interview score,
  * this function deterministically selects the winner using:

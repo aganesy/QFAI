@@ -3,6 +3,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../../config.js";
+import { isUntouchedCycleZeroSeed } from "../../prototyping/iteration.js";
 import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
 import { exists, issue } from "../utils.js";
@@ -20,6 +21,18 @@ export async function validatePrototypingArtifactRefIntegrity(
   if (doc && Array.isArray(doc.iterations)) {
     for (let i = 0; i < doc.iterations.length; i += 1) {
       const iter = asRecord(doc.iterations[i]);
+      // The cycle-0 seed cites no evidence and owes none: `iterate`
+      // writes it BEFORE capture, so any ref it carried named a file
+      // that did not exist yet, and the project failed this gate for
+      // the whole window between `iterate` and the first review.
+      //
+      // The test is the shared structural one, not a `reviewerId`
+      // string. Keying a waiver on that field alone was not
+      // load-bearing on the sibling gate — nothing cleared the stamp,
+      // and writing it into any row waived that row — so both gates
+      // ask the same question through one predicate: is this record
+      // still the untouched seed the writer emitted?
+      if (isUntouchedCycleZeroSeed(doc.iterations, i)) continue;
       const refs = asRecord(iter?.evidenceRefs);
       await validateArtifactRef(
         root,

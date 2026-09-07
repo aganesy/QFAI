@@ -431,6 +431,41 @@ const seededDiscussionPackFiles = {
     "- Confidence: high",
     "- Rationale: provide stable evidence for seeded discussion.",
     "",
+    // The research-first protocol stores its output here, and the gate now
+    // requires the section on the current pack — a seeded pack without it is
+    // QFAI-RESEARCH-016. That code rides the `researchSummarySchemaFields`
+    // promotion window, so while the window is open it is a `warning` and the
+    // `--fail-on error` run below reports it without failing; from
+    // the release the window names it is an `error` and the run stops. Seeded
+    // either way, so this fixture does not start failing on the promotion.
+    "## Research Summary",
+    "",
+    "```yaml",
+    "research_summary:",
+    "  sources:",
+    "    - id: SRC-0001",
+    "      title: QFAI packaging smoke fixture note",
+    "      url: https://example.com/qfai/verify-pack",
+    "      published: 2026-02-16",
+    "  best_practices:",
+    "    - id: BP-0001",
+    "      category: packaging",
+    "      title: Seed a realistic discussion pack before packing",
+    "      description: Give the pack-time validate gate concrete inputs.",
+    "      source_id: SRC-0001",
+    "  anti_patterns:",
+    "    - id: AP-0001",
+    "      category: packaging",
+    "      title: Validate against an empty scaffold",
+    "      description: An empty pack lets every discussion gate pass vacuously.",
+    "      source_id: SRC-0001",
+    "  reflection:",
+    "    - source_id: SRC-0001",
+    "      finding: The smoke fixture has to carry the research storage slot.",
+    "      action: apply",
+    "      reason: Pack-time validate gates the current pack on that section.",
+    "```",
+    "",
   ],
   "05_Scope.md": [
     "# 05 Scope",
@@ -539,8 +574,37 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
-const seededReviewPackDir = path.join(outputDir, ".qfai", "review", "review-20260216000000000");
+const seededReviewPackName = "review-20260216000000000";
+const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
+
+/**
+ * The commit this run is gating, named by the seeded pack's `revision`.
+ *
+ * The sandbox lives under this repository's own work tree, so the check behind
+ * that field resolves the value against this repository. A placeholder resolves
+ * to nothing and reports a warning on every release run — one no change to the
+ * product can remove, in the list a reader scans before shipping — and the
+ * branch that runs when a revision *does* resolve never runs at all.
+ *
+ * `HEAD` is also what the pack means: its verdict describes the tree being
+ * validated, and that tree is this checkout.
+ */
+function headCommit() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    throw new Error(
+      "git rev-parse HEAD failed, so the seeded review pack cannot name the commit this run " +
+        "is gating. Run verify-pack from a git checkout.",
+    );
+  }
+}
+const seededRevision = headCommit();
 writeFileSync(
   path.join(seededReviewPackDir, "review_request.md"),
   [
@@ -571,7 +635,7 @@ writeFileSync(
       // by the current one.
       revision_form: "content-hash",
       // Declaring the contract means the tree has to be named too.
-      revision: "0000000000000000000000000000000000000000",
+      revision: seededRevision,
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
         kind: "discussion",
@@ -602,6 +666,37 @@ execFileSync(
     stdio: "inherit",
   },
 );
+
+// The seeded pack must not be the reason for a finding about itself. Read
+// through the report rather than the console: `--fail-on error` lets a warning
+// past, so the run stays green while the list a reader scans before shipping
+// carries an entry no change to the product can remove.
+const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
+if (!existsSync(validateJsonPath)) {
+  throw new Error("validate did not write .qfai/report/validate.json.");
+}
+const validateReport = JSON.parse(readFileSync(validateJsonPath, "utf-8"));
+// Stated rather than defaulted to an empty list. A report whose `issues` is
+// not a list is one this check cannot read, and reading it as "no findings"
+// gives the answer the check exists to withhold — the pass would then mean
+// the file was unreadable, and nothing would say so.
+if (!Array.isArray(validateReport.issues)) {
+  throw new Error(
+    `${validateJsonPath} has no \`issues\` array. The self-finding check reads that list, so a ` +
+      `report without one is unreadable rather than clean.`,
+  );
+}
+const selfInflicted = validateReport.issues.filter(
+  (issue) => typeof issue?.file === "string" && issue.file.includes(seededReviewPackName),
+);
+if (selfInflicted.length > 0) {
+  throw new Error(
+    "the seeded review pack produced findings about itself:\n" +
+      selfInflicted
+        .map((issue) => `  ${issue.severity} ${issue.code} ${issue.file}: ${issue.message}`)
+        .join("\n"),
+  );
+}
 
 execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
   stdio: "inherit",

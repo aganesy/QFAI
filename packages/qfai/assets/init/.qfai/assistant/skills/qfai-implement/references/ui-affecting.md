@@ -22,7 +22,7 @@ ledger left `Owning module` undeclared (`#when-owning-module-is-not-declared`).
   project says which paths render a user-visible surface; its bullet syntax, its matching rule and
   its `none` form are defined there. Until it is filled the clauses below that read it are
   unevaluable, which is a steering gap for
-  `constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`
+  `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`
   to close, not a licence to guess.
 - **Declared UI contracts** — every `*.yaml` **and** `*.yml` file found by walking
   `<contractsDir>/ui/**` **recursively**, where `<contractsDir>` is `paths.contractsDir` from

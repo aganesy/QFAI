@@ -17,7 +17,7 @@ profiles:
     always_required: [completion-reviewer, qa-gatekeeper]
     conditional_required: [implementation-reviewer]
   # `qfai-implement` makes `implementation-reviewer` PASS item 8 of its
-  # unconditional 11-point gate, so for that skill the code-quality review is
+  # unconditional 12-point gate, so for that skill the code-quality review is
   # always required and always blocking. It shares `runtime-heavy` with
   # qfai-atdd / qfai-configure / qfai-verify, where the same reviewer is
   # genuinely conditional — hence a profile of its own rather than widening

@@ -4,7 +4,7 @@
 Canonical path: `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`
 ID pattern:     `CR-\d{8}-\d{4}`
 A Change Request is the mandatory precondition for any upstream SSOT edit
-(`constitution/drift-protocol.md`). `qfai-implement` blocks spec completion
+(`.qfai/assistant/constitution/drift-protocol.md`). `qfai-implement` blocks spec completion
 while an unresolved CR exists, so `Status` must be a real, checkable field.
 -->
 
@@ -12,7 +12,7 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 - Title: `<one-line summary>`
 - Raised by: `<skill or agent>`
 - Raised at: `YYYY-MM-DDThh:mm:ssZ`
-- Class: `intent` <!-- intent | defect; see constitution/drift-protocol.md#drift-classes -->
+- Class: `intent` <!-- intent | defect; see .qfai/assistant/constitution/drift-protocol.md#drift-classes -->
 - Status: `open` <!-- open | approved | rejected | superseded -->
 - Approved by: `-` <!-- required whenever Status leaves `open` (approved / rejected / superseded) -->
 - Approved at: `-` <!-- YYYY-MM-DDThh:mm:ssZ -->
@@ -24,7 +24,7 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 `Status: approved` records the operator's decision; `Applied at` records that
 the approved actions were carried out. `qfai-implement` treats an approved CR
 as unresolved until `Applied at` and `Resolution` are both filled, because
-`constitution/drift-protocol.md` resumes downstream work only after the
+`.qfai/assistant/constitution/drift-protocol.md` resumes downstream work only after the
 upstream artifacts have been updated.
 -->
 
@@ -45,7 +45,7 @@ REQUIRED when Class is `defect`; delete this section when Class is `intent`.
 The command and its verbatim output, or the two artifact excerpts that
 contradict each other, with paths and line numbers. A defect claim without a
 reproduction is an intent-drift CR that skipped its options
-(`constitution/drift-protocol.md#drift-classes`).
+(`.qfai/assistant/constitution/drift-protocol.md#drift-classes`).
 -->
 
 ## Proposed change
@@ -74,7 +74,7 @@ was fabricated.
 
 <!--
 The set STOP covers for THIS Change Request
-(`constitution/drift-protocol.md#when-drift-is-detected`, step 1). Enumerate it
+(`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`, step 1). Enumerate it
 — an item not listed here is not blocked by this CR and continues. The halt is
 not repository-wide, and this section is what makes that checkable.
 
@@ -92,11 +92,24 @@ union of the open CRs' blocked sets.
 
 ## Impact scope
 
+<!--
+THIS SECTION IS WHAT AUTHORISES AN UPSTREAM EDIT. `QFAI-DRIFT-001` reads it —
+and only it — from every CR at `Status: approved`, so a path named anywhere
+else in this document authorises nothing. That includes `## Context`, the
+`## Reproduction` block a defect-class CR must carry, and a rejected option: a
+sentence FORBIDDING an edit used to grant it.
+
+Name each upstream file by its repository-relative path (preferred) or by its
+bare filename. A contract ID does NOT authorise a path — `CON-DB-0022` names a
+declaration inside a file, not the file — so give the path as well as the ID.
+-->
+
 - Specs: `<spec-NNNN, ...>`
 - Plans: `<paths>`
 - Tests: `<paths / TDD-IDs>`
-- Contracts: `<CON-*>`
+- Contracts: `<CON-*>` — `<.qfai/contracts/db/<file>.sql, ...>`
 - Schema: `<paths>`
+- Upstream paths edited under this CR: `<repository-relative paths, comma-separated>`
 
 ## Decision needed from user
 

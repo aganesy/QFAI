@@ -19,7 +19,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { collectHeadingTcIdsFrom, collectHeadingTcLevelsFrom } from "./atddTraceability.js";
+import {
+  collectHeadingTcIdsFrom,
+  collectHeadingTcLevelsFrom,
+  collectTcLevels,
+  resolveAtddHomeKind,
+} from "./atddTraceability.js";
 import {
   hasTestCaseTableSection,
   resolveTestCaseTable,
@@ -35,6 +40,23 @@ export type TestCaseIds = {
   knownTcIds: Set<string>;
   unitComponentTcIds: Set<string>;
   /**
+   * The TCs whose ATDD annotation routes to `tests/integration/**`, which is
+   * exactly the set Phase 2b owes a `Layer = Integration` ledger row.
+   *
+   * Derived from {@link collectTcLevels} and {@link resolveAtddHomeKind} rather
+   * than from a word list of its own. `QFAI-ATDD-112` routes by that pair, so
+   * a second spelling test here would be a second answer to "is this TC
+   * integration-level" — and the two would disagree exactly where it costs
+   * most. `system` and `acceptance` are the case that proves it: both are
+   * *recognised* by the TDD level vocabulary, so a "neither vocabulary knows
+   * it" test puts them in no group at all, while ATDD routes them here.
+   *
+   * A TC that declares no `Level` is in this set for the same reason ATDD
+   * routes an unreadable cell to integration: the obligation is kept rather
+   * than discharged.
+   */
+  integrationTcIds: Set<string>;
+  /**
    * Coverage-target TC -> the lower-cased `Level` it declared, or `""` when the
    * spec declared none. The id set alone discards the level, so coverage could
    * only ask "is this TC on some row"; the crosswalk needs to ask "on a row of
@@ -43,6 +65,20 @@ export type TestCaseIds = {
   coverageTargetLevels: Map<string, string>;
   /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
   unrecognizedLevels: Set<string>;
+  /**
+   * Declared TCs that state no `Level` at all — a blank cell, a heading with no
+   * `- Level:` line, or a `06_Test-Cases.md` with no `Level` column. They are
+   * not coverage targets (`tddHelpers.classifyCoverageLevel`) and are owed to
+   * `QFAI-ATDD-112` instead.
+   *
+   * Exposed rather than merely skipped because the previous rule *did* make
+   * them targets: a project upgraded from it still carries the ledger rows that
+   * rule seeded, and a stale row keeps the TC owned by `/qfai-implement` while
+   * ATDD owns it too. `validateTddList` reads this to report those rows so they
+   * can be retired or given a `Level`. Empty on the early-return paths, where
+   * no `Level` was read at all and silence is the honest answer.
+   */
+  undeclaredLevelTcIds: Set<string>;
   /**
    * Set when no `TC-ID`-bearing table could be located. Both TC checks go
    * silent in that case, so the caller reports the miss rather than letting
@@ -65,13 +101,43 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   // second `unrecognizedLevels` that could diverge from this one.
   const knownTcIds = new Set<string>();
   const unitComponentTcIds = new Set<string>();
+  const integrationTcIds = new Set<string>();
   const unrecognizedLevels = new Set<string>();
   const coverageTargetLevels = new Map<string, string>();
+  const undeclaredLevelTcIds = new Set<string>();
   const collected: TestCaseIds = {
     knownTcIds,
     unitComponentTcIds,
+    integrationTcIds,
     unrecognizedLevels,
     coverageTargetLevels,
+    undeclaredLevelTcIds,
+  };
+  // Every TC for which some heading or row carried a non-empty `Level`,
+  // whatever that value classified as. The complement against `knownTcIds` is
+  // the undeclared set, which cannot be built as we go: a TC whose first row
+  // says nothing may be declared by a later one.
+  const levelDeclaredTcIds = new Set<string>();
+  const settleUndeclared = (): void => {
+    undeclaredLevelTcIds.clear();
+    for (const tcId of knownTcIds) {
+      if (levelDeclaredTcIds.has(tcId)) continue;
+      undeclaredLevelTcIds.add(tcId);
+    }
+  };
+  /**
+   * Fills {@link integrationTcIds} from the ids collected so far.
+   *
+   * Called at each return that can carry TCs rather than once at the end,
+   * because the `!resolution.table` branch returns a populated `knownTcIds`
+   * (a heading-form spec) and leaving the set empty there would report every
+   * integration obligation such a spec has as absent.
+   */
+  const settleIntegrationTcIds = (raw: string): void => {
+    const levels = collectTcLevels(raw);
+    for (const tcId of knownTcIds) {
+      if (resolveAtddHomeKind(levels.get(tcId)) === "integration") integrationTcIds.add(tcId);
+    }
   };
   const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return { ...collected, fileMissing: true };
@@ -99,6 +165,12 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   const headingLeveledTcIds = new Set<string>();
   for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
     knownTcIds.add(tcId);
+    // Before the first-declaration guard below: a superseded duplicate heading
+    // is still a heading that states a `Level`, so the TC is declared either
+    // way. An empty `- Level:` line states nothing and does not count.
+    if (level.trim().length > 0) {
+      levelDeclaredTcIds.add(tcId);
+    }
     // Reported only for a declaration that is actually in force. A superseded
     // duplicate heading raised `TDDLIST_UNKNOWN_LEVEL` for a value nothing
     // reads, with a message ("every such TC becomes a mandatory ledger row")
@@ -136,6 +208,11 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
     // `TDDLIST_TC_TABLE_UNRESOLVED` nor `TDDLIST_TC_NOT_COVERED` was raised
     // and ATDD asked for the default integration annotation instead.
     const brokenSection = hasTestCaseTableSection(content);
+    settleIntegrationTcIds(content);
+    // Settled on the heading-only path too: a `## TC-0001` block with no
+    // `- Level:` line is exactly the shape the old rule made a target, so a
+    // heading-form spec can carry the same stale ledger rows a table one does.
+    settleUndeclared();
     return knownTcIds.size > 0 && !brokenSection
       ? collected
       : { ...collected, unresolved: resolution.reason };
@@ -148,17 +225,6 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   // L1` row in a second table would otherwise be owed by nothing at all.
 
   const tableLeveledTcIds = new Set<string>();
-  // Coverage targets admitted by the blank/absent-`Level` fallback rather than
-  // by a declaration, and therefore still revocable.
-  //
-  // `classifyCoverageLevel("")` is `coverage-target` on purpose — an unstated
-  // `Level` must not silently drop the TC out of the only gate L1/L2 have. But
-  // a row that says nothing cannot out-rank a later row that says `L3`: the
-  // ATDD collector ignores a blank cell entirely and takes the `L3`, so leaving
-  // the provisional target in place made a correctly annotated integration TC
-  // owe `QFAI-ATDD-112` *and* `TDDLIST_TC_NOT_COVERED`. Tracking which ids the
-  // fallback added is what lets the first explicit `Level` settle it either way.
-  const provisionalTcIds = new Set<string>();
   for (const table of resolveTestCaseTables(content)) {
     // Lower-cased on both sides: `resolveTestCaseTables` now accepts a `tc-id`
     // / `TC-Id` header the way the ATDD collector always has, and a
@@ -190,42 +256,35 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       // `QFAI-ATDD-112`, and an inflated target count in the report.
       if (tableLeveledTcIds.has(tcId)) continue;
       const level = levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "";
-      if (levelIndex >= 0) {
+      if (levelIndex >= 0 && classifyCoverageLevel(level) === "unrecognized") {
         // The unrecognized-value report sits behind the same rule, for the same
         // reason it does in the heading pass: a superseded row's `Level` is not
         // in force and must not be described as making the TC a mandatory
         // ledger row.
-        if (classifyCoverageLevel(level) === "unrecognized") {
-          unrecognizedLevels.add((row[levelIndex] ?? "").trim());
-        }
-        if (level.length > 0) {
-          // The first *explicit* `Level` is the declaration, and it settles a
-          // provisional target in whichever direction it points.
-          tableLeveledTcIds.add(tcId);
-          if (!isCoverageTargetLevel(level)) {
-            if (provisionalTcIds.delete(tcId)) {
-              unitComponentTcIds.delete(tcId);
-              coverageTargetLevels.delete(tcId);
-            }
-            continue;
-          }
-          if (provisionalTcIds.delete(tcId)) {
-            // Provisionally recorded as `""`; the declaration replaces it, so
-            // the `Level`/`Layer` crosswalk reads the level the spec states
-            // rather than the absence an earlier row happened to show.
-            coverageTargetLevels.set(tcId, level);
-          }
-        }
+        unrecognizedLevels.add((row[levelIndex] ?? "").trim());
       }
-      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
+      // A row that declares no `Level` — blank cell, or no `Level` column at
+      // all — declares nothing, and nothing is not a claim. It is not settled
+      // either: a later row that does declare one still speaks for the TC, so
+      // this row neither records a target nor enters `tableLeveledTcIds`.
+      // Claiming it here made a `Level`-less TC a coverage target while
+      // `QFAI-ATDD-112` was claiming the same TC for `tests/integration/**`
+      // (`tddHelpers.classifyCoverageLevel`), which is one TC owed to two
+      // owners and a seeded row whose `Layer` nothing could derive. The
+      // heading form already left it to ATDD; the table form now agrees.
+      if (level.length === 0) continue;
+      // The first *explicit* `Level` is the declaration, and it settles the TC
+      // in whichever direction it points.
+      tableLeveledTcIds.add(tcId);
+      levelDeclaredTcIds.add(tcId);
+      if (!isCoverageTargetLevel(level)) continue;
       unitComponentTcIds.add(tcId);
       if (!coverageTargetLevels.has(tcId)) {
         coverageTargetLevels.set(tcId, level);
       }
-      if (level.length === 0) {
-        provisionalTcIds.add(tcId);
-      }
     }
   }
+  settleIntegrationTcIds(content);
+  settleUndeclared();
   return collected;
 }

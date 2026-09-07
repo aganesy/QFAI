@@ -67,11 +67,19 @@ const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
 ];
 
+/** Repo-relative rule-master paths cited by the generated agent instructions. */
+const RULE_REFERENCE_RE = /\.agents\/rules\/[A-Za-z0-9._-]+\.md/g;
+
 const TEXT_EXTENSIONS = new Set([
   ".md",
   ".yaml",
   ".yml",
   ".json",
+  // The MCP server templates the `web-research` skill ships. A text format the
+  // init payload carries but this walk does not open is a distributed surface
+  // with no guard over it — the shell guard greps the tree with no extension
+  // filter, so the two layers would disagree about what they cover.
+  ".toml",
   ".ts",
   ".tsx",
   ".js",
@@ -191,6 +199,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     const hits: Hit[] = [];
     const nameHits: Hit[] = [];
     const visitedRelative: string[] = [];
+    const scannedRelative: string[] = [];
     for await (const { full: file, isFile } of walk(tmpDir)) {
       const relative = path.relative(tmpDir, file);
       visitedRelative.push(relative);
@@ -200,6 +209,7 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       // extensionless `.gitkeep` / `.gitignore` / `.gitattributes` included.
       if (!isFile) continue;
       if (!isScannableTextFile(file)) continue;
+      scannedRelative.push(relative);
       const stats = await stat(file);
       if (stats.size > 1_000_000) continue;
       const content = await readFile(file, "utf-8");
@@ -252,9 +262,21 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     }
     expect(nameHits).toEqual([]);
 
-    // TC-1.5.1: DESIGN.md must be in the walked file list (guard against
-    // accidental rename / exclusion of the root brand SSOT).
-    expect(visitedRelative).toContain("DESIGN.md");
+    // TC-1.5.1: the brand sample must be in the walked file list (guard
+    // against accidental rename / exclusion). It ships as the prototyping
+    // template rather than at the project root: `qfai init` writes no root
+    // DESIGN.md, because `/qfai-discussion` emits one and only for a
+    // visual-prototyping surface.
+    expect(visitedRelative).toContain(
+      path.join(
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-prototyping",
+        "templates",
+        "DESIGN.md.sample",
+      ),
+    );
 
     // The walk must actually reach the symlinked wrappers, or the name pass
     // above proves nothing about the names `syncIntegrationWrappers` mints.
@@ -269,6 +291,21 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       symlinked.length,
       "the walk must reach the skill wrappers init creates as symlinks",
     ).toBeGreaterThan(0);
+
+    // The MCP server templates the `web-research` skill ships are TOML — a text
+    // format the init payload did not carry until they moved into it, and one
+    // this pass would have walked past unread. A shipped text file the content
+    // scan skips is a distributed surface with no guard over it, and the shell
+    // guard greps the tree with no extension filter at all, so the two layers
+    // would have disagreed about what they cover with nothing saying so.
+    //
+    // Pinned on the SCANNED list rather than the walked one: walking a file
+    // proves nothing about whether its bytes were read, which is the whole
+    // distinction `isScannableTextFile` draws.
+    expect(
+      scannedRelative.filter((rel) => rel.endsWith(".toml")),
+      "the init payload ships .toml, so the content scan has to open it",
+    ).not.toEqual([]);
   });
 
   // The walk above only proves that today's tree happens to be clean —
@@ -309,9 +346,17 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     expect(classNames(path.join(".qfai", "assistant", "steering", "test-layers.md"))).toEqual([]);
   });
 
-  // TC-1.5.2: standalone DESIGN.md template scan against all 4 PATTERNS.
-  it("DESIGN.md template alone has zero matches across all 4 forbidden patterns", async () => {
-    const designMdPath = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+  // TC-1.5.2: standalone DESIGN.md sample scan against all 4 PATTERNS.
+  it("the DESIGN.md sample alone has zero matches across all 4 forbidden patterns", async () => {
+    const designMdPath = path.join(
+      getInitAssetsDir(),
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "DESIGN.md.sample",
+    );
     const content = await readFile(designMdPath, "utf-8");
     const lines = content.split("\n");
     const hits: Array<{ pattern: string; line: number; match: string }> = [];
@@ -334,5 +379,45 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
       );
     }
     expect(hits).toEqual([]);
+  });
+
+  // The generated agent instruction files declare `.agents/rules/**` the
+  // cross-AI SSOT. A consumer project has no other source for those files, so
+  // every path they name must exist in the tree `qfai init` just produced —
+  // otherwise the rules named as authoritative are unreadable by construction.
+  it("every .agents/rules path cited by the generated instructions resolves", async () => {
+    const tmpDir = await newTempDir();
+    await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
+
+    // Every entry point an agent loads on its own: Codex reads `AGENTS.md`,
+    // Claude Code reads `CLAUDE.md`, Copilot reads its instructions file.
+    // `.codex/README.md` is not auto-loaded, but it makes the same claim, so
+    // its citations have to resolve too.
+    const citingFiles = [
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      ".codex/README.md",
+    ];
+    const missing: string[] = [];
+
+    for (const citing of citingFiles) {
+      const citingPath = path.join(tmpDir, ...citing.split("/"));
+      const content = await readFile(citingPath, "utf-8").catch(() => null);
+      expect(content, `qfai init did not create ${citing}`).not.toBeNull();
+      const cited = new Set(content?.match(RULE_REFERENCE_RE) ?? []);
+      expect(cited.size, `${citing} cites no .agents/rules path`).toBeGreaterThan(0);
+      for (const rulePath of cited) {
+        const stats = await stat(path.join(tmpDir, ...rulePath.split("/"))).catch(() => null);
+        if (!stats?.isFile()) {
+          missing.push(`${citing} -> ${rulePath}`);
+        }
+      }
+    }
+
+    expect(
+      missing,
+      `dangling .agents/rules references in qfai init output:\n${missing.join("\n")}`,
+    ).toEqual([]);
   });
 });

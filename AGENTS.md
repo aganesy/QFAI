@@ -58,6 +58,10 @@ QFAI パッケージの版番号 (`X.Y.Z`) を AI が独断で選んではいけ
 - `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
 - `root-additions-policy.md` (repo root への新規追加は要確認)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
+- `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
+  `packages/qfai/assets/mdschema/**` が SSOT)
+- `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
+- `repository-language.md` (this repository is written in English)
 
 `.claude/rules/` はこれらへの symlink (Windows 環境では Git の
 `core.symlinks=true` 設定 + Developer Mode が必要。それ以外の場合は
@@ -66,6 +70,20 @@ QFAI パッケージの版番号 (`X.Y.Z`) を AI が独断で選んではいけ
 Codex / Copilot は本ファイル (`AGENTS.md`) と
 `.github/copilot-instructions.md` / `.codex/README.md` の参照経由で
 これらを参照すること。
+
+## 記述基準 (全 AI 必読)
+
+PR / issue のタイトルと説明、変更差分に含まれるコードコメントと Markdown は、
+`.agents/rules/documentation-clarity.md` (SSOT) の基準を満たしてから完了とする。
+
+- ソースと Markdown に issue/PR 番号、チケット ID、内輪の呼称を書かない。
+- 検討や実装の経緯を書かない。現在の仕様とその理由だけを書く。
+- 自明・重複・冗長な記述を削る。箇条書きと表で整理する。
+- 一般的な用語のみを使い、一文を短くする。
+- 書き終えたら変更範囲を全件読み直し、翻訳調の文を自然な文に直す。
+
+`.claude/settings.json` の hooks が、GitHub MCP ツールでの投稿前と
+Markdown 編集後に、この基準を自動で読み込ませる。
 
 ## コア姿勢
 

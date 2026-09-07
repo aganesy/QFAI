@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /**
@@ -29,29 +31,360 @@ export async function validateContractConsistency(
     return [];
   }
 
-  const dbDomains = await collectDbStateDomains(dbFiles);
-  if (dbDomains.size === 0) {
-    return [];
+  const collected = await collectDbStateDomains(dbFiles);
+  const issues: Issue[] = [];
+
+  // `QFAI-CONTRACT-041` ships behind a promotion window (P7). The declaration
+  // FORMAT is new, so the first authors to use it are answering another finding
+  // voluntarily and will get the grammar wrong in the ways the message exists
+  // to teach; failing their run on a line they added to engage with the tool is
+  // the worst first experience of it. Resolved once here rather than per
+  // finding: it is one fact about the running version, and reading it inside a
+  // loop would say otherwise.
+  const declarationSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
+  );
+
+  // Reported before anything else, and whether or not a domain was collected: a
+  // declaration nobody could read is a defect in the declaration, and it is
+  // exactly the state in which the author believes they have answered a finding
+  // that is still standing.
+  for (const { file, line } of collected.malformed) {
+    issues.push(unreadableDerivedDeclaration(file, line, declarationSeverity));
   }
 
-  const issues: Issue[] = [];
+  if (collected.domains.size === 0) {
+    return issues;
+  }
+
+  // Which declared values actually did work, gathered across every API contract
+  // so the staleness verdict is taken once and not once per file.
+  const honoured = new Set<string>();
   for (const file of apiFiles) {
-    issues.push(...(await validateApiFileAgainstDb(file, dbDomains)));
+    issues.push(...(await validateApiFileAgainstDb(file, collected, honoured)));
+  }
+  issues.push(...staleDerivedDeclarations(collected, honoured, declarationSeverity));
+  return issues;
+}
+
+/** `<file>::<normalized field>::<value>`, the key a declaration is credited by. */
+function derivedKey(declaration: DerivedDeclaration, value: string): string {
+  return `${declaration.file}::${normalizeFieldName(declaration.fieldName)}::${value}`;
+}
+
+/** One contract's bound on a field name, kept separate from every other's. */
+type DbFieldBinding = {
+  /** The contract file that declares it. */
+  file: string;
+  /** Values THAT file can store for the field. */
+  values: Set<string>;
+  /**
+   * Whether this file's bound is a Postgres ENUM rather than a check
+   * constraint.
+   *
+   * The two forms the collector reads cannot be conflated. An ENUM — `CREATE
+   * TYPE … AS ENUM`, or an inline `col ENUM(…)` — rejects an out-of-domain
+   * value at insert time, so an API contract requiring one describes a pair no
+   * implementation can satisfy. A `CHECK (col IN (…))` is a bound the DB
+   * currently asserts: it can be dropped, replaced, or declared `NOT VALID`,
+   * and the column itself still holds the value.
+   *
+   * Within one file the enum wins where the two forms provably bound the SAME
+   * column: an ENUM column carrying a redundant CHECK is still an ENUM column,
+   * and the strictest constraint is the one an implementation has to satisfy
+   * (#1100). Where they may not — see {@link enumEvidence} — this is false and
+   * the finding stays a warning.
+   */
+  enumBacked: boolean;
+  /**
+   * The file declared an ENUM for this name, whether or not that is decisive.
+   *
+   * `collectSqlDomainBounds` keys on the column NAME, not on the table, so a
+   * contract declaring two tables that each have a `status` column — one ENUM,
+   * one CHECK — collapses to one entry carrying both forms, indistinguishable
+   * there from #1100's single column with a redundant CHECK. The tie is broken
+   * by the one fact that separates them: a file declaring ONE table has only
+   * one column of that name, so both forms are the same column; a file
+   * declaring several may not, and the same rule as across contracts applies —
+   * a CHECK among the candidates means the value can be stored, so
+   * impossibility is not a claim this rule may make.
+   *
+   * That downgrade costs the one case it cannot tell apart: a genuinely
+   * redundant CHECK in a multi-table contract reports `warning` instead of
+   * `error`. Attributing a column to its table is what would recover it, and
+   * that is a change to the SQL scan rather than to this decision.
+   *
+   * Kept separate from {@link enumBacked} so the message can still name the
+   * contract the ENUM came from, which is what the reader needs in order to
+   * settle the pairing.
+   */
+  enumEvidence: boolean;
+};
+
+/**
+ * Every contract that declares a given field NAME, one entry each.
+ *
+ * Not merged into a single bound, because the pairing is by normalized field
+ * name across all DB contracts while the severity and the domain are then
+ * attributed to one specific API field. Flattening the two lost that
+ * distinction: `sim_lines.status` is bounded by a `CHECK` in
+ * `db-0003-sim-lines.sql`, and OR-ing `enumBacked` across the eight contracts
+ * that happen to declare a column called `status` made it `error` on the
+ * strength of `call_list_status` — an ENUM on a different table, which rejects
+ * no insert into `sim_lines` at all. The message said so in as many words
+ * (`insert 時に拒絶される物理制約`), of a field that does not have one (#1162).
+ *
+ * #1100's "enum wins" is unaffected: it is about ONE field bound by both
+ * forms, which is a per-file question and is settled per file.
+ */
+type DbDomain = {
+  bindings: DbFieldBinding[];
+  /**
+   * Every value any contributing contract can store — the representability
+   * test, which is still the union.
+   *
+   * Held beside the bindings and grown with them rather than folded on demand.
+   * `validateApiFileAgainstDb` runs once per API contract, so a union computed
+   * at the point of use is rebuilt for every API file that names the field —
+   * an allocation the split would otherwise have introduced. It is updated at
+   * the one place a binding is added, so it cannot come to describe a set of
+   * bindings that is no longer there.
+   */
+  values: Set<string>;
+};
+
+function domainFiles(domain: DbDomain): string[] {
+  return domain.bindings.map((binding) => binding.file).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * The contracts that declared an ENUM for this name — evidence, not verdict.
+ *
+ * `enumEvidence` rather than `enumBacked`, so a contract whose ENUM was not
+ * decisive is still named. That contract is exactly what the reader has to look
+ * at to settle the pairing, and omitting it would leave the message saying the
+ * candidates disagree without saying with whom.
+ */
+function enumFiles(domain: DbDomain): string[] {
+  return domain.bindings
+    .filter((binding) => binding.enumEvidence)
+    .map((binding) => binding.file)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Whether EVERY contract that could be bounding this field is an ENUM.
+ *
+ * The claim `error` makes is that no implementation can satisfy both
+ * contracts, and that only holds when the value is refused whichever of the
+ * candidate bindings is the real one. A single `CHECK` among them means the
+ * value can be stored somewhere the pairing considers a match, so the claim is
+ * not available and the finding stays a `warning` — which is also what the
+ * rule said before #1100 raised the genuinely impossible case.
+ */
+function isEnumOnly(domain: DbDomain): boolean {
+  return domain.bindings.length > 0 && domain.bindings.every((binding) => binding.enumBacked);
+}
+
+/**
+ * The allowed values, broken down per contract once there is more than one.
+ *
+ * A flat union reads as one domain and is not one. The reported list for
+ * `SimLine.status` held `accepted`, `archived`, `sending`, `succeeded` … while
+ * `sim_lines.status` accepts four values — so a value legal only in an
+ * unrelated table counted as representable, and the reader had no way to see
+ * that from the message (#1162). Narrowing the pairing itself needs a
+ * table-to-schema binding this rule does not have; showing which contract
+ * contributed what is what it can do, and is enough to act on.
+ */
+function describeDbDomain(domain: DbDomain): string {
+  const sorted = [...domain.bindings].sort((a, b) => a.file.localeCompare(b.file));
+  const first = sorted[0];
+  if (sorted.length === 1 && first) {
+    return `DB domain: ${Array.from(first.values).sort().join(", ")}`;
+  }
+  const perFile = sorted
+    .map((binding) => `${binding.file}: ${Array.from(binding.values).sort().join(", ")}`)
+    .join("; ");
+  return `DB domain, per contract: ${perFile}`;
+}
+
+/** Which form bounds the field, and — when the candidates disagree — whose. */
+function describeDbConstraint(domain: DbDomain): string {
+  if (isEnumOnly(domain)) {
+    return "ENUM (a physical constraint: the insert is rejected)";
+  }
+  const fromEnum = enumFiles(domain);
+  if (fromEnum.length === 0) {
+    return (
+      "CHECK (a constraint the DB asserts today, not the shape of the column: " +
+      "it can be dropped or declared NOT VALID)"
+    );
+  }
+  return (
+    `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
+    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
+  );
+}
+
+/**
+ * What to do about it, which depends on WHERE the disagreement is.
+ *
+ * Three shapes, and the third is the one a single branch got wrong. When the
+ * ENUM and the CHECK are in the same contract — two tables in one file, each
+ * with a `status` column — every candidate is an ENUM contributor, so the
+ * "contracts that bound it with a CHECK" list is EMPTY and the remedy read
+ * `CHECK で束縛する契約 ()`. Empty brackets are not a shorter answer; they are a
+ * reader looking for a file name that is not there. That case has its own
+ * sentence, and it points at the table rather than at another contract, because
+ * the contract is already settled and the column is not.
+ */
+function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
+  if (enumOnly) {
+    return (
+      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - it is a physical ` +
+      "constraint that rejects the value at insert time, so no implementation satisfies both " +
+      "contracts. Add the value to the ENUM (this needs a migration), or correct the API " +
+      "contract's terminal semantics."
+    );
+  }
+  if (fromEnum.length === 0) {
+    return (
+      `A disagreement with the CHECK constraint in the DB contracts (${dbFiles.join(", ")}) - ` +
+      "widening the constraint (drop or redefine it) and correcting the API are both open. " +
+      "Which one is canonical is decided in the Contracts table of the spec that owns the entity."
+    );
+  }
+  const fromCheck = dbFiles.filter((name) => !fromEnum.includes(name));
+  // An empty CHECK side does NOT mean one contract. Every candidate can
+  // declare an ENUM while one of them is non-decisive because its own file
+  // mixes the two forms across tables, and then `fromEnum` holds them all. The
+  // count is what separates "the pairing is settled and the column is not"
+  // from "neither is settled", and only the first may say "the same contract".
+  if (fromCheck.length === 0 && dbFiles.length === 1) {
+    return (
+      `ENUM and CHECK both appear in the same contract (${dbFiles.join(", ")}) - ` +
+      "where several tables carry a same-named column, that ENUM need not be the one bounding " +
+      "the API field. Identify the one table and column first, then add the value to the ENUM, " +
+      "or widen the CHECK, or correct the API."
+    );
+  }
+  if (fromCheck.length === 0) {
+    return (
+      `Every candidate contract (${dbFiles.join(", ")}) declares an ENUM, but at least one of ` +
+      "them mixes CHECK and ENUM within itself, so that ENUM need not be the one bounding the " +
+      "API field. Narrow the pairing to one DB contract in the Contracts table of the spec that " +
+      "owns the entity, then identify the table and column."
+    );
+  }
+  return (
+    `The ENUM is declared by ${fromEnum.join(", ")}, and the contracts bounding it with a ` +
+    `CHECK (${fromCheck.join(", ")}) are candidates too - ` +
+    "the pairing is by field name alone, so the contract bounding this API field need not be " +
+    "the one with the ENUM. Narrow it to one DB contract in the Contracts table of the spec " +
+    "that owns the entity."
+  );
+}
+
+/**
+ * A line carrying the key that does not parse as a declaration.
+ *
+ * The severity comes from the promotion window, not from a literal: what this
+ * adds today is the one thing the author cannot see otherwise — that the marker
+ * they wrote was not read, so the finding they were answering is still standing
+ * for the reason it always was — and the run still reports whatever
+ * `QFAI-CONTRACT-040` was going to report either way.
+ */
+function unreadableDerivedDeclaration(
+  file: string,
+  line: string,
+  // Named as the binding is, because the ledger guard follows the NAME: an
+  // emission whose severity expression is not the one bound to this entry's pin
+  // reads as a hard-coded severity, which is a window that never opens.
+  declarationSeverity: "warning" | "error",
+): Issue {
+  return issue(
+    "QFAI-CONTRACT-041",
+    `A \`Derived (not stored):\` declaration does not parse: ${line}`,
+    declarationSeverity,
+    file,
+    "contracts.crossContract.derivedNotStored",
+    [line],
+    "canonical",
+    "The form is `-- Derived (not stored): <column> = <value>, <value> from <inputs>`. " +
+      "The `from` clause - what the values are computed from - is required; without it the " +
+      "line is not read as a declaration at all, because a marker that needs only the values " +
+      "would be a way to silence this rule rather than a way to answer it. One empty element " +
+      "in the value list invalidates the whole declaration, so that a half-written one is " +
+      "never read as finished.",
+  );
+}
+
+/**
+ * A declaration that did no work, which is a claim nobody is checking.
+ *
+ * Two ways to get here, and the message says which. The value is not one the
+ * API requires — so nothing was ever going to ask about it — or the DB domain
+ * stores it after all, which contradicts the declaration outright. Both are
+ * stale rather than harmless: the next reader takes the line as a statement
+ * about the schema, and it is not one.
+ */
+function staleDerivedDeclarations(
+  collected: DbStateDomains,
+  honoured: Set<string>,
+  declarationSeverity: "warning" | "error",
+): Issue[] {
+  const issues: Issue[] = [];
+  for (const [normalized, declarations] of collected.derived.entries()) {
+    const domain = collected.domains.get(normalized);
+    for (const declaration of declarations) {
+      const unused = [...declaration.values]
+        .filter((value) => !honoured.has(derivedKey(declaration, value)))
+        .sort((a, b) => a.localeCompare(b));
+      if (unused.length === 0) {
+        continue;
+      }
+      const stored = unused.filter((value) => domain?.values.has(value) === true);
+      const unasked = unused.filter((value) => domain?.values.has(value) !== true);
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-041",
+          `A \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
+            "do nothing: " +
+            unused.join(", ") +
+            (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
+            (unasked.length > 0
+              ? ` (the API contract does not require: ${unasked.join(", ")})`
+              : ""),
+          declarationSeverity,
+          declaration.file,
+          "contracts.crossContract.derivedNotStored",
+          [declaration.fieldName, ...unused],
+          "canonical",
+          (stored.length > 0
+            ? "The DB domain can store that value, which contradicts the claim that it is " +
+              "not stored - drop the declaration, or, if it really is not stored, remove the " +
+              "value from the DB domain."
+            : "") +
+            (unasked.length > 0
+              ? "The API contract does not require that value, so the declaration exempts " +
+                "nothing. Keep it if the value is about to be added to the API; otherwise " +
+                "drop it."
+              : ""),
+        ),
+      );
+    }
   }
   return issues;
 }
 
-type DbDomain = {
-  /** Values the DB contract can actually store for this field. */
-  values: Set<string>;
-  /** Contract files that declared the domain. */
-  files: Set<string>;
-};
-
 async function validateApiFileAgainstDb(
   file: string,
-  dbDomains: Map<string, DbDomain>,
+  collected: DbStateDomains,
+  honoured: Set<string>,
 ): Promise<Issue[]> {
+  const dbDomains = collected.domains;
   let doc: Record<string, unknown>;
   try {
     const text = await readFile(file, "utf-8");
@@ -67,27 +400,61 @@ async function validateApiFileAgainstDb(
     if (!db) {
       continue;
     }
+    const declarations = collected.derived.get(normalized) ?? [];
+    // Subtracted, not exempted wholesale. A value nobody declared still fires,
+    // or the marker would be a way to silence the rule rather than a way to
+    // answer it — and the declaration is credited only for a value the DB
+    // genuinely cannot store, so a declaration covering a stored value earns
+    // nothing and is reported below.
     const unrepresentable = Array.from(api.values)
       .filter((value) => !db.values.has(value.toLowerCase()))
+      .filter((value) => {
+        const lower = value.toLowerCase();
+        const covering = declarations.filter((entry) => entry.values.has(lower));
+        for (const entry of covering) {
+          honoured.add(derivedKey(entry, lower));
+        }
+        return covering.length === 0;
+      })
       .sort((a, b) => a.localeCompare(b));
     if (unrepresentable.length === 0) {
       continue;
     }
-    const dbFileList = Array.from(db.files).sort((a, b) => a.localeCompare(b));
+    const dbFileList = domainFiles(db);
+    const enumOnly = isEnumOnly(db);
+    const enumContributors = enumFiles(db);
+    // `error` only when EVERY candidate binding is an ENUM, because that is
+    // when the two contracts cannot both be implemented whichever binding is
+    // the real one: Postgres rejects the value at insert time. Every gate qfai
+    // prescribes is `--fail-on error`, so at `warning` this never blocked
+    // anything and sat in a bucket ~95 entries deep — the constraint violation
+    // was found by Postgres rather than by the gate that exists to find it
+    // (#1100).
+    //
+    // A `CHECK` constraint stays `warning`: it is a bound the DB currently
+    // asserts rather than the shape of the column, and it can be dropped,
+    // replaced or declared `NOT VALID`. Raising both would lose the distinction
+    // between "impossible" and "currently disallowed".
+    //
+    // A MIX stays `warning` too, and this is the case #1162 reported: one
+    // `CHECK` among the candidates means the value can be stored in a contract
+    // the pairing considers a match, so "no implementation can satisfy this"
+    // is not a claim this rule is entitled to make from a field name alone.
+    const severity = enumOnly ? "error" : "warning";
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
-        `API 契約が要求する ${api.fieldName} の値が、同名フィールドを宣言する DB 契約で表現できません: ` +
-          `${unrepresentable.join(", ")} (DB 側の許容値: ${Array.from(db.values).sort().join(", ")}; ` +
-          `DB 契約: ${dbFileList.join(", ")})`,
-        "warning",
+        `The API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
+          `field name cannot represent: ${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
+          `DB contracts: ${dbFileList.join(", ")}; DB constraint: ${describeDbConstraint(db)})`,
+        severity,
         file,
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
-        "API 契約が要求する terminal state / status enum ごとに、同名フィールドを宣言する DB 契約へ表現可能な値を" +
-          "追加するか、API 側の terminal semantics を訂正してください。照合は明示的なペア宣言ではなく、" +
-          "正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
+        mixedRemedy(enumOnly, dbFileList, enumContributors) +
+          " Pairing is by normalized field name across the DB contracts, not by an explicit " +
+          "pair declaration.",
       ),
     );
   }
@@ -275,8 +642,126 @@ const NAMED_TYPE_USAGE_PATTERNS = [
   /\bALTER\s+(?:COLUMN\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+(?:SET\s+DATA\s+)?TYPE\s+(?:"?[A-Za-z_][A-Za-z0-9_]*"?\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gi,
 ] as const;
 
-async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbDomain>> {
+const CREATE_TABLE_PATTERN =
+  /\bCREATE\s+(?:(?:GLOBAL|LOCAL)\s+)?(?:(?:TEMPORARY|TEMP|UNLOGGED)\s+)?TABLE\b/gi;
+
+/** How many tables a contract declares, over text with comments removed. */
+function countCreateTables(rawText: string): number {
+  return (stripSqlComments(rawText).match(CREATE_TABLE_PATTERN) ?? []).length;
+}
+
+/**
+ * A `Derived (not stored)` declaration: values computed at read time.
+ *
+ * `QFAI-CONTRACT-040` asks that every state value an API contract mandates be
+ * representable in the paired DB domain, and for a value that is never STORED
+ * both of the remedies it offers are wrong. Widening the domain would make it
+ * possible to store a value the DB contract says must not be stored — and a
+ * value derived from the wall clock goes stale the moment the clock moves,
+ * which is why it is not stored. Deleting it from the API would remove a value
+ * the UI contract requires the screen to display. There was no way to say so,
+ * so the finding had no valid remedy and stayed in the bucket forever (#1203).
+ *
+ * The declaration lives in the DB contract, not on the API property, because
+ * storage is the DB contract's subject. An API contract asserting "this is not
+ * stored" would let the side making the DEMAND silence the side that answers
+ * it — and the projects that hit this already state the derivation in their DB
+ * contract's prose, so this makes an existing claim machine-readable rather
+ * than inventing a place for it.
+ */
+type DerivedDeclaration = {
+  file: string;
+  /** The column name as written, for the message. */
+  fieldName: string;
+  /** Values the contract says are computed rather than stored. */
+  values: Set<string>;
+  /** What they are computed FROM, as written. */
+  inputs: string;
+};
+
+/**
+ * `-- Derived (not stored): status = standby, powered_off from enabled, clock`
+ *
+ * Both anchors are the ones {@link DEPENDS_ON_COMMENT_RE}'s docblock argues
+ * for, and for the same reason: the comment marker is required and the key
+ * starts the line, so prose ABOUT a derivation — the natural thing to write in
+ * a DDL comment above the column — is not itself a declaration.
+ *
+ * The `from` clause is required. Without it the marker would be a one-word
+ * silencer for any value an author found inconvenient; naming the inputs is
+ * what makes the claim reviewable, and it is the half a reader needs in order
+ * to check that nothing in the list is a column the derivation would have to
+ * store.
+ */
+const DERIVED_NOT_STORED_RE =
+  /^[ \t]*(?:--|#|\/\/|\*)[ \t]*Derived \(not stored\):[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.+?)[ \t]+from[ \t]+(.+?)[ \t]*$/gim;
+
+/** The key with anything after it, for telling a typo from an absence. */
+const DERIVED_KEY_RE = /^[ \t]*(?:--|#|\/\/|\*)[ \t]*Derived \(not stored\):[ \t]*(.*)$/gim;
+
+/**
+ * Every readable declaration in one contract, and every line that tried to be
+ * one and failed.
+ *
+ * A malformed declaration is REPORTED rather than ignored. Ignoring it is the
+ * silent-failure shape `dependencyIdsFromElements` was written to avoid: an
+ * author writes the marker, mistypes the `from` clause, sees the finding they
+ * were trying to answer still standing, and has nothing telling them the
+ * declaration was never read.
+ */
+function collectDerivedDeclarations(
+  file: string,
+  text: string,
+): { declared: DerivedDeclaration[]; malformed: string[] } {
+  // The raw text, NOT comment-stripped: the declaration lives in a comment.
+  const body = text;
+  const declared: DerivedDeclaration[] = [];
+  const readable = new Set<string>();
+  for (const match of body.matchAll(DERIVED_NOT_STORED_RE)) {
+    // Narrowed rather than asserted. Every group of `DERIVED_NOT_STORED_RE` is
+    // required today, so a match always carries all three — but saying so with
+    // an `as` would let a later edit making one optional pass with nothing to
+    // notice it, and the repository's TypeScript rule is to narrow instead.
+    const line = match[0];
+    const fieldName = match[1];
+    const valueList = match[2];
+    const inputs = match[3];
+    if (fieldName === undefined || valueList === undefined || inputs === undefined) {
+      continue;
+    }
+    const elements = valueList.split(",");
+    const values = elements.map((value) => value.trim().toLowerCase());
+    // The whole list or none of it, as the apply-order lanes do: a trailing
+    // comma or an empty element means the author was mid-edit, and harvesting
+    // the readable half would let a half-written declaration silence a value.
+    if (values.some((value) => value.length === 0) || inputs.trim() === "") {
+      continue;
+    }
+    readable.add(line);
+    declared.push({ file, fieldName, values: new Set(values), inputs: inputs.trim() });
+  }
+  const malformed: string[] = [];
+  for (const match of body.matchAll(DERIVED_KEY_RE)) {
+    const line = match[0];
+    if (!readable.has(line)) {
+      malformed.push(line.trim());
+    }
+  }
+  return { declared, malformed };
+}
+
+type DbStateDomains = {
+  domains: Map<string, DbDomain>;
+  /** Readable declarations, keyed by normalized field name. */
+  derived: Map<string, DerivedDeclaration[]>;
+  /** Lines that carry the key but do not parse, per contract file. */
+  malformed: { file: string; line: string }[];
+};
+
+async function collectDbStateDomains(dbFiles: string[]): Promise<DbStateDomains> {
   const domains = new Map<string, DbDomain>();
+  const derived = new Map<string, DerivedDeclaration[]>();
+  const malformed: { file: string; line: string }[] = [];
   for (const file of dbFiles) {
     let text: string;
     try {
@@ -284,21 +769,57 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
     } catch {
       continue;
     }
-    for (const [name, values] of collectSqlEnumDomains(text).entries()) {
+    const declarations = collectDerivedDeclarations(file, text);
+    for (const line of declarations.malformed) {
+      malformed.push({ file, line });
+    }
+    for (const declaration of declarations.declared) {
+      const key = normalizeFieldName(declaration.fieldName);
+      const existing = derived.get(key);
+      if (existing) {
+        existing.push(declaration);
+      } else {
+        derived.set(key, [declaration]);
+      }
+    }
+    // One table means one column of any given name, so a name carrying both
+    // forms carries them on the SAME column and #1100's "enum wins" applies.
+    // Counted over comment-stripped text, so a commented-out `CREATE TABLE`
+    // cannot make a single-table contract look like several.
+    const singleTable = countCreateTables(text) <= 1;
+    for (const [name, bound] of collectSqlDomainBounds(text).entries()) {
       if (!isStateLikeFieldName(name)) {
         continue;
       }
       const normalized = normalizeFieldName(name);
+      const binding: DbFieldBinding = {
+        file,
+        values: new Set(bound.values),
+        // Decisive only when the two forms cannot be on different columns.
+        enumBacked: bound.enumBacked && (!bound.checkBacked || singleTable),
+        enumEvidence: bound.enumBacked,
+      };
       const existing = domains.get(normalized);
       if (existing) {
-        values.forEach((value) => existing.values.add(value));
-        existing.files.add(file);
+        // Appended, not merged. Two contracts declaring one field NAME are two
+        // candidate bindings, and which of them bounds a given API field is
+        // not something a name match can tell — see {@link DbDomain}.
+        const sameFile = existing.bindings.find((entry) => entry.file === file);
+        if (sameFile) {
+          binding.values.forEach((value) => sameFile.values.add(value));
+          sameFile.enumBacked = sameFile.enumBacked || binding.enumBacked;
+          sameFile.enumEvidence = sameFile.enumEvidence || binding.enumEvidence;
+        } else {
+          existing.bindings.push(binding);
+        }
+        // The union grows with the bindings, here and nowhere else.
+        binding.values.forEach((value) => existing.values.add(value));
       } else {
-        domains.set(normalized, { values: new Set(values), files: new Set([file]) });
+        domains.set(normalized, { bindings: [binding], values: new Set(binding.values) });
       }
     }
   }
-  return domains;
+  return { domains, derived, malformed };
 }
 
 /**
@@ -306,14 +827,64 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
  * Values are lower-cased; comparison is case-insensitive on both sides.
  */
 export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const [name, bound] of collectSqlDomainBounds(rawText).entries()) {
+    out.set(name, bound.values);
+  }
+  return out;
+}
+
+/** A field's allowed values, and whether the bound is a Postgres ENUM. */
+export type SqlDomainBound = {
+  values: string[];
+  /**
+   * True for `CREATE TYPE … AS ENUM` and inline `col ENUM(…)`; false for
+   * `CHECK (col IN (…))`.
+   *
+   * The distinction decides `QFAI-CONTRACT-040`'s severity: an ENUM rejects an
+   * out-of-domain value at insert time, so an API contract requiring one
+   * describes a pair no implementation can satisfy. A check constraint is a
+   * bound the DB currently asserts and can be dropped, replaced or declared
+   * `NOT VALID` (#1100).
+   */
+  enumBacked: boolean;
+  /**
+   * True when a `CHECK (col IN (…))` was also seen for this name in this file.
+   *
+   * Not exclusive with {@link enumBacked}, and recorded rather than folded
+   * because the PAIR is what says whether the ENUM reading is decisive — this
+   * map is keyed by column name, so two tables with a same-named column look
+   * exactly like one column bound twice. See `DbFieldBinding.enumEvidence`.
+   */
+  checkBacked: boolean;
+};
+
+/**
+ * As {@link collectSqlEnumDomains}, and it also says which SQL form bound each
+ * field.
+ *
+ * Where both forms bound one field, `enumBacked` is true: the strictest
+ * constraint is the one an implementation has to satisfy, so a column that is
+ * an ENUM *and* carries a redundant `CHECK` is still impossible to violate.
+ */
+export function collectSqlDomainBounds(rawText: string): Map<string, SqlDomainBound> {
   const text = stripSqlComments(rawText);
-  const domains = new Map<string, string[]>();
+  const domains = new Map<string, SqlDomainBound>();
   const patterns = [CHECK_IN_PATTERN, CREATE_TYPE_ENUM_PATTERN, INLINE_ENUM_PATTERN];
   const namedTypes = new Map<string, { name: string; literals: string[] }>();
 
-  const add = (name: string, literals: string[]): void => {
+  const add = (name: string, literals: string[], enumBacked: boolean): void => {
     const existing = domains.get(name);
-    domains.set(name, existing ? Array.from(new Set([...existing, ...literals])) : literals);
+    domains.set(
+      name,
+      existing
+        ? {
+            values: Array.from(new Set([...existing.values, ...literals])),
+            enumBacked: existing.enumBacked || enumBacked,
+            checkBacked: existing.checkBacked || !enumBacked,
+          }
+        : { values: literals, enumBacked, checkBacked: !enumBacked },
+    );
   };
 
   for (const pattern of patterns) {
@@ -335,7 +906,8 @@ export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
               : literals,
           });
         } else {
-          add(name, literals);
+          // `INLINE_ENUM_PATTERN` is an ENUM column; `CHECK_IN_PATTERN` is not.
+          add(name, literals, pattern === INLINE_ENUM_PATTERN);
         }
       }
       match = scoped.exec(text);
@@ -347,14 +919,15 @@ export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
   // invisible to a reconciliation keyed on the API field name `status`.
   const resolved = resolveNamedTypeColumns(text, namedTypes);
   for (const [column, literals] of resolved.columns.entries()) {
-    add(column, literals);
+    // A column declared with a named enum type IS an enum column.
+    add(column, literals, true);
   }
   // Fall back to the type name only for types whose column usage is not visible here (declared in
   // one contract file, used in another). Publishing it alongside a resolved column would report
   // the same contradiction twice — once as `status`, once as `order_status`.
   for (const [key, entry] of namedTypes.entries()) {
     if (!resolved.usedTypes.has(key)) {
-      add(entry.name, entry.literals);
+      add(entry.name, entry.literals, true);
     }
   }
 

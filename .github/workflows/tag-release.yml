@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
           # Shallow, deliberately. `BR-0017-0019` keeps full history job-scoped, and neither
@@ -131,7 +131,14 @@ jobs:
           fi
           # Every associated pull request, not just the first: a commit can belong to more than
           # one, and picking `.[0]` would decline a real release merge for an incidental sibling.
-          if ! printf '%s' "$pulls" | jq -r '.[].headRefName' | grep -qxF "release/v${claimed}"; then
+          #
+          # `.head.ref`, which is what REST returns. `headRefName` is the GraphQL spelling and is
+          # absent from this response, so `jq` emitted `null` for every associated pull request
+          # and the comparison could not match — the branch below was taken on every release,
+          # the step reported success, and no tag was ever pushed (#1155). `// empty` drops the
+          # null instead of printing the string "null", which a branch named `release/vnull`
+          # would otherwise match.
+          if ! printf '%s' "$pulls" | jq -r '.[].head.ref // empty' | grep -qxF "release/v${claimed}"; then
             echo "tag-release: ${GITHUB_SHA} did not arrive from release/v${claimed}; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"

@@ -41,6 +41,11 @@
 - Reference research remains mandatory for UI-bearing packs.
 - Downstream skills consume normalized specs/contracts, not raw discussion sidecars.
 
+## Evidence Summary
+
+- Evidence: SKILL.md at `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/SKILL.md`
+- Evidence: pack templates at `packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/`
+
 ## Relevant Requirements
 
 - REQ-0001: UI-bearing discussion packs create `30_exploration_brief.md`

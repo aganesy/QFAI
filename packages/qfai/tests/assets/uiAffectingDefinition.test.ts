@@ -47,11 +47,18 @@ const read = (tree: string, rel: string): Promise<string> =>
  * that uses the term is making the same claim a sentence would, and every
  * current call site is prose or a row.
  */
+/**
+ * Paragraphs that use the term, which is the unit a citation binds.
+ *
+ * Not lines: prose here is hard-wrapped, so which line a use lands on is a
+ * formatting accident and a per-line rule would demand the citation inside a
+ * sentence it splits.
+ */
 const usageLines = (text: string): string[] =>
   text
-    .split(/\r?\n/)
-    .filter((line) => line.includes("UI-affecting"))
-    .filter((line) => !line.startsWith("#"));
+    .split(/\r?\n\r?\n/)
+    .filter((block) => block.includes("UI-affecting"))
+    .filter((block) => !block.trimStart().startsWith("#"));
 
 describe("UI-affecting is defined once and referenced everywhere", () => {
   for (const tree of QFAI_TREES) {
@@ -348,12 +355,14 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       expect(evidenceLine).toContain("Audited evidence hash");
       expect(evidenceLine).toContain("#staleness-reviewed-revision-and-audited-evidence-hash");
 
-      // Gate item 10's revision-agreement rule covered items 3/5/7/8 and
-      // excluded item 9, which is what let a stale PASS through it.
+      // Gate item 10's revision-agreement rule excluded item 9, which is what
+      // let a stale PASS through it.
       const item10 = skill.split(/\r?\n/).find((line) => line.startsWith("10. `test-list.md`"));
       expect(item10).toBeDefined();
-      expect(item10).toContain("items 5, 7, 8 and 9 share `Revision`");
-      expect(item10).toContain("Item 9's hash is recomputed");
+      expect(item10).toContain("item 9's `Prototype parity reviewed revision` shares it too");
+      expect(item10).toContain(
+        "Each reviewer verdict's `Audited evidence hash` is **recomputed** here",
+      );
     });
 
     it(`${tree}: the design contracts resolve from contractsDir too`, async () => {
@@ -528,10 +537,10 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       // a stale PASS false. Exempting it accepted an `n/a` taken before the
       // change existed while the final diff matched a UI path.
       const revision = await read(tree, `${IMPLEMENT}/references/evidence-revision.md`);
-      expect(revision).toContain("gate items 3, 5, 7, 8 and 9) MUST all name the **same**");
-      expect(revision).toContain("**Item 9 is in that set whatever it answered.**");
-      expect(revision).toContain("`n/a` is a claim about the tree");
-      expect(revision).not.toContain("and 9 on a row a UI-affecting");
+      expect(revision).toContain("gate items 6, 7 and 8 — MUST all");
+      expect(revision).toContain("**It is in that set whatever it answered**");
+      expect(revision.replace(/\s+/g, " ")).toContain("`n/a` is a claim about the tree");
+      expect(revision).not.toContain("the rule applies where item 9 does");
     });
 
     it(`${tree}: the recomputation binds the ledger writer in every mode`, async () => {

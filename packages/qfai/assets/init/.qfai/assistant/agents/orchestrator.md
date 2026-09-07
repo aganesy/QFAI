@@ -21,7 +21,14 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Inputs you must read
 
 - .qfai/assistant/constitution/\*\*
-- .qfai/assistant/{manifest,catalog}/\*\*
+- .qfai/assistant/manifest/agent-routing.yml
+- .qfai/assistant/manifest/review-profiles.yml
+- .qfai/assistant/catalog/\*\* and `.qfai/assistant/manifest/agent-catalog.yml`
+  (this role's own entry — `owned_artifacts`,
+  `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+  Skip a `developer_instructions` body only when it matches the agent card already in
+  context; when the two differ the card is the role contract and wins. See
+  `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md (SSOT for hard coverage obligations)
 - .qfai/specs/spec-\*/07_Decisions.md and .qfai/specs/\_policies/08_Decisions.md (Decision Records, DR-\*; check rejected)
 - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
@@ -32,7 +39,12 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Work Orders for each subagent (scope, inputs, outputs, gates)
 - Stage Gates plan + current status
 - Completion report (DoD checklist + evidence links)
-- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
+- Evidence summary for `.qfai/evidence/` (mostly gitignored; do not commit the
+  regenerable stage logs). The governance records there are the exception and
+  **must** be committed: `implement-<spec-id>.md`, `atdd-<spec-id>.md`,
+  `coverage-depth-*.md`, `change-request-*.md`, `decision-*.md` and
+  `decisions/`. See
+  `.qfai/assistant/constitution/drift-protocol.md#which-evidence-is-committed`.
 
 ## Stop conditions
 
@@ -45,7 +57,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Sign-off
 
 - [ ] Deliverables are complete
-- [ ] Evidence is present (gitignored)
+- [ ] Evidence is present — regenerable logs left gitignored, governance records
+      committed (see Deliverables)
 - [ ] Stage gates are PASS
 - [ ] Reviewer sign-off recorded
 

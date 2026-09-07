@@ -2,6 +2,10 @@
 
 5 items.
 
+## Open Questions
+
+0 open questions in this spec.
+
 ## Resolved by cited decisions (CHG-006, 2026-05-27)
 
 - OQ-0160 — Default Autopilot Policy template structure (which categories belong to auto-decide / ask-user / hard-required). RESOLVED by `_policies/08_Decisions.md` DR-0269 (3-bucket template, option C). Realized as AC-0015-0015 / BR-0015-0010.

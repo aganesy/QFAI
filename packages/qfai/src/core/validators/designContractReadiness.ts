@@ -74,11 +74,72 @@ export async function validateSddDesignContractReadiness(
   });
 }
 
+/**
+ * Whether the root DESIGN.md parses — and nothing else.
+ *
+ * Split out because the stage that AUTHORS the file could not see whether it
+ * parses. `qfai-discussion` mandates a parsable root DESIGN.md and prescribes
+ * `--profile discussion`, whose validators read discussion packs, mermaid,
+ * visuals, research summaries and review artifacts — none of them DESIGN.md.
+ * `QFAI-DCON-033` reached a run only through the sdd or prototyping readiness
+ * gates, so a malformed file surfaced a review round later, under a different
+ * skill, with the earlier gate having passed (#1098).
+ *
+ * The parse half only. The readiness validator also compares DESIGN.md against
+ * its lock, requires UI contracts and rejects premature ones — all of which
+ * belong to later stages, and the lock in particular is `/qfai-sdd` Phase 0's
+ * to clear. "The file is malformed" and "the file no longer matches its frozen
+ * hash" are different failures with different owners, which is why this is a
+ * separate entry point rather than a flag on the existing one.
+ *
+ * Silent when the file is absent: `QFAI-DCON-030` owns missing-file, and a
+ * discussion run happens before the file necessarily exists.
+ */
+export async function validateRootDesignMdParse(root: string): Promise<Issue[]> {
+  let text: string;
+  try {
+    text = await readFile(path.join(root, ROOT_DESIGN_MD_REL), "utf-8");
+  } catch {
+    // Absent or unreadable: `QFAI-DCON-030` owns missing-file, and a discussion
+    // run happens before the file necessarily exists. Reporting either here
+    // would put a second finding on one state, or a finding on a project that
+    // has not reached this artifact yet.
+    return [];
+  }
+  const parsed = parseDesignMd(text);
+  return "error" in parsed ? [rootDesignMdParseIssue(parsed.error.message)] : [];
+}
+
 export async function validatePrototypingDesignContractReadiness(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
   return validateDesignContractReadinessForStage(root, config, "prototyping");
+}
+
+/**
+ * The `QFAI-DCON-033` finding, built in one place.
+ *
+ * Two callers emit it now — the readiness gate and the discussion-profile parse
+ * check — and a finding whose message, rule or remedy differed between them
+ * would send automated remediation down two paths for one defect.
+ *
+ * The parse error's own message is passed through verbatim because it already
+ * names what to fix: `rejectUnknownKeys` produces
+ * `Unknown '<section>' key '<k>'. Allowed: <list>.`, so the allowed set reaches
+ * the operator without opening the spec.
+ */
+function rootDesignMdParseIssue(detail: string): Issue {
+  return issue(
+    "QFAI-DCON-033",
+    `Root DESIGN.md failed to parse: ${detail}`,
+    "error",
+    ROOT_DESIGN_MD_REL,
+    "designContractReadiness.rootDesignMdParse",
+    undefined,
+    "canonical",
+    "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
+  );
 }
 
 async function validateDesignContractReadinessForStage(
@@ -115,9 +176,9 @@ async function validateDesignContractReadinessForStage(
   // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
   // Every other check in this validator presupposes design contracts that
   // only exist once prototyping has started, but the sample gate has to
-  // fire earlier than that: `qfai init` seeds the sample DESIGN.md on day
-  // one, UI contracts are only authored later in SDD, and `/qfai-sdd`
-  // Phase 0 freezes the file's sha256 in between. Gated behind
+  // fire earlier than that: the sample can be copied in at any point, UI
+  // contracts are only authored later in SDD, and `/qfai-sdd` Phase 0
+  // freezes the file's sha256 in between. Gated behind
   // `uiContracts.length === 0` the gate could only ever report a freeze
   // that already happened.
   //
@@ -427,11 +488,18 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  *
  * DCON-030..033 are all content-agnostic: they verify that DESIGN.md
  * exists, parses and has not changed since the freeze — never that it was
- * authored by this project. `qfai init` seeds the shipped sample brand
- * into the project root, so an unreplaced sample satisfies every one of
+ * authored by this project. So an unreplaced sample satisfies every one of
  * them, gets sha256-frozen as the project's brand contract, and from then
  * on `/qfai-prototyping` enforces a fictional identity while swapping in
  * the real brand breaks the lock until it is refrozen.
+ *
+ * A project holds the sample because someone put it there: copied from
+ * `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` as a
+ * starting point, or
+ * seeded by a release back when `qfai init` wrote one. Init writes none
+ * now — `/qfai-discussion` emits the draft, and only for a
+ * visual-prototyping surface — so this gate no longer reports a file the
+ * tool itself had just written.
  *
  * Severity scales with how far the project has committed to a brand
  * contract:
@@ -442,12 +510,11 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  *     marker exists at Phase 0 while the contracts do not, and a gate that
  *     only fires after the contracts land can only report a freeze that
  *     already happened.
- *   - otherwise -> `warning`. Every `qfai init` seeds the sample,
- *     including into projects that never ship a UI and never freeze
- *     anything; turning that into a hard failure would break projects
- *     that never opted into the design surface at all. The warning still
- *     surfaces the condition from `qfai validate` on day one, which is
- *     what the shipped sample's own instructions promise.
+ *   - otherwise -> `warning`. A project that ships no UI freezes nothing,
+ *     so the sample costs it nothing yet; a hard failure would stop a
+ *     project that never opted into the design surface at all. The warning
+ *     still names the file, which is what the sample's own instructions
+ *     promise a reader.
  *
  * A missing DESIGN.md is not this gate's business (DCON-030 owns it, and
  * only for UI-bearing projects), so an unreadable file is silently
@@ -466,7 +533,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
   return [
     issue(
       "QFAI-DCON-034",
-      "Root DESIGN.md is still the qfai sample brand (unreplaced `qfai init` seed).",
+      "Root DESIGN.md is still the qfai sample brand (unreplaced sample).",
       uiBearing ? "error" : "warning",
       ROOT_DESIGN_MD_REL,
       "designContractReadiness.rootDesignMdSample",
@@ -548,18 +615,7 @@ async function validateRootDesignMdAndLock(
   if (designMdText !== null) {
     const parseResult = parseDesignMd(designMdText);
     if ("error" in parseResult) {
-      issues.push(
-        issue(
-          "QFAI-DCON-033",
-          `Root DESIGN.md failed to parse: ${parseResult.error.message}`,
-          "error",
-          ROOT_DESIGN_MD_REL,
-          "designContractReadiness.rootDesignMdParse",
-          undefined,
-          "canonical",
-          "Fix DESIGN.md front-matter so parseDesignMd succeeds (see qfai-prototyping/references/design-md-spec.md). Do NOT regenerate the template — that would discard user content.",
-        ),
-      );
+      issues.push(rootDesignMdParseIssue(parseResult.error.message));
     } else {
       designMd = parseResult.data;
     }

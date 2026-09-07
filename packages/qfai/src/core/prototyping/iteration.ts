@@ -148,6 +148,79 @@ export function iterationReviewPath(index: number): string {
 }
 
 /**
+ * `reviewerId` stamped on the placeholder iteration that
+ * `prototyping iterate --cycle 0` seeds before any reviewer has run.
+ *
+ * Shared as a constant so the writer and the readers cannot drift. It is
+ * NOT sufficient on its own to identify the seed — see
+ * {@link isUntouchedCycleZeroSeed}.
+ */
+export const SEED_REVIEWER_ID = "iterate-seed" as const;
+
+/** `commitSha` the cycle-0 seed carries: it records no commit. */
+export const SEED_COMMIT_SHA = "uncommitted" as const;
+
+/**
+ * The placeholder critique `prototyping iterate --cycle 0` writes.
+ *
+ * Lives here rather than beside the writer because two validators now
+ * have to recognise an untouched seed, and the only honest way to do
+ * that is to compare against the exact text the writer emits.
+ */
+export const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
+  const sentence =
+    "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
+  return Array.from({ length: 10 }, () => sentence).join(" ");
+})();
+
+/**
+ * True when `iterations[index]` is still the untouched cycle-0 seed.
+ *
+ * The gates that waive an obligation for the seed used to ask only
+ * whether `reviewerId === SEED_REVIEWER_ID`, and that was not
+ * load-bearing in either direction:
+ *
+ *   - **It never cleared.** `reviewerId` is absent from the
+ *     {@link Iteration} type, `buildSeedIterations` is its only writer,
+ *     and no shipped instruction tells the orchestrator to overwrite it
+ *     while transcribing a review into the same record in place. So a
+ *     reviewed `iterations[0]` kept the seed stamp and stayed exempt for
+ *     the life of the loop — and for a loop that converges at cycle 0
+ *     that is the iteration `certify` seals. Measured before this
+ *     change: three iterations with all four axes `exceptional`,
+ *     `stopReason: "axes-exceptional"` and no `review.json` anywhere on
+ *     disk validated at `error=0`.
+ *   - **It applied at any index.** The waiver was one string in the file
+ *     the gate exists to distrust, so writing it into `iterations[7]`
+ *     waived that row too — and because `reviewerId` was not a mirrored
+ *     field, the disagreement with the reviewer's own `reviewerId` was
+ *     itself unreportable.
+ *
+ * The anchor is therefore structural AND content-based, and every part
+ * of it is something only the writer produces:
+ *
+ *   1. the loop holds exactly one iteration, at index 0 — the only shape
+ *      `writeSeedMetadata` can produce, since it assigns a fresh
+ *      single-element array;
+ *   2. `reviewerId` and `commitSha` are the seed's;
+ *   3. `proseCritique` is still the placeholder, byte for byte.
+ *
+ * (3) is what makes the exemption self-clearing: a review replaces the
+ * critique with 200-500 words of its own, so the waiver lifts on the
+ * first real review even when `reviewerId` is left stale.
+ */
+export function isUntouchedCycleZeroSeed(iterations: readonly unknown[], index: number): boolean {
+  if (index !== 0 || iterations.length !== 1) return false;
+  const seed = iterations[0];
+  if (!isRecord(seed)) return false;
+  return (
+    seed.reviewerId === SEED_REVIEWER_ID &&
+    seed.commitSha === SEED_COMMIT_SHA &&
+    seed.proseCritique === SEED_PROSE_CRITIQUE_PLACEHOLDER
+  );
+}
+
+/**
  * Closed evidence-ref kind set for the per-iteration evidence refs.
  */
 export const EVIDENCE_REF_KINDS = ["screenshot", "html"] as const;

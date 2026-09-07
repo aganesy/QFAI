@@ -14,23 +14,31 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 - Implement E2E coverage for required user stories.
 - Implement API coverage for declared `CON-API-*` contracts.
-- Implement integration coverage for required `TC-*` behavior.
+- Implement integration coverage for required `TC-*` behavior and for declared `CON-DB-*` contracts.
 - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
 
 ## Inputs you must read
 
 - .qfai/assistant/constitution/\*\*
-- .qfai/assistant/{manifest,catalog}/\*\*
+- .qfai/assistant/manifest/agent-routing.yml
+- .qfai/assistant/manifest/review-profiles.yml
+- .qfai/assistant/catalog/\*\* and `.qfai/assistant/manifest/agent-catalog.yml`
+  (this role's own entry — `owned_artifacts`,
+  `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+  Skip a `developer_instructions` body only when it matches the agent card already in
+  context; when the two differ the card is the role contract and wins. See
+  `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
 - .qfai/contracts/api/\*\*
+- .qfai/contracts/db/\*\*
 
 ## Deliverables
 
 - Acceptance test plan and implemented coverage
-- Mapping from US / TC / CON-API to test assets
+- Mapping from US / TC / CON-API / CON-DB to test assets
 - Execution proof and evidence summary
 - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
 - Gaps and follow-up actions
