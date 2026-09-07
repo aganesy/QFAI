@@ -34,8 +34,8 @@ the item owns, and nothing downstream re-asks: coverage is annotation presence
 and the Depth Matrix counts case categories. A test that cannot fail otherwise
 clears every gate.
 
-Require an `Oracle proof` on each item **at a GREEN or completion gate**, and
-**reject** it when:
+Require an `Oracle proof` on each item that reached `red` **at a GREEN or
+completion gate**, and **reject** it when:
 
 - the mutation is outside the code the item owns — breaking a shared helper
   proves the helper is used, not that this test discriminates;
@@ -43,6 +43,37 @@ Require an `Oracle proof` on each item **at a GREEN or completion gate**, and
   export — that is a load failure, not a discriminating failure;
 - the failing output names a selector other than the row's;
 - the recorded command differs from the `GREEN command`.
+
+**A branch-3 `exception` is outside this requirement, at either gate.** Branch 3
+is reached only when neither a mutation nor an `equivalent-mutant` was
+available, so an `Oracle proof` is the one thing such a row cannot produce. It
+never reaches GREEN, and a user-approved `TDDLIST-001` waiver can carry it to
+the spec-level completion gate still holding no proof — do not REVISE it there
+for the absence. Judge it by "Branch 3 gets its own verdict" below, on its
+`DR-*`.
+
+**The status alone does not carry the exclusion; the `DR-*` does.** `exception`
+is reachable from **any** active status, so a row that reached `red`, proved its
+oracle and was parked by a failing checkpoint at `refactor -> exception` is an
+`exception` that already owed a proof — and owes it still. Apply the exclusion
+only where the `DR-*` records that **both** proof forms were unavailable, which
+is the finding that puts a row on branch 3. A `DR-*` recording any other anomaly
+leaves the row's `Oracle proof` obligation exactly where its `red` left it, and
+absence or invalidity is REVISE there as anywhere. A `DR-*` naming no
+unavailability at all is already REVISE under "Branch 3 gets its own verdict",
+so no row reaches a gate exempt on a record that does not say why.
+
+**And it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell.**
+`exception -> todo` **keeps** the anomaly's `DR-*`, and a row that enters
+`exception` again records a new one **appended, not substituted**
+(`../skills/qfai-implement/references/execution-ledger.md`). So a row once on
+branch 3, reset to `todo`, re-run to `red` and parked again by some unrelated
+checkpoint anomaly holds both records side by side, and a rule that asks only
+whether _a_ `DR-*` reports both forms unavailable exempts it on the older one —
+readmitting exactly the row that reached `red` and owes its proof, which is the
+hole the paragraph above closes. Read the **last appended** `DR-*`: the one the
+current `exception` was written with. An earlier branch-3 record describes an
+exception that is over and exempts nothing.
 
 **At a RED observation the proof is a plan, and a plan is enough.** Branch 1's
 RED is taken before any production behaviour exists, so there is nothing to
@@ -56,7 +87,7 @@ selector; judge the demonstration once the behaviour exists.
 genuinely weaker than the obligation. It is an upstream gap: route it as an
 advisory / Change Request, do not send the implementer to strengthen an
 assertion past the contract — that is reviewer-originated scope, which
-`drift-protocol.md` forbids. Full criteria and the weak-oracle shapes:
+`.qfai/assistant/constitution/drift-protocol.md` forbids. Full criteria and the weak-oracle shapes:
 `.qfai/assistant/skills/qfai-implement/references/oracle-strength.md`.
 
 ## RED/GREEN Observation Gate (MUST)
@@ -72,7 +103,63 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   raised it, and the message names the predicate the row owns;
 - the recorded output retains that assertion message and its location;
 - when the `Selector` holds several entries, each entry's failure was observed
-  separately. One aggregate run is not a RED for several entries.
+  separately. One aggregate run is not a RED for several entries;
+- `RED assertion-stripped result` records the `RED command` re-run with the
+  row's assertions neutralized and shows it **passing**. The criteria above are
+  readable off the recorded failure; this one is a counterfactual, so
+  `RED failure mode: assertion` reads identically whether it was checked or
+  skipped and nothing else on the row distinguishes the two. REVISE when it is
+  absent, when the stripped run still fails, or when its command differs from
+  the `RED command`. A `falsifiability` row has no RED pair to strip — its
+  mutation run answers this.
+- **Judge the strip, not only its exit code.** You read this field after the
+  restore, so the passing output on its own is equally producible by a skipped
+  selector, a deleted test body, an expectation moved to whatever the code
+  returns, or a production edit — and you cannot tell any of them from a strip.
+  Require the **strip diff** taken before the restore, over the row's
+  `Test file` and the test-owned artifacts it reads, and require the output to
+  show the row's `Selector` **executing and passing**. REVISE when the diff is
+  absent, when it touches production source, an expected-value fixture or the
+  `Selector` itself, or when the run collected nothing, filtered to zero tests
+  or reports the selector skipped. **REVISE too when the diff removes more
+  than the assertions' verdicts** — emptying the selector's body deletes the
+  call under test with them while touching nothing outside the `Test file`,
+  keeping the `Selector` named and still reporting it passed, so it satisfies
+  every other condition here; require the call under test, its arguments and
+  the control flow before the assertions to be still standing in the diff. A
+  build or collection error in the stripped
+  run is a botched strip, not a criterion-4 failure: send it back to be
+  re-taken in the compilable form, do not accept the build error as the result.
+  **Do not require the selector by name where the runner does not print it on
+  success** — `go test` without `-v` reports `ok <package>` — there the
+  command's own selector filter plus a success line free of any zero-selected
+  or skipped marker is that showing, and a command that added `-v` to produce
+  the name is a changed command and therefore a REVISE.
+- **`pre-contract` is the one admissible absence.** A round whose RED was
+  observed before this field existed cannot produce the run — the production
+  code is already in the tree — so
+  `.qfai/assistant/skills/qfai-implement/references/round-evidence.md`
+  grandfathers it. Accept it **only** on a round that already holds a complete
+  GREEN pair
+  **and** whose `RED revision` is a commit shown to be a **strict** ancestor
+  of the commit that added this field — `--is-ancestor` holds and the two
+  revisions differ, since a RED taken on the field commit itself was taken on
+  a tree that already carried the field. A GREEN pair alone is equally true of
+  a round that took its RED after the update and skipped the strip, and a
+  `working-tree+<content hash>` revision orders against nothing. On a RED
+  routed here at phase `red` it is a REVISE: that submission is the moment the
+  stripped run is takeable. Where no such warrant can exist — the project does
+  not track `.qfai`, or the revision is `working-tree+<content hash>` — the
+  row is not stranded and `pre-contract` is still refused: it takes the
+  **evidence-migration round** of
+  `.qfai/assistant/skills/qfai-implement/references/round-evidence.md`, which
+  you judge as an ordinary round: it submits its own RED here before it restores
+  the production code, so it arrives with a real RED pair, a real strip, a
+  revision and a hash, and no absence to admit. Every reference on this page is
+  written from the project root: this file's own directory holds no
+  `references/`, and the same text ships inside `agent-catalog.yml` and
+  `.codex/agents/`, so a path relative to any one of the three resolves nowhere
+  in the other two.
 
 **A minimal seam in the tree is an admissible state, not a ground for REVISE.**
 The producer's Phase Red step 3a requires one for a surface that does not exist
@@ -144,9 +231,11 @@ commit recorded **alongside** the path and symbol is provenance and is fine.
 outside the code the item owns, which on an `E2E` / `API` / `Integration` row is every
 production predicate there is — the same sentence above says no ledger row owns
 that surface. Applied literally, no branch-2 row could ever produce
-falsifiability evidence that passes. On a handed-over row, **the predicate
-`Satisfied-by` names is the owned code** for this check; anything else is still
-out of bounds.
+falsifiability evidence that passes. On a falsifiability row, **the predicate
+`Satisfied-by` names is the owned code** for this check — the exemption follows
+the evidence branch, not the `Layer`, because a `Unit` / `Component` trio
+mutates a sibling's predicate by construction too; anything else is still out of
+bounds.
 
 **On any other row the sibling row is still required** — production code
 no ledger row owns is the anomaly case there, not a substitute. See

@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import type { Stats } from "node:fs";
 import {
@@ -48,6 +48,22 @@ import { QFAI_STATE_SCRATCH_SUFFIX } from "./gitignore.js";
  *     main source of the unreadable file in the first place.
  */
 const STATE_REL = path.join(".qfai", "state.json");
+
+/**
+ * Advisory-lock tuning. The lock is held only across one
+ * read-modify-write of a small JSON file, so the wait budget is short.
+ * `LOCK_STALE_MS` is when a lock first becomes a reap *candidate*;
+ * `LOCK_ABANDON_MS` is the backstop for a lock whose recorded owner
+ * cannot be trusted (see {@link reapStaleLock}).
+ */
+const LOCK_STALE_MS = 10_000;
+const LOCK_ABANDON_MS = 60_000;
+const LOCK_RETRY_MS = 10;
+const LOCK_TIMEOUT_MS = 5_000;
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 
 function stateAbsPath(root: string): string {
   return path.join(root, STATE_REL);
@@ -591,7 +607,7 @@ export async function readDiscussionCurrentIdState(root: string): Promise<Discus
 
   const discussion: unknown = read.state.discussion;
   if (discussion === undefined) return { kind: "unset" };
-  if (!isJsonObject(discussion)) {
+  if (!isRecord(discussion)) {
     return {
       kind: "corrupt",
       detail: `${STATE_REL}#discussion must be an object (got ${describeJsonValue(discussion)})`,
@@ -614,10 +630,6 @@ export async function readDiscussionCurrentIdState(root: string): Promise<Discus
   return { kind: "set", currentId: currentIdField };
 }
 
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function describeJsonValue(value: unknown): string {
   if (value === null) return "null";
   if (Array.isArray(value)) return "an array";
@@ -634,13 +646,67 @@ function describeError(value: unknown): string {
  * when the file, the `discussion` object, or the `currentId` string is
  * absent / not a non-empty string.
  *
- * Callers that must distinguish an unset pointer from a corrupt state file
- * (because they fall back to an inferred pack when none is set) should use
- * {@link readDiscussionCurrentIdState} instead.
+ * Lossy on purpose: a caller that shows the pointer *as a fact about
+ * every pack* ("this one is active, those are not") cannot use it,
+ * because a state file it merely failed to read comes back looking
+ * exactly like a repository where no pointer was ever set. Those callers
+ * take {@link readDiscussionPointer} instead — or
+ * {@link readDiscussionCurrentIdState} when they need the unset/corrupt
+ * split with a `detail` string.
  */
 export async function readDiscussionCurrentId(root: string): Promise<string | null> {
-  const read = await readDiscussionCurrentIdState(root);
-  return read.kind === "set" ? read.currentId : null;
+  const pointer = await readDiscussionPointer(root);
+  return pointer.ok ? pointer.currentId : null;
+}
+
+/**
+ * The active-session pointer, or the reason it could not be established.
+ *
+ * `ok: true` with `currentId: null` is a determinate answer: no pointer
+ * is set (no state file, no `discussion` key, or an explicit `null`).
+ * `ok: false` means the answer is unknown — a present-but-unreadable
+ * state file, invalid JSON, or a `discussion` / `currentId` value of the
+ * wrong shape.
+ */
+export type DiscussionPointerRead =
+  | { ok: true; currentId: string | null }
+  | { ok: false; reason: string };
+
+export async function readDiscussionPointer(root: string): Promise<DiscussionPointerRead> {
+  // Ported to the `loadState` discriminated result main replaced
+  // `loadStateStrict` with. `detail` is the operator-facing sentence that
+  // names the file, which is what the old `reason` carried; the throwing
+  // `readStateStrict` is the wrong shape here because an unreadable file is
+  // one of this function's two reported outcomes, not an exception.
+  const loaded = await loadState(root);
+  if (loaded.kind === "unreadable") {
+    return { ok: false, reason: loaded.detail };
+  }
+  if (loaded.kind === "absent") {
+    return { ok: true, currentId: null };
+  }
+  const abs = stateAbsPath(root);
+  const discussion = loaded.state.discussion;
+  // An absent or explicitly-null `discussion` is "no pointer recorded",
+  // which is a determinate answer. Any other non-object is a corrupt
+  // record: we cannot say the pointer is unset, only that we cannot read it.
+  if (discussion === undefined || discussion === null) {
+    return { ok: true, currentId: null };
+  }
+  if (typeof discussion !== "object" || Array.isArray(discussion)) {
+    return { ok: false, reason: `${abs}#discussion is not an object.` };
+  }
+  const currentIdField = (discussion as Record<string, unknown>).currentId;
+  if (currentIdField === undefined || currentIdField === null) {
+    return { ok: true, currentId: null };
+  }
+  if (typeof currentIdField !== "string" || currentIdField.trim().length === 0) {
+    return {
+      ok: false,
+      reason: `${abs}#discussion.currentId is not a non-empty string.`,
+    };
+  }
+  return { ok: true, currentId: currentIdField };
 }
 
 /**
@@ -652,15 +718,452 @@ export async function readDiscussionCurrentId(root: string): Promise<string | nu
  * other writers (e.g. the ATDD escalation counters under `atdd`).
  */
 export async function writeDiscussionCurrentId(root: string, currentId: string): Promise<void> {
-  const existing = (await readStateStrict(root)) ?? {};
+  // Through `updateState`, which holds the state-file lock across the read AND
+  // the write. A plain read-modify-write here loses the other writer's keys
+  // whenever two runs overlap - the counters live in the same document.
+  // main's `isJsonObject` guard is kept: it is the same test, as a type guard.
+  await updateState(root, (existing) => {
+    const discussionField: unknown = existing.discussion;
+    const discussion: Record<string, unknown> = isJsonObject(discussionField)
+      ? { ...discussionField }
+      : {};
+    discussion.currentId = currentId;
+    return { next: { ...existing, discussion }, result: undefined };
+  });
+}
 
-  const discussionField: unknown = existing.discussion;
-  const discussion: Record<string, unknown> = isJsonObject(discussionField)
-    ? { ...discussionField }
-    : {};
-  discussion.currentId = currentId;
+/**
+ * Lock path for one project root: a sibling of the state file it guards.
+ *
+ * It used to live in the OS temp dir, keyed by a hash of the project's real
+ * path, to keep an untracked `.qfai/state.json.lock` out of consumer repos.
+ * That put the lock outside the repository's own permissions: on a machine
+ * where several Unix users share a checkout, the first writer's lock is created
+ * under that user's uid in a sticky `/tmp`, and no other user can unlink it —
+ * so a crash there wedged every later update for everybody, whatever the age or
+ * the owner's liveness. Beside `state.json` the lock inherits exactly the
+ * permissions that already decide who may write the state, which is the set of
+ * people who must be able to reap it. `QFAI_GITIGNORE_BLOCK` carries the
+ * matching ignore line.
+ *
+ * A sibling also needs no key: two aliases of one project resolve to the same
+ * file through the filesystem itself, where a hash of the pathname needed
+ * `realpath` to notice they were the same project.
+ */
+function stateLockPath(root: string): string {
+  return `${stateAbsPath(root)}.lock`;
+}
 
-  const next: Record<string, unknown> = { ...existing, discussion };
+/**
+ * Path of the short-lived lock that serializes **reapers**.
+ *
+ * Reaping is read-then-unlink, and the two cannot be made one operation: Node
+ * has no "unlink only this inode". Two waiters reaping the same stale lock
+ * could therefore both pass the identity check, the first delete it and take a
+ * fresh one, and the second delete *that* one. Taking this lock first makes at
+ * most one process a reaper at a time, so between one reaper's check and its
+ * unlink no other reaper can slip a new lock onto the path.
+ */
+function reapLockPath(lockPath: string): string {
+  return `${lockPath}.reap`;
+}
 
-  await writeStateFile(root, next);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Narrow an unknown throwable to its `errno` code without a cast. */
+function errorCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return null;
+  }
+  const { code } = error;
+  return typeof code === "string" ? code : null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Identity stamped into the lock file so a holder can prove it owns it. */
+interface LockOwner {
+  readonly pid: number;
+  readonly token: string;
+}
+
+/** A held state lock: the open handle plus the owner stamped on disk. */
+interface StateLock {
+  readonly handle: FileHandle;
+  readonly owner: LockOwner;
+}
+
+/** Is `pid` still running on this machine? */
+function isProcessAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM means the process exists but belongs to another user.
+    return errorCode(error) === "EPERM";
+  }
+}
+
+/** Read the owner stamp, or `null` when it is absent / unparsable. */
+async function readLockOwner(lockPath: string): Promise<LockOwner | null> {
+  let raw: string;
+  try {
+    raw = await readFile(lockPath, "utf-8");
+  } catch {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) return null;
+    const { pid, token } = parsed;
+    if (typeof pid !== "number" || typeof token !== "string") return null;
+    return { pid, token };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What one lock file looked like at one instant: enough to judge it
+ * AND to prove later that the file on that path is still that same
+ * file. `ino`/`dev` are 0 on filesystems that do not report them
+ * (notably some Windows volumes), so the owner token and the mtime
+ * carry the identity check there.
+ */
+interface LockSnapshot {
+  readonly mtimeMs: number;
+  readonly ino: number;
+  readonly dev: number;
+  readonly owner: LockOwner | null;
+}
+
+/** Snapshot the lock file, or `null` when it is gone / unreadable. */
+async function readLockSnapshot(lockPath: string): Promise<LockSnapshot | null> {
+  let info: Stats;
+  try {
+    info = await stat(lockPath);
+  } catch {
+    return null;
+  }
+  return {
+    mtimeMs: info.mtimeMs,
+    ino: info.ino,
+    dev: info.dev,
+    owner: await readLockOwner(lockPath),
+  };
+}
+
+/** Do two snapshots describe the same lock file, taken by the same holder? */
+function isSameLock(before: LockSnapshot, after: LockSnapshot): boolean {
+  if (before.ino !== 0 && after.ino !== 0) {
+    if (before.ino !== after.ino || before.dev !== after.dev) return false;
+  }
+  if (before.mtimeMs !== after.mtimeMs) return false;
+  return before.owner?.token === after.owner?.token;
+}
+
+/**
+ * Unlink the lock only while it is still the file `before` describes.
+ *
+ * Deletion is by path, and between the decision to delete and the
+ * `rm` another waiter can reap the same lock and take a fresh one on
+ * that path. Removing it then would drop the NEW holder's lock while
+ * that holder keeps writing through its unlinked handle — two
+ * `updateState` calls inside the critical section at once, which is
+ * the exact race this module exists to close. Re-reading the file and
+ * requiring the same identity (inode/device when reported, mtime,
+ * owner token) keeps a replaced lock alive; the loser simply waits
+ * one more retry.
+ */
+async function removeLockIfUnchanged(lockPath: string, before: LockSnapshot): Promise<void> {
+  const after = await readLockSnapshot(lockPath);
+  if (after === null || !isSameLock(before, after)) return;
+  try {
+    await rm(lockPath, { force: true });
+  } catch {
+    // The lock vanished or is unreadable — the next acquire attempt decides.
+  }
+}
+
+/**
+ * Remove a lock whose holder is gone.
+ *
+ * An old mtime is not evidence of death: a holder stalled on slow I/O
+ * or suspended by the scheduler keeps its mtime frozen while it is
+ * still inside the critical section, and deleting that lock would admit
+ * a second writer (and let the original holder unlink the newcomer's
+ * lock on release). So an aged lock is only reaped once the pid stamped
+ * inside it is no longer running. `LOCK_ABANDON_MS` is the backstop for
+ * the cases where that pid check cannot be trusted — a recycled pid, or
+ * a lock leaked by this very process.
+ *
+ * A lock whose stamped owner is provably dead is reaped IMMEDIATELY,
+ * with no age gate: `LOCK_STALE_MS` is longer than `LOCK_TIMEOUT_MS`,
+ * so gating the dead-owner case on age would make every run that
+ * starts within the stale window after a holder crashed time out and
+ * fail (`qfai atdd scaffold`, `qfai discussion use`) even though the
+ * lock is known to be free. The age gate still governs the locks whose
+ * owner cannot be read — a lock created microseconds ago but not yet
+ * stamped must not be mistaken for an abandoned one.
+ */
+async function reapStaleLock(lockPath: string): Promise<void> {
+  // One reaper at a time. Without this, two waiters could both clear the same
+  // identity check, the first unlink and take a fresh lock, and the second
+  // unlink that one — see {@link reapLockPath}. Losing the race is not a
+  // failure: the caller retries, and by then the winner has finished.
+  let reaper: FileHandle;
+  try {
+    reaper = await open(reapLockPath(lockPath), "wx");
+  } catch {
+    return;
+  }
+  try {
+    const before = await readLockSnapshot(lockPath);
+    if (before === null) return;
+    const ownerAlive = before.owner !== null && isProcessAlive(before.owner.pid);
+    if (before.owner === null || ownerAlive) {
+      const age = Date.now() - before.mtimeMs;
+      if (age < LOCK_STALE_MS) return;
+      if (age < LOCK_ABANDON_MS && ownerAlive) return;
+    }
+    await removeLockIfUnchanged(lockPath, before);
+  } finally {
+    await reaper.close().catch(() => undefined);
+    await rm(reapLockPath(lockPath), { force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * Whether `lockPath` still names the file this holder created.
+ *
+ * The `LOCK_ABANDON_MS` backstop can take a lock away from a holder that is
+ * still alive — a recycled pid, or a critical section stalled past the
+ * backstop — and pid liveness alone cannot tell those apart from a genuinely
+ * abandoned lock. Prevention is therefore not enough on its own: the holder
+ * checks, immediately before it writes, that the lock it took is still on the
+ * path. A holder whose lock was reaped writes nothing and reports it, so the
+ * worst a wrong reap can do is fail one update — never let two writers into
+ * the critical section and lose an increment, which is what this module exists
+ * to prevent.
+ */
+async function lockStillOurs(lockPath: string, lock: StateLock): Promise<boolean> {
+  const owner = await readLockOwner(lockPath);
+  return owner !== null && owner.token === lock.owner.token;
+}
+
+/**
+ * Take the exclusive state lock, or throw.
+ *
+ * Giving up and proceeding unlocked would reopen the exact lost-update
+ * race this module exists to close: the holder that outran our wait
+ * budget resumes, writes back the snapshot it read before us, and our
+ * increment disappears. Refusing to write is the safe failure —
+ * `.qfai/state.json` is bookkeeping, and its callers either surface the
+ * error (`qfai discussion use`, `qfai atdd scaffold`) or degrade to
+ * "counter unavailable" (the scaffold-placeholder validator, which
+ * already catches per-TC state failures).
+ */
+async function acquireStateLock(lockPath: string): Promise<StateLock> {
+  const owner: LockOwner = { pid: process.pid, token: randomUUID() };
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  // The lock is a sibling of `state.json`, so on a project whose first write
+  // this is, `.qfai/` does not exist yet — `writeStateObject` creates it, but
+  // the lock has to be taken before that runs.
+  await mkdir(path.dirname(lockPath), { recursive: true });
+  // What the LAST contended attempt failed with, when that was not a plain
+  // EEXIST. A wait that ends in the timeout below then still names the errno
+  // it kept seeing, rather than reporting a permission fault as contention.
+  let contendedBy: unknown = null;
+  for (;;) {
+    let handle: FileHandle | null = null;
+    try {
+      handle = await open(lockPath, "wx");
+    } catch (error) {
+      if (!(await exclusiveCreateWasContended(lockPath, error))) {
+        throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`);
+      }
+      contendedBy = errorCode(error) === "EEXIST" ? null : error;
+    }
+    if (handle !== null) return stampLockOwner(lockPath, handle, owner);
+    await reapStaleLock(lockPath);
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `qfai: state lock ${lockPath} is still held after ${LOCK_TIMEOUT_MS}ms; ` +
+          "refusing to update .qfai/state.json without it." +
+          (contendedBy === null ? "" : ` Last attempt: ${describeError(contendedBy)}.`),
+      );
+    }
+    await delay(LOCK_RETRY_MS);
+  }
+}
+
+/**
+ * Whether a failed exclusive create means the NAME was taken.
+ *
+ * POSIX says `EEXIST` and only `EEXIST`. Windows does not: while the name is
+ * being unlinked — which is every release, and every reap — `CreateFile` with
+ * `CREATE_NEW` returns `ERROR_ACCESS_DENIED`, and libuv maps that to `EPERM`.
+ * Measured at 2 failures in 8 runs of `atddScaffoldEscalation.test.ts` on
+ * Windows 11; the CI matrix is Linux-only, so no lane can see it. Rethrowing
+ * made every state write fail under contention — `qfai discussion use` and the
+ * scaffold counters both go through `updateState`.
+ *
+ * Widening the check to the errno alone is what must NOT happen: `EPERM` and
+ * `EACCES` are also what a genuinely unwritable `.qfai/` returns, and calling
+ * that contention spins until the timeout and reports a permission fault as a
+ * busy lock. So the errno only selects the QUESTION, and the answer comes from
+ * the filesystem:
+ *
+ *   - a name that is present and is not a file will never become creatable, so
+ *     the failure is permanent whatever the errno says;
+ *   - a name the `lstat` itself cannot answer for leaves the question OPEN, and
+ *     an open question is not contention. `ENOENT` is an answer ("no such
+ *     name"); an `EACCES` on the lock path is not, and treating it as absence
+ *     would send a permanent fault into the retry loop — the very confusion
+ *     this function exists to prevent, arriving through the stat instead of
+ *     through the open;
+ *   - otherwise, ask the directory directly whether this process can put a new
+ *     name in it. If it can, the create lost a race and retrying is right; if
+ *     it cannot, the original error is the true one and is rethrown intact.
+ */
+async function exclusiveCreateWasContended(lockPath: string, error: unknown): Promise<boolean> {
+  const code = errorCode(error);
+  if (code === "EEXIST") return true;
+  if (code !== "EPERM" && code !== "EACCES") return false;
+  let existing: Stats | null;
+  try {
+    existing = await lstat(lockPath);
+  } catch (statError) {
+    if (!isEnoent(statError)) return false;
+    existing = null;
+  }
+  if (existing !== null && !existing.isFile()) return false;
+  return acceptsNewNames(path.dirname(lockPath));
+}
+
+/**
+ * Can this process create a name in `dir` at all?
+ *
+ * Asked by creating one, because that is the operation whose failure is being
+ * explained. `access(dir, W_OK)` is not an answer on Windows: it reports the
+ * read-only ATTRIBUTE, which is meaningless on a directory, and says "writable"
+ * for a directory whose ACL denies this account — the one case this has to
+ * catch.
+ *
+ * The probe name carries the pid and a UUID so two runs racing here cannot
+ * collide. Removing it is BEST EFFORT: the answer is already known once the
+ * create succeeded, and failing the acquire because the cleanup failed would
+ * turn a working directory into a refusal. A name left behind — by a failed
+ * `rm`, or by a process killed between the create and it — is inert: nothing
+ * reads it, the lock and its reap file are addressed by exact path, and the
+ * next probe picks a fresh UUID rather than that one.
+ */
+async function acceptsNewNames(dir: string): Promise<boolean> {
+  const probePath = path.join(dir, `.qfai-lock-probe-${process.pid}-${randomUUID()}`);
+  let probe: FileHandle;
+  try {
+    probe = await open(probePath, "wx");
+  } catch {
+    return false;
+  }
+  await probe.close().catch(() => undefined);
+  await rm(probePath, { force: true }).catch(() => undefined);
+  return true;
+}
+
+/** Stamp the owner into a freshly created lock file. */
+async function stampLockOwner(
+  lockPath: string,
+  handle: FileHandle,
+  owner: LockOwner,
+): Promise<StateLock> {
+  const lock: StateLock = { handle, owner };
+  try {
+    await handle.writeFile(`${JSON.stringify(owner)}\n`, "utf-8");
+  } catch (error) {
+    await releaseStateLock(lockPath, lock);
+    throw new Error(`qfai: cannot stamp state lock ${lockPath}: ${describeError(error)}`);
+  }
+  return lock;
+}
+
+async function releaseStateLock(lockPath: string, lock: StateLock): Promise<void> {
+  try {
+    await lock.handle.close();
+  } catch {
+    // Already closed; the unlink below is what matters.
+  }
+  try {
+    const snapshot = await readLockSnapshot(lockPath);
+    if (snapshot === null) return;
+    if (snapshot.owner !== null && snapshot.owner.token !== lock.owner.token) {
+      // Our lock was reaped as abandoned and the path re-taken by
+      // someone else: removing it now would drop *their* lock, not ours.
+      return;
+    }
+    // Same identity check as the reaper: the path can be re-taken
+    // between the read above and the unlink below.
+    await removeLockIfUnchanged(lockPath, snapshot);
+  } catch {
+    // Best effort — a leftover lock is reaped as abandoned by the next writer.
+  }
+}
+
+/** What one {@link updateState} mutation decided. */
+export interface StateMutation<T> {
+  /** The document to persist, or `null` to leave the file untouched. */
+  readonly next: Record<string, unknown> | null;
+  /** Value handed back to the caller of `updateState`. */
+  readonly result: T;
+}
+
+/**
+ * Serialized read-modify-write of `.qfai/state.json`.
+ *
+ * Every writer MUST go through this. Loading the whole document,
+ * mutating it and writing it back is a lost-update race otherwise: two
+ * runs read the same snapshot, both write, and the first increment
+ * disappears. Holding the lock across the read as well as the write is
+ * what closes that window — a compare-and-swap on the file contents
+ * would leave one.
+ *
+ * Throws when the lock cannot be taken: no lock, no write. Callers on
+ * a best-effort path must catch, as the scaffold-placeholder validator
+ * already does.
+ *
+ * `mutate` is synchronous on purpose, to keep the critical section to
+ * the two filesystem calls this function makes itself. A malformed
+ * existing file makes `readStateStrict` throw, which is the refusal this
+ * lock exists to make safe: the update is abandoned rather than written
+ * from a snapshot that never parsed.
+ */
+export async function updateState<T>(
+  root: string,
+  mutate: (current: Record<string, unknown>) => StateMutation<T>,
+): Promise<T> {
+  const lockPath = stateLockPath(root);
+  const lock = await acquireStateLock(lockPath);
+  try {
+    const current = (await readStateStrict(root)) ?? {};
+    const { next, result } = mutate(current);
+    if (next !== null) {
+      // Re-checked here rather than trusted from the acquire: see
+      // {@link lockStillOurs}. Nothing is written without it.
+      if (!(await lockStillOurs(lockPath, lock))) {
+        throw new Error(
+          `qfai: state lock ${lockPath} was taken over while this update ran; ` +
+            "refusing to write .qfai/state.json from a stale snapshot.",
+        );
+      }
+      await writeStateFile(root, next);
+    }
+    return result;
+  } finally {
+    await releaseStateLock(lockPath, lock);
+  }
 }

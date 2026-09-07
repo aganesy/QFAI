@@ -93,7 +93,7 @@ describe("drift protocol distinguishes intent drift from defect drift", () => {
 
       expect(template).toContain("- Class: `intent`");
       expect(template).toContain("intent | defect");
-      expect(template).toContain("constitution/drift-protocol.md#drift-classes");
+      expect(template).toContain(".qfai/assistant/constitution/drift-protocol.md#drift-classes");
       expect(template).toContain("## Reproduction");
       expect(flat(template)).toContain("REQUIRED when Class is `defect`");
       expect(flat(template)).toContain(

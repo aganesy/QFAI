@@ -44,10 +44,15 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-DOC-CONVERGENCE-MISSING",
   "QFAI-DOC-VOCABULARY-CONTRADICTION",
   "QFAI-DOC-VOCABULARY-PROHIBITED",
-  // `core/validators/mermaidFence.ts` was its sole emitter. This branch folds
-  // that fence check into `mermaidEnforcement.ts` — which raises
-  // `QFAI-MMD-001` over the same input — and deletes the file.
+  // `core/validators/mermaidFence.ts` was its sole emitter. That fence check
+  // folded into `mermaidEnforcement.ts` — which raises `QFAI-MMD-001` over the
+  // same input — and the file was deleted.
   "QFAI-MERMAID-001",
+  // Both retired by this change: the two performance findings are replaced by
+  // the `timings` record `validate.json` now carries, so nothing emits either
+  // code any more. Listed in sorted order because the assertion compares this
+  // against a sorted `retired`.
+  "QFAI-MOCK-099",
   "QFAI-REQCTX-000",
   "QFAI-REQCTX-001",
   "QFAI-REQCTX-002",
@@ -58,6 +63,7 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-REQCTX-021",
   "QFAI-REQINDEX-001",
   "QFAI-REQINDEX-002",
+  "QFAI-UIUX-PERF",
 ];
 
 /**
@@ -118,6 +124,13 @@ const ERROR_FROM_INTRODUCTION: readonly { code: string; reason: string }[] = [
 ];
 
 const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
+  // `prototyping.mode=exploration` downgraded one or more declared-error
+  // gates to warning. The relaxation is what the project asked for, so the
+  // notice reports a configured fact and names the file it came from; what
+  // is new here is the audit trail, not the downgrade. There is no release
+  // at which telling an operator about their own setting should fail a
+  // build, so there is nothing for a promotion window to close.
+  "QFAI-PROT-337",
   // `.qfai/review/` holds a directory whose name is not a pack timestamp. The
   // finding tells the operator that directory is not inspected; it does not
   // claim the tree is wrong, and nothing about it is a gate waiting to close.

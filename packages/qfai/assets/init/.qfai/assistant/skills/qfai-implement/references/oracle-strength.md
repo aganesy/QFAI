@@ -13,7 +13,10 @@ and the `Oracle proof` field below are what close that hole.
 
 ## `Oracle proof` — the evidence field
 
-Per item, alongside the RED/GREEN pair:
+Per **round**, alongside that round's RED/GREEN pair — a `REVISE` that opens
+round N+1 rewrites the code the mutation targets, so round 1's proof no longer
+shows that the new pass depends on the item's behaviour, and
+`round-evidence.md` records it as `Round N: Oracle proof`:
 
 1. Name the **smallest production change** that makes this item's test fail
    again — one line, in the code the item owns.
@@ -22,8 +25,9 @@ Per item, alongside the RED/GREEN pair:
 3. **Revert immediately.** The mutation is evidence, not a deliverable; it must
    never appear in the commit.
 
-One mutation per item. It is the only evidence that separates a discriminating
-test from a vacuous one, and it costs one run.
+One mutation per round — not one per item, and never round 1's re-used. It is
+the only evidence that separates a discriminating test from a vacuous one, and
+it costs one run.
 
 A row on the _RED not observable_ path already carries
 `Falsifiability command` / `Falsifiability result`, which is the same proof by
@@ -32,7 +36,12 @@ the same method. That satisfies `Oracle proof`; do not do it twice.
 ## Reject an `Oracle proof` when
 
 - the mutation is outside the code the item owns — breaking a shared helper
-  proves the helper is used, not that this test discriminates;
+  proves the helper is used, not that this test discriminates. **On a _RED not
+  observable_ row the predicate `Satisfied-by` names is the owned code for this
+  check**: that row's mutation is a sibling's predicate by construction, so read
+  literally this criterion rejected every correctly executed trio — on any
+  `Layer` — and `red-not-observable.md` forbids sending that case to
+  `exception`. Anything else is still out of bounds;
 - the mutation is a syntax error, a thrown "not implemented", or a deleted
   export — that is a load failure, the same non-observation
   `red-admissibility.md` rejects for RED;
@@ -68,7 +77,7 @@ promised.
 That is not an implementer defect and must not be worked around by strengthening
 the assertion past the contract: doing so encodes a reviewer-originated
 obligation in a hard assertion, which
-`constitution/drift-protocol.md#reviewer-originated-obligations` forbids in
+`.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations` forbids in
 exactly those terms.
 
 The route:
@@ -76,7 +85,7 @@ The route:
 1. Record `Oracle proof: equivalent-mutant`, naming the contract clause that is
    weaker than the obligation.
 2. Raise it as an advisory / Change Request per
-   `drift-protocol.md#when-drift-is-detected`. `/qfai-sdd` owns closing it, by
+   `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`. `/qfai-sdd` owns closing it, by
    tightening the contract.
 3. The row may reach `done` against its existing obligation with the advisory
    recorded — the gap is upstream, and blocking the implementer on a finding

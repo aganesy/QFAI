@@ -19,7 +19,7 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 1. Identify the latest discussion-pack, if there is one.
 2. Note which of its files are missing, and any blocking OQ, as reference-quality
    facts — they are recorded, not blocking. A pack is non-normative reference
-   material (`constitution/drift-protocol.md#core-rule`), so do NOT repair or
+   material (`.qfai/assistant/constitution/drift-protocol.md#core-rule`), so do NOT repair or
    re-run it to make this gate pass; a correction it implies belongs in the
    SDD-owned artifact, with the discrepancy noted in delta/evidence.
 3. Stop only when there is no usable source at all: no pack, no import-lite
@@ -76,6 +76,10 @@ rather than falling back here. Validator: `QFAI-IMPLITE-001`.
    `UPDATE:REMOVE` rows wherever existing AC/BR reference the changed
    concept. The same `Source` ID may legitimately appear on multiple rows.
 4. Obtain AskUserQuestion approval for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows.
+   Under `--auto` ask nothing and do not self-approve: those rows stay unapproved and
+   trip the stop condition below, no `CAP-NNNN` is written to
+   `_policies/03_Capabilities.md` on their behalf, and the batch stops whole rather
+   than running its approval-free rows ahead of the gate.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
 6. Stop entry to Phase 0 until every approval-required row has an
    approver recorded and every CREATE row cites a registered CAP

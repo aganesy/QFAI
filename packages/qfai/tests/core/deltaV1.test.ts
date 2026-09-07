@@ -247,15 +247,33 @@ describe("deltaV1 parser", () => {
     expect(entry?.verificationPlanItems[0]?.level).toBe("unit");
   });
 
-  it("reads fenced and unfenced Verification.Plan bodies identically", () => {
-    // Same bytes inside the fence as outside it, so any difference in the
-    // result is the fence handling and nothing else.
-    const fenced = parseDeltaV1(planDocument(FENCED_PLAN)).entries[0];
-    const unfenced = parseDeltaV1(planDocument(UNFENCED_PLAN)).entries[0];
+  it("reads fenced and unfenced bodies identically when the plan has no comments", () => {
+    // Backward compatibility, stated as a property rather than assumed: every
+    // delta written before the fence existed is unfenced, and this parser runs
+    // over adopter trees it does not control.
+    const plain = UNFENCED_PLAN.filter((line) => !line.trim().startsWith("#"));
+    const fenced = parseDeltaV1(planDocument(["```yaml", ...plain, "```"])).entries[0];
+    const unfenced = parseDeltaV1(planDocument(plain)).entries[0];
 
     expect(fenced?.verificationPlanItems).toEqual(unfenced?.verificationPlanItems);
     expect(fenced?.verificationPlanError).toBeNull();
     expect(unfenced?.verificationPlanError).toBeNull();
+  });
+
+  it("keeps an indented YAML comment out of the heading scan only when fenced", () => {
+    // This is what the fence is FOR, and the asymmetry is the finding rather
+    // than a defect in the test. `  # unit | integration | …` is a legal ATX
+    // heading under CommonMark — up to three leading spaces are allowed — so an
+    // unfenced plan is cut short at its own first comment, and every field after
+    // it is lost. Fenced, the same bytes parse whole.
+    const fenced = parseDeltaV1(planDocument(FENCED_PLAN)).entries[0];
+    const unfenced = parseDeltaV1(planDocument(UNFENCED_PLAN)).entries[0];
+
+    expect(fenced?.verificationPlanItems[0]?.level).toBe("unit");
+    expect(fenced?.verificationPlanItems[0]?.owner).toBe("dev");
+
+    // Truncated at the comment: the item survives, the fields after it do not.
+    expect(unfenced?.verificationPlanItems[0]?.level).toBe("");
   });
 
   it("reports a parse error for a fenced plan whose YAML is not a list", () => {

@@ -32,6 +32,11 @@ validation:
     # other stack. Run /qfai-configure to populate it; `qfai validate` reports
     # QFAI-TRACE-124 while this is unset or matches zero files.
     #
+    # This key also selects the files scanned by the test-stub gate
+    # (validation.testStrategy.forbidTestTodoStubs). While it is empty that gate
+    # scans nothing, so QFAI-TEST-001 cannot fire however many stubs exist;
+    # `qfai validate` reports QFAI-TEST-002 to say the scan produced no evidence.
+    #
     # Examples:
     #   TypeScript: tests/**/*.test.ts, src/**/*.spec.ts
     #   Python:     tests/**/test_*.py, tests/**/*_test.py
@@ -50,3 +55,11 @@ prototyping:
   execution:
     targetUrl: null
     browserTool: playwright
+atdd:
+  # How many consecutive `qfai validate` runs may observe a scaffold skeleton
+  # still in placeholder shape before D-SCAFFOLD-PLACEHOLDER escalates from
+  # warning to error. 0 disables the escalation and keeps it a warning forever.
+  # This is the in-code default, restated here so the knob the ATDD skill
+  # advertises is readable from the file it sends you to. See
+  # `.qfai/assistant/skills/qfai-atdd/references/scaffolding.md`.
+  scaffoldEscalateCycles: 3

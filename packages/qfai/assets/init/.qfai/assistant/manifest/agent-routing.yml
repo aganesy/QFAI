@@ -1,5 +1,42 @@
 schema_version: "1.0"
 
+# Contract with each skill's `roles:` frontmatter (validated by
+# `QFAI-AGENT-015` .. `QFAI-AGENT-019`):
+#
+# A skill's `roles:` is the closed set of agents it may dispatch, so it must be
+# a SUPERSET of every agent this manifest binds to that skill —
+# `mandatory_agents`, `conditional_agents`, `blocking_agents` and
+# `parallel_groups` across all of its phases — plus every reviewer its
+# `review_profile` selects. A missing `mandatory_agents` / `blocking_agents`
+# entry, or a missing `always_required` reviewer of that profile, is an error:
+# the run cannot finish without dispatching a role the skill never declared. A
+# missing `conditional_agents` / `parallel_groups` / `conditional_required`
+# entry is a warning.
+#
+# The reverse also holds: a declared role that neither this manifest nor the
+# skill's review profile selects is a stale grant and is reported as a warning.
+# The one exception is `orchestrator`, the invoking agent, which
+# `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` governs instead of any
+# routing phase.
+#
+# Both directions need a `roles:` list to compare, so a `roles:` key that is
+# not a list of agent ids is an error rather than "no declaration"
+# (`QFAI-AGENT-016`) — otherwise one notation slip disables the cross-check.
+# And a skill that declares `routing-profile:` but that this file routes
+# nothing to is an error too (`QFAI-AGENT-017`): a deleted or misspelled
+# `- skill:` block — or a `- skill:` header left with no usable `phases:` —
+# leaves a workflow that can dispatch no one. Skills with no
+# `routing-profile:` (`web-research`) are deliberately un-routed and exempt.
+# That `routing-profile:` must also name the same profile this file's
+# `review_profile:` gives the skill, and one `review-profiles.yml` defines
+# (`QFAI-AGENT-018`): otherwise the two sides state different review gates.
+# Both keys must be a non-empty profile name when present — a list or an empty
+# value is a shape error (`QFAI-AGENT-013` here, `QFAI-AGENT-016` in the skill)
+# rather than "no gate declared". Whenever the gate is in any of those states,
+# the roles cross-check above is skipped for that skill: the reviewer set it
+# would compare against is known to be partial, and reporting from it would
+# name roles that are in fact declared correctly.
+
 routing:
   - skill: qfai-discussion
     phases:
@@ -83,13 +120,25 @@ routing:
   # self-attestation it exists to prevent.
   - skill: qfai-implement
     phases:
+      # Runs once, before any ledger row is touched: `delivery-planner` frames
+      # the invocation (risk tiers, T1 groups, dispatch, order) and blocks it
+      # when the plan is wrong, while `test-design-analyst` reports coverage /
+      # layer-ownership findings and does not block, because their repair is
+      # upstream. Written up in `qfai-implement/SKILL.md` under
+      # `### Phase: Stage 0 + Preflight + Plan` — a routed phase the skill body
+      # never named dispatched `test-design-analyst` with no task definition.
+      # `changed-scope-dependents`, not `failed-agents-only`: repairing a
+      # `delivery-planner` scope REVISE splits a selector, adds a row or moves
+      # an obligation reference, which changes the ledger `test-design-analyst`
+      # read — so its earlier PASS would otherwise stand over a ledger that no
+      # longer exists. Same reason the ATDD scope gate uses this policy.
       - id: plan
         iteration: per-invocation
         mandatory_agents: [delivery-planner, test-design-analyst]
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner]
-        rerun_policy: failed-agents-only
+        rerun_policy: changed-scope-dependents
       # The failing test exists and no production code does. This is the only
       # window in which "watch it fail" is a first-hand observation, so the
       # gatekeeper is mandatory AND blocking here: RED must be confirmed before
@@ -132,10 +181,17 @@ routing:
           - [frontend-engineer, backend-engineer]
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
+      # `acceptance-test-engineer` is **not** listed here. Acceptance tests are
+      # `/qfai-atdd`'s owned artifact and `qfai-implement/SKILL.md` Non-goals
+      # bar this skill from authoring them, so routing the role into this phase
+      # gave the manifest and the skill opposite instructions about the same
+      # agent — and licensed, one phase after the step 3b handback, exactly the
+      # edit that handback exists to prevent. The role reaches an `E2E` / `API`
+      # / `Integration` row through the `qfai-atdd` route below, never here.
       - id: test
         iteration: per-ledger-item
         mandatory_agents: []
-        conditional_agents: [acceptance-test-engineer, qa-strategist]
+        conditional_agents: [qa-strategist]
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents
@@ -150,7 +206,7 @@ routing:
         parallel_groups: []
         # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
         # unconditional 12-point gate in qfai-implement/SKILL.md, and every DONE
-        # rule in the skill and in shared-skill-delegation-baseline.md is phrased
+        # rule in the skill and in .qfai/assistant/constitution/shared-skill-delegation-baseline.md is phrased
         # over *blocking* reviewers. Listing it as mandatory-only let an item
         # reach `done` with the code-quality reviewer sitting at REVISE.
         blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
@@ -309,5 +365,5 @@ routing:
 #                               touched, including ones that passed
 #
 # The key was previously on all 23 phases, defined nowhere and read by nothing,
-# so a typo in it was invisible. `constitution/drift-protocol.md` step 4 uses the
-# same vocabulary when a Change Request names its rerun mode.
+# so a typo in it was invisible. `.qfai/assistant/constitution/drift-protocol.md`
+# step 4 uses the same vocabulary when a Change Request names its rerun mode.

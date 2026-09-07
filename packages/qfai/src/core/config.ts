@@ -180,6 +180,25 @@ export type QfaiReviewConfig = {
   staleTtlDays?: number;
 };
 
+export type QfaiReportConfig = {
+  /**
+   * Stale run-log TTL (calendar days) used by `qfai doctor --clean` to
+   * decide whether a `<paths.outDir>/run-*` directory may be pruned.
+   * `0` opts out entirely (never prune). Default (when unset) is applied
+   * at the call-site by `RUN_LOG_STALE_TTL_DAYS_DEFAULT`.
+   */
+  staleTtlDays?: number;
+  /**
+   * Number of newest `run-*` directories retained regardless of age, so
+   * `validate.log`'s `run_log:` pointer can never be pruned away.
+   * Default (when unset) is applied at the call-site by
+   * `RUN_LOG_KEEP_LATEST_DEFAULT`; `0` is clamped up to
+   * `RUN_LOG_KEEP_LATEST_MIN` (1) there, because keeping nothing would
+   * strand that pointer. Use `staleTtlDays: 0` to keep every run.
+   */
+  keepLatestRuns?: number;
+};
+
 export type QfaiAtddConfig = {
   /**
    * Number of consecutive un-skip + re-skip cycles tolerated before the
@@ -196,6 +215,7 @@ export type QfaiConfig = {
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
   review?: QfaiReviewConfig;
+  report?: QfaiReportConfig;
   atdd?: QfaiAtddConfig;
   baseBranch?: string;
 };
@@ -216,6 +236,21 @@ export type ConfigLoadResult = {
   config: QfaiConfig;
   issues: Issue[];
   configPath: string;
+  /**
+   * The parsed YAML document, before normalization. `undefined` when the
+   * file is absent (`issues` empty) or could not be read / parsed at all
+   * (`issues` non-empty) — the two cases a caller distinguishes by the
+   * issue list.
+   *
+   * `issues` records *that* something was rejected but not *which* key,
+   * so it cannot answer "was the value I depend on honoured, or silently
+   * replaced by its default?". Normalization is per-key and independent,
+   * so an unrelated rejection (a bad `baseBranch`, say) says nothing
+   * about `paths.discussionDir`. A caller whose correctness hinges on one
+   * key reads it here and checks that key alone, rather than treating any
+   * issue anywhere in the file as a reason to distrust the whole config.
+   */
+  document?: unknown;
 };
 
 export type ConfigSearchResult = {
@@ -313,7 +348,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   }
 
   const normalized = normalizeConfig(parsed, configPath, issues, toolVersion);
-  return { config: normalized, issues, configPath };
+  return { config: normalized, issues, configPath, document: parsed };
 }
 
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
@@ -334,6 +369,7 @@ function normalizeConfig(
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues, toolVersion);
   const review = normalizeReview(raw.review, configPath, issues);
+  const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
@@ -348,6 +384,9 @@ function normalizeConfig(
   }
   if (review) {
     base.review = review;
+  }
+  if (report) {
+    base.report = report;
   }
   if (atdd) {
     base.atdd = atdd;
@@ -777,6 +816,57 @@ function normalizeReview(
   return Object.keys(result).length === 0 ? undefined : result;
 }
 
+function readNonNegativeInteger(
+  raw: unknown,
+  field: string,
+  configPath: string,
+  issues: Issue[],
+): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw) && Number.isInteger(raw) && raw >= 0) {
+    return raw;
+  }
+  issues.push(configIssue(configPath, `${field} は 0 以上の整数である必要があります。`));
+  return undefined;
+}
+
+function normalizeReport(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiReportConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "report はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiReportConfig = {};
+  if (raw.staleTtlDays !== undefined) {
+    const value = readNonNegativeInteger(
+      raw.staleTtlDays,
+      "report.staleTtlDays",
+      configPath,
+      issues,
+    );
+    if (value !== undefined) {
+      result.staleTtlDays = value;
+    }
+  }
+  if (raw.keepLatestRuns !== undefined) {
+    const value = readNonNegativeInteger(
+      raw.keepLatestRuns,
+      "report.keepLatestRuns",
+      configPath,
+      issues,
+    );
+    if (value !== undefined) {
+      result.keepLatestRuns = value;
+    }
+  }
+  return Object.keys(result).length === 0 ? undefined : result;
+}
+
 function normalizeAtdd(
   raw: unknown,
   configPath: string,
@@ -1094,15 +1184,19 @@ function normalizeUiux(
     }
   }
   if (raw.competitive_refs_min !== undefined) {
+    // Integers only. A count of references is discrete, and now that the knob
+    // is a blocking gate a fractional bound is silently rounded up by the
+    // comparison while the finding still reports the fraction — `2.5` demands
+    // three references and says "at least 2.5".
     if (
       typeof raw.competitive_refs_min === "number" &&
-      Number.isFinite(raw.competitive_refs_min) &&
+      Number.isInteger(raw.competitive_refs_min) &&
       raw.competitive_refs_min >= 0
     ) {
       result.competitive_refs_min = raw.competitive_refs_min;
     } else {
       issues.push(
-        configIssue(configPath, "uiux.competitive_refs_min は0以上の数値である必要があります。"),
+        configIssue(configPath, "uiux.competitive_refs_min は0以上の整数である必要があります。"),
       );
     }
   }

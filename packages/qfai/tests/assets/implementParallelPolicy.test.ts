@@ -299,7 +299,7 @@ describe("qfai-implement states one parallelization policy", () => {
       // stage-independent Concurrency subsection, so an anchor is both checkable
       // and correct about where it applies.
       expect(section).toContain(
-        "`constitution/workflow.md#concurrency-stage-independent-mandatory` requires no",
+        "`.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory` requires no",
       );
       expect(section).toContain("Worktree separation is also **not sufficient on its own**");
       // And the deny list must name the same collisions.

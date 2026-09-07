@@ -431,6 +431,41 @@ const seededDiscussionPackFiles = {
     "- Confidence: high",
     "- Rationale: provide stable evidence for seeded discussion.",
     "",
+    // The research-first protocol stores its output here, and the gate now
+    // requires the section on the current pack — a seeded pack without it is
+    // QFAI-RESEARCH-016. That code rides the `researchSummarySchemaFields`
+    // promotion window, so while the window is open it is a `warning` and the
+    // `--fail-on error` run below reports it without failing; from
+    // the release the window names it is an `error` and the run stops. Seeded
+    // either way, so this fixture does not start failing on the promotion.
+    "## Research Summary",
+    "",
+    "```yaml",
+    "research_summary:",
+    "  sources:",
+    "    - id: SRC-0001",
+    "      title: QFAI packaging smoke fixture note",
+    "      url: https://example.com/qfai/verify-pack",
+    "      published: 2026-02-16",
+    "  best_practices:",
+    "    - id: BP-0001",
+    "      category: packaging",
+    "      title: Seed a realistic discussion pack before packing",
+    "      description: Give the pack-time validate gate concrete inputs.",
+    "      source_id: SRC-0001",
+    "  anti_patterns:",
+    "    - id: AP-0001",
+    "      category: packaging",
+    "      title: Validate against an empty scaffold",
+    "      description: An empty pack lets every discussion gate pass vacuously.",
+    "      source_id: SRC-0001",
+    "  reflection:",
+    "    - source_id: SRC-0001",
+    "      finding: The smoke fixture has to carry the research storage slot.",
+    "      action: apply",
+    "      reason: Pack-time validate gates the current pack on that section.",
+    "```",
+    "",
   ],
   "05_Scope.md": [
     "# 05 Scope",

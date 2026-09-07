@@ -23,8 +23,12 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+// The IMPLEMENTATION, not the repository-root delegator: the delegator exists
+// to be run as a program and exits the process on load, which would end the test
+// run during collection. The spawn cases below still address the delegator,
+// because that is the path `pnpm lint:mdschema` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
-import { patternToRegExp } from "../../../../scripts/check-mdschema.mjs";
+import { patternToRegExp } from "../../assets/scripts/check-mdschema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts -> tests -> packages/qfai -> packages -> repo root

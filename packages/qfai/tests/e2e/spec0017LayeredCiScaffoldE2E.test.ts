@@ -561,8 +561,9 @@ describe(
       // `.npmrc` into the shipped root, ran init, and executed the very step body whose digest is pinned —
       // arbitrary code, with all seven projects and `ci:lint` green.
       //
-      // Two questions, because the surface has two halves. WHICH files arrive, outside the four
-      // agent-instruction trees, is a six-entry list pinned by path and by content — plus the provenance record
+      // Two questions, because the surface has two halves. WHICH files arrive, outside the
+      // agent-instruction trees `INIT_INSTRUCTION_TREES` names, is a list pinned by path and by content —
+      // plus the provenance record
       // inside one of those trees, pinned by shape because it gates a delete. WHAT KIND of
       // file arrives anywhere,
       // those trees included, is the narrower claim that survives a skill edit: nothing init writes may be

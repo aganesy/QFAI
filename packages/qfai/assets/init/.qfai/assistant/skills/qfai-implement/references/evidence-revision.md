@@ -48,10 +48,12 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      could not agree on one revision and a correct item never reached `done`.
      What protects the pack is a **pack seal**, not the audit hash: that one
      addresses the evidence a reviewer _read_, and the pack is what it _wrote_.
-     When the last reviewer of a round has stored its response, record the seal
-     in the item's evidence entry as `Review pack seal` — by the **audit-hash**
+     When the last reviewer of a **review attempt** has stored its response,
+     record the seal in the item's evidence entry as `Review pack seal` — one
+     per attempt, because a behaviour-preserving `REVISE` re-reviews inside the
+     same round into a pack of its own — by the **audit-hash**
      procedure in
-     `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
+     `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
      not the working-tree one below: its step 2 normalization (LF, trailing
      whitespace, leading and trailing blank lines, one final newline), its
      `path + NUL + SHA-256` record sorted by path, its final hash over the
@@ -73,11 +75,19 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      beside it. A spec has several packs and a blocking REVISE opens more, so a
      bare hash left the gate unable to say which directory to recompute over —
      it either checked another round's pack or stopped a correct item.
+     **A round that was reviewed more than once carries one pair per attempt**,
+     qualified `(attempt M)` in review order (`round-evidence.md`): every review
+     writes its own pack, so writing the seal only for the attempt that closed
+     the round left the earlier packs unsealed and their edits undetectable.
+     **Gate item 10 recomputes every seal the entry carries**, not just the
+     latest — a recomputation that stops at one pair is the same hole with a
+     value stored beside it.
 
      **A record re-attestation seals its own pack the same way**, under
      `Record re-attestation pack` and `Record re-attestation pack seal` — it is
      not a round, so it takes no `Round N:` prefix
-     (`../../../constitution/drift-protocol.md#the-record-defect-queue`). The
+     (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
+     The
      pack holding the verdict it supersedes is never edited to restamp a hash:
      that would break the seal already recorded over it, which is the one thing
      a seal exists to prevent.
@@ -94,10 +104,12 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      same hand can update it. Three successive homes were tried and each fell to
      the same move — beside the artifact, in a commit, in the newest commit that
      introduces the line — and a fourth would fall too. **Committing the seal is
-     not the answer either.** Per-item stage evidence is a committed governance
-     record (the managed `.gitignore` block negates `implement-*.md` and
-     `atdd-*.md` back in), but the record and its seal are still writable by the
-     same authority.
+     not the answer either.** `implement-<spec-id>.md` and `atdd-<spec-id>.md`
+     are now governance records and ARE committed (`.qfai/evidence/*` is
+     ignored, with the governance records negated back in), so the objection is
+     no longer availability — it is that a committed copy buys nothing here. The
+     same hand that rewrites the pair rewrites the seal in the same commit, so
+     the fourth home falls exactly as the other three did.
 
      A consistent rewrite is caught where consistent rewrites are caught: by
      review of the change itself, against a history the seals make legible.
@@ -146,7 +158,7 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
 evidence hash`** beside its `Reviewed revision`. **What it covers is the
   named subject for that observation** — RED, GREEN or completion review —
   defined once in
-  `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
   Do not restate it here and do not derive it by subtraction: an entry that goes
   on growing means "the section minus what is written later" is a different
   value for every reader, and each observation is judged against the fields that
@@ -172,7 +184,7 @@ item 5's `Revision` with the final value, or pull a reviewer's back to the
 pre-refactor one, and break that table or gate item 10. The three places:
 
 1. **Reviewer responses** — as `Reviewed revision`, per
-   `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+   `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
 2. **The per-item evidence contract** — one `Revision` per round block, beside
    the RED / GREEN commands and results, one for the refactor-verify pair, named
    `Refactor verify revision` after the pair it sits beside, and one for the
@@ -299,7 +311,7 @@ identical timestamps. The revision is the only thing that survives the question
 "which code did this verdict actually rule on?".
 
 Reviewers and `qa-gatekeeper` are dispatched against the **integrated** tree by
-design — `../../../constitution/workflow.md`'s worktree-separation rule constrains
+design — `.qfai/assistant/constitution/workflow.md`'s worktree-separation rule constrains
 implementers, not reviewers — so the tree a reviewer reads is legitimately
 allowed to move under it. A fully independent reviewer reading a tree that is
 being edited mid-review produces a verdict that is honest, independent and
@@ -344,6 +356,15 @@ Consequences:
   name the **same** revision. Verdicts from different revisions do not compose
   into a ruling about one state — the earlier ones ruled on code that no longer
   exists.
+- **A UI-affecting row adds gate item 9 to that set**: the
+  `product-surface-reviewer` PASS recorded as `Prototype parity`. Its
+  `Reviewed revision` is held to the same rule and must equal the others'. The
+  routed set is the subject here, not a fixed pair — reading it as one let a
+  parity PASS taken against an earlier rendering stand while the UI moved
+  underneath it, and that is the one verdict a later reader cannot re-derive
+  from the spec and the diff: it was an observation of a surface that no longer
+  exists. A row that routed no parity reviewer has nothing extra to agree; the
+  rule applies where item 9 does.
 - **The exceptions are items 3 and 5, on every row, above under _A transient
   observation names its own revision_** and in the table under _Which tree each
   gate item addresses_. A RED is observed before the code that
@@ -361,7 +382,7 @@ Consequences:
   having, not decay. Each records its own field — `Round N: RED revision` beside
   the RED pair, `Round N: Falsifiability revision` beside the trio,
   `Round N: Revision` beside the
-  GREEN pair — and leaves `Refactor verify revision` for item 6 and the two
+  GREEN pair — and leaves `Refactor verify revision` for item 6 and the routed
   reviews, which must still agree with each other. Folding
   any of them into one field made a correct row permanently stale and unable to
   reach `done`: the `observed-red` E2E/API rows first, every branch-2 row

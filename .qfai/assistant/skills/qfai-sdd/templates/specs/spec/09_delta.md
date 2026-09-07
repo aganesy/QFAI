@@ -86,7 +86,7 @@ notes: <one line of context>
 
 #### Verification
 
-> Required when `compat: Change`. See `constitution/change-classification.md`.
+> Required when `compat: Change`. See `.qfai/assistant/constitution/change-classification.md`.
 
 ### Plan
 
@@ -124,6 +124,18 @@ notes: <one line of context>
 - Reason: <why rejected>
 - DO NOT: <must not reintroduce>
 - Temptation: <why people may accidentally choose it again>
+- Re-opened by: `-` <!-- the `Status: re-open` DR-* in 07_Decisions.md that re-adopted this candidate; stays `-` while the rejection holds -->
+
+<!--
+`Re-opened by:` is the only sanctioned route out of `DO NOT`. Moving a rejected
+candidate to `## Adopted` without it is the reintroduction the Delta Rejected
+Guard blocks; `npx qfai validate` reports `QFAI-DECISION-006` when a
+`- Candidate:` here also appears as an `- Adopted:` name while its own
+`Re-opened by:` is empty, and `QFAI-DECISION-004` when the ID here resolves to
+no `Status: re-open` record — and equally when such a record names no candidate
+here. One `Re-opened by:` covers the candidate block it sits under, so a delta
+re-adopting two candidates writes one per candidate.
+-->
 
 ## Impact
 
@@ -135,3 +147,22 @@ notes: <one line of context>
 - <next action>
 - Owner: <owner>
 - Due: YYYY-MM-DD
+
+## Change Requests
+
+<!-- The canonical CR-reference record required by
+     `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` step 4. One row per
+     approved Change Request whose owner-skill rerun landed in this spec. The
+     rerun writes it in Phase 4, never before approval. `Mode` is the rerun mode
+     the CR approved (`confirm-only` or `re-derive`); `Applied at` matches the
+     CR's own `Applied at`. A CR that also mints or amends a `DR-*` additionally
+     cites its ID in that record's `Related` field in `07_Decisions.md`. Do not
+     record a CR as a `## Triage` row: Triage rows carry incoming REQ/NFR
+     operations, and only this table is the CR reference. -->
+
+| CR ID            | Upstream artifact                  | Mode         | Approved by  | Applied at           |
+| ---------------- | ---------------------------------- | ------------ | ------------ | -------------------- |
+| CR-YYYYMMDD-NNNN | `<spec-NNNN>/04_Business-Rules.md` | confirm-only | `<approver>` | YYYY-MM-DDThh:mm:ssZ |
+
+- 0 approved Change Requests recorded. Delete the sample row above once the
+  first real one lands.

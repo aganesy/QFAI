@@ -5,7 +5,7 @@
 ```
 [Freeze] cycle 0:    cache the lock-anchored sha256(DESIGN.md) into prototyping.json
 [Seed]   cycle 0:    generate one iter-00/index.html under DESIGN.md tokens
-[Loop]   cycle 1..14: capture -> review -> iterate (DESIGN.md hash held)
+[Loop]   cycle 1..9:  capture -> review -> iterate (DESIGN.md hash held)
 [Cert]   final:      handoff yaml + completion-certificate.json
 ```
 
@@ -37,7 +37,7 @@ Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
   (`informationArchitecture`, `navigationFlow`, `usability`,
   `functionality`) at `exceptional` AND `layoutAntiPatternsDetected`
   is empty AND `designMdViolations` is empty.
-- `65` — max-iterations: latest iter `index === 14`.
+- `65` — max-iterations: latest iter `index === 9`.
 - `2` — input error, including:
   - root `DESIGN.md` missing or unparseable;
   - `.qfai/contracts/design/DESIGN.md.lock.yaml` missing;

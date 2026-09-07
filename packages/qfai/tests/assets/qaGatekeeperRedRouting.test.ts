@@ -40,6 +40,7 @@ type Phase = {
   id?: string;
   iteration?: string;
   mandatory_agents?: string[];
+  conditional_agents?: string[];
   blocking_agents?: string[];
 };
 
@@ -86,6 +87,28 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
     expect(build?.blocking_agents ?? []).toContain("qa-gatekeeper");
   });
 
+  it("routes no acceptance-test-engineer into any phase of this skill", async () => {
+    // The `test` phase listed it as a conditional agent while the skill's
+    // Non-goals bar this skill from authoring acceptance tests, so the manifest
+    // and the skill gave opposite instructions about the same role — and the
+    // phase right after Phase Red's handback licensed exactly the edit that
+    // handback exists to prevent. No step in the skill enters `test`, so the
+    // role's answer here is "nothing", and it is routed by `qfai-atdd` instead.
+    const phases = await implementPhases(rel);
+    for (const phase of phases) {
+      expect(phase.mandatory_agents ?? [], `phase ${phase.id ?? "?"}`).not.toContain(
+        "acceptance-test-engineer",
+      );
+      expect(phase.conditional_agents ?? [], `phase ${phase.id ?? "?"}`).not.toContain(
+        "acceptance-test-engineer",
+      );
+    }
+    // The phase itself stays — removing it would drop `qa-strategist` too.
+    expect(phases.find((p) => p.id === "test")?.conditional_agents ?? []).toContain(
+      "qa-strategist",
+    );
+  });
+
   it("declares the micro-cycle phases as per-ledger-item, not per-invocation", async () => {
     const phases = await implementPhases(rel);
     for (const id of ["red", "build", "test", "review"]) {
@@ -119,6 +142,20 @@ describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) =>
   it("states the routing phases run per row", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     expect(skill.replace(/\s+/g, " ")).toContain("iteration: per-ledger-item");
+  });
+
+  it("drops acceptance-test-engineer from `roles:` and says why in the roster", async () => {
+    // It was declared in the frontmatter and named exactly once in the body —
+    // to say it was unavailable. The roster documented seven roles and not
+    // this one, so nothing in the skill described what the routed role could
+    // do, while the Non-goals forbade the only thing it does.
+    const skill = await readFile(path.join(repoRoot, rel), "utf-8");
+    const frontmatter = skill.slice(0, skill.indexOf("\n---", 4));
+    expect(frontmatter).not.toContain("acceptance-test-engineer");
+    const flat = skill.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      "`acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`",
+    );
   });
 
   it("splits the handoff contract into a RED and a GREEN submission", async () => {

@@ -33,6 +33,14 @@ From the ATDD stage onward:
 - Produce the Coverage Depth Matrix as a required deliverable, plus the business rule coverage table under it when the spec declares `BR-*`. Flag any ❌ cells in either as gaps.
 - Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
 
+Exception — `qfai-implement`'s `plan` phase:
+
+- The input there is an execution ledger (`.qfai/specs/spec-\*/tdd/test-list.md`), not a spec's test cases, so a matrix produced
+  against it would describe neither. Report coverage and layer-ownership findings only.
+- Do NOT produce, re-derive or supersede the Coverage Depth Matrix, and do NOT return REVISE because it is absent or incomplete:
+  it stays owned from the ATDD stage, and every gap it names is repaired upstream in `/qfai-sdd` or `/qfai-atdd`.
+- Reference: `.qfai/assistant/skills/qfai-implement/references/plan-phase.md`
+
 During SDD:
 
 - Require normal path plus error/boundary coverage per AC, read directly from `06_Test-Cases.md`.
@@ -51,10 +59,23 @@ carry it.
 - .qfai/assistant/{manifest,catalog}/\*\*
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
+- .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/03_Acceptance-Criteria.md
 - .qfai/specs/spec-\*/04_Business-Rules.md
 - .qfai/specs/spec-\*/05_Examples.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
+- .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
+
+Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
+rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
+the rows. `US-*` seeds no ledger row, so its absence from one is never a missing-row finding — it is read for layer ownership, and
+discharged by the acceptance tests' annotations.
+
+`.qfai/contracts/api/\*\*` joins that obligation set **only where it applies**: in `qfai-implement`'s `plan` phase, and there only
+for a spec whose `CON-API-*` an `API` row's `CON-API-Refs` can cite. It is not a required input of this card in general. A spec
+with no API surface is normal, and a fresh install ships no `.qfai/contracts/api/` at all, so its absence is **not** a missing
+required source artifact and must not trip the Stop condition below — not here, and not in `qfai-sdd`'s `design` phase or
+`qfai-atdd`'s blocking `coverage` phase, where this same card is routed against specs that may have no API contract at all.
 
 ## Deliverables
 
@@ -66,13 +87,15 @@ carry it.
   per-item TDD evidence, and the justification behind each `❌` is the input `qa-gatekeeper`
   reads. During SDD there is
   no evidence artifact that holds it, so report depth gaps as findings instead of producing the
-  matrix format.
+  matrix format, and in `qfai-implement`'s `plan` phase it is not produced at all — see the
+  exception above.
 - Volume estimate and risk notes
 - Scope-boundary decisions for tests
 
 ## Stop conditions
 
-- Governing specs, routing rules, or required source artifacts are missing.
+- Governing specs, routing rules, or required source artifacts are missing. **Required means required for the phase being run**:
+  an input this card marks conditional is not one wherever its condition does not hold.
 - The requested output belongs to another specialist's ownership without an explicit handoff.
 - The task would bypass required validation or reviewer gates.
 

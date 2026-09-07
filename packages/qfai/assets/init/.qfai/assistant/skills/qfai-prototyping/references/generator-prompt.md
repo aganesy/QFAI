@@ -10,7 +10,7 @@ identity.
 1. Root `DESIGN.md` (front-matter tokens + `# Brand Philosophy` body).
 2. `.qfai/specs/spec-*/01_Spec.md` and `03_Acceptance-Criteria.md`.
 3. `.qfai/contracts/ui/*.yaml`.
-4. Cycles 1..14: `iter-(NN-1)/review.json` (critique, scores,
+4. Cycles 1..9: `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
    `progress.md`.
@@ -337,7 +337,7 @@ Produce one self-contained `iter-00/index.html` that satisfies the spec
 under locked DESIGN.md tokens. Lead with the user's primary task;
 respect `audience.do_not_look_like`.
 
-## Cycles 1..14
+## Cycles 1..9
 
 The reviewer's `pivotDirective` is your strong recommendation:
 

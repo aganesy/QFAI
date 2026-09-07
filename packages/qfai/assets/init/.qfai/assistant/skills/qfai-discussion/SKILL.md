@@ -25,6 +25,15 @@ mode: interactive-by-default
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- ask-user bucket decisions (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations)
+- destructive operations and scope expansions outside the active envelope
+
 ## Goal
 
 Produce a unified 15-file discussion pack plus exploration-first UI sidecars so `/qfai-sdd` and `/qfai-prototyping` can operate without forcing an early visual direction decision.
@@ -53,16 +62,16 @@ Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mo
 ## Required Process
 
 1. Run the core interview for concept, scope, stakeholders, and constraints.
-2. Run Inception Deck and include at least one Mermaid diagram.
-3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
-4. Register source traceability and reference research in `04_Sources.md`.
+2. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+3. Run Inception Deck and include at least one Mermaid diagram.
+4. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
 6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
 9. **Emit root `DESIGN.md` draft** per `references/design-dna-intake.md`. Required when any classified surface — primary or secondary — is `web`, `mobile`, `desktop` or `mixed`; skip for cli-only and non-ui targets. Fill its required `brand.archetype` field in two phases: **Phase A** picks the closest-fitting archetype from `references/design-md-brand-catalog.md` and takes its `aesthetic_properties` as draft defaults; **Phase B** routes each default to its own home: `color_tendency` / `typography` / `spacing` into the `visual.*` token tree, and the `interaction` default into `accessibility.motion` (`visual.*` accepts only `colors | typography | radius | shadow | spacing`). This fills the draft brand SSOT only — exploration directions stay unranked and the design system is not finalized here.
 10. Generate `prototyping.yaml` only when the latest discussion pack targets a prototyping execution surface (`web`, `mobile`, `desktop`, `mixed`) and an explicit prototyping recommendation is useful. A cli-only pack emits none — `/qfai-prototyping` rejects `cli`.
-11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields.
+11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields. It owns the write paths under `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
 For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars, and apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
@@ -88,6 +97,7 @@ Before declaring completion, you MUST:
 - ensure `Disposition: open` count is zero in `11_OQ-Register.md`;
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
+- ensure the `## Research Summary` section of `04_Sources.md` is filled from an actual protocol run (`sources`, `best_practices`, `anti_patterns`, and `reflection` with at least one `action: apply`);
 - ensure the UI-bearing sidecar family is complete, and — when any classified surface (primary or secondary) is `web`, `mobile`, `desktop` or `mixed` — that the root `DESIGN.md` draft exists at the consuming-project root and parses as valid front-matter;
 - run `npx qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
@@ -96,6 +106,8 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
+  required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
 - the UI-bearing sidecar family is complete when the pack is UI-bearing;
 - discussion stayed planner-first and did not choose a single visual winner;
@@ -151,6 +163,8 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - `primarySpecId` (when absent from inputs)
 
 A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+
+Route every ask-user and hard-required item through the protocol in [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol) above, including its `--auto` no-question rule.
 
 project_memory:
 

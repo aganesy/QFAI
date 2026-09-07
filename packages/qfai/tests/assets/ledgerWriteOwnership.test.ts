@@ -150,7 +150,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // one of them — it has no revision field of its own, so exempting it left
     // item 5 stale on every merged row.
     expect(policy).toContain(
-      "`RED revision`, `Falsifiability revision` and `Replacement proof revision` are exempt from steps 2 and 3",
+      "`RED revision`, `Falsifiability revision` and `Round N: Replacement proof revision` are exempt from steps 2 and 3",
     );
     expect(policy).not.toContain("`Oracle proof` are exempt from step 2");
   });
@@ -215,14 +215,14 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // step 2 — but only on the rework rows that carry one.
     const policy = await read(tree, POLICY);
     expect(policy).toContain(
-      "`Replacement proof revision` too — _beside_ its `RED revision`, not instead of it",
+      "`Round N: Replacement proof revision` too — _beside_ its `RED revision`, not instead of it",
     );
     expect(policy).toContain("a row with no replacement owes nothing here");
     expect(policy).toContain(
-      "own branch selects — including `Replacement proof revision` where the row took a test-only replacement",
+      "own branch selects — including `Round N: Replacement proof revision` where the row took a test-only replacement",
     );
     expect(policy).toContain(
-      "one can re-take `RED revision`, `Falsifiability revision` or `Replacement proof revision`",
+      "one can re-take `RED revision`, `Falsifiability revision` or `Round N: Replacement proof revision`",
     );
   });
 
@@ -235,7 +235,10 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const policy = await read(tree, POLICY);
     const contract = (await read(tree, SKILL)) + (await read(tree, REVISION));
     for (const field of [
-      "Replacement proof revision",
+      // A round field, so it carries the `Round N:` prefix the closed list gives
+      // every one of them (#654) — which is exactly what this case is for: the
+      // policy must name the field the contract defines.
+      "Round N: Replacement proof revision",
       "Round N: Review pack",
       "Round N: Review pack seal",
       "Checkpoint verification command",

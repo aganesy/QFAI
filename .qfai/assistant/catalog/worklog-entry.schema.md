@@ -3,10 +3,15 @@
 - Contract scope: frontmatter and body schema for `.qfai/steering/*.md` entries
 - Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
-- SSOT modules (shipped inside the QFAI package, run by `npx qfai validate`):
+- Enforced by: `npx qfai validate` (`--profile sdd` and `--profile full`), whose
+  work-log surface checks ship already compiled inside the installed package:
   - the work-log entry parser (`string → Result<Entry, SchemaError>`)
   - the work-log link-integrity check
 - The field checks, enums and required headings are compiled into the CLI, not read from this file: this document is their reference, so editing it does not change what `validate` accepts. Report a divergence as a QFAI bug instead of customizing the schema here.
+
+  The QFAI source tree is not part of the npm distribution, so this contract
+  names no local module path on purpose: the schema below plus the
+  `npx qfai validate` output are the surface you can actually read here.
 
 ## Storage model
 

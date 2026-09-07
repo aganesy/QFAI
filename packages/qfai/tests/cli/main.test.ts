@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 describe("cli root discovery", { timeout: 15000 }, () => {
@@ -98,6 +99,29 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       process.exitCode = previousExitCode;
       writeSpy.mockRestore();
       stdoutSpy.mockRestore();
+    }
+  });
+
+  // `--dry-run` is rejected on the commands that never wired it, but
+  // `handoff upgrade` implements it: the flag must reach the command and
+  // preview instead of writing the canonical file.
+  it("honours --dry-run on handoff upgrade instead of writing the canonical file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-dryrun-"));
+    const legacyFile = path.join(root, "legacy.yaml");
+    await writeFile(legacyFile, "companyName: FreshCo\n", "utf-8");
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await captureStdout(async () => {
+        await run(["handoff", "upgrade", legacyFile, "--root", root, "--dry-run"], root);
+      });
+      expect(process.exitCode).toBe(0);
+      // The whole point of the flag: nothing may be written.
+      await expect(readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8")).rejects.toThrow();
+    } finally {
+      process.exitCode = previousExitCode;
+      await rm(root, { recursive: true, force: true });
     }
   });
 
@@ -208,6 +232,86 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       process.exitCode = previousExitCode;
     }
   });
+
+  it("writes the init tree to --root instead of the cwd", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-init-root-"));
+    const target = path.join(base, "target");
+    const cwd = path.join(base, "cwd");
+    try {
+      await mkdir(target, { recursive: true });
+      await mkdir(cwd, { recursive: true });
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(["init", "--root", target, "--yes"], cwd);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+
+      await expect(readdir(path.join(target, ".qfai"))).resolves.not.toHaveLength(0);
+      await expect(readdir(cwd)).resolves.toEqual([]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("cli usage errors", () => {
+  async function captureRun(argv: string[]): Promise<{ stdout: string; stderr: string }> {
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(argv, process.cwd());
+      return {
+        stdout: stdoutSpy.mock.calls.map((call) => String(call[0])).join(""),
+        stderr: stderrSpy.mock.calls.map((call) => String(call[0])).join(""),
+      };
+    } finally {
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+      process.exitCode = previousExitCode;
+    }
+  }
+
+  it("writes the rejection reason to stderr, not only usage to stdout", async () => {
+    const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);
+    expect(stderr).toContain("--profile");
+    expect(stderr).toContain('"bogus"');
+    expect(stdout).toContain("qfai <command> [options]");
+  });
+
+  it("surfaces the per-family subcommand diagnostics on stderr", async () => {
+    const cases: Array<{ argv: string[]; expected: string }> = [
+      { argv: ["audit"], expected: "qfai audit: unknown or missing subcommand. Expected: log" },
+      { argv: ["atdd"], expected: "qfai atdd: unknown or missing subcommand. Expected: scaffold" },
+      {
+        argv: ["handoff"],
+        expected: "qfai handoff: unknown or missing subcommand. Expected: upgrade",
+      },
+      {
+        argv: ["discussion"],
+        expected: "qfai discussion: unknown or missing subcommand. Expected: list|use",
+      },
+      {
+        argv: ["prototyping", "bogusaction"],
+        expected:
+          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-spec',
+      },
+    ];
+    for (const { argv, expected } of cases) {
+      const { stderr } = await captureRun(argv);
+      expect(stderr).toContain(expected);
+    }
+  });
+
+  it("keeps stderr silent when help is requested explicitly", async () => {
+    const { stdout, stderr } = await captureRun(["--help"]);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("qfai <command> [options]");
+  });
 });
 
 describe("cli usage text", () => {
@@ -264,5 +368,48 @@ describe("cli usage text", () => {
 
     expect(entry).not.toContain("それ以外は既存があればスキップ");
     expect(entry).toContain("assistant/manifest/**");
+  });
+});
+
+describe("cli --version", () => {
+  async function captureRun(argv: string[]): Promise<{ stdout: string; exitCode: unknown }> {
+    const chunks: string[] = [];
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    process.stdout.write = ((chunk: unknown): boolean => {
+      chunks.push(typeof chunk === "string" ? chunk : String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      await run(argv, process.cwd());
+      return { stdout: chunks.join(""), exitCode: process.exitCode };
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = previousExitCode;
+    }
+  }
+
+  it("prints the resolved tool version and leaves the exit code unset", async () => {
+    const expected = await resolveToolVersion();
+    const { stdout, exitCode } = await captureRun(["--version"]);
+    expect(stdout.trim()).toBe(expected);
+    expect(exitCode).toBeUndefined();
+  });
+
+  it("supports the -V alias", async () => {
+    const expected = await resolveToolVersion();
+    const { stdout } = await captureRun(["-V"]);
+    expect(stdout.trim()).toBe(expected);
+  });
+
+  it("does not print usage for a version request", async () => {
+    const { stdout } = await captureRun(["--version"]);
+    expect(stdout).not.toContain("qfai <command> [options]");
+  });
+
+  it("advertises the version flag in usage output", async () => {
+    const { stdout } = await captureRun(["--help"]);
+    expect(stdout).toContain("-V, --version");
   });
 });
