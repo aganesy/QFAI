@@ -45,6 +45,7 @@ import {
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
+import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 import {
   checkAssistantAssetLineBudget,
   type ExemptAssistantAsset,
@@ -104,6 +105,40 @@ async function exists(target: string): Promise<boolean> {
 
 function addCheck(checks: DoctorCheck[], check: DoctorCheck): void {
   checks.push(check);
+}
+
+/** `qfai validate` allocates one of these per run and never reuses one. */
+const RUN_LOG_DIR_RE = /^run-\d{17}$/u;
+
+/**
+ * Count of run-log directories at which the accumulation is worth
+ * mentioning. `outDir` is covered by the managed gitignore block, so
+ * `git status` never shows the growth and nothing else prompts a
+ * cleanup — this check is the only place the condition becomes visible
+ * before the directory is measured in tens of megabytes.
+ */
+const RUN_LOG_ADVISORY_COUNT = 50;
+
+async function buildRunLogVolumeCheck(root: string, outDirAbs: string): Promise<DoctorCheck> {
+  let count = 0;
+  try {
+    const names = await readdir(outDirAbs);
+    count = names.filter((name) => RUN_LOG_DIR_RE.test(name)).length;
+  } catch {
+    // Unreadable outDir is already reported by the `paths.outDir`
+    // check above; do not duplicate the finding here.
+    count = 0;
+  }
+  const crowded = count > RUN_LOG_ADVISORY_COUNT;
+  return {
+    id: "report.runLogs",
+    severity: crowded ? "info" : "ok",
+    title: "Validate run logs (outDir/run-*)",
+    message: crowded
+      ? `${count} run-* directories accumulated (> ${RUN_LOG_ADVISORY_COUNT}); run 'qfai doctor --clean' to prune the TTL-expired ones`
+      : `${count} run-* directories`,
+    details: { outDir: toRelativePath(root, outDirAbs), runLogCount: count },
+  };
 }
 
 function summarize(checks: DoctorCheck[]): DoctorData["summary"] {
@@ -228,6 +263,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { path: toRelativePath(root, resolved) },
     });
 
+    if (key === "outDir" && ok) {
+      addCheck(checks, await buildRunLogVolumeCheck(root, resolved));
+    }
+
     if (key === "skillsDir") {
       // Isolated, not awaited bare: `collectFiles` inside the diff rejects on
       // an unreadable skills tree, and this call sits before every check that
@@ -241,7 +280,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           severity: "warning",
           title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "skills を検査できませんでした（ディレクトリまたはファイルの読み取りに失敗）。権限とパスを確認してください。",
+            "Could not inspect skills (reading a directory or a file failed). Check the permissions and the path.",
           details: { skillsDir: toRelativePath(root, resolved) },
         });
       } else if (diff.status === "skipped_missing_skills") {
@@ -249,7 +288,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "skills が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+          message:
+            "the skills directory has not been created yet, so the check was skipped " +
+            "(run 'qfai init')",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "skipped_missing_assets") {
@@ -257,8 +298,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "init assets が見つからないため検査をスキップしました（インストール状態を確認してください）",
+          message: "init assets not found, so the check was skipped (check the installation)",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "ok") {
@@ -266,7 +306,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "ok",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "標準 assets と一致しています",
+          message: "Matches the standard assets",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else {
@@ -279,13 +319,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           severity: "warning",
           title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "標準資産 '.qfai/assistant/skills/**' が改変されています。skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+            "The standard assets under '.qfai/assistant/skills/**' have been modified. Editing skills directly is discouraged (an update or a re-init can overwrite them).",
           details: {
             skillsDir: toRelativePath(root, diff.skillsDir),
             missing: diff.missing,
             extra: diff.extra,
             changed: diff.changed,
-            nextActions: ["必要なら qfai init --force で skills を標準状態へ戻す"],
+            nextActions: [
+              "If needed, run qfai init --force to restore skills to their standard state",
+            ],
           },
         });
       }
@@ -624,10 +666,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     severity: deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
     message: deprecatedPromptsConfigured
-      ? "promptsDir は deprecated です。設定で指定されています（skillsDir へ移行してください）"
+      ? "promptsDir is deprecated and is set in the config (migrate to skillsDir)"
       : deprecatedPromptsExists
-        ? "promptsDir は deprecated です。存在しても検証では使用されません（skillsDir を使用してください）"
-        : "promptsDir は deprecated です（未作成で問題ありません）",
+        ? "promptsDir is deprecated; even when it exists it is not used by validation (use skillsDir)"
+        : "promptsDir is deprecated (not being created is fine)",
     details: {
       path: toRelativePath(root, deprecatedPromptsDir),
       configured: deprecatedPromptsConfigured,
@@ -810,6 +852,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const matchedCount = scanResult.matchedFileCount;
     const truncated = scanResult.truncated;
 
+    // Globs that are set but collect nothing are `error`, not `warning`: the
+    // SC->Test gate is armed (`scMustHaveTest` with scenario files present) and
+    // matched no file, so it reports success while covering nothing — the
+    // "a gate that cannot run is a gate that silently passes" case. `validate`
+    // already calls this class an error (`QFAI-TRACE-124` /
+    // `traceability.layered.testFileGlobsNoMatch`) under the same precondition,
+    // and the two tools disagreeing meant `--fail-on error` on this one passed
+    // the exact misconfiguration the other fails. Unset globs stay `warning`
+    // here for the same reason `validate` keeps them a warning: a project that
+    // has not configured the gate yet has not broken it.
     const severity: DoctorSeverity =
       globs.length === 0
         ? "warning"
@@ -818,7 +870,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           : scenarioFiles.length > 0 &&
               config.validation.traceability.scMustHaveTest &&
               matchedCount === 0
-            ? "warning"
+            ? "error"
             : "ok";
 
     addCheck(checks, {
@@ -901,8 +953,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "info",
       title,
-      message:
-        "assistant assets が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+      message: "Skipped: no assistant assets have been created yet (run 'qfai init')",
       details,
     };
   }
@@ -912,7 +963,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
-      message: `${report.scanned} 件の assistant asset がいずれも ${report.maxLines} 行以内です${exemptNote}`,
+      message: `all ${report.scanned} assistant assets are within ${report.maxLines} lines${exemptNote}`,
       details,
     };
   }
@@ -922,14 +973,14 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 
   if (report.status === "incomplete") {
     const incompleteActions = [
-      "読み取れなかったパスの権限・存在を確認してから doctor を再実行する",
+      "check that the unreadable paths exist and are readable, then run doctor again",
     ];
     return {
       id: "assets.lineBudget",
       severity: "warning",
       title,
       message:
-        `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした: ` +
+        `${unmeasured} assistant assets could not be read, so their line counts were not checked: ` +
         `${formatMessagePaths(unmeasuredPaths)}${exemptNote}${formatNextActionHint(incompleteActions)}`,
       details: {
         ...details,
@@ -940,7 +991,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 
   const unmeasuredNote =
     unmeasured > 0
-      ? `（ほかに ${unmeasured} 件は読み取れず未検査: ${formatMessagePaths(unmeasuredPaths)}）`
+      ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
   const nextActions = assetLineBudgetNextActions(report.oversized);
   return {
@@ -948,7 +999,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     severity: "warning",
     title,
     message:
-      `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています: ` +
+      `${report.oversized.length} assistant assets exceed ${report.maxLines} lines: ` +
       `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
       formatNextActionHint(nextActions),
     details: {
@@ -1009,7 +1060,9 @@ function formatMessagePaths(paths: ReadonlyArray<string>): string {
  * see exactly one line per finding.
  */
 function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>): string {
-  return oversized.map((entry) => `${escapeForMessage(entry.path)} (${entry.lines} 行)`).join(", ");
+  return oversized
+    .map((entry) => `${escapeForMessage(entry.path)} (${entry.lines} lines)`)
+    .join(", ");
 }
 
 /**
@@ -1025,14 +1078,14 @@ function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string
     return "";
   }
   const entries = exempt
-    .map((entry) => `${escapeForMessage(entry.path)}（${escapeForMessage(entry.reason)}）`)
+    .map((entry) => `${escapeForMessage(entry.path)} (${escapeForMessage(entry.reason)})`)
     .join(", ");
-  return `（検査対象外 ${exempt.length} 件: ${entries}）`;
+  return ` (${exempt.length} exempt from the check: ${entries})`;
 }
 
 /** Appends the repair guidance so text readers get it, not only JSON readers. */
 function formatNextActionHint(actions: ReadonlyArray<string>): string {
-  return actions.length > 0 ? ` — 対処: ${actions.join(" / ")}` : "";
+  return actions.length > 0 ? ` — next: ${actions.join(" / ")}` : "";
 }
 
 /**
@@ -1048,11 +1101,11 @@ function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>):
   const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
   const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
   if (hasSkillAsset) {
-    actions.push("超過した skill の1トピックを、その skill 配下の references/ に移す");
+    actions.push("move one topic out of the oversized skill into that skill's own references/");
   }
   if (hasOtherAsset) {
     actions.push(
-      "skill 以外の資産（constitution/ catalog/ manifest/ など）は同じレイヤー内でトピック単位に分割し、参照元のパスを更新する",
+      "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
     );
   }
   return actions;
@@ -1099,7 +1152,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
       id: "agents.frontmatter",
       severity: "warning",
       title: "Agent frontmatter",
-      message: "agent ディレクトリを列挙できませんでした（権限またはロックを確認してください）",
+      message: "Could not enumerate the agent directory (check the permissions or a lock)",
       details: { path: toRelativePath(root, agentsDir) },
     };
   }
@@ -1145,7 +1198,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
       id: "agents.frontmatter",
       severity: "warning",
       title: "Agent frontmatter",
-      message: `agent 定義を読み取れず検査できませんでした (count=${unreadableFiles.length}): ${formatMessagePaths(unreadableFiles)}`,
+      message: `Agent definitions could not be read, so they were not checked (count=${unreadableFiles.length}): ${formatMessagePaths(unreadableFiles)}`,
       details: { count: markdownFiles.length, unreadableFiles },
     };
   }
@@ -1935,29 +1988,6 @@ function relativizeMaybe(root: string, target: string): string {
   return path.isAbsolute(target) ? toRelativePath(root, target) || target : target;
 }
 
-const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
-  ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-  "**/.pnpm/**",
-  "**/tmp/**",
-  "**/.mcp-tools/**",
-];
-
-type OutDirCollision = {
-  outDir: string;
-  roots: string[];
-};
-
-type OutDirCollisionResult = {
-  monorepoRoot: string;
-  configRoots: string[];
-  collisions: OutDirCollision[];
-  scan: {
-    truncated: boolean;
-    matchedFileCount: number;
-    limit: number;
-  };
-};
-
 async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
   try {
     const result = await detectOutDirCollisions(root);
@@ -2004,63 +2034,4 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
       details: { error: String(error) },
     };
   }
-}
-
-async function detectOutDirCollisions(root: string): Promise<OutDirCollisionResult> {
-  const monorepoRoot = await findMonorepoRoot(root);
-  const configScan = await collectFilesByGlobs(monorepoRoot, {
-    globs: ["**/qfai.config.yaml"],
-    ignore: DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS,
-  });
-  const configPaths = configScan.files;
-  const configRoots = Array.from(
-    new Set(configPaths.map((configPath) => path.dirname(configPath))),
-  ).sort((a, b) => a.localeCompare(b));
-  const outDirToRoots = new Map<string, Set<string>>();
-
-  for (const configRoot of configRoots) {
-    const { config } = await loadConfig(configRoot);
-    const outDir = path.normalize(resolvePath(configRoot, config, "outDir"));
-    const roots = outDirToRoots.get(outDir) ?? new Set<string>();
-    roots.add(configRoot);
-    outDirToRoots.set(outDir, roots);
-  }
-
-  const collisions: OutDirCollision[] = [];
-  for (const [outDir, roots] of outDirToRoots.entries()) {
-    if (roots.size > 1) {
-      collisions.push({
-        outDir,
-        roots: Array.from(roots).sort((a, b) => a.localeCompare(b)),
-      });
-    }
-  }
-
-  return {
-    monorepoRoot,
-    configRoots,
-    collisions,
-    scan: {
-      truncated: configScan.truncated,
-      matchedFileCount: configScan.matchedFileCount,
-      limit: configScan.limit,
-    },
-  };
-}
-
-async function findMonorepoRoot(startDir: string): Promise<string> {
-  let current = path.resolve(startDir);
-  for (;;) {
-    const gitPath = path.join(current, ".git");
-    const workspacePath = path.join(current, "pnpm-workspace.yaml");
-    if ((await exists(gitPath)) || (await exists(workspacePath))) {
-      return current;
-    }
-    const parent = path.dirname(current);
-    if (parent === current) {
-      break;
-    }
-    current = parent;
-  }
-  return path.resolve(startDir);
 }

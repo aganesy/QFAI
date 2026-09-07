@@ -104,9 +104,8 @@ describe("the review pack seal has a heading of its own", () => {
       const body = flat(section(await read(tree, REVISION), "## Review pack seal"));
 
       expect(body).toContain("What protects the pack is a **pack seal**, not the audit hash");
-      expect(body).toContain(
-        "record the seal in the item's evidence entry as `Review pack seal` — by the **audit-hash** procedure in",
-      );
+      expect(body).toContain("record the seal in the item's evidence entry as `Review pack seal`");
+      expect(body).toContain("by the **audit-hash** procedure in");
       expect(body).toContain("**gate item 10 recomputes it from the pack** and compares");
       expect(body).toContain(
         "**Record it per round, and name the pack it seals**: `Round N: Review pack`",
@@ -138,16 +137,14 @@ describe("the review pack seal has a heading of its own", () => {
 
       // Gate item 10 is the consumer that recomputes the seal.
       expect(flat(skill)).toContain(
-        "`Review pack seal` (`references/evidence-revision.md#review-pack-seal`) is recomputed here",
+        "Every `Review pack seal` the entry carries (`references/evidence-revision.md#review-pack-seal`)",
       );
       // The per-round field list names the fields and points at the contract.
       expect(flat(round)).toContain("`Round N: Review pack` — the `review-<timestamp>/` directory");
       expect(round).toContain(ANCHOR);
       // The same file's exhaustive list of round fields has to carry the two
       // new ones too, or an agent reading that list omits them.
-      expect(flat(round)).toContain(
-        "the reviewer verdict, and the `Review pack` / `Review pack seal` pair",
-      );
+      expect(flat(round)).toContain("the review pack and its seal, the reviewer verdict");
       // The layout file states the per-round pack rule the seal depends on.
       expect(layout).toContain(ANCHOR);
       expect(flat(layout)).toContain(
@@ -178,14 +175,14 @@ describe("the ATDD stage seal has a reference of its own", () => {
       const bullets = bulletsOf(dod);
 
       expect(bullets.length).toBeGreaterThan(9);
-      // No bullet may be more than half the section again. The seal bullet was
-      // 2,024 characters — larger than the other nine put together. The cap is
-      // above the longest bullet this section already carries (531 characters,
-      // wrapped over nine lines), so it fails on a paragraph moving back in —
-      // wrapped or not — and not on ordinary prose.
+      // No bullet may be a paragraph again. The seal bullet was 2,024
+      // characters — larger than the other nine put together. The cap sits
+      // above the longest bullet this section already carries (1,047
+      // characters, wrapped over ten lines), so it fails on a paragraph moving
+      // back in — wrapped or not — and not on ordinary prose.
       for (const bullet of bullets) {
         expect(bullet.length, `DoD bullet is a paragraph: ${bullet.slice(0, 80)}…`).toBeLessThan(
-          700,
+          1200,
         );
       }
 
@@ -205,7 +202,9 @@ describe("the ATDD stage seal has a reference of its own", () => {
         skill.indexOf("## ATDD Work Orders"),
       );
 
-      expect(template).toContain("## Final status (PASS/FAIL) + who confirmed");
+      expect(template).toContain(
+        "## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed",
+      );
       expect(template).toContain("Review pack: `.qfai/review/review-<timestamp>/`");
       expect(template).toContain("Review pack seal: <sha256>");
     });

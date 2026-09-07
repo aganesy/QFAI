@@ -63,6 +63,8 @@ coverage/
 .qfai/discussion/*
 .qfai/review/*
 .qfai/state.json
+*.qfai-state.tmp
+.qfai/state.json.lock
 !.qfai/
 !.qfai/evidence/
 !.qfai/decisions/
@@ -71,6 +73,8 @@ coverage/
 !.qfai/evidence/decisions/**
 !.qfai/evidence/change-request-*.md
 !.qfai/evidence/decision-*.md
+!.qfai/evidence/implement-*.md
+!.qfai/evidence/atdd-*.md
 !.qfai/evidence/coverage-depth-*.md
 !.qfai/review/
 !.qfai/review/.legacy-packs

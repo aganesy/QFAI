@@ -68,7 +68,7 @@ Scenario: パス読み込みエラー
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title               | Notes    | Priority |
+| AC-ID        | Title               | Notes    | Priority |
 | ------------ | ------------------- | -------- | -------- |
 | AC-0007-0001 | 一覧の正常表示      | REQ-0040 | P1       |
 | AC-0007-0002 | 一覧の空結果        | REQ-0040 | P1       |

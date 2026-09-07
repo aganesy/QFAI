@@ -84,12 +84,20 @@ describe("report", { timeout: 15000 }, () => {
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
+    const stderrChunks: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    });
     try {
       await runReport({ root, format: "md" });
 
       expect(process.exitCode).toBe(2);
+      // AC-0005-0005: the missing-input error is surfaced to the operator.
+      expect(stderrChunks.join("")).toContain("qfai report: input file not found");
       await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
     } finally {
+      stderrSpy.mockRestore();
       process.exitCode = previousExitCode;
     }
   });
