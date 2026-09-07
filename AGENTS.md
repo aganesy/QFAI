@@ -61,6 +61,7 @@ QFAI パッケージの版番号 (`X.Y.Z`) を AI が独断で選んではいけ
 - `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
   `packages/qfai/assets/mdschema/**` が SSOT)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
+- `repository-language.md` (このリポジトリの記述言語は英語)
 
 `.claude/rules/` はこれらへの symlink (Windows 環境では Git の
 `core.symlinks=true` 設定 + Developer Mode が必要。それ以外の場合は
