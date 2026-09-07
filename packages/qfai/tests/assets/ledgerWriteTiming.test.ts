@@ -74,6 +74,25 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
   });
 
+  it("does not make DR-ID a function of the status the row is left at", async () => {
+    // The cell carries two ids on different terms
+    // (`references/execution-ledger.md`): a `DR-*` that an `exception` row is
+    // invalid without, and a `CR-*` that an approved Change Request puts there
+    // and the row keeps through every later status. Reading the column off the
+    // final status alone loses the second — a reconciler comparing a `done` row
+    // against "no status requires this cell" empties it.
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "**`DR-ID` holds the `DR-*` a row left at `exception` is invalid without, and holds a `CR-*` at whatever status the row is left at**",
+    );
+    expect(skill).toContain("the row keeps it through every later status");
+    // Only `Blocked-By` follows the status by itself, which is why the two
+    // cells cannot share one sentence.
+    expect(skill).not.toContain(
+      "`DR-ID` and `Blocked-By` are required by the status the row is left at",
+    );
+  });
+
   it("carries DR-ID through the parallel reconcile, the one write left", async () => {
     // A parallel worker cannot write the ledger, and Completion now only
     // reconciles — so a reconcile spelled "Status + Evidence" leaves an
