@@ -26,8 +26,9 @@ export function sectionOfEachLine(text: string): string[] {
   return text.split(/\r?\n/).map((line) => {
     // The group is typed optional because a pattern need not reach it. This
     // one has no alternation and no optional group, so a match always carries
-    // it — but a later edit that added either would silently start writing
-    // `undefined` into the section of every line below the heading.
+    // it. The guard below is what a later edit adding either would fall
+    // through: the heading would not become the current section, and its lines
+    // would be counted under the section above it.
     const heading = H2_RE.exec(line)?.[1];
     if (heading !== undefined) {
       current = heading;
