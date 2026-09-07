@@ -89,22 +89,28 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
       expect(section).not.toContain('so "unmet" has no tool-checkable meaning');
     });
 
-    it(`${relativePath}: scopes the guardrail to the scenario distribution`, async () => {
+    it(`${relativePath}: names both sources the guardrail can measure`, async () => {
       const section = unwrap(
         volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
       );
-      // `collectTestStrategy` is fed `collectScenarioFiles(specsRoot)` and
-      // counts Gherkin scenario tags only, so a layered project whose E2E lives
-      // in `<testsDir>/e2e/**` measures 0 and never trips the knobs.
-      expect(section).toContain("**What it counts is narrow.**");
+      // `collectTestStrategy` reads Gherkin `@layer-*` tags where they parse and
+      // the ledger's `Layer` column where they do not, and #1197 made the two
+      // knobs measure whichever one produced the numbers. The paragraph used to
+      // say they "never inspect" anything but Gherkin, which stopped being true
+      // of the layered layout — the shape the same paragraph calls normal.
+      expect(section).toContain("**What it counts.**");
       expect(section).toContain("Gherkin scenarios parsed out of each spec's Examples file");
-      expect(section).toContain("never inspect `<testsDir>/e2e/**` or any other code test");
-      expect(section).toContain(
-        "measures zero scenarios, so the guardrail stays silent however many code E2E tests exist",
-      );
-      expect(section).toContain(
-        "a guardrail over the **scenario** distribution, not over the real test-layer distribution",
-      );
+      expect(section).toContain("the `Layer` column of every active spec's `tdd/test-list.md`");
+      expect(section).toContain("`report.testStrategy.layerSource` names which one");
+      expect(section).not.toContain("never inspect `<testsDir>/e2e/**` or any other code test");
+
+      // What it still does not count, which is the honest half of the old claim.
+      expect(section).toContain("**What it still does not count**");
+      expect(section).toContain("an E2E test written with no ledger row behind it is invisible");
+
+      // And that an unreadable distribution is not a measured one.
+      expect(section).toContain("**When both sources are empty**");
+      expect(section).toContain('never as "no E2E tests"');
       expect(section).toContain("how the distribution was counted");
     });
 
