@@ -332,8 +332,10 @@ describe("qfai init run report", { timeout: 60000 }, () => {
 
       const written = pathsUnder(secondRun, "  written paths:");
       const skipped = pathsUnder(secondRun, "  skipped paths:");
-      expect(skipped).toContain("DESIGN.md");
-      expect(written).not.toContain("DESIGN.md");
+      // A create-only root file the first run wrote: the second run has to
+      // report it as skipped rather than written.
+      expect(skipped).toContain("qfai.config.yaml");
+      expect(written).not.toContain("qfai.config.yaml");
       expect(skipped.length).toBeGreaterThan(1);
       expect(reportedCount(secondRun, "skipped")).toBe(skipped.length);
     } finally {
