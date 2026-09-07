@@ -88,7 +88,7 @@ function ruleRegion(drift: string): string {
 }
 
 describe.each(TREES)("%s", (tree) => {
-  it("names the ledger and its three unconditional cells in the whitelist", async () => {
+  it("names the ledger and its four unconditional cells in the whitelist", async () => {
     const drift = await read(tree, DRIFT);
     const start = drift.indexOf("## Allowed exceptions");
     const end = drift.indexOf("## When drift is detected");
@@ -96,10 +96,16 @@ describe.each(TREES)("%s", (tree) => {
     expect(end).toBeGreaterThan(start);
     const whitelist = drift.slice(start, end);
     expect(whitelist).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md`");
-    // "unconditionally" is the word that distinguishes these three from the two
+    // `Blocked-By` joined the three: `todo -> blocked` is an edge the skill
+    // owns and `TDDLIST_BLOCKED_MISSING_REF` errors without the cell, so the
+    // three-cell form made an owned transition unwritable.
+    //
+    // "unconditionally" is the word that distinguishes these four from the two
     // conditional cells below. It is not decoration: dropping it would read as
     // the whole entry being conditional.
-    expect(whitelist).toContain("`Status`, `DR-ID` and `Evidence` cells unconditionally");
+    expect(whitelist).toContain(
+      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells unconditionally",
+    );
   });
 
   it("keeps the rows upstream, so the carve-out is not a licence over the file", async () => {
@@ -126,7 +132,7 @@ describe.each(TREES)("%s", (tree) => {
     // Gate item 10 requires the Evidence column and the hard rules forbid the
     // status-only substitute, so a status-scoped permission is unusable.
     const drift = await read(tree, DRIFT);
-    expect(drift).toContain("`Evidence` cells unconditionally");
+    expect(drift).toContain("`Evidence` and `Blocked-By` cells unconditionally");
   });
 
   it("names `Test file` and `Selector` as writable only while a condition holds", async () => {
@@ -233,7 +239,7 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     // contradicted the protocol it cites. Both halves are asserted contiguous
     // with their cell lists so that widening one silently is not possible.
     expect(nonGoals).toContain(
-      "`Status` / `DR-ID` / `Evidence` cells are carved out unconditionally",
+      "`Status` / `DR-ID` / `Evidence` / `Blocked-By` cells are carved out unconditionally",
     );
     expect(nonGoals).toContain("its `Test file` / `Selector` cells conditionally");
   });
@@ -248,7 +254,7 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     expect(skill, "the Completion heading moved").toContain(heading);
     const completion = skill.slice(skill.indexOf(heading));
     expect(completion).toContain(
-      "final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers unconditionally",
+      "final Status, DR-ID and Evidence values — three of the four cells the Drift Protocol carve-out covers unconditionally",
     );
     expect(completion).toContain(
       "`Test file` and `Selector` are covered too, but only while their stated condition still holds",
@@ -266,7 +272,9 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     expect(end, "the bullet closing the ownership split moved").toBeGreaterThan(start);
     const split = trace.slice(start, end);
 
-    expect(split).toContain("owns the `Status`, `DR-ID` and `Evidence` cells unconditionally");
+    expect(split).toContain(
+      "owns the `Status`, `DR-ID`, `Evidence` and `Blocked-By` cells unconditionally",
+    );
     // Each conditional cell contiguous with its own condition, for the same
     // reason as the protocol case above: swapped bodies must not read green.
     expect(split).toContain("`Test file` while the seeded value is empty or a dash placeholder");

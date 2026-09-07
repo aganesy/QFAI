@@ -19,11 +19,49 @@ So the sweep is a **preflight**, not an opportunistic step:
 
 1. On every run, before the ledger is read for any other purpose, enumerate
    `.qfai/decisions/CR-*.md` and keep those in scope for the target spec.
+   **Both the approved and the still-open ones** — the open set is what the two
+   rules below read, and enumerating only the approved ones made this preflight
+   unable to see the blockers it is supposed to honour.
 2. Apply every reset the approved ones authorise (conditions below).
 3. Only then judge the ledger. A run whose preflight reset rows must not report
    "nothing to do", because the all-`done` state it would report is stale.
 
-A run with no in-scope approved CR does nothing here and proceeds unchanged.
+A run with no in-scope CR at all does nothing here and proceeds unchanged.
+
+## While a CR is open, its blocked set is not selectable
+
+**A row named in an open in-scope CR's blocked set is not selected**, whatever
+its status. A `todo` row carries that as `blocked` in the ledger, parked by the
+raiser at `.qfai/assistant/constitution/drift-protocol.md` step 2; a row past `todo`, and a `done` row, could
+not be parked at all, because `todo -> blocked` is the only inbound edge there
+is (`execution-ledger.md#allowed-transitions`). Reading the CR files here — the
+record the parking is derived from — gives those rows the same protection
+without an illegal transition, and without re-deriving the determination on
+every pass, which is the loop `blocked` exists to stop.
+
+The rows this covers are ordinary: a post-RED scope gap is raised from a row at
+`red` or later, a checkpoint regression from one at `done`, and a `review-fix`
+row is re-selected ahead of every `todo` row by the loop head, so without this
+it would be picked up again on every run for as long as the approval takes.
+
+## Releasing a row takes every open CR into account
+
+A row can sit in more than one blocked set, and an approved CR releases only its
+own claim. So the release is a re-evaluation, not an unconditional write:
+
+- Recompute the **union** of the blocked sets of every CR still open and in
+  scope, after this CR's approval has taken it out of that set.
+- **A row still in the union stays where it is.** Remove only this CR's ID from
+  `Blocked-By`, leaving the other blockers; do not write `blocked -> todo`, and
+  do not apply this CR's reset to it. Returning it would put a row back into
+  selection over an unresolved change and let a test that depends on it run and
+  complete.
+- **A row no longer in the union** takes the reset below in full: back to
+  `todo`, this CR's ID recorded in `DR-ID`, and `Blocked-By` cleared.
+
+Reading the approved CR's enumeration alone is what made this wrong: that list
+says which rows the operator approved reopening, not which rows are free to
+run.
 
 ## The exception
 

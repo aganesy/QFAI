@@ -61,6 +61,15 @@ normally delivered by this spec's own TC rows, so an E2E/API row is a coverage
 obligation rather than the sole carrier of a feature. `/qfai-atdd` does not write to
 this ledger.
 
+A **matrix-shaped TC takes more than one row**: many rejection reasons, a
+status-code matrix or several independent state transitions are split into one
+row per independently observable boundary, each carrying that `TC-*` in
+`TC-Refs` (`TC-Refs` is many-to-many with `TDD-ID`). A single test function can
+fail only once, so a row that conflates boundaries leaves every assertion behind
+the first unobserved on every RED run. Phase 2b is the only phase that may add
+or re-scope a row, so a shape left un-split here reaches `/qfai-implement`,
+which owns cells and not rows and can only send it back as a Change Request.
+
 **A seeded E2E/API row's `Test file` and `Selector` start at `-`, and
 `/qfai-implement` fills them.** The acceptance test does not exist when Phase 2b
 runs, so that phase invents no path for it. `/qfai-atdd` writes the test and
@@ -96,8 +105,15 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module |
-| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- |
+| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By |
+| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- |
+
+`Blocked-By` is an **optional** column, seeded here so a downstream `blocked`
+row never has to add one — and added to an already-seeded eight-column ledger by
+Phase 2b's column migration, which runs whether or not this template was copied.
+`/qfai-implement` may write the `Status`, `DR-ID`, `Evidence` and `Blocked-By`
+cells unconditionally and never a row, and a `Status = blocked` row with no
+blocker named raises `TDDLIST_BLOCKED_MISSING_REF`.
 
 ## Schema
 

@@ -69,6 +69,29 @@ function section(markdown: string, heading: string): string {
   return end < 0 ? rest : rest.slice(0, end);
 }
 
+/**
+ * A pattern that matches `text` wherever the shipped file happens to wrap it.
+ *
+ * These pins assert that a sentence is present. Written with literal spaces they assert something
+ * else as well — that the sentence is broken across lines at exactly today's columns — and
+ * `drift-protocol.md` is re-wrapped whenever it drifts back over its line ceiling. Each such
+ * re-wrap has been reddening a different subset of these pins against prose nobody edited, and the
+ * repairs so far have been per-site (`\s+` here, `\s*\n?\s*` there) at whichever gap moved that
+ * time, which only relocates the next failure. Every inter-word gap becomes `\s+` here, so the
+ * words are pinned and the wrap column is not.
+ *
+ * Regex metacharacters in `text` are escaped: the phrases carry backticks, dots and asterisks from
+ * the markdown they quote, and those are content, not syntax.
+ */
+function wrapTolerant(text: string, flags = ""): RegExp {
+  const escaped = text.trim().split(/\s+/).map(escapeRegExp).join("\\s+");
+  return new RegExp(escaped, flags);
+}
+
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const STAGES_WITHOUT_A_DRAIN = [
   "/qfai-sdd",
   "/qfai-atdd",
@@ -91,7 +114,7 @@ describe("reviewer finding provenance", () => {
       expect(drift).toContain(cls);
       expect(baseline).toContain(cls);
     }
-    expect(drift).toMatch(/demonstrable from the changed artifacts/i);
+    expect(drift).toMatch(wrapTolerant("demonstrable from the changed artifacts", "i"));
   });
 
   it("does not let an advisory that changes an approved obligation reach done", async () => {
@@ -101,7 +124,7 @@ describe("reviewer finding provenance", () => {
       /changes an already-approved obligation[\s\S]{0,400}when-drift-is-detected/,
     );
     expect(drift).toMatch(
-      /no `done` for items that\s*\n?\s*depend on the obligation under dispute/,
+      wrapTolerant("no `done` for items that depend on the obligation under dispute"),
     );
   });
 
@@ -193,9 +216,11 @@ describe("reviewer finding provenance", () => {
       expect(doc).toContain(".qfai/evidence/implement-<spec-id>.md");
       expect(doc).toContain(".qfai/evidence/atdd-<spec-id>.md");
     }
-    expect(drift).toMatch(/Never `08_Open-questions\.md`/);
+    expect(drift).toMatch(wrapTolerant("Never `08_Open-questions.md`"));
     // Owner: the orchestrator that dispatched the review, not the reviewer.
-    expect(drift).toMatch(/The \*\*orchestrator\*\* that dispatched the review appends it/);
+    expect(drift).toMatch(
+      wrapTolerant("The **orchestrator** that dispatched the review appends it"),
+    );
     // Drain: consumed at the spec boundary, and completion is gated on it.
     // Repair is the only close. A validator bug report is what a
     // `record:unchecked` entry additionally owes for the missing check — closing
@@ -235,7 +260,7 @@ describe("reviewer finding provenance", () => {
     expect(skill).toMatch(/cannot be repaired honestly[\s\S]{0,120}`defect:code-quality`/);
     // …while still not gating any individual row's `done`.
     for (const doc of [drift, classification]) {
-      expect(doc).toMatch(/never holds an\s*\n?\s*individual row out of `done`/);
+      expect(doc).toMatch(wrapTolerant("never holds an individual row out of `done`"));
     }
   });
 
@@ -334,7 +359,7 @@ describe("reviewer finding provenance", () => {
     }
     // The operative rule is a property of the stage's own completion contract,
     // so a stage that adds the drain gains the class without editing this list.
-    expect(drift).toMatch(/completion\s+conditions must require this queue drained/);
+    expect(drift).toMatch(wrapTolerant("completion conditions must require this queue drained"));
     expect(drift).toMatch(/gains\s+the class by adding the drain to its completion conditions/);
     // A stage without a drain does not lose the finding — it keeps the class it
     // would otherwise have had.

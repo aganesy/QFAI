@@ -2204,7 +2204,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // first entry failing while the rest are unobserved.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("run **each entry of** this row's `Selector` separately");
-    expect(implement).toContain("Record the trio per entry, or split the row before the handoff");
+    // The trio is per entry; the split that used to be offered as the
+    // alternative is `/qfai-sdd` Phase 2b's write, not this skill's.
+    expect(implement).toContain("Record the trio per entry");
+    expect(implement).toContain("**and never split the row here to get one**");
   });
 
   it("takes Round 1: Revision from the restored tree, not the mutated one", async () => {

@@ -243,7 +243,7 @@ it holds — a comma is legal inside a single test name, so nothing splits a bar
 (`selector-granularity.md#entry-form`). What is restricted is what a row may _conflate_ — **one
 independently observable boundary per row**, with RED observed per selector entry, and a
 matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
-`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. If you
+`TDD-ID`), by `/qfai-sdd` Phase 2b, which owns the rows. A selector that accumulates unrelated boundaries invalidates the RED observation. If you
 cannot name the single boundary that every selector entry on a row observes, split the row. Rules
 and examples: `selector-granularity.md`.
 

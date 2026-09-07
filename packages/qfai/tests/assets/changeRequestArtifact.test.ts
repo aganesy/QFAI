@@ -202,10 +202,15 @@ describe("a Change Request is a defined artifact", () => {
       // `09_delta.md` / `07_Decisions.md` are upstream SSOT, so step 2 (before
       // approval) must not write them.
       const drift = await read(tree, "assistant/constitution/drift-protocol.md");
+      // The "only write" claim now carries one named exception — parking this
+      // CR's blocked set in the execution ledger — so it is asserted flattened
+      // and paired with the bound that keeps the two SSOT files out of it.
       expect(flat(drift)).toContain(
-        "Creating this file is the only write this step makes: the delta and Decisions files the reference lands in",
+        "Creating this file is the only write this step makes **outside the raiser's own whitelisted cells**.",
       );
-      expect(flat(drift)).toContain("are upstream SSOT");
+      expect(flat(drift)).toContain(
+        "writes nothing else: no other cell, no other file, and no row added",
+      );
       expect(flat(drift)).toContain(
         "written there by the owner skill in step 4, never before approval",
       );
