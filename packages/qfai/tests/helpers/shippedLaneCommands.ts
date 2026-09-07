@@ -1363,10 +1363,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // failure message.
   // Re-derived once more for the MERGED file: main dropped the three retired
   // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
-  // comment, and this branch seeds `testFileGlobs`. Neither predecessor digest
-  // describes what ships. Taken by running `qfai init` into a temp root and
-  // hashing the file it wrote, which is how both predecessors were taken.
-  ["qfai.config.yaml", "ed3b8b5e22a67ba6a83a81aa1a83d0db8ca39ba5f262b68895135ef9a57acf90"],
+  // comment. Taken by running `qfai init` into a temp root and hashing the file
+  // it wrote, which is how both predecessors were taken.
+  //
+  // Re-pinned again for the `testFileGlobs` comment block, which now describes
+  // a derived value: `qfai init` matches each recognised layout against the
+  // tree it runs in and writes the ones that select a file. The whole delta is
+  // that comment — restoring the previous wording reproduces `ed3b8b5e…` byte
+  // for byte.
+  //
+  // A byte pin still holds even though the value now varies by repository. The
+  // root this runs against has no test file, so no layout matches and the key
+  // keeps the empty list the template ships. That is also the case the comment
+  // calls a fact about the repository rather than about the default, so the pin
+  // covers the shipped text and the empty-tree behaviour at once.
+  ["qfai.config.yaml", "dca10e4f4e6f07c5d358e7669ad7cce09b26aaa63fcd19f71c0a40245cbe3b5e"],
 ]);
 
 /**
