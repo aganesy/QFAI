@@ -44,13 +44,19 @@ The rows this covers are ordinary: a post-RED scope gap is raised from a row at
 row is re-selected ahead of every `todo` row by the loop head, so without this
 it would be picked up again on every run for as long as the approval takes.
 
-## Releasing a row takes every open CR into account
+## Releasing a row takes every unresolved CR into account
 
 A row can sit in more than one blocked set, and an approved CR releases only its
 own claim. So the release is a re-evaluation, not an unconditional write:
 
-- Recompute the **union** of the blocked sets of every CR still open and in
-  scope, after this CR's approval has taken it out of that set.
+- Recompute the **union** of the blocked sets of every in-scope CR still
+  **unresolved** (`#when-an-in-scope-cr-counts-as-resolved`), after this CR's
+  approval has taken it out of that set. **`open` is not the membership test**:
+  an `approved` CR whose `Applied at` is still empty is unresolved too, and the
+  row it names still owes the obligation in its pre-update form — the owner-skill
+  rerun that moves it has not run yet. Recomputing over the open ones alone
+  released such a row into selection and let it complete against the obligation
+  the approval had already replaced.
 - **A row still in the union stays where it is.** Remove only this CR's ID from
   `Blocked-By`, leaving the other blockers; do not write `blocked -> todo`, and
   do not apply this CR's reset to it. Returning it would put a row back into

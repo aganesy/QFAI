@@ -120,7 +120,7 @@ explicitly allows downstream updates" — could not rescue that, for two reasons
   mandatory and non-substitutable was precisely the content no rule authorised anyone to persist.
 
 So an agent obeying the protocol could not satisfy gate item 10, and an agent satisfying it was in
-drift. The entry above names the file and the three cells unconditionally, which is what removes
+drift. The entry above names the file and the four cells unconditionally, which is what removes
 the choice.
 
 ### Why `Test file` and `Selector` are conditional
@@ -137,7 +137,7 @@ validator rules are what create it:
 
 A row is seeded with a descriptive selector and, commonly, no test file: the path is a downstream
 decision, and the test's title does not exist until the micro-cycle authors it. So the writing
-stage cannot hold the status the first three cells **do** authorise without also writing a cell
+stage cannot hold the status the first four cells **do** authorise without also writing a cell
 they do **not** — and the earlier status it would otherwise have to keep is false, because the row
 has already passed that phase. Seeding both cells upstream does not resolve it either: it would
 require inventing titles that implementers then match exactly, inverting the direction of

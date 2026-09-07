@@ -423,18 +423,20 @@ describe.each(TREES)("%s", (tree) => {
     expect(red).toContain("asking for that column migration");
   });
 
-  it("keeps the row blocked while another open CR still names it", async () => {
+  it("keeps the row blocked while another unresolved CR still names it", async () => {
     // Blocked sets compose per CR: a row on two of them resumes only when both
     // release, so clearing `Blocked-By` on the matrix CR alone re-runs a test
-    // whose other approved change has not landed.
+    // whose other approved change has not landed. "Unresolved" and not "open",
+    // because an approved CR is unresolved until its `Applied at` says the
+    // owner rerun landed — which is exactly that case.
     const red = section(
       await read(tree, SKILL),
       "### Phase: Red (Write Failing Test)",
       "### Phase: Green",
     );
 
-    expect(red).toContain("**but only when no other open `CR-*` still names the row**");
-    expect(red).toContain("recomposes every open CR's set before it writes");
+    expect(red).toContain("**but only when no other unresolved `CR-*` still names the row**");
+    expect(red).toContain("recomposes every unresolved CR's set before it writes");
   });
 
   it("reverts the falsifiability mutation before the residual handoff", async () => {
@@ -541,7 +543,12 @@ describe.each(TREES)(
       // also held by a second, unresolved CR went back into selection and could
       // run and complete over that unresolved change.
       const reset = await read(tree, RESET);
-      expect(reset).toContain("Recompute the **union** of the blocked sets of every CR still open");
+      expect(reset).toContain(
+        "Recompute the **union** of the blocked sets of every in-scope CR still **unresolved**",
+      );
+      // `open` alone released a row whose other blocker was approved but not
+      // yet applied — still unresolved, and still holding the old obligation.
+      expect(reset).toContain("**`open` is not the membership test**");
       expect(reset).toContain("**A row still in the union stays where it is.**");
       expect(reset).toContain("Remove only this CR's ID from `Blocked-By`");
       expect(reset).toContain("**A row no longer in the union** takes the reset below in full");
