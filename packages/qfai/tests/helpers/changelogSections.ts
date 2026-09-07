@@ -24,9 +24,13 @@ const H2_RE = /^##[ \t]+(.*\S)[ \t]*$/;
 export function sectionOfEachLine(text: string): string[] {
   let current = CHANGELOG_PREAMBLE;
   return text.split(/\r?\n/).map((line) => {
-    const heading = H2_RE.exec(line);
-    if (heading !== null) {
-      current = heading[1];
+    // The group is typed optional because a pattern need not reach it. This
+    // one has no alternation and no optional group, so a match always carries
+    // it — but a later edit that added either would silently start writing
+    // `undefined` into the section of every line below the heading.
+    const heading = H2_RE.exec(line)?.[1];
+    if (heading !== undefined) {
+      current = heading;
     }
     return current;
   });
