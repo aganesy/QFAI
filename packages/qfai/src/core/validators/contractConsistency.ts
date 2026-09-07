@@ -185,7 +185,10 @@ function describeDbConstraint(domain: DbDomain): string {
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
-    return "CHECK (the bound the DB currently asserts; it can be dropped or declared NOT VALID)";
+    return (
+      "CHECK (a constraint the DB asserts today, not the shape of the column: " +
+      "it can be dropped or declared NOT VALID)"
+    );
   }
   return (
     `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
@@ -303,7 +306,7 @@ async function validateApiFileAgainstDb(
         "QFAI-CONTRACT-040",
         `the API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
           `field name cannot represent: ${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
-          `DB contracts: ${dbFileList.join(", ")}; DB bound: ${describeDbConstraint(db)})`,
+          `DB contracts: ${dbFileList.join(", ")}; DB constraint: ${describeDbConstraint(db)})`,
         severity,
         file,
         "contracts.crossContract.stateDomain",

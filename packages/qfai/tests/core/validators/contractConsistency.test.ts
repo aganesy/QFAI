@@ -395,7 +395,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // every contract's path appears earlier in the message, so a whole-
       // message assertion would pass on either name.
       const message = issues[0]?.message ?? "";
-      const constraintClause = message.slice(message.indexOf("DB bound: "));
+      const constraintClause = message.slice(message.indexOf("DB constraint: "));
       expect(constraintClause).toContain("CHECK and ENUM mixed");
       expect(constraintClause).toContain("db-0002-call-lists.sql");
       expect(constraintClause).not.toContain("db-0003-sim-lines.sql");
@@ -475,7 +475,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // The ENUM is still named: it is what the reader has to look at to settle
       // which table the API field pairs with.
       const message = issues[0]?.message ?? "";
-      expect(message.slice(message.indexOf("DB bound: "))).toContain("CHECK and ENUM mixed");
+      expect(message.slice(message.indexOf("DB constraint: "))).toContain("CHECK and ENUM mixed");
 
       // The remedy points at the TABLE, because the contract is already
       // settled — there is only one. The cross-contract wording would have
