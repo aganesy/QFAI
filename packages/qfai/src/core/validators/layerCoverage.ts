@@ -316,6 +316,80 @@ export async function collectV1421LayerRefs(entry: SpecEntry): Promise<V1421Laye
   };
 }
 
+/**
+ * The same reference graph, read from whichever layout the pack is written in.
+ *
+ * `collectV1421LayerRefs` reads Markdown definition tables and `## <ID>`
+ * headings. On `v1417` / `v1416` the Examples layer is a Gherkin `.feature`
+ * file (`specLayout.ts` resolves `examplesPath` to it), whose EX ids are
+ * `@EX-NNNN` tags and whose parentage is a `# Parent: BR-NNNN` comment — so
+ * that reader returns an empty `exToBrRefs` there rather than an error, and a
+ * caller that derives from the graph derives nothing at all. This walk is the
+ * one `#validatebrtoexcoverage` and `#validateextotccoverage` already apply to
+ * those layouts, so the two cannot disagree about what an EX's parent is.
+ *
+ * A flat pack keeps the v1421 reader: it has no Gherkin Examples file, and
+ * changing what it reads is not this function's subject.
+ */
+export async function collectLayerRefs(entry: SpecEntry): Promise<V1421LayerRefs> {
+  if (entry.layeredStyle !== "v1417" && entry.layeredStyle !== "v1416") {
+    return collectV1421LayerRefs(entry);
+  }
+
+  const [acText, brText, exText, tcText] = await Promise.all([
+    readSafe(entry.acceptanceCriteriaPath),
+    readSafe(entry.businessRulesPath),
+    readSafe(entry.examplesPath),
+    readSafe(entry.testCasesPath),
+  ]);
+
+  return {
+    acIds: new Set(
+      collectMarkdownItems(acText, "AC")
+        .map((item) => item.id)
+        .filter((id) => ID_PATTERNS.ac.test(id)),
+    ),
+    brToAcRefs: parentEdges(collectMarkdownItems(brText, "BR"), ID_PATTERNS.ac),
+    exToBrRefs: scenarioParentEdges(collectScenarioItems(exText)),
+    tcToAcRefs: parentEdges(collectMarkdownItems(tcText, "TC"), ID_PATTERNS.ac),
+    tcToExRefs: parentEdges(collectMarkdownItems(tcText, "TC"), ID_PATTERNS.ex),
+  };
+}
+
+/**
+ * One `- Parent: <ID>` edge per definition, kept only where the parent is of
+ * the asked-for kind.
+ *
+ * A definition whose parent is another kind still gets an entry, empty: the
+ * consumers read "declared, with no reference of this kind" from an empty set
+ * and "not declared" from an absent key, and collapsing the two would report a
+ * TC that references an AC as one that references nothing.
+ */
+function parentEdges(
+  items: readonly { id: string; parent: string | null }[],
+  pattern: RegExp,
+): Map<string, Set<string>> {
+  const edges = new Map<string, Set<string>>();
+  for (const item of items) {
+    const refs = edges.get(item.id) ?? new Set<string>();
+    if (item.parent !== null && pattern.test(item.parent)) {
+      refs.add(item.parent.toUpperCase());
+    }
+    edges.set(item.id, refs);
+  }
+  return edges;
+}
+
+/** The same, for the `@EX-NNNN` tag and `# Parent: BR-NNNN` comment of a scenario. */
+function scenarioParentEdges(
+  items: readonly { exId: string; parent: string | null }[],
+): Map<string, Set<string>> {
+  return parentEdges(
+    items.map((item) => ({ id: item.exId.replace(/^@/, ""), parent: item.parent })),
+    ID_PATTERNS.br,
+  );
+}
+
 async function validateV1421Coverage(
   entry: SpecEntry,
 ): Promise<{ issues: Issue[]; snapshot: CoverageSnapshot }> {
