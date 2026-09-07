@@ -53,7 +53,7 @@ describe("qfai init and root DESIGN.md", () => {
     expect(existsSync(path.join(root, "DESIGN.md"))).toBe(false);
   });
 
-  it("reports no unreplaced-seed finding on the tree it just wrote", async () => {
+  it("reports no unreplaced-sample finding on the tree it just wrote", async () => {
     // The finding this removes. Read through the validator rather than by
     // grepping output, so a rename of the code cannot make the case vacuous.
     const root = await freshInit();

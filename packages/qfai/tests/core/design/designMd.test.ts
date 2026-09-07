@@ -1193,31 +1193,18 @@ describe("shipped DESIGN.md template", () => {
 // ---------------------------------------------------------------------------
 
 describe("isUnreplacedDesignMdSample", () => {
-  const shippedSamplePaths = [
-    SHIPPED_DESIGN_MD_SAMPLE,
-    path.join(
-      getInitAssetsDir(),
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "templates",
-      "DESIGN.md.sample",
-    ),
-  ];
-
-  it.each(shippedSamplePaths)("flags the shipped sample at %s", async (file) => {
-    const text = await readFile(file, "utf-8");
+  it("flags the shipped sample", async () => {
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     expect(text).toContain(DESIGN_MD_SAMPLE_MARKER);
     expect(isUnreplacedDesignMdSample(text)).toBe(true);
   });
 
   it("flags a marker-less legacy copy of the shipped sample", async () => {
     // `qfai init` copies the root asset tree create-only — `--force`
-    // included — so a project initialized before the marker existed keeps a
-    // marker-less copy of root/DESIGN.md forever. Simulate that
-    // installed-base file by stripping the marker comment from the
-    // shipped sample.
+    // included — so the root `DESIGN.md` an older release seeded is kept
+    // whatever it holds, and a project initialized before the marker existed
+    // keeps that copy without one forever. Simulate that installed-base file
+    // by stripping the marker comment from the shipped sample.
     const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text.replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "");
     expect(legacy).not.toContain(DESIGN_MD_SAMPLE_MARKER);

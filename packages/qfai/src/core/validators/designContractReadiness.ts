@@ -494,7 +494,8 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  * the real brand breaks the lock until it is refrozen.
  *
  * A project holds the sample because someone put it there: copied from
- * `qfai-prototyping/templates/DESIGN.md.sample` as a starting point, or
+ * `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` as a
+ * starting point, or
  * seeded by a release back when `qfai init` wrote one. Init writes none
  * now — `/qfai-discussion` emits the draft, and only for a
  * visual-prototyping surface — so this gate no longer reports a file the
