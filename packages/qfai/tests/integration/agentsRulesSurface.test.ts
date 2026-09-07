@@ -119,7 +119,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   });
 
   // A repository-only rule, like `document-schema.md`: it governs what this
-  // tree stores, and `assets/init/root/.agents/rules/` deliberately does not
+  // tree stores, and `packages/qfai/assets/init/root/.agents/rules/` does not
   // carry it. An adopter picks the language of their own repository, and a
   // copy under the shipped masters would both say otherwise and oblige every
   // shipped entry point to cite it.

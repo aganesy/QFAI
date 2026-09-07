@@ -9,7 +9,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A rule stating that this repository is written in English**
   (`.agents/rules/repository-language.md`). The language of the tree was
   settled one surface at a time. Operator-facing strings in
-  `packages/qfai/src/**` are pinned to English by `cli-ux-guidelines.md` and
+  `packages/qfai/src/**` are pinned to English by
+  `packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md` and
   held by a meta-test against a shrinking allowlist; comments, documents,
   tests and this file had no rule to point at, so each change decided for
   itself.

@@ -13,6 +13,11 @@ Everything tracked here, and everything written about it:
 - Workflow files and the comments inside them
 - Commit messages, and the title and body of every pull request and issue
 
+An allowlist is the one place a Japanese line appears on purpose. It records
+what is still untranslated so a check can hold that count, which makes the text
+there data rather than writing. Listing a line is not permission to add
+another: the lists may only shrink.
+
 ## Not in scope
 
 Two things this rule does not decide.
