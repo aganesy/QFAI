@@ -580,9 +580,13 @@ defect is gone with it. The drain is what pays for dropping the round.
 
 ### Line endings in the artifacts under review
 
-Every artifact `#core-rule` lists is shipped and maintained LF-normalised, and `npx qfai init` seeds
-a `.gitattributes` at the project root that keeps the paths QFAI owns that way: the `.qfai/**` tree
-and five files beside it. Each is named on its own, because a partial list migrates a partial set:
+The paths QFAI owns are shipped and maintained LF-normalised, and `npx qfai init` seeds a
+`.gitattributes` at the project root that keeps them that way: the `.qfai/**` tree and five files
+beside it. Each is named on its own, because a partial list migrates a partial set:
+
+`#core-rule` reaches further than this — it also lists production and test artifacts another spec's
+completed implementation guarantees — and those are not QFAI's to pin. Their line endings are the
+project's policy, below.
 
 | path                                  | seeded by             |
 | ------------------------------------- | --------------------- |
