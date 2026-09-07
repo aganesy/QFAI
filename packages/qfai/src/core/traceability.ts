@@ -246,7 +246,7 @@ function toSortedArray(values: Iterable<string>): string[] {
  * `collectFilesByGlobs` directly normalises its globs exactly the way
  * `collectScTestReferences` does, instead of reporting on a different file set.
  */
-export function normalizeGlobs(globs: string[]): string[] {
+export function normalizeGlobs(globs: readonly string[]): string[] {
   return globs.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
 }
 
