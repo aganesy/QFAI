@@ -2775,6 +2775,20 @@ async function collectTestStrategy(
   // Fall back to the ledger when the Gherkin path yielded nothing. `Layer` is a
   // hard-required column of every `tdd/test-list.md`, so on the layered layout
   // it is the only place a layer can actually be read from.
+  //
+  // The TOTAL and the E2E count follow the histogram, and until they did the
+  // report contradicted itself: the buckets summed to N while `totalScenarios`
+  // said 0. That is not only a display defect. `maxE2eScenarioRatio` and
+  // `maxE2eScenarioCount` are compared against these two numbers, so on the
+  // layered layout — the normal shape for a project whose E2E lives in code
+  // rather than in Gherkin — both knobs were compared against zero and could
+  // not fire however many E2E rows the ledger held. A project could set them,
+  // read them in `qfai.config.yaml`, and be told nothing (#1197).
+  //
+  // A ledger row is a TC obligation rather than a parsed scenario, which is why
+  // `layerSource` says which one produced these numbers. It is the same axis:
+  // both count the things the project has undertaken to test, bucketed by
+  // layer.
   let layerSource: ReportTestStrategy["layerSource"] =
     totalScenarios > 0 ? "scenario-tags" : "none";
   if (totalScenarios === 0) {
@@ -2784,6 +2798,8 @@ async function collectTestStrategy(
       for (const [bucket, count] of Object.entries(fromLedger.counts)) {
         layerCounts[bucket as keyof typeof layerCounts] += count;
       }
+      totalScenarios = fromLedger.total;
+      e2eCount = fromLedger.counts.e2e;
     }
   }
 
