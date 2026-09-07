@@ -245,10 +245,15 @@ boundary:
   needs a user-approved accepted-risk waiver, and a regression this run can fix is not one.
   **`refactor` is not terminal, and Phase Red does not select it**, so a run that ends before the
   re-run passes would strand the row. The preflight resume step (`../SKILL.md`, Phase: Stage 0 +
-  Preflight) is what picks it up: the next invocation re-enters Phase: Refactor at step 4 for that
-  row — routed blocking reviewers, then the whole set again — before it selects any `todo` row,
-  after any named handoff, and as one reopened group when the row is a T1 member of one
-  (`volume-policy.md`).
+  Preflight) is what picks it up; when it resumes, and as what unit, is stated there.
+
+  **A repair that changed code owes its `Refactor verify` fields before it re-submits.** Re-run the
+  relevant suite on the repaired tree and record the command, result and revision (Phase: Refactor
+  step 2) first, then the routed blocking reviewers, then the whole checkpoint set. Gate item 10
+  requires those three revisions to agree, so reviewers given a fresh PASS over a stale
+  `Refactor verify` leave the row unable to reach `done` — with no route back, since Phase Red does
+  not re-select it.
+
 - **Per spec** — the boundary owns no row, so no status moves. Fix the failure and re-run the whole
   set. **Do not add a row here.** When the repair needs its own Red/Green cycle it needs an
   obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds

@@ -1278,31 +1278,32 @@ describe("qfai-implement gate arity naming", () => {
       // selectable by Phase Red step 1 (named row / `review-fix` / `todo`). An
       // interrupted repair would strand it for every later invocation, so
       // preflight has to be the entry that re-selects it.
-      expect(skill).toContain(
-        "**Resume every row left at `refactor` — after any named handoff, before any `todo` row.**",
-      );
+      expect(skill).toContain("**Resume every row left at `refactor`.**");
       expect(skill).toContain("This is the only entry that re-selects `refactor`");
       expect(reference).toContain("The preflight resume step (`../SKILL.md`, Phase: Stage 0 +");
     }
   });
 
-  // Resuming an unrelated `refactor` row ahead of a named handoff runs that
-  // row's full-suite checkpoint against the handoff's deliberate RED, so it
-  // FAILs on an obligation the resumed row does not own.
-  it("keeps a named handoff ahead of the refactor resume", async () => {
+  // Resuming an unrelated `refactor` row ahead of what Phase Red step 1 would
+  // have selected runs that row's full-suite checkpoint against a deliberate
+  // RED, so it FAILs on an obligation the resumed row does not own. The order
+  // is that step's to state; restating it here is what made the two disagree.
+  it("defers to Phase Red step 1 for selection order", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
-      expect(skill).toContain("**A named handoff is processed first.**");
-      expect(skill).toContain(
-        "run Phase Red step 1 on those rows and come back here only once they are terminal",
-      );
-      expect(skill).toContain("FAILs on an obligation the row does not own");
+      expect(skill).toContain("**It runs last, and it reorders nothing.**");
+      expect(skill).toContain("Phase Red step 1 owns selection precedence and this step restates");
+      expect(skill).toContain("that end condition is a return to the caller");
+      expect(skill).toContain("FAILs it on an obligation the row does not own");
+      // A row an unresolved Change Request names may not move, whatever its
+      // status, so the resume is not the one selection that ignores that.
+      expect(skill).toContain("**A row an unresolved `CR-*` names is not resumed.**");
 
       const reference = await readFile(
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("after any named handoff");
+      expect(reference).toContain("when it resumes, and as what unit, is stated there");
     }
   });
 
@@ -1317,14 +1318,13 @@ describe("qfai-implement gate arity naming", () => {
       expect(skill).toContain(
         "a T1 group left open, whose members park in `refactor` legally and by design",
       );
-      expect(skill).toContain("**Resume by review unit, not row by row**");
-      expect(skill).toContain("every member transitioning in the same ledger write");
-
-      const reference = await readFile(
-        path.join(dir, "references", "checkpoint-verification.md"),
-        "utf-8",
-      );
-      expect(reference).toContain("as one reopened group when the row is a T1 member of one");
+      expect(skill).toContain("**Resume the review unit, not the `refactor` rows inside it.**");
+      // The unit is every T1 row of the key, not the subset currently parked at
+      // `refactor`: closing over that subset ends the group early, and closing
+      // over a group whose member is at `review-fix` closes it unrepaired.
+      expect(skill).toContain("an open T1 group is every T1 row of one `BR-Ref`");
+      expect(skill).toContain("resumes by continuing Fill");
+      expect(skill).toContain("a `review-fix` member is blocked on that repair");
     }
   });
 
