@@ -166,7 +166,12 @@ const VALID_STATUSES = new Set([
  */
 const LIVE_LEDGER_STATUSES = Array.from(VALID_STATUSES).filter((status) => status !== "done");
 
-/** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
+/**
+ * The column naming what a `blocked` row is waiting on **and the status it was
+ * blocked at** — both halves, in one cell. Optional to this validator; required
+ * on a `blocked` row, where either half missing is
+ * `TDDLIST_BLOCKED_MISSING_REF`.
+ */
 const BLOCKED_BY_COLUMN = "Blocked-By";
 
 /**
@@ -208,6 +213,88 @@ function brDeclarationFileName(specEntry: SpecEntry): string {
 
 /** The column the business-rules file declares a rule's id in. */
 const BR_ID_COLUMN = "BR-ID";
+
+/**
+ * The statuses a row can be blocked at.
+ *
+ * `Any active status -> blocked` is the inbound edge, so the departure status is
+ * one of the active ones: `blocked` itself is the destination, and `done` /
+ * `exception` are terminal — neither has work in flight for a blocker to stop.
+ *
+ * Derived by excluding those three rather than listed, for the reason
+ * {@link LIVE_LEDGER_STATUSES} is: a second hand-written copy of the vocabulary
+ * drifts silently, and a status added to {@link VALID_STATUSES} would then be
+ * legal in the `Status` column and rejected in `Blocked-By` — one ledger with
+ * two answers about what an active status is.
+ */
+const BLOCKED_DEPARTURE_STATUSES = new Set(
+  Array.from(VALID_STATUSES).filter(
+    (status) => status !== "blocked" && status !== "done" && status !== "exception",
+  ),
+);
+
+/**
+ * `<blocker> — blocked at <status>`.
+ *
+ * The blocker half is greedy so the separator matched is the last one that still
+ * leaves a legal tail: a blocker may itself contain a dash
+ * (`spec-0006:TDD-0034`), and anchoring on the first would cut it in half. An
+ * en dash and a plain hyphen are accepted beside the em dash the reference
+ * prints, because the difference is a keyboard, not a meaning.
+ *
+ * The status token admits digits so that a typo like `green2` reads as an
+ * unknown status rather than as no status at all: the cell has the shape, and
+ * saying the departure status is missing sends the author to the half that is
+ * there.
+ *
+ * **It admits an empty blocker half**, which the emptiness check below then
+ * names. Requiring a non-empty one made `— blocked at green` match nothing, so
+ * a cell whose departure status is right there was told the departure status is
+ * what is missing — and the remediation sent the author to add the half the
+ * cell already had.
+ */
+const BLOCKED_BY_DEPARTURE_RE = /^(.*)\s*[—–-]\s*blocked\s+at\s+([A-Za-z0-9-]+)\s*$/i;
+
+/**
+ * What a `Blocked-By` cell resolves to.
+ *
+ * Both halves are written by the `Any active status -> blocked` transition, and
+ * the departure status is the only persisted record of where the row was
+ * stopped: a row parked at `blocked` across a session boundary keeps nothing but
+ * its `Status` and this cell, and the resumption needs the departure status to
+ * pick the round it writes into. Parsing it here rather than at each reader is
+ * what keeps that contract in one place.
+ */
+type BlockedByParse =
+  | { ok: true; blocker: string; departureStatus: string }
+  | { ok: false; reason: "missing-blocker" }
+  | { ok: false; reason: "missing-departure-status" }
+  | { ok: false; reason: "unknown-departure-status"; departureStatus: string };
+
+/** Parse a `Blocked-By` cell into its blocker and departure-status halves. */
+function parseBlockedBy(raw: string): BlockedByParse {
+  const value = raw.trim();
+  if (value.length === 0 || value === "-") return { ok: false, reason: "missing-blocker" };
+
+  const match = BLOCKED_BY_DEPARTURE_RE.exec(value);
+  if (match === null) return { ok: false, reason: "missing-departure-status" };
+
+  const blocker = (match[1] ?? "").trim();
+  if (blocker.length === 0 || blocker === "-") return { ok: false, reason: "missing-blocker" };
+
+  const departureStatus = (match[2] ?? "").toLowerCase();
+  if (!BLOCKED_DEPARTURE_STATUSES.has(departureStatus)) {
+    return { ok: false, reason: "unknown-departure-status", departureStatus };
+  }
+  return { ok: true, blocker, departureStatus };
+}
+
+/**
+ * The departure statuses, in lifecycle order, for a finding message. Rendered
+ * from the set itself so the message cannot name a different vocabulary than
+ * the check applies.
+ */
+const BLOCKED_DEPARTURE_LIST = [...BLOCKED_DEPARTURE_STATUSES].map((s) => `\`${s}\``).join(" / ");
 
 /**
  * The `Layer` values the shipped ledger schema declares
@@ -3857,28 +3944,55 @@ async function validateSpecTddList(
     );
   }
 
-  // Phase 2 – Check 8a: a blocked row must name its blocker.
+  // Phase 2 – Check 8a: a blocked row must name its blocker *and* the status it
+  // was blocked at.
   //
-  // Without this the new status would be a second unfalsifiable state: "cannot
-  // start" with no record of what it is waiting on is the same re-derivation
-  // problem `todo` already had, one word further along.
+  // Without the blocker the status would be a second unfalsifiable state:
+  // "cannot start" with no record of what it is waiting on is the same
+  // re-derivation problem `todo` already had, one word further along.
+  //
+  // The departure status is the other half, and it is load-bearing for the same
+  // reason: `blocked` is reachable from every active status, and a row parked
+  // there across a session boundary persists nothing but its `Status` and this
+  // cell. The resumption reads the departure status to decide whether it
+  // continues an interrupted round or opens the next one, and to compose
+  // `Round N: Resumed-from-blocked`. Accepting a bare `CR-20260729-0008` let a
+  // row be saved in a state no later session can resume from.
   const hasBlockedByColumn = anyTableHasColumn(coverageTables, BLOCKED_BY_COLUMN);
   for (const ref of ledgerRows()) {
     if (cell(ref, "Status").toLowerCase() !== "blocked") continue;
     const blockedBy = cell(ref, BLOCKED_BY_COLUMN);
-    if (blockedBy.length > 0 && blockedBy !== "-") continue;
+    const parsed = parseBlockedBy(blockedBy);
+    if (parsed.ok) continue;
+
+    const where = `in tdd/test-list.md for spec-${specNumber} (${ref.label})`;
+    let message: string;
+    if (parsed.reason === "missing-blocker") {
+      // Three states, three sentences. A cell reading `— blocked at green` is
+      // not empty, and calling it empty sent the author to the half it already
+      // had; the parse admits that shape now, so the message can name the half
+      // that is actually absent.
+      message = !hasBlockedByColumn
+        ? `Status=blocked ${where} but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker and the status the row was blocked at`
+        : blockedBy.trim().length === 0 || blockedBy.trim() === "-"
+          ? `Status=blocked but ${BLOCKED_BY_COLUMN} is empty ${where}. Name the blocker and the status the row was blocked at`
+          : `Status=blocked but ${BLOCKED_BY_COLUMN} names no blocker ${where}: "${blockedBy}". Name what the row is waiting on ahead of the "— blocked at <status>" half`;
+    } else if (parsed.reason === "missing-departure-status") {
+      message = `Status=blocked but ${BLOCKED_BY_COLUMN} names no departure status ${where}: "${blockedBy}". Append "— blocked at <status>" (${BLOCKED_DEPARTURE_LIST})`;
+    } else {
+      message = `Status=blocked but ${BLOCKED_BY_COLUMN} names "${parsed.departureStatus}" as the departure status ${where}, which is not a status a row can be blocked at (${BLOCKED_DEPARTURE_LIST})`;
+    }
+
     issues.push(
       issue(
         "TDDLIST_BLOCKED_MISSING_REF",
-        !hasBlockedByColumn
-          ? `Status=blocked in tdd/test-list.md for spec-${specNumber} (${ref.label}) but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker`
-          : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty in tdd/test-list.md for spec-${specNumber} (${ref.label}). Name the blocker`,
+        message,
         "error",
         relPath,
         "tddList.blockedBy",
         undefined,
         "change",
-        `${BLOCKED_BY_COLUMN} 列に停止要因を記載してください: Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。`,
+        `Write both halves in ${BLOCKED_BY_COLUMN}. The blocker is a Change Request ID (\`CR-YYYYMMDD-NNNN\`), a contract path with a line (\`.qfai/contracts/db/CON-DB-0005.sql:2715\`), or a row in another spec (\`spec-0006:TDD-0034\`); after it, write \`— blocked at <status>\` (${BLOCKED_DEPARTURE_LIST}), as in \`CR-20260421-0004 — blocked at green\`. The departure status is the only record a \`blocked\` row keeps of where it was stopped, and it decides which round the resumption writes into.`,
       ),
     );
   }
