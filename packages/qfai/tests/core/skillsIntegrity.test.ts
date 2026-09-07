@@ -17,7 +17,52 @@ afterEach(() => {
   vi.doUnmock("../../src/shared/assets.js");
 });
 
-describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
+/**
+ * Deliberately no `{ timeout: … }` here, and none on `validateSkillsIntegrity`
+ * below.
+ *
+ * Both blocks declared `{ timeout: 15000 }`, eight times below the project's
+ * `testTimeout`, on a file whose ten `runInit` calls each copy a 204-file
+ * template tree and spawn `git` several times for the `core.symlinks` probe —
+ * a three-form `rev-parse` fallback chain, then `git config` reads and possibly
+ * a write, so the count is a range rather than a constant (#1218).
+ *
+ * `vitest.knobs.ts` is the precedent for inheriting rather than the reason: it
+ * raised `testTimeout` to 120 s and its measurement is about spawning the qfai
+ * binary — "ninety-three per cent of every CLI invocation is loading the 1.44 MB
+ * bundle" — which is a cost this file does not pay, because `runInit` is an
+ * in-process import here. What carries over is its conclusion, that "15 s was
+ * never a budget for this workload. It was a budget for in-process tests,
+ * applied to a suite that is subprocess-bound", and the argument below is this
+ * file's own numbers rather than that one's.
+ *
+ * Measured on this tree, no source change between the two runs:
+ *
+ * | run | whole file | slowest case | `recovers from legacy 10_workflow.md` |
+ * | --- | --- | --- | --- |
+ * | this file alone | 37.5 s | 5.7 s | passes in 6.2 s |
+ * | under a full `core` run | 101.6 s | 24.9 s | **fails** |
+ * | the same, inheriting 120 s | 141.9 s | 24.9 s | passes in 15.4 s |
+ *
+ * Two numbers carry it. The slowest case costs **24.9 s** under the concurrency
+ * the project declares, so a 15 s ceiling was below the cost of the work rather
+ * than near it. And the case that failed completes in **15.4 s** — it was losing
+ * by 375 ms, which is why it was intermittent rather than simply broken.
+ *
+ * The failure is `Test timed out in 15000ms.`, the override's own number and not
+ * the project's, which is what identifies the override as the cause rather than
+ * the workload.
+ *
+ * The file is SLOWER after this change, 101.6 s to 141.9 s, because a case that
+ * used to abort at 15 s now runs to completion. That is the trade: wall clock
+ * for a lane that does not fail on changes which cannot have caused it. Cutting
+ * the cost means spawning less, which is a different change.
+ *
+ * Inheriting is the fix rather than restating 120 s locally: the knobs file is
+ * the SSOT, and it says the number comes down when `CR-20260823-0001` removes
+ * the cold start. A copy here would be one more place to miss.
+ */
+describe("diffProjectSkillsAgainstInitAssets", () => {
   it("skips when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
@@ -187,7 +232,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
   });
 });
 
-describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
+describe("validateSkillsIntegrity", () => {
   it("returns empty array when skills is not modified", async () => {
     const root = await makeTempRoot();
     try {

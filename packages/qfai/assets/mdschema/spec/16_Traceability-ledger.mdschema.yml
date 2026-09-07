@@ -1,0 +1,37 @@
+# Document schema: `<specsDir>/spec-NNNN/16_Traceability-ledger.md`
+#
+# One row per obligation, naming the file that implements it and the file that
+# proves it. The DOCUMENT is optional in a pack — a spec without one is not
+# invalid. The ledger TABLE is not optional once the document exists, because
+# the table is the whole point of the document: a ledger with no rows records
+# nothing while looking like it does.
+
+structure:
+  - heading:
+      pattern: "^# 16 Traceability Ledger.*"
+      regex: true
+    description: Obligation-to-artifact mapping for this spec.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: >-
+          What this ledger is for and what it is not. Prose rather than a list
+          here: the section has to explain which validator rule fires and when,
+          and that is an argument rather than an enumeration.
+        allow_additional: true
+
+      - heading:
+          pattern: '^## Ledger Table \(required when this file exists\)$'
+          regex: true
+        description: >-
+          The rows. `Implementation File` holds one repository-root-relative
+          path, no globs — a glob names a set, and a set cannot be the artifact
+          that satisfies a single obligation.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Implementation File
+              - Test File
