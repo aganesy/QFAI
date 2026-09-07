@@ -1,4 +1,4 @@
-# QFAI's default, seeded by `qfai init`. It is written only when this file does
+# QFAI's default, seeded by `npx qfai init`. It is written only when this file does
 # not exist; an existing .gitattributes is never overwritten.
 #
 # The rules cover only the paths QFAI owns. A repository-wide `* eol=lf` would
@@ -33,10 +33,10 @@
 .qfai/**/*.bat text eol=crlf
 .qfai/**/*.cmd text eol=crlf
 
-# The root artifacts and configuration `qfai init` seeds
+# The root artifacts and configuration `npx qfai init` seeds
 /qfai.config.yaml text=auto eol=lf
 /DESIGN.md text=auto eol=lf
-# All three workflows `qfai init` seeds, not one of them. Pinning a single file
+# All three workflows `npx qfai init` seeds, not one of them. Pinning a single file
 # leaves the other two to arrive as CRLF on a Windows checkout, where this
 # setting's purpose — keeping review diffs free of line-ending noise — would go
 # unserved for them.

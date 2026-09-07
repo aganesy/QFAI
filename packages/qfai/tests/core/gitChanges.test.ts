@@ -103,10 +103,7 @@ describe("getChangedFilesAgainstBase", () => {
       "src/core/gone.ts": MODULE_BODY,
       "src/core/kept.ts": "export const kept = 1;\n",
     });
-    execFileSync("git", ["rm", "src/core/gone.ts"], {
-      cwd: root,
-      stdio: ["ignore", "ignore", "ignore"],
-    });
+    git(root, "rm", "src/core/gone.ts");
     git(root, "commit", "-m", "delete");
 
     const changed = changedFilesOrThrow(root, "base", { dropRenameSources: true });

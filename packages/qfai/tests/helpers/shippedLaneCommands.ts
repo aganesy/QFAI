@@ -1326,15 +1326,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // whose own digests never change, which is the one way a content pin can be
   // satisfied and still be wrong.
   //
-  // Its comments are English, like every other adopter-facing template `qfai
-  // init` writes. The rules a reader has to weigh are the ones this file scopes
-  // and the one-off renormalise it asks for, and a project reads them in the
-  // language its neighbours in the same seeded tree are written in.
+  // Its comments are English and name the launcher as `npx qfai init`, like
+  // every other adopter-facing template this command writes. The rules a reader
+  // has to weigh are the ones this file scopes and the one-off renormalise it
+  // asks for, and a project reads them in the language and the spelling its
+  // neighbours in the same seeded tree use.
   //
-  // Derived by running `qfai init` into a temp root and hashing what it wrote.
+  // Derived by running the command into a temp root and hashing what it wrote.
   // The comment block is the whole delta: the rule lines are byte-identical to
   // the ones `c428b147…` covered.
-  [".gitattributes", "1512c4dc2f57fb6e73fd48f622f6b5dc9b121f8f7a52f9d6311f466f690159b1"],
+  [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
   // Re-pinned when the managed block gained the three vendored-assistant
   // negations — `!.qfai/assistant/`, `!.qfai/assistant/**` and
   // `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
@@ -1537,8 +1538,8 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * with nothing after it as no extension at all, so that one is admitted by whole name in
  * `ALLOWED_INIT_SOURCE_BASENAMES` below rather than by extension. So the rule is an enumeration of
  * what may ship rather than a list of what may not — the same inversion the rest of this file is
- * built on, arrived at three rounds late because the earlier attempts kept enumerating the dangerous
- * side, which cannot be finished.
+ * built on. The dangerous side cannot be enumerated: every extension left off such a list ships
+ * unreviewed, and nothing says when the list is finished.
  *
  * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
  * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
