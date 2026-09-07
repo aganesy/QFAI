@@ -45,7 +45,9 @@ Phase 0 is a mandatory output of this skill, so its own artifacts belong on this
 - Failure / rejection paths in particular: the DB has an honest terminal value for each API-mandated
   failure outcome, rather than a success state whose preconditions cannot hold on failure.
 - The reconciled API↔DB pairing is recorded in `_policies/05_Contracts.md`.
-- `QFAI-CONTRACT-040` warnings are resolved or explicitly triaged before sign-off.
+- `QFAI-CONTRACT-040` findings are resolved or explicitly triaged before sign-off. It reports
+  `warning` unless every contract declaring that field name bounds it with an ENUM, which is
+  `error` — the value is then unstorable whichever pairing is the real one.
 
 ## Traceability Checks
 
