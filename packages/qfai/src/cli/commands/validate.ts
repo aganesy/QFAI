@@ -2038,7 +2038,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-RESEARCH-021":
     "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
   "QFAI-AUTOPILOT-001":
-    "Drop the entries the message names from the SKILL.md hard-required bucket, or declare one this skill really consumes for that skill. `npx qfai init --force` regenerates the shipped wording.",
+    "Drop the entries the message names from the SKILL.md hard-required bucket, or declare one this skill really consumes for that skill. `qfai init --force` regenerates the shipped wording.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

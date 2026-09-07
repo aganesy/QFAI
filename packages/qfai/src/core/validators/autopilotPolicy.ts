@@ -223,8 +223,12 @@ export function classifyHardRequiredEntries(
   retired: string[];
   unknown: string[];
 } {
+  // The names are input identifiers, matched as literals. Interpolating one
+  // straight into a pattern would read a `+` or a `(` in a future entry as
+  // syntax — a silently wrong match, or a thrown SyntaxError.
+  const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const named = (normalized: string, names: readonly string[]): boolean =>
-    names.some((name) => new RegExp(`(^|[^a-z0-9])${name}([^a-z0-9]|$)`).test(normalized));
+    names.some((name) => new RegExp(`(^|[^a-z0-9])${escape(name)}([^a-z0-9]|$)`).test(normalized));
 
   const allowed = [
     ...HARD_REQUIRED_COMMON_ENTRIES,
@@ -429,7 +433,7 @@ export async function validateAutopilotPolicy(
       if (isEnoent(err)) continue;
       throw err;
     }
-    const result = parseAutopilotPolicy(body, path.basename(path.dirname(skillDoc)));
+    const result = parseAutopilotPolicy(body, skillId);
     // Operator-facing relPath derived from the actual scan path so a
     // relocated skillsDir surfaces under its real root-relative
     // location (mirrors `staleReferences.ts` and `skillDocReferences.ts`).
