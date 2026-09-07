@@ -12,6 +12,7 @@ import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
   maskNonSpecRegions,
+  parseAllMarkdownTables,
   parseFirstMarkdownTable,
   splitMarkdownRow,
 } from "../specPackParsers.js";
@@ -50,6 +51,11 @@ import {
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
+// The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
+// with. The review-group key is derived from those very edges, so re-parsing
+// the layer files here is how the derived key and the coverage graph would come
+// to disagree about what a `TC` reaches.
+import { collectLayerRefs, type V1421LayerRefs } from "./layerCoverage.js";
 import { exists, isInside, issue, readSafe } from "./utils.js";
 
 /**
@@ -160,8 +166,135 @@ const VALID_STATUSES = new Set([
  */
 const LIVE_LEDGER_STATUSES = Array.from(VALID_STATUSES).filter((status) => status !== "done");
 
-/** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
+/**
+ * The column naming what a `blocked` row is waiting on **and the status it was
+ * blocked at** — both halves, in one cell. Optional to this validator; required
+ * on a `blocked` row, where either half missing is
+ * `TDDLIST_BLOCKED_MISSING_REF`.
+ */
 const BLOCKED_BY_COLUMN = "Blocked-By";
+
+/**
+ * The T1 review-group key column.
+ *
+ * Optional to this validator on purpose — the required set is what
+ * `TDDLIST_REQUIRED_COLUMN_MISSING` enforces, and ledgers seeded before the
+ * column existed must keep passing. It is `/qfai-implement`'s grouping key, so
+ * a ledger that *does* declare it gets its cells checked: see Check 8c.
+ */
+const BR_REF_COLUMN = "BR-Ref";
+
+/**
+ * The `BR-*` id shape the business-rules file declares.
+ *
+ * The second segment is optional, which is the same predicate
+ * `layerCoverage.ts` (`ID_PATTERNS.br`) already reads these ids with. Requiring
+ * it made the shipped templates illegal by their own example: the
+ * `04_Business-Rules.md` template declares `BR-0001` and the `05_Examples.md`
+ * one points at `BR-0001`, so a ledger derived from a freshly initialized
+ * project got `QFAI-BRREF-001` on a correctly derived key — and the same
+ * pattern gates the declaration set and the derivation candidates, so the id
+ * was invisible to all three at once.
+ */
+const BR_ID_FORMAT = /^BR-\d{4}(?:-\d{4})?$/;
+
+/**
+ * The file a ledger's `BR-Ref` has to resolve into, as the operator sees it.
+ *
+ * Read off the entry's resolved path rather than fixed, because the name is
+ * layout-dependent — `04_Business-Rules.md` on `v1421`, `04_Business-rules.md`
+ * on `v1417`, `03_Business-rules.md` on legacy, `08_Business-rules.md` in a
+ * spec pack. A remediation that names a file the project does not have sends
+ * the reader to the wrong place.
+ */
+function brDeclarationFileName(specEntry: SpecEntry): string {
+  return path.basename(specEntry.businessRulesPath);
+}
+
+/** The column the business-rules file declares a rule's id in. */
+const BR_ID_COLUMN = "BR-ID";
+
+/**
+ * The statuses a row can be blocked at.
+ *
+ * `Any active status -> blocked` is the inbound edge, so the departure status is
+ * one of the active ones: `blocked` itself is the destination, and `done` /
+ * `exception` are terminal — neither has work in flight for a blocker to stop.
+ *
+ * Derived by excluding those three rather than listed, for the reason
+ * {@link LIVE_LEDGER_STATUSES} is: a second hand-written copy of the vocabulary
+ * drifts silently, and a status added to {@link VALID_STATUSES} would then be
+ * legal in the `Status` column and rejected in `Blocked-By` — one ledger with
+ * two answers about what an active status is.
+ */
+const BLOCKED_DEPARTURE_STATUSES = new Set(
+  Array.from(VALID_STATUSES).filter(
+    (status) => status !== "blocked" && status !== "done" && status !== "exception",
+  ),
+);
+
+/**
+ * `<blocker> — blocked at <status>`.
+ *
+ * The blocker half is greedy so the separator matched is the last one that still
+ * leaves a legal tail: a blocker may itself contain a dash
+ * (`spec-0006:TDD-0034`), and anchoring on the first would cut it in half. An
+ * en dash and a plain hyphen are accepted beside the em dash the reference
+ * prints, because the difference is a keyboard, not a meaning.
+ *
+ * The status token admits digits so that a typo like `green2` reads as an
+ * unknown status rather than as no status at all: the cell has the shape, and
+ * saying the departure status is missing sends the author to the half that is
+ * there.
+ *
+ * **It admits an empty blocker half**, which the emptiness check below then
+ * names. Requiring a non-empty one made `— blocked at green` match nothing, so
+ * a cell whose departure status is right there was told the departure status is
+ * what is missing — and the remediation sent the author to add the half the
+ * cell already had.
+ */
+const BLOCKED_BY_DEPARTURE_RE = /^(.*)\s*[—–-]\s*blocked\s+at\s+([A-Za-z0-9-]+)\s*$/i;
+
+/**
+ * What a `Blocked-By` cell resolves to.
+ *
+ * Both halves are written by the `Any active status -> blocked` transition, and
+ * the departure status is the only persisted record of where the row was
+ * stopped: a row parked at `blocked` across a session boundary keeps nothing but
+ * its `Status` and this cell, and the resumption needs the departure status to
+ * pick the round it writes into. Parsing it here rather than at each reader is
+ * what keeps that contract in one place.
+ */
+type BlockedByParse =
+  | { ok: true; blocker: string; departureStatus: string }
+  | { ok: false; reason: "missing-blocker" }
+  | { ok: false; reason: "missing-departure-status" }
+  | { ok: false; reason: "unknown-departure-status"; departureStatus: string };
+
+/** Parse a `Blocked-By` cell into its blocker and departure-status halves. */
+function parseBlockedBy(raw: string): BlockedByParse {
+  const value = raw.trim();
+  if (value.length === 0 || value === "-") return { ok: false, reason: "missing-blocker" };
+
+  const match = BLOCKED_BY_DEPARTURE_RE.exec(value);
+  if (match === null) return { ok: false, reason: "missing-departure-status" };
+
+  const blocker = (match[1] ?? "").trim();
+  if (blocker.length === 0 || blocker === "-") return { ok: false, reason: "missing-blocker" };
+
+  const departureStatus = (match[2] ?? "").toLowerCase();
+  if (!BLOCKED_DEPARTURE_STATUSES.has(departureStatus)) {
+    return { ok: false, reason: "unknown-departure-status", departureStatus };
+  }
+  return { ok: true, blocker, departureStatus };
+}
+
+/**
+ * The departure statuses, in lifecycle order, for a finding message. Rendered
+ * from the set itself so the message cannot name a different vocabulary than
+ * the check applies.
+ */
+const BLOCKED_DEPARTURE_LIST = [...BLOCKED_DEPARTURE_STATUSES].map((s) => `\`${s}\``).join(" / ");
 
 /**
  * The `Layer` values the shipped ledger schema declares
@@ -2321,6 +2454,162 @@ function toPosixRel(value: string): string {
 }
 
 /**
+ * Every `BR-*` the spec's `04_Business-Rules.md` **declares**, or `null` when
+ * the file is absent.
+ *
+ * `null` is not an empty set: a spec with no rules file cannot contradict a
+ * `BR-Ref`, and reporting every key as dangling there would fire on layouts
+ * that legitimately have no `04`. Fenced and commented regions are masked so a
+ * rule quoted in an example block does not count as a declaration.
+ *
+ * Only definition positions count — a table's `BR-ID` column and a
+ * `## BR-NNNN-NNNN` heading. Scanning the whole file instead would collect a
+ * `BR-*` that a `Rule` or `Notes` cell, or the prose around the table, merely
+ * mentions: a retired or compared-against id would then resolve, and
+ * `QFAI-BRREF-002` would stay silent while the T1 group is keyed on
+ * a rule the file no longer declares.
+ *
+ * **A table with no `BR-ID` header declares nothing**, rather than having its
+ * first column read as one. `04_Business-Rules.md` legitimately carries
+ * auxiliary tables — a `| Superseded | Reason |` list of retired rules is the
+ * plain case — and their first column is exactly where a `BR-*` this file no
+ * longer declares is written down. Falling back to column 0 put those ids back
+ * into the declaration set through the side door, which is the same silent
+ * resolve the prose rule above exists to prevent. The header is the only signal
+ * that separates a definition table from a table that talks about definitions,
+ * so its absence has to mean "not a definition table" — the `## BR-NNNN-NNNN`
+ * heading layout stays supported for a pack that declares rules without one.
+ */
+async function collectDeclaredBrIds(file: string): Promise<Set<string> | null> {
+  if (!(await exists(file))) return null;
+  const declared = new Set<string>();
+  const text = maskNonSpecRegions(await readSafe(file));
+  for (const match of text.matchAll(/^##\s+(BR-\d{4}(?:-\d{4})?)\b/gim)) {
+    const id = match[1];
+    if (id !== undefined) declared.add(id.toUpperCase());
+  }
+  const brIdHeaderKey = headerKey(BR_ID_COLUMN);
+  for (const table of parseAllMarkdownTables(text)) {
+    const idIndex = table.headers.findIndex((header) => headerKey(header) === brIdHeaderKey);
+    if (idIndex < 0) continue;
+    for (const row of table.rows) {
+      const value = (row[idIndex] ?? "").trim().toUpperCase();
+      if (BR_ID_FORMAT.test(value)) declared.add(value);
+    }
+  }
+  return declared;
+}
+
+/**
+ * A table header reduced to its letters and digits, so Markdown decoration on
+ * it cannot change which column a reader finds.
+ *
+ * A shipped Business Rules file may legally write the column as `` `BR-ID` ``,
+ * and the raw comparison skipped that whole table as auxiliary — leaving the
+ * declared set empty and every real `BR-Ref` reported as declared nowhere. The
+ * same reduction is what `contractReferences.ts` and `densityHints.ts` apply to
+ * their own headers.
+ */
+function headerKey(header: string): string {
+  return header.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * One TC's references, tolerating a ledger that cites a sub-id whose parent is
+ * what `06_Test-Cases.md` declares — the same `resolveParentTcId` fallback
+ * Check 5 applies to `TC-Refs`.
+ */
+function tcRefsOf(map: Map<string, Set<string>>, tcId: string): Set<string> {
+  const direct = map.get(tcId);
+  if (direct !== undefined) return direct;
+  const parent = resolveParentTcId(tcId);
+  return (parent !== undefined ? map.get(parent) : undefined) ?? new Set<string>();
+}
+
+/**
+ * The `BR-Ref` the documented resolution procedure derives for one ledger row,
+ * or `null` when the spec's layer files reach no rule from it.
+ *
+ * Checking that the cell names a *declared* rule is not the same as checking it
+ * names *this row's* rule: a key left over from an earlier AC-first resolution
+ * rule resolves against the rules file perfectly well and still files the row
+ * under a rule its own `TC-Refs` never reach, which is precisely the
+ * misattribution the procedure was changed to prevent. Recomputing it is the
+ * only comparison that can see that.
+ *
+ * The procedure, per TC the row's `TC-Refs` name: the direct
+ * `TC` -> `EX` -> `BR` edge; the `AC` join **only** for a TC with no `EX-Ref`;
+ * then the lowest-numbered `BR-*` of the union everything reached. The
+ * tie-break is what makes the key reproducible between two agents, so a cell
+ * holding a member of the union that is not its lowest is as much a
+ * disagreement as one holding a rule from elsewhere.
+ *
+ * A candidate is held to the same id shape the cell is — `BR-NNNN` or
+ * `BR-NNNN-NNNN`, both spellings the vocabulary allows — and by the same
+ * pattern, so the derivation and the cell check cannot disagree about what a
+ * `BR-*` is. Narrowing either side alone is what would break a pack written in
+ * one spelling: every row of it would be compared against ids its column can
+ * never hold, and report a mismatch it cannot fix.
+ */
+/**
+ * `AC` -> the `BR`s that reference it, inverted from `brToAcRefs` once.
+ *
+ * The fallback below joins on `AC`, and doing that by scanning every `BR` per
+ * TC is `rows x tcRefs x brCount x acRefs` — a shape that gets slower as the
+ * column spreads and the ledger grows, on the one path that runs for every row.
+ * Inverted once per spec it is a lookup.
+ */
+function invertBrToAcRefs(brToAcRefs: V1421LayerRefs["brToAcRefs"]): Map<string, Set<string>> {
+  const acToBrRefs = new Map<string, Set<string>>();
+  for (const [brId, acRefs] of brToAcRefs) {
+    for (const acId of acRefs) {
+      const brIds = acToBrRefs.get(acId);
+      if (brIds === undefined) acToBrRefs.set(acId, new Set([brId]));
+      else brIds.add(brId);
+    }
+  }
+  return acToBrRefs;
+}
+
+function deriveExpectedBrRef(
+  refs: V1421LayerRefs,
+  acToBrRefs: ReadonlyMap<string, ReadonlySet<string>>,
+  tcRefsCell: string,
+  declaredBrIds: ReadonlySet<string> | null,
+): string | null {
+  const reached = new Set<string>();
+  for (const raw of splitTcRefs(tcRefsCell)) {
+    const tcId = raw.toUpperCase();
+    const exRefs = tcRefsOf(refs.tcToExRefs, tcId);
+    if (exRefs.size > 0) {
+      for (const exId of exRefs) {
+        // One `EX` may pin a cohesive rule bundle to several `BR-*`; all of
+        // them enter the union.
+        for (const brId of refs.exToBrRefs.get(exId) ?? []) reached.add(brId);
+      }
+      continue;
+    }
+    const acRefs = tcRefsOf(refs.tcToAcRefs, tcId);
+    if (acRefs.size === 0) continue;
+    for (const acId of acRefs) {
+      for (const brId of acToBrRefs.get(acId) ?? []) reached.add(brId);
+    }
+  }
+  const wellFormed = [...reached].filter((id) => BR_ID_FORMAT.test(id)).sort();
+  // The expected value has to be one the row could legally hold, and
+  // `QFAI-BRREF-002` refuses a `BR-*` the Business Rules file does not declare.
+  // Without this intersection an EX referencing a rule that was never declared
+  // made this check name that rule as the fix, and adopting it produced `-002`
+  // on the next run: a round trip with no ledger value able to end it. Where
+  // the reachable set is entirely undeclared the graph cannot name a legal key
+  // at all, so nothing is derived and the upstream `EX` is left as the thing to
+  // repair — `QFAI-COV-*` is what reports that.
+  const candidates =
+    declaredBrIds === null ? wellFormed : wellFormed.filter((id) => declaredBrIds.has(id));
+  return candidates[0] ?? null;
+}
+
+/**
  * A record filename's slug: `-`, `_` or `.`-joined words, each non-empty.
  *
  * Checking it is what tells a Decision Record apart from a file that merely
@@ -2836,14 +3125,10 @@ export async function validateTddList(
 
   for (const entry of entries) {
     if (!isSpecInScope(entry.specNumber, options.specScope)) continue;
-    const specIssues = await validateSpecTddList(
-      root,
-      entry.dir,
-      entry.specNumber,
-      specsRoot,
-      recordIds,
-      srcRelDir,
-    );
+    // The whole entry, not `dir` + `specNumber`: Check 8c derives the
+    // review-group key from the spec's layer files, and `SpecEntry` is what
+    // already resolves those paths per layout.
+    const specIssues = await validateSpecTddList(root, entry, specsRoot, recordIds, srcRelDir);
     issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
 
@@ -3000,6 +3285,12 @@ export function staleEvidenceFiles(
  * SDD stage neither creates nor owns them.
  */
 export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
+  // The review-group key: Phase 2b resolves and writes it (`BR-Ref`), so a
+  // malformed, dangling or wrongly-derived key is seed damage and the `sdd`
+  // profile — that phase's own gate — has to hear it.
+  "QFAI-BRREF-001",
+  "QFAI-BRREF-002",
+  "QFAI-BRREF-003",
   "TDDLIST_TABLE_MISSING",
   "TDDLIST_REQUIRED_COLUMN_MISSING",
   "TDDLIST_DUPLICATE_ID",
@@ -3126,12 +3417,16 @@ export async function validateTddListSeedShape(
 
 async function validateSpecTddList(
   root: string,
-  specDir: string,
-  specNumber: string,
+  specEntry: SpecEntry,
   specsRoot: string,
   recordIds: ReadonlySet<string>,
   srcRelDir: string,
 ): Promise<Issue[]> {
+  // The whole entry, not its directory: Check 8c derives the review-group key
+  // from the spec's layer files, and `SpecEntry` is what already resolves those
+  // paths per layout.
+  const specDir = specEntry.dir;
+  const specNumber = specEntry.specNumber;
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
   const issues: Issue[] = [];
@@ -3649,28 +3944,55 @@ async function validateSpecTddList(
     );
   }
 
-  // Phase 2 – Check 8a: a blocked row must name its blocker.
+  // Phase 2 – Check 8a: a blocked row must name its blocker *and* the status it
+  // was blocked at.
   //
-  // Without this the new status would be a second unfalsifiable state: "cannot
-  // start" with no record of what it is waiting on is the same re-derivation
-  // problem `todo` already had, one word further along.
+  // Without the blocker the status would be a second unfalsifiable state:
+  // "cannot start" with no record of what it is waiting on is the same
+  // re-derivation problem `todo` already had, one word further along.
+  //
+  // The departure status is the other half, and it is load-bearing for the same
+  // reason: `blocked` is reachable from every active status, and a row parked
+  // there across a session boundary persists nothing but its `Status` and this
+  // cell. The resumption reads the departure status to decide whether it
+  // continues an interrupted round or opens the next one, and to compose
+  // `Round N: Resumed-from-blocked`. Accepting a bare `CR-20260729-0008` let a
+  // row be saved in a state no later session can resume from.
   const hasBlockedByColumn = anyTableHasColumn(coverageTables, BLOCKED_BY_COLUMN);
   for (const ref of ledgerRows()) {
     if (cell(ref, "Status").toLowerCase() !== "blocked") continue;
     const blockedBy = cell(ref, BLOCKED_BY_COLUMN);
-    if (blockedBy.length > 0 && blockedBy !== "-") continue;
+    const parsed = parseBlockedBy(blockedBy);
+    if (parsed.ok) continue;
+
+    const where = `in tdd/test-list.md for spec-${specNumber} (${ref.label})`;
+    let message: string;
+    if (parsed.reason === "missing-blocker") {
+      // Three states, three sentences. A cell reading `— blocked at green` is
+      // not empty, and calling it empty sent the author to the half it already
+      // had; the parse admits that shape now, so the message can name the half
+      // that is actually absent.
+      message = !hasBlockedByColumn
+        ? `Status=blocked ${where} but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker and the status the row was blocked at`
+        : blockedBy.trim().length === 0 || blockedBy.trim() === "-"
+          ? `Status=blocked but ${BLOCKED_BY_COLUMN} is empty ${where}. Name the blocker and the status the row was blocked at`
+          : `Status=blocked but ${BLOCKED_BY_COLUMN} names no blocker ${where}: "${blockedBy}". Name what the row is waiting on ahead of the "— blocked at <status>" half`;
+    } else if (parsed.reason === "missing-departure-status") {
+      message = `Status=blocked but ${BLOCKED_BY_COLUMN} names no departure status ${where}: "${blockedBy}". Append "— blocked at <status>" (${BLOCKED_DEPARTURE_LIST})`;
+    } else {
+      message = `Status=blocked but ${BLOCKED_BY_COLUMN} names "${parsed.departureStatus}" as the departure status ${where}, which is not a status a row can be blocked at (${BLOCKED_DEPARTURE_LIST})`;
+    }
+
     issues.push(
       issue(
         "TDDLIST_BLOCKED_MISSING_REF",
-        !hasBlockedByColumn
-          ? `Status=blocked in tdd/test-list.md for spec-${specNumber} (${ref.label}) but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker`
-          : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty in tdd/test-list.md for spec-${specNumber} (${ref.label}). Name the blocker`,
+        message,
         "error",
         relPath,
         "tddList.blockedBy",
         undefined,
         "change",
-        `${BLOCKED_BY_COLUMN} 列に停止要因を記載してください: Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。`,
+        `Write both halves in ${BLOCKED_BY_COLUMN}. The blocker is a Change Request ID (\`CR-YYYYMMDD-NNNN\`), a contract path with a line (\`.qfai/contracts/db/CON-DB-0005.sql:2715\`), or a row in another spec (\`spec-0006:TDD-0034\`); after it, write \`— blocked at <status>\` (${BLOCKED_DEPARTURE_LIST}), as in \`CR-20260421-0004 — blocked at green\`. The departure status is the only record a \`blocked\` row keeps of where it was stopped, and it decides which round the resumption writes into.`,
       ),
     );
   }
@@ -3746,6 +4068,121 @@ async function validateSpecTddList(
             unresolved,
             "change",
             `該当の Decision Record を ${DR_DECLARATION_HOMES_JA} のいずれかに用意してください。このいずれでもない場所で管理している場合に限り、\`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 8c: a declared review-group key has to resolve, and has to
+  // be the one this row's own `TC-Refs` derive.
+  //
+  // `BR-Ref` is optional, so its absence is silent. Its *presence* is a claim
+  // `/qfai-implement` acts on: it opens, fills and closes a T1 review group by
+  // this cell, and nothing else in the ledger can contradict it. A mistyped or
+  // retired `BR-*` therefore does not fail loudly — it regroups rows into a
+  // review unit nobody chose.
+  //
+  // The three checks run one promotion window (`RULE_PROMOTIONS`), for the same
+  // reason the DR-ID referent checks are soft: a ledger written against an
+  // older `04_Business-Rules.md`, or keyed under the superseded AC-first
+  // derivation, must not start failing CI on upgrade. So the severity comes
+  // from the pin rather than a literal, and the message names the release that
+  // ends the window. One entry covers the three because they are one claim
+  // read three ways — an operator repairing a `BR-Ref` cell answers all of
+  // them in the same edit.
+  if (anyTableHasColumn(coverageTables, BR_REF_COLUMN)) {
+    // The entry's resolved path, not `specDir` + a fixed name: `specLayout.ts`
+    // spells this file `04_Business-Rules.md` only for `v1421`, and
+    // `04_Business-rules.md` / `03_Business-rules.md` / `08_Business-rules.md`
+    // for the other layouts. A fixed name misses on a case-sensitive
+    // filesystem, `collectDeclaredBrIds` returns `null` for "no such file",
+    // and `QFAI-BRREF-002` then went silent for every one of those packs —
+    // reporting nothing being indistinguishable from finding nothing wrong.
+    const declaredBrIds = await collectDeclaredBrIds(specEntry.businessRulesPath);
+    // Layout-aware: on `v1417` / `v1416` the Examples layer is a Gherkin
+    // `.feature` file, which the v1421 Markdown reader finds no `EX` in at all
+    // — so every derivation returned `null` there and `QFAI-BRREF-003` was
+    // silent on those packs rather than clean.
+    const layerRefs = await collectLayerRefs(specEntry);
+    // Inverted once per spec: the AC fallback runs per TC of per row.
+    const acToBrRefs = invertBrToAcRefs(layerRefs.brToAcRefs);
+    const brRefPromotion = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
+    const brRefSeverity = newRuleSeverity(await resolveToolVersion(), brRefPromotion);
+    const brRefWindowNote =
+      brRefSeverity === "warning"
+        ? `. Reported as a warning until the ${brRefPromotion} release, then an error`
+        : "";
+    for (const ref of ledgerRows()) {
+      const brRef = cell(ref, BR_REF_COLUMN);
+      // Empty and `-` are the same legal state — "not resolved" — and
+      // `volume-policy.md` says so in the same words: neither is a shared key,
+      // and either forms a review group of one that is reviewed alone. That is
+      // the documented safe degradation, not a defect.
+      if (brRef.length === 0 || brRef === "-") continue;
+      // Not upper-cased first. `volume-policy.md` opens and closes a T1 review
+      // group on the value **as recorded** and states no normalization, so
+      // `BR-0001` and `br-0001` are two keys there however plainly they name
+      // one rule. Folding the case here let both through this check and then
+      // split one review unit in two, which is the property the column exists
+      // to carry. The canonical spelling is required instead, and reported by
+      // this rule when it is not used.
+      const token = brRef;
+      if (!BR_ID_FORMAT.test(token)) {
+        issues.push(
+          issue(
+            "QFAI-BRREF-001",
+            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN or BR-NNNN-NNNN, or \`-\` (or an empty cell) when no BR reaches the row${brRefWindowNote}`,
+            brRefSeverity,
+            relPath,
+            "tddList.brRefFormat",
+            [brRef],
+            "change",
+            `Write one ${BR_REF_COLUMN} per row, spelled \`BR-NNNN\` or \`BR-NNNN-NNNN\` in upper case: the review group is keyed on the value as recorded, so \`br-0001\` is a different key. Resolve it per TC the row names, through that TC's \`EX-Ref\` to the \`BR-Ref\` of \`05_Examples.md\`, falling back to \`AC-Refs\` only for a TC with no \`EX-Ref\`, and write the lowest-numbered member of the union those reach (one \`EX\` may name several \`BR\`). A row no BR reaches takes \`-\`, which an empty cell also means.`,
+          ),
+        );
+        continue;
+      }
+      if (declaredBrIds !== null && !declaredBrIds.has(token)) {
+        issues.push(
+          issue(
+            "QFAI-BRREF-002",
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${brDeclarationFileName(specEntry)}. The T1 review group would be keyed on a rule that does not exist${brRefWindowNote}`,
+            brRefSeverity,
+            relPath,
+            "tddList.brRefResolves",
+            [token],
+            "change",
+            `Declare that BR in ${brDeclarationFileName(specEntry)}, or change ${BR_REF_COLUMN} to a \`BR-*\` that exists there — or to \`-\` (an empty cell means the same) when no BR reaches the row.`,
+          ),
+        );
+        continue;
+      }
+      // "Declared" is a weaker claim than "this row's". A key resolved by the
+      // superseded AC-first rule names a real rule and the check above passes,
+      // while the row is filed under a rule its own `TC-Refs` never reach — the
+      // misattribution the `TC` -> `EX` -> `BR` procedure exists to prevent,
+      // and two rows that verify different rules then share a review unit.
+      // Silent when the layer files reach nothing, and silent on `-` / empty,
+      // which the column documents as the legal "not resolved" degradation
+      // rather than a wrong key.
+      const expected = deriveExpectedBrRef(
+        layerRefs,
+        acToBrRefs,
+        cell(ref, "TC-Refs"),
+        declaredBrIds,
+      );
+      if (expected !== null && expected !== token) {
+        issues.push(
+          issue(
+            "QFAI-BRREF-003",
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}${brRefWindowNote}`,
+            brRefSeverity,
+            relPath,
+            "tddList.brRefDerivation",
+            [token, expected],
+            "change",
+            `Change ${BR_REF_COLUMN} to \`${expected}\`. The procedure is: per TC the row's \`TC-Refs\` name, resolve that TC's \`EX-Ref\` to the \`BR-Ref\` of \`05_Examples.md\`, falling back to \`AC-Refs\` only for a TC with no \`EX-Ref\`, then take the lowest-numbered member of the union those reach.`,
           ),
         );
       }

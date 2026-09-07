@@ -276,7 +276,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.message).toContain("ENUM");
     // And the remedy names the canonical side rather than offering both
     // directions symmetrically, which was the whole judgement call.
-    expect(issues[0]?.suggested_action).toContain("ENUM が正です");
+    expect(issues[0]?.suggested_action).toContain("is canonical");
   });
 
   it("keeps a CHECK-constraint contradiction a warning", async () => {
@@ -289,7 +289,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("CHECK");
     // Both directions stay open here, and the remedy says how to choose.
-    expect(issues[0]?.suggested_action).toContain("Contracts 表");
+    expect(issues[0]?.suggested_action).toContain("Contracts table");
   });
 
   it("takes the enum severity when both forms bound one field", async () => {
@@ -391,14 +391,14 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
       const issues = await validateContractConsistency([api], dbs);
 
-      expect(issues[0]?.message).not.toContain("insert 時に拒絶される物理制約");
+      expect(issues[0]?.message).not.toContain("a physical constraint");
       // Names the contract the ENUM came from, so the reader can see it is not
       // the one bounding their field. Read off the constraint clause alone:
       // every contract's path appears earlier in the message, so a whole-
       // message assertion would pass on either name.
       const message = issues[0]?.message ?? "";
-      const constraintClause = message.slice(message.indexOf("DB 側の制約: "));
-      expect(constraintClause).toContain("CHECK と ENUM の混在");
+      const constraintClause = message.slice(message.indexOf("DB constraint: "));
+      expect(constraintClause).toContain("CHECK and ENUM mixed");
       expect(constraintClause).toContain("db-0002-call-lists.sql");
       expect(constraintClause).not.toContain("db-0003-sim-lines.sql");
       expect(issues[0]?.suggested_action).toContain("db-0002-call-lists.sql");
@@ -416,7 +416,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // A flat union reported `completed`, `pending`, `running` as allowed
       // values for `SimLine.status`, which accepts four. The breakdown is what
       // lets a reader see which side each value came from.
-      expect(issues[0]?.message).toContain("DB 側の許容値 (契約ごと)");
+      expect(issues[0]?.message).toContain("DB domain, per contract");
       expect(issues[0]?.message).toContain("db-0002-call-lists.sql: completed, pending, running");
       expect(issues[0]?.message).toContain(
         "db-0003-sim-lines.sql: active, error, in_call, inactive",
@@ -443,7 +443,9 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("ENUM (insert 時に拒絶される物理制約)");
+      expect(issues[0]?.message).toContain(
+        "ENUM (a physical constraint: the value is rejected at insert time)",
+      );
     });
 
     /**
@@ -477,15 +479,15 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // The ENUM is still named: it is what the reader has to look at to settle
       // which table the API field pairs with.
       const message = issues[0]?.message ?? "";
-      expect(message.slice(message.indexOf("DB 側の制約: "))).toContain("CHECK と ENUM の混在");
+      expect(message.slice(message.indexOf("DB constraint: "))).toContain("CHECK and ENUM mixed");
 
       // The remedy points at the TABLE, because the contract is already
       // settled — there is only one. The cross-contract wording would have
       // named "the contracts that bound it with a CHECK" and had none to list,
       // so it printed empty brackets at a reader looking for a file name.
       const remedy = issues[0]?.suggested_action ?? "";
-      expect(remedy).toContain("ENUM と CHECK が同じ契約");
-      expect(remedy).toContain("対象のテーブルと列を 1 つに特定");
+      expect(remedy).toContain("ENUM and CHECK both appear in the same contract");
+      expect(remedy).toContain("Identify the one table and column first");
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
@@ -527,15 +529,15 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
       expect(issues[0]?.severity).toBe("warning");
       const remedy = issues[0]?.suggested_action ?? "";
-      // The single-contract sentence, not the words in it: the multi-contract
-      // wording says "one of them mixes the forms inside 同じ契約", which is
-      // true and must not be what this rejects.
-      expect(remedy).not.toContain("ENUM と CHECK が同じ契約");
+      // The single-contract SENTENCE, not the words in it: the multi-contract
+      // wording says "at least one of them mixes CHECK and ENUM within itself",
+      // which is true and must not be what this rejects.
+      expect(remedy).not.toContain("ENUM and CHECK both appear in the same contract");
       // Both files named, and the reader sent to the Contracts 表 first —
       // the contract has to be narrowed before the column can be.
       expect(remedy).toContain("db-0009-both.sql");
       expect(remedy).toContain("db-0011-notifications.sql");
-      expect(remedy).toContain("Contracts 表");
+      expect(remedy).toContain("Contracts table");
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
@@ -560,7 +562,9 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("ENUM (insert 時に拒絶される物理制約)");
+      expect(issues[0]?.message).toContain(
+        "ENUM (a physical constraint: the value is rejected at insert time)",
+      );
     });
 
     it("does not let a commented-out CREATE TABLE make one table look like two", async () => {
@@ -632,8 +636,8 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("解析できません");
-        expect(declaration[0]?.suggested_action).toContain("`from` 以降");
+        expect(declaration[0]?.message).toContain("does not parse");
+        expect(declaration[0]?.suggested_action).toContain("The `from` clause");
         // And the values it tried to cover are still reported.
         expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-040")).toHaveLength(1);
       });
@@ -680,8 +684,10 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("DB 側が格納できる: active");
-        expect(declaration[0]?.suggested_action).toContain("矛盾しています");
+        expect(declaration[0]?.message).toContain("the DB can store: active");
+        expect(declaration[0]?.suggested_action).toContain(
+          "contradicts the claim that it is not stored",
+        );
       });
 
       it("reports a declaration covering a value the API never asks for", async () => {
@@ -692,7 +698,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("API 契約が要求していない: retired");
+        expect(declaration[0]?.message).toContain("the API contract does not require: retired");
         // `standby` did work, so it is not named as stale.
         expect(declaration[0]?.message).not.toContain("standby");
       });
@@ -723,8 +729,8 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("warning");
-      expect(issues[0]?.message).toContain("DB 側の許容値: active, error, in_call, inactive");
-      expect(issues[0]?.message).not.toContain("契約ごと");
+      expect(issues[0]?.message).toContain("DB domain: active, error, in_call, inactive");
+      expect(issues[0]?.message).not.toContain("per contract");
     });
   });
 

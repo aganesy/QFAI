@@ -78,13 +78,12 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
   Under worktree separation there is no shared index and no sibling file to
   sweep, but the command still stages everything else loose in that agent's own
   worktree, so the commit still stops matching its declared deliverables.
-- When the agent's deliverable paths are not known up front, it hands back an
-  unstaged diff and the orchestrator commits — under the same rule. The
-  orchestrator commits one handed-back diff at a time, stages that agent's
-  declared paths only, and is equally forbidden from `git add -A` / `git add .`
-  / `git commit -a` while a parallel stage is in flight. Being the committer
-  does not exempt it; in degraded mode it is the only committer, so a sweeping
-  stage there mixes every sibling's work into one commit.
+- When the agent's deliverable paths are not known up front, it hands back an unstaged
+  diff and the orchestrator commits — under the same rule. The orchestrator commits one
+  handed-back diff at a time, stages that agent's declared paths only, and is equally
+  forbidden from `git add -A` / `git add .` / `git commit -a` while a parallel stage is
+  in flight. Being the committer does not exempt it; in degraded mode it is the only
+  committer, so a sweeping stage there mixes every sibling's work into one commit.
 - Isolation requirements for concurrent stages are defined once in
   `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`.
 
@@ -146,8 +145,7 @@ the shipped-asset line ceiling; the rules are unchanged by the move.
 
 ### Reviewer remit (in scope per stage)
 
-A finding outside the reviewing stage's remit is recorded and deferred, never
-blocking:
+A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
 
 | Stage              | In scope                                                          | Out of scope (record and defer)                |
 | ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- |
@@ -159,11 +157,10 @@ blocking:
 | `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity | Authoring quality of the artifacts it verifies |
 | `/web-research`    | Source authority and freshness, citation accuracy, claim support  | Spec content, implementation structure         |
 
-**Fallback for any stage not listed.** A stage that references this baseline
-without a row above has, as its remit, the artifacts that stage itself
-produces; everything upstream of them is out of scope, recorded and deferred.
-Add the row when a new stage starts routing blocking reviewers, so the
-in/out split is not re-derived per run.
+**Fallback for any stage not listed.** A stage that references this baseline without a
+row above has, as its remit, the artifacts that stage itself produces; everything
+upstream of them is out of scope, recorded and deferred. Add the row when a new stage
+starts routing blocking reviewers, so the in/out split is not re-derived per run.
 
 ### Finding provenance (MUST)
 
