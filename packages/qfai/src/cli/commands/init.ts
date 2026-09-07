@@ -2870,8 +2870,11 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
   // and the nested `*` hides it from the fresh clone that CI validates. Both
-  // accepted spellings, run-stamped and template-named.
-  "!import-lite*.md",
+  // accepted spellings, run-stamped and template-named — and the stamped one
+  // requires a digit after the hyphen, because a name like
+  // `import-lite-draft.md` is rejected by the check rather than accepted.
+  "!import-lite.md",
+  "!import-lite-[0-9]*.md",
 ];
 
 async function ensureLegacyEvidenceIgnoreNegations(

@@ -149,15 +149,20 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // wrote it — the fresh clone CI builds from has neither the evidence nor a
   // pack, so `QFAI-DPACK-001` fires on every imported spec set, and the
   // provenance every US and AC on that route cites points at nothing.
-  // The glob has no hyphen, so it re-includes both names the check reads: the
-  // run-stamped `import-lite-<ts>.md`, and the copy an operator kept under the
-  // template's own `import-lite.md`. `findImportLiteEvidence` accepts that
-  // second one deliberately — the remedy names the stamped form, but the
-  // shipped template does not carry a stamp, so requiring the separator left
-  // an operator who copied it under its own name still holding the warning
-  // they had just acted on. Both are input sources when filled in, so both
-  // have to reach a commit.
-  "!.qfai/evidence/import-lite*.md",
+  // Two entries, for the two names the check reads: the run-stamped
+  // `import-lite-<ts>.md`, and the copy an operator kept under the template's
+  // own `import-lite.md`. `findImportLiteEvidence` accepts that second one
+  // deliberately — the remedy names the stamped form, but the shipped template
+  // does not carry a stamp, so requiring the separator left an operator who
+  // copied it under its own name still holding the warning they had just acted
+  // on. Both are input sources when filled in, so both have to reach a commit.
+  //
+  // The stamped entry requires a digit after the hyphen because that is what
+  // the check requires. `import-lite-draft.md` is rejected outright there
+  // rather than demoted, so a negation that committed it would put a file in
+  // the repository that nothing reads.
+  "!.qfai/evidence/import-lite.md",
+  "!.qfai/evidence/import-lite-[0-9]*.md",
   // The Coverage Depth Matrix and the justification behind each `❌` cell.
   // `/qfai-atdd` makes "no unjustified ❌ cells" both a Definition-of-Done
   // condition and a Not-done criterion, and `qa-gatekeeper` REVISEs a missing

@@ -95,11 +95,19 @@ describe("the managed block keeps governance records tracked", () => {
     // this file is the whole of its provenance. Ignored, the fresh clone CI
     // builds from has neither, and `QFAI-DPACK-001` fires on a route the
     // skill documents as supported.
+    //
+    // Two entries, and the stamped one requires a digit after the hyphen: the
+    // check rejects `import-lite-draft.md` outright, so committing it would put
+    // a file in the repository that nothing reads.
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/import-lite*.md");
-    expect(lines.indexOf("!.qfai/evidence/import-lite*.md")).toBeGreaterThan(
-      lines.indexOf(".qfai/evidence/*"),
-    );
+    for (const negation of [
+      "!.qfai/evidence/import-lite.md",
+      "!.qfai/evidence/import-lite-[0-9]*.md",
+    ]) {
+      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain(negation);
+      expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
+    }
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).not.toContain("!.qfai/evidence/import-lite*.md");
   });
 });
 
@@ -112,6 +120,10 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // regenerable logs, and re-including them was never the point.
     ".qfai/evidence/sdd-spec-0001.md",
     ".qfai/evidence/verify-spec-0001.md",
+    // A hyphenated import-lite name that is not a canonical stamp. The check
+    // rejects it outright rather than reading it as a record, so committing it
+    // would put a file in the repository nothing reads.
+    ".qfai/evidence/import-lite-draft.md",
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [

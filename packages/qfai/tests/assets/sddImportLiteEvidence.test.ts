@@ -360,11 +360,11 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
     // The real trap the docs steer around: a name that matches while the body
     // records nothing traceable would silence the finding on a project with no
     // input source at all.
-    const shipped = await readFile(
+    const templateText = await readFile(
       path.join(repoRoot, QFAI_TREES[1] ?? ".qfai", TEMPLATE_REL),
       "utf-8",
     );
-    expect(await importLiteCodes("import-lite-20260822090000000.md", shipped)).toContain(
+    expect(await importLiteCodes("import-lite-20260822090000000.md", templateText)).toContain(
       "QFAI-IMPLITE-001",
     );
   });
