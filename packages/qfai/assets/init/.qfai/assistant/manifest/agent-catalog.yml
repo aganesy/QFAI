@@ -1824,14 +1824,20 @@ agents:
       unavailability, is still REVISE — this is a third form of evidence, not an
       exemption from having any.
 
-      **This file is the contract; `manifest/agent-catalog.yml` carries a copy.**
-      `npx qfai init --force` refreshes `assistant/agents/**` and deliberately leaves
-      `assistant/manifest/**` alone, so an upgraded project can hold a catalog block
-      that predates a phase the shipped skills already route to. Where the two
-      disagree, or where the catalog describes no gate for a phase this role is
-      routed to, read this file. A catalog block older than the routing table is a
-      stale copy, never a narrower contract — reading it as one puts a mandatory
-      blocking role into the Stop condition on a phase it is required to pass.
+      **`assistant/agents/qa-gatekeeper.md` is the contract;
+      `assistant/manifest/agent-catalog.yml` carries a copy.** `npx qfai init --force`
+      refreshes `assistant/agents/**` and deliberately leaves `assistant/manifest/**`
+      alone, so an upgraded project can hold a catalog block that predates a phase the
+      shipped skills already route to. Where the two disagree, or where the catalog
+      describes no gate for a phase this role is routed to, read the agent file. A
+      catalog block older than the routing table is a stale copy, never a narrower
+      contract — reading it as one puts a mandatory blocking role into the Stop
+      condition on a phase it is required to pass.
+
+      Both paths are written out because this passage is itself copied into the
+      catalog and into the per-tool agent profiles. "This file" resolves to whichever
+      copy the reader has open, which is the one question the passage exists to
+      settle.
 
       **The Skeleton observation gate reads a different set.**
       `/qfai-implement`'s `Phase: Skeleton` runs **before the first ledger row is

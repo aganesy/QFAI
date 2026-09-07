@@ -48,12 +48,32 @@ type Phase = {
   blocking_agents?: string[];
 };
 
+/**
+ * The `qfai-implement` route's phases, narrowed rather than asserted.
+ *
+ * An `as` over the parse tells the compiler the file has this shape and tells
+ * the reader nothing: a manifest that lost its `routing` list would reach the
+ * `.find` as `undefined` and fail on a property access, naming neither the file
+ * nor what was wrong with it. Each step is checked, so a malformed manifest
+ * fails on the assertion that names it. Same shape as
+ * `sddRoutingPhaseCrosswalk.test.ts`, which reads the same file.
+ */
 async function implementPhases(tree: string): Promise<Phase[]> {
-  const parsed = parseYaml(await read(tree, ROUTING)) as {
-    routing?: Array<{ skill?: string; phases?: Phase[] }>;
-  };
-  const route = parsed.routing?.find((r) => r.skill === "qfai-implement");
-  expect(route, `${tree} has no qfai-implement route`).toBeDefined();
+  const parsed: unknown = parseYaml(await read(tree, ROUTING));
+  const routing =
+    typeof parsed === "object" && parsed !== null && "routing" in parsed
+      ? (parsed as { routing?: unknown }).routing
+      : undefined;
+  expect(Array.isArray(routing), `${tree}: agent-routing.yml has no routing list`).toBe(true);
+  const routes = Array.isArray(routing) ? routing : [];
+  const route = routes.find(
+    (entry): entry is { skill: string; phases?: Phase[] } =>
+      typeof entry === "object" &&
+      entry !== null &&
+      "skill" in entry &&
+      (entry as { skill?: unknown }).skill === "qfai-implement",
+  );
+  expect(route, `${tree}: agent-routing.yml has no qfai-implement route`).toBeDefined();
   return route?.phases ?? [];
 }
 
