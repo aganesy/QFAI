@@ -574,7 +574,8 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
-const seededReviewPackDir = path.join(outputDir, ".qfai", "review", "review-20260216000000000");
+const seededReviewPackName = "review-20260216000000000";
+const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
 
 /**
@@ -676,7 +677,7 @@ if (!existsSync(validateJsonPath)) {
 }
 const validateReport = JSON.parse(readFileSync(validateJsonPath, "utf-8"));
 const selfInflicted = (validateReport.issues ?? []).filter(
-  (issue) => typeof issue?.file === "string" && issue.file.includes("review-20260216000000000"),
+  (issue) => typeof issue?.file === "string" && issue.file.includes(seededReviewPackName),
 );
 if (selfInflicted.length > 0) {
   throw new Error(
