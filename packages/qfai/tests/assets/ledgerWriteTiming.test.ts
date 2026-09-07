@@ -40,10 +40,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("reads Completion step 1 as a reconciliation pass, not the first write", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "After processing all items, confirm every row's `Status`, `DR-ID` and `Evidence` match the per-phase writes",
+      "After processing all items, confirm every row's `Status`, `DR-ID`, `Evidence` and `Blocked-By` match the per-phase writes",
     );
     // The old spelling is the one that reads as "write the ledger here".
-    expect(skill).not.toContain("update `test-list.md` with final Status, DR-ID and Evidence");
+    expect(skill).not.toContain(
+      "update `test-list.md` with final Status, DR-ID, Evidence and Blocked-By values",
+    );
   });
 
   it("says in Completion that the ledger was already written", async () => {

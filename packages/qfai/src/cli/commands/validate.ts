@@ -1628,6 +1628,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
+  // "or `-`" alone read as "an empty cell is malformed", which is the opposite
+  // of the rule: the validator, the ledger template and `volume-policy.md` all
+  // treat empty and `-` as the one "not resolved" state.
+  "QFAI-BRREF-001":
+    "A declared `BR-Ref` cell holds one `BR-NNNN` or `BR-NNNN-NNNN`, or `-` — equivalently an empty cell — when no BR reaches the row.",
+  "QFAI-BRREF-002":
+    "Every declared `BR-Ref` names a rule the spec's `04_Business-Rules.md` declares, so the T1 review group is keyed on a rule that exists.",
+  "QFAI-BRREF-003":
+    "A declared `BR-Ref` is the key the row's own `TC-Refs` derive: `TC` -> `EX-Ref` -> `05_Examples.md`'s `BR-Ref` (`AC-Refs` only for a TC with no `EX-Ref`), lowest of the union.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
@@ -1857,6 +1866,21 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  // The assistant-tree provenance family. Every governed file under
+  // `constitution/` and `catalog/` is either byte-identical to the installed
+  // release or an explicitly recorded local overlay; the four classifications
+  // below are the ways that can fail, and the fifth is the comparison itself
+  // being impossible.
+  "QFAI-ASSETS-004":
+    "Every governed assistant file qfai wrote is still the content the installed release ships (`qfai init --force` refreshes an unedited stale copy).",
+  "QFAI-ASSETS-005":
+    "No governed assistant file is a local fork: a project-specific rule lives in a `*.local.md` overlay of the same layer, not in the qfai-owned file.",
+  "QFAI-ASSETS-006":
+    "Every file under the governed assistant layers is either shipped by the installed release or a `*.local.md` overlay.",
+  "QFAI-ASSETS-007":
+    "Every normative file the installed release ships exists in the project as a regular file.",
+  "QFAI-ASSETS-008":
+    "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
   "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
   "QFAI-TDDLIST-009":
