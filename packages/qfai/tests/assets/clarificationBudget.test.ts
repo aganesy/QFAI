@@ -372,7 +372,10 @@ describe("the clarification budget is countable", () => {
         "This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget",
       );
       expectPhrase(content, "escalate rather than picking a runner");
-      expectPhrase(content, "a resolved tooling choice / runnable path (CRITICAL CONSTRAINTS)");
+      expectPhrase(
+        content,
+        "a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)",
+      );
     });
   }
 });

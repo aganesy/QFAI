@@ -71,9 +71,10 @@ export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", 
  * one is a reviewed change rather than a silent widening.
  *
  * The bucket is not a closed set: `qfai-configure` cannot write a config
- * without a `testFileGlobs` proposal that matches a real file, and nothing else
- * reads one. A list of only the common entries would fail on that; a list of
- * none would admit anything.
+ * without a `testFileGlobs` proposal that matches a real file or without a
+ * tooling choice that resolves to a runnable path, and nothing else reads
+ * either. A list of only the common entries would fail on those; a list of none
+ * would admit anything.
  *
  * Each value is matched as a whole word inside the normalized bullet, so it
  * names the input rather than the sentence around it — rewording the bullet
@@ -83,7 +84,7 @@ export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", 
  * public surface.
  */
 export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly string[]>> = {
-  "qfai-configure": ["testfileglobs"],
+  "qfai-configure": ["testfileglobs", "tooling choice"],
 };
 
 /**
@@ -106,6 +107,17 @@ const BUCKET_HEADERS = {
   askUser: /^\s*[-*]\s*ask-user\s*:/im,
   hardRequired: /^\s*[-*]\s*hard-required\s*:/im,
 } as const;
+
+/**
+ * The same line `BUCKET_HEADERS.hardRequired` finds, with whatever follows the
+ * colon captured.
+ *
+ * Two patterns for one line, kept in step by a case that asks both about the
+ * same header spellings. A single pattern would be better, but the bucket set
+ * is iterated whole to close one bucket at the next, and only this one has a
+ * tail to read.
+ */
+const HARD_REQUIRED_HEADER_WITH_TAIL = /^\s*[-*]\s*hard-required\s*:(.*)$/i;
 
 /**
  * The bullet with its decoration removed and nothing else — backticks,
@@ -170,6 +182,11 @@ export function normalizeHardRequiredEntry(bullet: string): string {
  * collector anchored at column zero read it, and everything under it, as more
  * hard-required entries.
  *
+ * A value written on the header line itself — `- hard-required: companyName` —
+ * is an entry. Read as a header and nothing else, that file collected an empty
+ * bucket, and an empty bucket is a narrowing this check permits: the one
+ * spelling that hides an entry was the one spelling that reported nothing.
+ *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
@@ -179,9 +196,14 @@ export function collectHardRequiredEntries(content: string): string[] {
   let bucketIndent = 0;
   for (const line of content.split(/\r?\n/)) {
     if (!inBucket) {
-      if (BUCKET_HEADERS.hardRequired.test(line)) {
+      const header = HARD_REQUIRED_HEADER_WITH_TAIL.exec(line);
+      if (header !== null) {
         inBucket = true;
         bucketIndent = line.length - line.trimStart().length;
+        const inline = header[1]?.trim();
+        if (inline !== undefined && inline.length > 0) {
+          entries.push(inline);
+        }
       }
       continue;
     }
@@ -224,6 +246,43 @@ export function collectHardRequiredEntries(content: string): string[] {
 }
 
 /**
+ * The pieces a bullet joins with `/`, `+` or a comma, outside any parenthetical.
+ *
+ * A hard-required bullet names one input. When it joins two, an allowed-name
+ * search over the whole bullet passes on whichever half is permitted and
+ * carries the other in beside it — so `brand intent / an unreviewed secret`
+ * declares an input nothing has approved and reads as clean. Each piece
+ * answering for itself is what closes that.
+ *
+ * Parentheses are skipped because a qualifier is prose and may hold any of
+ * these characters: `primarySpecId (absent from inputs, and no default)` is one
+ * entry with one qualifier rather than two entries.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function splitJoinedEntries(normalized: string): string[] {
+  const pieces: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of normalized) {
+    if (char === "(") {
+      depth += 1;
+    } else if (char === ")") {
+      depth = Math.max(0, depth - 1);
+    }
+    if (depth === 0 && (char === "/" || char === "+" || char === ",")) {
+      pieces.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  pieces.push(current);
+  return pieces.map((piece) => piece.trim()).filter((piece) => piece.length > 0);
+}
+
+/**
  * Judge one hard-required bucket against what its skill may carry.
  *
  * `retired` holds bullets naming an entry that has been withdrawn; `unknown`
@@ -237,7 +296,9 @@ export function collectHardRequiredEntries(content: string): string[] {
  * Matching is by whole word inside the bullet rather than by equality, so a
  * bullet naming two entries answers for both: `- brand intent / companyName`
  * names a live entry and a withdrawn one, and only a word match sees the
- * second.
+ * second. For the same reason the allowed test reads each joined piece
+ * separately (see {@link splitJoinedEntries}) — asked of the whole bullet it
+ * passes on one half and admits whatever the other half names.
  *
  * The validator and the shipped-asset guard in `tests/assets/assets.test.ts`
  * both call this, so membership has one definition rather than two.
@@ -288,7 +349,15 @@ export function classifyHardRequiredEntries(
       retired.push(entry);
       continue;
     }
-    if (named(decorationOnly(entry), foreign) || !named(normalized, allowed)) {
+    // Every joined piece has to name something allowed. `pieces` is empty only
+    // for a bullet that normalizes away entirely, which names nothing and is
+    // reported for that.
+    const pieces = splitJoinedEntries(normalized);
+    if (
+      named(decorationOnly(entry), foreign) ||
+      pieces.length === 0 ||
+      !pieces.every((piece) => named(piece, allowed))
+    ) {
       unknown.push(entry);
     }
   }

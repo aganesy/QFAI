@@ -228,6 +228,88 @@ ${hardRequired}
     expect(finding?.message ?? "").toContain("does not declare");
   });
 
+  it("reports an undeclared input written beside an allowed one", async () => {
+    // Asked of the whole bullet, the allowed test passes on `brand intent` and
+    // takes whatever shares the line with it — so a bullet joining two names
+    // declares an input nothing has approved and reads as clean. Hard-required
+    // is the bucket that stops a run, so that is the widening this check is
+    // for. Each joined piece answers for itself.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent / an unreviewed secret\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("an unreviewed secret");
+  });
+
+  it("keeps a qualifier that holds a joiner as one entry", async () => {
+    // A qualifier is prose and may carry a comma or a slash of its own. Split
+    // there, one entry would read as several and the bucket every skill ships
+    // would report itself.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n  - `primarySpecId` (absent from inputs, and no default)"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.filter((i) => i.code === "QFAI-AUTOPILOT-001")).toEqual([]);
+  });
+
+  it.each(["- hard-required:", "* hard-required:", "  - Hard-Required :"])(
+    "finds the bucket opened by `%s` and reads what is nested under it",
+    async (header) => {
+      // The bucket is located by one pattern and its header's tail read by
+      // another. Held together here: a spelling only one of them accepts is a
+      // policy located one way and collected another.
+      await writeSkill(
+        root,
+        "qfai-fixture",
+        `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- ask-user:
+  - destructive operations
+${header}
+    - companyName
+`,
+      );
+      const issues = await validateAutopilotPolicy(root);
+      const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+      expect(finding?.message ?? "").toContain("companyName");
+    },
+  );
+
+  it("reads an entry written on the bucket header line", async () => {
+    // `- hard-required: companyName` is the header and an entry at once.
+    // Read as a header and nothing else, the bucket collected nothing — and an
+    // empty bucket is a narrowing this check permits, so the one spelling that
+    // hides an entry was the one spelling that reported nothing.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- ask-user:
+  - destructive operations
+- hard-required: companyName
+`,
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
   it("reads a retired entry written in a trailing clause", async () => {
     // A trailing dash clause qualifies one entry, so the reduced form used to
     // compare names drops it. A withdrawn name written there is still written.

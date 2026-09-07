@@ -495,9 +495,10 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 - hard-required:
   - brand intent
   - `primarySpecId` (when absent from inputs)
-  - a `testFileGlobs` proposal that matches at least one real file (Step 5), and
-    a resolved tooling choice / runnable path (CRITICAL CONSTRAINTS) — neither
-    has a defensible default, and a guess is saved as if it were evidence
+  - a `testFileGlobs` proposal that matches at least one real file (Step 5)
+  - a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)
+    — neither this nor the proposal above has a defensible default, and a guess
+    is saved as if it were evidence
 
 A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
