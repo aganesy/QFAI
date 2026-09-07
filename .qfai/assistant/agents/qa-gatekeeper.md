@@ -66,7 +66,7 @@ so no row reaches a gate exempt on a record that does not say why.
 **And it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell.**
 `exception -> todo` **keeps** the anomaly's `DR-*`, and a row that enters
 `exception` again records a new one **appended, not substituted**
-(`../skills/qfai-implement/references/execution-ledger.md`). So a row once on
+(`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`). So a row once on
 branch 3, reset to `todo`, re-run to `red` and parked again by some unrelated
 checkpoint anomaly holds both records side by side, and a rule that asks only
 whether _a_ `DR-*` reports both forms unavailable exempts it on the older one —
@@ -214,17 +214,33 @@ already satisfied by something already in the tree, so the correct test passes
 first run. Then require `Satisfied-by`, `Falsifiability command` and
 `Falsifiability result` instead — never both forms, never neither.
 
-**On an `E2E` / `API` / `Integration` row, `Satisfied-by` need not be a sibling `TDD-NNNN`.** A
+**On an `E2E` / `API` / `Integration` row handed over by `/qfai-atdd`, `Satisfied-by` need not be a sibling `TDD-NNNN`.** A
 production **path and symbol** is equally valid there and is the normal answer
 for a row whose surface no ledger row owns; rejecting it sends every such row to
 `exception`, the terminal state the path exists to avoid. Judge it on whether it
 answers "what would I mutate to falsify this row".
 
+**Read the two exceptions before the `Layer`, the same two the input rule
+above reads.** What widens the field is the handover, not the layer: the
+producer's work orders are where a surface no ledger row owns comes from. Two
+kinds of `Integration` row are never handed over — one carrying
+`Pre-split-evidence: implement`, and one whose `TC-Refs` name only TCs that
+declare `Level` `L1` / `L2`, for which `/qfai-atdd` authors no test. Both are
+ordinary implement-owned TDD rows, so **the sibling `TDD-NNNN` is required on
+them** and a bare production path and symbol is the "anything else" case, as it
+is on a `Unit` / `Component` row. Keying this on `Layer` alone let exactly those
+rows satisfy falsifiability with no sibling and no production change of their
+own, which is the outcome the last sentence of
+`.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` names;
+that file
+carries the same two exceptions, and `qfai-implement/SKILL.md` is where both are
+defined — the paragraph above applies them here rather than settling them.
+
 **A commit id alone does not answer it — REVISE.** A commit that touched
 several routes and a helper names no single predicate, so the ownership check
 below has no boundary to apply and would accept a mutation anywhere inside it.
 The producer contract requires the symbol for this reason
-(`../skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`); a
+(`.qfai/assistant/skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`); a
 commit recorded **alongside** the path and symbol is provenance and is fine.
 
 **And the mutation may touch it.** The Oracle Strength Check rejects a mutation
@@ -238,7 +254,29 @@ mutates a sibling's predicate by construction too; anything else is still out of
 bounds.
 
 **On any other row the sibling row is still required** — production code
-no ledger row owns is the anomaly case there, not a substitute. See
+no ledger row owns is the anomaly case there, not a substitute. **One
+exception, and it is not unowned code**: a row resumed from `blocked` may name
+**itself** plus the round whose GREEN wrote the predicate, because
+`blocked` -> `todo` restarts a cycle this row had already implemented. Check it
+against the **retained round block** rather than a sibling, and treat the
+predicate that round's GREEN wrote as the owned code for the Oracle Strength
+Check. **The retained round alone does not qualify the row** — it proves the
+row was once GREEN, not that it resumed: require
+`Round N: Resumed-from-blocked` on the round the resumption wrote into, and
+REVISE the self-reference without it. **Read the departure status it records
+and require `green` or `refactor`** — the field carries both halves, and only
+those two name a round a GREEN pair closed. **A round may carry several
+`Resumed-from-blocked (resumption M)` fields, and any one of them naming those
+statuses qualifies the row**: read the `M` the `Satisfied-by` cites rather than
+the latest resumption, or a row legitimately resumed from `green` and blocked
+again at `todo` is REVISEd for the second block. A row blocked at `red`, at
+`review-fix` before its rework took a GREEN, or at `todo` has no GREEN of its
+own to point at, so a row that resumed from one of those and cites itself is
+hiding why its fresh RED passed. A row reset to `todo` by an approved
+Change Request carries the same retained GREEN while that approval **withdrew**
+the work it records, so accepting the retained round on its own readmits the
+"no production change and no sibling" path this exception is narrowed against.
+See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 
@@ -306,6 +344,17 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed gove
   one: a Unit-only spec never ran `/qfai-atdd`, and a spec whose rows are all
   `E2E` / `API` / `Integration` has no implement file. Either way the gate would stop before
   reading the evidence that does exist.
+  **Two kinds of row do not go by `Layer`; read them first.** A row carrying
+  `Pre-split-evidence: implement` in its `Evidence` cell keeps
+  `.qfai/evidence/implement-<spec-id>.md`, and so does an `Integration` row whose
+  `TC-Refs` name only TCs that declare `Level` `L1` / `L2`. The first is a legacy
+  row whose implement anchor gate item 10 goes on accepting; the second is carved
+  out of the ATDD-owned set because `/qfai-atdd` authors no test for it, so
+  `/qfai-implement` writes its evidence in its own Phase Red. Both are defined in
+  `.qfai/assistant/skills/qfai-implement/SKILL.md`. Selecting by `Layer` alone
+  sends this role to an ATDD file that was never written for the row: it stops on
+  missing evidence, or audits the wrong subject, while the evidence it was asked
+  to judge sits in the implement file.
   **The three below are required at a completion gate, not at a RED/GREEN
   observation.** `/qfai-atdd` routes this role as blocking at stage gate P1b, and
   validate output, coverage reports and runtime evidence are first produced at its
