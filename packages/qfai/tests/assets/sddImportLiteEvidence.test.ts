@@ -406,9 +406,11 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
 
 describe("the detector is reachable from the public validate profiles", () => {
   it("reports QFAI-IMPLITE-001 through validateProject --profile sdd", async () => {
-    // The detector once had no caller in production at all, so a spec change
-    // with neither a pack nor import-lite evidence passed the gate the shipped
-    // skill points at. This pins the dispatch that closed that hole.
+    // A detector with no caller reports nothing, and a gate reporting nothing
+    // is indistinguishable from a clean tree. The cases above call it directly,
+    // so they would all pass on a build where the profile never reaches it —
+    // this is the one that asks whether an operator running the command the
+    // shipped skill names gets the finding.
     const result = await validateProject(root, undefined, { profile: "sdd" });
     expect(result.issues.map((entry) => entry.code)).toContain("QFAI-IMPLITE-001");
   });
