@@ -1627,7 +1627,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         "change",
         [
           "This shape appears in every `git worktree`. Git writes each `.claude/skills/*` link as a FILE symlink to a directory — at the moment it writes it the target does not yet exist in the new worktree — and the OS will not follow that. The same paths in the primary checkout are intact.",
-          "To relink them in the worktree: confirm `git config core.symlinks true` is in effect, delete the paths named above, and run `qfai init`. Windows may also need Developer Mode enabled.",
+          "To relink them in the worktree: check the setting with `git config --get core.symlinks`, set it with `git config core.symlinks true` if it is not already true, then delete the paths named above and run `qfai init`. Windows may also need Developer Mode enabled.",
           "Left as they are, the assistant in that worktree does not load these skills or agents. The documents themselves are under `.qfai/assistant/**` and can be opened at the canonical path.",
         ].join("\n"),
         { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
