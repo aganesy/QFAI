@@ -66,9 +66,11 @@ describe.each(QFAI_TREES)("%s", (tree) => {
 
   it("says what a worker returns instead of writing", async () => {
     // Without this the ban is a prohibition with no replacement, and the
-    // evidence simply stops existing. All three carve-out cells: the
-    // orchestrator's reconcile is the only write an `exception` row's
-    // mandatory `DR-*` can come from.
+    // evidence simply stops existing. The three a worker returns — `Status`,
+    // `DR-ID` and `Evidence` — because the orchestrator's reconcile is the
+    // only write an `exception` row's mandatory `DR-*` can come from. The
+    // carve-out's fourth cell, `Blocked-By`, is written at the transition
+    // that fills it, which a merged slice has not taken.
     const policy = await read(tree, POLICY);
     expect(policy).toContain("final `Status`, its `DR-ID`");
     expect(policy).toContain("and the `Evidence` payload");

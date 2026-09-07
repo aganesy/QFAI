@@ -37,8 +37,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Local verification notes
 - TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
   the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
-  `DR-ID` carries the `DR-*` where the item's status requires one: an `exception` row is
-  invalid without it, and the orchestrator can write only what it was returned
+  Return `DR-ID` whenever the row carries one: the `DR-*` an `exception` row is invalid
+  without, and the `CR-*` an approved upstream reset put there, which the row keeps
+  through every later status. The orchestrator writes only what it receives, so a cell
+  left out of the report is a cell nobody can write
 - Evidence summary for `.qfai/evidence/`
 - Notes on invariants, validation, and why added abstractions/configuration are necessary now
 

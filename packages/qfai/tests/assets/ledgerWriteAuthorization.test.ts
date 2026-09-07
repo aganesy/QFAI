@@ -257,10 +257,10 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     const heading = "### Completion";
     expect(skill, "the Completion heading moved").toContain(heading);
     const completion = skill.slice(skill.indexOf(heading));
-    // The step reconciles the three unconditional cells rather than writing
+    // The step reconciles the four unconditional cells rather than writing
     // them for the first time (`ledgerWriteTiming.test.ts` owns that framing),
     // so the anchor is the reconcile spelling — but it still has to name the
-    // three as the unconditional set, which is what the conditional pair is
+    // four as the unconditional set, which is what the conditional pair is
     // being distinguished *from*.
     expect(completion).toContain(
       "`Status`, `DR-ID` and `Evidence` after each phase, and `Blocked-By` at the `todo -> blocked` transition that fills it. Those are the four cells the Drift Protocol carve-out covers unconditionally",
