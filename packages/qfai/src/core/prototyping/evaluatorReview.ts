@@ -308,10 +308,12 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  * This is the schema written to
  * `iter-NN/spec-NNNN/<screen>.review.json` by the product-surface
  * reviewer sub-agent and consumed by the prototyping CLI loop. The
- * SSOT for this schema is the prototyping CLI contract at
- * `.qfai/contracts/cli/qfai-prototyping.md` (§Review payload).
+ * SSOT for this schema is the shipped reference at
+ * `.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`,
+ * which `qfai init` installs into every consuming project — the
+ * reviewer sub-agent runs there and has to be able to read it.
  *
- * Shape (11 required top-level fields, per CLI contract):
+ * Shape (11 required top-level fields, per that reference):
  *   - top-level discriminators (`specId`, `screenId`, `cycle`,
  *     `sessionStatus`, `retryCount`) identify the (spec, screen, cycle)
  *     triple and the Reviewer Playwright session outcome (the
@@ -325,7 +327,9 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  *   - `wallTimeSec` records the Reviewer-measured per-session wall
  *     time (number, no upper bound; informational).
  *   - `softWarnings.timeBudget` is a boolean and is true iff
- *     `wallTimeSec` exceeded the per-spec NFR cap. The whole
+ *     `wallTimeSec` exceeded the per-session NFR cap
+ *     ({@link REVIEWER_TIME_BUDGET_SEC}: one (spec, screen) session,
+ *     not a per-spec total). The whole
  *     `softWarnings` object is required and closed (single key today;
  *     additional soft-warning channels would extend the nested object,
  *     not flatten new top-level keys).
@@ -385,6 +389,22 @@ const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
 ]);
 
 const SOFT_WARNINGS_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["timeBudget"]);
+
+/**
+ * Reviewer wall-time cap in seconds for ONE session — i.e. one
+ * `(spec, screen)` pair, since `dispatchReviewerToPair` runs a
+ * separate session per pair and each writes its own payload. The cap
+ * is deliberately per-session, not per-spec: a payload carries only
+ * its own `wallTimeSec`, so a per-spec total is not derivable here and
+ * a multi-screen spec would otherwise have to inflate every pair's
+ * flag (which this same relation check rejects). Declared by the
+ * shipped reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`
+ * §Field rules). `softWarnings.timeBudget` is `true` iff `wallTimeSec`
+ * exceeds this cap — the parser enforces that relation so a payload
+ * cannot record a 301-second session with the warning switched off.
+ */
+export const REVIEWER_TIME_BUDGET_SEC = 300;
 
 function isReviewerSessionStatus(value: unknown): value is ReviewerSessionStatus {
   return (
@@ -494,6 +514,14 @@ function isDesignMdViolationKind(value: string): value is DesignMdViolation["kin
   return VIOLATION_KINDS.has(value);
 }
 
+/**
+ * Allowed keys of a single `designMdViolations[]` element. The shipped
+ * reference declares the payload closed at every level, so an element
+ * carrying an unlisted key (e.g. a hand-added `severity`) is a hard
+ * failure rather than silently-dropped data.
+ */
+const DESIGN_MD_VIOLATION_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["kind", "found"]);
+
 function pushDmvErrors(
   record: Record<string, unknown>,
   errors: string[],
@@ -515,6 +543,13 @@ function pushDmvErrors(
       errors.push(`designMdViolations[${i}] must be an object {kind, found}`);
       continue;
     }
+    let entryOk = true;
+    for (const key of Object.keys(entry)) {
+      if (!DESIGN_MD_VIOLATION_KNOWN_KEYS.has(key)) {
+        errors.push(`unknown field: designMdViolations[${i}].${key}`);
+        entryOk = false;
+      }
+    }
     const kindValue = entry.kind;
     if (typeof kindValue !== "string" || !isDesignMdViolationKind(kindValue)) {
       errors.push(
@@ -526,6 +561,7 @@ function pushDmvErrors(
       errors.push(`designMdViolations[${i}].found must be a string`);
       continue;
     }
+    if (!entryOk) continue;
     out.push({ kind: kindValue, found: entry.found });
   }
   return out;
@@ -533,8 +569,8 @@ function pushDmvErrors(
 
 /**
  * Parse and validate a reviewer-driven per-spec / per-screen review
- * payload against the prototyping CLI contract
- * (`.qfai/contracts/cli/qfai-prototyping.md` §Review payload).
+ * payload against the shipped reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`).
  *
  * Fail-fast on shape errors but aggregate every named-field violation
  * so callers can render the full diagnostic surface in one pass — the
@@ -556,8 +592,11 @@ function pushDmvErrors(
  *   - `designMdViolations` required as array of `{kind, found}`
  *   - `wallTimeSec` required as a non-negative finite number
  *   - `softWarnings` required as a closed nested object with the
- *     single boolean key `timeBudget`
+ *     single boolean key `timeBudget`, which must equal
+ *     `wallTimeSec > {@link REVIEWER_TIME_BUDGET_SEC}` (the reference
+ *     defines the flag as derived, not free-standing)
  *   - any extra top-level / nested key is rejected (closed schema;
+ *     `designMdViolations[]` elements included — `{kind, found}` only;
  *     protects against typos and schema drift). The legacy flat
  *     `timeBudgetSoftWarning?: string` key is no longer accepted —
  *     callers must use `softWarnings.timeBudget: boolean`.
@@ -687,6 +726,24 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   for (const key of Object.keys(input)) {
     if (!REVIEWER_PAYLOAD_KNOWN_KEYS.has(key)) {
       errors.push(`unknown field: ${key}`);
+    }
+  }
+
+  // `softWarnings.timeBudget` is not free-standing state: the shipped
+  // reference defines it as `wallTimeSec > REVIEWER_TIME_BUDGET_SEC`.
+  // Type-checking the boolean alone let a 301-second session persist
+  // `timeBudget: false` and carry the over-budget evidence through
+  // certify unflagged, so validate the relation here (only once both
+  // operands are themselves valid — otherwise the type errors above
+  // already describe the payload).
+  if (wallTimeSec !== null && softWarnings !== null) {
+    const expected = wallTimeSec > REVIEWER_TIME_BUDGET_SEC;
+    if (softWarnings.timeBudget !== expected) {
+      errors.push(
+        `softWarnings.timeBudget must be ${String(expected)} for wallTimeSec ` +
+          `${String(wallTimeSec)} (true iff wallTimeSec > ${String(REVIEWER_TIME_BUDGET_SEC)}; ` +
+          `got ${String(softWarnings.timeBudget)})`,
+      );
     }
   }
 

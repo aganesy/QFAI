@@ -13,11 +13,12 @@
 - Upper-to-lower references are forbidden. Lower-to-upper references are allowed.
 - Connections between layers MUST be represented by IDs and required edges (US->AC->BR->EX->TC).
 
-## BR-0013-0003: Discussion-Pack Required
+## BR-0013-0003: Usable Source Required
 
 - AC-Refs: AC-0013-0003
 
-- SDD MUST stop when discussion-pack is missing/incomplete or has blocking OQ.
+- SDD MUST stop when NO usable source exists: no discussion pack, no import-lite input, and no explicit user requirement.
+- SDD MUST NOT stop on a pack that is merely incomplete, contradictory, or carrying a blocking OQ, and MUST NOT edit, repair or re-run a pack to make its own gate pass.
 
 ## BR-0013-0004: Plan After Slice
 

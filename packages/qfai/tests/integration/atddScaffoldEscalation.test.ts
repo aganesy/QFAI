@@ -16,8 +16,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
 import {
+  listValidateCycleKeys,
   readScaffoldAttempts,
+  readValidateCycles,
   recordScaffoldAttempt,
+  recordValidateCycle,
+  resetValidateCycle,
   shouldEscalate,
 } from "../../src/core/atdd/scaffoldEscalation.js";
 
@@ -148,5 +152,56 @@ describe("atdd scaffold — idempotency + 3-cycle escalation", () => {
 
     expect(errs.join("\n")).toMatch(/escalat/i);
     expect(errs.join("\n")).toContain("TC-0001-0001");
+  });
+});
+
+describe("atdd scaffold — concurrent counter updates keep every increment", () => {
+  it("TC-0008-0014 — 12 overlapping increments on one (spec, TC) all land (boundary)", async () => {
+    const specId = "spec-0001";
+    const tcId = "TC-0001-0001";
+    const attempts = 12;
+
+    // A lock-free load-mutate-store loses updates here: every call reads the
+    // same snapshot before any of them writes, so the counter ends at 1 and
+    // the escalation never trips.
+    await Promise.all(
+      Array.from({ length: attempts }, () => recordValidateCycle(root, specId, tcId)),
+    );
+
+    expect(await readValidateCycles(root, specId, tcId)).toBe(attempts);
+  });
+
+  it("TC-0008-0014 — increments interleaved across specs do not drop a sibling's key (error)", async () => {
+    const pairs = [
+      { specId: "spec-0001", tcId: "TC-0001-0001" },
+      { specId: "spec-0002", tcId: "TC-0002-0001" },
+      { specId: "spec-0003", tcId: "TC-0003-0001" },
+    ];
+
+    await Promise.all(
+      pairs.flatMap((pair) => [
+        recordValidateCycle(root, pair.specId, pair.tcId),
+        recordValidateCycle(root, pair.specId, pair.tcId),
+      ]),
+    );
+
+    for (const pair of pairs) {
+      expect(await readValidateCycles(root, pair.specId, pair.tcId)).toBe(2);
+    }
+    expect(await listValidateCycleKeys(root)).toHaveLength(pairs.length);
+  });
+
+  it("TC-0008-0014 — a reset concurrent with increments leaves the other counters intact (recovery)", async () => {
+    const kept = { specId: "spec-0002", tcId: "TC-0002-0001" };
+    await recordValidateCycle(root, "spec-0001", "TC-0001-0001");
+
+    await Promise.all([
+      resetValidateCycle(root, "spec-0001", "TC-0001-0001"),
+      recordValidateCycle(root, kept.specId, kept.tcId),
+      recordValidateCycle(root, kept.specId, kept.tcId),
+    ]);
+
+    expect(await readValidateCycles(root, "spec-0001", "TC-0001-0001")).toBe(0);
+    expect(await readValidateCycles(root, kept.specId, kept.tcId)).toBe(2);
   });
 });
