@@ -347,7 +347,10 @@ So:
   block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
   `../SKILL.md#post-parallel-integration-verify`, before the verify runs —
-  **all three unconditional carve-out cells**, not Status and Evidence alone. A
+  **the three cells a worker reports**, not Status and Evidence alone. Those are
+  three of the four the Drift Protocol carves out unconditionally; the fourth,
+  `Blocked-By`, is written at the `todo -> blocked` transition rather than here,
+  and a merged slice has not taken that edge. A
   worker cannot write the ledger, and `/qfai-implement`'s Completion step
   reconciles rather than writes, so a `DR-ID` dropped here is written by nobody:
   an `exception` row lands without the `DR-*` that
