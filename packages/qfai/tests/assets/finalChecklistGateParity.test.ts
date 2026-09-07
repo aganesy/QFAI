@@ -15,7 +15,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { gateItemList as gateItems } from "../helpers/gateItems.js";
+import { gateItemList } from "../helpers/gateItems.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
@@ -77,7 +77,7 @@ function sectionBullets(skill: string, heading: string): string[] {
 
 /** The numbered items of the 12-point gate, by their own numbering. */
 function gateItemNumbers(skill: string): number[] {
-  return gateItems(skill).map((item) => item.number);
+  return gateItemList(skill).map((item) => item.number);
 }
 
 interface ChecklistBox {
@@ -329,7 +329,7 @@ const GATE_ITEM_PARITY: readonly {
  * content, which makes *any* edit to a gate item — an added clause, a reworded
  * obligation, a deleted one — fail here until someone re-reads it against its
  * box, extends `GATE_ITEM_PARITY` and the checklist, and re-pins the digest.
- * `gateItems` folds continuation lines and collapses whitespace first, so a
+ * `gateItemList` folds continuation lines and collapses whitespace first, so a
  * rewrap or a re-indent does not move a digest; only the words do.
  */
 const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
@@ -496,7 +496,7 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     // tell that the box now restates a contract nobody wrote. The clause has to
     // be matched on both sides — as `SPEC_LEVEL_PARITY` already does for the
     // conditions that carry no number.
-    const items = gateItems(await readSkill(dir));
+    const items = gateItemList(await readSkill(dir));
     const boxes = checklistBoxes(await readChecklist(dir)).map((box) => ({
       text: box.text.replace(/\s+/g, " "),
       cites: citedGateItems(box.text),
@@ -535,7 +535,7 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     // every mapped substring still matches, the number still has an entry and
     // `unmapped` is still empty, so the checklist can stay a clause behind
     // forever. Addressing the item's whole text is what makes that visible.
-    const items = gateItems(await readSkill(dir));
+    const items = gateItemList(await readSkill(dir));
     expect(items.map((item) => item.number)).toEqual(
       Object.keys(GATE_ITEM_CONTRACT_DIGESTS)
         .map(Number)

@@ -14,8 +14,11 @@
 export const GATE_HEADING = "### Item completion checklist (12-point gate)";
 
 /**
- * The section the heading opens, heading line included, up to the next `##` or
- * `###`.
+ * What follows the heading, up to the next `##` or `###`.
+ *
+ * The heading line itself is not in it. Nothing here reads it — an item is
+ * found by its number — and leaving it out means a caller cannot mistake it
+ * for one.
  */
 function gateSection(skill: string): string {
   const start = skill.indexOf(GATE_HEADING);
