@@ -1,16 +1,26 @@
 /**
  * Characters a reviewer cannot see, rejected before they reach a diff.
  *
- * Two scans over two file sets, because the two hazards are not the same size.
+ * Two scans, now over one file set: every tracked file.
  *
- * 1. BIDI OVERRIDES AND BOM, over the six documents below. These reorder how a
- *    line RENDERS, so a reader and a compiler disagree about the same bytes.
- *    The set stays explicit: the tree carries U+FEFF in two files today, and
- *    widening this scan is a judgement about those, not a free extension.
+ * 1. BIDI OVERRIDES AND BOM. These reorder how a line RENDERS, so a reader and
+ *    a compiler disagree about the same bytes — the Trojan Source class.
  *
- * 2. NUL AND C0 CONTROLS, over every tracked file. These do not reorder
- *    anything; they hide inside a token and are drawn as nothing, or as the
- *    space they replaced.
+ * 2. NUL AND C0 CONTROLS. These do not reorder anything; they hide inside a
+ *    token and are drawn as nothing, or as the space they replaced.
+ *
+ * The bidi half used to cover six named documents — the ones a CONSUMER reads —
+ * while the files an AGENT reads and acts on were outside it entirely. A
+ * reordered line in a skill body is an instruction that reads one way and
+ * executes another, which is the worse half of the hazard and was the unguarded
+ * one (#1202).
+ *
+ * Widening it was held back by two U+FEFF occurrences, and neither survives as
+ * a reason: `designMd.test.ts` had a BOM as the SUBJECT of a case and now
+ * writes it as `\uFEFF`, the way every other control character in this
+ * repository's fixtures is written; and an archived review pack quotes a
+ * BOM-prefixed shebang in captured terminal output, which is a frozen record
+ * whose value is that it says what happened — see {@link frozenRecordPrefixes}.
  *
  * The second scan exists because the first class of guard cannot catch the
  * second. `instructionLanguageRules.ts` shipped with a NUL where a separator
@@ -33,18 +43,30 @@
  */
 /* global console */
 import { execFileSync } from "node:child_process";
-import { readFileSync, existsSync, lstatSync } from "node:fs";
+import { readFileSync, lstatSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const targets = [
-  "README.md",
-  "packages/qfai/README.md",
-  "CHANGELOG.md",
-  "RELEASE.md",
-  "package.json",
-  "packages/qfai/package.json",
-];
+/**
+ * Trees whose files are FROZEN RECORDS, exempt from the bidi/BOM scan.
+ *
+ * A review pack records what a round found, quoting what it ran and what came
+ * back. `review-20260822180000000/R03_qa-gatekeeper.md` carries a BOM inside
+ * captured terminal output — `qfai-bootstrap: line 1: <BOM>#!/bin/sh: No such
+ * file or directory` — which is the FINDING. Editing it to satisfy a guard
+ * would falsify the record, and a record that has been edited to look clean is
+ * worth less than no record.
+ *
+ * Narrow on purpose, and by tree rather than by file: these are the two roots
+ * this repository's own prettier and markdownlint configurations already
+ * exclude for the same reason. Nothing else is exempt, so a bidi override in a
+ * skill body, an instruction file, a spec or any source file fails the lane.
+ *
+ * The C0 scan does NOT honour this list. A NUL makes a frozen record
+ * unreadable to every text tool, which is not a thing any record is improved
+ * by; and none of these files carries one.
+ */
+const frozenRecordPrefixes = [".qfai/review/", ".qfai/review_archive/"];
 
 const bidiRanges = [
   [0x202a, 0x202e],
@@ -129,16 +151,28 @@ function classifyCode(code) {
   return null;
 }
 
-for (const relative of targets) {
-  const filePath = path.resolve(relative);
-  if (!existsSync(filePath)) {
-    continue;
-  }
-  const text = readFileSync(filePath, "utf-8");
-  for (let i = 0; i < text.length; i++) {
+/** Whether `relative` sits under a tree whose records are read, not executed. */
+function isFrozenRecord(relative) {
+  const posix = relative.split(path.sep).join("/");
+  return frozenRecordPrefixes.some((prefix) => posix.startsWith(prefix));
+}
+
+/**
+ * The bidi/BOM pass over one file's decoded text.
+ *
+ * Decoded, unlike the C0 pass beside it, because these are CODE POINTS: a bidi
+ * override is three UTF-8 bytes and a byte scan would have to reassemble them.
+ * The two passes read the same file two ways on purpose — one asks what the
+ * bytes are, the other what they render as.
+ */
+function scanBidi(relative, absolute) {
+  const text = readFileSync(absolute, "utf-8");
+  let reported = 0;
+  for (let i = 0; i < text.length && reported < maxHitsPerFile; i++) {
     const code = text.charCodeAt(i);
     const kind = classifyCode(code);
     if (kind) {
+      reported += 1;
       hits.push({
         file: relative,
         index: i,
@@ -219,6 +253,9 @@ for (const relative of tracked ?? []) {
   const absolute = path.resolve(relative);
   if (!isScannableEntry(absolute)) {
     continue;
+  }
+  if (!isFrozenRecord(relative)) {
+    scanBidi(relative, absolute);
   }
   const bytes = readFileSync(absolute);
   // Line and byte are carried along the scan rather than recomputed per hit.
