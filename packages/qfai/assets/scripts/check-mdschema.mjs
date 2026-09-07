@@ -68,6 +68,21 @@ const MANIFEST = path.join(SCHEMA_ROOT, "manifest.yml");
 const DEFAULT_BASE = "origin/main";
 
 /**
+ * The file names a `node_modules/.bin` entry can have, most runnable first.
+ *
+ * On Windows a package manager writes three shims for one binary: `mdschema`
+ * (a shell script for Git Bash), `mdschema.cmd` and `mdschema.ps1`. Only the
+ * `.cmd` is executable by `spawnSync` without a shell — the extensionless one
+ * exists, so a bare `existsSync` finds it and then the spawn fails with EFTYPE
+ * or a console window. Hence the extensionless name is tried LAST there, and
+ * first everywhere else.
+ */
+const BIN_CANDIDATES =
+  process.platform === "win32"
+    ? ["mdschema.cmd", "mdschema.exe", "mdschema.bat", "mdschema"]
+    : ["mdschema", "mdschema.cmd", "mdschema.exe", "mdschema.bat"];
+
+/**
  * The `mdschema` binary, found by walking up from the tree being checked and
  * then from this file.
  *
@@ -80,13 +95,16 @@ const DEFAULT_BASE = "origin/main";
  * @param {string} from Directory to start the first walk from.
  * @returns {string | null}
  */
-function findMdschemaBin(from) {
+export function findMdschemaBin(from) {
   for (const start of [from, SCRIPT_DIR]) {
     let dir = path.resolve(start);
     for (;;) {
-      const candidate = path.join(dir, "node_modules", ".bin", "mdschema");
-      if (existsSync(candidate)) {
-        return candidate;
+      const binDir = path.join(dir, "node_modules", ".bin");
+      for (const name of BIN_CANDIDATES) {
+        const candidate = path.join(binDir, name);
+        if (existsSync(candidate)) {
+          return candidate;
+        }
       }
       const parent = path.dirname(dir);
       if (parent === dir) {

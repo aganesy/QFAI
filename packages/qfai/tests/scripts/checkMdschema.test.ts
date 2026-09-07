@@ -19,16 +19,17 @@ import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-// The IMPLEMENTATION, not the repository-root delegator: the delegator exists
-// to be run as a program and exits the process on load, which would end the test
-// run during collection. The spawn cases below still address the delegator,
+// The IMPLEMENTATION, not the repository-root delegator: the delegator exits
+// the process on load, so it exports nothing at all — importing it would end the
+// test run during collection. The spawn cases below still address the delegator,
 // because that is the path `pnpm lint:mdschema` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
-import { patternToRegExp } from "../../assets/scripts/check-mdschema.mjs";
+import { findMdschemaBin, patternToRegExp } from "../../assets/scripts/check-mdschema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts -> tests -> packages/qfai -> packages -> repo root
@@ -284,5 +285,60 @@ describe("check-mdschema pattern compilation", () => {
     const re = patternToRegExp(".qfai/specs/spec-*/01_Spec.md");
 
     expect(re.test("Xqfai/specs/spec-0001/01_Spec.md")).toBe(false);
+  });
+});
+
+/**
+ * Finding the `mdschema` shim.
+ *
+ * A package manager writes one binary under several names, and which of them is
+ * spawnable depends on the platform: on Windows the extensionless `mdschema` is
+ * a shell script for Git Bash that `spawnSync` cannot run, while `mdschema.cmd`
+ * beside it is the one that works. A resolver that only ever looked for the
+ * extensionless name found a file on Windows and then failed to run it — and
+ * because the lane reports a spawn failure the same way whichever document it
+ * was checking, an adopter on a Windows runner would read it as "the schemas
+ * are broken" rather than "the wrong shim was chosen".
+ *
+ * These cases run on every platform, because the candidate list is ordered per
+ * platform but non-empty on all of them: a `.bin` holding only `mdschema.cmd`
+ * is still found from POSIX, just later in the list.
+ */
+describe("check-mdschema binary resolution", () => {
+  it("walks up from the given directory to the nearest node_modules/.bin", async () => {
+    const root = await newTempDir();
+    const bin = path.join(root, "node_modules", ".bin");
+    await mkdir(path.join(root, "nested", "deeper"), { recursive: true });
+    await mkdir(bin, { recursive: true });
+    await writeFile(path.join(bin, "mdschema"), "", "utf-8");
+
+    expect(findMdschemaBin(path.join(root, "nested", "deeper"))).toBe(path.join(bin, "mdschema"));
+  });
+
+  it("finds a .bin that holds only the .cmd shim", async () => {
+    // The Windows shape, asserted from any platform. Before the candidate list
+    // this returned null here and the lane reported the binary as missing.
+    const root = await newTempDir();
+    const bin = path.join(root, "node_modules", ".bin");
+    await mkdir(bin, { recursive: true });
+    await writeFile(path.join(bin, "mdschema.cmd"), "", "utf-8");
+
+    expect(findMdschemaBin(root)).toBe(path.join(bin, "mdschema.cmd"));
+  });
+
+  it("prefers the platform's spawnable name when several shims sit together", async () => {
+    // The real Windows install: three names for one binary. The extensionless
+    // one is the trap there and the right answer everywhere else, so the
+    // expectation is written from the platform rather than pinned to one name.
+    const root = await newTempDir();
+    const bin = path.join(root, "node_modules", ".bin");
+    await mkdir(bin, { recursive: true });
+    for (const name of ["mdschema", "mdschema.cmd", "mdschema.ps1"]) {
+      await writeFile(path.join(bin, name), "", "utf-8");
+    }
+
+    const expected = process.platform === "win32" ? "mdschema.cmd" : "mdschema";
+
+    expect(findMdschemaBin(root)).toBe(path.join(bin, expected));
   });
 });

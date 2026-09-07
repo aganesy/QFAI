@@ -22,9 +22,9 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-// The IMPLEMENTATION, not the repository-root delegator: the delegator exists
-// to be run as a program and exits the process on load, which would end the test
-// run during collection. The spawn cases below still address the delegator,
+// The IMPLEMENTATION, not the repository-root delegator: the delegator exits
+// the process on load, so it exports nothing at all — importing it would end the
+// test run during collection. The spawn cases below still address the delegator,
 // because that is the path `pnpm lint:mermaid` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
 import { extractMermaidBlocks } from "../../assets/scripts/check-mermaid.mjs";

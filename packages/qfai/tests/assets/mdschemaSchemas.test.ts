@@ -15,6 +15,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -24,7 +25,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const SCHEMA_ROOT = path.join(REPO_ROOT, "packages/qfai/assets/mdschema");
 const MANIFEST = path.join(SCHEMA_ROOT, "manifest.yml");
-const MDSCHEMA_BIN = path.join(REPO_ROOT, "node_modules/.bin/mdschema");
+/**
+ * The `node_modules/.bin` shim, named the way this platform names it.
+ *
+ * On Windows a package manager writes `mdschema` (a shell script for Git Bash)
+ * beside `mdschema.cmd`, and only the `.cmd` is executable by `spawnSync`
+ * without a shell. Picking the extensionless name there finds a file that then
+ * fails to spawn, so this whole describe would report every schema as violated
+ * on Windows while the schemas were fine.
+ */
+const MDSCHEMA_BIN = path.join(
+  REPO_ROOT,
+  "node_modules/.bin",
+  process.platform === "win32" ? "mdschema.cmd" : "mdschema",
+);
 
 /**
  * The packaged template tree, which is also what the repository root mirrors.

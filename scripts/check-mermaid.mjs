@@ -11,11 +11,17 @@
  * So this file is a delegator and nothing else. It exists because
  * `pnpm lint:mermaid` and the guard's tests address the lane by its
  * repository-root path, which is where a contributor looks for it.
+ *
+ * It deliberately exports nothing and so needs no entry-point guard. A module
+ * that both exports a symbol and exits at import time is a trap — the importer
+ * dies before its first statement, with no stack pointing here. Re-exporting
+ * the implementation's helpers would also give them a second specifier, which
+ * is the drift this file exists to prevent, one level up: import
+ * `packages/qfai/assets/scripts/check-mermaid.mjs`, which is guarded and is
+ * where the helpers live.
  */
 import process from "node:process";
 
-import { extractMermaidBlocks, main } from "../packages/qfai/assets/scripts/check-mermaid.mjs";
-
-export { extractMermaidBlocks };
+import { main } from "../packages/qfai/assets/scripts/check-mermaid.mjs";
 
 process.exit(await main());
