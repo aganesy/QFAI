@@ -341,8 +341,8 @@ const FIRST_CONTACT_RULES: ReadonlyArray<{ code: string; requires: string }> = [
 function firstContactNote(): string {
   const named = FIRST_CONTACT_RULES.map((rule) => `${rule.code} (${rule.requires})`).join(", ");
   return (
-    ` While it is absent these rules report nothing and are errors as soon as it exists: ${named}.` +
-    " The two source rules apply per source."
+    ` While the section is absent, these rules report nothing; each becomes an error as soon as` +
+    ` the section exists: ${named}. The two source rules apply per source.`
   );
 }
 

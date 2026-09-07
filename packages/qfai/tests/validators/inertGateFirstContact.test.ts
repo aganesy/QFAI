@@ -67,7 +67,12 @@ const PRESENT = {
   ].join("\n"),
 };
 
-const codesAt = async (files: Record<string, string>, severity: string): Promise<Set<string>> =>
+// The severity is narrowed rather than `string`: a value no issue carries
+// returns an empty set, which every case here would read as the answer it wants.
+const codesAt = async (
+  files: Record<string, string>,
+  severity: "info" | "warning" | "error",
+): Promise<Set<string>> =>
   withPack(files, async (root) => {
     const issues = await validateResearchSummary(root, defaultConfig);
     return new Set(issues.filter((item) => item.severity === severity).map((item) => item.code));
