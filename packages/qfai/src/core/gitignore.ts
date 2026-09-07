@@ -649,7 +649,38 @@ export function negationSamplePath(negation: string): string {
     return body.replace(/\*\.md$/, "spec-0001.md");
   }
   const withContents = body.endsWith("/") ? `${body}sample` : body;
-  return withContents.replace(/\*\*/g, "sample/leaf").replace(/\*/g, "sample");
+  // Bracket expressions first, because each becomes one literal character and
+  // may itself contain a `*`. Left standing, `[0-9]` is instantiated as the
+  // four characters `[0-9]`, which no digit-bearing pattern matches — so the
+  // stamped import-lite negation looked unopposed by a later
+  // `import-lite-[0-9]*.md`, and the canonical record stayed ignored.
+  return withContents
+    .replace(/\[!?[^\]]*\]/g, sampleForClass)
+    .replace(/\*\*/g, "sample/leaf")
+    .replace(/\*/g, "sample")
+    .replace(/\?/g, "s");
+}
+
+/** Characters tried against a bracket expression, in the order they are tried. */
+const CLASS_SAMPLE_CANDIDATES = ["0", "a", "z", "9", "-", "_"];
+
+/**
+ * One character a gitignore bracket expression accepts.
+ *
+ * Tried against a short alphabet rather than parsed: the ranges these patterns
+ * use are small, and a member found this way is a member under any reading of
+ * the syntax. A class no candidate satisfies keeps the literal spelling, which
+ * leaves the caller where it was rather than inventing a path.
+ */
+function sampleForClass(expression: string): string {
+  const body = expression.slice(1, -1);
+  let matcher: RegExp;
+  try {
+    matcher = new RegExp(`^[${body.startsWith("!") ? `^${body.slice(1)}` : body}]$`);
+  } catch {
+    return expression;
+  }
+  return CLASS_SAMPLE_CANDIDATES.find((candidate) => matcher.test(candidate)) ?? expression;
 }
 
 /**

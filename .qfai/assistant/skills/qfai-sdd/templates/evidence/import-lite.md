@@ -3,7 +3,9 @@
 Written by `/qfai-sdd` Stage 0 when specs exist and no discussion pack does. Copy this file to
 `.qfai/evidence/import-lite-<ts>.md`. The preflight check behind `QFAI-IMPLITE-001` does accept a
 copy kept under this template's own name, but that is a single fixed path, so a second import would
-overwrite the first run's trail — take the `-<ts>` run stamp to keep one file per run. `<ts>` is the
+overwrite the first run's trail — take the `-<ts>` run stamp to keep one file per run. The stamp is
+also what a spec item cites: a `Source` pair's left half is a stamped basename, so this file is
+renamed to the stamped form before any item points at it. `<ts>` is the
 canonical 17-digit stamp (`YYYYMMDDhhmmssSSS`, the same form discussion packs use); a suffix that is
 not exactly that stamp is rejected, so a `-<n>` collision counter does not work here. Millisecond
 precision alone is not a uniqueness guarantee, so claim the name with an **exclusive create**

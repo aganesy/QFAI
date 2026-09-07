@@ -78,8 +78,22 @@ describe("negationSamplePath", () => {
     ["!decisions/", "decisions/sample"],
     ["!decisions/**", "decisions/sample/leaf"],
     ["!.qfai/evidence/decision-*.md", ".qfai/evidence/decision-sample.md"],
+    // A bracket expression stands for one character, so the sample carries one.
+    // Left as the four characters `[0-9]`, the sample is a path no rule written
+    // about digits matches, and every overlap question about it answers "no".
+    ["!evidence/import-lite-[0-9][0-9].md", "evidence/import-lite-00.md"],
+    ["!logs/[a-z].txt", "logs/a.txt"],
+    ["!logs/[!0-9].txt", "logs/a.txt"],
+    ["!logs/?.txt", "logs/s.txt"],
   ])("%s -> %s", (negation, expected) => {
     expect(negationSamplePath(negation)).toBe(expected);
+  });
+
+  it("keeps a class no candidate satisfies rather than inventing a path", () => {
+    // The alphabet is short on purpose. A class it cannot instantiate leaves
+    // the caller where it was, which costs a relocation, rather than handing it
+    // a path the negation does not re-include.
+    expect(negationSamplePath("!logs/[%&].txt")).toBe("logs/[%&].txt");
   });
 });
 
@@ -111,6 +125,16 @@ describe("negationsOutrankLaterIgnores", () => {
   it("is not fooled by a non-matching later rule", () => {
     const lines = ["!coverage-depth-*.md", "*.json", "node_modules/"];
     expect(negationsOutrankLaterIgnores(lines, ["!coverage-depth-*.md"])).toBe(true);
+  });
+
+  it("rejects a stamped negation a later digit rule re-ignores", () => {
+    // The managed negation for the stamped import-lite record spells its stamp
+    // out as bracket classes. A project rule written the shorter way covers the
+    // same file, so the negation is not the last word on it.
+    const stamped = `!.qfai/evidence/import-lite-${"[0-9]".repeat(17)}.md`;
+    const lines = [".qfai/evidence/*", stamped, ".qfai/evidence/import-lite-[0-9]*.md"];
+
+    expect(negationsOutrankLaterIgnores(lines, [stamped])).toBe(false);
   });
 });
 

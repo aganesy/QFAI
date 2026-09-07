@@ -159,7 +159,12 @@ one.
   missing-pack exception in `SKILL.md`) has no pack half to write, so items it produces carry
   the evidence pair instead: `import-lite-<ts>#<REQ-ID>`, e.g.
   `import-lite-20260415101112123#REQ-0007` (the same 17-digit stamp form as a pack). The left half is the basename of the
-  `.qfai/evidence/import-lite-<ts>.md` file Stage 0 wrote, minus the `.md`; the right half is
+  `.qfai/evidence/import-lite-<ts>.md` file Stage 0 wrote, minus the `.md`, and it always
+  carries the stamp. `QFAI-IMPLITE-001` also clears on a copy kept under the template's own
+  name, `import-lite.md`, so that copying the file is enough to answer the warning — but that
+  name is one fixed path, so a later import overwrites it and every pair citing it re-points
+  without a diff. A run that writes `Source` values therefore renames its evidence to the
+  stamped form first, and `import-lite#<REQ-ID>` is not a pair. The right half is
   the requirement ID as the imported material names it. Material that carries no IDs of its own
   — a pasted excerpt is the usual case — is numbered in the evidence file instead: Stage 0
   lists what it read under `## Imported requirements` as `IMP-001`, `IMP-002`, … and items cite
