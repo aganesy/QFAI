@@ -385,8 +385,9 @@ describe("check-mdschema command resolution", () => {
     await writeFile(path.join(packageDir, "bin", "cli.js"), "", "utf-8");
     await writeFile(path.join(packageDir, "package.json"), manifest, "utf-8");
 
-    // The walk continues to this file's own tree, which does hold one, so the
-    // assertion is that the seeded directory is not what answered.
+    // What the seeded installation declares is unreadable, so it is not an
+    // answer. Whether the walk then finds another one further up is not this
+    // case's subject: either way, this directory must not be what answered.
     expect(findMdschemaCommand(root)?.args?.[0]).not.toBe(path.join(packageDir, "bin", "cli.js"));
   });
 });

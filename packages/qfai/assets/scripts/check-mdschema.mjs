@@ -413,7 +413,7 @@ export function main() {
   const mdschema = findMdschemaCommand(root);
   if (mdschema === null) {
     console.error(
-      "check-mdschema: the mdschema binary was not found. Install @jackchuka/mdschema (this repository carries it as a devDependency; an adopter's CI installs it in the lane).",
+      "check-mdschema: no mdschema entry point was found. Install @jackchuka/mdschema (this repository carries it as a devDependency; an adopter's CI installs it in the lane).",
     );
     return 2;
   }
