@@ -158,10 +158,16 @@ export function formatRecordLine({ total, perRoot }) {
 export function parseRecordLine(record) {
   const stated = RECORD_LINE.exec(record);
   if (stated === null) return null;
-  const perRoot = {};
+  // A null-prototype map, so a root named `constructor` or `__proto__` is a key
+  // like any other rather than a collision with `Object.prototype`.
+  const perRoot = Object.create(null);
   for (const entry of stated[2].split(", ")) {
     const pair = BREAKDOWN_ENTRY.exec(entry);
     if (pair === null) return null;
+    // A root stated twice states two counts for it. Assigning the second over
+    // the first would accept a line nobody can read as one measurement, which
+    // is what this function refuses to do everywhere else.
+    if (pair[1] in perRoot) return null;
     perRoot[pair[1]] = Number(pair[2]);
   }
   return { total: Number(stated[1]), perRoot };

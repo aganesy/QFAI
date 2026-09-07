@@ -62,6 +62,29 @@ describe("the e2e callsite record line", () => {
     ).toBeNull();
   });
 
+  it("refuses a split that states one root twice", () => {
+    // Two counts for one root is not a measurement of it. Taking the second
+    // over the first accepts a line nobody can read as one answer, and the
+    // per-root comparison then runs against a number the record does not state.
+    expect(
+      parseRecordLine("e2e callsites at this tree: 42 (tests/assets 30, tests/assets 12)"),
+    ).toBeNull();
+  });
+
+  it("reads a root named after an Object.prototype member as a root", () => {
+    // A plain object would report `constructor` as already present and refuse
+    // a line that states it once.
+    const parsed = parseRecordLine("e2e callsites at this tree: 3 (constructor 1, __proto__ 2)");
+
+    // Compared as entries: `__proto__:` in an object literal sets the
+    // prototype rather than a key, so the expected value could not be written
+    // as one.
+    expect(Object.entries(parsed?.perRoot ?? {})).toEqual([
+      ["constructor", 1],
+      ["__proto__", 2],
+    ]);
+  });
+
   it("refuses a line that has been broken across two", () => {
     // The split is one line. A record whose line got wrapped is not a
     // measurement of anything, and reading it as one would pin half a walk.
