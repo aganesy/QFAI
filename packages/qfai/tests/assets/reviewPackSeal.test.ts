@@ -36,12 +36,25 @@ const read = (tree: string, rel: string): Promise<string> =>
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 /** The body of a `## ` section, up to the next same-level heading. */
+/**
+ * Every `<file>#<anchor>` reference in `text`, as whole tokens.
+ *
+ * A containment check on an anchor passes for any longer anchor that starts
+ * with it, so a rename that only appends is invisible to it. Comparing whole
+ * tokens is what makes the check exact.
+ */
+const anchorsIn = (text: string): string[] =>
+  Array.from(text.matchAll(/[\w./-]+\.md#[a-z0-9-]+/g), (m) => m[0]);
+
 const section = (content: string, heading: string): string => {
-  const start = content.indexOf(`\n${heading}\n`);
-  if (start < 0) {
+  // A heading on the first line has no newline before it, so anchoring on one
+  // would return "" for it — a silent empty section that passes every
+  // `not.toContain` and fails every `toContain` for the wrong reason.
+  const at = content.startsWith(`${heading}\n`) ? 0 : content.indexOf(`\n${heading}\n`) + 1;
+  if (at === 0 && !content.startsWith(`${heading}\n`)) {
     return "";
   }
-  const after = start + heading.length + 2;
+  const after = at + heading.length + 1;
   const next = content.indexOf("\n## ", after);
   return next < 0 ? content.slice(after) : content.slice(after, next);
 };
@@ -185,7 +198,13 @@ describe("the ATDD stage seal has a reference of its own", () => {
         );
       }
 
-      expect(dod).toContain("references/pack-seal.md#recompute-the-p8-audit-hash");
+      // Exact, not a prefix: `#recompute-the-p8-audit-hash` is a prefix of
+      // `#recompute-the-p8-audit-hash-before-declaring-completion`, so a
+      // containment check passes for an anchor that was renamed or mistyped
+      // into the longer one.
+      expect(anchorsIn(dod)).toContain(
+        "references/pack-seal.md#recompute-the-p8-audit-hash-before-declaring-completion",
+      );
       // The seal bullet requires both moments, so it names both anchors:
       // `#seal-the-p8-pack` defines only the recording.
       expect(dod).toContain("references/pack-seal.md#seal-the-p8-pack");

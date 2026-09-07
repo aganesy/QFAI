@@ -196,8 +196,7 @@ value stored beside it.
 `Record re-attestation pack` and `Record re-attestation pack seal` — it is
 not a round, so it takes no `Round N:` prefix
 (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
-The
-pack holding the verdict it supersedes is never edited to restamp a hash:
+The pack holding the verdict it supersedes is never edited to restamp a hash:
 that would break the seal already recorded over it, which is the one thing
 a seal exists to prevent.
 
