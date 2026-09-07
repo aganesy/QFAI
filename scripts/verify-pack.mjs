@@ -22,6 +22,7 @@ import {
   diffFingerprints,
   fingerprintReport,
   formatDiff,
+  parseValidateReport,
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
@@ -655,9 +656,15 @@ execFileSync(
 // reported. Compare the findings against the recorded set, in both directions.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
-  throw new Error("validate did not write .qfai/report/validate.json.");
+  throw new Error(
+    `validate wrote no ${validateJsonPath}. The comparison below reads the findings that run ` +
+      `produced, so it has nothing to read without it.`,
+  );
 }
-const freshFindings = fingerprintReport(JSON.parse(readFileSync(validateJsonPath, "utf-8")));
+const freshFindings = fingerprintReport(
+  parseValidateReport(readFileSync(validateJsonPath, "utf-8"), validateJsonPath),
+  validateJsonPath,
+);
 
 if (process.env[UPDATE_ENV] === "1") {
   writeBaseline(freshFindings);

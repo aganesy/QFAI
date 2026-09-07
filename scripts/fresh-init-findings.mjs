@@ -68,10 +68,39 @@ export function fingerprint(issue) {
   return `${issue.severity} ${issue.code} ${file.split(path.sep).join("/")}`;
 }
 
-/** Every issue in a `validate.json`, fingerprinted and sorted. */
-export function fingerprintReport(report) {
-  const issues = Array.isArray(report.issues) ? report.issues : [];
-  return issues.map(fingerprint).sort();
+/**
+ * Every issue in a `validate.json`, fingerprinted and sorted.
+ *
+ * The shape is checked for the same reason the baseline's is: `issues` is a
+ * required field of the report, so a value that is not a list is a file this
+ * cannot read. Read as an empty list instead, a truncated report would record
+ * or match "the tree produces nothing" — the one answer the comparison exists
+ * to withhold.
+ */
+export function fingerprintReport(report, where = "validate.json") {
+  if (typeof report !== "object" || report === null || !Array.isArray(report.issues)) {
+    throw new Error(
+      `${where} has no \`issues\` array. That list is what a fresh run reports, so a report ` +
+        `without one is unreadable rather than clean.`,
+    );
+  }
+  return report.issues.map(fingerprint).sort();
+}
+
+/**
+ * A `validate.json` parsed, named in the failure.
+ *
+ * The parse error alone says only that some JSON was malformed, and the run
+ * reads several files.
+ */
+export function parseValidateReport(text, where = "validate.json") {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `${where} is not JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 /**

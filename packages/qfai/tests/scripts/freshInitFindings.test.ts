@@ -24,6 +24,7 @@ import {
   fingerprintReport,
   formatDiff,
   parseBaseline,
+  parseValidateReport,
 } from "../../../../scripts/fresh-init-findings.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -79,9 +80,34 @@ describe("fresh-init finding fingerprints", () => {
     expect(fingerprint(withCount)).toBe(fingerprint(withOther));
   });
 
-  it("reads a report with no issues as an empty set", () => {
+  it("reads a report that found nothing as an empty set", () => {
     expect(fingerprintReport({ issues: [] })).toEqual([]);
-    expect(fingerprintReport({})).toEqual([]);
+  });
+
+  it.each([
+    ["null", null],
+    ["a number", 3],
+    ["an object with no issues", { summary: "ok" }],
+    ["issues that is not a list", { issues: "none" }],
+  ])("refuses a report that is %s", (_name, report) => {
+    // `issues` is a required field of the report. Read as an empty list, each
+    // of these says "the tree produces nothing" — which is a real answer the
+    // comparison then records or matches, so the failure has to be loud.
+    expect(() => fingerprintReport(report, "validate.json")).toThrow(/validate\.json/);
+  });
+});
+
+describe("parsing the report", () => {
+  it("returns what the file holds", () => {
+    expect(parseValidateReport('{"issues":[]}')).toEqual({ issues: [] });
+  });
+
+  it("names the file it could not parse", () => {
+    // The run reads several JSON files, so the parse error alone does not say
+    // which one is malformed.
+    expect(() => parseValidateReport("{", "/tmp/pack/validate.json")).toThrow(
+      /\/tmp\/pack\/validate\.json is not JSON/,
+    );
   });
 });
 
