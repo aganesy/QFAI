@@ -47,6 +47,32 @@ async function writeValidationFixture(
   await writeFile(filePath, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
 }
 
+/**
+ * The 15 s ceiling is deliberate, and measured.
+ *
+ * This file makes 23 `runInit` and 26 `runReport` calls — more than any other
+ * file that declares a ceiling below the project's `testTimeout`. Call count is
+ * not the cost, though: a ceiling is per test, and these calls are spread one
+ * or two to a case rather than piled into one.
+ *
+ * Measured worst case, slowest first:
+ *
+ * ```text
+ * project `cli` alone — the shape the `test (cli)` job runs
+ *   report(md)                                                   2874ms
+ *   runs report with --run-validate                              2570ms
+ *
+ * whole package in one process — the heaviest load, as node-floor runs it
+ *   keeps sibling specs out of the scoped report body            4149ms
+ *   scopes input, output and spec-pack artifacts to --spec       3630ms
+ * ```
+ *
+ * 4.1 s against 15 s is 3.6x headroom under the heaviest load in the suite —
+ * twice the margin `main.test.ts` has at the same ceiling. So 15 s is a budget
+ * here, not a value below this file's cost, and a tight ceiling is worth
+ * keeping: it fails on a regression that makes a report run minutes long
+ * instead of waiting two minutes for the project value to notice.
+ */
 describe("report", { timeout: 15000 }, () => {
   it("runs init -> validate(json) -> report(md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
