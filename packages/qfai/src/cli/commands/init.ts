@@ -41,6 +41,7 @@ import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
+import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
@@ -366,6 +367,18 @@ export async function runInit(options: InitOptions): Promise<void> {
   // …and the summary counts them together, as one copy, which is what an operator sees.
   rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
   rootResult.skipped = [...workflowResult.skipped, ...rootResult.skipped];
+
+  // The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
+  // the stub scan behind `QFAI-TEST-001` pointed at nothing. Aim them at the files this
+  // repository already has.
+  //
+  // Only when THIS run wrote the file. The copy above is create-only, so a `qfai.config.yaml`
+  // it skipped is the adopter's — already tuned, perhaps by `/qfai-configure`, and rewriting a
+  // value they chose is not this command's to do.
+  const configPath = path.join(destRoot, "qfai.config.yaml");
+  if (!options.dryRun && rootResult.copied.includes(configPath)) {
+    await aimTestFileGlobsAtRepository(destRoot, configPath);
+  }
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -2262,6 +2275,34 @@ async function replaceFileAtomically(
     // the manifest directory with a partial YAML on every failed merge.
     await rm(temp, { force: true });
     throw err;
+  }
+}
+
+/**
+ * Point the freshly written config's `testFileGlobs` at this repository's tests.
+ *
+ * Best-effort, and silent when it finds nothing: the template's `[]` is a valid
+ * value that `QFAI-TEST-002` already explains, so a repository with no test file
+ * yet is left exactly as before. An I/O failure is the same case — the config is
+ * on disk and correct either way, and failing the whole init over a refinement
+ * would trade a working install for an empty one.
+ */
+async function aimTestFileGlobsAtRepository(root: string, configPath: string): Promise<void> {
+  try {
+    const derived = await deriveTestFileGlobs(root);
+    if (derived.length === 0) {
+      return;
+    }
+    const before = await readFile(configPath, "utf-8");
+    const after = withDerivedTestFileGlobs(before, derived);
+    if (after !== before) {
+      await writeFile(configPath, after, "utf-8");
+      info(
+        `config: aimed testFileGlobs at ${derived.length} test layout(s) found in this repository`,
+      );
+    }
+  } catch {
+    // Deliberately swallowed; see the docblock.
   }
 }
 

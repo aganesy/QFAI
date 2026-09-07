@@ -26,18 +26,25 @@ validation:
     forbidTestTodoStubs: true
   traceability:
     scMustHaveTest: true
-    # Intentionally empty: this matches the in-code default and must be set to the
-    # repository's real test layout before the SC traceability gate means anything.
-    # Seeding a language-specific list here makes the gate silently pass on every
-    # other stack. Run /qfai-configure to populate it; `qfai validate` reports
-    # QFAI-TRACE-124 while this is unset or matches zero files.
+    # `qfai init` fills this from the repository it runs in: each layout in the
+    # list below is matched against the real tree, and the ones that select at
+    # least one file are written here. A repository with no test file yet keeps
+    # the empty list, which is then a fact about that repository rather than
+    # about the default.
+    #
+    # It is left empty on purpose when nothing matched. A language-specific list
+    # seeded regardless of the tree makes the gate silently pass on every other
+    # stack, so the value is derived and never guessed. Run /qfai-configure to
+    # set or refine it; `qfai validate` reports QFAI-TRACE-124 while this is
+    # unset or matches zero files. `qfai init` never rewrites an existing config,
+    # so a value tuned here stays.
     #
     # This key also selects the files scanned by the test-stub gate
     # (validation.testStrategy.forbidTestTodoStubs). While it is empty that gate
     # scans nothing, so QFAI-TEST-001 cannot fire however many stubs exist;
     # `qfai validate` reports QFAI-TEST-002 to say the scan produced no evidence.
     #
-    # Examples:
+    # The layouts init recognises:
     #   TypeScript: tests/**/*.test.ts, src/**/*.spec.ts
     #   Python:     tests/**/test_*.py, tests/**/*_test.py
     #   Go:         **/*_test.go
