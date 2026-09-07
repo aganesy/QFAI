@@ -167,8 +167,8 @@ not the working-tree one above: its step 2 normalization (LF, trailing
 whitespace, leading and trailing blank lines, one final newline), its
 `path + NUL + SHA-256` record sorted by path, its final hash over the
 joined records. The subject is every file in that `review-<timestamp>/`
-directory, each under its repo-relative path. "The procedure below" was
-ambiguous between the two, and the two produce different values. It is
+directory, each under its repo-relative path. Naming it as "the procedure"
+alone is ambiguous between the two, and the two produce different values. It is
 recorded **outside** the pack, so nothing in the pack hashes itself, and
 **gate item 10 recomputes it from the pack** and compares — that is the
 check, and without it the field was a value nobody read. It is **not** in

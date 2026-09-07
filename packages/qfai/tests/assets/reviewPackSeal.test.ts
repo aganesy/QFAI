@@ -1,15 +1,14 @@
 /**
- * The review-pack seal contract is addressable (#693) and the ATDD stage does
- * not restate it in one unskimmable DoD bullet (#732).
+ * The review-pack seal contract is addressable, and each consumer cites it.
  *
- * The seal contract used to sit 49 lines deep inside step 2 of the working-tree
- * revision recipe — a step whose stated job is listing paths to exclude from a
- * different hash. It had no heading, so none of the call sites that consume it
- * could cite it by anchor, and each of them carried a fragment of the contract
- * instead. `/qfai-atdd` carried the largest fragment: a 2,024-character DoD
- * bullet that was the only place in the shipped tree defining `Review pack:`
- * and `Review pack seal:` — two fields its own evidence template had no slot
- * for.
+ * The contract has a heading of its own, so a call site can name it by anchor
+ * instead of carrying a fragment. A fragment in a consumer drifts from the
+ * contract silently, and a contract with no anchor leaves the consumer no
+ * other way to refer to it.
+ *
+ * `/qfai-atdd` states the two evidence fields the seal needs in its own
+ * reference and gives its evidence template a slot for them, so the stage that
+ * writes them and the file that holds them agree.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
