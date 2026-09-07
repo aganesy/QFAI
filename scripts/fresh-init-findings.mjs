@@ -130,10 +130,43 @@ export function formatDiff({ added, missing }) {
   return lines.join("\n");
 }
 
+/**
+ * The findings a parsed baseline records.
+ *
+ * Stated rather than defaulted to an empty list. An empty baseline is a real
+ * value — it says the tree produces nothing — so reading a malformed file as
+ * one turns a corrupt pin into a claim, and the comparison then reports every
+ * finding the tree has as newly arrived. A file that cannot be read is not a
+ * baseline, and saying so names what to fix.
+ */
+export function parseBaseline(text, where = BASELINE_PATH) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `${where} is not JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (typeof parsed !== "object" || parsed === null || !Array.isArray(parsed.findings)) {
+    throw new Error(
+      `${where} has no \`findings\` array. That list is the pin, so a file without one records ` +
+        `nothing while looking recorded.`,
+    );
+  }
+  const wrong = parsed.findings.filter((entry) => typeof entry !== "string");
+  if (wrong.length > 0) {
+    throw new Error(
+      `${where}: every entry is the \`<severity> <code> <file>\` line \`fingerprint\` writes, and ` +
+        `${String(wrong.length)} is not a string.`,
+    );
+  }
+  return parsed.findings;
+}
+
 /** The recorded baseline. */
 export function readBaseline() {
-  const parsed = JSON.parse(readFileSync(BASELINE_PATH, "utf-8"));
-  return Array.isArray(parsed.findings) ? parsed.findings : [];
+  return parseBaseline(readFileSync(BASELINE_PATH, "utf-8"));
 }
 
 /** Record `findings` as the baseline, one per line for a readable diff. */

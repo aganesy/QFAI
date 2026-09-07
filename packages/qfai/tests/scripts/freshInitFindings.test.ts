@@ -23,6 +23,7 @@ import {
   fingerprint,
   fingerprintReport,
   formatDiff,
+  parseBaseline,
 } from "../../../../scripts/fresh-init-findings.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -140,6 +141,34 @@ describe("the failure text", () => {
     // The remedy has to say the baseline is committed, or a run that only
     // rewrites the file locally looks like the whole fix.
     expect(text).toContain("commit the baseline in the same change");
+  });
+});
+
+describe("reading the baseline", () => {
+  it("returns the findings a well-formed baseline records", () => {
+    const recorded = ["info QFAI-SPACK-000 -", "warning QFAI-DCON-034 DESIGN.md"];
+
+    expect(parseBaseline(JSON.stringify({ findings: recorded }))).toEqual(recorded);
+  });
+
+  it("accepts a baseline that records nothing, which is a real answer", () => {
+    // "The tree produces no findings" is a state a repository can reach, and
+    // the next arrival has to be reported against it.
+    expect(parseBaseline(JSON.stringify({ findings: [] }))).toEqual([]);
+  });
+
+  it.each([
+    ["not JSON at all", "{"],
+    ["null", "null"],
+    ["an array rather than an object", "[]"],
+    ["an object with no findings", '{"description":"x"}'],
+    ["findings that is not a list", '{"findings":"info A -"}'],
+    ["a findings entry that is not a line", '{"findings":[{"code":"A"}]}'],
+  ])("refuses a baseline that is %s", (_name, text) => {
+    // Read as an empty list instead, each of these is a corrupt pin claiming
+    // the tree is clean — and the comparison then reports every finding the
+    // tree really has as newly arrived, which is a diff nobody can act on.
+    expect(() => parseBaseline(text, "baseline.json")).toThrow(/baseline\.json/);
   });
 });
 
