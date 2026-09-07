@@ -705,16 +705,30 @@ describe("the stage evidence's counts are derived, not typed", () => {
         "that count and nothing else pins them",
     ).not.toBeNull();
 
+    // Two readers hit this, and the command they run is the same for both. What
+    // differs is RESPONSIBILITY: one of them changed a callsite and owes the
+    // re-pin, the other inherited the drift from a merge and owes nothing. The
+    // message used to address only the first. "Land it in the same commit as the
+    // callsite edit" is advice a reader cannot follow when their branch has no
+    // callsite edit — which is the case this fires in most often, because a
+    // MERGE moves the total while both parent tips are individually correct
+    // (#1187). A reader told to do something impossible reasonably concludes
+    // the guard is broken, and the record's own prose has that happening twice.
+    const branchOwesIt =
+      "If this branch changed an `it` / `test` callsite under the `e2e` project, run " +
+      "`node scripts/pin-stage-evidence-counts.mjs` and land it in the same commit as the edit.";
+    const nobodyOwesIt =
+      "If it did not, the drift is inherited: a merge carries the callsites of both parents and " +
+      "neither parent's pin counted them together, so no branch owed this re-pin. Run the same " +
+      "command and land it on its own — it is a re-measurement, not a correction of your change.";
     expect(
       recorded,
       `the record states ${String(recorded)} e2e callsites; the tree holds ${String(measured)} ` +
         `(${Object.entries(perRoot)
           .map(([root, count]) => `${root} ${String(count)}`)
           .join(", ")}). ` +
-        "Run `node scripts/pin-stage-evidence-counts.mjs` and land it in the same commit as the " +
-        "callsite edit; the two suite totals beside that line are known-invalid until then. A " +
-        "commit that changes one invalidates both totals, which is the defect six rounds have " +
-        "reported and five repairs have re-typed",
+        `${branchOwesIt} ${nobodyOwesIt} ` +
+        "Either way the two suite totals beside that line are known-invalid until it lands.",
     ).toBe(measured);
   });
 
