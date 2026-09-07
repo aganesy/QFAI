@@ -1015,6 +1015,15 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
       // every other field and the second one was dropped.
       entry.loc?.column ?? "",
       (entry.refs ?? []).join(","),
+      // `QFAI-TEST-002` names a state, not an occurrence, and its three forms
+      // carry no line and no column. The ATDD selection hitting the file limit
+      // and the repo-wide selection being empty are different states of
+      // different scans; keyed on the fields above they collapsed, and the
+      // report kept whichever came first while the other went unmentioned. The
+      // message is what distinguishes them, and for a real occurrence it is a
+      // function of the fields already in the key, so adding it drops nothing
+      // that was being deduped before.
+      entry.message,
     ].join("\0");
     if (seen.has(key)) return false;
     seen.add(key);

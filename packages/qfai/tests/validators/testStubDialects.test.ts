@@ -221,6 +221,19 @@ describe("STUB_SOURCE_FILE_PATTERN — coverage information for a caller's own g
     });
   });
 
+  it("collects a Gherkin acceptance suite", async () => {
+    // On a Cucumber stack the `.feature` files are the acceptance suite, and
+    // the standard ATDD glob points straight at them. Leaving the extension out
+    // selected no file at all, so the gate came back clean over a directory
+    // nothing had opened.
+    await withTests({ "tests/e2e/spec-0001/login.feature": "Feature: login\n" }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG, {
+        globs: [`tests/e2e/${STUB_SOURCE_FILE_PATTERN}`],
+      });
+      expect(issues.find((i) => i.code === "QFAI-TEST-002")?.refs).toEqual([".feature"]);
+    });
+  });
+
   it("leaves fixtures and data files out of the disclaimer", async () => {
     await withTests(
       {
@@ -366,6 +379,209 @@ describe("a masking pass must not blank real code past its own construct", () =>
         // string's close is not — a mask that ran on would have hidden it.
         expect(await stubCodes(root)).toContain("QFAI-TEST-001");
         expect(await stubCodes(root)).toHaveLength(1);
+      },
+    );
+  });
+});
+
+/**
+ * Every mask here reads one language's lexical rules. Sharing a definition
+ * between two languages that spell a construct the same way, or leaving a form
+ * out of one, blanks the wrong range — and a blanked range is a stub the gate
+ * cannot see.
+ */
+describe("each dialect's mask follows its own language, not a neighbour's", () => {
+  it("does not open a Ruby heredoc inside a regex literal", async () => {
+    // `/<<~TEXT/` is a valid pattern. Read as a heredoc opener it has no
+    // terminator, so the body blanked to end of file and the real stub below it
+    // left the scan.
+    await withTests(
+      {
+        "tests/re_spec.rb": [
+          "pattern = /<<~TEXT/",
+          "it 'x' do",
+          "  pending 'later'",
+          "end",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("does not open a Ruby heredoc inside a %r literal", async () => {
+    await withTests(
+      {
+        "tests/pr_spec.rb": ["pattern = %r{<<~TEXT}", "pending 'later'", ""].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("blanks a %r literal's own body, and stops at its delimiter", async () => {
+    await withTests(
+      {
+        "tests/pb_spec.rb": ["pattern = %r{", "pending", "}x", "skip 'later'", ""].join("\n"),
+      },
+      async (root) => {
+        // The `pending` line is pattern text; the `skip` after the delimiter is
+        // the real stub, and a mask that ran on would have hidden it.
+        const issues = await validateTestTodoStubs(root, CONFIG);
+        expect(issues.filter((i) => i.code === "QFAI-TEST-001").map((i) => i.loc?.line)).toEqual([
+          4,
+        ]);
+      },
+    );
+  });
+
+  it("reads a Ruby division as division, not as an unclosed pattern", async () => {
+    await withTests(
+      {
+        "tests/div_spec.rb": ["average = total / count", "pending 'later'", ""].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("takes no backslash escape in a Kotlin raw string", async () => {
+    // Kotlin's `"""` is a raw string and Java's is a text block, so the shared
+    // definition escaped a trailing backslash: the mask skipped the first quote
+    // of the closing delimiter, ran to end of file, and took the real
+    // `@Disabled` with it.
+    await withTests(
+      {
+        "tests/ATest.kt": ['val windowsPath = """C:\\dir\\"""', "@Disabled", "fun a() {}", ""].join(
+          "\n",
+        ),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("still blanks a Kotlin raw string that holds the construct", async () => {
+    await withTests({ "tests/BTest.kt": 'val expected = """\n@Disabled\n"""\n' }, async (root) => {
+      expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+    });
+  });
+
+  it("still blanks a Java text block that holds the construct", async () => {
+    await withTests(
+      {
+        "tests/CTest.java": [
+          'String expected = """',
+          "@Disabled quoted inside expected output",
+          '""";',
+          "@Disabled",
+          "void c() {}",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await validateTestTodoStubs(root, CONFIG);
+        expect(issues.filter((i) => i.code === "QFAI-TEST-001").map((i) => i.loc?.line)).toEqual([
+          4,
+        ]);
+      },
+    );
+  });
+
+  it("closes a Rust block comment at its outermost delimiter", async () => {
+    // Rust block comments nest, so the shared flat definition ended the outer
+    // one at the inner delimiter and reported the commented-out attribute after
+    // it as a real one.
+    await withTests(
+      { "tests/n.rs": "/* outer /* inner */ #[ignore] */\nfn a() {}\n" },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("still reports a real #[ignore] after a nested block comment", async () => {
+    await withTests(
+      { "tests/o.rs": "/* outer /* inner */ still comment */\n#[ignore]\nfn a() {}\n" },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  const csharpInterpolated: Array<[string, string, string]> = [
+    ["tests/DT.cs", '@$"first line', "an interpolated verbatim string"],
+    ["tests/ET.cs", '$@"first line', "a verbatim string with the prefixes reversed"],
+    ["tests/FT.cs", '$"""', "an interpolated raw string"],
+  ];
+
+  for (const [file, opener, what] of csharpInterpolated) {
+    it(`blanks ${what} whole, line breaks included`, async () => {
+      // Only `@"` was matched, so the interpolated spellings fell through to
+      // the single-line span, ended at the first break, and re-exposed the rest
+      // of the fixture as code.
+      const close = opener === '$"""' ? '"""' : '"';
+      await withTests(
+        {
+          [file]: [
+            `var expected = ${opener}`,
+            "[Ignore] quoted inside expected output",
+            `${close};`,
+            "",
+          ].join("\n"),
+        },
+        async (root) => {
+          expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+        },
+      );
+    });
+  }
+
+  it("still reports a real [Ignore] after an interpolated verbatim string", async () => {
+    await withTests(
+      {
+        "tests/GT.cs": [
+          'var expected = @$"holds [Ignore] as text";',
+          '[Ignore("later")]',
+          "public void G() {}",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("scans a Python f-string's replacement field as the code it is", async () => {
+    // The field is evaluated when the string is built, so the test really is
+    // skipped. Blanking the literal whole took the only evidence of it out of
+    // the scan.
+    await withTests(
+      { "tests/test_f.py": "def test_a():\n    note = f\"{pytest.skip('later')}\"\n" },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("still blanks the literal halves of a Python f-string", async () => {
+    await withTests(
+      {
+        "tests/test_g.py": [
+          "def test_a():",
+          '    doc = f"see pytest.skip( in the docs, {name}"',
+          '    braces = f"{{pytest.skip(}} is a literal brace"',
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
       },
     );
   });

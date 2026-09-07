@@ -157,6 +157,17 @@ type NonCodeSpan = {
   escaped: boolean;
   /** Whether the span may cross a line break. */
   multiline: boolean;
+  /**
+   * Whether a second opener inside the span re-opens it instead of sitting in
+   * it as text.
+   *
+   * Rust's block comment is the case: an inner comment opened inside an outer
+   * one has to be closed twice, so a scan that stops at the first closing
+   * delimiter re-exposes the outer comment's tail as code — an `#[ignore]`
+   * written there was reported as a real attribute. Every other span here is
+   * flat, which is why the factory below defaults this to `false`.
+   */
+  nests: boolean;
 };
 
 type NonCodeSyntax = {
@@ -187,6 +198,28 @@ type NonCodeSyntax = {
    * opening quote first.
    */
   longStringOpener?: RegExp;
+  /**
+   * A format string whose body is part literal and part code, given as the
+   * span it occupies.
+   *
+   * Python's f-string is the case: `f"{pytest.skip('later')}"` evaluates the
+   * replacement field and really does skip the test, so blanking the literal
+   * whole took the only evidence of it out of the scan. See
+   * {@link maskFormatString}, which blanks the literal halves and leaves the
+   * fields.
+   */
+  formatStringOpener?: RegExp;
+  /**
+   * A regex literal, resolved by a function rather than a pattern because its
+   * delimiters are not fixed and one of its forms is ambiguous.
+   *
+   * Ruby is the case: `%r{…}` takes any delimiter, and a bare `/` is division
+   * as often as it opens a literal. `pattern = /<<~TEXT/` is a valid pattern
+   * whose body was read as a heredoc opener, and a heredoc with no terminator
+   * blanks to end of file — so every real `pending` after it left the scan.
+   * Returns the span to blank, or `null` when nothing opens here.
+   */
+  regexOpener?: (content: string, start: number) => NonCodeSpan | null;
 };
 
 const nonCodeSpan = (
@@ -194,7 +227,8 @@ const nonCodeSpan = (
   close: string,
   escaped: boolean,
   multiline: boolean,
-): NonCodeSpan => ({ open, close, escaped, multiline });
+  nests = false,
+): NonCodeSpan => ({ open, close, escaped, multiline, nests });
 
 /**
  * A Rust raw string: `r"…"`, `r#"…"#`, `br##"…"##`, any hash count.
@@ -221,6 +255,68 @@ const SINGLE_QUOTED = nonCodeSpan("'", "'", true, false);
  */
 const RUBY_HEREDOC_OPENER =
   /<<(?:[-~](?:"([A-Za-z_]\w*)"|'([A-Za-z_]\w*)'|([A-Za-z_]\w*))|"([A-Za-z_]\w*)"|'([A-Za-z_]\w*)'|([A-Z_]\w*))/y;
+
+/** The `%r` regex form, whose delimiter is whatever punctuation follows it. */
+const RUBY_PERCENT_REGEX_OPENER = /%r([^\w\s])/y;
+
+/** Bracket delimiters close with their mirror; every other one closes itself. */
+const RUBY_PERCENT_CLOSERS: Readonly<Record<string, string>> = {
+  "{": "}",
+  "[": "]",
+  "(": ")",
+  "<": ">",
+};
+
+/**
+ * Punctuation a `/` may follow and still open a regex literal: after any of
+ * these an operand has to come next, so the slash cannot be division.
+ */
+const RUBY_REGEX_AFTER_OPERATOR = /[=(,[{|&!~<>+\-*/%^?:;]\s*$/;
+
+/** Keywords with the same property, plus the methods a pattern is passed to. */
+const RUBY_REGEX_AFTER_KEYWORD =
+  /(?:^|[^\w.])(?:and|or|not|if|elsif|unless|while|until|when|case|then|do|in|return|match|match\?|split|gsub|gsub!|sub|sub!|scan|grep|grep_v)[!?]?\s*$/;
+
+/**
+ * The Ruby regex literal opened at `start`, as the span to blank, or `null`.
+ *
+ * `%r` cannot be anything else, so it is read straight and may cross line
+ * breaks: an unterminated one is a syntax error, not another reading of valid
+ * code.
+ *
+ * A bare `/` is division as often as it is a literal, and reading a division as
+ * a literal blanks real code — the direction that hides findings. So it counts
+ * only where an operand cannot stand (line start, or straight after an operator
+ * or keyword) **and** the line goes on to hold a closing `/`. `pattern =
+ * /<<~TEXT/` passes both tests; `total / count` passes neither, and `a / b / c`
+ * fails the first at each slash.
+ */
+function matchRubyRegexOpener(content: string, start: number): NonCodeSpan | null {
+  RUBY_PERCENT_REGEX_OPENER.lastIndex = start;
+  const percent = RUBY_PERCENT_REGEX_OPENER.exec(content);
+  if (percent) {
+    const open = percent[1] ?? "";
+    return nonCodeSpan(percent[0], RUBY_PERCENT_CLOSERS[open] ?? open, true, true);
+  }
+  if (content[start] !== "/") {
+    return null;
+  }
+  const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+  const before = content.slice(lineStart, start);
+  if (
+    before.trim().length > 0 &&
+    !RUBY_REGEX_AFTER_OPERATOR.test(before) &&
+    !RUBY_REGEX_AFTER_KEYWORD.test(before)
+  ) {
+    return null;
+  }
+  const lineBreak = content.indexOf("\n", start + 1);
+  const rest = content.slice(start + 1, lineBreak === -1 ? content.length : lineBreak);
+  if (!/^\/|[^\\]\//.test(rest)) {
+    return null;
+  }
+  return nonCodeSpan("/", "/", true, false);
+}
 
 /** The release `QFAI-TEST-003` stops being a warning at. */
 const SKIPPED_TEST_PROMOTION = RULE_PROMOTIONS.testSkippedSuite.promoteAt;
@@ -280,6 +376,13 @@ const JS_STUB_PATTERN = new RegExp(
   "g",
 );
 
+/**
+ * A Python f-string opener: any prefix combination containing `f`, then the
+ * opening quote. Sticky, and group 1 is the prefix so a raw f-string can drop
+ * backslash escapes; group 2 is the quote, which is also the closer.
+ */
+const PYTHON_FSTRING_OPENER = /([bBrRuU]*[fF][bBrRuU]*)("""|'''|"|')/y;
+
 /** Comment and string syntax of each non-JS dialect, for {@link maskNonCode}. */
 const PYTHON_NON_CODE: NonCodeSyntax = {
   lineComments: ["#"],
@@ -289,6 +392,7 @@ const PYTHON_NON_CODE: NonCodeSyntax = {
     DOUBLE_QUOTED,
     SINGLE_QUOTED,
   ],
+  formatStringOpener: PYTHON_FSTRING_OPENER,
 };
 
 const GO_NON_CODE: NonCodeSyntax = {
@@ -297,16 +401,36 @@ const GO_NON_CODE: NonCodeSyntax = {
   spans: [BLOCK_COMMENT, nonCodeSpan("`", "`", false, true), DOUBLE_QUOTED],
 };
 
-const JVM_NON_CODE: NonCodeSyntax = {
+/**
+ * Java: `"""` opens a text block, in which a backslash escapes — a trailing one
+ * joins the line to the next, and `\"` is a quote that does not close it.
+ */
+const JAVA_NON_CODE: NonCodeSyntax = {
   lineComments: ["//"],
   spans: [BLOCK_COMMENT, nonCodeSpan('"""', '"""', true, true), DOUBLE_QUOTED],
+};
+
+/**
+ * Kotlin: the same `"""` spelling is a *raw* string, where a backslash is a
+ * backslash. Sharing Java's definition made a raw string ending in one hide its
+ * own closing delimiter — the mask skipped the first quote of `"""` as an
+ * escaped character, ran on to end of file, and took every `@Disabled` after it
+ * out of the scan. Kotlin block comments also nest, unlike Java's.
+ */
+const KOTLIN_NON_CODE: NonCodeSyntax = {
+  lineComments: ["//"],
+  spans: [
+    nonCodeSpan("/*", "*/", false, true, true),
+    nonCodeSpan('"""', '"""', false, true),
+    DOUBLE_QUOTED,
+  ],
 };
 
 // No single-quote span: in Rust that opens a lifetime far more often than a
 // literal, and masking from one to the next would blank real code.
 const RUST_NON_CODE: NonCodeSyntax = {
   lineComments: ["//"],
-  spans: [BLOCK_COMMENT, nonCodeSpan('"', '"', true, true)],
+  spans: [nonCodeSpan("/*", "*/", false, true, true), nonCodeSpan('"', '"', true, true)],
   rawStringOpener: RUST_RAW_STRING_OPENER,
 };
 
@@ -314,21 +438,30 @@ const RUBY_NON_CODE: NonCodeSyntax = {
   lineComments: ["#"],
   spans: [DOUBLE_QUOTED, SINGLE_QUOTED],
   heredocOpener: RUBY_HEREDOC_OPENER,
+  regexOpener: matchRubyRegexOpener,
 };
 
 /**
- * A C# verbatim (`@"…"`) or raw (`"""…"""`, any quote count from three) string.
+ * A C# verbatim (`@"…"`) or raw (`"""…"""`, any quote count from three) string,
+ * with the `$` of either one's interpolated spelling.
  *
  * Both may hold line breaks, so the single-line `DOUBLE_QUOTED` span ends them
  * at the first newline and re-exposes the rest of a fixture as code — an
  * `[Ignore]` quoted inside expected output was reported as a real one. Matched
  * ahead of the plain span, and sticky like the other computed openers.
  *
+ * The interpolated forms are the same strings with a `$` on the prefix, in
+ * either order (`@$"` and `$@"` are both legal, as are `$"""` and `$$"""`), and
+ * they carry line breaks exactly as the plain ones do. Matching only `@"` left
+ * `@$"` to the single-line span, which is the defect above with an extra
+ * character in front of it.
+ *
  * The closer is computed from the opener: a verbatim string ends at a `"` that
  * is not doubled (`""` is an escaped quote inside one), and a raw string ends
- * at a run of at least as many quotes as opened it.
+ * at a run of at least as many quotes as opened it. The interpolation prefix
+ * changes neither rule.
  */
-const CSHARP_LONG_STRING_OPENER = /@"|"{3,}/y;
+const CSHARP_LONG_STRING_OPENER = /(?:@\$*|\$*@)"|\$*"{3,}/y;
 
 const CSHARP_NON_CODE: NonCodeSyntax = {
   lineComments: ["//"],
@@ -366,11 +499,20 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     runner: "go test",
     mask: (content) => maskNonCode(content, GO_NON_CODE),
   },
+  // One construct, two lexers: Java's `"""` text block takes backslash escapes
+  // and Kotlin's raw string does not, so a single entry could only be wrong for
+  // one of them.
   {
-    extensions: [".java", ".kt", ".kts"],
+    extensions: [".java"],
     pattern: /@(?:Disabled|Ignore)\b/g,
     runner: "JUnit",
-    mask: (content) => maskNonCode(content, JVM_NON_CODE),
+    mask: (content) => maskNonCode(content, JAVA_NON_CODE),
+  },
+  {
+    extensions: [".kt", ".kts"],
+    pattern: /@(?:Disabled|Ignore)\b/g,
+    runner: "JUnit",
+    mask: (content) => maskNonCode(content, KOTLIN_NON_CODE),
   },
   {
     extensions: [".rs"],
@@ -567,9 +709,13 @@ function collectStubIssues(
  * unconditionally clean ATDD gate — the exact reading `QFAI-TEST-002` exists
  * to prevent.
  *
- * Source extensions only. Fixtures and data files (`.json`, `.md`, `.yml`,
- * `.sql`) sit beside acceptance tests everywhere and never hold a stub, so
- * disclaiming them would be noise rather than coverage information.
+ * Test sources only. Fixtures and data files (`.json`, `.md`, `.yml`, `.sql`)
+ * sit beside acceptance tests everywhere and never hold a stub, so disclaiming
+ * them would be noise rather than coverage information. `.feature` is on this
+ * side of that line: Gherkin is the acceptance suite itself on a Cucumber
+ * stack, it is what the standard ATDD glob and the shipped config comment point
+ * at, and a suite written entirely in it selected no file at all — an
+ * unconditionally clean gate over a directory nothing had read.
  */
 const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
   "c",
@@ -581,6 +727,7 @@ const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
   "erl",
   "ex",
   "exs",
+  "feature",
   "fs",
   "groovy",
   "hs",
@@ -653,11 +800,25 @@ function maskNonCode(content: string, syntax: NonCodeSyntax): string {
       i += heredoc.length;
       continue;
     }
+    // Before the fixed spans: a `%r'…'` opener would otherwise reach its quote
+    // first, and a `/` is not a span opener at all.
+    const regex = syntax.regexOpener ? syntax.regexOpener(content, i) : null;
+    if (regex) {
+      i = maskSpan(content, blank, i, regex);
+      continue;
+    }
     const raw = syntax.rawStringOpener
       ? matchRawStringOpener(content, i, syntax.rawStringOpener)
       : null;
     if (raw) {
       i = maskRawString(content, blank, i, raw);
+      continue;
+    }
+    const format = syntax.formatStringOpener
+      ? matchFormatStringOpener(content, i, syntax.formatStringOpener)
+      : null;
+    if (format) {
+      i = maskFormatString(content, blank, i, format);
       continue;
     }
     const long = syntax.longStringOpener
@@ -829,7 +990,9 @@ function maskLongString(
 ): number {
   for (let k = start; k < start + open.length; k += 1) blank(k);
   let i = start + open.length;
-  if (open === '@"') {
+  // The `$` of an interpolated spelling changes neither closing rule, so the
+  // two forms are told apart by the `@` alone.
+  if (open.includes("@")) {
     while (i < content.length) {
       if (content[i] === '"') {
         // `""` is one escaped quote inside a verbatim string, not the end.
@@ -847,8 +1010,9 @@ function maskLongString(
     }
     return i;
   }
-  // A raw string closes on a run of at least as many quotes as opened it.
-  const quotes = open.length;
+  // A raw string closes on a run of at least as many quotes as opened it. The
+  // interpolation `$`s are not part of that count.
+  const quotes = open.replace(/^\$+/, "").length;
   while (i < content.length) {
     if (content[i] === '"') {
       let run = 0;
@@ -867,6 +1031,94 @@ function maskLongString(
   return i;
 }
 
+/** The f-string opened at `start`, or `null` when none is. */
+function matchFormatStringOpener(
+  content: string,
+  start: number,
+  opener: RegExp,
+): { prefix: string; quote: string; length: number } | null {
+  // The prefix has to begin a token. In `perf"x"` the `f"` is the tail of an
+  // identifier followed by an ordinary string, not an f-string opener.
+  if (start > 0 && /\w/.test(content[start - 1] ?? "")) {
+    return null;
+  }
+  opener.lastIndex = start;
+  const match = opener.exec(content);
+  if (!match) {
+    return null;
+  }
+  return { prefix: match[1] ?? "", quote: match[2] ?? "", length: match[0].length };
+}
+
+/**
+ * Blanks the literal halves of a format string and leaves its replacement
+ * fields as code; returns the index just past the whole literal.
+ *
+ * `f"{pytest.skip('later')}"` evaluates the field when the string is built, so
+ * the test really is skipped — blanking the literal whole took the only
+ * evidence of that out of the scan, and the finding this validator exists for
+ * was never emitted. `{{` and `}}` are literal braces and open no field.
+ *
+ * Brace depth is counted so a quote inside a field cannot be read as the
+ * closer; a quote inside a *string* inside a field can still be, which is the
+ * limit of a scanner that is not a Python lexer. That direction leaves text
+ * exposed rather than blanking code, so it can only cost a false positive on a
+ * construct no acceptance suite writes, never hide a stub.
+ */
+function maskFormatString(
+  content: string,
+  blank: (index: number) => void,
+  start: number,
+  open: { prefix: string; quote: string; length: number },
+): number {
+  const escaped = !/[rR]/.test(open.prefix);
+  const multiline = open.quote.length === 3;
+  for (let k = start; k < start + open.length; k += 1) blank(k);
+  let i = start + open.length;
+  let depth = 0;
+  while (i < content.length) {
+    if (content[i] === "\n" && !multiline) {
+      return i;
+    }
+    if (depth > 0) {
+      // Inside a field: the text is code and stays. Only the braces are
+      // counted, so the closing quote is not read out of one.
+      if (content[i] === "{") depth += 1;
+      else if (content[i] === "}") {
+        depth -= 1;
+        if (depth === 0) blank(i);
+      }
+      i += 1;
+      continue;
+    }
+    if (escaped && content[i] === "\\") {
+      blank(i);
+      if (i + 1 < content.length) blank(i + 1);
+      i += 2;
+      continue;
+    }
+    if ((content[i] === "{" || content[i] === "}") && content[i + 1] === content[i]) {
+      blank(i);
+      blank(i + 1);
+      i += 2;
+      continue;
+    }
+    if (content[i] === "{") {
+      blank(i);
+      depth = 1;
+      i += 1;
+      continue;
+    }
+    if (content.startsWith(open.quote, i)) {
+      for (let k = i; k < i + open.quote.length; k += 1) blank(k);
+      return i + open.quote.length;
+    }
+    blank(i);
+    i += 1;
+  }
+  return i;
+}
+
 /** Blanks one {@link NonCodeSpan}; returns the index just past it. */
 function maskSpan(
   content: string,
@@ -876,6 +1128,8 @@ function maskSpan(
 ): number {
   for (let k = start; k < start + span.open.length; k += 1) blank(k);
   let i = start + span.open.length;
+  // A flat span is the depth-1 case of a nesting one, so one loop covers both.
+  let depth = 1;
   while (i < content.length) {
     // An unterminated quote must not swallow the rest of the file: a
     // single-line span ends at the line break whatever follows it.
@@ -886,9 +1140,18 @@ function maskSpan(
       i += 2;
       continue;
     }
+    if (span.nests && content.startsWith(span.open, i)) {
+      for (let k = i; k < i + span.open.length; k += 1) blank(k);
+      i += span.open.length;
+      depth += 1;
+      continue;
+    }
     if (content.startsWith(span.close, i)) {
       for (let k = i; k < i + span.close.length; k += 1) blank(k);
-      return i + span.close.length;
+      i += span.close.length;
+      depth -= 1;
+      if (depth === 0) return i;
+      continue;
     }
     blank(i);
     i += 1;
@@ -945,6 +1208,49 @@ function reportEmptyTestFileGlobs(): Issue {
   );
 }
 
+/**
+ * The truncation form of `QFAI-TEST-002`: the selection was cut at the limit and
+ * the files past it were never opened.
+ *
+ * Dropping `truncated` made that indistinguishable from a scanned-and-clean
+ * run, so a suite larger than the limit could carry a stub through
+ * `--fail-on error` untouched — the same non-result-read-as-result the other two
+ * forms of this code exist to prevent.
+ *
+ * The remedy depends on where the selection came from, so the finding branches
+ * on it. A caller that brings its own globs — the ATDD gate scans the acceptance
+ * directories — is not reading `validation.traceability.testFileGlobs` at all,
+ * and telling its operator to narrow that key names a setting that cannot
+ * change the outcome. `validation.traceability.testFileExcludeGlobs` is applied
+ * on both paths, so it is the one key that helps on either.
+ *
+ * The count is of files **read**, and it is the limit itself:
+ * `collectFilesByGlobs` stops the stream once it has that many and never learns
+ * how many more would have matched. Saying "matched" claimed a total the scan
+ * had not measured.
+ */
+function reportTruncatedScan(limit: number, callerGlobs: boolean): Issue {
+  const key = callerGlobs
+    ? "validation.traceability.testFileExcludeGlobs"
+    : "validation.traceability.testFileGlobs";
+  const selection = callerGlobs
+    ? "the acceptance directories this gate scans"
+    : "`validation.traceability.testFileGlobs`";
+  const remedy = callerGlobs
+    ? "Widen `validation.traceability.testFileExcludeGlobs` in qfai.config.yaml so the selection fits under the limit and every acceptance test is actually read."
+    : "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read.";
+  return issue(
+    "QFAI-TEST-002",
+    `The stub scan read the first ${limit} files of ${selection} and stopped at that limit, so the rest were never opened. A clean result is not evidence that they hold no stub.`,
+    "info",
+    "qfai.config.yaml",
+    key,
+    [key],
+    "canonical",
+    remedy,
+  );
+}
+
 export async function validateTestTodoStubs(
   root: string,
   config: QfaiConfig,
@@ -971,7 +1277,7 @@ export async function validateTestTodoStubs(
     ]),
   );
 
-  const { files, truncated, matchedFileCount, limit } = await collectFilesByGlobs(root, {
+  const { files, truncated, limit } = await collectFilesByGlobs(root, {
     globs: Array.from(globs),
     ignore: excludeGlobs,
     limit: DEFAULT_GLOB_FILE_LIMIT,
@@ -1006,24 +1312,8 @@ export async function validateTestTodoStubs(
   }
 
   if (truncated) {
-    // The third state a clean result can mean: the selection was cut at the
-    // limit and the files past it were never opened. Dropping `truncated` made
-    // that indistinguishable from a scanned-and-clean run, so a suite larger
-    // than the limit could carry a stub through `--fail-on error` untouched —
-    // the same non-result-read-as-result the other two forms of this code
-    // exist to prevent.
-    issues.push(
-      issue(
-        "QFAI-TEST-002",
-        `The stub scan matched ${matchedFileCount} files and stopped at the ${limit}-file limit, so the rest were not read. A clean result is not evidence that they hold no stub.`,
-        "info",
-        "qfai.config.yaml",
-        "validation.traceability.testFileGlobs",
-        ["validation.traceability.testFileGlobs"],
-        "canonical",
-        "Narrow `validation.traceability.testFileGlobs`, or widen `validation.traceability.testFileExcludeGlobs`, so the selection fits under the limit and every acceptance test is actually read.",
-      ),
-    );
+    // The third state a clean result can mean.
+    issues.push(reportTruncatedScan(limit, options.globs !== undefined));
   }
 
   if (unscannedExtensions.size > 0) {
