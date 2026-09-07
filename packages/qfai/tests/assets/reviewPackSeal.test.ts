@@ -137,7 +137,7 @@ describe("the review pack seal has a heading of its own", () => {
 
       // Gate item 10 is the consumer that recomputes the seal.
       expect(flat(skill)).toContain(
-        "Every `Review pack seal` the entry carries (`references/evidence-revision.md#review-pack-seal`)",
+        "directory it names (`references/evidence-revision.md#review-pack-seal`)",
       );
       // The per-round field list names the fields and points at the contract.
       expect(flat(round)).toContain("`Round N: Review pack` — the `review-<timestamp>/` directory");
