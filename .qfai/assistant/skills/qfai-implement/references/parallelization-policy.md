@@ -336,8 +336,10 @@ So:
   worktree copy is read-only for the duration of the slice. This is the scope of
   the prohibition: it is the whole `tdd/` subtree, not `test-list.md` alone.
 - Each worker returns, per item it processed: `TDD-ID`, final `Status`, its
-  `DR-ID` where the item's status requires one, and the `Evidence` payload
-  carrying **every** field of
+  `DR-ID` whenever the row carries one — the `DR-*` an `exception` row is
+  invalid without, and the `CR-*` an approved upstream reset put there, which
+  the row keeps through every later status — its `Blocked-By` when the status it
+  returns is `blocked`, and the `Evidence` payload carrying **every** field of
   `../SKILL.md#per-item-evidence-contract-fresh-evidence-required` — the parent
   directory, because this file lives in `references/`. That contract is
   the only statement of the field list — `Status` and `DR-ID` are ledger cells
@@ -347,16 +349,18 @@ So:
   block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
   `../SKILL.md#post-parallel-integration-verify`, before the verify runs —
-  **the three cells a worker reports**, not Status and Evidence alone. Those are
-  three of the four the Drift Protocol carves out unconditionally; the fourth,
-  `Blocked-By`, is written at the `todo -> blocked` transition rather than here,
-  and a merged slice has not taken that edge. A
+  **every cell a worker reports**, not Status and Evidence alone. Those are the
+  four the Drift Protocol carves out unconditionally, and `Blocked-By` is among
+  them whenever the worker took the `todo -> blocked` edge inside its slice: the
+  edge is the orchestrator's to write in serial mode because that is where the
+  transition happens, and under parallel dispatch it happens in the worker. A
   worker cannot write the ledger, and `/qfai-implement`'s Completion step
-  reconciles rather than writes, so a `DR-ID` dropped here is written by nobody:
+  reconciles rather than writes, so a cell dropped here is written by nobody:
   an `exception` row lands without the `DR-*` that
-  `TDDLIST_EXCEPTION_MISSING_DR` requires at `error`, and a row reset by an
+  `TDDLIST_EXCEPTION_MISSING_DR` requires at `error`, a row reset by an
   approved Change Request loses the `CR-*` it must retain through its later
-  statuses.
+  statuses, and a row the worker parked lands at `blocked` naming no blocker,
+  which is what `TDDLIST_BLOCKED_MISSING_REF` reports.
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 

@@ -1,22 +1,21 @@
 /**
- * `/qfai-implement` named two different moments for the same ledger write.
+ * One ledger, one write point per cell, stated the same way everywhere.
  *
- * `### Completion` step 1 said "After processing all items, update
- * `test-list.md` with final Status, DR-ID and Evidence values", which reads as
- * the moment the ledger is first populated — every row that ran before it
- * unrecorded. The Orchestrator Protocol said the opposite: write after each
- * phase completes. An interrupted run following the former leaves the file's
- * own recovery passages (`review-fix` pickup, the unreconciled-ledger warning,
- * the checkpoint boundary) nothing to read.
+ * `/qfai-implement` names the moment each cell is written in three places: the
+ * Orchestrator Protocol mandates the write, `### Completion` confirms it
+ * happened, and `references/parallelization-policy.md` says who performs it
+ * when the phases run inside a worker. Nothing compares the three, so they can
+ * name different moments and different cells while each reads as correct on
+ * its own.
  *
- * The two rules also disagreed on cells: Completion named three, the per-phase
- * mandate named two. `DR-ID` therefore had no per-phase write point, so a row
- * that entered `exception` mid-run stayed observable with an empty `DR-ID`
- * until the end of the run — while `references/execution-ledger.md` requires a
- * `DR-*` for every `exception` row.
+ * What that costs is invisible until a run is interrupted. A cell whose write
+ * point is the end of the run is unwritten for every row that ran before it,
+ * so the file's own recovery passages — the `review-fix` pickup, the
+ * unreconciled-ledger warning, the checkpoint boundary — read a ledger saying
+ * nothing was done. A cell no rule assigns to anyone is worse: it is simply
+ * absent, and the gate requiring it fails a spec with no visible fault.
  *
- * These tests pin Completion as a reconciliation pass and `DR-ID` as a
- * per-phase write.
+ * These cases hold the three statements to one reading.
  */
 
 import { readFile } from "node:fs/promises";
@@ -42,7 +41,8 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain(
       "After processing all items, confirm every row's `Status`, `DR-ID`, `Evidence` and `Blocked-By` match the writes the Orchestrator Protocol mandates",
     );
-    // The old spelling is the one that reads as "write the ledger here".
+    // The spelling that reads as "write the ledger here" instead, which is
+    // what makes the step the first write rather than the check on it.
     expect(skill).not.toContain(
       "update `test-list.md` with final Status, DR-ID, Evidence and Blocked-By values",
     );
@@ -60,7 +60,8 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain(
       "update `test-list.md` **Status, DR-ID and Evidence** after each phase completes",
     );
-    // The two-cell spelling is what left `DR-ID` with no owner until the end.
+    // A two-cell mandate leaves `DR-ID` with no per-phase owner, so the cell
+    // is unwritten for every row that reaches `exception` before the run ends.
     expect(skill).not.toContain("update `test-list.md` **Status and Evidence** after each phase");
   });
 
@@ -94,12 +95,13 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   });
 
   it("carries DR-ID through the parallel reconcile, the one write left", async () => {
-    // A parallel worker cannot write the ledger, and Completion now only
-    // reconciles — so a reconcile spelled "Status + Evidence" leaves an
-    // `exception` row's mandatory `DR-*` written by nobody at all.
+    // A parallel worker cannot write the ledger and Completion only
+    // reconciles, so this reconcile is the only write a merged row gets. A
+    // cell it omits is written by nobody: an `exception` row lands without the
+    // `DR-*` its own gate requires.
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "Write `Status`, `DR-ID` and `Evidence` — the three cells a worker reports, and three of the four the Drift Protocol carves out unconditionally — for every merged item",
+      "Write every cell a worker reports — `Status`, `DR-ID`, `Evidence`, and `Blocked-By` when the worker parked the row — for every merged item",
     );
     expect(skill).not.toContain("Write Status + Evidence for every merged item");
     expect(skill).toContain("TDDLIST_EXCEPTION_MISSING_DR");
@@ -108,13 +110,13 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       tree,
       "assistant/skills/qfai-implement/references/parallelization-policy.md",
     );
-    expect(policy).toContain("`DR-ID` where the item's status requires one");
-    // The three are what a worker reports. They are three of the four the
-    // carve-out covers unconditionally — `Blocked-By` is the fourth and is
-    // written at the `todo -> blocked` transition, which a merged slice has
-    // not taken — and `Test file` / `Selector` are writable only while their
-    // condition holds.
-    expect(policy).toContain("**the three cells a worker reports**, not Status and Evidence alone");
+    expect(policy).toContain("`DR-ID` whenever the row carries one");
+    // Every cell the worker reports, because the reconcile is the only write
+    // those rows get. `Blocked-By` is among them when the worker took the
+    // `todo -> blocked` edge inside its slice: the edge is the orchestrator's
+    // in serial mode because that is where it happens, and under parallel
+    // dispatch it happens in the worker.
+    expect(policy).toContain("**every cell a worker reports**, not Status and Evidence alone");
     // Serial mode returns the same three; it has no merge step, not a
     // different contract.
     expect(policy).toContain(
@@ -133,7 +135,9 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain(
       "**Under coordinated parallel dispatch that currency is not available and this step does not supply it**",
     );
-    // The unqualified spelling is the claim that was false for parallel mode.
+    // Unqualified, the same sentence claims the guarantee for parallel mode,
+    // where a `todo` row after an interruption means "not merged" rather
+    // than "never attempted".
     expect(skill).not.toContain("first write: a row is written when its phase completes");
     // The per-phase mandate carries the same qualifier, so the two rules do
     // not disagree again the way this file's docblock describes.
