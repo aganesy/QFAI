@@ -12,11 +12,11 @@
 - AC-Refs: AC-0013-0002
 - Verify every indexed ID in `_policies/05_Contracts.md` maps to a declared file.
 
-## TC-0013-0003: Discussion-Pack Preflight Stop
+## TC-0013-0003: Usable-Source Preflight Stop
 
 - EX-Ref: EX-0013-0003
 - AC-Refs: AC-0013-0003
-- Verify SDD stops when discussion pack is missing or incomplete.
+- Verify SDD continues on an incomplete or contradictory pack, and stops only when no usable source exists.
 
 ## TC-0013-0004: Slice Gate US->AC->BR->EX->TC
 

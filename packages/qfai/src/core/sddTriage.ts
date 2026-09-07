@@ -426,13 +426,20 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
         // pattern (PR #206 review LW-I): the triage row is presented
         // for manual review + AskUserQuestion approval rather than
         // as a confident classification.
+        //
+        // The `Existing Spec` cell is part of that placeholder. DELETE
+        // removes a whole spec directory, so a row that names none is not
+        // executable; the rationale names the follow-up and the validator
+        // (`QFAI-TRIAGE-009`) refuses the row until the target is settled,
+        // the same producer/validator contract CREATE has with
+        // `QFAI-TRIAGE-006`.
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: null,
           op: "DELETE",
           rationale:
-            "no active spec absorbed the removal-shaped REQ; verify the subject is genuinely retired before approving DELETE (otherwise downgrade to UPDATE:REMOVE on the relevant spec)",
+            "no active spec absorbed the removal-shaped REQ; verify the subject is genuinely retired, then replace the Existing Spec placeholder with the spec this DELETE removes before persisting (QFAI-TRIAGE-009) — otherwise downgrade to UPDATE:REMOVE on the relevant spec",
         });
       }
       continue;
@@ -517,6 +524,21 @@ export const TRIAGE_TABLE_HEADER = [
 ] as const;
 
 /**
+ * The `Existing Spec` literal for a row that has no spec to act on — in
+ * practice a CREATE row. `-` is the spelling the field already uses and it
+ * matches the "not applicable" cells of the neighbouring `Sub-op` /
+ * `Approved By` columns, so it is the canonical one.
+ */
+export const TRIAGE_NO_EXISTING_SPEC = "-";
+
+/**
+ * Legacy spelling of `TRIAGE_NO_EXISTING_SPEC` that this renderer emitted
+ * before the grammar was fixed. Still accepted by the validator so an
+ * upgrade does not invalidate delta.md files written by an older version.
+ */
+export const TRIAGE_NO_EXISTING_SPEC_LEGACY = "(none)";
+
+/**
  * Escape a single Triage table cell so the resulting markdown row keeps
  * the column structure intact even when the source REQ subject /
  * rationale / spec name contains literal `|` (e.g. CLI flags
@@ -570,7 +592,7 @@ export function renderTriageMarkdown(rows: TriageRow[]): string {
     const cells = [
       row.source,
       row.subject,
-      row.existingSpec ?? "(none)",
+      row.existingSpec ?? TRIAGE_NO_EXISTING_SPEC,
       top,
       sub,
       row.approvedBy ?? "-",

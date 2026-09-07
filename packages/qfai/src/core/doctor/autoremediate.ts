@@ -3,7 +3,8 @@
  *
  * Coordinates three remediations on demand:
  *   1. install unmet runtimeDependencies (via `npm install <name>`).
- *   2. archive stale review packs (delegates to `cleanStaleReviewPacks`).
+ *   2. archive stale review packs (delegates to `cleanStaleReviewPacks`)
+ *      and prune stale validate run logs (via `cleanStaleRunLogs`).
  *   3. write missing default-keyed config fields (does NOT overwrite
  *      user-authored values).
  *
@@ -35,7 +36,9 @@ import { parse as parseYaml } from "yaml";
 import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
+import { WOULD_UNTRACK_REASON } from "./archiveVisibility.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
+import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
 import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
@@ -59,6 +62,14 @@ export type AutoremediateSummary = {
   readonly installed: readonly string[];
   readonly archived: readonly string[];
   readonly configFieldsWritten: readonly string[];
+  /** Validate run-log directories pruned by this run. */
+  readonly prunedRunLogs: readonly string[];
+  /**
+   * Run-log directories this run tried and failed to remove. Non-empty
+   * means the prune was partial — `prunedRunLogs` is still irreversibly
+   * gone — and the caller must exit non-zero.
+   */
+  readonly failedRunLogPrunes: readonly string[];
   /** Review packs recorded as predating `revision_form` by this run. */
   readonly legacyPacksRecorded: readonly string[];
 };
@@ -251,6 +262,8 @@ export async function runAutoremediate(
       installed: [],
       archived: [],
       configFieldsWritten: [],
+      prunedRunLogs: [],
+      failedRunLogPrunes: [],
       legacyPacksRecorded: [],
     };
   }
@@ -296,7 +309,7 @@ export async function runAutoremediate(
   }
 
   // (2) Archive stale review packs (--clean behavior).
-  const { config } = await loadConfig(options.root);
+  const { config, issues: configIssues } = await loadConfig(options.root);
   const ttlDays = config.review?.staleTtlDays;
   const cleanResult = await cleanStaleReviewPacks(options.root, {
     ...(typeof ttlDays === "number" ? { ttlDays } : {}),
@@ -310,17 +323,60 @@ export async function runAutoremediate(
   // dry-run vocabulary instead (`would archive` / `would move ->`).
   if (options.dryRun) {
     lines.push(
-      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}, kept-tracked=${cleanResult.skippedWouldUntrack.length}`,
     );
     for (const packName of archivedNames) {
       lines.push(`  would move -> _archive/${packName}`);
     }
+    for (const entry of cleanResult.skippedWouldUntrack) {
+      lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
+    }
   } else {
     lines.push(
-      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}, kept-tracked=${cleanResult.skippedWouldUntrack.length}`,
     );
     for (const packName of archivedNames) {
       lines.push(`  -> _archive/${packName}`);
+    }
+    for (const entry of cleanResult.skippedWouldUntrack) {
+      lines.push(`  kept ${entry.packName}: ${WOULD_UNTRACK_REASON}`);
+    }
+  }
+
+  // (2b) Prune stale validate run logs (--clean behavior, second target).
+  // Kept in lockstep with the `--clean` branch in `cli/commands/doctor.ts`
+  // so `--autoremediate` is not a narrower clean than `--clean`.
+  // Same precondition gate as `--clean`: an invalid config or an outDir
+  // shared with another project root means the retention numbers in
+  // hand are not the ones governing the directory, and this half of the
+  // cleanup deletes rather than moves.
+  const prunedRunLogs: string[] = [];
+  const failedRunLogPrunes: string[] = [];
+  const precheck = await precheckRunLogPrune(options.root, config, configIssues);
+  if (precheck.blocked) {
+    lines.push(`autoremediate: run log prune skipped — ${precheck.reason}`);
+  } else {
+    const runLogTtlDays = config.report?.staleTtlDays;
+    const keepLatestRuns = config.report?.keepLatestRuns;
+    const runLogResult = await cleanStaleRunLogs(options.root, config, {
+      ...(typeof runLogTtlDays === "number" ? { ttlDays: runLogTtlDays } : {}),
+      ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
+      ...(options.dryRun ? { dryRun: true } : {}),
+    });
+    prunedRunLogs.push(...runLogResult.removed.map((entry) => entry.runId));
+    lines.push(
+      options.dryRun
+        ? `autoremediate: would prune run logs=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length} (dry-run)`
+        : `autoremediate: run logs pruned=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length}`,
+    );
+    // A failed `rm` no longer aborts the pruner, so the partial outcome
+    // is reported here instead of being lost with the summary: the
+    // removals above already happened and cannot be undone.
+    failedRunLogPrunes.push(...runLogResult.failed.map((failure) => failure.entry.runId));
+    for (const failure of runLogResult.failed) {
+      lines.push(
+        `autoremediate: run log prune failed -> ${failure.entry.runId}: ${failure.reason}`,
+      );
     }
   }
 
@@ -376,6 +432,8 @@ export async function runAutoremediate(
     lines,
     installed,
     archived: archivedNames,
+    prunedRunLogs,
+    failedRunLogPrunes,
     configFieldsWritten,
     legacyPacksRecorded: migration.added,
   };

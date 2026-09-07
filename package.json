@@ -14,7 +14,7 @@
   "scripts": {
     "preinstall": "node ./scripts/check-not-a-dependency.mjs",
     "build": "pnpm -C packages/qfai build",
-    "sync:ssot": "node ./scripts/gen-agent-catalog.mjs && node ./scripts/sync-init-to-root.mjs",
+    "sync:ssot": "node ./scripts/gen-agent-catalog.mjs && node ./scripts/sync-init-to-root.mjs && node ./scripts/gen-codex-agents.mjs",
     "ci:gate": "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && pnpm format:check && pnpm lint && pnpm lint:md && pnpm check-types && node ./scripts/check-bidi.mjs && node ./scripts/check-readme-alignment.mjs && node ./scripts/check-instructions-size.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",
     "ci:lint": "node ./scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene && pnpm format:check && pnpm lint && pnpm lint:md && node ./scripts/check-bidi.mjs && node ./scripts/check-readme-alignment.mjs && node ./scripts/check-instructions-size.mjs && node ./scripts/check-review-profile-consistency.mjs && node ./scripts/check-prompt-scanner-pair.mjs && pnpm -C packages/qfai lint:shipping && pnpm -C packages/qfai lint:workflow-shape && pnpm -C packages/qfai lint:mirror-surface && node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017 && node ./packages/qfai/scripts/check-pack-locations.mjs",
     "ci:build-verify": "node ./scripts/check-build-warnings.mjs && pnpm verify:pack && node ./scripts/check-publish-dry-run.mjs",

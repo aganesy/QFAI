@@ -12,6 +12,7 @@
 import { mkdir, readdir, rename, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { moveWouldLeaveVersionControl } from "./archiveVisibility.js";
 import { isReviewPackArchiveEligible, REVIEW_STALE_TTL_DAYS_DEFAULT } from "./staleTtl.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/iu;
@@ -36,6 +37,12 @@ export type CleanReviewPackEntry = {
 export type CleanReviewPacksResult = {
   readonly archived: readonly CleanReviewPackEntry[];
   readonly skippedInTtl: readonly CleanReviewPackEntry[];
+  /**
+   * Eligible packs left in place because the archive destination is git-ignored
+   * and the pack is tracked. Moving them would delete committed review evidence
+   * from the repository on the next commit, which is not what "archive" means.
+   */
+  readonly skippedWouldUntrack: readonly CleanReviewPackEntry[];
   readonly reviewRoot: string;
   readonly archiveDir: string;
   readonly ttlDays: number;
@@ -81,6 +88,7 @@ export async function cleanStaleReviewPacks(
 
   const archived: CleanReviewPackEntry[] = [];
   const skipped: CleanReviewPackEntry[] = [];
+  const wouldUntrack: CleanReviewPackEntry[] = [];
 
   const entries = await listEntries(reviewRoot);
   for (const entry of entries) {
@@ -94,6 +102,12 @@ export async function cleanStaleReviewPacks(
     };
     if (!eligible) {
       skipped.push(record);
+      continue;
+    }
+    // Asked before the plan is recorded, so `--dry-run` previews the refusal
+    // rather than promising a move the real run will decline.
+    if (moveWouldLeaveVersionControl(root, entry.abs, toPath)) {
+      wouldUntrack.push(record);
       continue;
     }
     archived.push(record);
@@ -115,6 +129,7 @@ export async function cleanStaleReviewPacks(
   return {
     archived,
     skippedInTtl: skipped,
+    skippedWouldUntrack: wouldUntrack,
     reviewRoot,
     archiveDir,
     ttlDays,

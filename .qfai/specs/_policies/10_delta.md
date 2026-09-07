@@ -650,7 +650,7 @@
 
 ### Distributed-Surface Impact
 
-- `.qfai/steering/` (work-log surface, project-root) is NOT in `packages/qfai/package.json#files`. Only the seeded `assets/init/.qfai/steering/{README.md,.gitkeep,_templates/entry.md}` (generic content, no internal IDs) is shipped.
+- `.qfai/steering/` (work-log surface, project-root) is NOT in `packages/qfai/package.json#files`. Only the seeded `README.md` / `.gitkeep` / `_templates/entry.md` (generic content, no internal IDs) is shipped, and not as files under `assets/`: all three bodies are built by `packages/qfai/src/cli/commands/init.ts` and reach the distributed surface as string literals inside `dist/` — `.gitkeep`'s body is the empty string.
 - All relocation under `.qfai/assistant/**` continues to ship as today; the layer 1/2/3 leakage scan covers the new layout because `package.json#files` is the input.
 
 ## 2026-05-24 — CHG-005 — qfai-prototyping defect remediation (cross-spec)

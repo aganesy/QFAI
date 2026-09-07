@@ -9,12 +9,17 @@ run.
   test exercises a predicate that row already made pass. The usual case when a
   BR binds several ACs to one common validator. **Not an anomaly** and does
   **not** go to `exception`. Follow the procedure below.
-- **Or, on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`,
-  satisfied by production code no ledger row owns** — a pre-existing route, or
-  one built outside the ledger. Same procedure, and `Satisfied-by` takes the
-  path rather than a row id (step 1). Specific to those rows: their surfaces
-  come from work orders that never appear in the ledger, which is not true of
-  a `Unit` / `Component` / `Integration` row.
+- **Or, on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed
+  over by `/qfai-atdd`, satisfied by production code no ledger row owns** — a
+  pre-existing route, or one built outside the ledger. Same procedure, and
+  `Satisfied-by` takes the path rather than a row id (step 1). Specific to the
+  ATDD-owned rows (`execution-ledger.md#atdd-owned-rows`): their surfaces come
+  from work orders that never appear in the ledger, which is not true of a
+  `Unit` / `Component` row. **`Integration` among them**, because
+  `QFAI-ATDD-112` files every `L3` TC — and every one whose `Level` that
+  vocabulary cannot read — in `tests/integration/**` and `/qfai-atdd` P4 writes
+  those tests, so an integration surface reaches this branch on exactly the
+  terms an `E2E` one does.
 - **Or, on a row resumed from `blocked`, satisfied by this row's own earlier
   round** — `blocked` is reachable from `green` and `refactor`
   (`execution-ledger.md#allowed-transitions`) and `blocked` -> `todo` restarts
@@ -56,19 +61,27 @@ for the natural RED and let the row proceed to `green` and `done`:
    by code.
 
    **The production path and symbol** (`src/api/routes/evaluations.py::register`)
-   **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
-   `/qfai-atdd`** — path _and_ symbol, never a commit id on its own. A commit
+   **is accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration`
+   row handed over by `/qfai-atdd`** — path _and_ symbol, never a commit id on
+   its own. A commit
    that touched several routes and a helper names no single predicate, so the
    Oracle Strength Check has no boundary to apply and would take a mutation
    anywhere inside it; `qa-gatekeeper` REVISEs that form for exactly this
    reason. A commit recorded alongside the symbol is provenance and is fine. Those surfaces routinely
    have no ledger row — a pre-existing route, or one built outside the ledger —
    so requiring a row id sent every one of them to `exception`, the terminal
-   state this procedure exists to avoid. On a `Unit` / `Component` /
-   `Integration` row it is **not** accepted: production code no ledger row owns
-   is the "anything else" case above, and `qfai-implement/SKILL.md` Phase Red
-   step 5 sends it to `exception`. Widening the field for every row would let
-   an ordinary TDD row reach `done` with no production change and no sibling.
+   state this procedure exists to avoid. On a `Unit` / `Component` row it is
+   **not** accepted: production code no ledger row owns is the "anything else"
+   case above, and `qfai-implement/SKILL.md` Phase Red step 5 sends it to
+   `exception`. Widening the field for every row would let an ordinary TDD row
+   reach `done` with no production change and no sibling. **`Integration` sits
+   with `E2E` and `API`, not with `Unit` and `Component`**: it is an ATDD-owned
+   row seeded by `/qfai-sdd` Phase 2b and handed over with its provenance, and
+   `../../qfai-atdd/references/red-provenance.md` and
+   `../../../agents/qa-gatekeeper.md`
+   both already accept the path-and-symbol form there — excluding it here made
+   one correct handoff read as `todo -> red` or as a blocking `exception`
+   depending on which file the agent opened.
 
    **On a row resumed from `blocked` it is this row's own row id plus the round
    whose GREEN wrote the predicate** (`TDD-0007 round 1`) — the only case where
@@ -127,7 +140,7 @@ re-derived by each author.
 
 The `Evidence` cell carries `Satisfied-by`, `Falsifiability command`,
 `Falsifiability result` and the GREEN pair in place of a RED pair. The
-11-point gate is all-conditions-required, so every item this path touches is
+12-point gate is all-conditions-required, so every item this path touches is
 listed here — a substitute that only covered item 3 would still leave the row
 unable to reach `done`.
 
@@ -150,7 +163,7 @@ unable to reach `done`.
 - **The `FINAL CHECKLIST` Red and Green boxes** are ticked by this path's
   substitutes: the falsifiability trio for Red, and the observed pass with no
   new production code for Green.
-- **`project_memory` and `constitution/workflow.md`** restate "fresh RED +
+- **`project_memory` and `.qfai/assistant/constitution/workflow.md`** restate "fresh RED +
   GREEN evidence is mandatory per item"; both now carry this path's exception,
   so a run that reloads only its memory context does not re-impose the RED pair
   and force a fabricated failure.

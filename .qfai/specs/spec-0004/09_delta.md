@@ -1,5 +1,70 @@
 # 09 delta
 
+## 2026-09-04
+
+- `CR-20260904-0003` (`confirm-only`, `/qfai-sdd 0004`): this spec's
+  `iter-NN/review.json` schema disagreed with
+  `core/validators/prototypingEvidence.ts` in three places, and the
+  implementation is canonical for all three (operator decision).
+  `AC-0004-0012`'s eight `lap-*` IDs named navigation and interaction defects
+  while `assets/validators/layoutAntiPatterns.json` — what `loadKnownLapIds`
+  resolves against — names layout archetypes; seven of eight had no
+  counterpart, so every ID the criterion listed except
+  `lap-008-no-back-affordance` was rejected by the shipped gate. The criterion
+  now points at the registry and lists its IDs with their scopes.
+  `AC-0004-0013`'s `designMdViolations` shape was
+  `{category, expected, found, location}` with any extra field rejecting; the
+  validator checks `{kind, found}` and ignores the rest, and the criterion now
+  says so. `04_Business-Rules.md` and `05_Examples.md` said `prose` where the
+  validator requires `proseCritique` — 17 occurrences plus `REVIEW_KNOWN_KEYS`,
+  so a payload written to the spec was rejected twice.
+
+  **Upstream artifacts changed:** `03_Acceptance-Criteria.md`,
+  `04_Business-Rules.md`, `05_Examples.md`, `08_Open-questions.md`. All are
+  upstream SSOT under `drift-protocol.md:63-65`, which is why this took a
+  Change Request. Each corrected criterion records what it used to say.
+
+  No DERIVED artifact changed, and no test: `06_Test-Cases.md` cites the
+  criteria by ID rather than restating the shapes, and the tests already assert
+  the implementation's shape — which is what this CR makes canonical.
+
+  **Not settled:** two product questions the choice does not answer are open as
+  `OQ-0168` (is the navigation-defect family separately worth detecting? seven
+  of those IDs have no detector today and none was deliberately retired) and
+  `OQ-0169` (should a reviewer supply `expected` and `location`? the gate drops
+  both, so a violation is reported without a location). Filed from **#1105**.
+
+- `CR-20260904-0001` (`confirm-only`, `/qfai-sdd 0004`): `TDD-0011`, `TDD-0012`
+  and `TDD-0013` were `done` against
+  `packages/qfai/tests/core/prototypingEvidence.negative.test.ts`, which holds
+  no `QFAI-PROT-002` assertion; `16_Traceability-ledger.md`'s `REQ-0020` row
+  cited the same file. All four now name
+  `packages/qfai/tests/validators/prototypingEvidence.test.ts`, and one test was
+  added there for `EX-0004-0010`'s payload so `TDD-0011`'s selector resolves.
+  **Upstream artifacts changed:** `16_Traceability-ledger.md`'s `REQ-0020` row,
+  above. Only `tdd/test-list.md`'s `Test file` column is writable without the
+  drift path; `drift-protocol.md:63-65` puts every other file under
+  `.qfai/specs/**` — this ledger included — under upstream SSOT, so repointing
+  that row is an upstream change and is covered by `CR-20260904-0001`'s approval
+  and by this `confirm-only` rerun. An earlier revision of this entry said
+  "Nothing upstream of `tdd/test-list.md` changed" while recording the ledger
+  edit two sentences above; that was self-contradictory and is withdrawn.
+
+  No DERIVED artifact changed: `03`, `04`, `05` and `06` are untouched, and
+  "v1.x-shaped" in `TC-0004-0011` is not a version check — `EX-0004-0010`
+  defines it as a payload missing the required keys.
+
+  **Scope of the confirm-only:** this rerun confirms only that the corrected
+  ledger rows describe the tests that exist. It does **not** certify the rest of
+  the pack. Three divergences between this spec's `review.json` schema and the
+  shipped validator were found while recording it and are tracked in **#1105**:
+  `04:60` / `05:68` name the prose key `prose` where the validator requires
+  `proseCritique`; `03:58` defines `designMdViolations` as
+  `{category, expected, found, location}` where `prototypingEvidence.ts:79-87`
+  checks `{kind, found}`; and seven of `AC-0004-0012`'s eight `lap-*` names
+  differ from `assets/validators/layoutAntiPatterns.json`. Choosing a canonical
+  side for each needs its own Change Request.
+
 ## 2026-04-22
 
 - Clarified: validate's prototyping responsibility is current skill/evidence/schema gating.

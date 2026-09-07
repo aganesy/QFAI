@@ -1,5 +1,24 @@
 # 09 delta
 
+## 2026-09-04
+
+- `CR-20260904-0002` (`confirm-only`, `/qfai-sdd 0012`): recorded
+  `OQ-0012-0013` — `validate` requires the flat `iter-NN/review.json` for every
+  recorded non-seed iteration at a canonical index, while `certify` has a gate
+  for `iter-NN/spec-NNNN/<screen>.review.json`, so an iteration holding per-spec
+  artifacts without the flat one fails `validate`, and `certify` refuses it —
+  **when `validate` re-ran after the layout changed.** `certify` gates on the
+  STORED `validate.json` and checks only existence, `profile` and
+  `counts.error` (`prototypingCertify.ts:286-319`), with no correspondence to
+  the evidence it seals, so a stale success from when the flat artifact was
+  still present DOES let it seal. That path is recorded in the OQ and filed as
+  #1107. The trigger is bounded to a canonical-index iteration because
+  `validateIterationReviewArtifacts` skips an index-skewed record before
+  reading the flat path (`prototypingEvidence.ts:472-485`), raising
+  `QFAI-PROT-004` instead. Which artifact is canonical is **deferred**; no
+  acceptance criterion, business rule, example or test case changed. The guard
+  for the trigger is specified in issue #1093 and is not shipped.
+
 ## 2026-04-22
 
 - Adopted: reviewer-score centered full-harness evidence schema

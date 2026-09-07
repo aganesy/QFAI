@@ -1,5 +1,36 @@
 # 09 delta
 
+## 2026-09-04
+
+- `CR-20260904-0004` (`confirm-only`, `/qfai-sdd 0015`):
+  `R-CERTIFY-VERIFY-CIRCULAR` moves from severity `error` to `info` in
+  `validate`. At `error` it made `/qfai-verify`'s Completion Contract
+  unsatisfiable outside Work Order H: the skill MUSTs a `verify.json` whose
+  `scope` "names the stage this run actually covered — never a stage you did
+  not run" (`SKILL.md:148`, `:173`, `:72-73`), so an ordinary full-profile run
+  has to write `scope: "full"`, and the rule fires on exactly that while a
+  prototyping loop is open. Measured: `error=0` -> write the file -> `error=1`
+  -> remove it -> `error=0`. Waivers are restricted to `warning` / `info`
+  (`:151`), so there was no exit at all.
+
+  The enforcement is unchanged and unmoved: `prototypingCertify.ts:374-383`
+  already refuses a non-prototyping scope with exit 2, and its own comment says
+  this finding "keeps the certify command self-contained instead of relying on
+  a downstream validate pass to surface the same condition". A
+  `scope: "full"` verdict on disk is not damage — consuming it in `certify` is.
+  The finding's message now also names the way out, which it did not before:
+  close the loop, re-run `/qfai-verify` for Work Order H.
+
+  **Upstream artifacts changed:** `01_Spec.md` (`REQ-0015-0013`),
+  `02_User-stories.md` (`US-0015-0007`), `03_Acceptance-Criteria.md`
+  (`AC-0015-0013`), `05_Examples.md` (`EX-0015-0009`) — all
+  `.qfai/specs/**` under `drift-protocol.md`, which is why this took a Change
+  Request. Each records the new severity and why, so a reader finding `info` on
+  a rule named "CIRCULAR" is not left thinking the enforcement went away.
+
+  No DERIVED artifact changed. Two test files' severity expectations moved with
+  the rule. From **#1097**.
+
 ## 2026-04-22
 
 - Clarified: prototyping-related routing is now described against the skill-led flow.
