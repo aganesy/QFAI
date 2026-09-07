@@ -4007,7 +4007,7 @@ async function validateSpecTddList(
             "tddList.brRefFormat",
             [brRef],
             "change",
-            `${BR_REF_COLUMN} は1行1件で、表記は \`BR-NNNN\` / \`BR-NNNN-NNNN\` の大文字のみです（レビュー群のキーは記載値そのままで比較するため、\`br-0001\` は別キーになります）。TC の \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、こうして得た \`BR-*\` の和集合（1件の \`EX\` が複数 \`BR\` を挙げる場合も含む）から最小番号の1件を書いてください。該当する BR がない行は \`-\`（空欄も同じ扱い）です。`,
+            `Write one ${BR_REF_COLUMN} per row, spelled \`BR-NNNN\` or \`BR-NNNN-NNNN\` in upper case: the review group is keyed on the value as recorded, so \`br-0001\` is a different key. Resolve it per TC the row names, through that TC's \`EX-Ref\` to the \`BR-Ref\` of \`05_Examples.md\`, falling back to \`AC-Refs\` only for a TC with no \`EX-Ref\`, and write the lowest-numbered member of the union those reach (one \`EX\` may name several \`BR\`). A row no BR reaches takes \`-\`, which an empty cell also means.`,
           ),
         );
         continue;
@@ -4022,7 +4022,7 @@ async function validateSpecTddList(
             "tddList.brRefResolves",
             [token],
             "change",
-            `${brDeclarationFileName(specEntry)} に該当 BR を追加するか、${BR_REF_COLUMN} を実在する \`BR-*\`（または \`-\` / 空欄）に直してください。`,
+            `Declare that BR in ${brDeclarationFileName(specEntry)}, or change ${BR_REF_COLUMN} to a \`BR-*\` that exists there — or to \`-\` (an empty cell means the same) when no BR reaches the row.`,
           ),
         );
         continue;
@@ -4046,7 +4046,7 @@ async function validateSpecTddList(
             "tddList.brRefDerivation",
             [token, expected],
             "change",
-            `${BR_REF_COLUMN} を \`${expected}\` に直してください。行の \`TC-Refs\` が名指す各 TC について \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、到達した \`BR-*\` の和集合から最小番号の1件を採るのが規定の手順です。`,
+            `Change ${BR_REF_COLUMN} to \`${expected}\`. The procedure is: per TC the row's \`TC-Refs\` name, resolve that TC's \`EX-Ref\` to the \`BR-Ref\` of \`05_Examples.md\`, falling back to \`AC-Refs\` only for a TC with no \`EX-Ref\`, then take the lowest-numbered member of the union those reach.`,
           ),
         );
       }
