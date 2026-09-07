@@ -156,10 +156,15 @@ Declare it in the **DB** contract, which is the artifact that owns storage:
   API contract asserting "this is not stored" would let the side making the demand silence the side
   that answers it.
 
-`QFAI-CONTRACT-041` (`warning`) reports a declaration that does no work: one that does not parse —
-so the author believes they answered a finding that is still standing — and one naming a value the
-API does not require, or that the DB domain stores after all. A value **nobody declared** still
-raises `QFAI-CONTRACT-040`, or the marker would be a silencer.
+`QFAI-CONTRACT-041` reports a declaration that does no work: one that does not parse — so the
+author believes they answered a finding that is still standing — and one naming a value the API
+does not require, or that the DB domain stores after all. A value **nobody declared** still raises
+`QFAI-CONTRACT-040`, or the marker would be a silencer.
+
+It ships behind a promotion window: `warning` until the release its `RULE_PROMOTIONS` entry names,
+`error` from then on. The format is new, so the first authors to use it are answering another
+finding voluntarily and will get the grammar wrong in the ways the message exists to teach; failing
+the run on a line added to engage with the tool is the worst first experience of it.
 
 ## Executability (MUST)
 

@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /**
@@ -32,12 +34,24 @@ export async function validateContractConsistency(
   const collected = await collectDbStateDomains(dbFiles);
   const issues: Issue[] = [];
 
+  // `QFAI-CONTRACT-041` ships behind a promotion window (P7). The declaration
+  // FORMAT is new, so the first authors to use it are answering another finding
+  // voluntarily and will get the grammar wrong in the ways the message exists
+  // to teach; failing their run on a line they added to engage with the tool is
+  // the worst first experience of it. Resolved once here rather than per
+  // finding: it is one fact about the running version, and reading it inside a
+  // loop would say otherwise.
+  const declarationSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
+  );
+
   // Reported before anything else, and whether or not a domain was collected: a
   // declaration nobody could read is a defect in the declaration, and it is
   // exactly the state in which the author believes they have answered a finding
   // that is still standing.
   for (const { file, line } of collected.malformed) {
-    issues.push(unreadableDerivedDeclaration(file, line));
+    issues.push(unreadableDerivedDeclaration(file, line, declarationSeverity));
   }
 
   if (collected.domains.size === 0) {
@@ -50,7 +64,7 @@ export async function validateContractConsistency(
   for (const file of apiFiles) {
     issues.push(...(await validateApiFileAgainstDb(file, collected, honoured)));
   }
-  issues.push(...staleDerivedDeclarations(collected, honoured));
+  issues.push(...staleDerivedDeclarations(collected, honoured, declarationSeverity));
   return issues;
 }
 
@@ -271,17 +285,24 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
 /**
  * A line carrying the key that does not parse as a declaration.
  *
- * `warning`, not `error`: the file is still a valid contract and the run still
- * reports whatever `QFAI-CONTRACT-040` was going to report. What this adds is
- * the one thing the author cannot see otherwise — that the marker they wrote
- * was not read, so the finding they were answering is still standing for the
- * reason it always was.
+ * The severity comes from the promotion window, not from a literal: what this
+ * adds today is the one thing the author cannot see otherwise — that the marker
+ * they wrote was not read, so the finding they were answering is still standing
+ * for the reason it always was — and the run still reports whatever
+ * `QFAI-CONTRACT-040` was going to report either way.
  */
-function unreadableDerivedDeclaration(file: string, line: string): Issue {
+function unreadableDerivedDeclaration(
+  file: string,
+  line: string,
+  // Named as the binding is, because the ledger guard follows the NAME: an
+  // emission whose severity expression is not the one bound to this entry's pin
+  // reads as a hard-coded severity, which is a window that never opens.
+  declarationSeverity: "warning" | "error",
+): Issue {
   return issue(
     "QFAI-CONTRACT-041",
     `\`Derived (not stored):\` 宣言が解析できません: ${line}`,
-    "warning",
+    declarationSeverity,
     file,
     "contracts.crossContract.derivedNotStored",
     [line],
@@ -303,7 +324,11 @@ function unreadableDerivedDeclaration(file: string, line: string): Issue {
  * stale rather than harmless: the next reader takes the line as a statement
  * about the schema, and it is not one.
  */
-function staleDerivedDeclarations(collected: DbStateDomains, honoured: Set<string>): Issue[] {
+function staleDerivedDeclarations(
+  collected: DbStateDomains,
+  honoured: Set<string>,
+  declarationSeverity: "warning" | "error",
+): Issue[] {
   const issues: Issue[] = [];
   for (const [normalized, declarations] of collected.derived.entries()) {
     const domain = collected.domains.get(normalized);
@@ -323,7 +348,7 @@ function staleDerivedDeclarations(collected: DbStateDomains, honoured: Set<strin
             unused.join(", ") +
             (stored.length > 0 ? ` (DB 側が格納できる: ${stored.join(", ")})` : "") +
             (unasked.length > 0 ? ` (API 契約が要求していない: ${unasked.join(", ")})` : ""),
-          "warning",
+          declarationSeverity,
           declaration.file,
           "contracts.crossContract.derivedNotStored",
           [declaration.fieldName, ...unused],
@@ -681,12 +706,17 @@ function collectDerivedDeclarations(
   const declared: DerivedDeclaration[] = [];
   const readable = new Set<string>();
   for (const match of body.matchAll(DERIVED_NOT_STORED_RE)) {
-    const [line, fieldName, valueList, inputs] = match as unknown as [
-      string,
-      string,
-      string,
-      string,
-    ];
+    // Narrowed rather than asserted. Every group of `DERIVED_NOT_STORED_RE` is
+    // required today, so a match always carries all three — but saying so with
+    // an `as` would let a later edit making one optional pass with nothing to
+    // notice it, and the repository's TypeScript rule is to narrow instead.
+    const line = match[0];
+    const fieldName = match[1];
+    const valueList = match[2];
+    const inputs = match[3];
+    if (fieldName === undefined || valueList === undefined || inputs === undefined) {
+      continue;
+    }
     const elements = valueList.split(",");
     const values = elements.map((value) => value.trim().toLowerCase());
     // The whole list or none of it, as the apply-order lanes do: a trailing

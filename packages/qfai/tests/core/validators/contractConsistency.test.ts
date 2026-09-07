@@ -13,6 +13,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
+import { resolveToolVersion } from "../../../src/core/version.js";
 import {
   collectApiStateEnums,
   collectSqlEnumDomains,
@@ -647,6 +649,22 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toHaveLength(1);
         const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
         expect(domain[0]?.message).toContain("powered_off, standby");
+      });
+
+      it("takes the declaration severity from its promotion window", async () => {
+        // Read from the pin rather than asserted as a literal: the window opens
+        // at 1.12.0, and a hard-coded `warning` here would start failing then
+        // for a rule that is working exactly as declared.
+        const noFrom = DERIVED_DB.replace(" from enabled, connection_status, JST clock", "");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": noFrom });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const expected = newRuleSeverity(
+          await resolveToolVersion(),
+          RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
+        );
+        expect(issues.find((entry) => entry.code === "QFAI-CONTRACT-041")?.severity).toBe(expected);
       });
 
       it("reports a declaration covering a value the DB stores anyway", async () => {
