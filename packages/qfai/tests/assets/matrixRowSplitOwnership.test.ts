@@ -352,7 +352,12 @@ describe.each(TREES)("%s", (tree) => {
       "`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`",
     );
     expect(red).toContain("wait for explicit user approval");
-    expect(red).toContain("write `todo -> blocked` with that `CR-*` in `Blocked-By`");
+    // Both halves of the cell, or the parked row fails the check that made the
+    // departure status required in the first place.
+    expect(red).toContain(
+      "write `todo -> blocked` with that `CR-*` **and the departure status** in `Blocked-By`",
+    );
+    expect(red).toContain("always `todo` on this path");
   });
 
   it("blocks the residual row before the approval wait, not after the rerun", async () => {
