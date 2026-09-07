@@ -2649,7 +2649,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     //
     // Membership is decided by `classifyHardRequiredEntries`, the SAME matcher
     // `validateAutopilotPolicy` emits from, rather than by a test written out
-    // again here: two copies of this rule is how one hole reached both at once.
+    // again here: two copies of this rule are how one hole reaches both at once.
     const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
       cwd: templateQfaiDir,
       absolute: false,
@@ -2671,6 +2671,50 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
 
     expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
+  });
+
+  it("ends the bucket at a sibling bullet however it is indented", () => {
+    // Markdown admits up to three spaces before a top-level bullet, so the
+    // next bucket can open at column three and still be a sibling. A collector
+    // anchored at column zero read that line, and every item under it, as more
+    // hard-required entries — which reports `QFAI-AUTOPILOT-001` against a
+    // policy that says nothing wrong, and fails validate once the window
+    // closes.
+    for (const indent of ["", " ", "  ", "   "]) {
+      const policy = [
+        "- hard-required:",
+        "  - brand intent",
+        `${indent}- ask-user:`,
+        "  - which surface to prototype",
+        "",
+      ].join("\n");
+
+      expect(
+        collectHardRequiredEntries(policy),
+        `a bucket opening at ${indent.length} spaces`,
+      ).toEqual(["brand intent"]);
+    }
+  });
+
+  it("keeps a blank line, a comment and prose inside the bucket", () => {
+    // The other half of the boundary. Only a sibling or a heading closes it,
+    // so a formatting edit cannot hide the entries below itself.
+    const policy = [
+      "- hard-required:",
+      "  - brand intent",
+      "",
+      "<!-- the two the run cannot infer -->",
+      "  prose that belongs to the entry above",
+      "  - `primarySpecId`",
+      "## Next section",
+      "  - never reached",
+      "",
+    ].join("\n");
+
+    expect(collectHardRequiredEntries(policy)).toEqual([
+      "brand intent prose that belongs to the entry above",
+      "`primarySpecId`",
+    ]);
   });
 
   it("rejects a retired entry smuggled in beside a pinned one", () => {

@@ -228,10 +228,10 @@ describe("the clarification budget is countable", () => {
 
     it(`${tree}: the hard-required exemption is scoped to what the run consumes`, async () => {
       const content = await read(tree, CONSTITUTION);
-      // Every skill's `Default Autopilot Policy` carries the common entries,
-      // whatever else it declares for itself, so an unscoped rule would make
-      // `/qfai-verify` demand brand intent from a repository that has no brand
-      // surface and stop when unanswered.
+      // A skill's `Default Autopilot Policy` may carry the common entries as
+      // well as ones only it reads, and may narrow the bucket to neither. An
+      // unscoped rule would make `/qfai-verify` demand brand intent from a
+      // repository that has no brand surface and stop when unanswered.
       expectPhrase(content, "**scoped to the inputs the requested work actually\n  consumes**");
       expectPhrase(
         content,

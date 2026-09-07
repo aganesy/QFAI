@@ -154,9 +154,21 @@ export function normalizeHardRequiredEntry(bullet: string): string {
 
 /**
  * Collect the entries nested under the `- hard-required:` line, one string per
- * entry with a wrapped bullet joined back into it, stopping at the first line
- * that is neither. Reads a whole SKILL.md as readily as an already-extracted
- * policy block, because the bucket header is what anchors it.
+ * entry with a wrapped bullet joined back into it. Reads a whole SKILL.md as
+ * readily as an already-extracted policy block, because the bucket header is
+ * what anchors it.
+ *
+ * The bucket runs to the next sibling bullet or the next heading, and past
+ * everything else: a blank line, a comment and a line of prose all stay inside
+ * it. Ending at any of those made a formatting edit enough to hide every entry
+ * below it, which is a hole in a check whose whole subject is what the bucket
+ * names.
+ *
+ * A sibling is a bullet at or left of the header's own indent, which is the
+ * list rule rather than a column-zero test: Markdown admits up to three spaces
+ * before a top-level bullet, so `   - ask-user:` opens the next bucket and a
+ * collector anchored at column zero read it, and everything under it, as more
+ * hard-required entries.
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
@@ -164,12 +176,34 @@ export function normalizeHardRequiredEntry(bullet: string): string {
 export function collectHardRequiredEntries(content: string): string[] {
   const entries: string[] = [];
   let inBucket = false;
+  let bucketIndent = 0;
   for (const line of content.split(/\r?\n/)) {
-    if (BUCKET_HEADERS.hardRequired.test(line)) {
-      inBucket = true;
+    if (!inBucket) {
+      if (BUCKET_HEADERS.hardRequired.test(line)) {
+        inBucket = true;
+        bucketIndent = line.length - line.trimStart().length;
+      }
       continue;
     }
-    if (!inBucket) continue;
+    // Checked before the nested read, which accepts any indented bullet: a
+    // sibling is one of those too, and reading it as an entry is what carried
+    // the next bucket's items into this one.
+    //
+    // Two tests, because the buckets are found by content and the list by
+    // structure. Another bucket header closes this one at any indent, which is
+    // the indent `BUCKET_HEADERS` already accepts — anything else would let a
+    // policy be read one way when its buckets are located and another way when
+    // their entries are collected. Any other bullet closes it only at or left
+    // of this header, which is what makes it a sibling rather than an entry.
+    const bullet = /^(\s*)[-*]\s/.exec(line);
+    const opensAnotherBucket = Object.values(BUCKET_HEADERS).some((header) => header.test(line));
+    if (
+      opensAnotherBucket ||
+      (bullet !== null && (bullet[1]?.length ?? 0) <= bucketIndent) ||
+      /^#{1,6}\s/.test(line)
+    ) {
+      break;
+    }
     const nested = /^\s+[-*]\s+(.+)$/.exec(line);
     const text = nested?.[1]?.trim();
     if (text !== undefined && text.length > 0) {
@@ -184,16 +218,7 @@ export function collectHardRequiredEntries(content: string): string[] {
     const carried = continuation?.[1]?.trim();
     if (carried !== undefined && carried.length > 0 && entries.length > 0) {
       entries[entries.length - 1] = `${entries[entries.length - 1]} ${carried}`;
-      continue;
     }
-    // The bucket ends at the next top-level bullet or the next heading, and
-    // nowhere else. Everything nested belongs to the bullet that is open, and
-    // `- hard-required:` stays open until one of those two closes it.
-    //
-    // Ending at anything else — a blank line, a comment, a line of prose —
-    // made a formatting edit enough to hide every entry below it, which is a
-    // hole in a check whose whole subject is what the bucket names.
-    if (/^[-*]\s/.test(line) || /^#{1,6}\s/.test(line)) break;
   }
   return entries;
 }
