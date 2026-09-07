@@ -17,7 +17,33 @@ afterEach(() => {
   vi.doUnmock("../../src/shared/assets.js");
 });
 
-describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
+/**
+ * Deliberately no `{ timeout: … }` here, and none on the second block below.
+ *
+ * `vitest.knobs.ts` raised `testTimeout` to 120 s and measured why: "ninety-three
+ * per cent of every CLI invocation is loading the 1.44 MB bundle", the pool is
+ * ten workers, and "15 s was never a budget for this workload. It was a budget
+ * for in-process tests, applied to a suite that is subprocess-bound." These two
+ * blocks re-imposed exactly that abandoned number, eight times below the
+ * project's, on the file that calls `runInit` eleven times (#1218).
+ *
+ * Measured on this tree, no source change between the two runs:
+ *
+ * | | |
+ * | --- | --- |
+ * | this file alone | **37.5 s** for 13 cases, slowest case 5.7 s |
+ * | under a full `core` run | **101.6 s**, and `recovers from legacy 10_workflow.md` fails |
+ *
+ * The failure is `Test timed out in 15000ms.` — the override's own number, not
+ * the project's, which is what identifies the override as the cause rather than
+ * the workload. Comfortable alone, past the ceiling under the concurrency the
+ * project declares.
+ *
+ * Inheriting is the fix rather than restating 120 s locally: the knobs file is
+ * the SSOT, and it says the number comes down when `CR-20260823-0001` removes
+ * the cold start. A copy here would be one more place to miss.
+ */
+describe("diffProjectSkillsAgainstInitAssets", () => {
   it("skips when skills is missing", async () => {
     const root = await makeTempRoot();
     try {
@@ -187,7 +213,7 @@ describe("diffProjectSkillsAgainstInitAssets", { timeout: 15000 }, () => {
   });
 });
 
-describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
+describe("validateSkillsIntegrity", () => {
   it("returns empty array when skills is not modified", async () => {
     const root = await makeTempRoot();
     try {
