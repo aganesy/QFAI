@@ -2,10 +2,11 @@
 
 Gate item 10 is the record check. It asks one question — can the next reader
 trust this row's record? — and nothing it reports means the software is wrong.
-The gate states it in one sentence and points here; this file carries the rule
-the gate line moved out, and names item 10's remaining checks where they
-already stand (`#the-item-10-checks-written-elsewhere`). Read both, or the
-checks that are stated at the place they constrain go unrun.
+The gate states it in one sentence and points here. This file carries the rule
+the gate line moved out. Item 10's other checks stay beside the fields they
+constrain, and `#the-item-10-checks-written-elsewhere` lists where. An audit
+reads this file and follows that list; either one alone leaves the other's
+checks unrun.
 
 It is addressed to whoever audits a record or writes the validator that reports
 on it. An agent building a row does not need to read it to build the row: that

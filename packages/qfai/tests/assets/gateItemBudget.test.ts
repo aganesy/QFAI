@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { gateItems } from "../helpers/gateItems.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -29,57 +31,7 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
-/**
- * The body of each numbered item in the 12-point gate, keyed by its number.
- *
- * An item's body is its numbered line **plus every continuation line** up to
- * the next numbered item. Reading only the numbered line would let the budget
- * be satisfied by wrapping item 10 the way ordinary Markdown wraps a list
- * item: a short first line and the rest of the text in continuation lines,
- * uncounted, with the gate no lighter to read than before.
- *
- * The list ends where Markdown ends it — a blank line followed by an
- * unindented line — so the sequencing note after item 12 is excluded: it is
- * prose about the gate, not part of item 12. An indented block after a blank
- * line is still the item's own, and counts.
- */
-function gateItems(skill: string): Map<number, string> {
-  const start = skill.indexOf("### Item completion checklist (12-point gate)");
-  if (start === -1) throw new Error("gate section not found");
-  const rest = skill.slice(start);
-  const end = rest.indexOf("\n### ", 1);
-  const section = end === -1 ? rest : rest.slice(0, end);
-
-  const items = new Map<number, string>();
-  let current: number | undefined;
-  let afterBlank = false;
-
-  for (const line of section.split(/\r?\n/)) {
-    const match = /^(\d{1,2})\.\s+(.*)$/.exec(line);
-    if (match) {
-      const [, number, body] = match;
-      if (number === undefined || body === undefined) continue;
-      current = Number(number);
-      items.set(current, body.trim());
-      afterBlank = false;
-      continue;
-    }
-    if (current === undefined) continue;
-    if (line.trim() === "") {
-      afterBlank = true;
-      continue;
-    }
-    if (afterBlank && !/^\s/.test(line)) {
-      current = undefined;
-      continue;
-    }
-    items.set(current, `${items.get(current) ?? ""} ${line.trim()}`.trim());
-    afterBlank = false;
-  }
-  return items;
-}
-
-describe("gateItems (what the budget counts)", () => {
+describe("gateItems (what a gate item's body is)", () => {
   const section = [
     "### Item completion checklist (12-point gate)",
     "",

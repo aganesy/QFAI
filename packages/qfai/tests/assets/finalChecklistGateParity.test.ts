@@ -15,6 +15,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { gateItemList as gateItems } from "../helpers/gateItems.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 /** Shipped surface plus its root mirror. */
@@ -23,7 +25,6 @@ const SKILL_DIRS = [
   path.join(repoRoot, ".qfai/assistant/skills/qfai-implement"),
 ];
 
-const GATE_HEADING = "### Item completion checklist (12-point gate)";
 const SPEC_CONDITIONS_HEADING = "### Spec completion conditions";
 const PROHIBITIONS_HEADING = "### Completion prohibition conditions";
 
@@ -72,24 +73,6 @@ function sectionBullets(skill: string, heading: string): string[] {
     }
   }
   return bullets.map((bullet) => bullet.replace(/\s+/g, " "));
-}
-
-/** The numbered items of the 12-point gate, each by its own number. */
-function gateItems(skill: string): { number: number; text: string }[] {
-  const section = skillSection(skill, GATE_HEADING);
-  const items: { number: number; text: string }[] = [];
-  for (const line of section.split(/\r?\n/)) {
-    const match = /^(\d+)\.\s(.*)$/.exec(line);
-    if (match?.[1] !== undefined && match[2] !== undefined) {
-      items.push({ number: Number(match[1]), text: match[2].replace(/\s+/g, " ") });
-      continue;
-    }
-    const last = items[items.length - 1];
-    if (last !== undefined && /^\s+\S/.test(line)) {
-      last.text = `${last.text} ${line.trim()}`.replace(/\s+/g, " ");
-    }
-  }
-  return items;
 }
 
 /** The numbered items of the 12-point gate, by their own numbering. */
@@ -365,12 +348,11 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   // `GATE_ITEM_PARITY` with `source: "record"`, so both directions are still
   // covered.
   //
-  // The digest is over the collapsed words, so punctuation moves it. This one
-  // was re-pinned for the comma in "until it has run, an unmarked legacy row
-  // …", which the sentence needs to say that the pass is what has run: without
-  // it the row reads as the pass's object, and the item reads the marker rather
-  // than running anything.
-  10: "622ff892a0713127336b00d7015660c4bf09a264b3142a5e9efc1a5722c8ed31",
+  // The digest is over the collapsed words, so punctuation is part of it. The
+  // comma in "until it has run, an unmarked legacy row …" is load-bearing:
+  // without it the row reads as the object of "run", and the item reads the
+  // marker rather than running anything.
+  10: "3daeaebbea15108b917b3dbadc3b70a4c37df424f85018075237535af78056d3",
   11: "a7470dc8a8e922a0ea06fd70b7703a2ea35e31eb79c27436f84c329d11dc9493",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
