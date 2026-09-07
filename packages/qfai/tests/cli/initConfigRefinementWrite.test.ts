@@ -37,8 +37,10 @@ vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
-    rename: (...args: unknown[]) => renameSpy(actual, ...args),
-    writeFile: (...args: unknown[]) => writeFileSpy(actual, ...args),
+    // The wrapped functions' own parameter tuples, so a call that does not
+    // match the Node signature is a type error here rather than at run time.
+    rename: (...args: Parameters<FsPromises["rename"]>) => renameSpy(actual, ...args),
+    writeFile: (...args: Parameters<FsPromises["writeFile"]>) => writeFileSpy(actual, ...args),
   };
 });
 
