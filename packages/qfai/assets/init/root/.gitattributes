@@ -20,8 +20,10 @@
 #
 #     git add --renormalize .qfai
 #
-# を実行し、その結果を単独のコミットとして残す（seed 済みの
-# qfai.config.yaml / DESIGN.md も CRLF でコミット済みなら同様に指定する）。
+# を実行し、その結果を単独のコミットとして残す。このファイルが LF に固定する
+# ルート直下のファイル — qfai.config.yaml / DESIGN.md /
+# .github/workflows/qfai-validate.yml / qfai-tests.yml / qfai-docs.yml — も
+# CRLF でコミット済みなら、同じコマンドに並べて指定する。
 # この一手を飛ばすと、後日いずれかが LF で保存された時点で、この設定が
 # 防ぐはずの「全行変更」diff がそのまま発生する。
 

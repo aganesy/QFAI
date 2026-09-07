@@ -36,18 +36,15 @@ function gitStdout(root: string, args: readonly string[]): string | null {
  * `--name-only` and `--numstat` formatters do not carry that guarantee on every
  * git a consumer may have installed, which is why this second call exists.
  *
- * A git failure here is read as "changed": the caller's job is to flag drift,
- * and staying silent because a subprocess broke would be the wrong default.
- */
-/**
- * Whether one path differs once carriage returns at end of line are ignored.
- *
  * **Three-dot, matching {@link getChangedFilesAgainstBase}.** This confirms a
  * `0 0` row that function's own listing produced, so the two must address the
  * same pair of trees. Against a two-dot range the confirmation reads a file
  * that only `base` changed as differing, the `0 0` row survives, and a path
  * whose entire diff is line endings is reported as drift — the case this
  * function exists to drop.
+ *
+ * A git failure here is read as "changed": the caller's job is to flag drift,
+ * and staying silent because a subprocess broke would be the wrong default.
  */
 function differsIgnoringEol(root: string, baseBranch: string, file: string): boolean {
   try {
