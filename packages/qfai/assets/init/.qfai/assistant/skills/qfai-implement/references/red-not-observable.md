@@ -120,6 +120,21 @@ for the natural RED and let the row proceed to `green` and `done`:
    3b verifies the entry as it does for any other `todo` row. Such a row wrote
    no round, so this procedure's self-reference is closed to it regardless.
 
+   **Two kinds of `Integration` row are outside that set, and the sibling is
+   required on both.** "Handed over by `/qfai-atdd`" is the condition, and the `Layer` is
+   only its usual proxy — so where the two part, follow the handover. A row
+   carrying `Pre-split-evidence: implement` (gate item 10) predates the split
+   and was never handed over; a row whose `TC-Refs` name only TCs that declare
+   `Level` `L1` / `L2` is one `/qfai-atdd` authors no test for, so
+   `/qfai-implement` writes it in its own Phase Red. Both are ordinary
+   implement-owned TDD rows: their surface is code this ledger does own, the
+   reason the field was widened does not hold, and accepting a bare path and
+   symbol on them is precisely the "ordinary TDD row reaching `done` with no
+   production change and no sibling" the sentence above refuses. Both
+   exceptions are defined once, in `qfai-implement/SKILL.md`, which is what
+   both this file and `../../../agents/qa-gatekeeper.md` apply: each states the
+   condition it has to judge, and neither is the definition.
+
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as
    `Falsifiability command` / `Falsifiability result`.

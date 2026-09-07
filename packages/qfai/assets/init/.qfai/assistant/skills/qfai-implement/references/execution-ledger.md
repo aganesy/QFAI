@@ -194,10 +194,11 @@ widened to carry it, and who seeds the two layer columns:
 The `Evidence` cell is a **pointer**, not the payload.
 
 `.qfai/evidence/implement-<spec-id>.md` is the home — for every row this skill
-runs itself; the E2E/API rows use `atdd-<spec-id>.md`, see "ATDD-owned rows"
-below — of the per-item
-evidence contract — the RED/GREEN commands, their output, and the reviewer
-verdicts. The ledger cell records the outcome and says where to read the proof:
+runs itself; the **ATDD-owned** rows use `atdd-<spec-id>.md`, which is the
+`E2E` / `API` / `Integration` rows less the two exceptions that stay here, see
+"ATDD-owned rows" below — of the per-item evidence contract — the RED/GREEN
+commands, their output, and the reviewer verdicts. The ledger cell records
+the outcome and says where to read the proof:
 
 ```
 RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0027`
@@ -560,7 +561,8 @@ after its surface passes on the first run. So:
   `implement-<spec-id>.md` the single home was true while one stage produced
   every pair; it stopped being true the moment another stage did.
   `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
-  E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
+  E2E/API/Integration row whose anchor names the ATDD file reaches `done`;
+  items 11 and the
   matching prohibition condition append **every routed reviewer's** verdict to
   **that** file — `Spec review` and `Code quality review` on every row, and
   `Prototype parity` as well on a UI-affecting one, because gate item 9 routes
