@@ -492,6 +492,25 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(broken?.message).toContain("discussion-20250101000000000");
   });
 
+  it("reports an unreadable state file instead of falling back to the latest pack", async () => {
+    // `.qfai/state.json` is present but not parsable, so the pointer's value is
+    // UNKNOWN — not absent. Treating the two alike sent the gate to the latest
+    // pack, which is a pack nobody selected: a project whose state file pins an
+    // older, incomplete pack would have been told its research was in order.
+    const template = await readShippedTemplate();
+    const root = await seedPack(fillEveryPlaceholder(template), "discussion-20260202000000000");
+    await writeFile(path.join(root, ".qfai", "state.json"), "{ not json", "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const broken = issues.find((item) => item.code === "QFAI-RESEARCH-020");
+
+    expect(broken, "an unreadable state file must be reported, not papered over").toBeDefined();
+    expect(broken?.message).toContain("state.json");
+    // And the fallback must not have run: no per-file finding may name the pack
+    // the corrupt pointer did not select.
+    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-016");
+  });
+
   it("validates only 04_Sources.md inside a pack", async () => {
     // The Storage contract names one file. A sibling pack file that merely
     // mentions the heading must not be held to the whole Output Schema.
@@ -664,6 +683,56 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       ...defaultConfig,
       paths: { ...defaultConfig.paths, discussionDir: "docs/discussion" },
     });
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("does not read a non-YAML fenced block as summary data", async () => {
+    // A pack may keep a diagram or a paste of the blank template beside its
+    // summary. Collecting every fence made that prose part of the payload, so
+    // placeholders the real run had already replaced were reported again.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const note = [
+      "```markdown",
+      "sources:",
+      "  - id: SRC-0404",
+      "    title: [Reference title]",
+      "    url: [https://example.com/reference]",
+      "```",
+      "",
+      "```yaml",
+      "research_summary:",
+    ].join("\n");
+    const withNote = filled.replace("```yaml\nresearch_summary:", note);
+    expect(withNote, "fixture did not attach the note block").not.toBe(filled);
+
+    const issues = await validateResearchSummary(await seedPack(withNote), defaultConfig);
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("reads the payload out of a tilde fence rather than the whole section", async () => {
+    // The section is where the mask says it is, so an earlier draft left above
+    // the fence is inside it. Only the fence separates that draft from the
+    // data, and a payload rule that knew backticks alone could not draw the
+    // line: the stale entry became the summary and its placeholder reported.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const draft = [
+      "An earlier draft, kept for reference:",
+      "",
+      "sources:",
+      "  - id: SRC-0404",
+      "    title: [Stale draft title]",
+      "",
+      "~~~yaml",
+      "research_summary:",
+    ].join("\n");
+    const tildeFenced = filled
+      .replace("```yaml\nresearch_summary:", draft)
+      .replace("\n```\n", "\n~~~\n");
+    expect(tildeFenced, "fixture still carries a backtick fence").not.toContain("```");
+
+    const issues = await validateResearchSummary(await seedPack(tildeFenced), defaultConfig);
 
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });

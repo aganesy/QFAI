@@ -12,7 +12,7 @@ import {
 } from "../discussionPack.js";
 import type { LocatedPack } from "../packLocator.js";
 import { findPacks } from "../packLocator.js";
-import { readDiscussionCurrentId } from "../state.js";
+import { readDiscussionPointer } from "../state.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
@@ -33,13 +33,16 @@ function schemaWindowNote(severity: "warning" | "error"): string {
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 /**
- * A fenced block inside the stored section — the prose around it is not data.
+ * Fence info strings whose block carries the summary itself.
  *
- * Any info string, not `yaml` alone: the shipped template fences the summary as
- * ```yaml, but a pack that fences it bare or as ```yml carries the same data and
- * reading none of it would report every field missing.
+ * The shipped template writes a `yaml` fence, but a pack that fences the same
+ * data bare or as `yml` carries it too, and reading none of those would report
+ * every field missing. An allowlist rather than a denylist of languages: a
+ * denylist cannot be complete, and a block this does not recognise is not lost
+ * either — a section with no YAML fence at all still falls back whole.
  */
-const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
+const YAML_INFO_WORDS = new Set(["", "yaml", "yml"]);
+
 /** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
 const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 /**
@@ -468,8 +471,15 @@ type ResearchSummaryScanTarget = {
   reportMissingStorageFile: boolean;
   /** Discussion root, used to anchor pack-level findings. */
   discussionRoot: string;
-  /** `currentId` that is set but does not resolve to exactly one pack on disk. */
-  brokenPointer: { currentId: string; reason: string } | null;
+  /**
+   * The pointer could not be turned into exactly one pack on disk.
+   *
+   * Two shapes, and the `currentId` says which: a string is a pointer that is
+   * set and resolves to no pack (or to more than one); `null` is a state file
+   * that is present but unreadable, where the pointer's value is unknown
+   * rather than absent.
+   */
+  brokenPointer: { currentId: string | null; reason: string } | null;
 };
 
 /**
@@ -482,8 +492,15 @@ type ResearchSummaryScanTarget = {
  * schema against, say, an `01_Context.md` that merely mentions the heading.
  *
  * A pointer that is set but unresolvable is a broken SSOT and is reported
- * (QFAI-RESEARCH-020) instead of being papered over. A pointer that is simply
- * absent is the normal state of a gitignored runtime file, so it falls back to
+ * (QFAI-RESEARCH-020) instead of being papered over. So is a state file that is
+ * present but unreadable: `readDiscussionPointer` separates "no pointer
+ * recorded" from "the pointer could not be read", and only the first of those
+ * may reach the fallbacks below — inferring "latest pack" from a corrupt file
+ * substitutes a pack nobody selected, and the gate then passes or fails on the
+ * wrong session's evidence.
+ *
+ * A pointer that is simply absent is the normal state of a gitignored runtime
+ * file, so it falls back to
  * the same rule `qfai discussion list --active` uses: a lone `discussion-*`
  * directory is the de-facto active session; two or more are ambiguous, so the
  * latest pack is still read (an abandoned older pack must not keep the gate red
@@ -498,12 +515,20 @@ async function resolveResearchSummaryScanTarget(
   const discussionRoot = path.resolve(root, config.paths.discussionDir);
   const base = { discussionRoot, brokenPointer: null, reportMissingStorageFile: false } as const;
 
-  let currentId: string | null = null;
-  try {
-    currentId = await readDiscussionCurrentId(root);
-  } catch {
-    currentId = null;
+  const pointer = await readDiscussionPointer(root);
+  if (!pointer.ok) {
+    // Unreadable, not unset. `readDiscussionCurrentId` collapses the two to
+    // `null`, and its own docblock says a caller that picks a fallback cannot
+    // use it for exactly this reason: the fallbacks below would validate the
+    // latest pack against a state file that may well pin an older one.
+    return {
+      ...base,
+      files: [],
+      activePackDir: null,
+      brokenPointer: { currentId: null, reason: pointer.reason },
+    };
   }
+  const currentId = pointer.currentId;
 
   if (currentId !== null) {
     try {
@@ -671,10 +696,72 @@ function storageSlotIssue(
 /**
  * The fenced YAML blocks of the stored section, or the whole section when it
  * carries none (packs written before the template shipped a fence).
+ *
+ * Walks with {@link parseFenceLine} rather than carrying a fence pattern of
+ * its own. A second rule is a second thing to keep in step, and the two had
+ * already drifted: this read a backtick fence at column 0, while the mask that
+ * decides where the section even STARTS takes CommonMark's 0-3 leading spaces
+ * and `~~~` as well. A pack indenting its fence by two spaces was inside the
+ * section and outside its payload, so the whole section — prose included —
+ * went to the YAML reader.
+ *
+ * A closing fence is the same marker, at least as long as the opener, and
+ * carries no info string: the same three conditions the mask applies.
+ *
+ * Only a block whose opener names YAML is collected. Every fence is still
+ * tracked so its body cannot be mistaken for one: a mermaid diagram, or a
+ * markdown paste of the blank template, is prose the section happens to carry,
+ * and reading it as data reported placeholders the real summary had already
+ * filled in.
  */
 function extractYamlPayload(section: string): string {
-  const blocks = [...section.matchAll(YAML_FENCE_RE)].map((match) => match[1] ?? "");
+  const blocks: string[] = [];
+  let open: { marker: string; length: number; collect: boolean } | null = null;
+  let current: string[] = [];
+
+  for (const line of section.split("\n")) {
+    const fence = parseFenceLine(line);
+    if (!open) {
+      if (fence) {
+        open = {
+          marker: fence.marker,
+          length: fence.length,
+          collect: YAML_INFO_WORDS.has(fenceInfoWord(fence.info)),
+        };
+      }
+      continue;
+    }
+    if (
+      fence &&
+      fence.marker === open.marker &&
+      fence.length >= open.length &&
+      !fence.info.trim()
+    ) {
+      if (open.collect) {
+        blocks.push(current.join("\n"));
+      }
+      current = [];
+      open = null;
+      continue;
+    }
+    if (open.collect) {
+      current.push(line);
+    }
+  }
+  if (open?.collect && current.length > 0) {
+    blocks.push(current.join("\n"));
+  }
+
   return blocks.length > 0 ? blocks.join("\n") : section;
+}
+
+/**
+ * The first word of a fence's info string, lowercased: `yaml` out of an opener
+ * that carries attributes after the language, and the empty string out of a
+ * bare fence.
+ */
+function fenceInfoWord(info: string): string {
+  return info.trim().split(/\s+/u)[0]?.toLowerCase() ?? "";
 }
 
 /**
