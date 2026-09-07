@@ -84,8 +84,8 @@ export async function readRulePromotions(ledgerPath) {
 
   if (literal === undefined) {
     throw new Error(
-      `${LEDGER_REL}: no \`RULE_PROMOTIONS\` object literal. The promotion preflight reads the ` +
-        "ledger itself rather than a copy of it, so it cannot proceed without one.",
+      `${ledgerPath}: no \`RULE_PROMOTIONS\` object literal. The promotion preflight reads the ` +
+        `ledger itself rather than a copy of it, so it cannot proceed without one.`,
     );
   }
 
@@ -104,7 +104,7 @@ export async function readRulePromotions(ledgerPath) {
     const code = CODE_IN_DOC.exec(docCommentOf(property, source))?.[1];
     if (code === undefined || typeof fields.promoteAt !== "string") {
       throw new Error(
-        `${LEDGER_REL}: \`RULE_PROMOTIONS.${key}\` states no code in its doc comment, or no ` +
+        `${ledgerPath}: \`RULE_PROMOTIONS.${key}\` states no code in its doc comment, or no ` +
           "`promoteAt`. Every entry carries both, so a finding can be followed to the window " +
           "that governs it.",
       );
