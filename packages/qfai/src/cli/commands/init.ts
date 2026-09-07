@@ -55,6 +55,11 @@ import {
   needsManagedRulesSection,
 } from "../../core/agentEntryPoints.js";
 import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  mergeDocumentationClarityHooks,
+  serializeClaudeSettings,
+} from "../../core/claudeCodeHooks.js";
+import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
@@ -400,6 +405,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.dryRun,
   );
+  // Its template sits outside `root/`, so no earlier copy has touched the file:
+  // this owns both writing it and merging into one the project already had.
+  const claudeHooksResult = await ensureClaudeCodeHooks(assetsRoot, destRoot, options.dryRun);
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -501,6 +509,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
       ...entryPointRulesResult.copied,
+      ...claudeHooksResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
@@ -517,6 +526,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...gitignoreResult.skipped,
       ...legacyEvidenceIgnoreResult.skipped,
       ...entryPointRulesResult.skipped,
+      ...claudeHooksResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
@@ -2407,6 +2417,82 @@ async function ensureAgentEntryPointRules(
   }
 
   return { copied, skipped };
+}
+
+/**
+ * Writes the Claude Code hooks that restate the documentation-clarity rule.
+ *
+ * The template does not sit under `root/`, and cannot: everything the root copy
+ * writes into `.claude/` is a wrapper the symlink step owns, and the assets
+ * guardrail keeps that directory out of the root template so the two never
+ * compete for it. This is the second tree `qfai init` reads directly, beside
+ * `.github/instructions/`.
+ *
+ * So both cases are handled here rather than one here and one in the copy. A
+ * project without a settings file gets the whole template; one that has its own
+ * gets only the hook entries, appended after whatever it already declares.
+ *
+ * Every refusal is reported rather than silently absorbed. A settings file this
+ * cannot read is the project's own configuration in a shape the merge does not
+ * understand, and rewriting it on a guess would cost more than the reminder is
+ * worth — so the file is left exactly as it is and the operator is told which
+ * entries to add by hand.
+ */
+async function ensureClaudeCodeHooks(
+  assetsRoot: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const segments = CLAUDE_SETTINGS_RELATIVE_PATH.split("/");
+  const target = path.join(destRoot, ...segments);
+  // Messages below name the constant relative path, never `target`. An absolute
+  // path carries the destination directory's own name, which on an untrusted
+  // repository can hold a newline or an ANSI escape and forge this report's
+  // headings. `report()` prints the absolute paths, through `formatReportPath`.
+  const shown = CLAUDE_SETTINGS_RELATIVE_PATH;
+
+  const template = await readTextFileIfPresent(path.join(assetsRoot, ...segments));
+  if (template === null) {
+    error(
+      `  WARNING: ${shown} was left unchanged: the shipped hook template is missing from this ` +
+        `install, so the documentation-clarity reminder is not wired up.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+
+  const existing = await readTextFileIfPresent(target);
+  if (existing === null) {
+    // Booked into `copied` and nothing more: the create-only root copy announces
+    // every other seeded file the same way, through the run report alone.
+    if (!dryRun) {
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, template, "utf-8");
+    }
+    return { copied: [target], skipped: [] };
+  }
+
+  const merged = mergeDocumentationClarityHooks(existing, template);
+  if (merged.outcome === "already-present") {
+    return { copied: [], skipped: [target] };
+  }
+  if (merged.outcome === "unreadable") {
+    error(
+      `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
+        `the shipped template by hand to enable the documentation-clarity reminder.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+
+  const events = merged.events.join(", ");
+  if (dryRun) {
+    info(`  would update: ${shown} (add documentation-clarity hooks: ${events})`);
+    return { copied: [target], skipped: [] };
+  }
+  await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
+  info(
+    `  updated: ${shown} (added documentation-clarity hooks: ${events}; existing settings kept)`,
+  );
+  return { copied: [target], skipped: [] };
 }
 
 /** File contents, or `null` when nothing is there. Other read faults throw. */
@@ -6180,6 +6266,7 @@ function buildCodexReadme(): string {
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
     "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
     "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
+    "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "",
   ].join("\n");
 }
@@ -6272,6 +6359,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
     "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
     "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
+    "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "",
   ].join("\n");
 }

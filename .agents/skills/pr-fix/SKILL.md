@@ -107,6 +107,9 @@ $pr = gh pr view --json number,headRefName,baseRefName,url
 
 1. `git status --short`、`git branch --show-current`、`gh pr view <PR番号> --json number,title,body,baseRefName,headRefName,statusCheckRollup,url` を確認する。
 2. dry-run が PR 本文不備を検出したら、preview を確認し、必要なら `-DryRun` を外して本文を補正する。
+   本文を書き換えたら、タイトルと本文が `.agents/rules/documentation-clarity.md` の
+   基準を満たすか確認する（内輪の識別子を書かない、経緯を書かない、削る、
+   箇条書きと表で整える、翻訳調を直す）。
 3. dry-run が unresolved review thread を出したら、thread ごとの指摘を解消する。必要なローカル gate を実行し、commit/push する。
 4. script が表示する `gh api` コマンド、または script 内の confirm で reply/resolve を実行する。
 5. CI が落ちている場合は、失敗 job を `.github/workflows/ci.yml` と `package.json` の gate に引き当てて修正し、再度 commit/push する。

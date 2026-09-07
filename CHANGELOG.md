@@ -281,6 +281,27 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
 
 ### Added
 
+- **AI が書く文章の品質基準を全 AI 共通ルールに追加した。**
+  `.agents/rules/documentation-clarity.md` が SSOT で、PR / issue のタイトルと説明、
+  変更差分に含まれるコードコメントと Markdown に適用される。内容は 6 項目:
+  内輪の識別子を書かない、経緯を書かない、削る、平易に書く、箇条書きと表で整える、
+  書き終えたら全件読み直して翻訳調を直す。`qfai init` が配布する
+  `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` / `.codex/README.md`
+  と、constitution の `communication.md`、Copilot の review instructions がこれを参照する。
+
+- **Claude Code の hooks で、その基準を必要な場面だけ自動で読み込ませる。**
+  `qfai init` が `.claude/settings.json` を配布する。GitHub の MCP ツールで PR /
+  issue / レビューを投稿する直前 (PreToolUse) と、Markdown を書き込んだ直後
+  (PostToolUse) の 2 箇所で発火する。
+
+  hook は `node` を引数付きで直接起動し、固定の JSON を 1 行出すだけで、シェルも
+  ファイル読み込みもネットワークも使わない。設定ファイルが既にあるプロジェクトでは
+  既存の内容を残したまま hook のエントリだけを追記し、2 回目以降の `init` は何も
+  足さない。JSON として読めない設定ファイルは書き換えず、警告だけ出す。
+
+  `gh` コマンドは対象外。Bash 引数の条件指定は複合コマンドにも一致するため、
+  GitHub と無関係な作業の前でリマインダーが出てしまう。
+
 - **依存更新 PR を GitHub 上で自動生成する仕組み。** `.github/workflows/renovate.yml`
   が週次 (Asia/Tokyo の月曜 6 時前) と手動 dispatch で Renovate を回し、
   `.github/renovate.json5` が何をどうまとめるかを持つ。設定手順は

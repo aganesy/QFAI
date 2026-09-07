@@ -1233,9 +1233,13 @@ export function fileDigest(raw: Buffer): string {
  * `INIT_MUST_NOT_SHIP` states. This paragraph named four of the eight for a round after the list grew —
  * two copies of one fact, and the one nobody was looking at was wrong.
  *
- * **The justification is false of one file in those trees**, and `ALLOWED_PROVENANCE_SHAPE` below
- * covers it for that reason: `.qfai/install-provenance.json` is not an agent instruction, does not
- * change when a skill does, and gates whether init DELETES an adopter's workflow.
+ * **The justification is false of two files in those trees**, and each is covered below for that
+ * reason. `.qfai/install-provenance.json` is not an agent instruction, does not change when a skill
+ * does, and gates whether init DELETES an adopter's workflow; `ALLOWED_PROVENANCE_SHAPE` pins its
+ * shape. `.claude/settings.json` does not change when a skill does either, and its contents are a
+ * program an adopter's agent runs — `ALLOWED_INIT_CONTENT` pins its bytes. Neither can appear in the
+ * path set: that set is compared against the files OUTSIDE these trees, so naming a file inside one
+ * of them claims a path the walk never offers.
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
@@ -1249,7 +1253,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * And the CONTENT of the six that are not workflows.
+ * And the CONTENT of the files that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
  * planted in the shipped `DESIGN.md` was invisible — four of the six files then shipped were pinned by
@@ -1279,8 +1283,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // the file is written into. Reverting those five lines reproduces the previous digest
     // (`df81d579…`) byte for byte, which is what makes this a review of five lines rather than a
     // re-blessing of the whole file.
+    //
+    // The current digest adds one more line to that same block: the bullet naming
+    // `.agents/rules/documentation-clarity.md`, the writing rule the run seeds beside the other
+    // masters. Dropping that bullet reproduces `439cbe67…`.
     ".github/copilot-instructions.md",
-    "439cbe672bff64e110b13440d86eb18cf83685f73f41ccb12947408b5cd80b46",
+    "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
   ],
   // Re-derived for the MERGED managed block, which carries both sides' additions:
   // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
@@ -1292,8 +1300,20 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // wrote, which is how both predecessors were derived. Not copied from a
   // failure message: the point of the pin is that somebody looked at the block.
   [".gitignore", "f35a2624352ca319b3b53a6e9a556779877eef07c42338e85ab67afeef9bb832"],
-  ["AGENTS.md", "04061092ed7048349ad93404145a9e3d71cb7c21bd37f5a531d0cd61147b313d"],
-  ["CLAUDE.md", "040faf04c46b85d0064ca561ca813f66a3989b4f3ab44802f8c447908a0b455d"],
+  // One bullet each, inside the managed cross-AI rules block: the
+  // `documentation-clarity.md` master that the same run seeds beside them.
+  // Removing that line from both files reproduces the previous digests
+  // (`04061092…` and `040faf04…`), so this is a review of one line per file.
+  ["AGENTS.md", "a832e27c327ece55e502f6ad50c84f35be5edb2a07bfb1a9e83e9036cdbdd7a5"],
+  ["CLAUDE.md", "20040ab0f55a6ee346af40d1d143a96b38d1c7d541aa649c6042eab99c63a295"],
+  // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
+  // These are the hooks that restate the writing rule when a pull request, issue
+  // or review is posted through the GitHub tools, and after a Markdown file is
+  // written. Each entry runs `node` in exec form — no shell, no file reads, no
+  // network — and prints one constant JSON envelope, which
+  // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
+  // bytes are what an adopter's agent runs, so the bytes are the pin.
+  [".claude/settings.json", "846e05decda5d9bff1d5c932240322167df68e5988d17a0c3949ab07f58b1525"],
   // Moved when the state lock joined `QFAI_GITIGNORE_BLOCK`: the lock now sits beside
   // `.qfai/state.json` so that everyone who may write the state may also reap a lock a crash left
   // behind, and a file init writes beside the state file is a file init must ignore. Re-derived
@@ -1430,6 +1450,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/distributed-surface.md",
+  "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/version-discipline.md",
@@ -1439,6 +1460,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/CLAUDE.md",
   "root/DESIGN.md",
   "root/qfai.config.yaml",
+  ".claude/settings.json",
   ".github/instructions/code-review.instructions.md",
   ".github/instructions/principles.instructions.md",
 ]);

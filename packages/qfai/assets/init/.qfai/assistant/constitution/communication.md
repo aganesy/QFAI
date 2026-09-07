@@ -21,6 +21,25 @@ Use concise, structured bullet points:
 - **Verification**: what you ran and expected result
 - **Open Questions**: unresolved items (if any)
 
+## Writing quality bar
+
+Applies to every text an agent produces: pull request and issue titles and
+bodies, source-code comments, and Markdown files — inside the current change
+only, never beyond its diff.
+
+- No issue or pull-request numbers, ticket identifiers, or names only this
+  project understands, anywhere in source code or Markdown.
+- No account of how the work went. State the current behaviour and why it is
+  that way; the history is already in the git log and the pull request.
+- Cut what is self-evident, repeated, or wordy.
+- Ordinary vocabulary, one claim per sentence, lines short enough to scan.
+- Bullet lists and tables for parallel items.
+- Re-read every changed line afterwards. Text that reads as a literal
+  translation is a defect in any language pair — rewrite it the way someone
+  writing natively in that language would.
+
+Full rule: `.agents/rules/documentation-clarity.md`.
+
 ## AskUserQuestion Protocol
 
 When an agent needs to ask the user a question, the following rules apply (see also Constitution Article X):

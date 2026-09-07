@@ -19,6 +19,9 @@ directory; edit the master here.**
 - `root-additions-policy.md` — repository-root file/dir creation
   requires explicit user approval.
 - `temporary-files.md` — all scratch artifacts go under `tmp/`.
+- `documentation-clarity.md` — writing standard for PRs, issues, code
+  comments and Markdown. Reminded automatically by the hooks in
+  `.claude/settings.json`.
 
 ## Adding a new rule
 
