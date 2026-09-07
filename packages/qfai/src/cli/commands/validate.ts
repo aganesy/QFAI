@@ -1177,7 +1177,7 @@ function buildPartialProfileNotice(
         preconditionSentence
       : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
         `${fullCovered.join(", ")}. A PASS here is not full-scan coverage — run ` +
-        "`npx qfai validate --fail-on error` (full profile) before declaring completion." +
+        "`qfai validate --fail-on error` (full profile) before declaring completion." +
         stageOnlySentence +
         preconditionSentence;
   return profileNotice(message);
@@ -2027,7 +2027,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Fill the entry's missing `id` / `category` / `title` / `description` / `source_id` fields.",
   "QFAI-RESEARCH-019": "Fill the reflection entry's missing `source_id` / `finding` fields.",
   "QFAI-RESEARCH-020":
-    "Run `npx qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
+    "Run `qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
   "QFAI-RESEARCH-021":
     "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
 };
