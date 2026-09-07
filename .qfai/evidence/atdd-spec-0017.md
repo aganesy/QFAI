@@ -2259,9 +2259,9 @@ a merge can invalidate has no author to hold responsible for it.
 
 Re-measured for this commit by a separate walk of the two include roots — not by calling into
 `stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
-readings agree: **1762** (`tests/assets` 1592, `tests/e2e` 170).
+readings agree: **1773** (`tests/assets` 1603, `tests/e2e` 170).
 
-e2e callsites at this tree: 1762
+e2e callsites at this tree: 1773
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. The seventh INSTANCE is

@@ -69,6 +69,7 @@
     "tests/assets/openQuestionRouting.test.ts",
     "tests/assets/outputLanguageSingleSource.test.ts",
     "tests/assets/packGateQualifier.test.ts",
+    "tests/assets/projectMemoryReadScope.test.ts",
     "tests/assets/prototypeParityRecording.test.ts",
     "tests/assets/prototypingScopeFloorHome.test.ts",
     "tests/assets/reOpenRecordShape.test.ts",
