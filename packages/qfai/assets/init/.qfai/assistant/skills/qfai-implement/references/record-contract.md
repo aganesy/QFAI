@@ -53,6 +53,9 @@ is accepted — it has no ATDD entry to produce, and a `done` row has no legal
 transition that would let it re-observe a RED, so requiring the new location
 would make an already-complete row permanently ungateable.
 
+A row advanced **after** the split writes to the file its `Layer` owns. The
+compatibility above reaches backwards only.
+
 ## Who writes the marker
 
 **Item 10 reads the marker; it never writes one.** The pass that writes it is
@@ -69,7 +72,8 @@ was meant to clear stayed permanently unable to finish.
 
 Every `Review pack seal` the entry carries — one per review attempt, not one
 per round (`round-evidence.md`) — is recomputed here from the
-`review-<timestamp>/` directory it names, and a mismatch means that pack was
+`review-<timestamp>/` directory it names
+(`evidence-revision.md#review-pack-seal`), and a mismatch means that pack was
 edited after its attempt closed.
 
 Each reviewer verdict's `Audited evidence hash` is **recomputed** here over the
