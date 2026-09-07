@@ -768,10 +768,12 @@ describe("the shipped-lane allowlist", () => {
   });
 
   it("reads a seeded dotfile as data without reopening the extensionless hole", () => {
-    // `path.extname(".gitattributes")` is `""`, so the extension set alone called the seeded
-    // `.gitattributes` the same thing it called round 20's payload: an extensionless file. The fix
-    // must accept it by WHOLE NAME, because the other way to accept it — putting `""` in the
-    // extension set — accepts every extensionless file and is the guard deleted.
+    // `path.extname(".gitattributes")` is `""` — a leading dot with nothing after it is not an
+    // extension to node — so the extension set alone reads the seeded dotfile as the very thing
+    // the rule exists to refuse: an extensionless file, which is how an executable payload
+    // reaches an adopter with every other pin green. It is accepted by WHOLE NAME instead,
+    // because the other way to accept it — putting `""` in the extension set — accepts every
+    // extensionless file and is the guard deleted.
     expect(
       ALLOWED_INIT_SOURCE_EXTENSIONS.has(""),
       '`""` in the extension set admits every extensionless file, which is what the rule exists to refuse',

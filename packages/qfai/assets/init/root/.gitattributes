@@ -35,4 +35,9 @@
 # QFAI が seed するルート直下の成果物 / 設定
 /qfai.config.yaml text=auto eol=lf
 /DESIGN.md text=auto eol=lf
+# `qfai init` が seed するワークフローは 3 つとも対象にする。1 つだけを固定すると、
+# 残りは Windows の checkout で CRLF になり、レビュー差分のノイズを減らすという
+# この設定の目的をその 2 ファイルについては果たさない。
 /.github/workflows/qfai-validate.yml text=auto eol=lf
+/.github/workflows/qfai-tests.yml text=auto eol=lf
+/.github/workflows/qfai-docs.yml text=auto eol=lf

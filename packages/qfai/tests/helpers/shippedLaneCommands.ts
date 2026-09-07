@@ -1319,12 +1319,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
   ],
-  // Unchanged by the merge with main: the asset is byte-identical to what this
-  // branch added, and `qfai init` copies it verbatim. Pinned for the reason the
-  // others are, and for one more — its whole purpose is to fix the bytes of
-  // everything beside it, so a silent edit to it changes how every other pinned
-  // file is checked out.
-  [".gitattributes", "492ce2e432fff98fea3b35f89f3f4f44fe7268c54543e2d195c5fb4d0362806c"],
+  // `qfai init` copies this file verbatim, so it is pinned like every other
+  // adopter-facing file here — and for one reason none of the others has: it
+  // decides how git rewrites the bytes of everything beside it on checkout. An
+  // unreviewed edit to it moves what an adopter's working tree holds for files
+  // whose own digests never change, which is the one way a content pin can be
+  // satisfied and still be wrong.
+  [".gitattributes", "60f0c7f86b85d19fed85f5587d0fea94d4f39d782af0e70fa178ab7f7229f412"],
   // Re-derived for the MERGED managed block, which carries both sides' additions:
   // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
   // (`implement-*.md`, `atdd-*.md`) that arrived with it. Neither predecessor's

@@ -39,11 +39,21 @@ function gitStdout(root: string, args: readonly string[]): string | null {
  * A git failure here is read as "changed": the caller's job is to flag drift,
  * and staying silent because a subprocess broke would be the wrong default.
  */
+/**
+ * Whether one path differs once carriage returns at end of line are ignored.
+ *
+ * **Three-dot, matching {@link getChangedFilesAgainstBase}.** This confirms a
+ * `0 0` row that function's own listing produced, so the two must address the
+ * same pair of trees. Against a two-dot range the confirmation reads a file
+ * that only `base` changed as differing, the `0 0` row survives, and a path
+ * whose entire diff is line endings is reported as drift — the case this
+ * function exists to drop.
+ */
 function differsIgnoringEol(root: string, baseBranch: string, file: string): boolean {
   try {
     execFileSync(
       "git",
-      ["diff", "--ignore-cr-at-eol", "--quiet", `${baseBranch}..HEAD`, "--", file],
+      ["diff", "--ignore-cr-at-eol", "--quiet", `${baseBranch}...HEAD`, "--", file],
       { cwd: root, encoding: "utf-8", stdio: ["ignore", "ignore", "ignore"] },
     );
     return false;
@@ -227,6 +237,12 @@ export function changedFilesSince(
  * instead, so each entry is exactly `R<score>`, from, to.
  *
  * `-M` is explicit because a consumer may have `diff.renames` turned off.
+ *
+ * **Three-dot, matching {@link getChangedFilesAgainstBase}.** The sources are
+ * subtracted from that function's set, so a rename listed against a different
+ * pair of trees removes a path the set never held, or fails to remove one it
+ * does — either way `dropRenameSources` stops meaning what its caller reads it
+ * to mean.
  */
 function getRenameSourcesAgainstBase(root: string, baseBranch: string): Set<string> {
   const output = gitStdout(root, [
@@ -235,7 +251,7 @@ function getRenameSourcesAgainstBase(root: string, baseBranch: string): Set<stri
     "--diff-filter=R",
     "--name-status",
     "-z",
-    `${baseBranch}..HEAD`,
+    `${baseBranch}...HEAD`,
   ]);
   const sources = new Set<string>();
   if (output === null) {
