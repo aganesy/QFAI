@@ -21,13 +21,20 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 
-const read = (tree: string, rel: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, rel), "utf-8");
+/**
+ * Line endings are normalised to LF on read: `core.autocrlf` hands back CRLF on
+ * Windows, and both readers below anchor on `\n` — `subsection` finds a heading
+ * by the newline around it, and `flat` joins wrapped lines. Either would miss
+ * every match against a CRLF checkout, failing on the file's line endings
+ * rather than on its content.
+ */
+const read = async (tree: string, rel: string): Promise<string> =>
+  (await readFile(path.join(repoRoot, tree, rel), "utf-8")).replace(/\r\n/g, "\n");
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
-/** The body of a `#### ` section, up to the next heading of any level. */
+/** The body of the section `heading` names, up to the next heading of any level. */
 const subsection = (content: string, heading: string): string => {
   const start = content.indexOf(`\n${heading}\n`);
   if (start < 0) {
@@ -66,7 +73,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
 
     expect(step3b).toContain("**On a matrix shape take step 1's residual path**");
-    expect(step3b).toContain("write `todo -> blocked` with that `CR-*` in `Blocked-By`");
+    // The cell's format lives in step 1 and is cited, not restated: a second
+    // spelling of `CR-YYYYMMDD-NNNN — blocked at todo` is one that can drift.
+    expect(step3b).toContain(
+      "record that `CR-*` in `Blocked-By` **in the form step 1 gives, departure status included**",
+    );
+    expect(step3b).not.toContain("with that `CR-*` in `Blocked-By`.");
     // The copy is what attributes the RED, so refusing it is the whole point.
     expect(step3b).toContain("**Copy neither cell, and write no `red`**");
   });
