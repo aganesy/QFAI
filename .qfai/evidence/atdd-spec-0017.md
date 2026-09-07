@@ -2259,7 +2259,7 @@ a merge can invalidate has no author to hold responsible for it.
 
 Re-measured for this commit by a separate walk of the two include roots — not by calling into
 `stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
-readings agree: **937** (`tests/assets` 767, `tests/e2e` 170).
+readings agree: **1728** (`tests/assets` 1558, `tests/e2e` 170).
 
 e2e callsites at this tree: 1728
 
