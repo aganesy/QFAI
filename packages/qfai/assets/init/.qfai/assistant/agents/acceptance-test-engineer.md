@@ -33,7 +33,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Acceptance test plan and implemented coverage
 - Mapping from US / TC / CON-API / CON-DB to test assets
 - Execution proof and evidence summary
-- TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly). `DR-ID` carries the `DR-*` where the item's status requires one — an `exception` row is invalid without it, and the orchestrator can only write what it was returned
+- TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
+  the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
+  `DR-ID` carries the `DR-*` where the item's status requires one: an `exception` row is
+  invalid without it, and the orchestrator can write only what it was returned
 - Gaps and follow-up actions
 
 ## Stop conditions

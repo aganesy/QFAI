@@ -35,7 +35,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Backend implementation summary
 - Changed files and affected contracts
 - Local verification notes
-- TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly). `DR-ID` carries the `DR-*` where the item's status requires one — an `exception` row is invalid without it, and the orchestrator can only write what it was returned
+- TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
+  the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
+  `DR-ID` carries the `DR-*` where the item's status requires one: an `exception` row is
+  invalid without it, and the orchestrator can write only what it was returned
 - Evidence summary for `.qfai/evidence/`
 - Notes on invariants, validation, and why added abstractions/configuration are necessary now
 
