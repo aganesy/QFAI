@@ -161,4 +161,4 @@ Upstream: `_policies/10_delta.md` § 2026-08-22 (policy-only UPDATE:MODIFY — D
 - Rationale: `companyName` は配布ツリーに consumer が無く、hard-required の「着手前に必ず訊く」コストだけを払っていた。hard-required は縮小してよい (読まない入力を訊く理由が無い) 一方、widening は許さない。したがって削除したのは consumer 不在の 1 項目で、bucket が閉じた集合になったわけではない。skill 固有の hard-required 入力は、その skill を名指しで宣言した上で許可する。
 - Regression: `packages/qfai/tests/assets/assets.test.ts` — 配布 SKILL.md の hard-required bucket が、共通 2 項目と当該 skill が宣言した項目の範囲に収まり、廃止項目を含まないことを検査。項目数の不足は検査しない (縮小は許可)。
 - ID 安定性: US / AC / BR / EX / TC いずれも renumber なし。新規 append なし。
-- Approved By: yusuke_senaga (issue #753)
+- Approved By: yusuke_senaga

@@ -177,10 +177,20 @@ ${hardRequired}
     const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
     expect(finding?.message ?? "").toContain("companyName");
-    // Inside its promotion window, so a warning rather than a build failure,
-    // and the message has to say which release ends the window (P7).
-    expect(finding?.severity).toBe("warning");
-    expect(finding?.message ?? "").toMatch(/warning until the \d+\.\d+\.\d+ release/);
+    // The severity follows the promotion window, so it is derived from the
+    // same registry the validator reads rather than pinned to one release: a
+    // pinned `warning` fails on the version that promotes the rule.
+    const { RULE_PROMOTIONS, newRuleSeverity } = await import("../../../src/core/sunset.js");
+    const { resolveToolVersion } = await import("../../../src/core/version.js");
+    const expected = newRuleSeverity(
+      await resolveToolVersion(),
+      RULE_PROMOTIONS.autopilotHardRequiredDrift.promoteAt,
+    );
+    expect(finding?.severity).toBe(expected);
+    if (expected === "warning") {
+      // Inside the window the message names the release that ends it.
+      expect(finding?.message ?? "").toMatch(/warning until the \d+\.\d+\.\d+ release/);
+    }
   });
 
   it("reports a retired entry written beside a pinned one, which a substring test missed", async () => {
@@ -216,6 +226,20 @@ ${hardRequired}
     const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
     expect(finding?.message ?? "").toContain("does not declare");
+  });
+
+  it("reads a retired entry written in a trailing clause", async () => {
+    // A trailing dash clause qualifies one entry, so the reduced form used to
+    // compare names drops it. A withdrawn name written there is still written.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent — companyName\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
   });
 
   it("reads a retired entry written past a wrapped bullet", async () => {

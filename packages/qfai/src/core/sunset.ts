@@ -302,7 +302,7 @@ export const RULE_PROMOTIONS = {
    * every project that installed before the entry was retired still lists it
    * and would meet this at once.
    */
-  autopilotHardRequiredDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  autopilotHardRequiredDrift: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
   /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the

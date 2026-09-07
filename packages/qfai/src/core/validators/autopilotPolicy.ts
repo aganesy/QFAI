@@ -108,26 +108,36 @@ const BUCKET_HEADERS = {
 } as const;
 
 /**
- * Reduce one hard-required bullet to the identifier it names, so the
- * comparison against {@link HARD_REQUIRED_ENTRIES} can be an EQUALITY rather
- * than a substring test.
- *
- * Substring matching was the hole: a bullet reading
- * `- brand intent / companyName` contains `brand intent`, so it was neither an
- * unknown entry nor a missing one, and the retired identifier could be
- * reintroduced by writing it beside a permitted one. Equality on a normalized
- * bullet rejects that while leaving the bullets free to carry the decoration
- * the shipped tree actually uses — backticks and a trailing qualifier such as
- * `` `primarySpecId` (when absent from inputs) ``.
- *
- * Normalization is deliberately narrow: a trailing parenthetical or dash
- * clause is a qualifier on ONE entry, whereas anything else joining two names
- * (`/`, `+`, a comma) survives into the result and fails the equality, which
- * is the direction this guard must fail in.
+ * The bullet with its decoration removed and nothing else, so every name it
+ * writes is still in the result — including one in a trailing clause.
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
+/**
+ * Reduce one hard-required bullet to the identifier it names, so a comparison
+ * against the allowed entries reads the name and not the decoration around it.
+ *
+ * Decoration is backticks and emphasis; a qualifier is a trailing parenthetical
+ * or a trailing dash clause, and both attach to ONE entry — `` `primarySpecId`
+ * (when absent from inputs) ``. Parentheses go first: a qualifier may hold a
+ * dash of its own, and dropping from that dash leaves an unclosed parenthesis
+ * behind.
+ *
+ * Anything that joins two names — `/`, `+`, a comma — survives into the result,
+ * so a bullet naming two entries does not equal either of them.
+ *
+ * Not for the retired-name search: this drops a trailing clause, and a retired
+ * name written in one is exactly what that search is for. Use
+ * {@link decorationOnly} there.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function decorationOnly(bullet: string): string {
+  return bullet.replace(/[`*_]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 export function normalizeHardRequiredEntry(bullet: string): string {
   return bullet
     .replace(/[`*_]/g, "")
@@ -188,14 +198,13 @@ export function collectHardRequiredEntries(content: string): string[] {
  * skill may narrow this bucket to the inputs it actually reads. Carrying more
  * is what this refuses.
  *
- * Matching is by whole word inside the normalized bullet rather than by
- * equality, because the reintroduction to catch is a withdrawn name written
- * *beside* a live one: `- brand intent / companyName` names both, and an
- * equality test sees neither.
+ * Matching is by whole word inside the bullet rather than by equality, so a
+ * bullet naming two entries answers for both: `- brand intent / companyName`
+ * names a live entry and a withdrawn one, and only a word match sees the
+ * second.
  *
- * Exported so the validator and the shipped-asset guard in
- * `tests/assets/assets.test.ts` decide membership with ONE matcher: two copies
- * of this rule is how the substring hole reached both of them at once.
+ * The validator and the shipped-asset guard in `tests/assets/assets.test.ts`
+ * both call this, so membership has one definition rather than two.
  *
  * @param skillId the skill the bucket belongs to, which decides the
  * skill-specific entries it may carry. Omitted, only the common set applies.
@@ -222,7 +231,10 @@ export function classifyHardRequiredEntries(
   const unknown: string[] = [];
   for (const entry of entries) {
     const normalized = normalizeHardRequiredEntry(entry);
-    if (named(normalized, RETIRED_HARD_REQUIRED_ENTRIES)) {
+    // The retired search reads the whole bullet: a withdrawn name written in a
+    // trailing clause — `brand intent — companyName` — is gone from the
+    // reduced form, and that clause is one of the places it gets written.
+    if (named(decorationOnly(entry), RETIRED_HARD_REQUIRED_ENTRIES)) {
       retired.push(entry);
       continue;
     }
