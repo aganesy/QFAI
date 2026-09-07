@@ -96,7 +96,9 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
     // Serial mode returns the same three; it has no merge step, not a
     // different contract.
-    expect(policy).toContain("returns Status, `DR-ID` and Evidence, the orchestrator writes them");
+    expect(policy).toContain(
+      "returns `Status`, `DR-ID` and `Evidence`, the orchestrator writes them",
+    );
   });
 
   it("claims the interruption guarantee for serial mode only", async () => {

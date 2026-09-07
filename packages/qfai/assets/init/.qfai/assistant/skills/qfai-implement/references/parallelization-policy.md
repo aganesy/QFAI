@@ -379,7 +379,7 @@ nothing the trunk was owed. Read a `todo` row after an interrupted parallel run
 as "not merged", not as "not attempted", and re-run the slice.
 
 In serial mode the same rule holds with no merge step: the implementation agent
-returns Status, `DR-ID` and Evidence, the orchestrator writes them.
+returns `Status`, `DR-ID` and `Evidence`, the orchestrator writes them.
 
 ### Coordinated parallel mode
 

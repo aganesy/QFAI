@@ -36,7 +36,7 @@ const read = async (tree: string, rel: string): Promise<string> =>
   flat(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
 
 describe.each(QFAI_TREES)("%s", (tree) => {
-  it("writes both columns the gate reads, not just Status", async () => {
+  it("writes the two columns the gate reads and the DR-ID an exception owes", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
       "update `test-list.md` **Status, DR-ID and Evidence** after each phase",
