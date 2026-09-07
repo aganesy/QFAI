@@ -83,7 +83,7 @@ async function seedSpec(root: string): Promise<void> {
     "utf-8",
   );
   // `validateSddDesignContractReadiness` only speaks when a root DESIGN.md
-  // exists, and the unreplaced `qfai init` seed is what QFAI-DCON-034 names.
+  // exists, and an unreplaced sample is what QFAI-DCON-034 names.
   await writeFile(
     path.join(root, "DESIGN.md"),
     ["# DESIGN", "", "Brand: qfai", "", "## Tone", "", "qfai sample brand.", ""].join("\n"),

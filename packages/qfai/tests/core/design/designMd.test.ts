@@ -1158,9 +1158,27 @@ describe("hashDesignMd (TC-1.3.x)", () => {
 // Sanity: the shipped DESIGN.md template parses + validates cleanly.
 // ---------------------------------------------------------------------------
 
+/**
+ * The sample brand the package ships.
+ *
+ * `qfai init` writes no root `DESIGN.md`: `/qfai-discussion` emits one, and
+ * only for a visual-prototyping surface. So the sample lives where the remedy
+ * text sends an author who needs it, and this is the copy the detector below
+ * has to recognise.
+ */
+const SHIPPED_DESIGN_MD_SAMPLE = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-prototyping",
+  "templates",
+  "DESIGN.md.sample",
+);
+
 describe("shipped DESIGN.md template", () => {
-  it("parses and validates the shipped assets/init/root/DESIGN.md", async () => {
-    const file = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+  it("parses and validates the shipped sample", async () => {
+    const file = SHIPPED_DESIGN_MD_SAMPLE;
     const text = await readFile(file, "utf-8");
     const result = parseDesignMd(text);
     expect("error" in result).toBe(false);
@@ -1176,7 +1194,7 @@ describe("shipped DESIGN.md template", () => {
 
 describe("isUnreplacedDesignMdSample", () => {
   const shippedSamplePaths = [
-    path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+    SHIPPED_DESIGN_MD_SAMPLE,
     path.join(
       getInitAssetsDir(),
       ".qfai",
@@ -1200,14 +1218,14 @@ describe("isUnreplacedDesignMdSample", () => {
     // marker-less copy of root/DESIGN.md forever. Simulate that
     // installed-base file by stripping the marker comment from the
     // shipped sample.
-    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text.replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "");
     expect(legacy).not.toContain(DESIGN_MD_SAMPLE_MARKER);
     expect(isUnreplacedDesignMdSample(legacy)).toBe(true);
   });
 
   it("does not flag a sample whose brand name was replaced", async () => {
-    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text
       .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
       .replace('name: "Acme Ledger"', 'name: "Northwind Freight"');
@@ -1215,7 +1233,7 @@ describe("isUnreplacedDesignMdSample", () => {
   });
 
   it("does not flag a sample whose brand-philosophy body was rewritten", async () => {
-    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const text = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     const legacy = text
       .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
       .replace(

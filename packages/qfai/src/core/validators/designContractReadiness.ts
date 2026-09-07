@@ -176,9 +176,9 @@ async function validateDesignContractReadinessForStage(
   // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
   // Every other check in this validator presupposes design contracts that
   // only exist once prototyping has started, but the sample gate has to
-  // fire earlier than that: `qfai init` seeds the sample DESIGN.md on day
-  // one, UI contracts are only authored later in SDD, and `/qfai-sdd`
-  // Phase 0 freezes the file's sha256 in between. Gated behind
+  // fire earlier than that: the sample can be copied in at any point, UI
+  // contracts are only authored later in SDD, and `/qfai-sdd` Phase 0
+  // freezes the file's sha256 in between. Gated behind
   // `uiContracts.length === 0` the gate could only ever report a freeze
   // that already happened.
   //
@@ -488,11 +488,17 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  *
  * DCON-030..033 are all content-agnostic: they verify that DESIGN.md
  * exists, parses and has not changed since the freeze — never that it was
- * authored by this project. `qfai init` seeds the shipped sample brand
- * into the project root, so an unreplaced sample satisfies every one of
+ * authored by this project. So an unreplaced sample satisfies every one of
  * them, gets sha256-frozen as the project's brand contract, and from then
  * on `/qfai-prototyping` enforces a fictional identity while swapping in
  * the real brand breaks the lock until it is refrozen.
+ *
+ * A project holds the sample because someone put it there: copied from
+ * `qfai-prototyping/templates/DESIGN.md.sample` as a starting point, or
+ * seeded by a release back when `qfai init` wrote one. Init writes none
+ * now — `/qfai-discussion` emits the draft, and only for a
+ * visual-prototyping surface — so this gate no longer reports a file the
+ * tool itself had just written.
  *
  * Severity scales with how far the project has committed to a brand
  * contract:
@@ -527,7 +533,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
   return [
     issue(
       "QFAI-DCON-034",
-      "Root DESIGN.md is still the qfai sample brand (unreplaced `qfai init` seed).",
+      "Root DESIGN.md is still the qfai sample brand (unreplaced sample).",
       uiBearing ? "error" : "warning",
       ROOT_DESIGN_MD_REL,
       "designContractReadiness.rootDesignMdSample",

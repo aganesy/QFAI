@@ -15,6 +15,7 @@ import {
   writeFile,
   symlink,
 } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { execFile as execFileCb, spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -3081,17 +3082,17 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // TC-1.4.1 — fresh init creates DESIGN.md at root with template byte content
-  it("ships DESIGN.md at root with template byte content (TC-1.4.1)", async () => {
+  it("writes no DESIGN.md at root (TC-1.4.1)", async () => {
+    // `/qfai-discussion` emits the brand SSOT, and only for a
+    // visual-prototyping surface. Seeding it here put the file in every
+    // project — the cli-only and non-UI ones that skill exempts included —
+    // and the next `qfai validate` then reported the tool's own seed.
+    // `tests/cli/initNoDesignSeed.test.ts` holds the rest of that contract.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const designMdPath = path.join(root, "DESIGN.md");
-      const templatePath = path.join(getInitAssetsDir(), "root", "DESIGN.md");
-
-      const writtenBytes = await readFile(designMdPath);
-      const templateBytes = await readFile(templatePath);
-      expect(writtenBytes.equals(templateBytes)).toBe(true);
+      expect(existsSync(path.join(root, "DESIGN.md"))).toBe(false);
     } finally {
       await removeTempTree(root);
     }

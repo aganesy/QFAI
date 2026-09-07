@@ -1279,9 +1279,27 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
 // and Phase 0 freezes the file's sha256 in between.
 // ---------------------------------------------------------------------------
 
+/**
+ * The sample brand the package ships, as the prototyping template.
+ *
+ * `qfai init` writes no root `DESIGN.md`, so a project only holds this text
+ * because someone put it there — copied from the template, or seeded by a
+ * release that still did. Both are what this gate exists to catch, so the
+ * sample is still the fixture; only where it ships has moved.
+ */
+const SHIPPED_DESIGN_MD_SAMPLE = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-prototyping",
+  "templates",
+  "DESIGN.md.sample",
+);
+
 describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-034)", () => {
   async function readShippedSample(): Promise<string> {
-    return readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    return readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
   }
 
   it("reports DCON-034 before any UI contract exists (fresh init)", async () => {
@@ -1426,10 +1444,7 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedClassification(root, "cli", []);
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-034");
@@ -1439,10 +1454,7 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedClassification(root, "web", []);
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("error");
@@ -1539,10 +1551,7 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     await seedClassification(root, "cli", [], "discussion-20260101000000000");
     await mkdir(path.join(root, ".qfai"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "state.json"), body, "utf-8");
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
       (i) => i.code,
@@ -1632,10 +1641,7 @@ describe("cli-only carve-out is scoped to every UI-bearing spec", () => {
     await seedSpec(root, "0001", CLI_PACK);
     await seedSpec(root, "0002", WEB_PACK);
     await writeDiscussionCurrentId(root, CLI_PACK);
-    const shippedSample = await readFile(
-      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
-      "utf-8",
-    );
+    const shippedSample = await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
 
     const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
