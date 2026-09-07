@@ -309,9 +309,44 @@ function readHeadingBody(
   return lines.slice(startLine - 1, endLine).join("\n");
 }
 
+/** A fenced block's opening or closing line: the run, then the info string. */
+const FENCE_LINE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*(.*)$/;
+
+/**
+ * The body of the first `yaml` / `yml` fenced block in `body`, or null.
+ *
+ * Line-based rather than one regular expression over the whole string, and both
+ * fence characters rather than backticks only. A single non-greedy
+ * ```` ```…``` ```` match got two things wrong that matter now that
+ * `parseHeadings` skips fenced content properly: a `~~~yaml` block was not seen
+ * at all — so its markers stayed in the text and the YAML parse failed on them —
+ * and a nested ```` ``` ```` inside a wider block ended the match early. The
+ * closer rule is CommonMark's: same character, at least as long, no info string.
+ */
 function extractYamlCodeBlock(body: string): string | null {
-  const match = body.match(/```(?:yaml|yml)\s*([\s\S]*?)```/i);
-  const value = match?.[1]?.trim() ?? "";
+  const lines = body.split(/\r?\n/);
+  let marker: string | null = null;
+  const collected: string[] = [];
+  for (const line of lines) {
+    const match = FENCE_LINE_RE.exec(line);
+    if (marker === null) {
+      if (match === null) continue;
+      const info = (match[2] ?? "").trim().toLowerCase();
+      if (info === "yaml" || info === "yml") {
+        marker = match[1] ?? "";
+      }
+      continue;
+    }
+    if (match !== null) {
+      const run = match[1] ?? "";
+      const info = (match[2] ?? "").trim();
+      if (info === "" && run[0] === marker[0] && run.length >= marker.length) {
+        break;
+      }
+    }
+    collected.push(line);
+  }
+  const value = collected.join("\n").trim();
   return value.length > 0 ? value : null;
 }
 

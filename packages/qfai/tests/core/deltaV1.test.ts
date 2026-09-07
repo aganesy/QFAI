@@ -276,6 +276,38 @@ describe("deltaV1 parser", () => {
     expect(unfenced?.verificationPlanItems[0]?.level).toBe("");
   });
 
+  it("reads a tilde-fenced Verification.Plan block", () => {
+    // `~~~yaml` is the same block to CommonMark and to any renderer. Reading
+    // only backtick fences left its markers in the text, so a document that
+    // fenced its plan the other legal way failed to parse ON the fence.
+    const entry = parseDeltaV1(planDocument(["~~~yaml", ...UNFENCED_PLAN, "~~~"])).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems[0]?.level).toBe("unit");
+  });
+
+  it("does not end a fenced plan at a nested fence line carrying an info string", () => {
+    // The closer rule is the same one the heading scan uses: same character, at
+    // least as long, no info string. A shorter run, or one with an info string,
+    // is part of the block.
+    const entry = parseDeltaV1(
+      planDocument([
+        "````yaml",
+        "- id: VFY-001",
+        "  # ```yaml is not a closer here",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "````",
+      ]),
+    ).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems[0]?.owner).toBe("dev");
+  });
+
   it("reports a parse error for a fenced plan whose YAML is not a list", () => {
     // The fence must not become a way to smuggle an unparsable body past the
     // check: what is inside it is still validated as a Verification.Plan.

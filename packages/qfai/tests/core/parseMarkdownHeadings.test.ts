@@ -68,6 +68,24 @@ describe("parseHeadings", () => {
     expect(titles(md)).toEqual(["Doc", "After"]);
   });
 
+  it("does not close a block on a fence line that carries an info string", () => {
+    // A ```yaml line inside a wider block is CONTENT — it is how a document
+    // shows a fenced example — and CommonMark says a closer carries no info
+    // string. Closing there would reopen the heading scan mid-block, which is
+    // the thing this tracking exists to prevent.
+    const md = doc(
+      "# Doc",
+      "````markdown",
+      "```yaml",
+      "  # not a heading",
+      "```",
+      "````",
+      "## After",
+    );
+
+    expect(titles(md)).toEqual(["Doc", "After"]);
+  });
+
   it("does not close a backtick fence with a tilde fence", () => {
     const md = doc("# Doc", "```yaml", "~~~", "  # still inside", "```", "## After");
 

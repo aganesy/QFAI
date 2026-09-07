@@ -1,8 +1,10 @@
 # Document schema: `<specsDir>/spec-NNNN/16_Traceability-ledger.md`
 #
 # One row per obligation, naming the file that implements it and the file that
-# proves it. This document is optional in a pack; when it exists, the ledger
-# table is the whole point of it, so the table is not.
+# proves it. The DOCUMENT is optional in a pack — a spec without one is not
+# invalid. The ledger TABLE is not optional once the document exists, because
+# the table is the whole point of the document: a ledger with no rows records
+# nothing while looking like it does.
 
 structure:
   - heading:

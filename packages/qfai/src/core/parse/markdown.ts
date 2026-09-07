@@ -28,7 +28,25 @@ const HEADING_RE = /^ {0,3}(#{1,6})\s+(.+?)\s*$/;
  * `readHeadingBody` truncated the block at it, so the plan failed to parse with
  * an error pointing at the fence marker itself.
  */
-const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*(.*)$/;
+
+/**
+ * Whether `line` closes a block opened with `marker`.
+ *
+ * Three conditions, and dropping the third is a real bug rather than a
+ * simplification: a closer is the same fence character, at least as long, AND
+ * carries no info string. A line reading ```` ```yaml ```` inside a wider block
+ * is CONTENT — that is exactly how a document shows a fenced example — so
+ * closing on it reopens the heading scan in the middle of the outer block and
+ * undoes what the fence tracking is for.
+ */
+function closesFence(line: string, marker: string): boolean {
+  const match = FENCE_RE.exec(line);
+  if (match === null) return false;
+  const run = match[1] ?? "";
+  const info = (match[2] ?? "").trim();
+  return info === "" && run[0] === marker[0] && run.length >= marker.length;
+}
 
 export function parseHeadings(md: string): Heading[] {
   const lines = md.split(/\r?\n/);
@@ -37,22 +55,18 @@ export function parseHeadings(md: string): Heading[] {
   let fence: string | null = null;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    const fenceMatch = FENCE_RE.exec(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1] ?? "";
-      if (fence === null) {
-        // An info string is allowed on the opener and forbidden on the closer,
-        // which is why the marker is kept rather than a boolean: a closer must
-        // be the same character and at least as long.
-        fence = marker;
-        continue;
-      }
-      if (marker[0] === fence[0] && marker.length >= fence.length) {
-        fence = null;
-      }
+    if (fence !== null) {
+      if (closesFence(line, fence)) fence = null;
+      // Every line of an open block is content, the closer included.
       continue;
     }
-    if (fence !== null) continue;
+    const fenceMatch = FENCE_RE.exec(line);
+    if (fenceMatch) {
+      // An info string is allowed on the OPENER, which is why the marker is
+      // kept rather than a boolean: the closer is matched against it.
+      fence = fenceMatch[1] ?? "";
+      continue;
+    }
     const match = line.match(HEADING_RE);
     if (!match) continue;
     const levelToken = match[1];
