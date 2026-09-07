@@ -71,6 +71,12 @@ export const SUNSETS = {
  * 4. where the code can fire on rows that are already terminal, document how a
  *    terminal row is meant to satisfy it — otherwise the only remedy is an
  *    out-of-lifecycle edit.
+ *
+ * Each entry carries the `code` it governs as data, not only in the prose
+ * above it. A pin the reader can follow from a finding is what lets a gate ask
+ * "does this tree still pass once the window closes?" before the release that
+ * closes it — the question a pin only answers, otherwise, on the release it
+ * blocks.
  */
 export const RULE_PROMOTIONS = {
   /**
@@ -84,7 +90,11 @@ export const RULE_PROMOTIONS = {
    * of a code whose condition already crashes the run, where a window would
    * turn a hard failure into a pass for two minors.
    */
-  toolResolvedAgainstDeclaration: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  toolResolvedAgainstDeclaration: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-TOOL-002",
+  },
   /**
    * `QFAI-CTYPE-004` — a delta file was read and counted for nothing, per
    * `### DL-` entry. The window is P7's default and it is doing real work: the
@@ -94,7 +104,7 @@ export const RULE_PROMOTIONS = {
    * that first makes the condition visible would fail it on a backlog nobody
    * was ever told about.
    */
-  deltaEntryUncounted: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  deltaEntryUncounted: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-CTYPE-004" },
   /**
    * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
    * as UI-bearing. The window is doing real work: the in-loop way out does not
@@ -103,40 +113,60 @@ export const RULE_PROMOTIONS = {
    * advance. Failing a gate for a condition whose remedy discards the review
    * already paid for would make the warning worse than the silence it replaces.
    */
-  frozenSurfaceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  frozenSurfaceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-PROT-011" },
   /**
    * `TDDLIST_EVIDENCE_EMPTY` — an empty / dash-only `Evidence` cell on a ledger
    * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
    * full minor beyond it.
    */
-  tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
+  tddListEvidenceEmpty: {
+    introducedIn: "1.10.0",
+    promoteAt: "1.12.0",
+    code: "TDDLIST_EVIDENCE_EMPTY",
+  },
   /**
    * `QFAI-ATDD-131` — a spec with ATDD-owned tests and no Coverage Depth
    * Matrix file. Specs annotated before the matrix became a Mandatory Output
    * own no such file, so the rule meets the whole backlog on the first run
    * after the upgrade.
    */
-  atddCoverageDepthMatrixMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  atddCoverageDepthMatrixMissing: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-ATDD-131",
+  },
   /**
    * `QFAI-ATDD-132` — a Coverage Depth Matrix that `.gitignore` excludes and
    * git does not track, so the judgement never reaches history. The ignore
    * line predates the matrix in every repository that has one, and only a
    * `qfai init` or a hand edit moves it.
    */
-  atddCoverageDepthMatrixIgnored: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  atddCoverageDepthMatrixIgnored: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-ATDD-132",
+  },
   /**
    * `QFAI-ATDD-133` — an ATDD stage evidence file whose `## Coverage Depth
    * Matrix` section is missing, inlines the table, or names no matrix. The
    * section shape is a template younger than the evidence files it lands on.
    */
-  atddCoverageDepthInlineMatrix: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  atddCoverageDepthInlineMatrix: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-ATDD-133",
+  },
   /**
    * `QFAI-AGENT-014` — the agent catalog's embedded copy of an agent body is
    * absent, or disagrees with the markdown file it is derived from. Every
    * repository that customised an agent before the comparison existed carries
    * the divergence already.
    */
-  agentDeveloperInstructionsDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  agentDeveloperInstructionsDrift: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-AGENT-014",
+  },
   /**
    * `QFAI-CONTRACT-041` — a `Derived (not stored):` declaration that does no
    * work: one that does not parse, or one naming a value the API never asks
@@ -153,37 +183,61 @@ export const RULE_PROMOTIONS = {
    * A minor is enough: by 1.12.0 the format has shipped and been read, and a
    * declaration still wrong by then is one nobody checked.
    */
-  derivedNotStoredDeclaration: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
+  derivedNotStoredDeclaration: {
+    introducedIn: "1.10.2",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-041",
+  },
   /**
    * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
    * Contract sets written before the declaration was required state none, so
    * the rule lands on every one of them at once.
    */
-  contractDependencyUndeclared: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  contractDependencyUndeclared: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-015",
+  },
   /**
    * `QFAI-CONTRACT-032` — a contract index table with no `Depends On` column.
    * The column is in the shipped template, so a table predating it is missing
    * a column its author never had.
    */
-  contractIndexDependsOnColumnMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  contractIndexDependsOnColumnMissing: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-032",
+  },
   /**
    * `QFAI-CONTRACT-033` — an index row whose `Depends On` cell is blank, or
    * disagrees with the apply order the contract file declares. Nothing read
    * the column before, so the mirror it asks for was never maintained.
    */
-  contractIndexDependsOnMirror: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  contractIndexDependsOnMirror: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-033",
+  },
   /**
    * `QFAI-CONTRACT-034` — a contract that appears in no contract index. The
    * rule fires once per unlisted contract, so a repository that indexed only
    * part of its set meets the whole backlog in one run.
    */
-  contractIndexCoverageMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  contractIndexCoverageMissing: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-034",
+  },
   /**
    * `QFAI-CONTRACT-035` — an index row whose `File` cell points at a file that
    * does not declare the row's id. A wrong pointer is silent until something
    * reads it, so the finding arrives on rows nobody knew were wrong.
    */
-  contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  contractIndexFileDeclaresId: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-035",
+  },
   /**
    * `QFAI-PLATFORM-003` — a `--platform` the requested profile never reads.
    * The flag has parsed on every profile for as long as it has existed, so
@@ -191,13 +245,21 @@ export const RULE_PROMOTIONS = {
    * on its `discussion` / `sdd` / `atdd` / `tdd` legs at once, for invocations
    * that were legal when they were written.
    */
-  platformOptionUnusedByProfile: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  platformOptionUnusedByProfile: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-PLATFORM-003",
+  },
   /**
    * `QFAI-RESEARCH-012` — a discussion pack with no Research Summary section.
    * A pack is written once and rarely revisited, so the rule necessarily lands
    * on packs that were complete under the schema of their day.
    */
-  researchSummarySectionMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  researchSummarySectionMissing: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-RESEARCH-012",
+  },
   /**
    * The Research Summary's schema rules, read per entry rather than as text:
    * `QFAI-RESEARCH-015` (a `source_id` resolving to no `sources[].id`),
@@ -219,20 +281,28 @@ export const RULE_PROMOTIONS = {
    * not spelled in backticks here — the ledger reads every backticked code in
    * this block as one this entry governs.)
    */
-  researchSummarySchemaFields: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  researchSummarySchemaFields: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-RESEARCH-015",
+  },
   /**
    * `QFAI-TRIAGE-008` — a Triage heading that is not the canonical `## Triage`,
    * so no triage validator reads the rows under it. Existing delta files carry
    * whatever heading they were written with.
    */
-  triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  triageHeadingNonCanonical: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-TRIAGE-008",
+  },
   /**
    * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
    * declared grammar, or names a spec that is not on disk. The grammar is new,
    * so every delta file written before it carries whatever spelling its author
    * chose, and the cell is never rewritten once a row is approved.
    */
-  triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  triageExistingSpecCell: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-TRIAGE-009" },
   /**
    * `QFAI-SPLIT-106` — a CAP row the declared catalog cannot resolve to exactly
    * one spec directory: a blank `Spec` cell, one naming several directories, a
@@ -240,14 +310,18 @@ export const RULE_PROMOTIONS = {
    * `Spec` column is new, so every catalog written before it exists resolves
    * nothing and draws the finding on every one of its rows at once.
    */
-  specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-SPLIT-106" },
   /**
    * `QFAI-CONTRACT-050` — a `- SSOT modules:` entry naming a path that does not
    * resolve, or one that resolves only by leaving the project root. Nothing
    * read those paths before, so a route that went stale releases ago has been
    * sitting in the contract unchallenged and arrives in one run.
    */
-  contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  contractSsotModuleUnresolved: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-CONTRACT-050",
+  },
   /**
    * `QFAI-LINK-002` — a `file.md#anchor` citation in the assistant tree whose
    * target document or heading is not there. Nothing resolved these citations
@@ -255,7 +329,7 @@ export const RULE_PROMOTIONS = {
    * anchors the moment the rule arrives — and repairing them is an edit to the
    * vendored documents, not to the consumer's own work.
    */
-  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-LINK-002" },
   /**
    * `QFAI-SPECSECTION-001` — a spec pack missing a heading that
    * `validation.require.specSections` requires — and `QFAI-SPECSECTION-002`,
@@ -264,7 +338,11 @@ export const RULE_PROMOTIONS = {
    * nothing reading it, so every pack that never carried the heading, and
    * every unusable entry already written, meets the rule in one run.
    */
-  specSectionsRequiredHeadings: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  specSectionsRequiredHeadings: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-SPECSECTION-001",
+  },
   /**
    * `QFAI-DECISION-001`, `QFAI-DECISION-002`, `QFAI-DECISION-003`,
    * `QFAI-DECISION-004`, `QFAI-DECISION-005`, `QFAI-DECISION-006` and
@@ -276,7 +354,11 @@ export const RULE_PROMOTIONS = {
    * once. One window covers the seven because they are one guard: an operator
    * repairing a re-open answers all of them in the same edit.
    */
-  specPackReOpenDecisionRecord: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  specPackReOpenDecisionRecord: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-DECISION-001",
+  },
   /**
    * `QFAI-BRREF-001`, `QFAI-BRREF-002` and
    * `QFAI-BRREF-003` — a ledger's declared review-group key is
@@ -287,14 +369,14 @@ export const RULE_PROMOTIONS = {
    * correct under the procedure of their day — including rows already at
    * `done`, whose remedy is an edit to the cell rather than a transition.
    */
-  tddListBrRefKey: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  tddListBrRefKey: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-BRREF-001" },
   /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed
    * arrives in the first run after the upgrade.
    */
-  testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-TEST-003" },
   /**
    * The assistant-tree provenance family — `QFAI-ASSETS-004` (a vendored copy
    * still as qfai wrote it but behind the installed release), `QFAI-ASSETS-005`
@@ -304,14 +386,22 @@ export const RULE_PROMOTIONS = {
    * compared the governed layers before, so every project that ever edited one
    * meets the whole family in the run that first records provenance.
    */
-  assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  assistantAssetProvenance: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-ASSETS-004",
+  },
   /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the
    * evidence file its `Layer` owns. Nothing read the cell before, so every
    * ledger written under the old shape states its evidence exactly this way.
    */
-  tddListEvidenceAnchorMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  tddListEvidenceAnchorMissing: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-TDDLIST-007",
+  },
   /**
    * `QFAI-TDDLIST-008` — a pointer that does not resolve: the
    * wrong owner file for the row's `Layer`, another row's item, a heading that
@@ -321,7 +411,11 @@ export const RULE_PROMOTIONS = {
    * entry in this registry was written after. This repository meets 29 of
    * these on the release that introduces the code.
    */
-  tddListEvidenceAnchorUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  tddListEvidenceAnchorUnresolved: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-TDDLIST-008",
+  },
 
   /**
    * `QFAI-TDDLIST-009` — the row's `Revision` names a tree that files the
@@ -338,7 +432,11 @@ export const RULE_PROMOTIONS = {
    * `done` / `review-fix`, `warning` earlier. A row still moving is expected to
    * re-take; a row at rest is making a claim.
    */
-  tddListEvidenceRevisionStale: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  tddListEvidenceRevisionStale: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-TDDLIST-009",
+  },
   /**
    * `QFAI-ASSETS-003` — a Stage 0 steering catalog file still holding the
    * angle-bracket slots and bare to-do keywords it shipped with. `qfai init`
@@ -350,7 +448,11 @@ export const RULE_PROMOTIONS = {
    * all-caps word in this comment reads as a second finding code to the
    * wiring assertion in `tests/core/sunsetLedger.test.ts`.)
    */
-  steeringCatalogPlaceholders: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  steeringCatalogPlaceholders: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-ASSETS-003",
+  },
   /**
    * `QFAI-CFG-001` — a `validation.traceability` key that was
    * declared, defaulted and parsed but that no validator ever read
@@ -364,7 +466,7 @@ export const RULE_PROMOTIONS = {
    * this same change is what made inert. Per OC-63 the one-minor window opens
    * at the release that starts warning and closes at the next minor.
    */
-  retiredTraceabilityKeys: { introducedIn: "1.10.1", promoteAt: "1.11.0" },
+  retiredTraceabilityKeys: { introducedIn: "1.10.1", promoteAt: "1.11.0", code: "QFAI-CFG-001" },
   /**
    * The skill / `agent-routing.yml` cross-check, which ships as one rule in
    * five findings: `QFAI-AGENT-015` (a declared role nothing routes or selects),
@@ -379,7 +481,11 @@ export const RULE_PROMOTIONS = {
    * whose `roles:` and manifest drifted apart — which is every project that
    * customised either — meets the whole backlog in a single run.
    */
-  skillRolesRoutingCrossCheck: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  skillRolesRoutingCrossCheck: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-AGENT-015",
+  },
   /**
    * `QFAI-TDDLIST-010` — a `Tier` cell that is neither `T1`/`T2`/`T3` nor
    * `-`. The column itself is new, so the first ledgers to carry one were
@@ -387,7 +493,7 @@ export const RULE_PROMOTIONS = {
    * spelling the rule rejects (`T@`, `Tier 2`, `t2 (authz)`) is a cell its
    * author believed was fine. Every such row fails at once on upgrade.
    */
-  tddListUnknownTier: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  tddListUnknownTier: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-TDDLIST-010" },
   /**
    * `QFAI-TCLEVEL-001` — a ledger coverage row still claiming a TC
    * that declares no `Level`, and so is owned by `/qfai-atdd` under
@@ -396,14 +502,22 @@ export const RULE_PROMOTIONS = {
    * coverage target; every project upgraded from that version meets its whole
    * backlog at once, on rows nobody wrote by hand.
    */
-  tddListTcLevelUndeclared: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  tddListTcLevelUndeclared: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-TCLEVEL-001",
+  },
   /**
    * `QFAI-SKILLS-013` — a file under a skill's `references/` that no reachable
    * document cites, so no run ever opens it. Progressive disclosure was never
    * checked before, so a skill tree that grew a reference and lost its citation
    * meets the whole backlog on the first upgrade.
    */
-  skillReferenceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  skillReferenceUnreachable: {
+    introducedIn: "1.10.1",
+    promoteAt: "1.12.0",
+    code: "QFAI-SKILLS-013",
+  },
   /**
    * `QFAI-SKILLS-014` — a document under the skills tree that cannot be read at
    * all. Nothing read these files before, so an unreadable one (a mode bit, a
@@ -411,7 +525,7 @@ export const RULE_PROMOTIONS = {
    * the upgrade rather than caused by it, and hard-failing on discovery is the
    * shape of latch P7 exists to stop.
    */
-  skillDocumentUnreadable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  skillDocumentUnreadable: { introducedIn: "1.10.1", promoteAt: "1.12.0", code: "QFAI-SKILLS-014" },
 } as const;
 
 type FullSemver = {
