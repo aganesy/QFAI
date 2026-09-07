@@ -2444,10 +2444,12 @@ function tcRefsOf(map: Map<string, Set<string>>, tcId: string): Set<string> {
  * holding a member of the union that is not its lowest is as much a
  * disagreement as one holding a rule from elsewhere.
  *
- * Only long-form `BR-NNNN-NNNN` candidates count. The cell itself is held to
- * that shape one step earlier, so a pack written in the short `BR-NNNN`
- * vocabulary would otherwise be compared against ids the column can never
- * legally hold — every row of it would report a mismatch it cannot fix.
+ * A candidate is held to the same id shape the cell is — `BR-NNNN` or
+ * `BR-NNNN-NNNN`, both spellings the vocabulary allows — and by the same
+ * pattern, so the derivation and the cell check cannot disagree about what a
+ * `BR-*` is. Narrowing either side alone is what would break a pack written in
+ * one spelling: every row of it would be compared against ids its column can
+ * never hold, and report a mismatch it cannot fix.
  */
 function deriveExpectedBrRef(refs: V1421LayerRefs, tcRefsCell: string): string | null {
   const reached = new Set<string>();
