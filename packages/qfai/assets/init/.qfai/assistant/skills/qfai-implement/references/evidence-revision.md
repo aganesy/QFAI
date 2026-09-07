@@ -46,75 +46,8 @@ check. Gate item 10 rejects any other shape wherever a revision is recorded:
      track `.qfai/review/**`, and then every reviewer answer written into it
      moved the address the previous reviewer had just recorded, so items 7-8
      could not agree on one revision and a correct item never reached `done`.
-     What protects the pack is a **pack seal**, not the audit hash: that one
-     addresses the evidence a reviewer _read_, and the pack is what it _wrote_.
-     When the last reviewer of a **review attempt** has stored its response,
-     record the seal in the item's evidence entry as `Review pack seal` — one
-     per attempt, because a behaviour-preserving `REVISE` re-reviews inside the
-     same round into a pack of its own — by the **audit-hash**
-     procedure in
-     `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
-     not the working-tree one below: its step 2 normalization (LF, trailing
-     whitespace, leading and trailing blank lines, one final newline), its
-     `path + NUL + SHA-256` record sorted by path, its final hash over the
-     joined records. The subject is every file in that `review-<timestamp>/`
-     directory, each under its repo-relative path. "The procedure below" was
-     ambiguous between the two, and the two produce different values. It is
-     recorded **outside** the pack, so nothing in the pack hashes itself, and
-     **gate item 10 recomputes it from the pack** and compares — that is the
-     check, and without it the field was a value nobody read. It is **not** in
-     any reviewer's audit subject: the seal is written after the last reviewer
-     has hashed, so putting it there would make that verdict stale on being
-     recorded. Editing `Result`, `Reviewed revision` or `overall_status`
-     afterwards therefore moves the recomputation rather than the stored value,
-     which is what a seal is for. Excluding the pack from the revision without this left an
-     edited PASS reading as fresh.
-
-     **Record it per round, and name the pack it seals**: `Round N: Review pack`
-     (the `review-<timestamp>/` directory) and `Round N: Review pack seal`
-     beside it. A spec has several packs and a blocking REVISE opens more, so a
-     bare hash left the gate unable to say which directory to recompute over —
-     it either checked another round's pack or stopped a correct item.
-     **A round that was reviewed more than once carries one pair per attempt**,
-     qualified `(attempt M)` in review order (`round-evidence.md`): every review
-     writes its own pack, so writing the seal only for the attempt that closed
-     the round left the earlier packs unsealed and their edits undetectable.
-     **Gate item 10 recomputes every seal the entry carries**, not just the
-     latest — a recomputation that stops at one pair is the same hole with a
-     value stored beside it.
-
-     **A record re-attestation seals its own pack the same way**, under
-     `Record re-attestation pack` and `Record re-attestation pack seal` — it is
-     not a round, so it takes no `Round N:` prefix
-     (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
-     The
-     pack holding the verdict it supersedes is never edited to restamp a hash:
-     that would break the seal already recorded over it, which is the one thing
-     a seal exists to prevent.
-
-     **What a seal does and does not catch — say it once, plainly.** It is
-     recorded at one moment and recomputed at another, and it catches every
-     change between them: a pack edited after the round closed, a checkpoint
-     result edited after a row reached `done`, a stage evidence file edited
-     after the verdict. That is drift, and drift is what actually happens.
-
-     It does **not** catch an author who rewrites the sealed artifact and the
-     seal together in one consistent pass. Nothing recorded in the repository
-     can: the expected value has to live somewhere, and wherever that is, the
-     same hand can update it. Three successive homes were tried and each fell to
-     the same move — beside the artifact, in a commit, in the newest commit that
-     introduces the line — and a fourth would fall too. **Committing the seal is
-     not the answer either.** `implement-<spec-id>.md` and `atdd-<spec-id>.md`
-     are now governance records and ARE committed (`.qfai/evidence/*` is
-     ignored, with the governance records negated back in), so the objection is
-     no longer availability — it is that a committed copy buys nothing here. The
-     same hand that rewrites the pair rewrites the seal in the same commit, so
-     the fourth home falls exactly as the other three did.
-
-     A consistent rewrite is caught where consistent rewrites are caught: by
-     review of the change itself, against a history the seals make legible.
-     Recording it is what makes an inconsistent one impossible to miss; do not
-     read it as more than that, and do not add a fourth mechanism.
+     What protects the pack is a pack seal, not the audit hash — see
+     `#review-pack-seal`.
 
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
      the diff bytes; then one record per untracked file,
@@ -216,6 +149,80 @@ pre-refactor one, and break that table or gate item 10. The three places:
    `legacy`. The manifest is one file a reviewer reads whole, and adding a pack
    to it later is a visible change to a migration record. Until that pass has run those packs are reported rather than
    accepted, which is the safe direction, and running it is what clears them.
+
+## Review pack seal
+
+The review pack is excluded from the working-tree revision above, so no
+address defined in this file covers what a review round _wrote_.
+
+What protects the pack is a **pack seal**, not the audit hash: that one
+addresses the evidence a reviewer _read_, and the pack is what it _wrote_.
+When the last reviewer of a **review attempt** has stored its response,
+record the seal in the item's evidence entry as `Review pack seal` — one
+per attempt, because a behaviour-preserving `REVISE` re-reviews inside the
+same round into a pack of its own — by the **audit-hash**
+procedure in
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
+not the working-tree one above: its step 2 normalization (LF, trailing
+whitespace, leading and trailing blank lines, one final newline), its
+`path + NUL + SHA-256` record sorted by path, its final hash over the
+joined records. The subject is every file in that `review-<timestamp>/`
+directory, each under its repo-relative path. Naming it as "the procedure"
+alone is ambiguous between the two, and the two produce different values. It is
+recorded **outside** the pack, so nothing in the pack hashes itself, and
+**gate item 10 recomputes it from the pack** and compares — that is the
+check, and without it the field was a value nobody read. It is **not** in
+any reviewer's audit subject: the seal is written after the last reviewer
+has hashed, so putting it there would make that verdict stale on being
+recorded. Editing `Result`, `Reviewed revision` or `overall_status`
+afterwards therefore moves the recomputation rather than the stored value,
+which is what a seal is for. Excluding the pack from the revision without this left an
+edited PASS reading as fresh.
+
+**Record it per round, and name the pack it seals**: `Round N: Review pack`
+(the `review-<timestamp>/` directory) and `Round N: Review pack seal`
+beside it. A spec has several packs and a blocking REVISE opens more, so a
+bare hash left the gate unable to say which directory to recompute over —
+it either checked another round's pack or stopped a correct item.
+**A round that was reviewed more than once carries one pair per attempt**,
+qualified `(attempt M)` in review order (`round-evidence.md`): every review
+writes its own pack, so writing the seal only for the attempt that closed
+the round left the earlier packs unsealed and their edits undetectable.
+**Gate item 10 recomputes every seal the entry carries**, not just the
+latest — a recomputation that stops at one pair is the same hole with a
+value stored beside it.
+
+**A record re-attestation seals its own pack the same way**, under
+`Record re-attestation pack` and `Record re-attestation pack seal` — it is
+not a round, so it takes no `Round N:` prefix
+(`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
+The pack holding the verdict it supersedes is never edited to restamp a hash:
+that would break the seal already recorded over it, which is the one thing
+a seal exists to prevent.
+
+**What a seal does and does not catch — say it once, plainly.** It is
+recorded at one moment and recomputed at another, and it catches every
+change between them: a pack edited after the round closed, a checkpoint
+result edited after a row reached `done`, a stage evidence file edited
+after the verdict. That is drift, and drift is what actually happens.
+
+It does **not** catch an author who rewrites the sealed artifact and the
+seal together in one consistent pass. Nothing recorded in the repository
+can: the expected value has to live somewhere, and wherever that is, the
+same hand can update it. Three successive homes were tried and each fell to
+the same move — beside the artifact, in a commit, in the newest commit that
+introduces the line — and a fourth would fall too. **Committing the seal is
+not the answer either.** `implement-<spec-id>.md` and `atdd-<spec-id>.md`
+are now governance records and ARE committed (`.qfai/evidence/*` is
+ignored, with the governance records negated back in), so the objection is
+no longer availability — it is that a committed copy buys nothing here. The
+same hand that rewrites the pair rewrites the seal in the same commit, so
+the fourth home falls exactly as the other three did.
+
+A consistent rewrite is caught where consistent rewrites are caught: by
+review of the change itself, against a history the seals make legible.
+Recording it is what makes an inconsistent one impossible to miss; do not
+read it as more than that, and do not add a fourth mechanism.
 
 ## Which tree each gate item addresses
 

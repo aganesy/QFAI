@@ -92,7 +92,7 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     // This is the only list that states a directory per obligation, and the
     // annotation obligations already assign `QFAI:CON-DB-XXXX` to
     // `tests/integration/**`. It shares the `CON-API` bullet because the file
-    // sits on the 500-line ceiling `assets.test.ts` enforces.
+    // is at the line ceiling `ASSISTANT_ASSET_MAX_LINES` sets.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
       "`tests/integration/**` must cover all required `CON-DB-*` (`QFAI-ATDD-115`)",
@@ -128,14 +128,16 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
   });
 
   it("the volume estimate sizes Integration with its DB contracts", async () => {
-    // The Integration row was defined as `#TC`, so the layer that owes the
-    // `CON-DB` work was estimated without counting any of it.
+    // The Integration numerator once meant `TC-*` alone, so the layer that owes
+    // the `CON-DB` work was estimated without counting any of it. The contracts
+    // are in the numerator's own definition now — which is why the table's Raw
+    // count names it alone rather than adding them beside it.
     const atdd = flat(await read(tree));
     // Which CON-DB are counted is pinned separately, below.
     expect(atdd).toContain(
       "plus the **active** `CON-DB-*` this spec references — active meaning the contract does not declare `-- x-qfai-status: planned`",
     );
-    expect(atdd).toContain("| Integration | #TC + #CON-DB active |");
+    expect(atdd).toContain("| Integration | #TC |");
     expect(atdd).toContain("`L3`/no-`Level` TCs + active `CON-DB-*`");
   });
 
@@ -245,20 +247,21 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     // in, and the deferral sentence beside it has to name this row too.
     expect(atdd).not.toContain("plus the `CON-DB-*` this spec references.");
     expect(atdd).toContain(
-      "the `CON-API-*` and `CON-DB-*` rows drop every contract deferred with `x-qfai-status: planned`",
+      "the contract rows drop every deferred contract: `x-qfai-status: planned` in an OpenAPI document for a `CON-API-*`, the SQL comment `-- x-qfai-status: planned` for a `CON-DB-*`",
     );
   });
 
   it("says the same thing in the estimator table the stage must output", async () => {
     // The prose and the required table are two statements of one count; a
-    // reader filling the table works from the table alone.
+    // reader filling the table works from the table alone. `#TC` carries the
+    // contracts, and the Evidence column is where the table says so.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "| Integration | #TC + #CON-DB active | INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |",
+      "| Integration | #TC | INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |",
     );
-    // The regression: a Raw count of `#TC` alone sizes the layer that owes the
-    // DB work without counting any of it.
-    expect(atdd).not.toContain("| Integration | #TC | INT_s |");
+    // The regression: naming the contracts in the Raw count beside a numerator
+    // that already holds them counts each one twice.
+    expect(atdd).not.toContain("| Integration | #TC + #CON-DB active |");
   });
 
   it("completes the zero-row enumeration in the reference an implementer reads", async () => {
