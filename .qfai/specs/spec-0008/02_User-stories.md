@@ -1,5 +1,16 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0008-0001: ATDD Test Volume Estimation
+- US-0008-0002: E2E Acceptance Test Implementation
+- US-0008-0003: API Acceptance Test Implementation
+- US-0008-0004: Integration Acceptance Test Implementation
+- US-0008-0005: ATDD Reviewer Gate
+- US-0008-0006: Test Case Quality Depth Verification
+- US-0008-0007: ATDD Scaffold Bulk Skeleton Generation
+- US-0008-0008: Worker-Scoped Credential-Reuse Guidance
+
 ## US-0008-0001: ATDD Test Volume Estimation
 
 As a QA Engineer, I want to compute a test volume estimate from spec obligations (US/TC/CON-API counts), so that I can plan ATDD coverage systematically.

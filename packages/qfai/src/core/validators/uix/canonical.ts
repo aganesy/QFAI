@@ -17,6 +17,7 @@ import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
 import { validateExplorationArtifacts } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
+import { validateCompetitiveReferences } from "./competitiveRefs.js";
 
 import {
   validateThreeLayerModel,
@@ -51,6 +52,8 @@ export const CANONICAL_UIX_VALIDATORS: readonly UixValidator[] = [
   validateScreenContractSchema,
   // Exploration brief / rubric / evaluator calibration
   validateExplorationArtifacts,
+  // Competitive Reference Registry (bounded by uiux.competitive_refs_min)
+  validateCompetitiveReferences,
   // OQ closure
   validateOqClosure,
   // Trend scan — `04_Sources.md#Trend Scan` is live SSOT; only the

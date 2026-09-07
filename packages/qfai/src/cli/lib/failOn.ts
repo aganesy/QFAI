@@ -33,3 +33,19 @@ export function resolveFailOn(
   }
   return fallback;
 }
+
+/**
+ * `--strict` が明示 `--fail-on` に上書きされたか。
+ *
+ * {@link resolveFailOn} の優先順位の裏側であり、同じ 1 箇所に置く。優先順位
+ * そのものは仕様だが、`--strict` はヘルプ上「方針」として書かれているため、
+ * 既存の `--strict` レーンに後から `--fail-on error` を足すと warning ゲートが
+ * 黙って外れ、差分は「締めた」ようにしか見えない。呼び出し側がどちらが勝ったかを
+ * 名指しできるよう、判定をここから返す。
+ *
+ * 閾値が一致する `--strict --fail-on warning` は矛盾ではないので上書きとは
+ * 扱わない。`--strict` を受け取らないコマンド (doctor) では常に `false`。
+ */
+export function strictSupersededBy(options: { failOn?: FailOn; strict?: boolean }): boolean {
+  return options.strict === true && options.failOn !== undefined && options.failOn !== "warning";
+}

@@ -61,6 +61,20 @@ afterEach(async () => {
   }
 });
 
+/**
+ * `getChangedFilesAgainstBase` returns `null` for "git could not answer" —
+ * no repository, no resolvable base. Every fixture below is a real repository
+ * with a `base` ref, so a `null` here is a broken fixture rather than the case
+ * under test, and it fails loudly instead of narrowing away with `?.`.
+ */
+function changedFilesOrThrow(...args: Parameters<typeof getChangedFilesAgainstBase>): Set<string> {
+  const changed = getChangedFilesAgainstBase(...args);
+  if (changed === null) {
+    throw new Error("getChangedFilesAgainstBase could not diff the fixture repository");
+  }
+  return changed;
+}
+
 describe("getChangedFilesAgainstBase", () => {
   it("reports both endpoints of a rename by default", async () => {
     const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
@@ -69,7 +83,7 @@ describe("getChangedFilesAgainstBase", () => {
 
     // The drift guard wants the source: an artifact moved out from under its
     // protected path is exactly what it exists to notice.
-    const changed = getChangedFilesAgainstBase(root, "base");
+    const changed = changedFilesOrThrow(root, "base");
     expect(changed.has("src/core/old.ts")).toBe(true);
     expect(changed.has("src/core/new.ts")).toBe(true);
   });
@@ -79,7 +93,7 @@ describe("getChangedFilesAgainstBase", () => {
     git(root, "mv", "src/core/old.ts", "src/core/new.ts");
     git(root, "commit", "-m", "move");
 
-    const changed = getChangedFilesAgainstBase(root, "base", { dropRenameSources: true });
+    const changed = changedFilesOrThrow(root, "base", { dropRenameSources: true });
     expect(changed.has("src/core/old.ts")).toBe(false);
     expect(changed.has("src/core/new.ts")).toBe(true);
   });
@@ -95,12 +109,24 @@ describe("getChangedFilesAgainstBase", () => {
     });
     git(root, "commit", "-m", "delete");
 
-    const changed = getChangedFilesAgainstBase(root, "base", { dropRenameSources: true });
+    const changed = changedFilesOrThrow(root, "base", { dropRenameSources: true });
     expect(changed.has("src/core/gone.ts")).toBe(true);
   });
 });
 
 describe("validateTraceabilityIntegrity across a rename", () => {
+  /**
+   * The two files `collectSpecEntries` reads as "this directory is a layered
+   * spec", beside the `04_Business-Rules.md` marker each fixture already
+   * writes. Without them the directory is no layout at all,
+   * `validateTraceabilityIntegrity` never reaches its ledger, and the case
+   * under test reports `QFAI-TRACE-003` instead of the row it is about.
+   */
+  const layeredSpecBase: Record<string, string> = {
+    ".qfai/specs/spec-0001/01_Spec.md": "# Spec 0001\n",
+    ".qfai/specs/spec-0001/02_User-stories.md": "# User stories\n\n- US-0001-0001: story\n",
+  };
+
   const ledgerFor = (implFile: string): string =>
     [
       "# Traceability Ledger",
@@ -114,6 +140,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   // "modified" made the stalest possible ledger the one case that passed.
   it("reports a ledger row still pointing at the rename's source", async () => {
     const root = await newRepo({
+      ...layeredSpecBase,
       ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
       "src/core/old.ts": MODULE_BODY,
@@ -135,6 +162,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
 
   it("passes a ledger row updated to the rename's destination", async () => {
     const root = await newRepo({
+      ...layeredSpecBase,
       ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
       "src/core/old.ts": MODULE_BODY,

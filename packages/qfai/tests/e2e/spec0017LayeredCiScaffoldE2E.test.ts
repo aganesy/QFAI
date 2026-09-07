@@ -561,8 +561,9 @@ describe(
       // `.npmrc` into the shipped root, ran init, and executed the very step body whose digest is pinned —
       // arbitrary code, with all seven projects and `ci:lint` green.
       //
-      // Two questions, because the surface has two halves. WHICH files arrive, outside the four
-      // agent-instruction trees, is a seven-entry list pinned by path and by content — plus the provenance record
+      // Two questions, because the surface has two halves. WHICH files arrive, outside the
+      // agent-instruction trees `INIT_INSTRUCTION_TREES` names, is a list pinned by path and by content —
+      // plus the provenance record
       // inside one of those trees, pinned by shape because it gates a delete. WHAT KIND of
       // file arrives anywhere,
       // those trees included, is the narrower claim that survives a skill edit: nothing init writes may be
@@ -1229,7 +1230,12 @@ describe(
       const files = (await readdir(dir)).filter((f) => /\.ya?ml$/.test(f)).sort();
       expect
         .soft(files, "layer separation must not arrive as one workflow file per layer")
-        .toEqual([ORCHESTRATOR, "qfai-validate.yml"]);
+        // The whole set, not just the orchestrator: the claim is that no test
+        // LAYER got a file of its own, and only an exhaustive list can say that.
+        // `qfai-docs.yml` is not a layer — it checks document shape and diagram
+        // syntax, runs no test, and declares no lane — so it adds a check name
+        // that an adopter's branch protection sees once rather than five times.
+        .toEqual(["qfai-docs.yml", ORCHESTRATOR, "qfai-validate.yml"]);
     });
   },
 );

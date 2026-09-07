@@ -1,6 +1,6 @@
 # 10 Plan
 
-## Implementation Strategy
+## Implementation approach
 
 1. Define ATDD skill contract based on SKILL.md SSOT
 2. Implement TestVolumeEstimator signal table generation
@@ -9,7 +9,7 @@
 5. Implement stage gate enforcement (P0-P8)
 6. Implement evidence file generation
 
-## Test Strategy
+## Test approach
 
 - Unit tests: annotation parsing, volume estimation logic
 - Integration tests: coverage obligation verification, forbidden reference detection
@@ -20,7 +20,7 @@
 - Requires: spec artifacts (US/TC/CON-API declarations) from `/qfai-sdd`
 - Consumed by: `/qfai-implement` for unit/component TDD cycle
 
-## Risk
+## Risk mitigation
 
 - Coverage obligation definitions may evolve as contract schema changes
 - Mitigation: Use SKILL.md as SSOT and adapt obligation parsing accordingly
