@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { GATE_GROUP_FAMILIES } from "../../src/cli/commands/validate.js";
 import { SAAS_PACKAGE_SKIPPED_GATE_FAMILIES } from "../../src/core/saasPackage/skippedGates.js";
+import { familyMatches } from "../helpers/gateFamilies.js";
 
 const SRC_ROOT = path.resolve(__dirname, "../../src");
 const DOC_PATH = path.resolve(__dirname, "../../docs/finding-codes.md");
@@ -399,10 +400,43 @@ async function codesInFile(file: string): Promise<string[]> {
   return [...collectCodes([source], scan.factories, scan.constants)];
 }
 
-/** `QFAI-TEST-*` matches `QFAI-TEST-002`; a bare `QFAI-TEST-001` does not. */
-function familyMatches(family: string, code: string): boolean {
-  return family.endsWith("*") ? code.startsWith(family.slice(0, -1)) : family === code;
-}
+/**
+ * The matcher itself, because it is the thing that can fail by matching
+ * nothing.
+ *
+ * The table entry below is the one `GATE_GROUP_FAMILIES.tdd` actually holds.
+ * Read as one pattern it satisfies neither arm — not a glob, and equal to no
+ * code — so every coverage claim built on it passed by checking nothing. The
+ * guard below is one of those claims; it survives today only because the codes
+ * it scans happen to be covered by a different, clean entry in the same array
+ * (#1200).
+ */
+describe("gate-family matching", () => {
+  const ANNOTATED = "TDDLIST_* (execution state)";
+
+  it("matches through an annotation after the pattern", () => {
+    expect(familyMatches(ANNOTATED, "TDDLIST_MISSING")).toBe(true);
+  });
+
+  it("still requires the prefix, so the annotation is not a wildcard", () => {
+    expect(familyMatches(ANNOTATED, "QFAI-TEST-001")).toBe(false);
+  });
+
+  it("keeps an exact entry exact", () => {
+    expect(familyMatches("QFAI-TRACE-002", "QFAI-TRACE-002")).toBe(true);
+    expect(familyMatches("QFAI-TRACE-002", "QFAI-TRACE-003")).toBe(false);
+  });
+
+  it("reads an annotated exact entry as that code, not as the whole cell", () => {
+    expect(familyMatches("QFAI-TRACE-002 (ledger shape)", "QFAI-TRACE-002")).toBe(true);
+  });
+
+  it("covers no code at all when the entry is only an annotation", () => {
+    // `startsWith("")` is true of every string, so an empty pattern would make
+    // a comment-only cell cover the entire finding surface.
+    expect(familyMatches("   ", "QFAI-TEST-001")).toBe(false);
+  });
+});
 
 describe("finding code grammar", () => {
   it("finds every factory a finding can be built through", async () => {
