@@ -263,15 +263,24 @@ describe("the DR-ID resolves to a Decisions file", () => {
   // Only the id prefix of a filename was checked, so anything that merely
   // started like a record declared its id — and the warning that would have
   // said the record is still missing was suppressed by the file that proves it.
-  for (const [label, fileName] of [
-    ["whose slug placeholder was never substituted", "DR-0270-<slug>.md"],
-    ["left with a separator and an empty slug", "DR-0270-.md"],
-    ["whose slug is a bare separator", "DR-0270--.md"],
+  //
+  // `posixOnly` marks a fixture Windows cannot CREATE. `<` and `>` are illegal
+  // in a Windows filename, so `writeFile` answers `ENOENT` before the row
+  // reaches its assertion — and the hazard itself cannot occur there for the
+  // same reason, so the rule is unreachable rather than unverified (#1133).
+  // The sibling fixtures below are creatable and run everywhere.
+  for (const [label, fileName, posixOnly] of [
+    ["whose slug placeholder was never substituted", "DR-0270-<slug>.md", true],
+    ["left with a separator and an empty slug", "DR-0270-.md", false],
+    ["whose slug is a bare separator", "DR-0270--.md", false],
   ] as const) {
-    it(`does not accept a record filename ${label}`, async () => {
-      const found = await codes({ drId: "DR-0270", decisionRecords: [fileName] });
-      expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
-    });
+    it.skipIf(posixOnly && process.platform === "win32")(
+      `does not accept a record filename ${label}`,
+      async () => {
+        const found = await codes({ drId: "DR-0270", decisionRecords: [fileName] });
+        expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+      },
+    );
   }
 
   // The whole-basename match must not turn into a naming rule of its own:

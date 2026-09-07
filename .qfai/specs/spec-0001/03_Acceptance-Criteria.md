@@ -112,7 +112,7 @@ Scenario: Canonical Workflow Stages が定義されている
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                   | Notes    | Priority |
+| AC-ID        | Title                   | Notes    | Priority |
 | ------------ | ----------------------- | -------- | -------- |
 | AC-0001-0001 | v1421 spec 必須ファイル | REQ-0001 | P1       |
 | AC-0001-0002 | \_policies 必須ファイル | REQ-0001 | P1       |

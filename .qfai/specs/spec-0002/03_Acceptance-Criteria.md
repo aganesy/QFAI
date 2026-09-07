@@ -41,7 +41,7 @@ Scenario: UI-bearing discussion packs require prototyping.yaml
 
 ## AC Catalog (optional)
 
-| AC_ID        | Title                              | Notes    | Priority |
+| AC-ID        | Title                              | Notes    | Priority |
 | ------------ | ---------------------------------- | -------- | -------- |
 | AC-0002-0001 | 15 必須ファイル                    | REQ-0001 | P1       |
 | AC-0002-0008 | planner-first / no winner          | REQ-0012 | P1       |

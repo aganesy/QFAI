@@ -131,7 +131,7 @@ describe("a repair that cannot finish leaves the file it found", () => {
     });
   });
   it("says the restore failed, and carries the content, when it could not write", async () => {
-    // Swallowing the restore error reported "元のファイルは復元しました" on the
+    // Swallowing the restore error reported "The original file was restored" on the
     // one path where the operator has to know the file is gone.
     await withProject(async (root) => {
       writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
@@ -166,11 +166,11 @@ describe("a repair that cannot finish leaves the file it found", () => {
         (err: unknown) => err as Error,
       );
 
-      expect(error?.message).toContain("元のファイルの復元にも失敗しました");
-      expect(error?.message).not.toContain("元のファイルは復元しました。");
+      expect(error?.message).toContain("Restoring the original file failed as well");
+      expect(error?.message).not.toContain("The original file was restored.");
       // The content is on disk in the sidecar, and the message names where —
       // a path is more use than a copy pasted into an error.
-      expect(error?.message).toContain("元の内容は次の場所に退避してあります");
+      expect(error?.message).toContain("The original content is kept here");
       expect(error?.message).toContain(".qfai-repair-");
       expect(error?.message).toContain(FLATTENED);
     });
@@ -647,7 +647,7 @@ describe("a restore puts back more than the bytes", () => {
         actual.readFile(...args),
       );
       expect(readsOfSidecar).toEqual([]);
-      expect(error?.message).toContain("退避したファイルを復元できません");
+      expect(error?.message).toContain("Cannot restore the sidecar file");
       expect(error?.message).toContain(".qfai-repair-");
     });
   });
@@ -732,7 +732,7 @@ describe("a restore puts back more than the bytes", () => {
         chmodSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
           actual.chmod(...args),
         );
-        expect(error?.message).toContain("復元を取り消しました");
+        expect(error?.message).toContain("Rolled the restore back");
         // Nothing with the wrong permissions was left behind.
         await expect(lstat(linkPath)).rejects.toThrow();
       });

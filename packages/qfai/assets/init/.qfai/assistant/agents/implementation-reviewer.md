@@ -37,8 +37,8 @@ tools: [Read, Glob, Grep, Bash]
 
 **The last two are what the `Audited evidence hash` is computed over.** This
 role records that hash itself, over the row's phase-authored fields — and those
-live in an evidence file that is normally ignored, so the diff of changed files
-does not contain them. Without the ledger and the evidence home the row's
+live in a committed per-item evidence file so a fresh clone can reproduce the
+audit. Without the ledger and the evidence home the row's
 `Layer` selects, this role cannot identify its own audit subject: the hash goes
 missing and gate items 10-11 stop, or the orchestrator computes it instead,
 which is the one thing the contract says must not happen.

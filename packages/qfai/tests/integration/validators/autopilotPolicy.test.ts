@@ -195,12 +195,32 @@ ${hardRequired}
     expect(finding?.message ?? "").toContain("brand intent / companyName");
   });
 
-  it("reports a narrowed bucket too, which this set does not permit", async () => {
-    await writeSkill(root, "qfai-fixture", policyWith("  - brand intent"));
+  it("leaves a narrowed bucket alone, and an input only one skill reads", async () => {
+    // A skill may drop an entry it never reaches, and may hard-require an
+    // input of its own: `qfai-configure` cannot write a config without a
+    // `testFileGlobs` proposal that matches a real file, and nothing else
+    // reads one. Reporting either would put a prompt back that buys nothing.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n  - a `testFileGlobs` proposal that matches a real file"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.find((i) => i.code === "QFAI-AUTOPILOT-001")).toBeUndefined();
+  });
+
+  it("reads a retired entry written past a wrapped bullet", async () => {
+    // The continuation of a wrapped bullet is not itself a bullet. Ending the
+    // bucket there dropped the rest of the entry and everything after it.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent, and\n    companyName\n  - `primarySpecId`"),
+    );
     const issues = await validateAutopilotPolicy(root);
     const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
-    expect(finding?.message ?? "").toContain("primaryspecid");
+    expect(finding?.message ?? "").toContain("companyName");
   });
 
   it("does not report the bucket twice when the bucket header itself is absent", async () => {

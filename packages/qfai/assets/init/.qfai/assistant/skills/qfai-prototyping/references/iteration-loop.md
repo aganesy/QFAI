@@ -5,7 +5,7 @@
 ```
 [Freeze] cycle 0:    cache the lock-anchored sha256(DESIGN.md) into prototyping.json
 [Seed]   cycle 0:    generate one iter-00/index.html under DESIGN.md tokens
-[Loop]   cycle 1..14: capture -> review -> iterate (DESIGN.md hash held)
+[Loop]   cycle 1..9:  capture -> review -> iterate (DESIGN.md hash held)
 [Cert]   final:      handoff yaml + completion-certificate.json
 ```
 
@@ -14,7 +14,16 @@
 ```
 .qfai/prototypes/iter-NN/index.html
 .qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}
+.qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json
 ```
+
+The last path is mandatory from cycle 0 onward: the reviewer writes one
+payload per `(spec, screen)` pair alongside the per-cycle `review.json`
+summary (schema: `references/review-payload-schema.md`, aggregation
+rule: `references/reviewer-prompt.md`). `npx qfai prototyping certify`
+rejects the run (exit `64`) when a declared pair has no payload, so a
+run that only writes the flat summary cannot be certified — that holds
+for a single-spec run as much as for a multi-spec one.
 
 `progress.md` is one file for the whole run. The generator appends a
 one-line summary at each iter's end.
@@ -28,7 +37,7 @@ Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
   (`informationArchitecture`, `navigationFlow`, `usability`,
   `functionality`) at `exceptional` AND `layoutAntiPatternsDetected`
   is empty AND `designMdViolations` is empty.
-- `65` — max-iterations: latest iter `index === 14`.
+- `65` — max-iterations: latest iter `index === 9`.
 - `2` — input error, including:
   - root `DESIGN.md` missing or unparseable;
   - `.qfai/contracts/design/DESIGN.md.lock.yaml` missing;
