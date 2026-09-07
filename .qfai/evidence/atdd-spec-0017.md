@@ -2259,7 +2259,8 @@ a merge can invalidate has no author to hold responsible for it.
 
 Re-measured for this commit by a separate walk of the two include roots — not by calling into
 `stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
-readings agree: **1728** (`tests/assets` 1558, `tests/e2e` 170).
+readings agree. The total is on the maintained line below; `node ./scripts/derive-e2e-callsites.mjs`
+prints it with its per-root split.
 
 e2e callsites at this tree: 1756
 

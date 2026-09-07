@@ -48,33 +48,69 @@ type Phase = {
   blocking_agents?: string[];
 };
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+/** One routing phase, or a thrown error naming the field that is not one. */
+function toPhase(value: unknown, where: string): Phase {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`${where} is not a mapping`);
+  }
+  const phase: Phase = {};
+  for (const key of ["id", "iteration"] as const) {
+    if (!(key in value)) continue;
+    const field: unknown = value[key];
+    if (typeof field !== "string") throw new Error(`${where}: \`${key}\` is not a string`);
+    phase[key] = field;
+  }
+  for (const key of ["mandatory_agents", "conditional_agents", "blocking_agents"] as const) {
+    if (!(key in value)) continue;
+    const field: unknown = value[key];
+    if (!isStringArray(field)) throw new Error(`${where}: \`${key}\` is not a list of names`);
+    phase[key] = field;
+  }
+  return phase;
+}
+
 /**
  * The `qfai-implement` route's phases, narrowed rather than asserted.
  *
  * An `as` over the parse tells the compiler the file has this shape and tells
  * the reader nothing: a manifest that lost its `routing` list would reach the
  * `.find` as `undefined` and fail on a property access, naming neither the file
- * nor what was wrong with it. Each step is checked, so a malformed manifest
- * fails on the assertion that names it. Same shape as
- * `sddRoutingPhaseCrosswalk.test.ts`, which reads the same file.
+ * nor what was wrong with it.
+ *
+ * Each step throws where it fails rather than asserting and carrying on. An
+ * `expect` a caller then walks past leaves a malformed manifest to surface as
+ * an empty phase list, and every test here fails on a phase it could not find
+ * — one cause reported once per assertion, none of them naming the file.
  */
 async function implementPhases(tree: string): Promise<Phase[]> {
   const parsed: unknown = parseYaml(await read(tree, ROUTING));
   const routing =
     typeof parsed === "object" && parsed !== null && "routing" in parsed
-      ? (parsed as { routing?: unknown }).routing
+      ? parsed.routing
       : undefined;
-  expect(Array.isArray(routing), `${tree}: agent-routing.yml has no routing list`).toBe(true);
-  const routes = Array.isArray(routing) ? routing : [];
-  const route = routes.find(
-    (entry): entry is { skill: string; phases?: Phase[] } =>
+  if (!Array.isArray(routing)) {
+    throw new Error(`${tree}: agent-routing.yml has no routing list`);
+  }
+  const route: unknown = routing.find(
+    (entry: unknown) =>
       typeof entry === "object" &&
       entry !== null &&
       "skill" in entry &&
-      (entry as { skill?: unknown }).skill === "qfai-implement",
+      entry.skill === "qfai-implement",
   );
-  expect(route, `${tree}: agent-routing.yml has no qfai-implement route`).toBeDefined();
-  return route?.phases ?? [];
+  if (typeof route !== "object" || route === null || !("phases" in route)) {
+    throw new Error(`${tree}: agent-routing.yml has no qfai-implement route with phases`);
+  }
+  const phases: unknown = route.phases;
+  if (!Array.isArray(phases)) {
+    throw new Error(`${tree}: the qfai-implement route's \`phases\` is not a list`);
+  }
+  return phases.map((phase: unknown, index) =>
+    toPhase(phase, `${tree}: qfai-implement phase ${index}`),
+  );
 }
 
 /**
@@ -484,14 +520,15 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain("a `US-*`, or a `CON-API-*` on an API entrypoint");
     });
 
-    // `--force` regenerates skills and agents but deliberately never
-    // `manifest/**`, so a project updating to this version gets the phase and
-    // no route to dispatch it through.
-    it(`${tree}: an installation that predates the phase is told to add the route`, async () => {
+    // `--force` never overwrites `manifest/**`, but it does merge in the
+    // phases the regenerated skills name. Documenting the overwrite rule alone
+    // sent an updating project to `qfai-configure` for an entry it already has.
+    it(`${tree}: an installation that predates the phase is given the route`, async () => {
       const doc = unwrap(await read(tree, SKELETON));
 
-      expect(doc).toContain("**An installation that predates this phase adds the route itself.**");
-      expect(doc).toContain("never `manifest/**`");
+      expect(doc).toContain("**`npx qfai init --force` adds the route.**");
+      expect(doc).toContain("never overwrites `manifest/**`");
+      expect(doc).toContain("adding only and editing nothing");
       expect(doc).toContain("through `qfai-configure`");
     });
 

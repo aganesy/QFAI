@@ -150,10 +150,10 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // inside the ignored stage-evidence file, that reasoning never reaches a
   // commit and "unjustified" becomes unfalsifiable for every later reader.
   "!.qfai/evidence/coverage-depth-*.md",
-  // `Phase: Skeleton`'s record — the smoke run that proved the program starts,
-  // the `qa-gatekeeper` verdict on it, and the enumerated `Skeleton debt` whose
-  // rows a Change Request asks for
-  // (`assistant/skills/qfai-implement/references/walking-skeleton.md#evidence`).
+  // `Phase: Skeleton` records here: the smoke run that proved the program
+  // starts, the `qa-gatekeeper` verdict on it, and the enumerated `Skeleton
+  // debt` whose rows a Change Request asks for, all defined in
+  // `.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md#evidence`.
   // That phase requires the debt to be written back *in the skeleton's own
   // commit*, and every later invocation decides whether an entrypoint is
   // already proven by reading this file. Left ignored, both requirements hold

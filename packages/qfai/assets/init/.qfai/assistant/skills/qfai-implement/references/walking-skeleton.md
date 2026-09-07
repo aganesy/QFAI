@@ -103,18 +103,18 @@ case: a CLI that opens no socket satisfies the criterion over stdio, and a
 worker over its queue. Requiring a socket of them would leave a correct CLI
 unable to exit the phase with a passing smoke script.
 
-**An installation that predates this phase adds the route itself.** The phase
-is dispatched through `manifest/agent-routing.yml`'s `skeleton` entry, and
-`npx qfai init --force` regenerates `assistant/skills/**` and
-`assistant/agents/**` but deliberately never `manifest/**` — that taxonomy is
-the project's, and `qfai-configure` is its supported editor. So a project
-updating to this version gets this document and the phase it requires while its
-own routing table still has no `skeleton` phase, and no role is dispatched to
-write the entrypoint or the smoke script. Before the first run on such a
-project, add the phase to `manifest/agent-routing.yml` through `qfai-configure`,
-copying the shipped entry — `iteration: per-invocation`, `qa-gatekeeper`
-mandatory and blocking, the engineer roles conditional. A project initialised at
-or after this version already has it.
+**`npx qfai init --force` adds the route.** The phase is dispatched through
+`manifest/agent-routing.yml`'s `skeleton` entry. `--force` regenerates
+`assistant/skills/**` and `assistant/agents/**` and never overwrites
+`manifest/**` — that taxonomy is the project's, and `qfai-configure` is its
+supported editor — but it does merge the phases the regenerated skills name
+into the routing table, adding only and editing nothing. So an installation
+that predates this phase receives both this document and a `skeleton` entry to
+dispatch it through: `iteration: per-invocation`, `qa-gatekeeper` mandatory and
+blocking, the engineer roles conditional. Without that merge the project would
+hold a mandatory phase with no role dispatched to write the entrypoint or the
+smoke script. Adjust the entry afterwards through `qfai-configure`; a project
+that never runs `--force` adds it there the same way.
 
 **`qa-gatekeeper` judges the exit, not the author.** Whenever the verdict is
 `applicable`, the phase's routing entry (`manifest/agent-routing.yml`, phase
@@ -352,10 +352,16 @@ connection material: a queue URL, a database connection string, an API token in
 the command line or echoed by the runtime at start-up. Because this file is
 git-tracked, verbatim there is not a discarded terminal scrollback — it is a
 credential written into the repository's permanent history, from where a
-rotation is the only removal. So `Skeleton command` and `Skeleton result` are
-copied verbatim with **known secret values replaced by a stable placeholder**
-(`<QUEUE_URL>`, `<DB_PASSWORD>`, the variable's own name), and nothing else
-altered. The redaction is bounded by what it must leave intact:
+rotation is the only removal. So `Skeleton result` is copied verbatim with
+**known secret values replaced by a stable placeholder** (`<QUEUE_URL>`,
+`<DB_PASSWORD>`, the variable's own name), and nothing else altered.
+
+`Skeleton command` takes no placeholder. It is normalised before the run into a
+form that resolves its secrets at run time, so by the time it is recorded there
+is no value in it to redact — _`Skeleton command` stays runnable after
+redaction_, below, states how.
+
+The redaction of the result is bounded by what it must leave intact:
 
 - the **exit status** is never redacted — it is the criterion itself;
 - redact the **value**, not the line: the failing command, the error class and
