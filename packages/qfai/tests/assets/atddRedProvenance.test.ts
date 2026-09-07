@@ -1473,6 +1473,24 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     expect(migration).toContain("**Refuse the marker for that row**");
   });
 
+  it("gives the uncommitted-advance refusal a remedy in its report line", async () => {
+    // A refusal naming no way out leaves the operator with a row that cannot
+    // finish and no statement of what would let it.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain(
+      "**Report it in one line — the row, that its advance is uncommitted, and the way out: commit the ledger and re-run this pass**",
+    );
+    expect(migration).toContain("which the missing fingerprint already schedules");
+  });
+
+  it("does not date an uncommitted advance from the working-tree line", async () => {
+    // Reading the tree supplies the row's anchor and no date for it, which is
+    // the pairing the marker exists to refuse.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**The working-tree line is not read as the advance instead.**");
+    expect(migration).toContain("a third source of truth about when a layer moved");
+  });
+
   it("refuses a row whose last advance the history cannot date", async () => {
     // An untracked or uncommitted ledger yields no candidate at all; marking
     // then burns a fingerprint the later commit does not move, so the pass
