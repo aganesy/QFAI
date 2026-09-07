@@ -55,7 +55,7 @@ importers:
         version: 37.0.1
       '@cucumber/messages':
         specifier: ^31.1.0
-        version: 31.1.0
+        version: 31.2.0
       fast-glob:
         specifier: ^3.3.2
         version: 3.3.3
@@ -216,8 +216,8 @@ packages:
   '@cucumber/gherkin@37.0.1':
     resolution: {integrity: sha512-VmX+PKa9vqKZiycZoQKYlCsA0N7gAfiOfrcHSjK+suEVUwvKEH2sjO47NznrFFLmVWYTRmw3DLHQnpBAznkYEA==}
 
-  '@cucumber/messages@31.1.0':
-    resolution: {integrity: sha512-BViwUQ9YMjcGL98Ww2QHMgu3S4JLUjbTz+Jo/jsq+8ZjS47/2v3IszpD6e12Y6IzZoGfrZriauZHPQ4PAmN9XA==}
+  '@cucumber/messages@31.2.0':
+    resolution: {integrity: sha512-3urzBNCwmU/YKrKR0b3XdioFcOFNuxlLwEImsxeP8rXnweLs+Ky04QURcbKpFom3T6a6v9zVioLCfHUuSQ72pg==}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -1414,6 +1414,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -1662,10 +1663,6 @@ packages:
 
   jsonc-parser@3.3.1:
     resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
-
-  katex@0.16.33:
-    resolution: {integrity: sha512-q3N5u+1sY9Bu7T4nlXoiRBXWfwSefNGoKeOwekV+gw0cAXQlz2Ww6BLcmBxVDeXBMUDQv6fK5bcNaJLxob3ZQA==}
-    hasBin: true
 
   katex@0.16.47:
     resolution: {integrity: sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==}
@@ -2512,9 +2509,9 @@ snapshots:
 
   '@cucumber/gherkin@37.0.1':
     dependencies:
-      '@cucumber/messages': 31.1.0
+      '@cucumber/messages': 31.2.0
 
-  '@cucumber/messages@31.1.0':
+  '@cucumber/messages@31.2.0':
     dependencies:
       class-transformer: 0.5.1
       reflect-metadata: 0.2.2
@@ -2999,7 +2996,7 @@ snapshots:
 
   '@types/jsdom@28.0.1':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 20.19.39
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
       undici-types: 7.25.0
@@ -3896,10 +3893,6 @@ snapshots:
 
   jsonc-parser@3.3.1: {}
 
-  katex@0.16.33:
-    dependencies:
-      commander: 8.3.0
-
   katex@0.16.47:
     dependencies:
       commander: 8.3.0
@@ -4087,7 +4080,7 @@ snapshots:
     dependencies:
       '@types/katex': 0.16.8
       devlop: 1.1.0
-      katex: 0.16.33
+      katex: 0.16.47
       micromark-factory-space: 2.0.1
       micromark-util-character: 2.1.1
       micromark-util-symbol: 2.0.1
