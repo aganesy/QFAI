@@ -19,7 +19,10 @@ import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../../src/core/config.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
-import { validateAssistantAssets } from "../../../src/core/validators/assistantAssets.js";
+import {
+  citationTokensIn,
+  validateAssistantAssets,
+} from "../../../src/core/validators/assistantAssets.js";
 import type { Issue } from "../../../src/core/types.js";
 import { resolveToolVersion } from "../../../src/core/version.js";
 
@@ -324,6 +327,36 @@ async function writeRelocatedSkillFixture(root: string): Promise<string> {
   return referencesDir;
 }
 
+/**
+ * The token the scan yields, which is where the tilde defect actually lives.
+ *
+ * The reachability cases below pass against the broken pattern — two fallbacks
+ * cover a wrong token — so they could not pin this. These read the token.
+ */
+describe("citation tokens", () => {
+  it("keeps a tilde inside a segment rather than ending the token at it", () => {
+    expect(citationTokensIn("Follow `references/notes~1.md`.")).toEqual(["references/notes~1.md"]);
+  });
+
+  it("spans an absolute path through a tilde-bearing directory", () => {
+    const cited = String.raw`C:\Users\RUNNER~1\AppData\Local\Temp\skills\demo\references\guide.md`;
+    expect(citationTokensIn(`Read \`${cited}\` first.`)).toEqual([cited]);
+  });
+
+  it("still ends a token at a character no path segment carries", () => {
+    // The widening is one character. A space still ends a token, which is what
+    // the by-path pass exists for.
+    expect(citationTokensIn("Read `references/My Guide.md`.")).toEqual(["Guide.md"]);
+  });
+
+  it("still reads the forms it already read", () => {
+    expect(citationTokensIn("`references/設計.md` and `references/%E8%A8%AD.md`")).toEqual([
+      "references/設計.md",
+      "references/%E8%A8%AD.md",
+    ]);
+  });
+});
+
 describe("skill reference reachability", { timeout: 30000 }, () => {
   it("reports only the reference no reachable document names", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
@@ -464,6 +497,159 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
     } finally {
       await rm(root, { recursive: true, force: true });
       await rm(skillsDir, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * The character that stops the token scan is in the machine's path, not the
+   * project's.
+   *
+   * Written with an explicit `~` so a Linux-only matrix runs it: on Windows it
+   * arrives for free, because `os.tmpdir()` is the 8.3 short form
+   * (`C:\Users\RUNNER~1\AppData\Local\Temp`) and every sandbox in this file
+   * already sits under it — which is why the case above fails there and cannot
+   * fail in CI. The reference's own project-relative spelling is clean, so
+   * nothing about the *document* says it needs the by-path pass.
+   */
+  it("resolves an absolute citation whose machine prefix no path token can span", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-prefix-"));
+    const enclosing = path.join(base, "skills~home");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const skillsDir = await mkdtemp(path.join(enclosing, "skills-"));
+      const referencesDir = await writeExternalSkillsDirFixture(root, skillsDir);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * The same machine prefix, around a skillsDir that is INSIDE the project.
+   *
+   * Not a regression net for a bug that was ever live — it pins the boundary
+   * the fix chose. An in-project reference is cited relatively, so the path
+   * around the repository cannot appear in any citation of it, and judging it
+   * on that path would make every document in a project under `C:\Users\John
+   * Doe\` unscannable at once and put the whole tree through the by-path pass,
+   * which is |reachable| x |unscannable|. This asserts the ordinary graph still
+   * resolves with both an unscannable character and a space in the prefix.
+   */
+  it("judges an in-project reference on its project-relative spelling alone", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-inproject-"));
+    const enclosing = path.join(base, "John Doe~1");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const referencesDir = await writeSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      // `cited.md` and the `two-hop.md` it names both resolved by token scan.
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * A citation whose path carries a tilde, which the token scan can now span.
+   *
+   * BEFORE the fix, `CITATION_SEGMENT_SOURCE` admitted only
+   * `[\p{L}\p{N}\p{M}._-]`, so `~` ended a token: `references/notes~1.md`
+   * yielded `1.md`, and an absolute citation through a tilde-bearing directory
+   * yielded the tail after it. Neither resolved under any base.
+   *
+   * This case passed then too — hence the title. The `skillsDirPrefix` recovery
+   * in `resolveCitationToken` finds `.qfai/assistant/skills/` still present in
+   * the truncated tail and resolves from there, which is why the token being
+   * wrong was not a false finding. It stays as the net for that cover: the
+   * citation is absolute because the author wrote it that way, which is
+   * ordinary — and on Windows it is what `path.join` hands them, since
+   * `os.tmpdir()` is the 8.3 short form whenever the profile name exceeds eight
+   * characters (#1211).
+   *
+   * The `~` is written into the directory this creates, so a Linux-only matrix
+   * runs it too.
+   */
+  it("resolves a citation whose path carries a tilde (net: the prefix recovery covers it)", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-tilde-"));
+    const enclosing = path.join(base, "profile~1");
+    await mkdir(enclosing, { recursive: true });
+    try {
+      const root = await mkdtemp(path.join(enclosing, "root-"));
+      const referencesDir = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "skills",
+        "demo-skill",
+        "references",
+      );
+      await mkdir(referencesDir, { recursive: true });
+      await writeFile(
+        path.join(referencesDir, "..", "SKILL.md"),
+        [
+          "# demo-skill",
+          "",
+          "[DRIFT-PROTOCOL:MANDATORY]",
+          "",
+          // Absolute, through the tilde. The target's own project-relative
+          // spelling is clean, so the by-path pass never runs for it.
+          `Read \`${path.join(referencesDir, "guide.md")}\` before starting.`,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(referencesDir, "guide.md"), "# Guide\n", "utf-8");
+      await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * The same character in the file's OWN name, which is the half with no
+   * Windows in it at all: `~` is a legal filename character and backup
+   * conventions produce it routinely.
+   *
+   * This one passed before the fix as well, through the other cover: a target
+   * whose own name carries the tilde is unscannable, so it joins
+   * `unscannableTargets` and the by-path pass resolves it. The net is for that
+   * cover.
+   */
+  it("resolves a relative citation of a tilde name (net: the by-path pass covers it)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-tildename-"));
+    try {
+      const skillDir = path.join(root, ".qfai", "assistant", "skills", "demo-skill");
+      const referencesDir = path.join(skillDir, "references");
+      await mkdir(referencesDir, { recursive: true });
+      await writeFile(
+        path.join(skillDir, "SKILL.md"),
+        [
+          "# demo-skill",
+          "",
+          "[DRIFT-PROTOCOL:MANDATORY]",
+          "",
+          "Follow `references/notes~1.md`.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(referencesDir, "notes~1.md"), "# Notes\n", "utf-8");
+      await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 

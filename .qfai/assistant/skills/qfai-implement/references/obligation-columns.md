@@ -8,15 +8,36 @@ A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one
 every row has; the other two are optional columns that become required when the
 row's layer cannot host a `TC-*`.
 
-| Column       | Description                                                                       |
-| ------------ | --------------------------------------------------------------------------------- |
-| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
-| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
-| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
+| Column       | Description                                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows                                      |
+| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows                                 |
+| Blocked-By   | What a `blocked` row is waiting on, and the status it was blocked at. Required on `blocked` rows, blank otherwise |
 
 `Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
 with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
-(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
+(`spec-0006:TDD-0034`), **followed by the status the row was blocked at**
+(`CR-20260421-0004 — blocked at green`). **Both halves are written by the
+`Any active status -> blocked` transition itself**, because that transition is
+the last moment the departure status is observable: a row parked at `blocked`
+across a session boundary persists nothing but its `Status` and this cell, and
+the resumption needs the departure status both to pick the round it writes into
+(`round-evidence.md#what-opens-a-round`) and to compose
+`Round N: Resumed-from-blocked`. Writing it only at the resumption asked for
+information the block had already destroyed.
+
+**The departure status is one of `todo` / `red` / `green` / `refactor` /
+`review-fix`** — the active statuses the inbound edge admits. `blocked` is the
+destination, and `done` and `exception` are terminal: neither has work in
+flight for a blocker to stop. `TDDLIST_BLOCKED_MISSING_REF` **errors on either
+half**: a missing blocker, a cell that names no departure status, and a
+departure status outside that set are all the same defect — a `blocked` row
+saved in a state no later session can resume from. Enforcing only the blocker
+half let a bare `CR-20260729-0008` through, and the next session then had to
+guess which round the resumption writes into
+(`round-evidence.md#what-opens-a-round`).
+
+`DR-ID` is **not** widened to carry it: that column is
 what distinguishes a parked `exception` from a row that never started, and
 overloading it would merge the two states the `blocked` status exists to
 separate.

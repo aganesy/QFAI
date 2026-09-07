@@ -85,81 +85,81 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "validate / doctor",
     lines: [
-      `${EXIT_CODES.ok} = 成功,`,
-      `${EXIT_CODES.findings} = --fail-on 閾値に到達, または実行時エラー`,
-      "      (validate の JSON 出力 / doctor --out の書き込み失敗など、出力 I/O の例外)",
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
+      "      (an output I/O exception: a failed validate JSON write, a failed doctor --out write)",
     ],
   },
   {
     label: "prototyping preflight",
     lines: [
-      `${EXIT_CODES.ok} = 成功,`,
-      `${EXIT_CODES.findings} = --fail-on 閾値に到達, または実行時エラー`,
-      "      (--out の書き込み失敗など、出力 I/O の例外 — doctor と同じ実装経路)",
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
+      "      (an output I/O exception, such as a failed --out write — the same path as doctor)",
     ],
   },
   {
     label: "guardrails",
     lines: [
-      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = check で検査エラーを検出,`,
-      `${EXIT_CODES.inputError} = 入力エラー / 使用法エラー`,
+      `${EXIT_CODES.ok} = success, ${EXIT_CODES.findings} = check found a violation,`,
+      `${EXIT_CODES.inputError} = an input error, or a usage error`,
     ],
   },
   {
     label: "report",
     lines: [
-      `${EXIT_CODES.ok} = 成功,`,
-      `${EXIT_CODES.findings} = 入力 validate.json の破損 / スキーマ不正, または実行時エラー`,
-      "      (読み込み・出力の I/O 失敗),",
-      `${EXIT_CODES.inputError} = 入力 validate.json の欠落 (--in / config 既定)`,
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = the input validate.json is corrupt or off-schema, or a runtime error`,
+      "      (a read or write I/O failure),",
+      `${EXIT_CODES.inputError} = the input validate.json is missing (--in, or the config default)`,
     ],
   },
   {
     label: "prototyping iterate",
     lines: [
-      `${EXIT_CODES.ok} = 継続 (次 cycle へ) / UI-bearing spec なしの no-op 終了,`,
-      `${EXIT_CODES.inputError} = 入力 / lock drift エラー, または実行時エラー`,
-      `      (--auto-serve のサーバ起動失敗, --capture の runner 拒否 / I/O 失敗),`,
-      `${EXIT_CODES.prototypingStop} = STOP: 収束 (全 4 軸 exceptional),`,
-      `${EXIT_CODES.prototypingBudgetExhausted} = STOP: バジェット枯渇 (max iterations),`,
-      `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify 失敗`,
+      `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI-bearing spec,`,
+      `${EXIT_CODES.inputError} = an input or lock-drift error, or a runtime error`,
+      `      (--auto-serve could not start the server; --capture was refused by the runner or failed on I/O),`,
+      `${EXIT_CODES.prototypingStop} = STOP: converged (all four axes exceptional),`,
+      `${EXIT_CODES.prototypingBudgetExhausted} = STOP: budget exhausted (max iterations),`,
+      `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify failed`,
     ],
   },
   {
     label: "prototyping iterate --check-convergence",
     lines: [
-      `${EXIT_CODES.ok} = 収束済み,`,
-      `${EXIT_CODES.inputError} = 未収束 (prototyping.json の欠落 / 破損を含む),`,
-      `      --cycle が非負整数でない (-1 / 1.5 / abc — パーサが値を拒否し peek に到達しない`,
-      `      CLI 引数エラー), または --cycle 範囲エラー (10 以上の非負整数は peek せず停止)`,
+      `${EXIT_CODES.ok} = converged,`,
+      `${EXIT_CODES.inputError} = not converged (including a missing or corrupt prototyping.json),`,
+      `      --cycle is not a non-negative integer (-1 / 1.5 / abc — the parser refuses the`,
+      `      value and the peek is never reached), or --cycle is out of range (10 or more stops without peeking)`,
     ],
   },
   {
     label: "prototyping certify",
     lines: [
-      `${EXIT_CODES.ok} = 成功,`,
-      `${EXIT_CODES.findings} = 実行時エラー (certificate の書き込み失敗など、`,
-      `      証明書 I/O の例外),`,
-      `${EXIT_CODES.inputError} = 入力エラー / 品質ゲート拒否 (validate エラー, verify 不合格,`,
-      `      DESIGN.md 違反) / --check の証明書 digest・gate mismatch,`,
-      `${EXIT_CODES.prototypingStop} = カバレッジ不足 (review.json 欠落 /`,
-      `      multi-spec frozen set × flat layout 非対応)`,
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = a runtime error (a certificate I/O exception, such as a`,
+      `      failed certificate write),`,
+      `${EXIT_CODES.inputError} = an input error, or a quality gate refused it (a validate error, a failed`,
+      `      verify, a DESIGN.md breach), or --check found a certificate digest or gate mismatch,`,
+      `${EXIT_CODES.prototypingStop} = coverage is short (review.json is missing, or a`,
+      `      multi-spec frozen set on a flat layout, which is unsupported)`,
     ],
   },
   {
     label: "prototyping show-spec",
     lines: [
-      `${EXIT_CODES.ok} = 成功,`,
-      `${EXIT_CODES.findings} = 実行時エラー (spec 解決時の I/O 例外 — 権限エラー等,`,
-      "      ENOENT 以外の spec 本文読み込み失敗は再送出される),",
-      `${EXIT_CODES.inputError} = prototyping.json の欠落 / 破損`,
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = a runtime error (an I/O exception while resolving the spec — a`,
+      "      permission error, say; a spec body read failure other than ENOENT is re-thrown),",
+      `${EXIT_CODES.inputError} = prototyping.json is missing or corrupt`,
     ],
   },
   {
-    label: "その他のコマンド",
+    label: "other commands",
     lines: [
-      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 使用法エラー,`,
-      `${EXIT_CODES.findings} = 実行時エラー`,
+      `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
+      `${EXIT_CODES.findings} = a runtime error`,
       "(init / discussion / audit log / handoff upgrade / atdd scaffold)",
     ],
   },
@@ -169,16 +169,16 @@ const USAGE_ERROR_NOTE = [
   // CLI-arg エラーの終了コードは `parseArgs` の `invalidExitCode` 一箇所で
   // 決まり、コマンド差はない。init CLI contract の exit-code 表の 2 行目
   // (unknown flag / malformed value) がその SSOT。
-  `  ※ CLI 引数エラー (未知のフラグ, 値の不正 / 欠落) はコマンドを問わず ${EXIT_CODES.inputError}。`,
+  `  Note: a CLI argument error (an unknown flag, a bad or missing value) is ${EXIT_CODES.inputError} on every command.`,
   // 未知オプションはかつてパーサの `default` 分岐で読み飛ばされ、`--dry-run`
   // の綴り誤りが本物の init を exit 0 で実行していた。現在は拒否される。
-  `  ※ 未知のオプション (例: --typo) はコマンド本体へ進まず ${EXIT_CODES.inputError} で停止する。`,
-  `     未知の *コマンド* 名は別の行で、--help を伴う場合も使用法エラーとして ${EXIT_CODES.findings}`,
-  "     (綴り誤りのコマンドを --help が成功に見せないため)。",
+  `  Note: an unknown option (--typo, say) stops at ${EXIT_CODES.inputError} without reaching the command.`,
+  `     An unknown *command* name is a row of its own: a usage error at ${EXIT_CODES.findings} even with --help`,
+  "     (so --help cannot make a misspelled command read as a success).",
   // 値フラグの不正値はパーサが拒否する。--fail-on の未知の閾値を既定へ読み替えると、
   // 書かれたフラグと実際に効くゲートが黙って食い違うため、--cycle と同じ扱いになる。
-  `  ※ --fail-on の不正値 (例: --fail-on typo) はパーサが拒否し、既定の閾値へ読み替えないため、`,
-  `     コマンド本体へ進まず ${EXIT_CODES.inputError} を返す (--cycle と同じ)。`,
+  `  Note: a bad --fail-on value (--fail-on typo, say) is refused by the parser rather than read as`,
+  `     the default threshold, so it returns ${EXIT_CODES.inputError} without reaching the command (the same as --cycle).`,
 ].join("\n");
 
 /** CJK punctuation / kana / ideographs / fullwidth forms. */

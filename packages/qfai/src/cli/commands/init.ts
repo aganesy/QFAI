@@ -1,10 +1,11 @@
 import path from "node:path";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
+  copyFile,
   lstat,
   mkdir,
   link,
@@ -21,16 +22,26 @@ import {
   writeFile,
 } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
+import {
+  ASSISTANT_ASSETS_LOCK_BASENAME,
+  ASSISTANT_STAGING_PREFIX,
+  aliasesShippedGovernedAsset,
+  buildShippedAssistantHashes,
+  hasRealGovernedAssistantParents,
+  hashAssistantAssetFile,
+  readAssistantAssetsLock,
+  writeAssistantAssetsLock,
+} from "../../core/assistantAssetProvenance.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
+import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
@@ -55,6 +66,12 @@ import {
   needsManagedRulesSection,
 } from "../../core/agentEntryPoints.js";
 import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  mergeDocumentationClarityHooks,
+  serializeClaudeSettings,
+} from "../../core/claudeCodeHooks.js";
+import {
+  ASSISTANT_DIR,
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
@@ -175,7 +192,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。加えて qfai 提供の通常ファイル .github/copilot-instructions.md・.github/instructions/**（code-review / principles のレビュー指示）・統合ディレクトリの README.md も shipped テンプレートで再生成するため、これらへのローカル編集は失われます（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
+      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md, .github/instructions/** (the code-review / principles review instructions) and each integration directory's README.md from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
   }
 
@@ -222,7 +239,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const workflowsDirIsOwn = workflowAncestorsBefore !== undefined;
   if (!workflowsDirIsOwn) {
     error(
-      ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
+      "Skipped writing the shipped workflows: .github or .github/workflows is a symlink, and its target can point outside this repository. Replace it with a real directory and re-run.",
     );
   }
   // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
@@ -309,7 +326,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     settled === undefined;
   if (workflowsSwapped) {
     error(
-      ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
+      ".github or .github/workflows was swapped for another directory while the copy was running. The shipped workflows that were written may have landed outside this repository, so they are not recorded in provenance (following the swapped-in target to delete them would break the very policy of not following links). Check that `.github/workflows` is a real directory and that no unexpected files were created, then re-run.",
     );
     workflowResult.copied = [];
   }
@@ -350,6 +367,18 @@ export async function runInit(options: InitOptions): Promise<void> {
   // …and the summary counts them together, as one copy, which is what an operator sees.
   rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
   rootResult.skipped = [...workflowResult.skipped, ...rootResult.skipped];
+
+  // The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
+  // the stub scan behind `QFAI-TEST-001` pointed at nothing. Aim them at the files this
+  // repository already has.
+  //
+  // Only when THIS run wrote the file. The copy above is create-only, so a `qfai.config.yaml`
+  // it skipped is the adopter's — already tuned, perhaps by `/qfai-configure`, and rewriting a
+  // value they chose is not this command's to do.
+  const configPath = path.join(destRoot, "qfai.config.yaml");
+  if (!options.dryRun && rootResult.copied.includes(configPath)) {
+    await aimTestFileGlobsAtRepository(destRoot, configPath);
+  }
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -365,6 +394,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   // previous version of init left behind.
   const markerRewritten = await ensureAssistantMarker(assistantAssets, destRoot, options.dryRun);
   const rewrittenPaths = new Set(markerRewritten);
+  const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
+    force: options.force,
+    dryRun: options.dryRun,
+  });
 
   // The routing manifest is user configuration, so it is never overwritten —
   // but the skills just regenerated above may name phases an older project's
@@ -400,6 +433,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.dryRun,
   );
+  // Its template sits outside `root/`, so no earlier copy has touched the file:
+  // this owns both writing it and merging into one the project already had.
+  const claudeHooksResult = await ensureClaudeCodeHooks(assetsRoot, destRoot, options.dryRun);
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -468,7 +504,12 @@ export async function runInit(options: InitOptions): Promise<void> {
     },
   );
 
-  const removed = [...removedLegacySkills, ...wrappersResult.removed, ...removedRetiredWorkflows];
+  const removed = [
+    ...removedLegacySkills,
+    ...wrappersResult.removed,
+    ...removedRetiredWorkflows,
+    ...governedResult.removed,
+  ];
 
   // 4-layer assistant-tree seed + project-root steering surface seed.
   // These run AFTER copyTemplateTree so they can detect when the
@@ -485,25 +526,38 @@ export async function runInit(options: InitOptions): Promise<void> {
   );
   if (instructionsCreated && !options.dryRun) {
     info("");
-    info("Copilot コードレビュー用 instructions を作成しました。");
-    info("有効化: PR コメントで '@github-copilot review' を実行するか、");
-    info("GitHub Actions ワークフローで自動レビューを設定してください。");
-    info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+    info("Created the instructions files for Copilot code review.");
+    info("To enable it: comment '@github-copilot review' on a PR, or");
+    info("configure automatic review in a GitHub Actions workflow.");
+    info("Reference: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
+  // The generic `.qfai/` copy is create-only, so every governed file that
+  // already existed is in its `skipped` list before the governed sync runs.
+  // Whatever the governed sync then reports on is the authoritative outcome
+  // for that path — refreshed, left forked, retired — so the generic verdict
+  // is dropped rather than printed beside it, which showed one path twice and
+  // listed a file `--force` had just updated as "skipped".
+  const governedPaths = new Set([
+    ...governedResult.copied,
+    ...governedResult.skipped,
+    ...governedResult.removed,
+  ]);
   report(
     [
       ...rootResult.copied,
-      ...qfaiResult.copied,
+      ...withoutPaths(qfaiResult.copied, governedPaths),
       ...skillsResult.copied,
       ...markerRewritten,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
       ...entryPointRulesResult.copied,
+      ...claudeHooksResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
+      ...governedResult.copied,
     ],
     // The marker rewrite runs after a create-only copy that has already
     // recorded the same README as skipped. Reporting it in both columns tells
@@ -511,15 +565,17 @@ export async function runInit(options: InitOptions): Promise<void> {
     // the same time as saying it was written, so the rewrite's paths win.
     [
       ...rootResult.skipped,
-      ...qfaiResult.skipped,
+      ...withoutPaths(qfaiResult.skipped, governedPaths),
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
       ...legacyEvidenceIgnoreResult.skipped,
       ...entryPointRulesResult.skipped,
+      ...claudeHooksResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
+      ...governedResult.skipped,
     ].filter((entry) => !rewrittenPaths.has(entry)),
     [...removed, ...upgradeResult.removed, ...assistantTreeResult.removed],
     options.dryRun,
@@ -536,6 +592,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(note);
   }
 
+  for (const note of governedResult.manualMergeNotes) {
+    info(note);
+  }
+
   // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
   // the report summary so the warning stays at the bottom of the
   // terminal output and is not buried by the skipped-paths list (PR
@@ -544,6 +604,247 @@ export async function runInit(options: InitOptions): Promise<void> {
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Governed assistant assets: provenance record + upgrade path
+// ---------------------------------------------------------------------------
+
+function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
+  return paths.filter((candidate) => !excluded.has(candidate));
+}
+
+type GovernedAssetsResult = {
+  copied: string[];
+  skipped: string[];
+  removed: string[];
+  manualMergeNotes: string[];
+};
+
+/**
+ * Records what qfai wrote under `constitution/` and `catalog/`, and — under
+ * `--force` — refreshes the files that are still exactly that.
+ *
+ * Those two layers were create-only in every mode, so a correction to qfai's
+ * own normative rules reached new projects and nobody else, and a project that
+ * edited one had no way to say so. The record makes both states nameable:
+ * `qfai validate` can now separate a stale copy from a local fork, and this
+ * function refreshes only the former. A fork is never overwritten — it is
+ * reported for a human merge, because the content it holds is the project's,
+ * not the template's.
+ *
+ * A file the release no longer ships is retired by the same rule, in
+ * `retireWithdrawnGovernedAssets`.
+ */
+async function syncGovernedAssistantAssets(
+  assistantAssets: string,
+  destRoot: string,
+  options: { force: boolean; dryRun: boolean },
+): Promise<GovernedAssetsResult> {
+  // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
+  // come from `assistantPaths.ts` in init and in validate alike, so a future
+  // move of `ASSISTANT_DIR` cannot leave the provenance record, the refresh and
+  // the retire pass operating on a tree the validators no longer read.
+  const destAssistant = path.join(destRoot, ...ASSISTANT_DIR.split("/"));
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const removed: string[] = [];
+  const manualMergeNotes: string[] = [];
+
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(assistantAssets);
+  } catch {
+    // Fail closed. An unreadable or partially extracted install yields a
+    // shipped set that is short of files it really ships, and every governed
+    // file the lock names but the set omits is what `--force` retires — so a
+    // truncated package would have deleted the rules it could not read. The
+    // sync is abandoned whole: nothing refreshed, nothing removed, and the
+    // existing record left exactly as it was.
+    manualMergeNotes.push(
+      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
+    );
+    return { copied, skipped, removed, manualMergeNotes };
+  }
+
+  const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
+  const recorded: Record<string, string> = {};
+  const isContained = makeGovernedContainmentGuard(destRoot);
+
+  for (const [relative, shippedHash] of Object.entries(shipped)) {
+    const source = path.join(assistantAssets, ...relative.split("/"));
+    const dest = path.join(destAssistant, ...relative.split("/"));
+    if (!(await isContained(relative))) {
+      skipped.push(dest);
+      manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
+    const currentHash = await hashAssistantAssetFile(dest);
+    const previousHash = previous[relative];
+
+    if (currentHash === shippedHash) {
+      recorded[relative] = shippedHash;
+      continue;
+    }
+
+    if (currentHash === null) {
+      await restoreUnreadableGovernedAsset(source, dest, shippedHash, previousHash, options, {
+        copied,
+        skipped,
+        recorded,
+        manualMergeNotes,
+        relative,
+      });
+      continue;
+    }
+
+    const refreshable = options.force && previousHash !== undefined && currentHash === previousHash;
+    if (refreshable) {
+      // `currentHash` was read above; the refresh is only legitimate while the
+      // file still holds it. Passing it down makes the replacement decline a
+      // target that changed under the run instead of discarding the new
+      // content.
+      const outcome = options.dryRun
+        ? "replaced"
+        : await replaceGovernedAsset(source, dest, currentHash);
+      if (outcome === "target-changed") {
+        skipped.push(dest);
+        recorded[relative] = previousHash;
+        manualMergeNotes.push(
+          `NOTE: ${dest} was rewritten by another process while it was being updated, so it was left alone (run \`qfai init --force\` again).`,
+        );
+        continue;
+      }
+      copied.push(dest);
+      recorded[relative] = shippedHash;
+      continue;
+    }
+
+    skipped.push(dest);
+    recorded[relative] = previousHash ?? shippedHash;
+    if (options.force) {
+      manualMergeNotes.push(
+        `NOTE: ${dest} has diverged from the shipped content, so it was not updated (a manual merge is needed).`,
+      );
+    }
+  }
+
+  await retireWithdrawnGovernedAssets(
+    destAssistant,
+    shipped,
+    previous,
+    recorded,
+    options,
+    isContained,
+    { removed, skipped, manualMergeNotes },
+  );
+
+  // The record itself is a governed write: an assistant root that is a symlink
+  // out of the project would take the lock — and every later decision made from
+  // it — with it.
+  if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
+    await mkdir(destAssistant, { recursive: true });
+    await writeAssistantAssetsLock(destAssistant, { files: recorded });
+  }
+
+  return { copied, skipped, removed, manualMergeNotes };
+}
+
+/**
+ * Answers whether a governed relative path sits inside the project's own
+ * assistant tree.
+ *
+ * `rename` and `rm` act on the entry they are given, which makes the *final*
+ * component safe on its own — but not the directories above it. A checkout that
+ * left `constitution/` (or the assistant root itself) as a symlink to somewhere
+ * outside the repository pointed every governed write and every `--force`
+ * retire into that directory instead.
+ *
+ * The walk starts at the **project** root and the path handed to it carries the
+ * assistant segments. Starting at the assistant root left `.qfai` and
+ * `assistant` themselves unchecked, and `lstat` declines to resolve only the
+ * last component it is given — so a `.qfai` symlinked out of the repository
+ * made `lstat(.qfai/assistant)` report the external directory as real, and the
+ * guard waved through every write and retire inside it.
+ *
+ * **Nothing is cached.** The first version answered once per containing
+ * directory, which made the guard's answer as old as the run: a layer swapped
+ * for a link after the first file in it was cleared took every later hash,
+ * restore, retire and staging rename with it — and the restore of a missing
+ * file writes with no expected hash to stop it. Re-asking is four `lstat`s
+ * against a governed tree of a few dozen files, which is not a cost worth an
+ * answer that can be minutes stale. It does not make the check atomic with the
+ * write that follows it — no API here can — but the window is now the two
+ * syscalls either side of it rather than the length of the sync.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function makeGovernedContainmentGuard(
+  destRoot: string,
+): (relative: string) => Promise<boolean> {
+  return (relative: string) =>
+    hasRealGovernedAssistantParents(destRoot, `${ASSISTANT_DIR}/${relative}`);
+}
+
+function escapedGovernedPathNote(dest: string): string {
+  return `NOTE: a parent of ${dest} is not a real directory (a symlink or junction may point outside the project), so this normative file was excluded from both the sync and the retirement pass.`;
+}
+
+/**
+ * Writes `source` onto the governed path `dest` atomically.
+ *
+ * The copy lands on a temporary beside the target first and is then `rename`d
+ * over it, so a failure — a full disk, a read fault, a process killed between
+ * the two steps — leaves the previous rule in place instead of a hole where a
+ * normative file used to be. Deleting first and copying second had exactly
+ * that window, and the file it removed was one qfai had already vouched for.
+ *
+ * `rename` also keeps the property the delete-first version was written for:
+ * it replaces the directory entry itself, so a governed path left as a symlink
+ * is replaced, never followed to overwrite whatever it points at.
+ *
+ * `expectedHash`, where the caller has one, is re-read immediately before the
+ * `rename`. The refresh decides what to do from a hash taken earlier, and the
+ * atomic staging only protects the *old* content from a failed copy — it does
+ * nothing about an editor, or a concurrent `init`, that rewrote the target in
+ * between, whose work the unconditional `rename` then discarded. Re-reading
+ * does not make the swap atomic — POSIX has no conditional `rename` — but it
+ * closes the window down to the two syscalls, and a target that moved is
+ * reported instead of overwritten.
+ */
+export type GovernedWriteOutcome = "replaced" | "target-changed";
+
+/**
+ * @internal Exported for the regression test that pins the `target-changed`
+ * branch — not part of the package's public surface. The branch is only
+ * reachable through a race, so the test reaches it by handing in an
+ * `expectedHash` the target does not hold — the same state the race leaves.
+ */
+export async function replaceGovernedAsset(
+  source: string,
+  dest: string,
+  expectedHash?: string,
+): Promise<GovernedWriteOutcome> {
+  const directory = path.dirname(dest);
+  await mkdir(directory, { recursive: true });
+  const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await copyFile(source, staging, constants.COPYFILE_EXCL);
+    if (expectedHash !== undefined && (await hashAssistantAssetFile(dest)) !== expectedHash) {
+      await rm(staging, { force: true }).catch(() => {
+        // Best effort: the answer below is what the caller acts on.
+      });
+      return "target-changed";
+    }
+    await rename(staging, dest);
+    return "replaced";
+  } catch (error: unknown) {
+    await rm(staging, { force: true }).catch(() => {
+      // Best effort: the write fault below is the one worth reporting.
+    });
+    throw error;
   }
 }
 
@@ -624,8 +925,8 @@ async function ensureAssistantMarker(
     }
     warn(
       [
-        `WARN: ${dest} の状態を取得できませんでした（${describeError(err)}）。`,
-        `      qfai init のマーカーは書き込まれていないため、QFAI-LINK-001 は引き続き「未初期化」と判定します。パーミッションを確認して qfai init を再実行してください。`,
+        `WARN: could not stat ${dest} (${describeError(err)}).`,
+        `      The qfai init marker was not written, so QFAI-LINK-001 still reads this project as uninitialised. Check the permissions and run qfai init again.`,
       ].join("\n"),
     );
     return [];
@@ -651,8 +952,8 @@ async function ensureAssistantMarker(
   if (merged.byteLength > ASSISTANT_README_MAX_BYTES) {
     warn(
       [
-        `WARN: ${dest} に qfai init のマーカーを書き込めません（既存の内容と結合すると ${String(ASSISTANT_README_MAX_BYTES)} bytes の上限を超えます）。`,
-        `      既存の内容は変更していません。プロジェクト固有の注記を別ファイルへ移して短くしてから qfai init を再実行してください。`,
+        `WARN: cannot write the qfai init marker to ${dest} (merging it with the existing content would exceed the ${String(ASSISTANT_README_MAX_BYTES)} byte ceiling).`,
+        `      The existing content is unchanged. Move this project's own notes into another file to shorten it, then run qfai init again.`,
       ].join("\n"),
     );
     return [];
@@ -663,7 +964,7 @@ async function ensureAssistantMarker(
       // Somebody else put a different file at the pathname while this ran.
       // Theirs is the newer decision; overwriting it is not this repair's call.
       warn(
-        `WARN: ${dest} は qfai init の実行中に別のプロセスが置き換えたため、マーカーの書き込みを見送りました。qfai init を再実行してください。`,
+        `WARN: another process replaced ${dest} while qfai init was running, so the marker was not written. Run qfai init again.`,
       );
       return [];
     }
@@ -672,11 +973,11 @@ async function ensureAssistantMarker(
 }
 
 /** Heading the previous README's text is filed under. */
-const PRESERVED_BODY_HEADING = "## qfai init が置き換える前の README";
+const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
 
 const PRESERVED_BODY_NOTE = [
-  "以下は `qfai init` がこのファイルにマーカーを書き込む前からあった内容です。",
-  "プロジェクト固有の注記が含まれている可能性があるため保持しています。不要であれば削除してください。",
+  "The following was in this file before `qfai init` wrote its marker into it.",
+  "It is kept because it may hold notes that belong to this project. Delete it if you do not need it.",
 ].join("\n");
 
 /**
@@ -793,6 +1094,95 @@ async function replaceViaSidecar(
 }
 
 /**
+ * Handles a governed path that holds no readable regular file.
+ *
+ * Recording the shipped hash here was a false claim: nothing had been written,
+ * so the next `validate` compared the project against a record of a file that
+ * was never there. Worse, when the path is *occupied* — by a directory, a
+ * FIFO, a dangling symlink — the create-only copy upstream skips it as
+ * existing and this branch wrote nothing either, so `QFAI-ASSETS-007` kept
+ * firing and no `init`, `--force` included, could clear it.
+ *
+ * Absent is restored. Occupied is only replaced under `--force`, which is the
+ * flag that already means "regenerate what qfai owns"; without it the occupant
+ * is reported and left alone, because removing something a project deliberately
+ * put there is not a decision `qfai init` gets to make silently.
+ */
+async function restoreUnreadableGovernedAsset(
+  source: string,
+  dest: string,
+  shippedHash: string,
+  previousHash: string | undefined,
+  options: { force: boolean; dryRun: boolean },
+  out: {
+    copied: string[];
+    skipped: string[];
+    recorded: Record<string, string>;
+    manualMergeNotes: string[];
+    relative: string;
+  },
+): Promise<void> {
+  // An `lstat` that fails for anything but ENOENT (a permission fault on the
+  // parent, say) reads as occupied: what could not be inspected must not be
+  // clobbered.
+  const occupied = await pathExists(dest).catch(() => true);
+  if (!occupied) {
+    if (!options.dryRun) {
+      await replaceGovernedAsset(source, dest);
+    }
+    out.copied.push(dest);
+    out.recorded[out.relative] = shippedHash;
+    return;
+  }
+
+  if (options.force) {
+    if (!options.dryRun) {
+      // The occupant is moved aside and re-examined before anything is
+      // destroyed, for the reason the refresh and the retire were given the
+      // same treatment: `rm` acts on a pathname, and a process that put an
+      // ordinary project-owned file there between the probe above and this
+      // line lost it to a deletion justified by an entry nobody re-read. The
+      // rename carries whatever inode is at the path at that instant; the
+      // check then runs against the moved entry, whose name nothing else
+      // knows.
+      const outcome = await displaceUnreadableGovernedAsset(dest);
+      if (outcome !== "displaced") {
+        // It is a readable regular file now. That is not the occupied path
+        // this branch was entered for, and overwriting it here would discard
+        // content this run never inspected.
+        out.skipped.push(dest);
+        if (previousHash !== undefined) {
+          out.recorded[out.relative] = previousHash;
+        }
+        out.manualMergeNotes.push(
+          typeof outcome === "object"
+            ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
+            : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
+        );
+        return;
+      }
+      await replaceGovernedAsset(source, dest);
+    }
+    out.copied.push(dest);
+    out.recorded[out.relative] = shippedHash;
+    // Tense follows the run: under `--dry-run` nothing was removed and nothing
+    // was written, and an operator who reads only the preview must not come
+    // away believing the occupied path has already been repaired.
+    out.manualMergeNotes.push(
+      options.dryRun
+        ? `NOTE: ${dest} is occupied by something other than a regular file (a directory, a special file, a broken symlink), so it will be replaced with the shipped file (not done: --dry-run).`
+        : `NOTE: ${dest} was occupied by something other than a regular file (a directory, a special file, a broken symlink), so it was replaced with the shipped file.`,
+    );
+    return;
+  }
+
+  out.skipped.push(dest);
+  if (previousHash !== undefined) {
+    out.recorded[out.relative] = previousHash;
+  }
+}
+
+/**
  * Whether the pathname still holds exactly what {@link readExistingReadme} read.
  *
  * Identity first, then the bytes: the inode answers "is this still the same
@@ -847,6 +1237,213 @@ async function readExistingReadme(filePath: string): Promise<PinnedFileRead | nu
       return null;
     }
     throw err;
+  }
+}
+
+/**
+ * Removes the governed files a new release withdrew, under `--force`, when the
+ * project still holds exactly what qfai wrote there.
+ *
+ * A file that is deleted or renamed upstream used to survive every upgrade: the
+ * refresh loop walks the *current* shipped set, so the old path was never
+ * visited and only its lock entry disappeared. From the next `validate` on, an
+ * untouched retired rule read as `QFAI-ASSETS-006` — a file the project added —
+ * and no number of `qfai init --force` runs could clear it, while a rule qfai
+ * had repealed went on sitting in the tree being cited.
+ *
+ * A retired file whose content was edited is *not* removed: it stops being
+ * qfai's the moment the project changed it, and deleting it would throw away
+ * work. It keeps its recorded hash so a later `--force`, after the edit is
+ * reverted, can still recognise and retire it.
+ */
+async function retireWithdrawnGovernedAssets(
+  destAssistant: string,
+  shipped: Record<string, string>,
+  previous: Record<string, string>,
+  recorded: Record<string, string>,
+  options: { force: boolean; dryRun: boolean },
+  isContained: (relative: string) => Promise<boolean>,
+  out: { removed: string[]; skipped: string[]; manualMergeNotes: string[] },
+): Promise<void> {
+  for (const [relative, previousHash] of Object.entries(previous)) {
+    if (relative in shipped) {
+      continue;
+    }
+    if (aliasesShippedGovernedAsset(relative, shipped)) {
+      // A case variant of a path the release still ships. On a case-insensitive
+      // filesystem it names that very file, so retiring it would delete a rule
+      // qfai ships. The entry is dropped from the record instead of acted on.
+      continue;
+    }
+    const dest = path.join(destAssistant, ...relative.split("/"));
+    if (!(await isContained(relative))) {
+      out.skipped.push(dest);
+      out.manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
+    const currentHash = await hashAssistantAssetFile(dest);
+    if (currentHash === null) {
+      // Already gone (or never a readable regular file): nothing to retire,
+      // and nothing left worth recording.
+      continue;
+    }
+    if (currentHash !== previousHash) {
+      recorded[relative] = previousHash;
+      out.skipped.push(dest);
+      if (options.force) {
+        out.manualMergeNotes.push(
+          `NOTE: ${dest} is no longer shipped by this release, but its content has been edited, so it was not removed (delete it by hand if you do not need it).`,
+        );
+      }
+      continue;
+    }
+    if (!options.force) {
+      // Keep the record so a later `--force` can still identify the file as
+      // qfai's own withdrawn copy rather than a project addition.
+      recorded[relative] = previousHash;
+      continue;
+    }
+    if (options.dryRun) {
+      out.removed.push(dest);
+      continue;
+    }
+    const outcome = await retireVerifiedGovernedAsset(dest, previousHash);
+    if (outcome === "removed") {
+      out.removed.push(dest);
+      continue;
+    }
+    // The pathname stopped holding the content that was checked. Whatever is
+    // there now is not qfai's withdrawn copy, so it keeps its record and its
+    // place, exactly as an edited retired file does.
+    recorded[relative] = previousHash;
+    out.skipped.push(dest);
+    out.manualMergeNotes.push(
+      outcome === "changed"
+        ? `NOTE: ${dest} was replaced by another process just before the removal, so it was not removed.`
+        : `NOTE: ${dest} was replaced by another process just before the removal, so the removal was rolled back; the original content could not be restored and is parked at ${quarantineLabel(outcome)}.`,
+    );
+  }
+}
+
+/**
+ * Removes a withdrawn governed file, and only the exact file that was checked.
+ *
+ * `rm` acts on a pathname, not on the inode the hash was taken from. A process
+ * that replaced the path with a new project-owned file between the two lost
+ * that file to a deletion justified by somebody else's bytes. So the entry is
+ * moved aside first — `rename` within the directory carries whatever inode is
+ * at the path at that instant — and the hash is taken from the moved file,
+ * whose name nothing else knows. What is deleted is then necessarily what was
+ * inspected.
+ *
+ * When the moved file turns out not to be the withdrawn copy it is put back,
+ * and put back only if the pathname is still free: `link` fails with `EEXIST`
+ * rather than replacing whatever arrived there, so the restore cannot destroy
+ * the very file this precaution exists to protect. Where hard links are not
+ * available the restore falls back to `rename` guarded by a presence check.
+ */
+/**
+ * Moves a non-regular occupant off a governed path and destroys it, and only
+ * it.
+ *
+ * Same shape as {@link retireVerifiedGovernedAsset} and for the same reason:
+ * the decision to remove was taken from a probe, and `rm` acts on the pathname
+ * rather than on what the probe saw. The entry is renamed aside — atomic within
+ * the directory — and then inspected. A readable regular file is put back and
+ * the caller told to leave it alone; anything else is what this branch exists
+ * to clear, and is deleted where nothing else can reach it.
+ *
+ * `link` restores only into a free pathname (`EEXIST` otherwise), so the
+ * restore cannot overwrite whatever arrived in the meantime.
+ */
+export type GovernedDisplaceOutcome = "displaced" | "regular-file" | { orphaned: string };
+
+/**
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export async function displaceUnreadableGovernedAsset(
+  dest: string,
+): Promise<GovernedDisplaceOutcome> {
+  const directory = path.dirname(dest);
+  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await rename(dest, quarantine);
+  } catch (error: unknown) {
+    if (isEnoent(error)) {
+      // Already gone: nothing occupies the path, which is what this call was
+      // asked to arrange.
+      return "displaced";
+    }
+    throw error;
+  }
+  if ((await hashAssistantAssetFile(quarantine)) === null) {
+    await rm(quarantine, { force: true, recursive: true });
+    return "displaced";
+  }
+  try {
+    await link(quarantine, dest);
+    await rm(quarantine, { force: true });
+    return "regular-file";
+  } catch {
+    if (!(await pathExists(dest).catch(() => true))) {
+      try {
+        await rename(quarantine, dest);
+        return "regular-file";
+      } catch {
+        return { orphaned: quarantine };
+      }
+    }
+    return { orphaned: quarantine };
+  }
+}
+
+export type GovernedRetireOutcome = "removed" | "changed" | { orphaned: string };
+
+function quarantineLabel(outcome: GovernedRetireOutcome): string {
+  return typeof outcome === "object" ? outcome.orphaned : "";
+}
+
+/**
+ * @internal Exported for the regression test that pins the `changed` branch —
+ * not part of the package's public surface. Like the refresh above it is only
+ * reachable through a race. The test enters it by naming a hash the file does
+ * not hold; an implementation that deleted the pathname rather than the inode
+ * it checked destroys the file and fails.
+ */
+export async function retireVerifiedGovernedAsset(
+  dest: string,
+  expectedHash: string,
+): Promise<GovernedRetireOutcome> {
+  const directory = path.dirname(dest);
+  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await rename(dest, quarantine);
+  } catch (error: unknown) {
+    if (isEnoent(error)) {
+      // Already gone: the deletion this call was going to make has happened.
+      return "removed";
+    }
+    throw error;
+  }
+  if ((await hashAssistantAssetFile(quarantine)) === expectedHash) {
+    await rm(quarantine, { force: true });
+    return "removed";
+  }
+  try {
+    await link(quarantine, dest);
+    await rm(quarantine, { force: true });
+    return "changed";
+  } catch {
+    if (!(await pathExists(dest).catch(() => true))) {
+      try {
+        await rename(quarantine, dest);
+        return "changed";
+      } catch {
+        return { orphaned: quarantine };
+      }
+    }
+    return { orphaned: quarantine };
   }
 }
 
@@ -1682,6 +2279,77 @@ async function replaceFileAtomically(
 }
 
 /**
+ * Point the freshly written config's `testFileGlobs` at this repository's tests.
+ *
+ * Best-effort, and silent when it finds nothing: the template's `[]` is a valid
+ * value that `QFAI-TEST-002` already explains, so a repository with no test file
+ * yet is left exactly as before. An I/O failure is the same case — the config is
+ * on disk and correct either way, and failing the whole init over a refinement
+ * would trade a working install for an empty one.
+ */
+async function aimTestFileGlobsAtRepository(root: string, configPath: string): Promise<void> {
+  try {
+    const derived = await deriveTestFileGlobs(root);
+    if (derived.length === 0) {
+      return;
+    }
+    const before = await readFile(configPath, "utf-8");
+    const after = withDerivedTestFileGlobs(before, derived);
+    if (after !== before) {
+      await writeConfigByRename(configPath, after);
+      info(
+        `config: aimed testFileGlobs at ${derived.length} test layout(s) found in this repository`,
+      );
+    }
+  } catch {
+    // Deliberately swallowed; see the docblock.
+  }
+}
+
+/**
+ * Replace `target` by rename, keeping its mode.
+ *
+ * Writing over the file truncates it first, so an `ENOSPC`, an `EIO` or a
+ * signal partway through leaves a half-written `qfai.config.yaml` and no copy
+ * of what it replaced — and every later `validate` and `doctor` run reads that
+ * file. The content goes to a temp file beside the target and is renamed over
+ * it, so any failure before the rename leaves the original exactly as it was.
+ * That is what makes the caller's swallowed error safe: the refinement is
+ * skipped, and the config that init already wrote stands.
+ *
+ * The narrower cousin of `replaceFileAtomically`, which additionally re-checks
+ * the directory and the file for concurrent change. Those checks guard a merge
+ * into a file the adopter owns; this one replaces a file the same init run
+ * created moments earlier, and there is no older content to lose.
+ */
+async function writeConfigByRename(target: string, content: string): Promise<void> {
+  const { mode } = await stat(target);
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+  try {
+    // `O_EXCL`: the temp name is ours or nothing is written. Created `0600` and
+    // widened once complete, so the content is never briefly readable under a
+    // mode the original did not carry.
+    const handle = await open(
+      temp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    try {
+      await handle.writeFile(content, "utf-8");
+      await handle.chmod(mode);
+    } finally {
+      await handle.close();
+    }
+    await rename(temp, target);
+  } catch (err: unknown) {
+    // The temp file is this function's alone — leaving it behind would litter
+    // the project root with a partial YAML on every failed refinement.
+    await rm(temp, { force: true });
+    throw err;
+  }
+}
+
+/**
  * Give the replacement the original's `uid` / `gid`, or say it could not.
  *
  * Already-correct ownership is the common case and needs no syscall — a user
@@ -2378,8 +3046,9 @@ async function ensureAgentEntryPointRules(
       // would be worse than saying so: the project keeps a file that cites no
       // rule, and now knows it.
       error(
-        `  WARNING: ${name} は既存のため更新していません。テンプレートの managed section が見つからないので、` +
-          `\`.agents/rules/\` への参照を手動で追記してください（未参照のままだと共有ルールが AI のコンテキストに入りません）。`,
+        `  WARNING: ${name} already exists and was left unchanged. The shipped template has no ` +
+          `managed section, so add a reference to \`.agents/rules/\` by hand (while it is unreferenced, ` +
+          `the shared rules never reach the AI's context).`,
       );
       skipped.push(target);
       continue;
@@ -2406,6 +3075,117 @@ async function ensureAgentEntryPointRules(
   }
 
   return { copied, skipped };
+}
+
+/**
+ * Writes the Claude Code hooks that restate the documentation-clarity rule.
+ *
+ * The template does not sit under `root/`, and cannot: everything the root copy
+ * writes into `.claude/` is a wrapper the symlink step owns, and the assets
+ * guardrail keeps that directory out of the root template so the two never
+ * compete for it. This is the second tree `qfai init` reads directly, beside
+ * `.github/instructions/`.
+ *
+ * So both cases are handled here rather than one here and one in the copy. A
+ * project without a settings file gets the whole template; one that has its own
+ * gets only the hook entries, appended after whatever it already declares.
+ *
+ * Every refusal is reported rather than silently absorbed, and none of them ends
+ * the run. A reminder is worth less than the rest of what `qfai init` writes, so
+ * a settings file this cannot read or cannot understand is left exactly as it
+ * is, the operator is told which entries to add by hand, and init carries on.
+ */
+async function ensureClaudeCodeHooks(
+  assetsRoot: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const segments = CLAUDE_SETTINGS_RELATIVE_PATH.split("/");
+  const target = path.join(destRoot, ...segments);
+  // Messages below name the constant relative path, never `target`. An absolute
+  // path carries the destination directory's own name, which on an untrusted
+  // repository can hold a newline or an ANSI escape and forge this report's
+  // headings. `report()` prints the absolute paths, through `formatReportPath`.
+  const shown = CLAUDE_SETTINGS_RELATIVE_PATH;
+
+  const template = await readSettingsText(path.join(assetsRoot, ...segments));
+  if (template.kind !== "text") {
+    const why =
+      template.kind === "absent"
+        ? "the shipped hook template is missing from this install"
+        : `the shipped hook template could not be read (${template.reason})`;
+    error(
+      `  WARNING: ${shown} was left unchanged: ${why}, so the documentation-clarity reminder is ` +
+        `not wired up.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+
+  const existing = await readSettingsText(target);
+  if (existing.kind === "unreadable") {
+    error(
+      `  WARNING: ${shown} was left unchanged (${existing.reason}). Copy the \`hooks\` entries from ` +
+        `the shipped template by hand to enable the documentation-clarity reminder.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+  if (existing.kind === "absent") {
+    // Booked into `copied` and nothing more: the create-only root copy announces
+    // every other seeded file the same way, through the run report alone.
+    if (!dryRun) {
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, template.text, "utf-8");
+    }
+    return { copied: [target], skipped: [] };
+  }
+
+  const merged = mergeDocumentationClarityHooks(existing.text, template.text);
+  if (merged.outcome === "already-present") {
+    return { copied: [], skipped: [target] };
+  }
+  if (merged.outcome === "unreadable") {
+    error(
+      `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
+        `the shipped template by hand to enable the documentation-clarity reminder.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+
+  const events = merged.events.join(", ");
+  if (dryRun) {
+    info(`  would update: ${shown} (add documentation-clarity hooks: ${events})`);
+    return { copied: [target], skipped: [] };
+  }
+  await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
+  info(
+    `  updated: ${shown} (added documentation-clarity hooks: ${events}; existing settings kept)`,
+  );
+  return { copied: [target], skipped: [] };
+}
+
+/**
+ * What reading a settings file produced: its text, nothing there, or a fault.
+ *
+ * `readTextFileIfPresent` collapses the last two into a throw, which is right
+ * for a file init must have and wrong for this one. A settings file a
+ * permission or a file type keeps this from reading is a file to leave alone
+ * and report — not a reason to abandon the rest of an init run.
+ */
+type SettingsRead =
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "absent" }
+  | { readonly kind: "unreadable"; readonly reason: string };
+
+async function readSettingsText(target: string): Promise<SettingsRead> {
+  try {
+    return { kind: "text", text: await readFile(target, "utf-8") };
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return { kind: "absent" };
+    }
+    const code = hasErrnoCode(err) ? err.code : "read failed";
+    return { kind: "unreadable", reason: code };
+  }
 }
 
 /** File contents, or `null` when nothing is there. Other read faults throw. */
@@ -2917,8 +3697,8 @@ async function gitSymlinksEnabled(
 
 /** Disclosed when the local pin is in place but something outranks it. */
 const WORKTREE_OVERRIDE_NOTE =
-  "  warning: core.symlinks の実効値は false のままです（worktree スコープの上書き）。" +
-  "解除するには linked worktree で `git config --worktree core.symlinks true` を実行してください。";
+  "  warning: the effective value of core.symlinks is still false (a worktree-scope override). " +
+  "To clear it, run `git config --worktree core.symlinks true` in the linked worktree.";
 
 /**
  * Configures `core.symlinks`, the one change init makes outside the working
@@ -2958,10 +3738,10 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       [
-        "git config --local core.symlinks true の設定に失敗しました。",
-        "手動で以下を実行してください:",
+        "Failed to set git config --local core.symlinks true.",
+        "Run the following manually:",
         "  git config --local core.symlinks true",
-        `原因: ${detail}`,
+        `Cause: ${detail}`,
       ].join("\n"),
     );
   }
@@ -3109,18 +3889,18 @@ async function syncIntegrationWrappers(
     if (alreadyExists && (!options.force || refuseOverwrite)) {
       if (escapesProject) {
         info(
-          `  skipped: ${dest} はプロジェクト外へ解決します (--force でも上書きしません)。` +
-            `更新するにはリンク先で直接編集してください。`,
+          `  skipped: ${dest} resolves outside the project (not overwritten, even with --force). ` +
+            `Edit it at the link target to update it.`,
         );
       } else if (existingKind?.isDirectory() === true) {
         info(
-          `  skipped: ${dest} はディレクトリです (--force でも削除しません)。` +
-            `配下の内容を退避してディレクトリを削除してから再実行してください。`,
+          `  skipped: ${dest} is a directory (not deleted, even with --force). ` +
+            `Move its contents aside, delete the directory, then re-run.`,
         );
       } else if (!isReplaceableEntry) {
         info(
-          `  skipped: ${dest} は通常ファイルでも symlink でもありません ` +
-            `(--force でも置き換えません)。該当エントリを退避してから再実行してください。`,
+          `  skipped: ${dest} is neither a regular file nor a symlink ` +
+            `(not replaced, even with --force). Move that entry aside, then re-run.`,
         );
       }
       skipped.push(dest);
@@ -3144,8 +3924,8 @@ async function syncIntegrationWrappers(
             typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
           const detail = err instanceof Error ? err.message : String(err);
           throw new Error(
-            `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
-              ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
+            `Failed to read the instructions template: ${templateSrc}` +
+              ` (${code ?? detail}). Check that the package is installed correctly.`,
           );
         }
         await replaceWithRegularFile(dest, content);
@@ -3358,10 +4138,10 @@ async function findUnsafeWrapperComponent(
       return undefined;
     }
     if (stats.isSymbolicLink()) {
-      return `${current} が symlink のため生成先として使えません`;
+      return `${current} is a symlink, so it cannot be used as an output location`;
     }
     if (!stats.isDirectory()) {
-      return `${current} がディレクトリではありません`;
+      return `${current} is not a directory`;
     }
   }
   return undefined;
@@ -3443,7 +4223,7 @@ async function planCodexAgentProfile(
     return { status: "unavailable", reason: markdown.reason };
   }
   if (markdown.status === "absent") {
-    return { status: "unavailable", reason: "canonical markdown が見つかりません" };
+    return { status: "unavailable", reason: "canonical markdown not found" };
   }
 
   const rendered = renderCodexAgentToml(markdown.content, kind, agentName);
@@ -3458,8 +4238,8 @@ function classifyFailureReason(agentName: string, classification: AgentClassific
     return classification.unusable;
   }
   return classification.rejected.has(agentName)
-    ? `agent-catalog.yml の ${agentName} の kind が不正です`
-    : `agent-catalog.yml に ${agentName} の kind がありません`;
+    ? `agent-catalog.yml declares an invalid kind for ${agentName}`
+    : `agent-catalog.yml declares no kind for ${agentName}`;
 }
 
 /**
@@ -3515,7 +4295,7 @@ type AgentClassification = {
  * of. A project initialised by an older release keeps its catalog verbatim, so
  * returning the first non-empty map left every agent a later release added
  * permanently un-classified — markdown and two wrappers written, Codex profile
- * skipped as "kind がありません" forever.
+ * skipped as "declares no kind" forever.
  *
  * It fills in **only** those, though. An ID the project names without a usable
  * `kind` is a broken local statement about that agent, and answering it with
@@ -3542,7 +4322,7 @@ async function loadAgentClassification(
     return {
       kinds: new Map(),
       rejected: new Set(),
-      unusable: "agent-catalog.yml を agents リストとして読めません",
+      unusable: "agent-catalog.yml cannot be read as an agents list",
     };
   }
 
@@ -3573,7 +4353,7 @@ async function removeSymlinkAt(target: string): Promise<void> {
 }
 
 const NON_REGULAR_DESTINATION =
-  "通常ファイル以外のエントリ（FIFO / ソケット / デバイス）が存在するため生成できません";
+  "a non-regular entry (FIFO / socket / device) is in the way, so nothing can be generated here";
 
 /**
  * Why this destination cannot take generator output, or `undefined`.
@@ -3595,7 +4375,9 @@ function describeUnwritableDestination(stats: Stats | undefined): string | undef
   if (stats === undefined || stats.isFile() || stats.isSymbolicLink()) {
     return undefined;
   }
-  return stats.isDirectory() ? "ディレクトリが存在するため生成できません" : NON_REGULAR_DESTINATION;
+  return stats.isDirectory()
+    ? "a directory is in the way, so nothing can be generated here"
+    : NON_REGULAR_DESTINATION;
 }
 
 /**
@@ -3719,7 +4501,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
     if (hasErrnoCode(err) && UNREADABLE_OPEN_CODES.has(err.code)) {
       return {
         status: "rejected",
-        reason: `${filePath} は通常ファイルとして開けません (${err.code})`,
+        reason: `${filePath} cannot be opened as a regular file (${err.code})`,
       };
     }
     throw err;
@@ -3727,7 +4509,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
   try {
     const stats = await handle.stat();
     if (!stats.isFile()) {
-      return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
+      return { status: "rejected", reason: `${filePath} is not a regular file` };
     }
     const chunks: Buffer[] = [];
     let total = 0;
@@ -3741,7 +4523,7 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
       if (total > MAX_CANONICAL_INPUT_BYTES) {
         return {
           status: "rejected",
-          reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+          reason: `${filePath} exceeds the ${MAX_CANONICAL_INPUT_BYTES} byte ceiling`,
         };
       }
       chunks.push(chunk.subarray(0, bytesRead));
@@ -3860,9 +4642,9 @@ async function restoreHeldLink(args: {
   info(
     [
       occupied
-        ? `  note: ${linkPath} は別プロセスが作成した entry に占有されているため復元しませんでした。`
-        : `  note: ${linkPath} の復元に失敗しました: ${describeError(failure)}`,
-      `  note: 元の entry は次の場所に退避してあります: ${sidecar}`,
+        ? `  note: ${linkPath} was not restored — another process created an entry there first.`
+        : `  note: could not restore ${linkPath}: ${describeError(failure)}`,
+      `  note: the original entry is held here: ${sidecar}`,
     ].join("\n"),
   );
 }
@@ -3896,7 +4678,7 @@ async function putBackHeldEntry(
   if (held?.isSymbolicLink() === true) {
     const target = await readlink(sidecar).catch(() => null);
     if (target === null) {
-      return new Error(`退避した symlink の target を読み取れません: ${sidecar}`);
+      return new Error(`Cannot read the held symlink's target: ${sidecar}`);
     }
     return await symlink(target, linkPath, type).then(
       () => null,
@@ -3904,9 +4686,7 @@ async function putBackHeldEntry(
     );
   }
   if ((await safeLstat(linkPath)) !== undefined) {
-    const occupied: NodeJS.ErrnoException = new Error(
-      `${linkPath} は別の entry に占有されています`,
-    );
+    const occupied: NodeJS.ErrnoException = new Error(`${linkPath} is occupied by another entry`);
     occupied.code = "EEXIST";
     return occupied;
   }
@@ -3929,8 +4709,8 @@ async function discardHold(hold: string, linkPath: string): Promise<void> {
     await rm(hold, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
     info(
-      `  note: 修復は成功しましたが退避先を削除できませんでした (${hold}): ` +
-        `${describeError(cleanupErr)} — ${linkPath} は修復済みです`,
+      `  note: the repair succeeded but the hold could not be deleted (${hold}): ` +
+        `${describeError(cleanupErr)} — ${linkPath} is repaired`,
     );
   }
 }
@@ -3973,7 +4753,7 @@ async function claimHoldDir(linkPath: string): Promise<string> {
     }
   }
   throw new Error(
-    `qfai init: 修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です`,
+    `qfai init: cannot reserve a hold for the repair: ${base} and every numbered candidate already exist`,
   );
 }
 
@@ -4084,10 +4864,10 @@ async function ensureSymlink(
       if (isEpermOnWindows(err)) {
         throw new Error(
           [
-            "symlink の作成に失敗しました (EPERM)。",
-            "Windows では Developer Mode を有効にする必要があります:",
-            "  設定 > システム > 開発者向け > 開発者モード を ON",
-            "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+            "Failed to create a symlink (EPERM).",
+            "On Windows, Developer Mode has to be enabled:",
+            "  Settings > System > For developers > Developer Mode: ON",
+            "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
           ].join("\n"),
         );
       }
@@ -4162,7 +4942,7 @@ async function openSidecar(linkPath: string): Promise<{ path: string; handle: Fi
     }
   }
   throw new Error(
-    `修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です。前回の修復が残した .qfai-repair-* を確認して退避してください。`,
+    `Cannot reserve a sidecar path for the repair: ${base} and every numbered candidate already exists. Check for .qfai-repair-* files left behind by an earlier repair and move them aside.`,
   );
 }
 
@@ -4203,9 +4983,9 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     if (original === null) {
       throw new Error(
         [
-          `退避したファイルを復元できません（種別が変わったか、上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes を超えています）: ${linkPath}`,
-          `このファイルシステムでは hard link を作成できず、内容のコピーはその上限までに制限しています。`,
-          `元のファイルは次の場所にあります: ${sidecar}`,
+          `Cannot restore the sidecar file (its kind changed, or it exceeds the ${String(SIDECAR_COPY_MAX_BYTES)} byte ceiling): ${linkPath}`,
+          `This filesystem cannot create hard links, so the content copy is capped at that ceiling.`,
+          `The original file is here: ${sidecar}`,
         ].join("\n"),
         { cause: linkErr },
       );
@@ -4235,14 +5015,14 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
       );
       throw new Error(
         [
-          `退避したファイルのパーミッションを復元できなかったため、復元を取り消しました: ${linkPath}`,
-          `原因: ${describeError(modeErr)}`,
+          `Rolled the restore back because the sidecar file's permissions could not be restored: ${linkPath}`,
+          `Cause: ${describeError(modeErr)}`,
           ...(removeErr === null
             ? []
             : [
-                `作成済みの復元先を削除できませんでした（権限が元と異なります）: ${describeError(removeErr)}`,
+                `Could not remove the restore destination that had already been created (its permissions differ from the original): ${describeError(removeErr)}`,
               ]),
-          `元のファイル（パーミッションを含む）は次の場所にあります: ${sidecar}`,
+          `The original file, permissions included, is here: ${sidecar}`,
         ].join("\n"),
         { cause: modeErr },
       );
@@ -4315,10 +5095,10 @@ async function recreateFlattenedLink(
     if (restoreErr === null) throw readErr;
     throw new Error(
       [
-        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
-        `退避したファイルの読み取りに失敗しました: ${describeError(readErr)}`,
-        `復元にも失敗しました: ${describeError(restoreErr)}`,
-        `元のファイルは次の場所にあります: ${sidecar}`,
+        `Failed to repair the flattened symlink: ${linkPath}`,
+        `Failed to read the sidecar file: ${describeError(readErr)}`,
+        `The restore failed as well: ${describeError(restoreErr)}`,
+        `The original file is here: ${sidecar}`,
       ].join("\n"),
       { cause: readErr },
     );
@@ -4362,29 +5142,29 @@ async function recreateFlattenedLink(
     // sidecar — a path is more use than a copy pasted into an error message.
     const restored =
       restoreError === undefined
-        ? "元のファイルは復元しました。"
+        ? "The original file was restored."
         : [
             occupied
-              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。`
-              : `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
-            `元の内容は次の場所に退避してあります: ${sidecar}`,
-            "内容:",
+              ? `${linkPath} holds a file created by another process, so it was not restored (an overwrite is avoided).`
+              : `Restoring the original file failed as well: ${describeError(restoreError)}`,
+            `The original content is kept here: ${sidecar}`,
+            "Content:",
             original,
           ].join("\n");
     if (isEpermOnWindows(err)) {
       throw new Error(
         [
-          `平坦化された symlink の修復に失敗しました (EPERM): ${linkPath}`,
+          `Failed to repair the flattened symlink (EPERM): ${linkPath}`,
           restored,
-          "Windows では Developer Mode を有効にする必要があります:",
-          "  設定 > システム > 開発者向け > 開発者モード を ON",
-          "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+          "On Windows, Developer Mode has to be enabled:",
+          "  Settings > System > For developers > Developer Mode: ON",
+          "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
         ].join("\n"),
       );
     }
     if (restoreError !== undefined) {
       throw new Error(
-        [`平坦化された symlink の修復に失敗しました: ${linkPath}`, restored].join("\n"),
+        [`Failed to repair the flattened symlink: ${linkPath}`, restored].join("\n"),
         { cause: err },
       );
     }
@@ -4404,7 +5184,7 @@ async function recreateFlattenedLink(
   const stillOurs = await readPinnedRegularFile(sidecar, 4096).catch(() => null);
   if (stillOurs === null || toComparableTarget(stillOurs) !== toComparableTarget(target)) {
     info(
-      `  note: 修復は成功しましたが、退避ファイルの内容が検査時から変わっていたため削除していません: ${sidecar}`,
+      `  note: the repair succeeded, but the sidecar file was left in place because its content changed since it was inspected: ${sidecar}`,
     );
     info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
     return "created";
@@ -4413,7 +5193,7 @@ async function recreateFlattenedLink(
     await rm(sidecar, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
     info(
-      `  note: 修復は成功しましたが退避ファイルを削除できませんでした: ${sidecar} (${describeError(cleanupErr)})`,
+      `  note: the repair succeeded, but the sidecar file could not be removed: ${sidecar} (${describeError(cleanupErr)})`,
     );
   }
   info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
@@ -5430,14 +6210,14 @@ async function removeJudgedAgentWrapper(entryPath: string, target: string): Prom
     } catch (restoreErr: unknown) {
       throw new Error(
         [
-          `退役 wrapper の削除を中止しましたが、退避したファイルを元に戻せませんでした: ${entryPath}`,
-          `原因: ${describeError(restoreErr)}`,
-          `元のファイルは次の場所にあります: ${sidecar}`,
+          `Aborted the retired-wrapper deletion but could not put the moved file back: ${entryPath}`,
+          `Cause: ${describeError(restoreErr)}`,
+          `The original file is at: ${sidecar}`,
         ].join("\n"),
         { cause: restoreErr },
       );
     }
-    info(`  note: ${entryPath} は検査後に内容が変わったため削除していません`);
+    info(`  note: ${entryPath} changed after it was checked, so it was not deleted`);
     return false;
   }
   // A symlink or a small regular file — that is all the check above accepts —
@@ -6179,6 +6959,7 @@ function buildCodexReadme(): string {
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
     "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
     "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
+    "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "",
   ].join("\n");
 }
@@ -6271,6 +7052,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.",
     "- `.agents/rules/distributed-surface.md` — keep internal identifiers and version markers out of published files.",
     "- `.agents/rules/version-discipline.md` — never choose a release version number on your own; the user decides.",
+    "- `.agents/rules/documentation-clarity.md` — plain, minimal writing in pull requests, issues, comments and Markdown; no local identifiers, no account of how the work went.",
     "",
   ].join("\n");
 }

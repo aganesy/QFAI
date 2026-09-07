@@ -136,27 +136,27 @@ function buildMissingInputGuidance(
   profile: ValidationProfile | undefined,
   expectedValidateJsonPath: string,
 ): string {
-  const header = [`qfai report: 入力ファイルが見つかりません: ${inputPath}`, ""];
+  const header = [`qfai report: input file not found: ${inputPath}`, ""];
   const profileArg = profile ? ` --profile ${profile}` : "";
   if (specIds.length === 0) {
     return [
       ...header,
-      "まず qfai validate を実行してください。例:",
+      "Run qfai validate first. For example:",
       `  qfai validate${profileArg}`,
-      `（デフォルトの出力先: ${expectedValidateJsonPath}）`,
+      `(default output path: ${expectedValidateJsonPath})`,
       "",
-      "または report に --run-validate を指定してください。",
-      "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
+      "Alternatively, pass --run-validate to report.",
+      "If you use the GitHub Actions template, run the workflow's validate job first.",
     ].join("\n");
   }
   const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
   return [
     ...header,
-    `--spec 付きの report は scoped な validate 結果を読みます。まず同じ --spec で validate を実行してください。例:`,
+    `report with --spec reads the scoped validate result. Run validate with the same --spec first. For example:`,
     `  qfai validate ${specArgs}${profileArg}`,
-    `（出力先: ${expectedValidateJsonPath}）`,
+    `(output path: ${expectedValidateJsonPath})`,
     "",
-    `または report 自身に --run-validate を指定してください。例:`,
+    `Alternatively, pass --run-validate to report itself. For example:`,
     `  qfai report ${specArgs}${profileArg} --run-validate`,
   ].join("\n");
 }
@@ -169,8 +169,8 @@ export async function runReport(options: ReportOptions): Promise<void> {
   if (paths === null) {
     error(
       [
-        `qfai report: --spec の値を spec 番号として解釈できません: ${specIds.join(", ")}`,
-        "例: --spec 0003 / --spec spec-0004",
+        `qfai report: --spec values are not readable as spec numbers: ${specIds.join(", ")}`,
+        "For example: --spec 0003 / --spec spec-0004",
       ].join("\n"),
     );
     process.exitCode = 2;
@@ -180,7 +180,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
   let ranNarrowProfileInCi = false;
   if (options.runValidate) {
     if (options.inputPath) {
-      warn("report: --run-validate が指定されたため --in は無視します。");
+      warn("report: --in is ignored because --run-validate was given.");
     }
     // Same migration gate `runValidate` enforces, read through the same two
     // exported predicates. Post-sunset, a config still pointing at
@@ -194,8 +194,8 @@ export async function runReport(options: ReportOptions): Promise<void> {
     if (configTargetsLegacyValidateJsonPath(configuredValidateJsonPath) && !legacyWriteEnabled) {
       error(
         [
-          `qfai report: qfai.config.yaml#output.validateJsonPath が sunset 済みの legacy SSOT (${configuredValidateJsonPath}) を指しています。`,
-          "validate 結果の書き込みを拒否しました。output.validateJsonPath を .qfai/report/validate.json に更新してから再実行してください。",
+          `qfai report: qfai.config.yaml#output.validateJsonPath points at the sunset legacy SSOT (${configuredValidateJsonPath}).`,
+          "Refused to write the validate result. Update output.validateJsonPath to .qfai/report/validate.json and run again.",
         ].join("\n"),
       );
       process.exitCode = 2;
@@ -239,9 +239,9 @@ export async function runReport(options: ReportOptions): Promise<void> {
       const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
       error(
         [
-          `qfai report: --in の validate 結果が --spec の scope と一致しません: ${inputPath}`,
-          `--spec 付きの report は counts / issues / SC coverage / waiver 集計を入力ファイルからそのまま採用するため、repo 全体や別 spec の結果を渡すと scope 外の結果が出力に混ざります。`,
-          `${path.basename(paths.validateJsonPath)} という名前の scoped な validate 結果を指定してください。例:`,
+          `qfai report: the --in validate result does not match the --spec scope: ${inputPath}`,
+          `report with --spec takes counts / issues / SC coverage / waiver totals from the input file as they are, so a whole-repo or different-spec result mixes out-of-scope results into the output.`,
+          `Pass the scoped validate result named ${path.basename(paths.validateJsonPath)}. For example:`,
           `  qfai validate ${specArgs}`,
           `  qfai report ${specArgs}`,
         ].join("\n"),
@@ -307,7 +307,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
     // non-zero here made every stage gate that names a narrow profile
     // unreachable in CI.
     warn(
-      "report: CI で full-scan ではない profile を実行しました。stage gate としては有効ですが、完了宣言の前に --profile full（または --profile 指定なし）で full-scan を実行してください。",
+      "report: a non-full-scan profile was run in CI. That is valid as a stage gate, but run a full scan with --profile full (or with no --profile) before declaring completion.",
     );
   }
   // `data.summary.counts`, not `validation.counts`: the report adds findings of
@@ -378,8 +378,8 @@ function warnOnProfileMismatch(
     return;
   }
   warn(
-    `report: --profile ${profile} を指定しましたが、入力 ${inputPath} は profile "${validation.profile}" の実行結果です。` +
-      `そのままの数値でレポートを生成します。`,
+    `report: --profile ${profile} was given, but the input ${inputPath} is the result of a run with ` +
+      `profile "${validation.profile}". The report is generated from those numbers as they are.`,
   );
 }
 
@@ -387,7 +387,7 @@ async function readValidationResult(inputPath: string): Promise<ValidationResult
   const raw = await readFile(inputPath, "utf-8");
   const parsed = JSON.parse(raw) as unknown;
   if (!isValidationResult(parsed)) {
-    throw new Error(`validate.json の形式が不正です: ${inputPath}`);
+    throw new Error(`validate.json has an invalid shape: ${inputPath}`);
   }
   return parsed;
 }

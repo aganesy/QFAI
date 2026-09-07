@@ -73,28 +73,30 @@ describe("qfai --help exit-code section", () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
-    expect(section).toMatch(/guardrails[\s\S]*使用法エラー/);
+    expect(section).toMatch(/guardrails[\s\S]*a usage error/);
   });
 
   it("records the non-usage exit codes the other commands actually return", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
-    // guardrails check reports 検査エラー with 1, not only 0 / 2.
+    // guardrails check reports a violation with 1, not only 0 / 2.
     expect(section).toMatch(
-      new RegExp(`guardrails[\\s\\S]*?${EXIT_CODES.findings} = check で検査エラー`),
+      new RegExp(`guardrails[\\s\\S]*?${EXIT_CODES.findings} = check found a violation`),
     );
     // report / show-spec exit 2 on a missing or unreadable input file — the
-    // catch-all "1 = 使用法エラー" row would misreport them.
+    // catch-all "1 = a usage error" row would misreport them.
     expect(section).toMatch(
-      new RegExp(`report\\s+${EXIT_CODES.ok} = 成功,[\\s\\S]*?${EXIT_CODES.inputError} = 入力`),
+      new RegExp(
+        `report\\s+${EXIT_CODES.ok} = success,[\\s\\S]*?${EXIT_CODES.inputError} = the input`,
+      ),
     );
     expect(section).toMatch(
       new RegExp(
-        `prototyping show-spec\\s+${EXIT_CODES.ok} = 成功,[\\s\\S]*?${EXIT_CODES.inputError} = prototyping.json`,
+        `prototyping show-spec\\s+${EXIT_CODES.ok} = success,[\\s\\S]*?${EXIT_CODES.inputError} = prototyping.json`,
       ),
     );
-    expect(section).toContain("--check の証明書 digest・gate mismatch");
+    expect(section).toContain("--check found a certificate digest or gate mismatch");
   });
 
   it("names the iterate outcomes that share 0 and 2 with unrelated causes", async () => {
@@ -120,7 +122,7 @@ describe("qfai --help exit-code section", () => {
     const certifyRow = section.slice(section.indexOf("prototyping certify"));
 
     expect(certifyRow).toMatch(
-      new RegExp(`${EXIT_CODES.prototypingStop} = [^]*?flat layout 非対応`),
+      new RegExp(`${EXIT_CODES.prototypingStop} = [^]*?flat layout, which is unsupported`),
     );
   });
 
@@ -129,7 +131,9 @@ describe("qfai --help exit-code section", () => {
     const section = help.slice(help.indexOf("Exit codes:"));
 
     expect(section).toContain("prototyping iterate --check-convergence");
-    expect(section).toMatch(new RegExp(`--check-convergence[\\s\\S]*?${EXIT_CODES.ok} = 収束済み`));
+    expect(section).toMatch(
+      new RegExp(`--check-convergence[\\s\\S]*?${EXIT_CODES.ok} = converged`),
+    );
   });
 
   it("does not advertise the reviewer hard-stop that no CLI path returns", async () => {
@@ -151,7 +155,9 @@ describe("qfai --help exit-code section", () => {
 
     // A corrupt / schema-invalid validate.json throws out of runReport, and
     // cli/index.ts turns any throw into exit 1 — the row has to say so.
-    expect(reportRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 入力 validate.json の破損`));
+    expect(reportRow).toMatch(
+      new RegExp(`${EXIT_CODES.findings} = the input validate.json is corrupt`),
+    );
   });
 
   it("rejects a corrupt validate.json instead of exiting 0 or 2", async () => {
@@ -166,12 +172,12 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
-  it("separates the --check-convergence cycle-range error from 未収束", async () => {
+  it("separates the --check-convergence cycle-range error from not-converged", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
     const peekRow = section.slice(section.indexOf("prototyping iterate --check-convergence"));
 
-    expect(peekRow).toContain("--cycle 範囲エラー");
+    expect(peekRow).toContain("--cycle is out of range");
   });
 
   it("returns the input-error code for an out-of-range --check-convergence cycle", async () => {
@@ -202,9 +208,9 @@ describe("qfai --help exit-code section", () => {
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.invalidExitCode).toBe(EXIT_CODES.inputError);
 
-    expect(section).toContain("未知のオプション");
+    expect(section).toContain("an unknown option");
     expect(section).toMatch(
-      new RegExp(`未知のオプション[\\s\\S]*?${EXIT_CODES.inputError} で停止する`),
+      new RegExp(`an unknown option[\\s\\S]*?stops at ${EXIT_CODES.inputError}`),
     );
   });
 
@@ -216,7 +222,9 @@ describe("qfai --help exit-code section", () => {
     // unknown flag or a malformed value — not for a mistyped command name.
     // Folding the two together would file a typo under a row written for
     // something else, and `--help` after the typo must not read as success.
-    expect(section).toMatch(new RegExp(`未知の \\*コマンド\\* 名[\\s\\S]*?${EXIT_CODES.findings}`));
+    expect(section).toMatch(
+      new RegExp(`An unknown \\*command\\* name[\\s\\S]*?${EXIT_CODES.findings}`),
+    );
   });
 
   it("names the certify runtime error that the 0 / 2 / 64 row omitted", async () => {
@@ -226,8 +234,8 @@ describe("qfai --help exit-code section", () => {
 
     // writeCompletionCertificate() throws on a read-only destination and
     // cli/index.ts maps any throw to 1 — the row has to carry it.
-    expect(certifyRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 実行時エラー`));
-    expect(certifyRow).toContain("証明書 I/O の例外");
+    expect(certifyRow).toMatch(new RegExp(`${EXIT_CODES.findings} = a runtime error`));
+    expect(certifyRow).toContain("a certificate I/O exception");
   });
 
   it("names the runtime error the validate / doctor / preflight rows blamed on --fail-on", async () => {
@@ -248,9 +256,9 @@ describe("qfai --help exit-code section", () => {
     // makes an I/O failure read as a quality verdict.
     for (const row of [validateRow, preflightRow]) {
       expect(row).toMatch(
-        new RegExp(`${EXIT_CODES.findings} = --fail-on 閾値に到達, または実行時`),
+        new RegExp(`${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime`),
       );
-      expect(row).toContain("出力 I/O の例外");
+      expect(row).toContain("an output I/O exception");
     }
   });
 
@@ -296,11 +304,11 @@ describe("qfai --help exit-code section", () => {
     // resolveSurfaceUnion() re-throws every non-ENOENT spec-body read error
     // rather than classifying the spec as non-UI, so 1 is reachable with a
     // perfectly valid prototyping.json.
-    expect(showSpecRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 実行時エラー`));
-    expect(showSpecRow).toContain("spec 解決時の I/O 例外");
+    expect(showSpecRow).toMatch(new RegExp(`${EXIT_CODES.findings} = a runtime error`));
+    expect(showSpecRow).toContain("an I/O exception while resolving the spec");
     // Over-correction pin: the missing / corrupt prototyping.json stays 2.
     expect(showSpecRow).toMatch(
-      new RegExp(`${EXIT_CODES.inputError} = prototyping.json の欠落 / 破損`),
+      new RegExp(`${EXIT_CODES.inputError} = prototyping.json is missing or corrupt`),
     );
   });
 
@@ -339,9 +347,9 @@ describe("qfai --help exit-code section", () => {
     // a rejected value is a CLI-arg error on every command — so what the row
     // has to keep apart is the two CAUSES, not two codes. It said 1 for the
     // first, which is the number the parser never returns.
-    expect(peekRow).toContain("--cycle が非負整数でない");
-    expect(peekRow).toContain("CLI 引数エラー");
-    expect(peekRow).toContain("10 以上の非負整数");
+    expect(peekRow).toContain("--cycle is not a non-negative integer");
+    expect(peekRow).toContain("the parser refuses the");
+    expect(peekRow).toContain("10 or more stops without peeking");
     expect(peekRow).not.toMatch(new RegExp(`${EXIT_CODES.findings} = --cycle`));
   });
 
@@ -387,9 +395,9 @@ describe("qfai --help exit-code section", () => {
     expect(parsed.options.failOn).toBeUndefined();
     expect(parsed.options.invalidExitCode).toBe(EXIT_CODES.inputError);
 
-    expect(section).toContain("--fail-on の不正値");
+    expect(section).toContain("a bad --fail-on value");
     expect(section).toMatch(
-      new RegExp(`--fail-on の不正値[\\s\\S]*?${EXIT_CODES.inputError} を返す`),
+      new RegExp(`a bad --fail-on value[\\s\\S]*?returns ${EXIT_CODES.inputError}`),
     );
   });
 

@@ -105,7 +105,9 @@ import {
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
+  STUB_SOURCE_FILE_PATTERN,
 } from "./validators/index.js";
+import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -157,18 +159,15 @@ export async function validateProject(
   const specScope = requestedScope;
 
   const timingsSink: TimingsSink = {};
-  const findings = [
-    ...configIssues,
-    ...scopeIssues,
-    ...(await runProfileValidators(
-      root,
-      config,
-      profile,
-      timingsSink,
-      options.platform,
-      specScope,
-    )),
-  ];
+  const profileRun = await runProfileValidators(
+    root,
+    config,
+    profile,
+    timingsSink,
+    options.platform,
+    specScope,
+  );
+  const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) =>
     isFindingInSpecScope(finding, scopeRoots, specScope),
   );
@@ -203,6 +202,10 @@ export async function validateProject(
     // `ValidationResult` carries it without having to remember to.
     generatedAt: new Date().toISOString(),
     profile,
+    // Reported, not inferred: a run stopped by the integration surface returns
+    // only those findings, and their absence is indistinguishable from a clean
+    // surface to a reader looking at the issue list alone.
+    profileValidatorsRan: profileRun.ranProfileValidators,
     issues,
     counts: countIssues(issues),
     traceability: {
@@ -474,6 +477,20 @@ async function buildUnusedPlatformIssues(
   ];
 }
 
+/**
+ * What one profile's run produced, and whether its own validators ran at all.
+ *
+ * The two cannot be recovered from the issue list downstream: an aborted run
+ * and a healthy one both return `surface.issues` first, so a caller counting
+ * findings cannot tell "the surface is broken and nothing else was looked at"
+ * from "the surface is broken and everything else passed".
+ */
+type ProfileValidatorRun = {
+  readonly issues: Issue[];
+  /** `false` when the integration-surface inspection stopped the run below. */
+  readonly ranProfileValidators: boolean;
+};
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -481,7 +498,7 @@ async function runProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
   specScope?: SpecScope,
-): Promise<Issue[]> {
+): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
   // so every gate the profile is about was defined by files nothing read. That
@@ -528,15 +545,21 @@ async function runProfileValidators(
   // elsewhere is not a reason to withhold a finding the walk already has.
   const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues];
+    return {
+      issues: [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
+      ranProfileValidators: false,
+    };
   }
-  return [
-    ...toolProvenance,
-    ...unusedPlatform,
-    ...surface.issues,
-    ...anchorIssues,
-    ...(await runProfileOwnValidators()),
-  ];
+  return {
+    issues: [
+      ...toolProvenance,
+      ...unusedPlatform,
+      ...surface.issues,
+      ...anchorIssues,
+      ...(await runProfileOwnValidators()),
+    ],
+    ranProfileValidators: true,
+  };
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
@@ -882,6 +905,24 @@ async function runAtddValidators(
     // Scoped: this validator writes `.qfai/state.json` escalation counters, so
     // an unscoped scan under `--spec` mutated sibling specs' state.
     ...(await validateScaffoldPlaceholder(root, config, specScope ? { specScope } : {})),
+    // QFAI-TEST-001. `qfai-atdd` names `--profile atdd` as its completion gate
+    // and owns `tests/e2e/**`, `tests/api/**` and `tests/integration/**`. An
+    // acceptance test written as a silent stub still satisfies QFAI-ATDD-111 /
+    // -112 / -113 — those count the annotation, not the assertion — and carries
+    // no scaffold marker, so D-SCAFFOLD-PLACEHOLDER does not see it either.
+    // Without this the stage's own gate went green on a suite whose tests do
+    // not run, and the repo-wide profiles that do catch it are not what the
+    // skill instructs the operator to run. Unscoped like the contract rules:
+    // the finding names a test file, which no spec owns.
+    //
+    // Selection is the stage's own three directories, not
+    // `validation.traceability.testFileGlobs`: that list is repo-wide, so a
+    // `tests/**/*.test.ts` project would have had a `tests/unit/**` stub block
+    // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
+    // it empty, which made the validator return before reading anything.
+    ...(await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+    })),
   ];
 }
 
@@ -947,6 +988,49 @@ async function runTddValidators(
   ];
 }
 
+/**
+ * Collapses the stub findings the ATDD and TDD scans both produced.
+ *
+ * `full` runs both, and they select files differently — the acceptance
+ * directories versus `validation.traceability.testFileGlobs` — so neither is a
+ * subset of the other and dropping either one would lose real findings. The
+ * overlap is exact (same rule, file, line and construct), so it dedupes
+ * cleanly instead.
+ */
+const STUB_VALIDATOR_CODES = new Set(["QFAI-TEST-001", "QFAI-TEST-002", "QFAI-TEST-003"]);
+
+function dedupeStubFindings(issues: Issue[]): Issue[] {
+  const seen = new Set<string>();
+  return issues.filter((entry) => {
+    // All three codes this validator emits, not only the first two: `full`
+    // runs it once per profile, so a `.skip` the two selections share was
+    // counted twice as `QFAI-TEST-003` — twice in the warning count and, after
+    // the promotion window closes, twice in the error count.
+    if (!STUB_VALIDATOR_CODES.has(entry.code)) return true;
+    const key = [
+      entry.code,
+      entry.file ?? "",
+      entry.loc?.line ?? "",
+      // Two stubs on one line are two findings. Without the column they share
+      // every other field and the second one was dropped.
+      entry.loc?.column ?? "",
+      (entry.refs ?? []).join(","),
+      // `QFAI-TEST-002` names a state, not an occurrence, and its three forms
+      // carry no line and no column. The ATDD selection hitting the file limit
+      // and the repo-wide selection being empty are different states of
+      // different scans; keyed on the fields above they collapsed, and the
+      // report kept whichever came first while the other went unmentioned. The
+      // message is what distinguishes them, and for a real occurrence it is a
+      // function of the fields already in the key, so adding it drops nothing
+      // that was being deduped before.
+      entry.message,
+    ].join("\0");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function runFullValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -954,7 +1038,7 @@ async function runFullValidators(
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
-  return [
+  return dedupeStubFindings([
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
@@ -972,7 +1056,7 @@ async function runFullValidators(
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
-  ];
+  ]);
 }
 
 async function runUiuxValidators(

@@ -71,9 +71,12 @@ describe("execution ledger selector-granularity summary", () => {
     for (const file of LEDGER_PATHS) {
       const content = unwrap(await readFile(file, "utf-8"));
 
+      // The sentence names who performs the split as well as when: this skill
+      // owns cells and not rows, so recognising the shape is a request.
       expect(content).toContain(
-        "If you cannot name the single boundary that every selector entry on a row observes, split the row.",
+        "If you cannot name the single boundary that every selector entry on a row observes, the row needs splitting",
       );
+      expect(content).toContain("**and that is a request, not a write**");
     }
   });
 });

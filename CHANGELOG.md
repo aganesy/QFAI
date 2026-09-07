@@ -1,10 +1,78 @@
 # Changelog
 
-この変更履歴は Keep a Changelog と Semantic Versioning に基づきます。
+This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A rule stating that this repository is written in English**
+  (`.agents/rules/repository-language.md`). The language of the tree was
+  settled one surface at a time. Operator-facing strings in
+  `packages/qfai/src/**` are pinned to English by
+  `packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md` and
+  held by a meta-test against a shrinking allowlist; comments, documents,
+  tests and this file had no rule to point at, so each change decided for
+  itself.
+
+  The rule covers what this repository stores and ships. It does not fix the
+  language an assistant replies in, which follows the user, nor what an adopter
+  writes in their own repository. For that reason it is a master only: like
+  `document-schema.md` it is absent from
+  `packages/qfai/assets/init/root/.agents/rules/`, so `qfai init` does not
+  carry it into a project that has made a different choice.
+
+  Existing Japanese is a backlog rather than permission. The English wording of
+  several rules already exists — the shipped copies under
+  `packages/qfai/assets/init/root/.agents/rules/` carry none.
+
+## [1.11.0] - 2026-09-07
+
+### Added
+
+- **Mermaid 図の構文チェックレーン (`packages/qfai/assets/scripts/check-mermaid.mjs`)。** markdownlint
+  はフェンスの中身を不透明なテキストとして扱うため、GitHub 上でエラーボックスに
+  なる図でも Markdown 規則は全て通る。唯一の判定基準は Mermaid 自身の文法なので、
+  レンダラが描画前に呼ぶ `mermaid.parse()` を jsdom 上で走らせる (ブラウザ不要)。
+  フェンス走査は CommonMark 準拠で、より広いフェンスの内側に書かれた
+  ` ```mermaid ` は「Mermaid の書き方の説明」であって図ではないため解析しない。
+  プレースホルダを含むテンプレート図は直前行の `<!-- mermaid-lint:ignore -->` で
+  個別に除外できる (ファイル単位の除外は、後から足された図を黙って覆うので設けない)。
+  現状リポジトリ全体で 1,472 ファイル中 52 図すべてが解析に成功する。
+
+- **宣言的な Markdown ドキュメントスキーマ (`packages/qfai/assets/mdschema/`)。**
+  「どの章が必要か」「その章はリストか、テーブルか、Mermaid か」を YAML で宣言し、
+  `mdschema` で検証する。spec パック 11 種と `_policies` 11 種の計 22 スキーマ +
+  `manifest.yml` を同梱し、`qfai-sdd` テンプレートを SSOT として写している。
+  テーブルは必須カラム名まで固定するので、`EX-Ref` 列の改名がトレースを黙って
+  空にする代わりにこのレーンで落ちる。`_policies/04_Business-Flow.md` は
+  `mermaid` 型のコードブロックを必須とする (無指定フェンスは不可)。
+  ドライバ `packages/qfai/assets/scripts/check-mdschema.mjs` は `qfai.config.yaml` の
+  `paths.specsDir` を読み、`--scope changed|all|files` で適用範囲を切り替える。
+
+- **配布ワークフロー `qfai-docs.yml`。** `qfai init` が adopter の
+  `.github/workflows/` に書く 3 本目。上の 2 レーンを adopter の CI でも走らせる
+  — ドライバもスキーマもインストール済みパッケージから読むので、QFAI 自身が
+  自分の spec に当てているのと同じ規則が動く。specs ディレクトリが無いツリーでは
+  「0 件を検査した」と述べて exit 0 する (何も検査せずに緑を出さない)。
+  このレーンは `qfai` の bin ではなくパッケージ内の**ファイル**を実行するため、
+  パッケージが展開されている必要がある。`qfai init` は adopter の manifest に
+  QFAI を追加しないので、`node_modules/qfai` が無いときに限り `--no-save` で
+  取得する。既に依存として入れているリポジトリでは、そのリポジトリが選んだ版の
+  規則がそのまま報告される (勝手に最新へ差し替えない)。
+  `SHIPPED_WORKFLOW_NAMES` / 構造ゲート / lane-command 許可リスト /
+  provenance / init-path 各列挙に登録済み。
+
 ### Changed
+
+- **spec / `_policies` の表記揺れを正典へ収束。** `10_Plan.md` は
+  実装戦略・`1. Implementation Strategy`・`Implementation Strategy`・
+  `Implementation approach` の 4 系統が混在していた。`_policies` の
+  3 ファイルは日本語見出しのまま残っていた。見出しリネームとコンテナ節の
+  追加が中心で、`Test approach` / `Risk mitigation` など実際に欠けていた節は
+  各 spec 自身の材料 (証明しているテスト、実在する順序制約) から起こした。
+  `AC_ID` → `AC-ID`、`# 09 delta` → `# 09 Delta` 等の ID・タイトル表記も統一。
+  結果として 185 文書すべてがスキーマに適合する。
 
 - **`markInvalid()` の `guardrails` 専用分岐を削除した。** 既定値が 2 になった時点で、
   この分岐は**既に入っている値を代入するだけの死んだコード**になっていた。ただ無害
@@ -104,6 +172,17 @@
   scaffold gate が落ちる。4 箇所すべてを更新済み。
 
 ### Fixed
+
+- **`.qfai/specs/spec-0010/01_Spec.md` に欠けていた `## Evidence Summary`
+  節を追加。** 新設の spec スキーマが検出したもので、これで 17 本すべての
+  `01_Spec.md` がテンプレート構造に適合する。
+
+- **配布テンプレート `09_delta.md` の `### Plan` ブロックが未フェンスの
+  YAML だった問題。** 2 スペース字下げの `# comment` は CommonMark 上は
+  正当な ATX 見出しなので、テンプレートは自身のコメントを GitHub 上で
+  最上位見出しとして描画していた。`parseVerificationPlan` がフェンス付き
+  ブロックを読むようにし (無い場合は従来どおり本文をそのまま読む)、
+  テンプレートをフェンス化した。既存の未フェンス delta は影響を受けない。
 
 - **`brandCatalogStepAnchor.test.ts` の path 判定を Windows でも成立するように
   した。** `fast-glob` は `absolute: true` でも**常に `/` 区切り**を返すのに、
@@ -281,6 +360,27 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
 
 ### Added
 
+- **AI が書く文章の品質基準を全 AI 共通ルールに追加した。**
+  `.agents/rules/documentation-clarity.md` が SSOT で、PR / issue のタイトルと説明、
+  変更差分に含まれるコードコメントと Markdown に適用される。内容は 6 項目:
+  内輪の識別子を書かない、経緯を書かない、削る、平易に書く、箇条書きと表で整える、
+  書き終えたら全件読み直して翻訳調を直す。`qfai init` が配布する
+  `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` / `.codex/README.md`
+  と、constitution の `communication.md`、Copilot の review instructions がこれを参照する。
+
+- **Claude Code の hooks で、その基準を必要な場面だけ自動で読み込ませる。**
+  `qfai init` が `.claude/settings.json` を配布する。GitHub の MCP ツールで PR /
+  issue / レビューを投稿する直前 (PreToolUse) と、Markdown を書き込んだ直後
+  (PostToolUse) の 2 箇所で発火する。
+
+  hook は `node` を引数付きで直接起動し、固定の JSON を 1 行出すだけで、シェルも
+  ファイル読み込みもネットワークも使わない。設定ファイルが既にあるプロジェクトでは
+  既存の内容を残したまま hook のエントリだけを追記し、2 回目以降の `init` は何も
+  足さない。JSON として読めない設定ファイルは書き換えず、警告だけ出す。
+
+  `gh` コマンドは対象外。Bash 引数の条件指定は複合コマンドにも一致するため、
+  GitHub と無関係な作業の前でリマインダーが出てしまう。
+
 - **依存更新 PR を GitHub 上で自動生成する仕組み。** `.github/workflows/renovate.yml`
   が週次 (Asia/Tokyo の月曜 6 時前) と手動 dispatch で Renovate を回し、
   `.github/renovate.json5` が何をどうまとめるかを持つ。設定手順は
@@ -307,6 +407,104 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   `GITHUB_TOKEN` による push / PR 作成には workflow event が発生しないため、
   checks が一度も走らない PR ができてしまう (`prepare-release.yml` と同じ理由)。
   **この secret は本変更では作成できない** — 手順は `.github/renovate.md`。
+
+- **その依存更新 PR を、CI グリーンだけを条件に自動マージするようにした。**
+  `.github/renovate.json5` の top level に `automerge: true` を置いたので、
+  major を含むすべての更新種別が対象になる。`matchUpdateTypes` で major を
+  除外する一般的な書き方を**あえて採っていない**。
+
+  マージ条件が CI だけで成立するのは、ここの CI が何であるかによる。
+  `ci-pass` は lint / 型 2 lane / Node floor / Vitest 全体 / scanner coverage /
+  pack 検証をすべて needs に持ち、`success` でも `skipped` でもない job 結果を
+  受理しない。このリポジトリを壊す依存はその verdict に落ちるので PR はマージ
+  されず、落ちない依存は誰にも読まれずにマージされる。
+
+  マージを実行するのは Renovate ではなく GitHub である (`platformAutomerge`)。
+  週次スケジュールのもとで Renovate 側マージを使うと、緑になった PR が最大 1 週間
+  放置される — 「自動マージ」と書いてあるのに実質そうならない。かわりに
+  **branch protection が唯一の門番になる**: `main` で `ci-pass` を required
+  status check に設定していないと、GitHub は lane が 1 つも始まらないうちに
+  マージする。リポジトリ設定は PR からは読めないので、
+  `.github/required-status-contexts.json` に期待が宣言されていることだけを
+  `renovateMechanism.test.ts` が要求する — automerge を宣言しながら required
+  context を宣言しない状態を構造的に拒否する。設定手順は `.github/renovate.md`。
+
+  併せて: `engines` / `packageManager` の `dependencyDashboardApproval` を外した
+  (単独 PR にはなるが承認待ちはしない)。PR 上限は 5/2 から 10/5 に上げた —
+  旧上限は「人が読む queue」を前提にした数字で、週 5 件しか流れない自動マージは
+  遅い手動マージと変わらない。`ignoreTests: false` は既定値だが明示した。これを
+  倒すと上のすべてが無意味になる唯一の knob だからである。
+
+  repin job は push の前に branch がまだ remote に存在するかを確認する。
+  自動マージにより、この job が計算している最中に PR がマージされて branch が
+  消えうる — そして削除済み branch への `git push HEAD:refs/heads/<name>` は
+  失敗せず **branch を作り直す**。action bump を自動マージするたびに孤児 branch が
+  残ることになる。lookup 1 回で通常ケースを塞いだ (force push はしていない)。
+
+- **Renovate を日次にし、設定側の実行時間帯を撤去した。** cron を
+  `0 20 * * 0` (週次) から `41 19 * * *` (日次 = Asia/Tokyo 04:41) に変更し、
+  `.github/renovate.json5` の `schedule` を `["before 6am on monday"]` から
+  `["at any time"]` にした。
+
+  **後者は cadence の変更ではなく、実測されたバグの修正である。** Renovate には
+  時計が 2 つある — workflow の cron (いつ bot が走るか) と config の `schedule`
+  (いつ branch を作ってよいか) — これを対で狭く設定していた。初回の実運転が
+  その帰結を測定した: cron は 20:00 UTC を要求し、GitHub がジョブを開始したのは
+  **21:55 UTC** = Asia/Tokyo 06:55 で、窓の 1 時間外である。窓の外に落ちた run は
+  何も作らずに success を返すので、**失敗が無言**で、「更新が無かった」と区別が
+  つかない。
+
+  GitHub はスケジュール遅延に上限を設けていない。そして日次化は窓を遅延に対して
+  相対的に小さくするので、状況は悪化する。したがって窓は廃止し、cron を唯一の
+  時計にした。`renovateMechanism.test.ts` が両側を固定している —
+  config 側の窓が開いたままであることと、cron が日次のままであること。
+
+  cron の分は :00 を避けた。GitHub 自身が「毎時 0 分のスケジュールは最も混雑し
+  遅延しやすい」と文書化しており、上の 1 時間 55 分は実際 `0 20 * * 0` で起きた。
+
+- **`.github/renovate.md` のトークン権限に `Workflows` が抜けていたのを直した。**
+  fine-grained token の必要権限として Contents / Pull requests / Issues しか
+  挙げていなかったが、workflow ファイルを含む commit の push は専用権限を要求
+  される。このリポジトリの Renovate は常時それに触る — config は全 GitHub
+  Action を 1 つの PR にまとめて digest pin し、repin job は `ci.yml` を
+  書き換える。
+
+  **症状が原因を名乗らない**のが厄介な点である: 他のパッケージは普通に更新され、
+  actions group の push だけが拒否される。classic token なら `repo` + `workflow`
+  の 2 スコープが等価。`Commit statuses` (Renovate 自身の branch status) と
+  `Dependabot alerts` (`vulnerabilityAlerts` 用) も併せて明記した。
+
+  ドキュメントが黙って古くなるのを防ぐため、`renovateMechanism.test.ts` が
+  「config が workflow ファイルを管理している」ことと「setup 文書が
+  `Workflows` 権限を名指ししている」ことを 1 行で結んでいる。
+
+- **QFAI 利用側リポジトリ向けの Renovate preset を公開した。**
+  `.github/renovate-presets/qfai.json` と `qfai-self-hosted.json`。
+  `github>aganesy/QFAI//.github/renovate-presets/qfai` の 1 行で extend する。
+
+  `qfai` の bump は、バージョン番号が変わった時点では終わっていない唯一の依存
+  更新である。パッケージは adopter のリポジトリに assistant tree (skills /
+  agents と `.agents/` `.claude/` `.codex/` `.github/` の wrapper) を書き込むが、
+  新しい版を入れても既に書かれたものは更新されない — 更新するのは
+  `qfai init --force` だけである。バンプ単体でマージすると、リポジトリは
+  「自分が持っていない skills のバージョン」を名乗ることになる。
+
+  そこで preset は `postUpgradeTasks` で更新ブランチ内に
+  `npx --yes qfai@{{newVersion}} init --force` を走らせ、再生成された tree を
+  同じ PR に commit させる。ただしそのコマンドを走らせてよいかは Renovate の
+  **管理者設定** (`allowedCommands`) で、config 側からは読めない — self-hosted
+  なら許可でき、hosted app は既定で許可しない。
+
+  したがって base preset は **fail closed** にした: `qfai` だけは自動マージ
+  しない。再生成が走ったかどうかを設定ファイルは知りえないので、走らなかった
+  場合に stale な assistant tree が default branch へ無点検で入ることを構造的に
+  防ぐ。`qfai-self-hosted` はその hold だけを外した同じ preset で、コマンドを
+  allow-list 済みの Renovate 向けである。
+
+  preset の**パスは公開インターフェース**であり、改名すれば adopter 側の
+  Renovate が config 解決エラーになる一方、こちらは緑のままになる。そのため
+  self-hosted preset が base を参照する `github>` 文字列は、base ファイルが
+  実際に置かれているパスから導出して検証している。
 
 ## [1.10.2] - 2026-09-05
 

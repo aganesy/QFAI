@@ -24,6 +24,13 @@ import { SKILL_MANIFEST_PAIRS } from "../../../../src/core/validators/skillManif
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
+/**
+ * Source-level split of the stub token, as in `tests/validators/testTodoStubs`:
+ * the fixture written to disk is the real construct, but this file must not
+ * trip the very gate it exercises when qfai validates its own repository.
+ */
+const TODO = ".todo";
+
 type Finding = { code: string; severity: string; message: string };
 
 async function findings(root: string): Promise<Finding[]> {
@@ -50,6 +57,17 @@ async function seedSpec(root: string): Promise<void> {
   );
 }
 
+/** The repo-wide test selection a real project configures — unit tests included. */
+async function seedRepoWideTestGlobs(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    ["validation:", "  traceability:", "    testFileGlobs:", "      - tests/**/*.test.ts", ""].join(
+      "\n",
+    ),
+    "utf-8",
+  );
+}
+
 /**
  * Adds a layered ledger linking a BR to an implementation file that is not in
  * any diff — the state `/qfai-sdd` leaves behind before `/qfai-implement` runs.
@@ -67,6 +85,23 @@ async function seedLedger(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+}
+
+/** A silent stub at `relDir`, annotated so the ATDD routing rules see it. */
+async function seedStub(root: string, relDir: string): Promise<void> {
+  const testDir = path.join(root, ...relDir.split("/"));
+  await mkdir(testDir, { recursive: true });
+  await writeFile(
+    path.join(testDir, "us-0001.test.ts"),
+    [`it${TODO}("QFAI:SPEC-0001:US-0001 covers the login flow");`, ""].join("\n"),
+    "utf-8",
+  );
+}
+
+/** An acceptance test that is a silent stub, plus the repo-wide config. */
+async function seedStubbedAcceptanceTest(root: string): Promise<void> {
+  await seedRepoWideTestGlobs(root);
+  await seedStub(root, "tests/e2e/spec-0001");
 }
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
@@ -177,8 +212,9 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       ]) {
         expect(notice?.message).toContain(family);
       }
-      // What tdd does run must stay off the list.
-      expect(notice?.message).not.toContain("TDDLIST_*");
+      // What tdd does run must stay off the list — and it runs BOTH halves of
+      // the prefix, so no `TDDLIST_` code may appear at all.
+      expect(notice?.message).not.toContain("TDDLIST_");
     });
   });
 
@@ -191,7 +227,9 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
         expect(notice?.message).toContain('profile="discussion" is a partial profile');
         expect(notice?.message).toContain("QFAI-HYG-*");
-        expect(notice?.message).toContain("TDDLIST_*");
+        // Named per code rather than as `TDDLIST_*`: that glob claimed the seed
+        // half as well, which is a separate group.
+        expect(notice?.message).toContain("TDDLIST_STALE_STATUS");
         // The required-heading gate is SDD-only, so a discussion run must
         // declare it unevaluated rather than let the partial PASS look total.
         expect(notice?.message).toContain("QFAI-SPECSECTION-*");
@@ -220,6 +258,22 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("does not call the full profile partial, but still names what it skips", async () => {
+    // `runFullValidators` disables the two stage-ownership gates
+    // (`QFAI-DCON-019`, `QFAI-DRIFT-*`) and never composes the saas-package
+    // profile at all, so a silent full run would read as coverage of every
+    // gate in the tool. It is not a partial profile either.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.severity).toBe("info");
+      expect(notice?.message).not.toContain("is a partial profile");
+      expect(notice?.message).toContain("evaluated every gate a full scan covers");
+      expect(notice?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
+      expect(notice?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+    });
+  });
+
   it("says the full profile does not wire the drift gate", async () => {
     // The claim #1122 reports. `full` and `verify` both call
     // `runFullValidators`, which passes `includeUpstreamGuard = false`, so
@@ -236,9 +290,10 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("names drift and nothing else for the full profile", async () => {
-    // `FULL_GATE_GROUPS` is `ALL_GATE_GROUPS` minus `drift`, so any second
-    // family here means a group `full` does run got dropped from the map.
+  it("names only stage-only families for the full profile", async () => {
+    // `FULL_GATE_GROUPS` is `ALL_GATE_GROUPS` minus the three stage-only
+    // groups, so any family here that a full scan DOES cover means a group
+    // `full` runs got dropped from the map.
     await withProject(async (root) => {
       await runValidate({ root, strict: false, profile: "full" });
       const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
@@ -290,6 +345,85 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("reports the stub gate under the atdd profile", async () => {
+    // `/qfai-atdd` owns `tests/e2e/**`, `tests/api/**` and
+    // `tests/integration/**`, and names `--profile atdd` as its completion
+    // gate. A stubbed acceptance test satisfies `QFAI-ATDD-111` (the rule
+    // counts the annotation, not the assertion) and carries no scaffold
+    // marker, so without this validator the stage's own gate went green on a
+    // suite whose tests do not run.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedStubbedAcceptanceTest(root);
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const stub = (await findings(root)).find((entry) => entry.code === "QFAI-TEST-001");
+        expect(stub?.severity).toBe("error");
+      });
+    });
+  });
+
+  it("reports the stub gate on the config qfai init ships", async () => {
+    // `qfai init` writes `testFileGlobs: []` on purpose, and the validator
+    // returns early on an empty list — so wiring it in without an ATDD-owned
+    // default made the gate scan nothing at all on a fresh repository, which
+    // is precisely the state a first `/qfai-atdd` run is in.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedStub(root, "tests/e2e/spec-0001");
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const stub = (await findings(root)).find((entry) => entry.code === "QFAI-TEST-001");
+        expect(stub?.severity).toBe("error");
+        expect(stub?.message).toContain("tests/e2e/spec-0001/us-0001.test.ts");
+      });
+    });
+  });
+
+  it("does not block the atdd gate on a stub outside the stage's directories", async () => {
+    // `/qfai-atdd` owns `tests/e2e/**`, `tests/api/**` and
+    // `tests/integration/**`. A project whose `testFileGlobs` also cover
+    // `tests/unit/**` would otherwise have had a unit test's stub — nothing
+    // this stage can act on — hold its completion gate shut. `--profile tdd`,
+    // which is repo-wide and owns that test, still reports it.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedRepoWideTestGlobs(root);
+        await seedStub(root, "tests/unit");
+        await runValidate({ root, strict: false, profile: "atdd" });
+        expect((await findings(root)).map((entry) => entry.code)).not.toContain("QFAI-TEST-001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-TEST-001");
+      });
+    });
+  });
+
+  it("does not double-report the stub gate under the full profile", async () => {
+    // `runFullValidators` runs both profiles; the tdd one still owns the gate.
+    await withProject(async (root) => {
+      await seedStubbedAcceptanceTest(root);
+      await runValidate({ root, strict: false });
+      const stubs = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-001");
+      expect(stubs).toHaveLength(1);
+    });
+  });
+
+  it("stops listing the stub gate among what --profile atdd skipped", async () => {
+    // The notice is derived from `PROFILE_GATE_GROUPS`; leaving `QFAI-TEST-001`
+    // in the tdd group would tell the reader that the run it just made did not
+    // evaluate a rule it did.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).not.toContain("QFAI-TEST-001");
+        // The rest of the tdd group is still named — moving the stub gate out
+        // of it must not take the ledger families with it. `QFAI-TDDLIST-*` is
+        // the surviving glob: the execution-state codes beside it are listed
+        // one by one, from the constant the seed-shape gate filters on.
+        expect(notice?.message).toContain("QFAI-TDDLIST-*");
+      });
+    });
+  });
+
   it("keeps the notice families in step with the skip-set SSOT", () => {
     // Every skipped gate must map to at least one code family, or the notice
     // silently under-reports what was not evaluated.
@@ -329,8 +463,10 @@ describe("--profile sdd owns the traceability-ledger gate", () => {
         // But the implementation-drift half is genuinely not evaluated by sdd,
         // so the notice must keep saying so.
         expect(notice?.message).toContain("QFAI-TRACE-001");
-        // The TDD-list gates are still not part of what sdd evaluates.
-        expect(notice?.message).toContain("TDDLIST_*");
+        // The execution-state TDD-list gates are still not part of what sdd
+        // evaluates — but the seed half is, so this names a code from the half
+        // it really does skip.
+        expect(notice?.message).toContain("TDDLIST_STALE_STATUS");
       });
     });
   });

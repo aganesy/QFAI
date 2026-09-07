@@ -6,18 +6,50 @@ Red/Green/Refactor cycle one row at a time.
 
 ## Producer
 
-`/qfai-sdd` seeds the rows at Phase 2b, in **three groups**:
+`/qfai-sdd` seeds the rows at Phase 2b, in **four groups**:
 
 - **one row per coverage-target TC** from `06_Test-Cases.md` — `Layer` from the
   TC's declared `Level`, obligation in `TC-Refs`;
+- **one `Layer = Integration` row per integration-level TC** from the same file
+  — every `Level` whose ATDD annotation routes to `tests/integration/**`: `L3`,
+  `integration`, a blank cell, a spelling that names no layer,
+  and `system` / `acceptance`; obligation in `TC-Refs`;
 - **one `Layer = E2E` row per active `US-*`** from `02_User-stories.md` —
   obligation in `US-Refs`, `TC-Refs` is `-`;
 - **one `Layer = API` row per active `CON-API-*`** the spec **owns** —
   obligation in `CON-API-Refs`, `TC-Refs` is `-`.
 
-Without the last two the ledger has nowhere to hold a `US-*` / `CON-API-*`
-obligation, so an all-`done` ledger can sit beside a `QFAI-ATDD-111` /
-`QFAI-ATDD-113` gate at 0% and still report itself complete.
+Without the E2E / API groups the ledger has nowhere to hold a `US-*` /
+`CON-API-*` obligation, so an all-`done` ledger can sit beside a
+`QFAI-ATDD-111` / `QFAI-ATDD-113` gate at 0% and still report itself complete.
+Without the integration group an integration-level TC has no row at all, and
+nothing reports its absence — the whole integration layer then sits outside the
+micro-cycle while `validate` stays quiet.
+
+The two TC groups are exclusive, and membership is decided by **where the
+annotation goes, not by whether the word is familiar**. `system` and
+`acceptance` are the case that proves it: both are in the layer vocabulary, so
+neither is unrecognised, and neither is unit or component — a spelling test puts
+them in no group at all while `/qfai-atdd` still writes their tests. A TC whose
+`Level` is blank **or unrecognised** belongs to the integration group for the
+same reason: `QFAI-ATDD-112` routes every `Level` it cannot read to
+`tests/integration/**`, so seeding it as a coverage-target row would have
+`/qfai-implement` and `/qfai-atdd` each write a test for it — and
+`TDDLIST_UNKNOWN_LEVEL` is a waivable `warning`, so nothing stops such a TC
+arriving here unfixed. That one `Integration` row still covers the TC for
+`TDDLIST_TC_NOT_COVERED`, which asks only that some row carry it in `TC-Refs`.
+
+**"One row" is a floor, not a cap.** A TC that enumerates several rejection
+reasons, a status-code matrix or independent state transitions is seeded one row
+per independently observable boundary, all carrying that TC in `TC-Refs`
+(`.qfai/assistant/skills/qfai-implement/references/selector-granularity.md`).
+Splitting an `Integration` TC is Phase 2b's job: `/qfai-atdd` observes RED per
+row and never writes this ledger.
+
+An `Integration` row is ATDD-owned on the same terms an `E2E` one is:
+`/qfai-atdd` authors its test and its RED provenance, and the row's `Evidence`
+anchors into `.qfai/evidence/atdd-<spec-id>.md`
+(`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`).
 
 **Active** is the exemption `.qfai/assistant/catalog/test-layers.md` already
 defines: a spec that declares no user-facing surface owes no E2E reference for
@@ -41,8 +73,9 @@ as a cross-spec obligation. Never write the same `CON-API-*` row into two
 ledgers. A `CON-API-*` no spec names has no owner and gets no row until
 Phase 2c gives it one.
 
-An empty table below is valid — it means the spec has no coverage-target TC and
-no active `US-*` / `CON-API-*` yet, not that the ledger is missing.
+An empty table below is valid — it means the spec has no coverage-target TC, no
+integration-level TC and no active `US-*` / `CON-API-*` yet, not that the ledger
+is missing.
 
 `Tier` is seeded with the row, from its `Layer`, what the item touches
 (infrastructure, a public API surface, a `CON-*` contract or persisted schema →
@@ -61,6 +94,15 @@ normally delivered by this spec's own TC rows, so an E2E/API row is a coverage
 obligation rather than the sole carrier of a feature. `/qfai-atdd` does not write to
 this ledger.
 
+A **matrix-shaped TC takes more than one row**: many rejection reasons, a
+status-code matrix or several independent state transitions are split into one
+row per independently observable boundary, each carrying that `TC-*` in
+`TC-Refs` (`TC-Refs` is many-to-many with `TDD-ID`). A single test function can
+fail only once, so a row that conflates boundaries leaves every assertion behind
+the first unobserved on every RED run. Phase 2b is the only phase that may add
+or re-scope a row, so a shape left un-split here reaches `/qfai-implement`,
+which owns cells and not rows and can only send it back as a Change Request.
+
 **A seeded E2E/API row's `Test file` and `Selector` start at `-`, and
 `/qfai-implement` fills them.** The acceptance test does not exist when Phase 2b
 runs, so that phase invents no path for it. `/qfai-atdd` writes the test and
@@ -78,10 +120,45 @@ already progressed would destroy the RED/GREEN evidence that proves its cycle.
 
 The delta runs in both directions. A TC whose obligation changed has its row
 returned to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in
-`DR-ID`, prior `Evidence` kept); a TC deleted upstream, or no longer a
-coverage target, has its row retired the same way. Leaving a stale `done` row
-hides re-implementation work, and leaving a `todo` row for a deleted TC feeds
-`/qfai-implement` an obligation that no longer exists.
+`DR-ID`, prior `Evidence` kept); a TC deleted upstream, or whose `Level` moved
+to a layer this ledger does not seed, has its row retired the same way. Leaving
+a stale `done` row hides re-implementation work, and leaving a `todo` row for a
+deleted TC feeds `/qfai-implement` an obligation that no longer exists.
+
+Retirement is keyed on the TC, not on coverage-target status. A row whose TC is
+still declared at `L3` is a row Phase 2b seeds today: **do not retire it for
+not being a coverage target**. That reading would sweep away every existing
+`Layer = Integration` row, evidence and all.
+
+**A move between the two seeded groups is a reclassification, not a reset.**
+Both `L1`/`L2` and `L3` are seeded here, so a `Level` that crosses between them
+retires nothing and only the changed-TC reset fires — and that writes `Status`
+and `DR-ID`, never `Layer`, `Test file`, `Selector` or the evidence home. Left
+there, a now-`L1` TC keeps an ATDD-owned `Integration` row waiting on a handoff
+nothing will send, and a now-`L3` TC keeps a coverage-target row while both
+skills author a test for it. A row still at `todo` is retired and re-seeded in
+the new group; a row past `todo` **stops for a `CR-*`**, because its `Evidence`
+addresses the previous owner's file and this delta keeps prior `Evidence`.
+
+**Within a TC it is keyed on the boundary.** A matrix-shaped TC holds one row
+per independently observable boundary, so re-derive that set: a boundary the TC
+has gained is appended at `todo`, and the rest are reset. Reconciling per TC
+alone leaves a TC that drops from three boundaries to two holding all three rows
+— the TC is still declared and still `L3`, so no retirement rule fires, and the
+changed-TC reset hands the third row back as selectable work for behaviour the
+spec no longer states.
+
+**`Selector` is not that key.** The executing stage is authorised to fill a
+placeholder selector and to repair an unresolvable one, so a row seeded with a
+descriptive selector holds the test's real title once its cycle has run. A
+string comparison against the spec therefore reports every implemented boundary
+as deleted, and retiring on it discards a `done` row's `TDD-ID`, `Status` and
+`Evidence` for behaviour that never changed. Retire on this rule only a row
+still at `Status = todo` whose seeded selector names a boundary the TC no longer
+declares; when the re-derived set is smaller than the TC's rows that have
+already progressed, stop and raise a `CR-*` instead. Which implemented
+obligation the spec dropped belongs to the change record, and `TDD-ID` is the
+only identity on these rows that nothing downstream rewrites.
 
 The `US-*` and `CON-API-*` rows follow the same rule, with one extra trigger:
 an obligation that **became exempt** — the spec stopped declaring a user-facing
@@ -96,13 +173,37 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module |
-| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- |
+| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref |
+| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ |
+
+`Blocked-By` is an **optional** column, seeded here so a downstream `blocked`
+row never has to add one — and added to an already-seeded eight-column ledger by
+Phase 2b's column migration, which runs whether or not this template was copied.
+`/qfai-implement` may write the `Status`, `DR-ID`, `Evidence` and `Blocked-By`
+cells unconditionally and never a row, and a `Status = blocked` row with no
+blocker named raises `TDDLIST_BLOCKED_MISSING_REF`.
+
+`BR-Ref` is **the one `BR-*` this row serves** — the T1 review-group key — and it is resolved here because this is the only phase where `03`, `04`, `05`
+and `06` are all open: read each TC's `EX-Ref` in `06_Test-Cases.md` and that
+`EX`'s `BR-Ref` in `05_Examples.md` — the edge that names the rule the test
+verifies — taking every `BR-*` listed there when one `EX` covers a cohesive
+rule bundle. Only a TC with no `EX-Ref` falls back to its `AC-Refs` and every
+`BR` whose `AC-Refs` names one of them in `04_Business-Rules.md`. Then take the
+union of everything reached and keep the **lowest-numbered** `BR-*` of it —
+across several `TC-Refs` and across a multi-`BR` `EX` alike — so the key is the
+same for whoever resolves it next. Write `-` when no `BR` reaches the row. An
+empty cell reads the same as `-`, and that row is reviewed alone.
+`npx qfai validate` recomputes this same derivation and reports
+`QFAI-BRREF-003` when the cell holds a different rule, so a key
+resolved by any other route is named rather than silently regrouping rows.
+`/qfai-implement` batches its T1 reviews on this value and can close no group
+without it. It is derived from upstream, not from run state, so a reseed
+re-resolves it — that is not the row rewrite the delta rule forbids.
 
 ## Schema
 
 The ledger schema — required columns, the optional `US-Refs` / `CON-API-Refs` /
-`Blocked-By` / `Owning module` columns, the `Status` vocabulary, and the
+`Blocked-By` / `Owning module` / `BR-Ref` columns, the `Status` vocabulary, and the
 `Evidence` cell contract — is defined in
 `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`.
 

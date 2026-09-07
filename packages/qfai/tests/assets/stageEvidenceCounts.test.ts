@@ -666,16 +666,16 @@ describe("the stage evidence's counts are derived, not typed", () => {
   });
 
   it("keeps the e2e sequence's last row current with the callsites it counts", async () => {
-    // The two `P7` suite totals were stale for the SIXTH time this round: 1437 recorded against 1439
-    // measured, 1206 against 1212. Five previous rounds each found the same sentence a round behind, and
-    // each repair re-typed the number.
+    // The record's own stated rule is that a commit changing an `it` / `test` callsite under the e2e
+    // project's two globs owes a re-measurement. So the recorded figure is compared with the measured
+    // one: a commit that adds a callsite reddens this until the line is re-pinned.
     //
-    // A test cannot derive the totals — that would mean running the suite from inside it. It CAN derive
-    // the thing that invalidates them. The sequence's rows carry a CALLSITE count beside each total, and
-    // the record's own stated rule is that a commit changing an `it` / `test` callsite under the e2e
-    // project's two globs owes a row. So the last row's callsite figure is compared with the measured
-    // one: a commit that adds a callsite reddens this until its row is written, and until then the total
-    // beside it is known to be wrong rather than assumed to be right.
+    // The PER-ROOT SPLIT is compared too, not just the total. It was prose above the line, typed by
+    // hand and derived by nothing, and it went stale seven times — most recently reading 937 against a
+    // tree holding 1728. Every one of those was found by a reader rather than by a gate. The split now
+    // comes back from the same walk as the total, so this compares both and neither can drift alone.
+    // It also catches what the total cannot: a callsite moving from one root to the other leaves the
+    // total exactly where it was.
     //
     // The record is read through `recordedE2eCallsites()` rather than through
     // `source()` here, so the line's shape is stated in one place — the
@@ -693,29 +693,44 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // still checks the COMMITTED LITERAL against the tree — sharing the
     // derivation does not make it self-referential, because the literal is not
     // derived from anything at read time.
-    const { deriveE2eCallsites, recordedE2eCallsites } =
+    const { deriveE2eCallsites, formatRecordLine, recordedE2eCallsites } =
       await import("../../../../scripts/derive-e2e-callsites.mjs");
-    const { total: measured, perRoot } = await deriveE2eCallsites();
+    const measured = await deriveE2eCallsites();
     const recorded = await recordedE2eCallsites();
 
-    expect(
-      recorded,
-      "the record must state its own e2e callsite count, in the form " +
-        "`e2e callsites at this tree: N`, because the two suite totals above it are only valid for " +
-        "that count and nothing else pins them",
-    ).not.toBeNull();
+    // The absence check is written as a branch because it is also what narrows
+    // the reader's `… | null` for the comparison below.
+    if (recorded === null) {
+      expect.fail(
+        "the record must state its own e2e callsite count and its per-root split, in the form " +
+          "`e2e callsites at this tree: N (<root> N, …)`. A line this cannot parse reads as no " +
+          "line at all, because half a measurement is not one",
+      );
+    }
 
+    // Two readers hit this, and the command they run is the same for both. What
+    // differs is RESPONSIBILITY: one of them changed a callsite and owes the
+    // re-pin, the other inherited the drift from a merge and owes nothing. The
+    // message used to address only the first. "Land it in the same commit as the
+    // callsite edit" is advice a reader cannot follow when their branch has no
+    // callsite edit — which is the case this fires in most often, because a
+    // MERGE moves the total while both parent tips are individually correct
+    // (#1187). A reader told to do something impossible reasonably concludes
+    // the guard is broken, and the record's own prose has that happening twice.
+    const branchOwesIt =
+      "If this branch changed an `it` / `test` callsite under the `e2e` project, run " +
+      "`node scripts/pin-stage-evidence-counts.mjs` and land it in the same commit as the edit.";
+    const nobodyOwesIt =
+      "If it did not, the drift is inherited: a merge carries the callsites of both parents and " +
+      "neither parent's pin counted them together, so no branch owed this re-pin. Run the same " +
+      "command and land it on its own — it is a re-measurement, not a correction of your change.";
+    // Compared as the formatted line rather than field by field, so a failure prints the line the
+    // record should carry — which is the thing the reader has to end up with.
     expect(
-      recorded,
-      `the record states ${String(recorded)} e2e callsites; the tree holds ${String(measured)} ` +
-        `(${Object.entries(perRoot)
-          .map(([root, count]) => `${root} ${String(count)}`)
-          .join(", ")}). ` +
-        "Run `node scripts/pin-stage-evidence-counts.mjs` and land it in the same commit as the " +
-        "callsite edit; the two suite totals beside that line are known-invalid until then. A " +
-        "commit that changes one invalidates both totals, which is the defect six rounds have " +
-        "reported and five repairs have re-typed",
-    ).toBe(measured);
+      formatRecordLine(recorded),
+      `the record states \`${formatRecordLine(recorded)}\`; the tree holds ` +
+        `\`${formatRecordLine(measured)}\`. ${branchOwesIt} ${nobodyOwesIt}`,
+    ).toBe(formatRecordLine(measured));
   });
 
   it("derives the round and response counts `## Final status` certifies with", async () => {
