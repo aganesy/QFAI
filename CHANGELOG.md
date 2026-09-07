@@ -41,6 +41,11 @@
 
 ### Changed
 
+- **配布する `.agents/rules/*.md` テンプレートの文面を整理した。** 文を短くし、
+  `temporary-files.md` の「`qfai init` は `.gitignore` に `/tmp/` を追加しない」という
+  記述を、managed block に `/tmp/` を書く現行の挙動に合わせて直した。規則の内容は
+  変えていない。
+
 - **spec / `_policies` の表記揺れを正典へ収束。** `10_Plan.md` は
   実装戦略・`1. Implementation Strategy`・`Implementation Strategy`・
   `Implementation approach` の 4 系統が混在していた。`_policies` の

@@ -96,6 +96,6 @@ reminder in front of unrelated work. The standard reaches the agent through
 
 ## Scope of this file
 
-This is the master copy shared by every AI coding agent working in this
-repository. Tool-specific instruction files reference it instead of restating
-it, so edit this file when the rule changes.
+This is the master copy for every AI coding agent in this repository.
+Tool-specific instruction files point here instead of restating it. Edit this
+file when the rule changes.

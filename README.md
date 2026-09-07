@@ -206,7 +206,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 ### Where the skills live
 
 - QFAI canonical skills (SSOT): `.qfai/assistant/skills/**` (may be overwritten when you re-run `qfai init --force`).
-- QFAI no longer creates local override scaffolds. Project-specific guidance should live in your repository's normal agent docs or be created explicitly by your AI workflow.
+- QFAI does not create local override scaffolds. Project-specific guidance belongs in your repository's normal agent docs, or is created explicitly by your AI workflow.
 
 ### Minimal custom skill set
 
@@ -412,9 +412,9 @@ Release gate behavior:
 - Q: release_candidate validation fails due open questions.
   - A: Keep specs definition-only, use `.qfai/report/run-*` as execution logs, and convert open OQ to `resolved` or `deferred` with evidence.
 - Q: `qfai validate` reports `QFAI-STATUS-001` ("Status bullet が見つかりません") on every spec.
-  - A: Each `01_Spec.md` must declare `- Status: active | superseded | deprecated | removed` (introduced in 1.8.8).
+  - A: Each `01_Spec.md` must declare `- Status: active | superseded | deprecated | removed`.
     Add `Status: active` for currently-authoritative specs; superseded specs need a `- Superseded-by: spec-NNNN` companion bullet,
-    and deprecated/removed specs need `- Deprecated-at: YYYY-MM-DD`. The previous `QFAI-STATUS-001` (status-leak guard) was renamed to `QFAI-STATUSLEAK-001` to free the namespace.
+    and deprecated/removed specs need `- Deprecated-at: YYYY-MM-DD`. The status-leak guard is a different check and reports as `QFAI-STATUSLEAK-001`.
 - Q: `/qfai-sdd` is asking for `AskUserQuestion` approval that earlier versions never asked for.
   - A: Stage 1 Triage classifies each requirement into one of 8 first-class operations and gates approval-required ops
     (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) on explicit user confirmation. Append-first means UPDATE:APPEND on an existing active spec is the default;
@@ -706,11 +706,11 @@ while Codex consumes `.codex/agents/*.toml` profiles generated from that same ma
 The `.claude` / `.github` agent wrappers are symlinks and follow the canonical document
 automatically; the Codex profiles are generated files, so rerun `npx qfai init --force`
 to refresh them (and any other wrapper asset that has drifted).
-`--force` deletes as well as overwrites: it removes the command and prompt wrappers earlier releases
-installed under `.claude/commands/` and `.github/prompts/`, and the skill wrappers it installed under
-`.claude/skills/`, `.agents/skills/`, `.codex/skills/` and `.github/skills/` for skills QFAI no longer
-ships — the directory wrappers releases before the symlink recut copied there as well as the symlinks
-that replaced them. Files it did not write — a project's own slash command, prompt file or skill,
+`--force` deletes as well as overwrites: it removes the command and prompt wrappers
+under `.claude/commands/` and `.github/prompts/`, and the skill wrappers under
+`.claude/skills/`, `.agents/skills/`, `.codex/skills/` and `.github/skills/` for skills that are
+not in the current release, whether those wrappers are directories or symlinks.
+Files it did not write — a project's own slash command, prompt file or skill,
 including one published from a project-authored `.qfai/assistant/skills/` entry — are left in place,
 whatever they are named. Ownership is read from the file, not the name: a wrapper is removed only when
 it carries the delegation line to the canonical document of the same name, or is a symlink into

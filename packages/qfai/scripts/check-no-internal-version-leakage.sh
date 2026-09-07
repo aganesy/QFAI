@@ -20,14 +20,15 @@ fi
 
 fail=0
 
-# SSOT-sync (PR #206 review Nv4N): the regex set below is mirrored in
+# The regex set below is mirrored in
 #   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
 #     (pre-build, JSDoc → dist/*.d.ts path)
 #   - packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts
 #     `PATTERNS` array (smoke against `qfai init` output)
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
 # QFAI-context pattern) requires updating both other sites in the same
-# PR. See `.agents/rules/distributed-surface.md` "Defenses (4 layers)".
+# change. The guard table in `.agents/rules/distributed-surface.md`
+# lists the layers.
 #
 # The same three regexes are applied twice per surface: once to file
 # CONTENT and once to file NAMES (see the loop at the bottom). The smoke
