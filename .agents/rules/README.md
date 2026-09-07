@@ -23,6 +23,11 @@ directory; edit the master here.**
 - `documentation-clarity.md` — writing standard for PRs, issues, code
   comments and Markdown. Reminded automatically by the hooks in
   `.claude/settings.json`.
+- `repository-language.md` — this repository is written in English.
+  Operator-facing strings are enforced by
+  `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog
+  by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an
+  allowlist that may only shrink. The rest is held by review.
 
 ## Adding a new rule
 
