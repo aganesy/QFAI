@@ -572,10 +572,11 @@ export const GATE_GROUP_FAMILIES = {
   // now states it, so the next divergence fails a lane instead of the notice.
   //
   // The family grammar has no negation, so the disjoint set is spelled out.
-  // Nine patterns for 29 codes, safe to maintain by hand only because the
-  // coverage case in that same file fails on a `UIX-VAL-` code no pattern here
-  // covers — the drift this list could otherwise accumulate is what that guard
-  // is for.
+  // Safe to maintain by hand only because the coverage case in that same file
+  // fails on a `UIX-VAL-` code no pattern here covers — the drift this list
+  // could otherwise accumulate is what that guard is for. No count is given
+  // here on purpose: the guard is what keeps the list complete, and a number
+  // in a comment would go stale without anything noticing.
   "canonical-uix": [
     "UIX-VAL-3LAYER-*",
     "UIX-VAL-CLASSIFICATION-*",

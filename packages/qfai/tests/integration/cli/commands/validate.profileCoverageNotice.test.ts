@@ -133,7 +133,7 @@ async function withBrokenReviewPack(task: (root: string) => Promise<void>): Prom
 /**
  * The same project plus a `qfai-prototyping/SKILL.md` that fails its own gate.
  *
- * `validators/skill/prototypingSkill.ts` is the sole emitter of
+ * `core/validators/skill/prototypingSkill.ts` is the sole emitter of
  * `UIX-VAL-SKILL-*`, reached only through `validatePrototypingSkill`, which
  * short-circuits on an absent or empty file. So a stub that is non-empty and
  * missing every mandatory section turns "does this profile run that validator?"
