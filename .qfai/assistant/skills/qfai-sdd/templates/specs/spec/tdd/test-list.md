@@ -167,10 +167,11 @@ retired exactly like a deleted one, and an obligation that became active is
 appended at `todo`.
 
 **Retiring a row means deleting it from the table.** There is no `retired`
-status: the legal values are the eight the `Status` row of the schema table
-below lists, and any other one is a `TDDLIST_INVALID_STATUS` **error** — so
-writing `Status = retired`
-fails the run that followed the instruction. Nor is there a parking spot lower
+status. The legal values are the eight
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`
+lists — this file states the schema nowhere, on purpose (see `Schema`, below) —
+and any other one is a `TDDLIST_INVALID_STATUS` **error**, so writing
+`Status = retired` fails the run that followed the instruction. Nor is there a parking spot lower
 down: `validateTddList` scores **every** schema-complete table in this file, so
 a row moved under a `## Retired` heading is still read as a ledger row, and a
 trimmed-down copy of it raises `TDDLIST_REQUIRED_COLUMN_MISSING` instead.
@@ -228,14 +229,20 @@ checkout, on CI and for a second operator. The body stays where it was written;
 the record carries the reference to it, and the cycle's audit trail survives the
 row.
 
-**A row retired before it ever ran has no such section.** `todo`, `blocked`,
-`red` and `exception` owe no evidence — only `green`, `refactor`, `review-fix`
-and `done` are asked for a command and its result — so the cell is empty or a
-bare dash and the `### TDD-NNNN` it would anchor to does not exist. Write that
-down as what it is, `no evidence — retired at Status = <status>, never
-executed`, and delete the row on it. Never compose a section so the record has
-something to point at, and never hold a retirement open waiting on evidence a
-`todo` row was never going to produce.
+**A row that never ran has no such section — read the cell to know.** Only
+`green`, `refactor`, `review-fix` and `done` are asked for a command and its
+result, so a row retired outside those four may hold an empty `Evidence` cell
+or a bare dash, and the `### TDD-NNNN` it would anchor to does not exist. Write
+that down as what it is, `no evidence — retired at Status = <status>, never
+executed`, and delete the row on it.
+
+**The status alone does not settle it.** A row reaches `blocked` or `exception`
+from any state, so one blocked out of `green` or `refactor` carries the rounds
+it already took and an anchor that still resolves; its `Blocked-By` names the
+status it left from. Transcribe what such a row's cell points at, exactly as
+for a `done` row. Never compose a section so the record has something to point
+at, and never hold a retirement open waiting on evidence a `todo` row was never
+going to produce.
 
 **Nothing beyond the pointer goes into `_policies/10_delta.md`.** When the
 approving Triage row is the cross-spec one persisted there, that file is barred
@@ -252,10 +259,13 @@ the evidence file.
 
 ## Ledger
 
-The **first** markdown table in this file is the ledger — `validateTddList`
-reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
-parsed as the ledger instead and raises eight
-`TDDLIST_REQUIRED_COLUMN_MISSING` errors.
+The table below is the ledger. `validateTddList` finds it by shape rather than
+by position — `collectLedgerTables` takes **every** table in this file that
+carries all eight required columns and is not inside a fence — so a second
+ledger-shaped table anywhere in the file is read as ledger rows too, and a
+trimmed-down copy of one raises `TDDLIST_REQUIRED_COLUMN_MISSING`. Keep this
+one first all the same: it is the table a reader looks for, and the only one
+this template seeds.
 
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref |
 | ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ |

@@ -132,11 +132,12 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column. One MODIFY row needs it too: an
-   `UPDATE:MODIFY` that moves a TC's `Level` out of the coverage-target
-   set deletes that TC's `tdd/test-list.md` row at Phase 2b, and deleting
-   a ledger row is operator-approved on every other path
-   (`spec-traceability-rules.md`, Ownership split). Ask for the deletion
+   approver in the `Approved By` column. An `UPDATE:MODIFY` row needs it
+   whenever it deletes a ledger row at Phase 2b — a `Level` change either
+   way does that: out of the coverage-target set the TC's row is retired,
+   and into a different target layer the old row is retired and a new one
+   seeded — because deleting a ledger row is operator-approved on every
+   other path (`spec-traceability-rules.md`, Ownership split). Ask for the deletion
    itself, not for the `Level` change, and record the approver on that
    row. Without it Phase 2b has no authorisation and the removal takes
    the Change Request path instead. Under `--auto` the row leaves

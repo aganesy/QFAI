@@ -119,9 +119,12 @@ declaration inside a file, not the file — so give the path as well as the ID.
 
 1. `<owner skill>` rerun scope: `<what>`
 2. Downstream ledger sweep: reset **or retire** these `tdd/test-list.md` rows.
-   **Enumerate them here, before approval** — list them as `<spec-id>/TDD-NNNN`
-   (or a verifiable selection rule such as "every row whose `TC-Refs` names
-   TC-0007"), because what the operator approves is this list. A reset or a
+   **Enumerate them here, before approval** — list them as `<spec-id>/TDD-NNNN`,
+   because what the operator approves is this list. A verifiable selection rule
+   ("every row whose `TC-Refs` names TC-0007") stands in for it **on a reset
+   only**: those rows survive, so the rule can be re-evaluated against the
+   ledger afterwards. A retirement deletes its rows, and nothing is left to
+   re-evaluate the rule against, so each retired ID is written out. A reset or a
    retirement of any row not covered by it is not operator-approved, and
    `Resolution` must match this list. Qualify every ID with its spec: `TDD-ID`
    is unique only within its spec, so a CR touching two specs cannot otherwise
@@ -165,7 +168,9 @@ declaration inside a file, not the file — so give the path as well as the ID.
 Filled in when Status leaves `open`. Record what was actually done: the owner
 skill that was rerun and the upstream artifacts it updated, and the ledger rows
 touched as `<spec-id>/TDD-NNNN` — resets and retirements listed separately,
-each retirement carrying the `Evidence` value its deleted row held, the
-transcribed `### TDD-NNNN` evidence body, and what became of that row's test.
+each retirement carrying the `Evidence` value its deleted row held and what
+became of that row's test. The cell is a pointer and the body stays in the
+evidence file it names; copying the body here would make a second audit trail
+that a later correction to the first leaves stale.
 Set `Applied at` in the header once this section is true.
 -->

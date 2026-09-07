@@ -325,10 +325,12 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `Evidence` cell verbatim. The cell is a pointer, and the managed `.gitignore`
   block re-includes `.qfai/evidence/implement-*.md` and `atdd-*.md` by name, so
   it still resolves in a clean checkout and the body stays where it was written.
-  A row retired at `todo`, `blocked`, `red` or `exception` owes no `Evidence` and
-  anchors nothing: record `no evidence — retired at Status = <status>, never
-executed` rather than composing a section for it to name. The same record says
-  what happens to the deleted row's test, which no skill removes on its own. A
+  A row whose `Evidence` cell is empty or `-` anchors nothing: record
+  `no evidence — retired at Status = <status>, never executed` rather than
+  composing a section for it to name. Read the cell, not the status — a row
+  blocked out of `green` or `refactor` keeps the rounds it already took, and its
+  `Blocked-By` names the status it left from. The same record says what happens
+  to the deleted row's test, which no skill removes on its own.
   A retired `TDD-ID` is **never reused**: allocate the next one above the highest
   the spec has ever issued, counting the ones those records retired, so a new
   row's `Evidence` anchor cannot land on a retired cycle's `### TDD-NNNN` section

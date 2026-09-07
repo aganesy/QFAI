@@ -360,11 +360,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    changed / removed TCs are reset or retired under the upstream-reset rule —
    **per boundary within a matrix-shaped TC**, so a boundary the TC no longer
    declares has its row retired rather than reset back to `todo`. Retiring a row
-   means **deleting it from the table**, since there is no `retired` status,
-   recorded in whatever authorised
-   the deletion: the approved `UPDATE:REMOVE`
-   Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal reseed, the
-   driving `CR-*` on a Drift Protocol owner rerun. The same holds for the row
+   means **deleting it from the table**, since there is no `retired` status, and
+   the deletion is recorded in whatever authorised it: the approved
+   `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a
+   normal reseed, the driving `CR-*` on a Drift Protocol owner rerun. The same holds for the row
    of a `US-*` / `CON-API-*` deleted upstream or newly exempt
    (`references/sdd-phase-checklists.md`). **An eight-column ledger is migrated
    in the same pass**: add `US-Refs` and `CON-API-Refs` to its header, and move
