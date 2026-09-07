@@ -206,6 +206,7 @@
     "tests/scripts/workflowHygieneRequiredContext.test.ts",
     "tests/unit/buildCommand.test.ts",
     "tests/core/tddListBrRefKey.test.ts",
+    "tests/unit/changelogLanguage.test.ts",
     "tests/unit/cli/commands/handoffUpgrade.concurrency.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
