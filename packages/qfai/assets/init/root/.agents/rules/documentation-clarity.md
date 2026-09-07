@@ -20,15 +20,17 @@ separate change.
 
 ## 1. No local identifiers
 
-Never write these into source code or Markdown:
+Never write these into source code or Markdown files:
 
 - issue and pull-request numbers (`#123`, `GH-123`)
 - ticket, review or thread identifiers
 - names and abbreviations that only this project or team understands
 
 When a reader needs the background, write the background itself in ordinary
-words instead of pointing at a number. Numbers and links belong in commit
-messages, pull requests and the changelog.
+words instead of pointing at a number.
+
+Pull request and issue bodies are outside this clause. Numbers and links belong
+there, and in commit messages and the changelog.
 
 ## 2. No account of how the work went
 

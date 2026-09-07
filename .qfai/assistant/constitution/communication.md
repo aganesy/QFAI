@@ -28,7 +28,8 @@ bodies, source-code comments, and Markdown files — inside the current change
 only, never beyond its diff.
 
 - No issue or pull-request numbers, ticket identifiers, or names only this
-  project understands, anywhere in source code or Markdown.
+  project understands, anywhere in source code or Markdown files. Those belong
+  in the pull request, the commit message and the changelog.
 - No account of how the work went. State the current behaviour and why it is
   that way; the history is already in the git log and the pull request.
 - Cut what is self-evident, repeated, or wordy.
