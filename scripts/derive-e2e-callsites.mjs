@@ -47,7 +47,10 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 
 const WORKSPACE_REL = "packages/qfai/vitest.workspace.ts";
 const RECORD_REL = ".qfai/evidence/atdd-spec-0017.md";
-const RECORD_LINE = /^e2e callsites at this tree: (\d+) \(([^()]+)\)$/m;
+// The split is on ONE line. `[^()]` alone matches a newline, and with `m`
+// the closing `$` then lands on a later line — so a record whose line had
+// been broken in two would read as a whole measurement.
+const RECORD_LINE = /^e2e callsites at this tree: (\d+) \(([^()\r\n]+)\)$/m;
 /** One `<root> <count>` pair out of the parenthesised split. */
 const BREAKDOWN_ENTRY = /^(\S+) (\d+)$/;
 

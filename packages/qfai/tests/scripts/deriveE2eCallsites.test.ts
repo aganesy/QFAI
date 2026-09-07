@@ -60,6 +60,14 @@ describe("the e2e callsite record line", () => {
     ).toBeNull();
   });
 
+  it("refuses a line that has been broken across two", () => {
+    // The split is one line. A record whose line got wrapped is not a
+    // measurement of anything, and reading it as one would pin half a walk.
+    expect(
+      parseRecordLine("e2e callsites at this tree: 42 (tests/assets 30,\ntests/e2e 12)"),
+    ).toBeNull();
+  });
+
   it("refuses a root whose name would be read wrong", () => {
     // A space inside a root name splits it into two tokens. Reading the first
     // as the whole name would record a measurement of a directory that is not
