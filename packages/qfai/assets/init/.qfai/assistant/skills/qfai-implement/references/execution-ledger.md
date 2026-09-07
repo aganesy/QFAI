@@ -274,10 +274,16 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   status exists to hold and re-derives the determination on every pass.
 - `blocked` -> `todo` (the blocker cleared **with this row's obligation intact**).
   This is a **resumption, not a backward transition**: nothing upstream changed, so
-  nothing is being undone. **An approved Change Request is not this edge.** A row
-  blocked on an unresolved `CR-*` may take it only when that CR resolved **without
-  moving what the row owes** — `rejected` or `superseded`, an upstream defect fixed
-  inside the same obligation, a cross-spec row finished. **Those are status values a
+  nothing is being undone. A row blocked on an unresolved `CR-*` may take it
+  whenever that CR resolved **without moving what this row owes** — an upstream
+  defect fixed inside the same obligation, a cross-spec row finished, a protected
+  artifact repaired. **The test is this row's obligation, not the CR's status.**
+  `rejected` and `superseded` never move it, and an `approved` one may or may not:
+  an approval that repaired a dependency and left this row's obligation column and
+  the sources behind it unchanged is this edge, and only an approval that moved
+  them is the upstream reset below. Excluding approval by status left exactly that
+  row with no exit at all — this edge refused it for being approved, and the reset
+  requires an invalidated obligation it does not have. **Those are status values a
   Change Request can actually hold**: the template and
   `.qfai/assistant/constitution/drift-protocol.md` step 2 define the set as `open` / `approved` /
   `rejected` / `superseded`, and `change-request-reset.md` reads exactly `approved`,
@@ -312,9 +318,10 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   `review-fix` before the rework opened a round follows the path that `REVISE` took,
   recorded on that round's reviewer verdict: the behaviour-preserving path **opens
   no round on resumption either** and returns through a refreshed `Refactor verify`
-  pair. **A row blocked at `review-fix` still owes its reviewer the rework**: the
-  resumption does not discharge the `REVISE`, and the restarted cycle re-submits at
-  `refactor` exactly as the ordinary `review-fix` -> `refactor` return does. **When
+  pair. **A row blocked at `review-fix` resumes at `review-fix`, not at `todo`** —
+  the edge below — and still owes its reviewer the rework: the resumption does not
+  discharge the `REVISE`, and it re-submits through `review-fix` -> `refactor`
+  exactly as the ordinary return does. **When
   the block happened at `green` or `refactor` this row's own implementation is still
   there, so that fresh RED passes on its first run — that is the falsifiability path
   of `red-not-observable.md`, not `exception`.** `Satisfied-by` names this row's own
@@ -322,6 +329,19 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   `Resumed-from-blocked` field and the round block left behind are the audit trail a
   sibling row id provides in the ordinary case. Weakening the correct test until it
   fails is forbidden here as everywhere.
+- `blocked` -> `review-fix` (the blocker cleared on a row that was blocked
+  **while reworking a `REVISE`**, with this row's obligation intact). The same
+  resumption as the edge above, differing only in destination, and taken on
+  exactly the rows whose `Blocked-By` records `blocked at review-fix`. `todo` is
+  the wrong destination for those: it claims the cycle restarts, and a rework has
+  no RED phase to restart — `review-fix` does not change across the rework
+  (`round-evidence.md#where-the-rounds-happen`), which is why the round and not
+  the status is what says how far it got. Sending them to `todo` left the two
+  rework paths with no legal move at all: the behaviour-preserving one returns
+  through a refreshed `Refactor verify` pair and the other re-submits at
+  `refactor`, and `todo` -> `refactor` is not on this list. Everything else is as
+  the edge above: `Blocked-By` is cleared, the rounds are retained, and the
+  resumption records `Resumed-from-blocked` on the round it writes into.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)

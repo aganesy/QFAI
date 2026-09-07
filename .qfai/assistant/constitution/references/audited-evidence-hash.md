@@ -53,6 +53,21 @@ procedure, in four steps:
      `Revision`**: it names the tree the GREEN landed at and does not exist
      yet, so including it made every correct RED PASS stale at GREEN.
 
+     **`Resumed-from-blocked (resumption M)` is in the subject of an
+     observation taken after resumption `M` and of no earlier one.** An
+     observation's subject is the fields it could read, and a RED verdict
+     recorded before the block never read a field the resumption wrote — so
+     including every one of them unconditionally staled each correct earlier
+     verdict the moment a later resumption was recorded, and did it on the
+     highest existing round too, where the resumption appends beside a verdict
+     that is already there.
+
+     **A moved run is hashed from its own `Interrupted RED (block M)` group and
+     nothing else** (`../../skills/qfai-implement/references/round-evidence.md`)
+     — the group's fields, plus the row identity every subject carries. Not the
+     round's live RED fields, which hold the fresh run; and not the resumption
+     field that moved it, which is the same field the paragraph above excludes.
+
      `Resumed-from-blocked` is in the subject because the reviewer reads it:
      it is what qualifies the self-reference
      `../../skills/qfai-implement/references/red-not-observable.md` opens to a

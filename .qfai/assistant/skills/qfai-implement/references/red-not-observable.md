@@ -28,9 +28,14 @@ run.
   `exception`: without this case the edge the ledger deliberately widened would
   have no legal way back to `done`. Same procedure, and `Satisfied-by` takes
   this row's own row id and the round that satisfied it (step 1). **Only a row
-  whose resumed round carries `Resumed-from-blocked`** (`round-evidence.md`)
-  **naming a departure status whose round was closed by a GREEN pair** — that
-  is, `green` or `refactor` — qualifies. A row that reached `todo` by an
+  whose resumed round carries `Resumed-from-blocked (resumption M)`**
+  (`round-evidence.md`) **for some `M` naming a departure status whose round was
+  closed by a GREEN pair** — that is, `green` or `refactor` — qualifies. **Any
+  one of the round's resumptions is enough, and the latest is not the one to
+  read**: a row resumed from `green` and blocked again at `todo` before its
+  fresh RED has two of these fields, and the earlier one is what says the row
+  wrote the GREEN this form points at. Cite that `M` in `Satisfied-by`, so the
+  qualification names the resumption it rests on. A row that reached `todo` by an
   approved upstream reset has its retained GREEN withdrawn, not resumed; a row
   blocked at `todo` or `red` never wrote the GREEN this form points at. Both
   take the ordinary classification.

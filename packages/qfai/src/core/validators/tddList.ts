@@ -169,8 +169,18 @@ const BLOCKED_BY_COLUMN = "Blocked-By";
  * `Any active status -> blocked` is the inbound edge, so the departure status is
  * one of the active ones: `blocked` itself is the destination, and `done` /
  * `exception` are terminal — neither has work in flight for a blocker to stop.
+ *
+ * Derived by excluding those three rather than listed, for the reason
+ * {@link LIVE_LEDGER_STATUSES} is: a second hand-written copy of the vocabulary
+ * drifts silently, and a status added to {@link VALID_STATUSES} would then be
+ * legal in the `Status` column and rejected in `Blocked-By` — one ledger with
+ * two answers about what an active status is.
  */
-const BLOCKED_DEPARTURE_STATUSES = new Set(["todo", "red", "green", "refactor", "review-fix"]);
+const BLOCKED_DEPARTURE_STATUSES = new Set(
+  Array.from(VALID_STATUSES).filter(
+    (status) => status !== "blocked" && status !== "done" && status !== "exception",
+  ),
+);
 
 /**
  * `<blocker> — blocked at <status>`.
@@ -193,14 +203,14 @@ const BLOCKED_BY_DEPARTURE_RE = /^(.*\S)\s*[—–-]\s*blocked\s+at\s+([A-Za-z-]
  * pick the round it writes into. Parsing it here rather than at each reader is
  * what keeps that contract in one place.
  */
-export type BlockedByParse =
+type BlockedByParse =
   | { ok: true; blocker: string; departureStatus: string }
   | { ok: false; reason: "missing-blocker" }
   | { ok: false; reason: "missing-departure-status" }
   | { ok: false; reason: "unknown-departure-status"; departureStatus: string };
 
 /** Parse a `Blocked-By` cell into its blocker and departure-status halves. */
-export function parseBlockedBy(raw: string): BlockedByParse {
+function parseBlockedBy(raw: string): BlockedByParse {
   const value = raw.trim();
   if (value.length === 0 || value === "-") return { ok: false, reason: "missing-blocker" };
 

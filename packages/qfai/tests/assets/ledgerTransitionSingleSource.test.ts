@@ -256,14 +256,18 @@ describe.each(TREES)("%s (`blocked` is reachable after the cycle starts)", (tree
 describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tree) => {
   it("keeps an approved Change Request on the sanctioned reset, not on the resumption", async () => {
     // `green` / `refactor` -> `blocked` made "unresolved Change Request" a
-    // mid-cycle blocker. If that CR is then approved it moves the obligation,
-    // and taking `blocked` -> `todo` on its "nothing upstream changed" gloss
-    // would re-use the withdrawn implementation while skipping the DR-ID
-    // record and the downstream sweep `drift-protocol.md` step 5 requires.
+    // mid-cycle blocker. If that CR is then approved and moves the obligation,
+    // taking `blocked` -> `todo` on its "nothing upstream changed" gloss would
+    // re-use the withdrawn implementation while skipping the DR-ID record and
+    // the downstream sweep `drift-protocol.md` step 5 requires.
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("(the blocker cleared **with this row's obligation intact**)");
-    expect(ledger).toContain("**An approved Change Request is not this edge.**");
-    expect(ledger).toContain("that CR resolved **without moving what the row owes**");
+    // Which exit applies is decided by the row's obligation, not by the CR's
+    // status: an approval that repaired a dependency and moved nothing this row
+    // owes had no exit at all while approval was excluded by status.
+    expect(ledger).toContain("**The test is this row's obligation, not the CR's status.**");
+    expect(ledger).toContain("that CR resolved **without moving what this row owes**");
+    expect(ledger).toContain("Excluding approval by status left exactly that row with no exit");
     expect(ledger).toContain(
       "**When the CR is approved and changes the obligation the row leaves `blocked` by the upstream reset below**",
     );
@@ -281,7 +285,10 @@ describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tre
     const rounds = flat(
       await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
     );
-    expect(rounds).toContain("- `Round N: Resumed-from-blocked`");
+    expect(rounds).toContain("- `Round N: Resumed-from-blocked (resumption M)`");
+    // A round can be blocked and resumed more than once, so the departure
+    // status has to be readable per resumption rather than appended into one.
+    expect(rounds).toContain("**`M` numbers this round's resumptions from 1");
     expect(rounds).toContain("**copied whole out of `Blocked-By`** before that transition clears");
     // The field list declares itself complete, so the new field has to be in it.
     expect(rounds).toContain(
@@ -315,14 +322,17 @@ describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tre
     );
     expect(reference).toContain("**The retained round is necessary and not sufficient**");
     expect(reference).toContain(
-      "**Only a row whose resumed round carries `Resumed-from-blocked`**",
+      "**Only a row whose resumed round carries `Resumed-from-blocked (resumption M)`**",
     );
+    // And the qualifying resumption is named, not assumed to be the latest.
+    expect(reference).toContain("the latest is not the one to read");
     // The reviewer that judges the form has to apply the same condition.
     const gatekeeper = flat(await read(tree, "assistant/agents/qa-gatekeeper.md"));
     expect(gatekeeper).toContain("**The retained round alone does not qualify the row**");
     expect(gatekeeper).toContain(
       "require `Round N: Resumed-from-blocked` on the round the resumption wrote into",
     );
+    expect(gatekeeper).toContain("read the `M` the `Satisfied-by` cites rather than the latest");
   });
 
   it("stops step 3b from replaying a consumed handover on a resumed ATDD row", async () => {
@@ -405,8 +415,14 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("or at `review-fix` after the rework had taken its RED");
     expect(ledger).toContain(
-      "**A row blocked at `review-fix` still owes its reviewer the rework**",
+      "**A row blocked at `review-fix` resumes at `review-fix`, not at `todo`**",
     );
+    // `todo` -> `refactor` is not on the list, so a rework sent to `todo` had no
+    // legal move back on either of its two paths.
+    expect(ledger).toContain(
+      "- `blocked` -> `review-fix` (the blocker cleared on a row that was blocked",
+    );
+    expect(ledger).toContain("`todo` -> `refactor` is not on this list");
   });
 
   it("names only Change Request statuses a CR can actually hold", async () => {
@@ -452,7 +468,7 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
     expect(reference).toContain("**A row blocked at `todo` is excluded from that exclusion**");
     // And such a row cannot claim the self-reference either: it wrote no round.
     expect(reference).toContain(
-      "**naming a departure status whose round was closed by a GREEN pair**",
+      "**for some `M` naming a departure status whose round was closed by a GREEN pair**",
     );
   });
 
@@ -465,8 +481,12 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
       await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
     );
     expect(rounds).toContain(
-      "- `Round N: Interrupted RED revision` / `Round N: Interrupted RED test hash` (with its manifest) / `Round N: Interrupted RED command` / `Round N: Interrupted RED result`",
+      "- `Round N: Interrupted RED (block M) revision` / `Round N: Interrupted RED (block M) test hash` (with its manifest) / `Round N: Interrupted RED (block M) command` / `Round N: Interrupted RED (block M) result` / `Round N: Interrupted RED (block M) assertion-stripped result`",
     );
+    // Numbered, or two interrupted runs sit under one set of field names and no
+    // verdict can say which run it audited.
+    expect(rounds).toContain("**`M` numbers the blocks of this round from 1");
+    expect(rounds).toContain("names the block it was taken on");
     expect(rounds).toContain("requires every run of the same gate to be reported in order");
     expect(rounds).toContain("move that run into the round's `Interrupted RED` group");
     expect(rounds).toContain("**retained beside** the fresh one rather than replaced");
@@ -608,10 +628,14 @@ describe.each(TREES)("%s (the resumption reads what was written, not the status 
     expect(text).toContain(
       "**A round whose RED observation was the falsifiability trio moves the trio, not a RED pair**",
     );
-    expect(text).toContain("`Round N: Interrupted RED Satisfied-by`");
-    expect(text).toContain("`Round N: Interrupted Falsifiability command`");
-    expect(text).toContain("`Round N: Interrupted Falsifiability result`");
-    expect(text).toContain("`Round N: Interrupted RED failure mode`");
+    expect(text).toContain("`Round N: Interrupted RED (block M) Satisfied-by`");
+    expect(text).toContain("`Round N: Interrupted (block M) Falsifiability revision`");
+    expect(text).toContain("`Round N: Interrupted (block M) Falsifiability command`");
+    expect(text).toContain("`Round N: Interrupted (block M) Falsifiability result`");
+    expect(text).toContain("`Round N: Interrupted RED (block M) failure mode`");
+    // The trio's own transient address moves with it, or the moved verdict
+    // cannot say which mutated tree it audited.
+    expect(text).toContain("a trio moved without it cannot say which tree it ran against");
     // The field list declares itself complete, so it has to admit both shapes.
     expect(text).toContain("in whichever of the two forms that round's own observation took");
   });

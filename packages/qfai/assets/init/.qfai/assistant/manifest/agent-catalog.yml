@@ -1659,7 +1659,11 @@ agents:
       `Round N: Resumed-from-blocked` on the round the resumption wrote into, and
       REVISE the self-reference without it. **Read the departure status it records
       and require `green` or `refactor`** — the field carries both halves, and only
-      those two name a round a GREEN pair closed. A row blocked at `red`, at
+      those two name a round a GREEN pair closed. **A round may carry several
+      `Resumed-from-blocked (resumption M)` fields, and any one of them naming those
+      statuses qualifies the row**: read the `M` the `Satisfied-by` cites rather than
+      the latest resumption, or a row legitimately resumed from `green` and blocked
+      again at `todo` is REVISEd for the second block. A row blocked at `red`, at
       `review-fix` before its rework took a GREEN, or at `todo` has no GREEN of its
       own to point at, so a row that resumed from one of those and cites itself is
       hiding why its fresh RED passed. A row reset to `todo` by an approved
