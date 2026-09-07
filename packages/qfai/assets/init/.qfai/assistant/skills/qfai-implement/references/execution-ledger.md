@@ -279,7 +279,7 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   moving what the row owes** — `rejected` or `superseded`, an upstream defect fixed
   inside the same obligation, a cross-spec row finished. **Those are status values a
   Change Request can actually hold**: the template and
-  `constitution/drift-protocol.md` step 2 define the set as `open` / `approved` /
+  `.qfai/assistant/constitution/drift-protocol.md` step 2 define the set as `open` / `approved` /
   `rejected` / `superseded`, and `change-request-reset.md` reads exactly `approved`,
   `rejected` and `superseded` as resolved. There is no `withdrawn`; naming it here
   told an operator to park a CR in a status the mandatory preflight still counts as
@@ -288,7 +288,7 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   the CR is approved and changes the obligation the row leaves `blocked` by the
   upstream reset below**, not here: `any status` -> `todo` with the approving
   `CR-*`/`DR-*` recorded in `DR-ID` and cited in `Evidence`, and the downstream
-  sweep `constitution/drift-protocol.md` step 5 requires. Reading "nothing upstream
+  sweep `.qfai/assistant/constitution/drift-protocol.md` step 5 requires. Reading "nothing upstream
   changed" as unconditional is how a row re-uses, as a mere resumption, the
   implementation and evidence that approval withdrew — and skips both the record of
   why and the sweep of the rows that moved with it. The row **restarts its cycle
