@@ -2660,7 +2660,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     for (const relativePath of skillDocs.sort()) {
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const entries = collectHardRequiredEntries(content);
-      expect(entries.length, `${relativePath} has no hard-required bucket`).toBeGreaterThan(0);
+      expect(
+        entries.length,
+        `${relativePath} declares no hard-required entry: the bucket is absent, or it is there ` +
+          `and empty`,
+      ).toBeGreaterThan(0);
       const skillId = path.basename(path.dirname(relativePath));
       const classified = classifyHardRequiredEntries(entries, skillId);
       offenders.push(
