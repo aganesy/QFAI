@@ -193,6 +193,7 @@
     "tests/integration/spec0017TuningChangeScope.test.ts",
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
     "tests/scripts/boundedRead.test.ts",
+    "tests/scripts/deriveE2eCallsites.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
     "tests/scripts/renovateMechanism.test.ts",
