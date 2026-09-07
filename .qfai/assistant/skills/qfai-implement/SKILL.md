@@ -43,7 +43,7 @@ When no explicit argument is given, detect the candidate specs — **active spec
 
 ### User Selection Flow
 
-- Single spec: announce the detected spec and require the user to confirm it before the first TDD item. Auto-discovery narrows the candidates; it does not supply the value. `primarySpecId` is hard-required, and a single candidate does not mean the user named it (see `## Default Autopilot Policy`).
+- Single spec: announce the detected spec and require the user to confirm it before the first TDD item. Spec Auto-Discovery narrows the candidates; it does not supply the value. `primarySpecId` is hard-required, and a single candidate does not mean the user named it (see `## Default Autopilot Policy`).
 - Multiple specs: display the candidates and require the user to choose one spec, or to confirm an ordered queue processed one spec at a time.
 - Zero specs: stop and ask the user to provide the target spec explicitly. **An explicitly named spec that is retired stops the same way** — the argument selects a spec, it does not waive the lifecycle check: report the `Status:` it declares and, for `superseded`, its `Superseded-by` successor, and ask the user to name a row in that successor's ledger instead.
 

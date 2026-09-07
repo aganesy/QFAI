@@ -9,7 +9,7 @@
  * agent read last.
  *
  * The answer is the governing decision's: `hard-required` means no default is
- * possible and the value is supplied before proceeding. Auto-discovery narrows
+ * possible and the value is supplied before proceeding. Spec Auto-Discovery narrows
  * the candidates; being the only candidate is not the same as the user having
  * named it. So a lone candidate is announced for confirmation, not proceeded
  * on, and both sections say that.
@@ -61,7 +61,9 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain(
       "Single spec: announce the detected spec and require the user to confirm it before the first TDD item",
     );
-    expect(skill).toContain("Auto-discovery narrows the candidates; it does not supply the value");
+    expect(skill).toContain(
+      "Spec Auto-Discovery narrows the candidates; it does not supply the value",
+    );
     expect(skill).toContain("a single candidate does not mean the user named it");
   });
 
