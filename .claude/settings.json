@@ -37,7 +37,7 @@
             "command": "node",
             "args": [
               "-e",
-              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just written, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; cut self-evident, repeated and wordy text; ordinary words, one claim per sentence, short lines; bullet lists and tables for parallel items; then re-read every line and rewrite anything that reads as a literal translation.'}}))"
+              "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'QFAI documentation clarity (.agents/rules/documentation-clarity.md). For the Markdown just edited, inside this change only: no issue or PR numbers, ticket IDs or team-local jargon; no account of how the work went, only the current behaviour and why; cut self-evident, repeated and wordy text; ordinary words, one claim per sentence, short lines; bullet lists and tables for parallel items; then re-read every line and rewrite anything that reads as a literal translation.'}}))"
             ]
           }
         ]

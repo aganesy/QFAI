@@ -1336,7 +1336,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // network — and prints one constant JSON envelope, which
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
-  [".claude/settings.json", "846e05decda5d9bff1d5c932240322167df68e5988d17a0c3949ab07f58b1525"],
+  [".claude/settings.json", "b13d4081b4e4e404656858ff2bc365f36887b93321c0003394a89d918f7911d1"],
   // Moved when the state lock joined `QFAI_GITIGNORE_BLOCK`: the lock now sits beside
   // `.qfai/state.json` so that everyone who may write the state may also reap a lock a crash left
   // behind, and a file init writes beside the state file is a file init must ignore. Re-derived

@@ -102,7 +102,7 @@ describe("qfai init and the documentation-clarity hooks", () => {
     });
   });
 
-  it("leaves a settings file it cannot read exactly as it found it, and says so", async () => {
+  it("leaves a settings file it cannot parse exactly as it found it, and says so", async () => {
     await withTempRoot(async (root) => {
       const damaged = '{ "hooks": "off",\n';
       await mkdir(path.join(root, ".claude"), { recursive: true });
@@ -112,6 +112,29 @@ describe("qfai init and the documentation-clarity hooks", () => {
 
       expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(damaged);
       expect(stderr).toContain("documentation-clarity");
+    });
+  });
+
+  // A read that fails for any reason other than "nothing is there" — a
+  // permission, or the path being something other than a file. The rest of the
+  // run is worth more than the reminder, so the fault is reported and init
+  // finishes; a throw here would abandon every later step over one optional file.
+  //
+  // The settings path is made a DIRECTORY rather than chmod-ed unreadable:
+  // `chmod 000` does not stop a privileged user, so that test passes vacuously
+  // wherever the suite runs as root, while `EISDIR` is a fault on every account.
+  it("reports a settings path it cannot read and still completes the run", async () => {
+    await withTempRoot(async (root) => {
+      await mkdir(path.join(root, SETTINGS), { recursive: true });
+
+      const stderr = await initInto(root);
+
+      expect(stderr).toContain("documentation-clarity");
+      expect(stderr).toContain(".claude/settings.json");
+      // init got past it: the files it writes beside the hooks are all there.
+      await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
+        "documentation-clarity.md",
+      );
     });
   });
 });

@@ -2432,11 +2432,10 @@ async function ensureAgentEntryPointRules(
  * project without a settings file gets the whole template; one that has its own
  * gets only the hook entries, appended after whatever it already declares.
  *
- * Every refusal is reported rather than silently absorbed. A settings file this
- * cannot read is the project's own configuration in a shape the merge does not
- * understand, and rewriting it on a guess would cost more than the reminder is
- * worth — so the file is left exactly as it is and the operator is told which
- * entries to add by hand.
+ * Every refusal is reported rather than silently absorbed, and none of them ends
+ * the run. A reminder is worth less than the rest of what `qfai init` writes, so
+ * a settings file this cannot read or cannot understand is left exactly as it
+ * is, the operator is told which entries to add by hand, and init carries on.
  */
 async function ensureClaudeCodeHooks(
   assetsRoot: string,
@@ -2451,27 +2450,38 @@ async function ensureClaudeCodeHooks(
   // headings. `report()` prints the absolute paths, through `formatReportPath`.
   const shown = CLAUDE_SETTINGS_RELATIVE_PATH;
 
-  const template = await readTextFileIfPresent(path.join(assetsRoot, ...segments));
-  if (template === null) {
+  const template = await readSettingsText(path.join(assetsRoot, ...segments));
+  if (template.kind !== "text") {
+    const why =
+      template.kind === "absent"
+        ? "the shipped hook template is missing from this install"
+        : `the shipped hook template could not be read (${template.reason})`;
     error(
-      `  WARNING: ${shown} was left unchanged: the shipped hook template is missing from this ` +
-        `install, so the documentation-clarity reminder is not wired up.`,
+      `  WARNING: ${shown} was left unchanged: ${why}, so the documentation-clarity reminder is ` +
+        `not wired up.`,
     );
     return { copied: [], skipped: [target] };
   }
 
-  const existing = await readTextFileIfPresent(target);
-  if (existing === null) {
+  const existing = await readSettingsText(target);
+  if (existing.kind === "unreadable") {
+    error(
+      `  WARNING: ${shown} was left unchanged (${existing.reason}). Copy the \`hooks\` entries from ` +
+        `the shipped template by hand to enable the documentation-clarity reminder.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+  if (existing.kind === "absent") {
     // Booked into `copied` and nothing more: the create-only root copy announces
     // every other seeded file the same way, through the run report alone.
     if (!dryRun) {
       await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, template, "utf-8");
+      await writeFile(target, template.text, "utf-8");
     }
     return { copied: [target], skipped: [] };
   }
 
-  const merged = mergeDocumentationClarityHooks(existing, template);
+  const merged = mergeDocumentationClarityHooks(existing.text, template.text);
   if (merged.outcome === "already-present") {
     return { copied: [], skipped: [target] };
   }
@@ -2493,6 +2503,31 @@ async function ensureClaudeCodeHooks(
     `  updated: ${shown} (added documentation-clarity hooks: ${events}; existing settings kept)`,
   );
   return { copied: [target], skipped: [] };
+}
+
+/**
+ * What reading a settings file produced: its text, nothing there, or a fault.
+ *
+ * `readTextFileIfPresent` collapses the last two into a throw, which is right
+ * for a file init must have and wrong for this one. A settings file a
+ * permission or a file type keeps this from reading is a file to leave alone
+ * and report — not a reason to abandon the rest of an init run.
+ */
+type SettingsRead =
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "absent" }
+  | { readonly kind: "unreadable"; readonly reason: string };
+
+async function readSettingsText(target: string): Promise<SettingsRead> {
+  try {
+    return { kind: "text", text: await readFile(target, "utf-8") };
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return { kind: "absent" };
+    }
+    const code = hasErrnoCode(err) ? err.code : "read failed";
+    return { kind: "unreadable", reason: code };
+  }
 }
 
 /** File contents, or `null` when nothing is there. Other read faults throw. */
