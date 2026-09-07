@@ -224,7 +224,7 @@ function describeDbConstraint(domain: DbDomain): string {
   }
   return (
     `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
-    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
+    "An ENUM on a same-named column bounds that table's column, so it need not reject the value this API field allows"
   );
 }
 
