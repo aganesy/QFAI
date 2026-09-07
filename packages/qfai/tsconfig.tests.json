@@ -43,6 +43,7 @@
     "tests/assets/atddScaffoldTunableSeed.test.ts",
     "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/autoModeApprovalDegrade.test.ts",
+    "tests/assets/autopilotHardRequiredScope.test.ts",
     "tests/assets/bareAnchorCitations.test.ts",
     "tests/assets/blockedCompletionProhibition.test.ts",
     "tests/assets/brandCatalogStepAnchor.test.ts",

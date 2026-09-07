@@ -113,6 +113,19 @@ There is one base, and it is the project root.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
+- The three buckets of a skill's `## Default Autopilot Policy` say who settles a
+  decision:
+  - `auto-decide` — the skill settles it without asking.
+  - `ask-user` — the skill asks before acting.
+  - `hard-required` — no default is possible, so a run may not proceed on a
+    guess. The value is either supplied by the user or read off evidence that
+    settles it. A `testFileGlobs` proposal is settled that way: a glob either
+    matches real files or it does not. `primarySpecId` is not, and a single
+    candidate does not settle it — which spec to work on is a choice, and
+    auto-discovery narrows the candidates without making it.
+
+  What a missing hard-required value costs a run is below.
+
 - Spend **at most 5 clarifying questions per invocation**, the unit being one
   top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
   `/web-research`, …), counted per question item rather than per
