@@ -159,7 +159,7 @@ export async function precheckRunLogPrune(
   if (configIssues.length > 0) {
     return {
       blocked: true,
-      reason: `config has ${configIssues.length} unresolved issue(s); run 'npx qfai doctor' and fix them first`,
+      reason: `config has ${configIssues.length} unresolved issue(s); run 'qfai doctor' and fix them first`,
     };
   }
   const reportRoot = resolvePath(root, config, "outDir");
