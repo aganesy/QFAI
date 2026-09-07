@@ -194,8 +194,9 @@ describe.each(TREES)("%s", (tree) => {
     expect(phase2b).toContain("`CON-API-Refs` from the operation its contract declares");
     // And the split must not move an obligation into a column its layer rejects.
     expect(phase2b).toContain("`TDDLIST_OBLIGATION_LAYER_MISMATCH`");
-    // Seeding is unchanged: only coverage-target TCs originate rows.
-    expect(phase2b).toContain("Seeding still runs off coverage-target TCs alone");
+    // Any of the four seed groups can originate a matrix-shaped row, so the
+    // re-scoping right is stated over all of them rather than over the TC ones.
+    expect(phase2b).toContain("Every one of the four seed groups can produce a matrix-shaped row");
     expect(await read(tree, SDD_SKILL)).toContain(
       "re-scoping is this phase's write at every Layer",
     );

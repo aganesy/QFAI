@@ -145,9 +145,14 @@ authority between the spec and the test.
 
 The conditions are what keep this narrow. They authorise **filling a placeholder and repairing an
 unresolvable selector**, never rewriting a cell that already resolves, and never touching the
-columns that carry the row's obligation identity. Decomposing an existing obligation across rows
-stays in remit for the executing stage; minting a new obligation id does not, and that line is
-unchanged.
+columns that carry the row's obligation identity. Decomposing an existing obligation across rows is
+**not** in remit either, and minting a new obligation id is not: rows are not on this whitelist at
+all, and the phase that owns them is `/qfai-sdd` Phase 2b
+(`../skills/qfai-sdd/references/sdd-phase-checklists.md`). The executing stage raises a Change
+Request naming the boundaries the row conflates and parks the row at `blocked` until that split
+lands. Reading decomposition as the executing stage's own write is what let a matrix row be
+re-scoped by the one role this whitelist grants no row write — obeying this line broke the
+whitelist above it, and obeying the whitelist left the row unsplittable by anyone.
 
 One limit is worth stating, because the `Selector` condition is narrower than it reads.
 `selectorResolves` is deliberately lenient: it accepts verbatim containment, then containment of

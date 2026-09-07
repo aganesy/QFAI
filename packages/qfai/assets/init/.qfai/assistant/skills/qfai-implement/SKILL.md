@@ -143,8 +143,11 @@ test until it fails in order to manufacture a RED. See `references/red-not-obser
 > whichever assert happens to execute first — every assertion after it is unobserved on every RED
 > run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
 > row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
-> observation**. Split the row per `references/execution-ledger.md#selector-granularity-must` (rules
-> and examples: `references/selector-granularity.md`) before continuing; do not proceed to Green.
+> observation**. **Do not split it here**: this skill owns cells and not rows, so take step 1's
+> residual path — Change Request, `todo -> blocked`, `/qfai-sdd` Phase 2b re-scopes the row — and do
+> not proceed to Green. The criterion that split will apply is
+> `references/execution-ledger.md#selector-granularity-must` (rules and examples:
+> `references/selector-granularity.md`).
 
 > **A matrix selector is judged in step 1, not here.** A row whose selector conflates unrelated boundaries usually fails as expected on its first assert and never reaches this step, so the residual-case path — Change Request, `todo -> blocked`, no split in place — is bound to selection (step 1). A shape that first surfaces at this step on a row already past `todo` takes the same path minus the status write: keep the status and stop with a handoff note naming the `CR-*`.
 
