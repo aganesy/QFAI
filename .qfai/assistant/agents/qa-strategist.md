@@ -23,7 +23,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
-- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; an absent directory is not missing
+- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
 - QA evidence, coverage tooling outputs, and test plans
 
 ## Deliverables

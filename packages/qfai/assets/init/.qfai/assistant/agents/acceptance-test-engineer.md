@@ -26,7 +26,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
 - .qfai/contracts/api/\*\*
-- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; an absent directory is not missing
+- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
 
 ## Deliverables
 

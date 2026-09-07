@@ -65,7 +65,7 @@ carry it.
 - .qfai/specs/spec-\*/05_Examples.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
 - .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
-- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; an absent directory is not missing
+- .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
 
 Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
 rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
