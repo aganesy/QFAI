@@ -18,7 +18,36 @@ const implementSkillPath = path.join(
 );
 
 // QFAI:SPEC-0011:US-0011-0005
-describe("wrapper parity across all three platforms", { timeout: 15000 }, () => {
+/**
+ * Deliberately no `{ timeout: … }`.
+ *
+ * It declared 15 s — the value `vitest.knobs.ts` raised `testTimeout` away from,
+ * having measured THIS project (#1233):
+ *
+ * > In a run of the `e2e` project ALONE, five tests already exceed 15 s and the
+ * > slowest takes 47.3 s; under the full suite the same files take longer again.
+ *
+ * That quote is about the project, not about this file's mechanism: its three
+ * `runInit` calls are in-process imports, so the bundle cold start the knobs
+ * file measures is a cost this file does not pay. What it pays instead is a
+ * 204-file template tree copied three times, plus the `git` probes `runInit`
+ * spawns. Either way the ceiling is the question, and the ceiling is measured:
+ *
+ * Measured here, `e2e` alone — the lightest load this file ever sees:
+ *
+ * ```text
+ * ✓ tests/e2e/wrapperParity.test.ts (4 tests) 41440ms
+ *     all platform wrappers point to canonical qfai-implement via symlinks   14628ms
+ *     all three platform wrappers serve identical SKILL.md content            13479ms
+ *     all platform wrapper SKILL.md contains required phrases                13324ms
+ * ```
+ *
+ * Three of four cases within 1.7 s of the ceiling, the closest by **372 ms**,
+ * with the full suite still to add. It had not failed yet; it had run out of
+ * margin, which is the state `skillsIntegrity.test.ts` was in before it started
+ * failing at the same distance.
+ */
+describe("wrapper parity across all three platforms", () => {
   it("all platform wrappers point to canonical qfai-implement via symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-wrapper-parity-"));
     try {

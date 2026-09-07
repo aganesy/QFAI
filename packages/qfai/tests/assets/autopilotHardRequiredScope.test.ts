@@ -38,9 +38,9 @@ const read = async (tree: string, rel: string): Promise<string> =>
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("keeps the hard-required entry at full strength and points at the protocol", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("`primarySpecId` (when absent from inputs");
+    expect(skill).toContain("`primarySpecId` (only when Spec Auto-Discovery cannot resolve one");
     expect(skill).toContain(
-      "auto-discovery narrows the candidates, the user still supplies the value; see `## Spec Auto-Discovery Protocol`)",
+      "a single unambiguous candidate is announced and proceeds, so it is not a required input)",
     );
   });
 
@@ -64,7 +64,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const baseline = await read(tree, BASELINE);
     expect(baseline).toContain("## User Questions (AskUserQuestion Protocol)");
     expect(baseline).toContain(
-      "`hard-required` = no default is possible, so the run may not start until the user has supplied the value",
+      "`hard-required` = no default is possible, so the value comes from the user rather than from the agent",
     );
     expect(baseline).toContain(
       "a repository-side derivation may narrow the candidates but never settles the value on the agent's own authority",

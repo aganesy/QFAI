@@ -1,5 +1,24 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0015-0001: Agent Catalog
+- US-0015-0002: Standard Agent Contract
+- US-0015-0003: Orchestrator Protocol
+- US-0015-0004: Devils-Advocate Reviewer
+- US-0015-0005: Pattern-Doubler Reviewer
+- US-0015-0006: All-Reviewer FAIL Obligation
+- US-0015-0007: Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check
+- US-0015-0008: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`
+- US-0015-0009: SKILL.md `## Default Autopilot Policy` section
+- US-0015-0010: Envelope-deviation `AskUserQuestion` audit-log
+- US-0015-0011: Cross-skill `handoff.yaml` schema
+- US-0015-0012: New Reviewer-Gate finding-code catalog
+- US-0015-0013: `qfai audit log` CLI surface
+- US-0015-0014: Cross-skill handoff legacy adapter helper
+- US-0015-0015: Cross-skill documentation realignment to implementation
+- US-0015-0016: Reviewer-Gate ingests workflow-hygiene and shipped-shape drift
+
 ## US-0015-0001: Agent Catalog
 
 As a QFAI maintainer, I want a catalog of 19 consolidated sub-agents with ID, mission, and category, so that agent delegation is standardized across all skills.
@@ -26,7 +45,7 @@ As a QFAI user, I want every reviewer to provide a concrete alternative or fix p
 
 ## US-0015-0007: Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check
 
-As a QFAI maintainer, I want the Reviewer Gate to emit `R-CERTIFY-VERIFY-CIRCULAR` (severity: error) whenever a future PR reintroduces the cycle where certify reads validator output that requires `/qfai-atdd` or `/qfai-implement` artifacts at the prototyping phase, so that the prototyping-completable certify path (option-B per upstream deferred-OQ decision) cannot silently regress to the old circular contract (REQ-0015-0013).
+As a QFAI maintainer, I want the Reviewer Gate to emit `R-CERTIFY-VERIFY-CIRCULAR` (severity: info — `qfai prototyping certify` is what refuses the wrong-phase verdict, with exit 2) whenever a future PR reintroduces the cycle where certify reads validator output that requires `/qfai-atdd` or `/qfai-implement` artifacts at the prototyping phase, so that the prototyping-completable certify path (option-B per upstream deferred-OQ decision) cannot silently regress to the old circular contract (REQ-0015-0013).
 
 ## US-0015-0008: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`
 
@@ -34,7 +53,7 @@ As a Reviewer-Gate consumer, I want the Reviewer Gate to emit `R-PROMPT-SCANNER-
 
 ## US-0015-0009: SKILL.md `## Default Autopilot Policy` section
 
-As a QFAI operator, I want every SKILL.md to carry a `## Default Autopilot Policy` section with three named buckets (auto-decide / ask-user / hard-required) and a Reviewer Gate that emits `R-AUTOPILOT-POLICY-MISSING` (severity error) when the section is absent OR is present but missing one or more required buckets (heading-only / partial population), so that avoidable per-session `AskUserQuestion` prompts collapse to 0–1 while triage / destructive / version-pin / scope-expansion decisions still require human authorization (REQ-0160, DR-0269).
+As a QFAI operator, I want every SKILL.md to carry a `## Default Autopilot Policy` section with three named buckets (auto-decide / ask-user / hard-required) and a Reviewer Gate that emits `R-AUTOPILOT-POLICY-MISSING` (severity error) when the section is absent OR is present but missing one or more required buckets (heading-only / partial population), so that avoidable per-session `AskUserQuestion` prompts collapse to 0–1 while approval-required governance operations / destructive / version-pin / scope-expansion decisions still require human authorization — the first being a category each skill instantiates with the operations its own run cannot authorize for itself, so a skill may narrow a bucket to what it can reach but may not add an entry outside the prototype's categories (REQ-0160, DR-0269 Amendment 2).
 
 ## US-0015-0010: Envelope-deviation `AskUserQuestion` audit-log
 

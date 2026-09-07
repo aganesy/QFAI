@@ -57,12 +57,9 @@ function makeConfig(): QfaiConfig {
         forbidTestTodoStubs: true,
       },
       traceability: {
-        brMustHaveSc: true,
         scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        scNoTestSeverity: "error",
-        orphanContractsPolicy: "error",
         unknownContractIdSeverity: "warning",
       },
     },

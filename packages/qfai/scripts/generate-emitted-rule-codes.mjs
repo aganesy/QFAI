@@ -691,8 +691,26 @@ function collectStringConstants(sources) {
 async function collectEmittedRuleCodes(srcDir, outputFile) {
   const skip = path.resolve(outputFile);
   const sources = [];
+  /**
+   * Sources excluded because their findings land after `applyWaivers`. Scanned
+   * separately so the codes can be NAMED without being registered: a waiver
+   * against one can never match, and `QFAI-WAIVER-004` used to call them
+   * unknown rules, which sent the operator looking for a typo (#1110).
+   */
+  const postWaiver = [];
   for (const file of await listTypeScriptFiles(srcDir)) {
-    if (path.resolve(file) === skip || isPostWaiverSource(file)) {
+    if (path.resolve(file) === skip) {
+      continue;
+    }
+    if (isPostWaiverSource(file)) {
+      let raw;
+      try {
+        raw = await readFile(file, "utf-8");
+      } catch (error) {
+        throw new Error(`failed to read ${file}: ${toMessage(error)}`);
+      }
+      const { sanitized, literals } = sanitizeSource(raw);
+      postWaiver.push({ file, raw, sanitized, literals });
       continue;
     }
     let raw;
@@ -705,8 +723,13 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
     sources.push({ file, raw, sanitized, literals });
   }
 
-  const constants = collectStringConstants(sources);
-  const factories = collectIssueFactories(sources);
+  // Built from BOTH sets. A post-waiver file names its code through a
+  // module-level `const` (`code: TRUNCATED_SCAN_CODE`), so a constants map
+  // built only from the registered sources cannot resolve it — and the
+  // post-waiver list came back holding only the codes written as literals.
+  const allSources = [...sources, ...postWaiver];
+  const constants = collectStringConstants(allSources);
+  const factories = collectIssueFactories(allSources);
   const downgraded = collectDowngradedCodes(sources);
   /** @type {Map<string, { severities: Set<string | null> }>} */
   const emissions = new Map();
@@ -718,7 +741,20 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
     scanIssueObjectLiterals(resolvable, constants, emissions);
   }
 
+  // The post-waiver codes, resolved the same way and against the same
+  // constants, so a code named through a `const` is found here too.
+  /** @type {Map<string, { severities: Set<string | null> }>} */
+  const postWaiverEmissions = new Map();
+  for (const source of postWaiver) {
+    const resolvable = { ...source, properties: collectPropertyValues(source, constants) };
+    scanFactoryCalls(resolvable, factories, constants, postWaiverEmissions, new Set());
+    scanIssueObjectLiterals(resolvable, constants, postWaiverEmissions);
+  }
+
   const codes = [...emissions.keys()].sort((a, b) => a.localeCompare(b, "en"));
+  const postWaiverCodes = [...postWaiverEmissions.keys()]
+    .filter((code) => !emissions.has(code))
+    .sort((a, b) => a.localeCompare(b, "en"));
   const errorOnly = codes.filter((code) => {
     if (downgraded.has(code)) {
       return false;
@@ -729,7 +765,7 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
   const aliases = [...aliasSet]
     .filter((alias) => !emissions.has(alias))
     .sort((a, b) => a.localeCompare(b, "en"));
-  return { codes, errorOnly, aliases };
+  return { codes, errorOnly, aliases, postWaiverCodes };
 }
 
 /**
@@ -1033,7 +1069,7 @@ async function listTypeScriptFiles(dir) {
  * @param {readonly string[]} aliases
  * @returns {string}
  */
-function renderEmittedRuleCodesModule(codes, errorOnly, aliases) {
+function renderEmittedRuleCodesModule(codes, errorOnly, aliases, postWaiverCodes) {
   const list = (values) =>
     values.length === 0 ? "" : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
   return `/**
@@ -1069,6 +1105,18 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [${list(errorOnly)}];
  * {@link EMITTED_RULE_CODES}: they are waivable, but they are not codes.
  */
 export const RULE_ID_ALIASES: readonly string[] = [${list(aliases)}];
+
+/**
+ * Codes emitted from \`src/cli/\`, after \`applyWaivers\` has run.
+ *
+ * They are deliberately NOT in {@link EMITTED_RULE_CODES}: a waiver naming one
+ * can never match a finding, and registering them would let an unmatchable
+ * waiver be reported as \`active\`. But they DO exist, and calling them unknown
+ * rules sent an operator looking for a typo — so \`applyWaivers\` uses this list
+ * to say the true thing instead: the rule exists and no waiver can suppress it,
+ * because it is appended after waiver processing.
+ */
+export const POST_WAIVER_RULE_CODES: readonly string[] = [${list(postWaiverCodes)}];
 `;
 }
 
@@ -1119,11 +1167,11 @@ async function main() {
     return 2;
   }
 
-  const { codes, errorOnly, aliases } = await collectEmittedRuleCodes(
+  const { codes, errorOnly, aliases, postWaiverCodes } = await collectEmittedRuleCodes(
     parsed.srcDir,
     parsed.outputFile,
   );
-  const rendered = renderEmittedRuleCodesModule(codes, errorOnly, aliases);
+  const rendered = renderEmittedRuleCodesModule(codes, errorOnly, aliases, postWaiverCodes);
 
   if (parsed.checkOnly) {
     let current;

@@ -223,10 +223,15 @@ describe("every mandatory checklist carries the L1/L2 exclusion", () => {
       // "every TC", so an L1/L2-only spec the validator passes read as
       // not-done — and the repair a reader reaches for is the duplicated
       // integration annotation `QFAI-ATDD-123` rejects.
+      //
+      // The qualifier is now phrased by DESTINATION rather than by spelling.
+      // The claim this case makes is unchanged — the gate must not demand
+      // "every TC" — but `system` and `acceptance` are in the layer vocabulary
+      // and route to `tests/integration/**`, so a gate enumerating
+      // `L3`/`L4`/`L5`/blank left the rows Phase 2b seeds for them uncounted.
       const atdd = flat(await read(tree, "assistant/skills/qfai-atdd/SKILL.md"));
-      expect(atdd).toContain(
-        "every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered",
-      );
+      expect(atdd).toContain("every `TC` **whose `Level` routes to an ATDD home**");
+      expect(atdd).toContain("or `system` / `acceptance` — is covered");
       expect(atdd).toContain("**`L1`/`Unit` and `L2`/`Component` are outside this obligation**");
       expect(atdd).toContain("L1/Unit and L2/Component owe no ATDD annotation");
     });

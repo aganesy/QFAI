@@ -50,7 +50,7 @@ describe('"relevant test suite" is defined and bounded', () => {
       expect(skill).toContain("narrow suite per item, full suite at each checkpoint boundary");
       expect(skill).toContain("quadratic in ledger size");
       expect(section).toContain("### Checkpoint boundaries");
-      expect(section).toContain("The full suite runs at, and only at");
+      expect(section).toContain("the full suite runs at, and only at");
       // Item 11 must not re-impose the full suite on every item.
       expect(skill).not.toContain(
         "Checkpoint verification passed — this is where the **full** suite runs",
@@ -58,8 +58,50 @@ describe('"relevant test suite" is defined and bounded', () => {
       expect(skill).toContain(
         "The **full** suite is required here only when the item sits on a checkpoint boundary",
       );
-      // ...while still running at least once per spec.
-      expect(skill).toContain("the last row a run completes is always a boundary");
+      // ...while still running at least once per spec. The guarantee comes from
+      // the unconditional spec-level boundary, not from a condition re-derived
+      // in `SKILL.md`: a run that completes one named row while others are still
+      // `todo` — the ordinary `/qfai-atdd` handoff — is not on a boundary.
+      expect(skill).toContain(
+        "the spec-level boundary runs it unconditionally on a terminal ledger",
+      );
+      expect(skill).not.toContain("always a boundary");
+    });
+
+    // The "only" in the list above is scoped, and has to be. This file's list is
+    // a set of ROW predicates, while `checkpoint-verification.md` tiers the
+    // boundaries into per item and per spec — and the spec-level one has no row
+    // at all, so it cannot be one of these entries. When this file claimed to be
+    // "the single definition of the boundary cadence" full stop, an agent reading
+    // only this anchor would skip the spec-level run that the checkpoint document
+    // separately requires (with its own command set, minus step 1, and its own
+    // seal). Pin the scoping so the two cannot drift back into contradiction.
+    it(`${tree}: the boundary list scopes its "only" to the per-item tier`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      expect(section).toContain(
+        "**This list is the single definition of the PER-ITEM boundary cadence",
+      );
+      expect(section).not.toContain(
+        "**This list is the single definition of the boundary cadence.**",
+      );
+      expect(section).toContain("It is not the definition of every full-suite run");
+      expect(section).toContain("is defined there, not here");
+      // …and it must DELEGATE rather than restate. Naming the spec-level
+      // condition here would make this file the second definition of it —
+      // the exact shape that let the two drift apart, one tier up.
+      expect(section, "the spec-level condition is restated here again").not.toMatch(
+        /reaches `done` or a valid `exception`/,
+      );
+      expect(section).toContain('Do not read the "only" below as licence to skip it');
+
+      // And the document it defers to must still carry that boundary, with the
+      // two things this file promises are specified there.
+      const checkpoint = unwrap(
+        await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+      );
+      expect(checkpoint).toContain("**Per spec**");
+      expect(checkpoint).toContain("## Verification command set (per spec)");
+      expect(checkpoint).toContain("The spec-level boundary records a seal of its own");
     });
 
     it(`${tree}: the once-per-spec boundary follows work, not file position`, async () => {
@@ -111,9 +153,16 @@ describe('"relevant test suite" is defined and bounded', () => {
       // AC-group boundary degenerates back to a full run per item.
       expect(section).toContain("every **N-th** completed row, with `N = 10` by default");
       expect(section).toContain("An AC or BR group is **not** a boundary");
-      expect(section).toContain("`TC-0006-0001..0009`");
       expect(section).toContain("coarser than the obligation granularity");
       expect(section).not.toContain("the **last row of each BR/AC group**");
+      // The degenerate case is stated generically. The file ships verbatim into
+      // every consuming project, so a concrete spec id here names that
+      // project's own unrelated spec, not the one the sentence measured.
+      expect(section).toContain(
+        "every `TC` mapping to a distinct `AC` and occupying one ledger row",
+      );
+      expect(section).not.toContain("this repository's `spec-");
+      expect(section).not.toMatch(/`TC-\d{4}-\d{4}/);
     });
 
     it(`${tree}: test-layers.md bounds test-file granularity`, async () => {

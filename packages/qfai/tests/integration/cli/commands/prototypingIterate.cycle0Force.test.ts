@@ -112,6 +112,15 @@ async function seedExistingIter00(root: string, contents: string): Promise<strin
   return markerPath;
 }
 
+function captureStdout(): string[] {
+  const lines: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown): boolean => {
+    lines.push(String(chunk));
+    return true;
+  });
+  return lines;
+}
+
 function captureStderr(): string[] {
   const lines: string[] = [];
   vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown): boolean => {
@@ -172,5 +181,120 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
       targetUrl: "http://localhost:5173",
     });
     expect(exit).toBe(0);
+  });
+
+  // #1072. `--dry-run` is documented as "display only, make no changes" and was
+  // parsed globally but threaded only into `init` and `doctor`, so this command
+  // performed the cycle-0 reset under it — measured at 27 files and 1,475,551
+  // bytes relocated, with `mutation-log.jsonl` recording every write as real.
+  // The negative control for these three cases is the `--force` test above:
+  // without `--dry-run` the same fixture DOES get backed up.
+  it("--force --dry-run moves nothing and writes nothing (exit 0)", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    const PRIOR = "the prior loop, which a preview must not relocate";
+    const markerPath = await seedExistingIter00(root, PRIOR);
+    const stdout = captureStdout();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+      dryRun: true,
+    });
+
+    expect(exit).toBe(0);
+    // The prior loop is where it was, byte for byte.
+    expect(await readFile(markerPath, "utf-8")).toBe(PRIOR);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    const entries = await readdir(evidenceRoot);
+    expect(entries.filter((e) => e.startsWith("iter-00.backup-"))).toEqual([]);
+    // None of the three writes the real run makes happened.
+    expect(entries).not.toContain("prototyping.json");
+    expect(entries).not.toContain("mutation-log.jsonl");
+    await expect(
+      readFile(path.join(evidenceRoot, "iter-00/iterate-plan.json"), "utf-8"),
+    ).rejects.toThrow();
+    // And the preview says what it would have done.
+    const joined = stdout.join("");
+    expect(joined).toMatch(/--dry-run/);
+    expect(joined).toMatch(/would MOVE/);
+    expect(joined).toMatch(/wrote nothing/);
+  });
+
+  // A preview that exits 0 where the run it previews exits 2 is the same defect
+  // in a new place, so the read-only refusal keeps its precedence.
+  it("--dry-run without --force still refuses with exit 2, and still moves nothing", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    const PRIOR = "prior loop seed";
+    const markerPath = await seedExistingIter00(root, PRIOR);
+    const stderr = captureStderr();
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      dryRun: true,
+    });
+
+    expect(exit).toBe(2);
+    const joined = stderr.join("");
+    expect(joined).toMatch(/--force/);
+    expect(joined).toMatch(/iter-00/);
+    expect(await readFile(markerPath, "utf-8")).toBe(PRIOR);
+    const entries = await readdir(path.join(root, ".qfai/evidence/prototyping"));
+    expect(entries.filter((e) => e.startsWith("iter-00.backup-"))).toEqual([]);
+  });
+
+  // The preview covers the cycle >= 1 path too, so cycle 0 is seeded for real
+  // first — a cycle-1 run against a project with no seed refuses on the drift
+  // gate, and a preview that reported 0 there would be describing a run that
+  // exits 2.
+  it("--cycle 1 --dry-run creates no iteration directory and leaves the state file", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    const seeded = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(seeded).toBe(0);
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
+    const before = await readFile(protoJsonPath, "utf-8");
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 1,
+      targetUrl: "http://localhost:5173",
+      dryRun: true,
+    });
+
+    expect(exit).toBe(0);
+    await expect(readdir(path.join(root, ".qfai/evidence/prototyping/iter-01"))).rejects.toThrow();
+    expect(await readFile(protoJsonPath, "utf-8")).toBe(before);
+  });
+
+  // A cycle >= 1 run with nothing frozen refuses, and the preview reports that
+  // refusal rather than exiting 0 past it.
+  it("--cycle 1 --dry-run reports the same refusal as the real run", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+
+    const dry = await runPrototypingIterate({
+      root,
+      cycle: 1,
+      targetUrl: "http://localhost:5173",
+      dryRun: true,
+    });
+    const real = await runPrototypingIterate({
+      root,
+      cycle: 1,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(dry).toBe(real);
+    expect(dry).toBe(2);
   });
 });

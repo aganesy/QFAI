@@ -13,7 +13,7 @@
 - US-0003-0009: Git symlink 設定 + Windows 対応 - git config 自動設定とクロスプラットフォーム対応
 - US-0003-0010: copilot-instructions.md 生成 - Copilot 向けリポジトリ指示ファイル生成
 - US-0003-0011: Copilot review instructions 配布 - .github/instructions/ に create-only で配布
-- US-0003-0012: instructions の force 無効保護 - --force でも instructions は上書きしない
+- US-0003-0012: instructions の force 更新 - --force で instructions を shipped テンプレートへ更新
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
 - US-0003-0014: README ファイル生成 - 各統合ディレクトリに README.md を通常ファイルとして配置
 - US-0003-0015: `.gitignore` 管理ブロック自動追記 (v1.7.18) - `qfai init` 時に QFAI 生成成果物（report/evidence/review-pack/discussion-pack）が自動で gitignore される
@@ -136,11 +136,11 @@
 - Goal: `qfai init` 時に `.github/instructions/code-review.instructions.md` と `.github/instructions/principles.instructions.md` を create-only で配布する
 - Non-goals: 言語固有のルール追加（SDD skill の責務）
 
-## US-0003-0012: instructions の force 無効保護
+## US-0003-0012: instructions の force 更新
 
 - Parent: CAP-0003
-- Goal: `--force` を付けても instructions ファイルは上書きされない
-- Non-goals: instructions の自動更新
+- Goal: `--force` を付けた場合、instructions ファイルを shipped テンプレートで再生成する
+- Non-goals: `--force` なしでの自動更新
 
 ## US-0003-0013: instructions アクティベーション案内
 

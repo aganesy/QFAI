@@ -42,13 +42,20 @@ function expectNoPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).not.toContain(unwrap(phrase));
 }
 
+// The round-budget and convergence rules moved out of the delegation
+// baseline: that file sat at exactly the 500-line shipped-asset ceiling, so
+// the corrective-review path could not be added to it. The rules are
+// unchanged by the move; the assertions about them follow the file, and the
+// assertions about the reviewer remit table and the response template stay
+// on the baseline, which still owns those.
+const CONVERGENCE = "assistant/constitution/review-convergence.md";
 const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const OPERATING = "assistant/constitution/shared-skill-operating-baseline.md";
 
 describe("reviewer gates terminate", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the Reviewer Gate Baseline caps rounds and escalates`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       expectPhrase(content, "### Round budget (MUST)");
       expectPhrase(content, "**Two rounds per reviewer per artifact.**");
       expectPhrase(content, "MUST stop and\n  escalate to the user");
@@ -60,7 +67,7 @@ describe("reviewer gates terminate", () => {
     });
 
     it(`${tree}: escalation has an exit that can reach DONE`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       expectPhrase(content, "**Completion after escalation.**");
       expectPhrase(content, 'the exception to\n  "no DONE until all blocking reviewers `PASS`"');
       expectPhrase(content, "superseded by the recorded user decision");
@@ -69,7 +76,7 @@ describe("reviewer gates terminate", () => {
     });
 
     it(`${tree}: the exit withholds accept-as-OQ for a critical finding`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       // Without this, the general exit is a route around the severity floor
       // that needs no lateness and no reviewer consent — only a user click.
       expectPhrase(content, "**Severity floor on the exit.**");
@@ -83,7 +90,7 @@ describe("reviewer gates terminate", () => {
     });
 
     it(`${tree}: round 2b may report a regression the named fix caused`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       // The convergence rule already accepts that a fix introduces or exposes
       // findings; a 2b reviewer that may not report one can only return a
       // false PASS or break the rule.
@@ -100,18 +107,26 @@ describe("reviewer gates terminate", () => {
     // A budget-free 2b plus an always-available escalation compose into a loop
     // with no guaranteed end. The cap is what makes the gate terminate.
     it(`${tree}: the verification review cannot recur without bound`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       expectPhrase(content, "**One 2b per artifact, total.**");
       expectPhrase(content, "MUST NOT be answered with another _apply a named fix_ + 2b cycle");
       expectPhrase(
         content,
         "At the second escalation the user is offered only _accept as Open Question_ or _drop the item from scope_",
       );
-      expectPhrase(content, "the artifact does not reach DONE and the stage stops");
+      expectPhrase(
+        content,
+        "the intersection of the two rules leaves _drop the item from scope_ alone",
+      );
+      // The corrective path is the exit that state has, and it ends: a
+      // `REVISE` there is terminal, so the cap's guaranteed end moved one
+      // step later rather than being removed.
+      expectPhrase(content, "**`REVISE` is terminal.**");
+      expectPhrase(content, "No second corrective artifact, no further review");
     });
 
     it(`${tree}: a late high-severity finding still blocks`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       expectPhrase(content, "**Severity overrides lateness.**");
       expectPhrase(content, "security defect, data loss or corruption");
       expectPhrase(content, "stops and escalates to the user immediately");
@@ -128,7 +143,7 @@ describe("reviewer gates terminate", () => {
     });
 
     it(`${tree}: a later-round finding must justify itself`, async () => {
-      const content = await read(tree, DELEGATION);
+      const content = await read(tree, CONVERGENCE);
       expectPhrase(content, "### Convergence (MUST)");
       expectPhrase(content, "MUST state why it was not raisable in\n  round N-1");
       expectPhrase(content, "out of budget");
@@ -181,7 +196,7 @@ describe("reviewer gates terminate", () => {
       expectPhrase(content, "shared-skill-delegation-baseline.md#verdict-vocabulary");
       expectNoPhrase(content, "reviewer returns `FAIL` / `REVISE`");
       expectPhrase(content, "stop on **round count** as well as on lack of progress");
-      expectPhrase(content, "shared-skill-delegation-baseline.md#round-budget-must");
+      expectPhrase(content, "review-convergence.md#round-budget-must");
     });
   }
 });

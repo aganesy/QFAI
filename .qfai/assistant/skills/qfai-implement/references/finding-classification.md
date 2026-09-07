@@ -1,6 +1,6 @@
 # Blocking vs advisory findings
 
-Provenance rules: `shared-skill-delegation-baseline.md#finding-provenance-must`.
+Provenance rules: `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ## Blocking
 
@@ -39,11 +39,11 @@ rejects the first two outright and a response whose attestation is anything but
 merely wrong: a tier missing from an Evidence cell, a `Satisfied-by` naming the
 wrong sibling row, an unlabelled round block.
 
-Route a `none` advisory per `drift-protocol.md#reviewer-originated-obligations`:
+Route a `none` advisory per `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`:
 record it in the reviewer response under `Advisory / Change Request proposals`.
 
 Route a `record:*` advisory to the queue instead
-(`drift-protocol.md#the-record-defect-queue`): the reviewer records it in its
+(`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`): the reviewer records it in its
 response, and the orchestrator appends it to `## Record defects` in this stage's
 evidence file — `.qfai/evidence/implement-<spec-id>.md`, or
 `.qfai/evidence/atdd-<spec-id>.md` when that file is the one the spec has. Each
@@ -99,7 +99,7 @@ phase (`/qfai-sdd`) records and adjudicates it.
 - A new advisory that does **not** change an already-approved obligation leaves
   the item free to reach `done`.
 - One that **does** change an approved obligation takes the Change Request path,
-  and `drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done`
+  and `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done`
   for items depending on the obligation under dispute until approval and the
   owner rerun.
 

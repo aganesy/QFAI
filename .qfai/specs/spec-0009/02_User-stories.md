@@ -1,5 +1,13 @@
 # 02 User Stories
 
+## US Catalog
+
+- US-0009-0001: Repository Analysis
+- US-0009-0002: Config Glob Tuning
+- US-0009-0003: Steering Population
+- US-0009-0004: Evidence Sampling Confirmation
+- US-0009-0005: Tool Selection Documentation
+
 ## US-0009-0001: Repository Analysis
 
 As a QFAI user, I want the configure skill to analyze my repository's test frameworks and locations, so that traceability globs are accurate from the start.
