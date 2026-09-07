@@ -91,8 +91,9 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
   it("the mandatory-obligation bullets name the directory CON-DB is discharged from", async () => {
     // This is the only list that states a directory per obligation, and the
     // annotation obligations already assign `QFAI:CON-DB-XXXX` to
-    // `tests/integration/**`. It shares the `CON-API` bullet because the file
-    // is at the line ceiling `ASSISTANT_ASSET_MAX_LINES` sets.
+    // `tests/integration/**`. It shares the `CON-API` bullet because the two
+    // obligations are discharged the same way and a bullet each would say the
+    // same sentence twice.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
       "`tests/integration/**` must cover all required `CON-DB-*` (`QFAI-ATDD-115`)",
