@@ -1383,11 +1383,9 @@ describe("exactly one gate owns a TC however its Level was written", () => {
       expect(gates.levels.get("TC-0001")).toBe("l3");
     });
 
-    it("keeps the TC when nothing later contradicts the fallback", async () => {
-      // The fallback itself is not the defect and must not move: an unstated
-      // `Level` still has to land on a gate, and the ledger is the one that
-      // takes it.
-      const gates = await gatesFor(
+    it.each([
+      [
+        "a blank Level cell",
         [
           "# 06 Test Cases",
           "",
@@ -1398,9 +1396,33 @@ describe("exactly one gate owns a TC however its Level was written", () => {
           "| TC-0001 |  | AC-0001 | - | s | e |",
           "",
         ].join("\n"),
-      );
+      ],
+      [
+        "no Level column at all",
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+      ],
+    ])("gives ATDD sole ownership of %s", async (_name, testCases) => {
+      // An unstated `Level` still has to land on a gate, and it lands on
+      // exactly one. `toContain("ledger")` asserted only that it landed; the
+      // half left unasserted was the defect. The ledger claimed the TC as a
+      // coverage target while `QFAI-ATDD-112` claimed the same TC for
+      // `tests/integration/**`, so one TC was owed to two owners, two test
+      // trees and two evidence files, and the `Layer` of the row the ledger
+      // seeds — which is what gate item 10 picks the evidence file by — was
+      // underivable. ATDD keeps it, which is the answer the heading form
+      // ("a heading TC that declares no Level is owed by ATDD") already gave.
+      const gates = await gatesFor(testCases);
 
-      expect(owners(gates)).toContain("ledger");
+      expect(owners(gates)).toEqual(["atdd"]);
     });
 
     it("adopts a later explicit coverage Level instead of the blank it recorded", async () => {
@@ -1473,8 +1495,14 @@ describe("one Level predicate, one normalization, one answer", () => {
     ["API ", "api"],
     [" l5\t", "e2e"],
     ["\tE2E ", "e2e"],
-    // No `Level` column at all: the historical default, unchanged.
+    // No `Level` column at all: the historical default, unchanged. A blank
+    // cell reaches the same answer — the collector reports it as no
+    // declaration — and the ledger no longer claims it in parallel
+    // (`classifyCoverageLevel("")` is `non-coverage`), so this default is the
+    // TC's only gate rather than its second one.
     [undefined, "integration"],
+    ["", "integration"],
+    ["   ", "integration"],
   ];
 
   it.each(routes)("resolves %s the same way whichever entry point asks", (level, home) => {

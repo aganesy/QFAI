@@ -41,7 +41,19 @@ and is quadratic in ledger size. That cost is paid at boundaries instead.
 
 ### Checkpoint boundaries
 
-The full suite runs at, and only at:
+**This list is the single definition of the PER-ITEM boundary cadence — which
+rows are boundaries.** `checkpoint-verification.md` and `SKILL.md` cite this
+anchor and do not restate it — a second copy of the cadence is what let them
+contradict it.
+
+It is not the definition of every full-suite run. `checkpoint-verification.md`
+tiers the boundaries into **per item** and **per spec**, and the spec-level one
+is defined there, not here — when it is reached, the command set it takes, and
+the seal it records. That boundary has no row, so a list of row predicates is
+the wrong place to state it. Do not read the "only" below as licence to skip it,
+and do not restate its condition here.
+
+Within that per-item tier, the full suite runs at, and only at:
 
 - the **last incomplete row this run completes** — while finishing a row, if no
   other row is left at `todo` / `red` / `green` / `refactor` / `review-fix`,
@@ -62,15 +74,16 @@ The full suite runs at, and only at:
   in the item's evidence when a project overrides it.
 
 The counted interval is what keeps the cadence sub-quadratic. An AC or BR group
-is **not** a boundary: in a spec where TC and AC are close to one-to-one — as in
-this repository's `spec-0006`, whose `TC-0006-0001..0009` each map to a distinct
-AC and each occupy one ledger row — every row would be the last of its group and
-the per-item full run would be right back. The boundary must be coarser than the
-obligation granularity, so it is defined by count, not by grouping.
+is **not** a boundary: in a spec where TC and AC are close to one-to-one — every
+`TC` mapping to a distinct `AC` and occupying one ledger row — every row would be
+the last of its group and the per-item full run would be right back. The boundary
+must be coarser than the obligation granularity, so it is defined by count, not
+by grouping.
 
 Rows that are not on a boundary are gated on the narrow suite alone: items 6, 7
-and 8 of the 11-point gate are evaluated against it, and item 11 requires the
-full suite only for a row that sits on a boundary.
+and 8 of the 12-point gate are evaluated against it, and the gate item that
+cites `SKILL.md#checkpoint-verification` (item 12 of the 12-point gate) requires
+the full suite only for a row that sits on a boundary.
 
 ### Checkpoint runs before `done`, never after
 

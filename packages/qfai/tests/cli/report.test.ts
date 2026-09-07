@@ -47,6 +47,42 @@ async function writeValidationFixture(
   await writeFile(filePath, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
 }
 
+/**
+ * The 15 s ceiling is deliberate, and measured.
+ *
+ * This file makes 23 `runInit` and 26 `runReport` calls — more than any other
+ * file that declares a ceiling below the project's `testTimeout`. Call count is
+ * not the cost, though: a ceiling is per test, and these calls are spread one
+ * or two to a case rather than piled into one.
+ *
+ * Measured worst case, slowest first:
+ *
+ * Each command selects the slice a CI job selects, plus the two flags that
+ * make per-case durations visible. The selection is CI's; the flags are the
+ * measurement's, and `test:cli` / `test` carry neither.
+ *
+ * ```text
+ * # the slice `test (cli)` runs
+ * vitest run --project cli --silent --reporter=verbose
+ *   report(md)                                                   2874ms
+ *   runs report with --run-validate                              2570ms
+ *
+ * # every project in one process, the slice node-floor runs — the heaviest load
+ * vitest run --silent --reporter=verbose
+ *   keeps sibling specs out of the scoped report body            4149ms
+ *   scopes input, output and spec-pack artifacts to --spec       3630ms
+ * ```
+ *
+ * Both from `packages/qfai`. `--reporter=verbose` prints the per-case
+ * durations; `--silent` is what keeps them readable, since this file streams
+ * `qfai validate` output to stdout and would otherwise bury them.
+ *
+ * 4.1 s against 15 s is 3.6x headroom under the heaviest load in the suite —
+ * twice the margin `main.test.ts` has at the same ceiling. So 15 s is a budget
+ * here, not a value below this file's cost, and a tight ceiling is worth
+ * keeping: it fails on a regression that makes a report run minutes long
+ * instead of waiting for the project-level timeout to notice.
+ */
 describe("report", { timeout: 15000 }, () => {
   it("runs init -> validate(json) -> report(md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
@@ -84,12 +120,20 @@ describe("report", { timeout: 15000 }, () => {
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
+    const stderrChunks: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    });
     try {
       await runReport({ root, format: "md" });
 
       expect(process.exitCode).toBe(2);
+      // AC-0005-0005: the missing-input error is surfaced to the operator.
+      expect(stderrChunks.join("")).toContain("qfai report: input file not found");
       await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
     } finally {
+      stderrSpy.mockRestore();
       process.exitCode = previousExitCode;
     }
   });

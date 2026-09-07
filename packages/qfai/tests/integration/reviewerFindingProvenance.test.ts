@@ -16,6 +16,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { collectHeadingSlugs as headingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
+import { escapeRegExp } from "../../src/core/regex.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
@@ -56,37 +58,6 @@ const REVIEWER_AGENTS = [
 const DEFECT_CLASSES = ["defect:correctness", "defect:security", "defect:code-quality"] as const;
 
 /**
- * Simplified GitHub heading slug: lowercase, drop punctuation, spaces to
- * hyphens. It covers the ASCII headings these documents use and does not model
- * GitHub's Unicode normalization or emoji handling.
- */
-function slugify(heading: string): string {
-  return heading
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-/**
- * Anchor set for a document, including GitHub's duplicate disambiguation: the
- * first heading with a given slug keeps it and each later repeat gets a `-1`,
- * `-2`, … suffix in document order. Without that, a second heading that slugs
- * the same as an earlier one would make this test call a working link broken.
- */
-function headingSlugs(markdown: string): Set<string> {
-  const occurrences = new Map<string, number>();
-  const slugs = new Set<string>();
-  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
-    const base = slugify(match[1] ?? "");
-    const seen = occurrences.get(base) ?? 0;
-    occurrences.set(base, seen + 1);
-    slugs.add(seen === 0 ? base : `${base}-${seen}`);
-  }
-  return slugs;
-}
-
-/**
  * The body of one `###` section, so a rule can be asserted against the section
  * that states it rather than against the whole document — several of these
  * documents legitimately use the same tokens elsewhere for a different purpose.
@@ -97,6 +68,25 @@ function section(markdown: string, heading: string): string {
   const rest = markdown.slice(start + heading.length + 5);
   const end = rest.search(/^#{1,3} /m);
   return end < 0 ? rest : rest.slice(0, end);
+}
+
+/**
+ * A pattern that matches `text` wherever the shipped file happens to wrap it.
+ *
+ * These pins assert that a sentence is present. Written with literal spaces they assert something
+ * else as well — that the sentence is broken across lines at exactly today's columns — and
+ * `drift-protocol.md` is re-wrapped whenever it drifts back over its line ceiling. Each such
+ * re-wrap has been reddening a different subset of these pins against prose nobody edited, and the
+ * repairs so far have been per-site (`\s+` here, `\s*\n?\s*` there) at whichever gap moved that
+ * time, which only relocates the next failure. Every inter-word gap becomes `\s+` here, so the
+ * words are pinned and the wrap column is not.
+ *
+ * Regex metacharacters in `text` are escaped: the phrases carry backticks, dots and asterisks from
+ * the markdown they quote, and those are content, not syntax.
+ */
+function wrapTolerant(text: string, flags = ""): RegExp {
+  const escaped = text.trim().split(/\s+/).map(escapeRegExp).join("\\s+");
+  return new RegExp(escaped, flags);
 }
 
 const STAGES_WITHOUT_A_DRAIN = [
@@ -121,7 +111,7 @@ describe("reviewer finding provenance", () => {
       expect(drift).toContain(cls);
       expect(baseline).toContain(cls);
     }
-    expect(drift).toMatch(/demonstrable from the changed artifacts/i);
+    expect(drift).toMatch(wrapTolerant("demonstrable from the changed artifacts", "i"));
   });
 
   it("does not let an advisory that changes an approved obligation reach done", async () => {
@@ -131,7 +121,7 @@ describe("reviewer finding provenance", () => {
       /changes an already-approved obligation[\s\S]{0,400}when-drift-is-detected/,
     );
     expect(drift).toMatch(
-      /no `done` for items that\s*\n?\s*depend on the obligation under dispute/,
+      wrapTolerant("no `done` for items that depend on the obligation under dispute"),
     );
   });
 
@@ -223,9 +213,11 @@ describe("reviewer finding provenance", () => {
       expect(doc).toContain(".qfai/evidence/implement-<spec-id>.md");
       expect(doc).toContain(".qfai/evidence/atdd-<spec-id>.md");
     }
-    expect(drift).toMatch(/Never `08_Open-questions\.md`/);
+    expect(drift).toMatch(wrapTolerant("Never `08_Open-questions.md`"));
     // Owner: the orchestrator that dispatched the review, not the reviewer.
-    expect(drift).toMatch(/The \*\*orchestrator\*\* that dispatched the review appends it/);
+    expect(drift).toMatch(
+      wrapTolerant("The **orchestrator** that dispatched the review appends it"),
+    );
     // Drain: consumed at the spec boundary, and completion is gated on it.
     // Repair is the only close. A validator bug report is what a
     // `record:unchecked` entry additionally owes for the missing check — closing
@@ -265,7 +257,7 @@ describe("reviewer finding provenance", () => {
     expect(skill).toMatch(/cannot be repaired honestly[\s\S]{0,120}`defect:code-quality`/);
     // …while still not gating any individual row's `done`.
     for (const doc of [drift, classification]) {
-      expect(doc).toMatch(/never holds an\s*\n?\s*individual row out of `done`/);
+      expect(doc).toMatch(wrapTolerant("never holds an individual row out of `done`"));
     }
   });
 
@@ -325,7 +317,18 @@ describe("reviewer finding provenance", () => {
     }
     // The gate recomputes the superseding hash and both seals.
     expect(skill).toMatch(/compared against \*\*that\*\* hash and not the superseded original/);
-    expect(skill.replace(/\s+/g, " ")).toContain("beside the round's `Review pack seal`");
+    // The review pack and its seal are per review ATTEMPT, not per round: a
+    // `REVISE` and the `PASS` answering it sit inside one round and seal two
+    // packs (`references/round-evidence.md`), so gate item 10 names the
+    // attempt's seal. The property pinned here is the one that matters and is
+    // unchanged — the re-attestation seal is recomputed BESIDE the review pack
+    // seal rather than instead of it — and the second assertion keeps the gate
+    // reaching every seal the entry carries rather than only the latest.
+    const flatSkill = skill.replace(/\s+/g, " ");
+    expect(flatSkill).toContain("beside the attempt's `Review pack seal`");
+    expect(flatSkill).toContain(
+      "Every `Review pack seal` the entry carries — one per review attempt",
+    );
     // The pack layout recognizes the shape, so it is not an ad-hoc directory.
     expect(layout).toMatch(/record re-attestation/i);
     expect(layout).toMatch(/not a round/);
@@ -353,12 +356,16 @@ describe("reviewer finding provenance", () => {
     }
     // The operative rule is a property of the stage's own completion contract,
     // so a stage that adds the drain gains the class without editing this list.
-    expect(drift).toMatch(/completion\s+conditions must require this queue drained/);
+    expect(drift).toMatch(wrapTolerant("completion conditions must require this queue drained"));
     expect(drift).toMatch(/gains\s+the class by adding the drain to its completion conditions/);
     // A stage without a drain does not lose the finding — it keeps the class it
     // would otherwise have had.
     expect(baseline).toMatch(/keeps the class it would otherwise have had/);
-    expect(drift).toMatch(/blocking under the rule it names/);
+    // `\s+` between every word for the same reason the two pins above use it: the phrase sits in a
+    // hard-wrapped paragraph, and the line-ceiling guard on `drift-protocol.md` moves the wrap
+    // point. A pin with a literal space silently asserts today's column as well as the words, and
+    // reddens on a re-wrap that changed no prose.
+    expect(drift).toMatch(/blocking\s+under\s+the\s+rule\s+it\s+names/);
   });
 
   it("names the queue's home from each stage's own evidence file, not a pattern", async () => {

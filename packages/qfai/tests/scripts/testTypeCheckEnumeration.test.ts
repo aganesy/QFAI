@@ -86,4 +86,43 @@ describe("the test tree's type-check enumeration", () => {
         "job reads one half of a suite and not the other",
     ).toEqual([]);
   });
+  it("holds every suite that enforces a shipped-asset budget", () => {
+    // #1066: `assets.test.ts` owns the 500-line shipped-asset ceiling and was
+    // itself outside the enumeration, so the guard that keeps the shipped
+    // surface honest was the one thing nothing type-checked. Enumerating it
+    // surfaced a real `TS2345` it had been carrying.
+    //
+    // The rule is decidable from the tree without an inventory: a suite that
+    // imports the budget helper is enforcing the budget, and a budget guard
+    // that is not type-checked is the shape this row exists to prevent. It is
+    // deliberately narrower than "every test file" — the file's own docstring
+    // gives the measured reason a census was rejected.
+    const enumeratedSet = new Set(enumeratedTests());
+    const unchecked: string[] = [];
+
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(path.join(PACKAGE_ROOT, dir), { withFileTypes: true })) {
+        const rel = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          walk(rel);
+          continue;
+        }
+        if (!entry.name.endsWith(".test.ts")) continue;
+        const body = readFileSync(path.join(PACKAGE_ROOT, rel), "utf-8");
+        // The two names the budget reaches a suite under: the shared helper,
+        // and the constant it re-exports from the shipping module.
+        if (!/helpers\/skillBudget|ASSISTANT_ASSET_MAX_LINES|SKILL_MD_MAX_LINES/.test(body)) {
+          continue;
+        }
+        if (!enumeratedSet.has(rel)) unchecked.push(rel);
+      }
+    };
+    walk("tests");
+
+    expect(
+      unchecked.sort(),
+      `${CONFIG_REL} leaves a shipped-asset budget guard un-type-checked, which is how the suite ` +
+        "that polices the 500-line ceiling came to carry a TS2345 of its own (#1066)",
+    ).toEqual([]);
+  });
 });
