@@ -35,7 +35,7 @@ install, or one of these directories left as a symlink — `validate` says so
 To add a project rule, create a `*.local.md` overlay beside the file instead of
 editing it — for example `catalog/test-layers.local.md`. Overlays are never
 written by `init`, never reported by `validate`, and never overwritten. See
-`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`.
+`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`.
 
 `manifest/` is different: it is project configuration, edited through
 `/qfai-configure`, and is not covered by the record.

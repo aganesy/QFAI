@@ -368,14 +368,33 @@ describe("assistant asset provenance", () => {
     const output = await captureStdout(() =>
       runInit({ dir: root, force: true, dryRun: false, yes: true }),
     );
-    const listedTimes = (needle: string): number =>
-      output.split("\n").filter((line) => line.trim().startsWith("- ") && line.includes(needle))
-        .length;
+    // `init` names a written path as a `- ` bullet under `written paths:` and a
+    // governed path it declined to touch as a `NOTE:` line. A path reaching
+    // both surfaces is the double-report this test refuses, so the two are
+    // counted separately rather than summed.
+    const lines = output.split("\n");
+    const writtenAt = lines.findIndex((line) => line.trim() === "written paths:");
+    expect(writtenAt).toBeGreaterThan(-1);
+    const written: string[] = [];
+    for (let index = writtenAt + 1; index < lines.length; index += 1) {
+      const line = lines[index] ?? "";
+      if (!line.trim().startsWith("- ")) {
+        break;
+      }
+      written.push(line.trim().slice(2));
+    }
+    const notes = lines.filter((line) => line.startsWith("NOTE:"));
+    const reportOf = (needle: string): { written: number; notes: number } => ({
+      written: written.filter((entry) => entry.includes(needle)).length,
+      notes: notes.filter((line) => line.includes(needle)).length,
+    });
 
-    // Refreshed by the governed sync, so the generic create-only skip for the
-    // same path must not survive into the report.
-    expect(listedTimes(path.join("catalog", "test-layers.md"))).toBe(0);
-    expect(listedTimes(path.join("constitution", "quality.md"))).toBe(1);
+    // Still the content qfai recorded writing, so the governed sync refreshes
+    // it — once, and never also as a path it skipped.
+    expect(reportOf(path.join("catalog", "test-layers.md"))).toEqual({ written: 1, notes: 0 });
+    // Diverged, so it is left byte-identical and named once as a manual merge,
+    // and never claimed as written.
+    expect(reportOf(path.join("constitution", "quality.md"))).toEqual({ written: 0, notes: 1 });
     // No staging file is left behind by the atomic refresh.
     const catalogEntries = await readdir(path.join(assistantDir, "catalog"));
     expect(catalogEntries.filter((entry) => entry.includes("qfai-staging"))).toEqual([]);
@@ -911,8 +930,8 @@ describe("assistant asset provenance", () => {
     );
 
     expect(output).toContain("--dry-run");
-    expect(output).not.toContain("出荷ファイルで置き換えました");
-    expect(output).toContain("出荷ファイルで置き換えます");
+    expect(output).not.toContain("was occupied by something other than a regular file");
+    expect(output).toContain("is occupied by something other than a regular file");
   });
 
   // Without the record in version control a fresh clone reads every untouched
@@ -1000,7 +1019,11 @@ describe("assistant asset provenance", () => {
     await rm(path.join(root, ".qfai", "assistant", ASSISTANT_ASSETS_LOCK_BASENAME));
 
     const issues = await validateAssistantAssets(root, defaultConfig);
-    expect(codesOf(issues).filter((code) => code.startsWith("QFAI-ASSETS-"))).toEqual([]);
+    // The provenance family only. `QFAI-ASSETS-003` is the Stage 0 steering
+    // placeholder detector, which shares the prefix and fires on the shipped
+    // catalog this fixture copies verbatim — a prefix match would assert on a
+    // rule that has nothing to do with the record.
+    expect(codesOf(issues).filter((code) => PROVENANCE_CODES.has(code))).toEqual([]);
   });
 
   // A lock key inside the tree is not the same as a path qfai owns. An overlay
