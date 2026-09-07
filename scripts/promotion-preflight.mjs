@@ -122,14 +122,23 @@ export async function readRulePromotions(ledgerPath) {
  */
 export function findingsAwaitingPromotion(issues, promotions) {
   const windows = new Map(promotions.map((entry) => [entry.code, entry]));
-  return issues
-    .filter((issue) => issue?.severity === "warning" && windows.has(issue.code))
-    .map((issue) => ({
+  const pending = [];
+  for (const issue of issues) {
+    if (issue?.severity !== "warning") {
+      continue;
+    }
+    const window = windows.get(issue.code);
+    if (window === undefined) {
+      continue;
+    }
+    pending.push({
       code: issue.code,
       file: typeof issue.file === "string" && issue.file.length > 0 ? issue.file : "-",
-      promoteAt: windows.get(issue.code).promoteAt,
-      key: windows.get(issue.code).key,
-    }));
+      promoteAt: window.promoteAt,
+      key: window.key,
+    });
+  }
+  return pending;
 }
 
 /** What to print when the sandbox holds findings a promotion will escalate. */

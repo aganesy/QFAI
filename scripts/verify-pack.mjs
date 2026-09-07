@@ -684,9 +684,12 @@ for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md
     );
   }
   const before = readFileSync(catalogPath, "utf-8");
+  // One value for both placeholder forms: they stand for the same thing, and a
+  // reader should not have to compare two strings to see that.
+  const fixtureValue = "verify-pack fixture value";
   const after = before
-    .replace(/<(?!\/|!)[^<>\n]+>/g, "verify-pack fixture value")
-    .replace(/\b(?:TODO|TBD)\b/g, "verify-pack fixture value");
+    .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
+    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
   if (after === before) {
     throw new Error(
       `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this stands ` +
