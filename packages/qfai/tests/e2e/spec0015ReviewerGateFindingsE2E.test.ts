@@ -10,7 +10,11 @@
  * E2E scope: invokes the composite `validateReviewerGate` validator
  * against a tmpdir fixture populated to mimic a real prototyping run,
  * then asserts that the resulting Issue list contains the expected
- * severity-error code with a non-empty 3-part justification.
+ * `R-CERTIFY-VERIFY-CIRCULAR` is `info` in `validate` — the enforcement is
+ * `qfai prototyping certify`'s exit-2 refusal of a non-prototyping scope. At `error`
+ * severity a repo-wide run made `/qfai-verify`'s Completion Contract unsatisfiable
+ * outside Work Order H (#1097). The other codes here keep theirs.
+ * severity code with a non-empty 3-part justification.
  */
 // QFAI:SPEC-0015:US-0015-0007
 // QFAI:SPEC-0015:US-0015-0008
@@ -99,7 +103,9 @@ describe("US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(findings.length).toBe(1);
     const f = findings[0];
-    expect(f?.severity).toBe("error");
+    // `info` in `validate`; the enforcement is `qfai prototyping certify`
+    // refusing a non-prototyping scope with exit 2 (#1097).
+    expect(f?.severity).toBe("info");
     // 3-part justification probe.
     expect(f?.message).toMatch(/certify=/);
     expect(f?.message).toMatch(/profile=atdd/);

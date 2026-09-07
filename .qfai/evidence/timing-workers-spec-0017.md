@@ -13,25 +13,27 @@ directory. A wrong number in this file fails that row rather than surviving in i
 
 ## Which project, and why that one
 
-Largest project: `core` (1587 tests). Measured, not assumed — every runner project listed on the
-same machine, same commit:
+Largest project: `core` (2439 tests). Measured, not assumed — every runner project enumerated on
+the same machine, same commit, with `vitest list --json` (a collection pass, so it counts declared
+cases and agrees with the `2439 passed` the runs below report):
 
 ```text
-core         1587 tests   122 test files
-integration   862 tests   123 test files
-e2e           903 tests    23 test files
-validators    351 tests    46 test files
-cli           321 tests    11 test files
-unit          266 tests    43 test files
-scripts       135 tests    10 test files
+core         2439 tests   145 test files
+e2e          1531 tests    91 test files
+integration  1178 tests   142 test files
+validators    640 tests    44 test files
+cli           614 tests    23 test files
+unit          502 tests    54 test files
+scripts       390 tests    17 test files
 ```
 
-`core` is the largest by test count. `integration` has one more FILE and roughly half the cases,
-which is why the count is stated in both units: file count is what the row re-checks (a directory
-walk costs milliseconds, and spawning the runner from a test is the cost that put this spec's own
-integration slice past its timeout), and case count is what "largest" is judged on.
+`core` is the largest by test count. The count is stated in both units because the two are used for
+different things: file count is what the row re-checks (a directory walk costs milliseconds, and
+spawning the runner from a test is the cost that put this spec's own integration slice past its
+timeout), and case count is what "largest" is judged on. `integration` is within three files of
+`core` and holds half the cases, which is why the two units cannot be substituted for each other.
 
-test files: 122
+test files: 145
 
 ## The comparison
 
@@ -40,13 +42,13 @@ one full run per setting, `Duration` as vitest reports it.
 
 | workers | duration | vs fastest | tests                     |
 | ------- | -------- | ---------- | ------------------------- |
-| 4       | 132.94s  | —          | 1587 passed \| 2 skipped  |
-| 10      | 134.07s  | +0.85%     | 1587 passed \| 2 skipped  |
-| 14      | 135.62s  | +2.02%     | 1587 passed \| 2 skipped  |
+| 4       | 107.53s  | —          | 2439 passed \| 22 skipped |
+| 10      | 111.27s  | +3.48%     | 2439 passed \| 22 skipped |
+| 14      | 126.84s  | +17.96%    | 2439 passed \| 22 skipped |
 
 adopted: 10
 
-Fastest measured: 4 workers at 132.94s. The adopted value of 10 is **0.85% slower**, inside the ten
+Fastest measured: 4 workers at 107.53s. The adopted value of 10 is **3.48% slower**, inside the ten
 percent `EX-0017-0049` allows, so the accepting condition is the second one and a written reason is
 required.
 
@@ -58,11 +60,14 @@ than the number that exposes it. `DR-0017-0009` records that episode, including 
 lower the value and its refusal; `BR-0017-0051` reserves the choice of starting value to the user in
 the first place, so adopting 4 on the strength of this table is not a decision this row may take.
 
-The table also argues against caring. The full spread from 4 to 14 workers is **2.7 seconds on a
-133-second run — about 2%** — so `core` is not worker-bound at all: its cost is dominated by
-per-file transform and collect, which every setting pays. Adopting the fastest value here would buy
-1.1 seconds and cost the ability to run ten-way, which is what the parallelism work exists to
-enable.
+**The second argument this section used to make is withdrawn, not re-typed.** The previous
+measurement — 122 test files, 1587 cases — found the whole 4-to-14 spread worth 2.7 seconds on a
+133-second run, about 2%, and concluded from it that `core` "is not worker-bound at all". On this
+tree the spread is **19.3 seconds on a 107-second run, about 18%**, and it is monotonic in the
+setting. The project has since grown by 23 files and 852 cases, and the shape of the curve went with
+it. So the case for 10 rests on the instruction and on the margin — 3.48%, 3.7 seconds — and no
+longer on a claim that the setting does not matter. Anyone lowering the ten-percent allowance should
+re-read this table first: the old one would have survived any threshold, and this one would not.
 
 What this table does NOT say, because the measurement was not taken: that 10 is the right value for
 every project. It compares settings on the largest one, which is what the rule asks for.
@@ -73,8 +78,15 @@ to quote.
 ## Provenance
 
 One run per setting, not a best-of-three. Recorded as a limitation rather than smoothed over: the
-three durations differ by less than the run-to-run variance this repository has already shown
-elsewhere in this spec's evidence, so the ORDER of the three rows is not established by this data —
-only the magnitude of the spread, which is the fact the reason above rests on. A best-of-three would
-change nothing about the conclusion and is the obvious improvement if the ten-percent margin ever
-gets close.
+3.74-second gap between 4 and 10 is inside the run-to-run variance this repository has already shown
+elsewhere in this spec's evidence, so this data does not establish that 4 beats 10 — only that the
+two are close, which is the fact the reason above rests on. The 14-worker row is outside that band
+and is the one new fact here. A best-of-three is the obvious improvement if the margin ever
+approaches ten percent.
+
+**Why this file was re-measured.** `main` reached 145 `core` test files against the 122 recorded
+here — 18.9% against the row's twenty-percent tolerance, so any branch landing three more core test
+files reddened `TC-0017-0065`, and with it `test (e2e)`, `node-floor` and `ci-pass` (#1151). The
+row's stated reason is that "beyond twenty percent the comparison describes a different project",
+and it was right: the spread this re-measurement found is nine times the one it replaced. Re-typing
+the file count alone would have left the withdrawn paragraph above standing.
