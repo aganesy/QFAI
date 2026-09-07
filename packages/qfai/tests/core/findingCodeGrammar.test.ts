@@ -559,7 +559,7 @@ describe("finding code grammar", () => {
     expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
     expect(re.test("TDDLIST_EXCEPTION_PARKED")).toBe(false);
 
-    const doc = await readFile(DOC_PATH, "utf-8");
+    const doc = flat(await readFile(DOC_PATH, "utf-8"));
     expect(doc).toContain("`QFAI-CFG-LINK-001` strips to nothing");
     expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED`");
   });
