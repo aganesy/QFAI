@@ -339,7 +339,8 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   the status is what says how far it got. Sending them to `todo` left the two
   rework paths with no legal move at all: the behaviour-preserving one returns
   through a refreshed `Refactor verify` pair and the other re-submits at
-  `refactor`, and `todo` -> `refactor` is not on this list. Everything else is as
+  `refactor`, and neither is an edge out of `todo`: this list carries no jump
+  out of `todo` past `red`, by design (`parallelization-policy.md`). Everything else is as
   the edge above: `Blocked-By` is cleared, the rounds are retained, and the
   resumption records `Resumed-from-blocked` on the round it writes into.
 - `todo` -> `red` (write a failing test)

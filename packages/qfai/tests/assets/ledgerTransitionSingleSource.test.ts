@@ -422,7 +422,7 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
     expect(ledger).toContain(
       "- `blocked` -> `review-fix` (the blocker cleared on a row that was blocked",
     );
-    expect(ledger).toContain("`todo` -> `refactor` is not on this list");
+    expect(ledger).toContain("neither is an edge out of `todo`");
   });
 
   it("names only Change Request statuses a CR can actually hold", async () => {
