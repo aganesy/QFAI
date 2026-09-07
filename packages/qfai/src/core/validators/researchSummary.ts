@@ -706,7 +706,10 @@ function storageSlotIssue(
  * went to the YAML reader.
  *
  * A closing fence is the same marker, at least as long as the opener, and
- * carries no info string: the same three conditions the mask applies.
+ * carries no info string: the same three conditions the mask applies. An
+ * unclosed one yields what followed it — including nothing, when it opened at
+ * the end of the section: the fallback belongs to a section with no YAML fence
+ * at all, not to one whose fence is empty.
  *
  * Only a block whose opener is **YAML or unlabelled** is collected — the info
  * words {@link YAML_INFO_WORDS} admits, which are `yaml`, `yml` and the empty
@@ -750,7 +753,12 @@ function extractYamlPayload(section: string): string {
       current.push(line);
     }
   }
-  if (open?.collect && current.length > 0) {
+  // `current.length` is not a condition. An unclosed YAML fence with an empty
+  // body is a payload that says "no data", and pushing nothing left `blocks`
+  // empty — which sends the whole section, fence line and prose included, to
+  // the YAML reader. The closing branch above already pushes unconditionally;
+  // this is the same rule at the file's end.
+  if (open?.collect) {
     blocks.push(current.join("\n"));
   }
 

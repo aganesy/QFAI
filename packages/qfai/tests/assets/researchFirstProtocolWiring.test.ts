@@ -721,6 +721,47 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });
 
+  it("treats an unclosed empty YAML fence as an empty payload, not as no fence", async () => {
+    // A fence that opens at the end of the section and carries nothing is a
+    // payload saying "no data". Gating the tail push on a non-empty body left
+    // `blocks` empty, which is indistinguishable from a section with no YAML
+    // fence at all — so the whole section went to the YAML reader, fence line
+    // and prose included.
+    //
+    // The section carries a draft above the fence, which is what makes the two
+    // readings distinguishable: the empty payload has no sources at all
+    // (`-001`), while a fallback to the whole section finds the draft's
+    // `sources:` and reports its placeholder (`-021`) instead.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const truncated = filled.replace(
+      filled.slice(filled.indexOf("```yaml")),
+      [
+        "An earlier draft, left above the fence:",
+        "",
+        "sources:",
+        "  - id: SRC-0404",
+        "    title: [Stale draft title]",
+        "",
+        "```yaml",
+        "",
+      ].join("\n"),
+    );
+    expect(truncated, "fixture still carries the filled payload").not.toContain(
+      "research_summary:",
+    );
+    expect(truncated, "fixture lost its fence").toContain("```yaml");
+
+    const issues = await validateResearchSummary(await seedPack(truncated), defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes, "an empty payload has no sources, and that is what to report").toContain(
+      "QFAI-RESEARCH-001",
+    );
+    expect(codes, "the fallback read the draft above the empty fence").not.toContain(
+      "QFAI-RESEARCH-021",
+    );
+  });
+
   it("reads the payload out of a tilde fence rather than the whole section", async () => {
     // The section is where the mask says it is, so an earlier draft left above
     // the fence is inside it. Only the fence separates that draft from the
