@@ -469,33 +469,53 @@ describe("finding code grammar", () => {
   });
 
   it("tells a branch holding a frozen-family code what to do with it", async () => {
-    // Four branches met this guard and took four different answers — rename
-    // into an existing area, open a new one, hold, and leave it unresolved —
-    // because the document said only that the registry does not grow.
+    // The registry does not grow, so such a branch renames. Without the steps,
+    // the reader has to work out what a rename costs and what it may reuse.
     const doc = await readFile(DOC_PATH, "utf-8");
 
     expect(doc).toContain("## A branch that already emits a frozen-family code");
     expect(doc).toContain("**Rename to `QFAI-<AREA>-<NNN>`**");
+    expect(doc).toContain("**Keep the `<AREA>-<NNN>` suffix the old id had**");
+    expect(doc).toContain(
+      "**Check the stripped spelling for a collision, not only the full code.**",
+    );
     expect(doc).toContain("**Check whether the code already exists.**");
   });
 
-  it("says the prefix strip is what keeps a renamed code's waiver resolving", async () => {
-    // Renaming reads as an operator-facing break until you know the waiver
-    // still matches, and that is the whole reason it is cheap.
+  it("says what the alias covers and what a shipped rename still breaks", async () => {
+    // The alias is about waivers. The code is also an operator-facing
+    // identifier in annotations and in `validate.json`, so a rename is a
+    // behaviour change for anyone reading those.
     const doc = await readFile(DOC_PATH, "utf-8");
 
-    expect(doc).toContain("`resolveRuleKeys`");
-    expect(doc).toContain("strips the `QFAI-` prefix");
-    // And the limit of it: the deferred case is now the shapes it cannot reach.
-    expect(doc).toContain("**The strip is narrow, and only the numbered shape gets it.**");
+    expect(doc).toContain("### Renaming a code that has shipped");
+    expect(doc).toContain("The alias above covers waivers and nothing else.");
+    expect(doc).toContain("breaking for anyone\nidentifying findings by code");
+    // And the deferred case stays the shapes the strip cannot reach.
     expect(doc).toContain("Renaming a legacy code whose shape is **not** `<AREA>-<NNN>`");
   });
 
   it("keeps the documented strip in step with the one waivers.ts applies", async () => {
-    // Two statements of one regular expression is how the document would come
-    // to promise an alias the resolver does not give.
+    // Two statements of one rule is how the document would come to promise an
+    // alias the resolver does not give. The document states the shape in prose,
+    // so both are checked on the same boundary cases instead of by comparing
+    // the two spellings.
     const waivers = await readFile(path.resolve(SRC_ROOT, "core/waivers.ts"), "utf-8");
-    expect(waivers).toContain("const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\\d{3})$/;");
+    const stripped = /const STRIPPED_CODE_RE = (\/\^QFAI-\(\[A-Z\]\+-\\d\{3\}\)\$\/);/.exec(
+      waivers,
+    );
+    expect(stripped, "STRIPPED_CODE_RE is not in the shape the document describes").not.toBeNull();
+
+    const re = new RegExp("^QFAI-([A-Z]+-\\d{3})$");
+    // What the document promises an alias for.
+    expect(re.exec("QFAI-TDDLIST-007")?.[1]).toBe("TDDLIST-007");
+    // And the two shapes it says get none.
+    expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
+    expect(re.test("TDDLIST_EXCEPTION_PARKED")).toBe(false);
+
+    const doc = await readFile(DOC_PATH, "utf-8");
+    expect(doc).toContain("`QFAI-CFG-LINK-001` strips to nothing");
+    expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED`");
   });
 
   it("documents every frozen family in docs/finding-codes.md", async () => {
