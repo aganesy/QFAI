@@ -258,18 +258,18 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
 });
 
 /**
- * Codes with an emit site in more than one module, and how the table accounts
- * for each.
+ * Codes with an emit site in more than one module, and the group each belongs
+ * to.
  *
  * `QFAI-PROFILE-001` derives what a partial run skipped from GROUPS, so a code
- * with emitters in two compositions is reported correctly only if its group is
- * listed by every profile that can reach one of them. Get that wrong and the
- * notice denies a gate the run just evaluated — which is the failure the table
- * already carries three repairs for, none of them labelled as such.
+ * whose emitters sit in two compositions is reported correctly only if its
+ * group is listed by every profile that can reach one of them. Under any
+ * narrower group the notice denies a gate the run just evaluated.
  *
- * #1229 asked for this sweep, and it answers that issue by precedent rather
- * than by a new rule: the treatment already exists, is used three times, and
- * agrees with what ships for the fourth.
+ * Three of the four below are cross-dispatch and resolve the same way: the
+ * group is one that both dispatching profiles list. The fourth has an emitter
+ * that runs in every profile, which puts it outside that rule by construction
+ * — its entry says how.
  */
 interface DualEmitter {
   /** Every module with an emit site, package-relative and sorted. */
@@ -323,13 +323,12 @@ const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
     {
       modules: ["src/cli/commands/validate.ts", "src/core/validators/assistantTreeMigration.ts"],
       treatment:
-        "The case #1229 was filed about, and the precedent above decides it. One emitter is " +
-        "the CLI's legacy-path notice, which runs in EVERY profile - so 'a group every " +
-        "emitting profile lists' is a group every profile lists, and that can never appear " +
-        "in `full groups - profile groups`. Behaviourally identical to the " +
-        "PROFILE_INDEPENDENT_CODES entry it already has, so what ships is the consistent " +
-        "answer. What is still open is only how it READS: the exemption records it as 'no " +
-        "group owns it' rather than 'every profile evaluates it'.",
+        "One emitter is the CLI's legacy-path notice, which runs in EVERY profile - so 'a " +
+        "group every emitting profile lists' would be a group every profile lists, and that " +
+        "can never appear in `full groups - profile groups`. Exempt in " +
+        "PROFILE_INDEPENDENT_CODES instead, which reaches the same outcome by a different " +
+        "route: that list reads as 'no group owns it' where the accurate statement is 'every " +
+        "profile evaluates it'.",
     },
   ],
 ]);
