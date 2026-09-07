@@ -306,7 +306,7 @@ function unreadableDerivedDeclaration(
 ): Issue {
   return issue(
     "QFAI-CONTRACT-041",
-    `a \`Derived (not stored):\` declaration does not parse: ${line}`,
+    `A \`Derived (not stored):\` declaration does not parse: ${line}`,
     declarationSeverity,
     file,
     "contracts.crossContract.derivedNotStored",
@@ -350,7 +350,7 @@ function staleDerivedDeclarations(
       issues.push(
         issue(
           "QFAI-CONTRACT-041",
-          `a \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
+          `A \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
             "do nothing: " +
             unused.join(", ") +
             (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
@@ -444,7 +444,7 @@ async function validateApiFileAgainstDb(
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
-        `the API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
+        `The API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
           `field name cannot represent: ${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
           `DB contracts: ${dbFileList.join(", ")}; DB constraint: ${describeDbConstraint(db)})`,
         severity,

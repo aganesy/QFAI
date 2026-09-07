@@ -136,7 +136,8 @@ describe("operator-facing CLI message language", () => {
   });
 
   /**
-   * What the allowlist is allowed to weigh, and it only ever goes down.
+   * What the allowlist is allowed to weigh. Translating a message lowers it;
+   * only a merge taking the base's own entries raises it.
    *
    * Every other assertion here compares the list against the sources, so the
    * list is exact — but only in one direction. Adding an entry for a message
@@ -160,11 +161,8 @@ describe("operator-facing CLI message language", () => {
     expect(
       counted,
       counted > ALLOWLISTED_MESSAGE_COUNT
-        ? "the allowlist grew. A new operator-facing message must be English " +
-            "(cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, " +
-            "raise this number in the same change so the addition is reviewed"
-        : "the allowlist shrank — lower this number in the same change, so the migration's " +
-            "progress cannot be spent on a later addition",
+        ? "the allowlist grew. A new operator-facing message must be English (cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, raise this number in the same change so the addition is reviewed"
+        : "the allowlist shrank — lower this number in the same change, so the migration's progress cannot be spent on a later addition",
     ).toBe(ALLOWLISTED_MESSAGE_COUNT);
   });
 
