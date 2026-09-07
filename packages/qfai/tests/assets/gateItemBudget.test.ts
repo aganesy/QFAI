@@ -2,13 +2,13 @@
  * The 12-point gate spends its reader's attention on the software, not on the
  * record.
  *
- * Item 10 — evidence-file bookkeeping — was 3,907 of the gate's 5,857
- * characters: 66.7%. Items 3 and 5, RED admissibility and GREEN plus the oracle
- * proof, which are the entirety of what TDD buys, were 11.7% combined. Every
- * row pays reviewer attention in proportion to that text, and nothing item 10
- * reports means the software is wrong. The record rule now lives in
- * `references/record-contract.md`, addressed to whoever audits a record, and
- * the gate line cites it.
+ * Every row pays reviewer attention in proportion to the gate's text, and
+ * nothing item 10 — evidence-file bookkeeping — reports means the software is
+ * wrong. So the item states its obligation and cites
+ * `references/record-contract.md` for the rule, and the assertions here hold it
+ * under a quarter of the gate and below items 3 and 5 combined: RED
+ * admissibility, and GREEN with the oracle proof, which are the entirety of
+ * what TDD buys.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -61,6 +61,41 @@ describe("gateItems (what a gate item's body is)", () => {
     const items = gateItems(section);
     expect(items.get(2)).not.toContain("Sequencing note");
     expect([...items.keys()]).toEqual([1, 2]);
+  });
+
+  it("does not resume on a numbered line in the prose after the list", () => {
+    // The list ends at the first unindented line after a blank one. Reading on
+    // from there takes a numbered step in a note below — a migration
+    // procedure, a sequencing rule — as a gate item, which moves the count and
+    // every ratio measured against it.
+    const items = gateItems(
+      [
+        "### Item completion checklist (12-point gate)",
+        "",
+        "1. first item",
+        "",
+        "Sequencing note: the steps below are not gate items.",
+        "",
+        "2. a numbered step in the note",
+      ].join("\n"),
+    );
+    expect([...items.keys()]).toEqual([1]);
+  });
+
+  it("refuses a gate that numbers an item twice", () => {
+    // `Map#set` would replace the first silently, and the callers count
+    // numbers rather than lines: twelve items would still be twelve.
+    expect(() =>
+      gateItems(
+        [
+          "### Item completion checklist (12-point gate)",
+          "",
+          "1. first item",
+          "2. second item",
+          "2. second item again",
+        ].join("\n"),
+      ),
+    ).toThrow("gate item 2 is numbered twice");
   });
 });
 

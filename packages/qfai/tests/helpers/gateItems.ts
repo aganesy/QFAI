@@ -55,6 +55,14 @@ export function gateItems(skill: string): Map<number, string> {
       const [, number, body] = match;
       if (number === undefined || body === undefined) continue;
       current = Number(number);
+      // A repeated number would replace the first item and say nothing. The
+      // callers count numbers, not lines, so a second `12.` still leaves
+      // twelve of them: the parity suite finds no duplicate, the count check
+      // passes, and where the two bodies agree the digest does not move
+      // either.
+      if (items.has(current)) {
+        throw new Error(`gate item ${String(current)} is numbered twice`);
+      }
       items.set(current, body.trim());
       afterBlank = false;
       continue;
@@ -64,10 +72,10 @@ export function gateItems(skill: string): Map<number, string> {
       afterBlank = true;
       continue;
     }
-    if (afterBlank && !/^\s/.test(line)) {
-      current = undefined;
-      continue;
-    }
+    // The list has ended, and so has the parse. Clearing the current item and
+    // reading on would take a numbered step in the prose below — a sequencing
+    // note, a migration procedure — as a gate item of its own.
+    if (afterBlank && !/^\s/.test(line)) break;
     items.set(current, `${items.get(current) ?? ""} ${line.trim()}`.trim());
     afterBlank = false;
   }
