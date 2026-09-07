@@ -259,6 +259,18 @@ describe("check-mdschema pattern compilation", () => {
     expect(re.test(".qfai/specs/spec-0001/01_Spec.md")).toBe(true);
   });
 
+  it("makes `**/` zero or more whole directories, not a bare wildcard", () => {
+    // The separator is part of what repeats. Dropping it let the wildcard end
+    // mid-segment, so `**/01_Spec.md` matched `x01_Spec.md` — a file the
+    // pattern does not name.
+    const re = patternToRegExp(".qfai/**/01_Spec.md");
+
+    expect(re.test(".qfai/01_Spec.md")).toBe(true);
+    expect(re.test(".qfai/specs/spec-0001/01_Spec.md")).toBe(true);
+    expect(re.test(".qfai/x01_Spec.md")).toBe(false);
+    expect(re.test(".qfai/specs/x01_Spec.md")).toBe(false);
+  });
+
   it("anchors both ends", () => {
     const re = patternToRegExp(".qfai/specs/spec-*/01_Spec.md");
 

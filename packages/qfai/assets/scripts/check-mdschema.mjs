@@ -186,13 +186,18 @@ export function patternToRegExp(pattern) {
     const ch = pattern[i];
     if (ch === "*") {
       if (pattern[i + 1] === "*") {
-        out += "[^\\u0000]*";
         i++;
-        // `**/` should also match zero directories, so the slash is optional.
         if (pattern[i + 1] === "/") {
-          out += "";
+          // `**/` is "zero or more DIRECTORIES", so the separator is part of
+          // what repeats rather than something dropped. Emitting the wildcard
+          // and discarding the slash made the whole segment optional in the
+          // wrong way: `**/foo.md` then matched `afoo.md`, because nothing
+          // required the match to end at a path boundary.
+          out += "(?:[^\\u0000]*/)?";
           i++;
+          continue;
         }
+        out += "[^\\u0000]*";
         continue;
       }
       out += "[^/]*";
