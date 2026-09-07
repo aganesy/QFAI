@@ -1271,16 +1271,14 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".gitignore",
   "AGENTS.md",
   "CLAUDE.md",
-  "DESIGN.md",
   "qfai.config.yaml",
 ]);
 
 /**
  * And the CONTENT of the files that are not workflows.
  *
- * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
- * planted in the shipped `DESIGN.md` was invisible — four of the six files then shipped were pinned by
- * name only, which round 18's gate measured. The two workflows are byte-pinned by
+ * The path pin says which files arrive; it says nothing about what is in them, so a line planted in
+ * a file pinned by name alone is invisible. The two workflows are byte-pinned by
  * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
  * this tree writes is pinned by content.
  *
@@ -1362,13 +1360,6 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `tests/assets/documentationClarityHooks.test.ts` executes and parses. The
   // bytes are what an adopter's agent runs, so the bytes are the pin.
   [".claude/settings.json", "b13d4081b4e4e404656858ff2bc365f36887b93321c0003394a89d918f7911d1"],
-  // Moved when the state lock joined `QFAI_GITIGNORE_BLOCK`: the lock now sits beside
-  // `.qfai/state.json` so that everyone who may write the state may also reap a lock a crash left
-  // behind, and a file init writes beside the state file is a file init must ignore. Re-derived
-  // rather than copied off the failure: dropping that one line from the tree init writes today
-  // reproduces the previous digest (`2cfeb083…`) byte for byte, which is what says the line is the
-  // whole change.
-  ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1377,15 +1368,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // predecessor's digest describes what ships, and the map is keyed by file
   // name, so this is one pin rather than two.
   //
-  // Derived by running `qfai init` into the E2E's temp root and reading what it
-  // wrote, which is how both predecessors were derived — not copied from a
-  // failure message.
-  // Re-derived once more for the MERGED file: main dropped the three retired
-  // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
-  // comment, and this branch seeds `testFileGlobs`. Neither predecessor digest
-  // describes what ships. Taken by running `qfai init` into a temp root and
-  // hashing the file it wrote, which is how both predecessors were taken.
-  ["qfai.config.yaml", "ed3b8b5e22a67ba6a83a81aa1a83d0db8ca39ba5f262b68895135ef9a57acf90"],
+  // Derived by running `qfai init` into a temp root and hashing the file it
+  // wrote, never copied from a failure message.
+  //
+  // Re-pinned again for the `testFileGlobs` comment block, which now describes
+  // a derived value: `qfai init` matches each recognised layout against the
+  // tree it runs in and writes the ones that select a file. The whole delta is
+  // that comment — restoring the previous wording reproduces `ed3b8b5e…` byte
+  // for byte.
+  //
+  // A byte pin still holds even though the value now varies by repository. The
+  // root this runs against has no test file, so no layout matches and the key
+  // keeps the empty list the template ships. That is also the case the comment
+  // calls a fact about the repository rather than about the default, so the pin
+  // covers the shipped text and the empty-tree behaviour at once.
+  ["qfai.config.yaml", "e683cf23daa705ed6a5a627fd25ad3f05282becf83ad7a7a900b97828db41263"],
 ]);
 
 /**
@@ -1507,7 +1504,6 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.github/workflows/qfai-validate.yml",
   "root/AGENTS.md",
   "root/CLAUDE.md",
-  "root/DESIGN.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
   ".github/instructions/code-review.instructions.md",

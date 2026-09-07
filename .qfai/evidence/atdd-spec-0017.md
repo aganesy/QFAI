@@ -2257,25 +2257,29 @@ revision at which this number can be made true. A branch-local discipline — in
 strongest argument in this record for deriving the count rather than committing it: a literal that only
 a merge can invalidate has no author to hold responsible for it.
 
-Re-measured for this commit by a separate walk of the two include roots — not by calling into
-`stageEvidenceCounts.test.ts`, because a probe derived from its subject cannot contradict it — and both
-readings agree: **1773** (`tests/assets` 1603, `tests/e2e` 170).
+The count and its split across the two include roots are on one line, and both are derived by the same
+walk:
 
-e2e callsites at this tree: 1773
-
+e2e callsites at this tree: 1773 (packages/qfai/tests/assets 1603, packages/qfai/tests/e2e 170)
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
-each found these totals a round behind, and each repair re-typed the number. The seventh INSTANCE is
+each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
 the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
 are not the same event: the merge is what carried a count from one parent into a tree that holds both
 parents' callsites, and re-recording the derived count is what corrects it. The numbers are left out
 of this sentence on purpose — naming them here is a second literal only a merge can invalidate, which
-is the defect the paragraph above describes. The line above carries the value; this says what happened
-to it. Neither total can be derived by a test — deriving them would mean running the suite from
-inside it — but the thing that INVALIDATES them can be: a commit that changes an `it` / `test`
-callsite under the e2e project's two include globs.
-`stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
-that moves a callsite reddens until the line is corrected, and the totals beside it are known-invalid
-rather than presumed-valid in the window between.
+is the defect the paragraph above describes.
+
+**The per-root split used to be prose, and that is what made it recur.** It read as an independent
+second measurement agreeing with the derived total, but nothing produced it except a person typing what
+they had just run, and nothing checked it afterwards. `pin-stage-evidence-counts.mjs` re-pinned the
+total and left the sentence describing an earlier tree, every time; the last such gap read 937 against
+a tree holding 1728. Both numbers come from `deriveE2eCallsites()` — the split is what that walk
+returns on the way to the total — so writing one and typing the other was never the cheaper option.
+
+`stageEvidenceCounts.test.ts` compares the whole line with a fresh walk, so a commit that moves a
+callsite reddens until the line is re-pinned. The split is compared root by root rather than folded
+into the total, which is the one drift a total cannot see: a callsite moving between the two roots
+leaves it unchanged.
 
 It reads "at this tree" rather than naming a revision on purpose. A row cannot name the commit it is
 written in — round 10's `m1` — so pointing the guard at the sequence's last row would either make the row

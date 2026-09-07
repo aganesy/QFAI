@@ -262,9 +262,21 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     }
     expect(nameHits).toEqual([]);
 
-    // TC-1.5.1: DESIGN.md must be in the walked file list (guard against
-    // accidental rename / exclusion of the root brand SSOT).
-    expect(visitedRelative).toContain("DESIGN.md");
+    // TC-1.5.1: the brand sample must be in the walked file list (guard
+    // against accidental rename / exclusion). It ships as the prototyping
+    // template rather than at the project root: `qfai init` writes no root
+    // DESIGN.md, because `/qfai-discussion` emits one and only for a
+    // visual-prototyping surface.
+    expect(visitedRelative).toContain(
+      path.join(
+        ".qfai",
+        "assistant",
+        "skills",
+        "qfai-prototyping",
+        "templates",
+        "DESIGN.md.sample",
+      ),
+    );
 
     // The walk must actually reach the symlinked wrappers, or the name pass
     // above proves nothing about the names `syncIntegrationWrappers` mints.
@@ -334,9 +346,17 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     expect(classNames(path.join(".qfai", "assistant", "steering", "test-layers.md"))).toEqual([]);
   });
 
-  // TC-1.5.2: standalone DESIGN.md template scan against all 4 PATTERNS.
-  it("DESIGN.md template alone has zero matches across all 4 forbidden patterns", async () => {
-    const designMdPath = path.join(getInitAssetsDir(), "root", "DESIGN.md");
+  // TC-1.5.2: standalone DESIGN.md sample scan against all 4 PATTERNS.
+  it("the DESIGN.md sample alone has zero matches across all 4 forbidden patterns", async () => {
+    const designMdPath = path.join(
+      getInitAssetsDir(),
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "DESIGN.md.sample",
+    );
     const content = await readFile(designMdPath, "utf-8");
     const lines = content.split("\n");
     const hits: Array<{ pattern: string; line: number; match: string }> = [];
