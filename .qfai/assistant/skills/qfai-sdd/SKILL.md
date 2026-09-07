@@ -537,8 +537,9 @@ schema from `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`; 
 
 ### Import-lite evidence (imported spec sets only)
 
-Producer: Stage 0, in every invocation form. When Stage 0 finds specs under `.qfai/specs/` and no
-`.qfai/discussion/discussion-*/` pack directory at all, create `.qfai/evidence/import-lite-<ts>.md`
+Producer: Stage 0, in every invocation form. When Stage 0 finds specs under `<paths.specsDir>` and
+no `<paths.discussionDir>/discussion-*/` pack directory at all, create
+`.qfai/evidence/import-lite-<ts>.md`
 from `templates/evidence/import-lite.md` and record where the requirements actually came from. That
 is the documented route for a spec set imported from outside QFAI, and it satisfies
 `QFAI-IMPLITE-001` without fabricating a discussion pack. A pack that exists but is incomplete is
@@ -577,8 +578,8 @@ US and AC items this route writes carry the evidence pair `Source: import-lite-<
 place of the `<pack-id>#<discussion-id>` one; the form is defined in
 `references/spec-traceability-rules.md`.
 
-The specs and discussion paths above are defaults: when `qfai.config.yaml` overrides
-`paths.specsDir` or `paths.discussionDir`, the check resolves those first. The evidence path is not
+`<paths.specsDir>` and `<paths.discussionDir>` are the resolved settings, `.qfai/specs/` and
+`.qfai/discussion/` by default; the check resolves them before it looks. The evidence path is not
 one of them — `.qfai/evidence/` is canonical and stays put even under a `paths.discussionDir`
 override, because every writer (`npx qfai init`, prototyping, audit log) uses it. Writing the evidence
 beside a relocated discussion directory puts it where nothing looks, leaving `QFAI-IMPLITE-001`
