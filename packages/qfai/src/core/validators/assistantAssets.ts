@@ -581,7 +581,7 @@ function missingGovernedLayerIssue(
     "assistantAssets.missingVendoredLayer",
     undefined,
     "canonical",
-    "Run `npx qfai init` to restore the shipped files of the missing layer. To take a normative rule out of scope, leave a Change Request rather than deleting it.",
+    "Run `qfai init` to restore the shipped files of the missing layer. To take a normative rule out of scope, leave a Change Request rather than deleting it.",
   );
 }
 
@@ -680,7 +680,7 @@ function provenanceIssue(
         "assistantAssets.staleVendoredAsset",
         undefined,
         "canonical",
-        "Run `npx qfai init --force` to refresh only the files that still hold what qfai wrote to the installed release.",
+        "Run `qfai init --force` to refresh only the files that still hold what qfai wrote to the installed release.",
       );
     case "forked":
       return issue(
@@ -713,7 +713,7 @@ function provenanceIssue(
         "assistantAssets.missingVendoredAsset",
         undefined,
         "canonical",
-        "Run `npx qfai init` to restore the missing shipped file (if a directory or a special file occupies the path, `npx qfai init --force` replaces it). To take a normative rule out of scope, leave a Change Request rather than deleting it.",
+        "Run `qfai init` to restore the missing shipped file (if a directory or a special file occupies the path, `qfai init --force` replaces it). To take a normative rule out of scope, leave a Change Request rather than deleting it.",
       );
   }
 }
