@@ -358,6 +358,104 @@ this qfai release generates` が以後ずっと出続ける。毎回出る通知
   checks が一度も走らない PR ができてしまう (`prepare-release.yml` と同じ理由)。
   **この secret は本変更では作成できない** — 手順は `.github/renovate.md`。
 
+- **その依存更新 PR を、CI グリーンだけを条件に自動マージするようにした。**
+  `.github/renovate.json5` の top level に `automerge: true` を置いたので、
+  major を含むすべての更新種別が対象になる。`matchUpdateTypes` で major を
+  除外する一般的な書き方を**あえて採っていない**。
+
+  マージ条件が CI だけで成立するのは、ここの CI が何であるかによる。
+  `ci-pass` は lint / 型 2 lane / Node floor / Vitest 全体 / scanner coverage /
+  pack 検証をすべて needs に持ち、`success` でも `skipped` でもない job 結果を
+  受理しない。このリポジトリを壊す依存はその verdict に落ちるので PR はマージ
+  されず、落ちない依存は誰にも読まれずにマージされる。
+
+  マージを実行するのは Renovate ではなく GitHub である (`platformAutomerge`)。
+  週次スケジュールのもとで Renovate 側マージを使うと、緑になった PR が最大 1 週間
+  放置される — 「自動マージ」と書いてあるのに実質そうならない。かわりに
+  **branch protection が唯一の門番になる**: `main` で `ci-pass` を required
+  status check に設定していないと、GitHub は lane が 1 つも始まらないうちに
+  マージする。リポジトリ設定は PR からは読めないので、
+  `.github/required-status-contexts.json` に期待が宣言されていることだけを
+  `renovateMechanism.test.ts` が要求する — automerge を宣言しながら required
+  context を宣言しない状態を構造的に拒否する。設定手順は `.github/renovate.md`。
+
+  併せて: `engines` / `packageManager` の `dependencyDashboardApproval` を外した
+  (単独 PR にはなるが承認待ちはしない)。PR 上限は 5/2 から 10/5 に上げた —
+  旧上限は「人が読む queue」を前提にした数字で、週 5 件しか流れない自動マージは
+  遅い手動マージと変わらない。`ignoreTests: false` は既定値だが明示した。これを
+  倒すと上のすべてが無意味になる唯一の knob だからである。
+
+  repin job は push の前に branch がまだ remote に存在するかを確認する。
+  自動マージにより、この job が計算している最中に PR がマージされて branch が
+  消えうる — そして削除済み branch への `git push HEAD:refs/heads/<name>` は
+  失敗せず **branch を作り直す**。action bump を自動マージするたびに孤児 branch が
+  残ることになる。lookup 1 回で通常ケースを塞いだ (force push はしていない)。
+
+- **Renovate を日次にし、設定側の実行時間帯を撤去した。** cron を
+  `0 20 * * 0` (週次) から `41 19 * * *` (日次 = Asia/Tokyo 04:41) に変更し、
+  `.github/renovate.json5` の `schedule` を `["before 6am on monday"]` から
+  `["at any time"]` にした。
+
+  **後者は cadence の変更ではなく、実測されたバグの修正である。** Renovate には
+  時計が 2 つある — workflow の cron (いつ bot が走るか) と config の `schedule`
+  (いつ branch を作ってよいか) — これを対で狭く設定していた。初回の実運転が
+  その帰結を測定した: cron は 20:00 UTC を要求し、GitHub がジョブを開始したのは
+  **21:55 UTC** = Asia/Tokyo 06:55 で、窓の 1 時間外である。窓の外に落ちた run は
+  何も作らずに success を返すので、**失敗が無言**で、「更新が無かった」と区別が
+  つかない。
+
+  GitHub はスケジュール遅延に上限を設けていない。そして日次化は窓を遅延に対して
+  相対的に小さくするので、状況は悪化する。したがって窓は廃止し、cron を唯一の
+  時計にした。`renovateMechanism.test.ts` が両側を固定している —
+  config 側の窓が開いたままであることと、cron が日次のままであること。
+
+  cron の分は :00 を避けた。GitHub 自身が「毎時 0 分のスケジュールは最も混雑し
+  遅延しやすい」と文書化しており、上の 1 時間 55 分は実際 `0 20 * * 0` で起きた。
+
+- **`.github/renovate.md` のトークン権限に `Workflows` が抜けていたのを直した。**
+  fine-grained token の必要権限として Contents / Pull requests / Issues しか
+  挙げていなかったが、workflow ファイルを含む commit の push は専用権限を要求
+  される。このリポジトリの Renovate は常時それに触る — config は全 GitHub
+  Action を 1 つの PR にまとめて digest pin し、repin job は `ci.yml` を
+  書き換える。
+
+  **症状が原因を名乗らない**のが厄介な点である: 他のパッケージは普通に更新され、
+  actions group の push だけが拒否される。classic token なら `repo` + `workflow`
+  の 2 スコープが等価。`Commit statuses` (Renovate 自身の branch status) と
+  `Dependabot alerts` (`vulnerabilityAlerts` 用) も併せて明記した。
+
+  ドキュメントが黙って古くなるのを防ぐため、`renovateMechanism.test.ts` が
+  「config が workflow ファイルを管理している」ことと「setup 文書が
+  `Workflows` 権限を名指ししている」ことを 1 行で結んでいる。
+
+- **QFAI 利用側リポジトリ向けの Renovate preset を公開した。**
+  `.github/renovate-presets/qfai.json` と `qfai-self-hosted.json`。
+  `github>aganesy/QFAI//.github/renovate-presets/qfai` の 1 行で extend する。
+
+  `qfai` の bump は、バージョン番号が変わった時点では終わっていない唯一の依存
+  更新である。パッケージは adopter のリポジトリに assistant tree (skills /
+  agents と `.agents/` `.claude/` `.codex/` `.github/` の wrapper) を書き込むが、
+  新しい版を入れても既に書かれたものは更新されない — 更新するのは
+  `qfai init --force` だけである。バンプ単体でマージすると、リポジトリは
+  「自分が持っていない skills のバージョン」を名乗ることになる。
+
+  そこで preset は `postUpgradeTasks` で更新ブランチ内に
+  `npx --yes qfai@{{newVersion}} init --force` を走らせ、再生成された tree を
+  同じ PR に commit させる。ただしそのコマンドを走らせてよいかは Renovate の
+  **管理者設定** (`allowedCommands`) で、config 側からは読めない — self-hosted
+  なら許可でき、hosted app は既定で許可しない。
+
+  したがって base preset は **fail closed** にした: `qfai` だけは自動マージ
+  しない。再生成が走ったかどうかを設定ファイルは知りえないので、走らなかった
+  場合に stale な assistant tree が default branch へ無点検で入ることを構造的に
+  防ぐ。`qfai-self-hosted` はその hold だけを外した同じ preset で、コマンドを
+  allow-list 済みの Renovate 向けである。
+
+  preset の**パスは公開インターフェース**であり、改名すれば adopter 側の
+  Renovate が config 解決エラーになる一方、こちらは緑のままになる。そのため
+  self-hosted preset が base を参照する `github>` 文字列は、base ファイルが
+  実際に置かれているパスから導出して検証している。
+
 ## [1.10.2] - 2026-09-05
 
 ### Added
