@@ -63,7 +63,7 @@ both outlive an exhausted budget.
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/constitution/*`
-- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`constitution/constitution.md` Article III)
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the whole file — its `developer_instructions` bodies mirror the agent cards (`.qfai/assistant/constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
@@ -338,7 +338,7 @@ Every 5 major actions, pause and restate:
      `manifest/agent-catalog.yml` whole — read the acting role's entry from
      it when a role needs one, because its `developer_instructions` bodies
      mirror the agent cards and reading both is the same text twice
-     (`constitution/constitution.md` Article III)
+     (`.qfai/assistant/constitution/constitution.md` Article III)
 
 2. Read **project constitution / instructions** (if present):
    - `.qfai/assistant/constitution/constitution.md`

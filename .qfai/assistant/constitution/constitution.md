@@ -48,7 +48,7 @@ Before producing deliverables, read **project memory**:
 2. `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`,
    and `.qfai/assistant/catalog/*`
    (`.qfai/assistant/manifest/agent-catalog.yml` for the acting `orchestrator` — the standing
-   commander named in `constitution/agent-selection.md`, which no routing phase or review
+   commander named in `.qfai/assistant/constitution/agent-selection.md`, which no routing phase or review
    profile lists, so it is never reached as a "routed role" — and for every routed role:
    `owned_artifacts`, `tool_profile`, `permission_profile`, and `specialization_tags` are SSOT
    whose values live nowhere else, so never skip them. Only the entry's
@@ -68,7 +68,7 @@ Before producing deliverables, read **project memory**:
 5. repository config (package.json, CI, scripts)
 
 At the start of a stage this read composes with the **Stage 0 — Steering refresh contract**
-in `constitution/workflow.md`: items 1-2 above cover _reading_ project memory, Stage 0 adds the
+in `.qfai/assistant/constitution/workflow.md`: items 1-2 above cover _reading_ project memory, Stage 0 adds the
 obligation to _check and update_ the four `catalog/` steering files it names. One bootstrap, two
 obligations — do not treat them as competing lists.
 
