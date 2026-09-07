@@ -2401,10 +2401,9 @@ async function collectDeclaredBrIds(file: string): Promise<Set<string> | null> {
     const id = match[1];
     if (id !== undefined) declared.add(id.toUpperCase());
   }
+  const brIdHeaderKey = headerKey(BR_ID_COLUMN);
   for (const table of parseAllMarkdownTables(text)) {
-    const idIndex = table.headers.findIndex(
-      (header) => headerKey(header) === headerKey(BR_ID_COLUMN),
-    );
+    const idIndex = table.headers.findIndex((header) => headerKey(header) === brIdHeaderKey);
     if (idIndex < 0) continue;
     for (const row of table.rows) {
       const value = (row[idIndex] ?? "").trim().toUpperCase();
@@ -2465,8 +2464,29 @@ function tcRefsOf(map: Map<string, Set<string>>, tcId: string): Set<string> {
  * one spelling: every row of it would be compared against ids its column can
  * never hold, and report a mismatch it cannot fix.
  */
+/**
+ * `AC` -> the `BR`s that reference it, inverted from `brToAcRefs` once.
+ *
+ * The fallback below joins on `AC`, and doing that by scanning every `BR` per
+ * TC is `rows x tcRefs x brCount x acRefs` — a shape that gets slower as the
+ * column spreads and the ledger grows, on the one path that runs for every row.
+ * Inverted once per spec it is a lookup.
+ */
+function invertBrToAcRefs(brToAcRefs: V1421LayerRefs["brToAcRefs"]): Map<string, Set<string>> {
+  const acToBrRefs = new Map<string, Set<string>>();
+  for (const [brId, acRefs] of brToAcRefs) {
+    for (const acId of acRefs) {
+      const brIds = acToBrRefs.get(acId);
+      if (brIds === undefined) acToBrRefs.set(acId, new Set([brId]));
+      else brIds.add(brId);
+    }
+  }
+  return acToBrRefs;
+}
+
 function deriveExpectedBrRef(
   refs: V1421LayerRefs,
+  acToBrRefs: ReadonlyMap<string, ReadonlySet<string>>,
   tcRefsCell: string,
   declaredBrIds: ReadonlySet<string> | null,
 ): string | null {
@@ -2484,13 +2504,8 @@ function deriveExpectedBrRef(
     }
     const acRefs = tcRefsOf(refs.tcToAcRefs, tcId);
     if (acRefs.size === 0) continue;
-    for (const [brId, brAcRefs] of refs.brToAcRefs) {
-      for (const acId of acRefs) {
-        if (brAcRefs.has(acId)) {
-          reached.add(brId);
-          break;
-        }
-      }
+    for (const acId of acRefs) {
+      for (const brId of acToBrRefs.get(acId) ?? []) reached.add(brId);
     }
   }
   const wellFormed = [...reached].filter((id) => BR_ID_FORMAT.test(id)).sort();
@@ -3976,6 +3991,8 @@ async function validateSpecTddList(
     // — so every derivation returned `null` there and `QFAI-BRREF-003` was
     // silent on those packs rather than clean.
     const layerRefs = await collectLayerRefs(specEntry);
+    // Inverted once per spec: the AC fallback runs per TC of per row.
+    const acToBrRefs = invertBrToAcRefs(layerRefs.brToAcRefs);
     const brRefPromotion = RULE_PROMOTIONS.tddListBrRefKey.promoteAt;
     const brRefSeverity = newRuleSeverity(await resolveToolVersion(), brRefPromotion);
     const brRefWindowNote =
@@ -4035,7 +4052,12 @@ async function validateSpecTddList(
       // Silent when the layer files reach nothing, and silent on `-` / empty,
       // which the column documents as the legal "not resolved" degradation
       // rather than a wrong key.
-      const expected = deriveExpectedBrRef(layerRefs, cell(ref, "TC-Refs"), declaredBrIds);
+      const expected = deriveExpectedBrRef(
+        layerRefs,
+        acToBrRefs,
+        cell(ref, "TC-Refs"),
+        declaredBrIds,
+      );
       if (expected !== null && expected !== token) {
         issues.push(
           issue(
