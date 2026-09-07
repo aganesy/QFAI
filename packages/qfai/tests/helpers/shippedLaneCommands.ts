@@ -1334,12 +1334,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the check accepts:
   //
   //     !.qfai/evidence/import-lite.md
-  //     !.qfai/evidence/import-lite-[0-9]x17.md
+  //     !.qfai/evidence/import-lite-<17 digits>.md
   //
   // the copy an operator kept under the shipped template's own name, and the
-  // run-stamped one with its stamp spelled out to the width the check
-  // requires. Anything wider commits a name the check rejects outright, which
-  // is a file in the repository that nothing reads.
+  // run-stamped one. The second line is written as `[0-9]` once per digit,
+  // which is what fixes the width: a shorthand for the repeat is not gitignore
+  // syntax, and anything wider commits a name the check rejects outright —
+  // a file in the repository that nothing reads.
   //
   // Derived the same way as its predecessors — `qfai init` into a temp root,
   // then reading what it wrote — not copied off a failure message. Those two
