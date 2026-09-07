@@ -25,7 +25,7 @@
  * enumerated below with the layer that emits them, because "outside on purpose"
  * and "forgotten" are the two readings this test exists to separate.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -254,5 +254,202 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
         "code path raises the finding, not at the caller and not at `src/cli/commands/validate.ts`, " +
         "whose description map mentions every code there is",
     ).toEqual([]);
+  });
+});
+
+/**
+ * Codes with an emit site in more than one module, and the group each belongs
+ * to.
+ *
+ * `QFAI-PROFILE-001` derives what a partial run skipped from GROUPS, so a code
+ * whose emitters sit in two compositions is reported correctly only if its
+ * group is listed by every profile that can reach one of them. Under any
+ * narrower group the notice denies a gate the run just evaluated.
+ *
+ * Three of the four below are cross-dispatch and resolve the same way: the
+ * group is one that both dispatching profiles list. The fourth has an emitter
+ * that runs in every profile, which puts it outside that rule by construction
+ * — its entry says how.
+ */
+interface DualEmitter {
+  /** Every module with an emit site, package-relative and sorted. */
+  readonly modules: readonly string[];
+  /**
+   * How the code is accounted for: the group that holds it and why that
+   * group's profile set matches its emitters — or, where no group can, the
+   * exemption standing in for one and what makes a group unreachable.
+   */
+  readonly treatment: string;
+}
+
+const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
+  [
+    "R-AUTOPILOT-POLICY-MISSING",
+    {
+      modules: [
+        "src/core/validators/autopilotPolicy.ts",
+        "src/core/validators/justificationCatalog.ts",
+      ],
+      treatment:
+        "The easy case: both emitters are dispatched from `runSddValidators`, so one group " +
+        "listed by `sdd` covers both. `reviewer-gate-sdd`.",
+    },
+  ],
+  [
+    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
+    {
+      modules: [
+        "src/core/validators/designMdPatchZone.ts",
+        "src/core/validators/justificationCatalog.ts",
+      ],
+      treatment:
+        "Genuinely cross-dispatch: `validateDesignMdPatchZone` from " +
+        "`runPrototypingValidators`, `validateReviewerJustification` from `runSddValidators`. " +
+        "`reviewer-gate-shared`, which BOTH profiles list, so neither is told it skipped a " +
+        "code it can emit.",
+    },
+  ],
+  [
+    "R-MOCK-HREF-DRIFT",
+    {
+      modules: [
+        "src/core/validators/justificationCatalog.ts",
+        "src/core/validators/reviewerGate.ts",
+      ],
+      treatment:
+        "As R-DESIGN-MD-PATCH-OUT-OF-ZONE: `detectMockHrefDrift` from " +
+        "`runPrototypingValidators`, the catalog re-emit from `runSddValidators`. " +
+        "`reviewer-gate-shared`.",
+    },
+  ],
+  [
+    "D-DEPRECATED-PATH",
+    {
+      modules: ["src/cli/commands/validate.ts", "src/core/validators/assistantTreeMigration.ts"],
+      treatment:
+        "One emitter is the CLI's legacy-path notice, which runs in EVERY profile - so 'a " +
+        "group every emitting profile lists' would be a group every profile lists, and that " +
+        "can never appear in `full groups - profile groups`. Exempt in " +
+        "PROFILE_INDEPENDENT_CODES instead, which reaches the same outcome by a different " +
+        "route: that list reads as 'no group owns it' where the accurate statement is 'every " +
+        "profile evaluates it'.",
+    },
+  ],
+]);
+
+function toPosixPath(value: string): string {
+  return value.split(path.sep).join("/");
+}
+
+/** `.ts` files under `src`, minus the generated registry the codes come from. */
+function sourceFiles(root: string): string[] {
+  const found: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".ts")) found.push(full);
+    }
+  };
+  walk(path.join(root, "src"));
+  return found.filter((file) => !toPosixPath(file).endsWith("src/core/emittedRuleCodes.ts"));
+}
+
+/**
+ * Modules with an emit site for each code, keyed by code.
+ *
+ * Shape-matched rather than string-matched. A plain search for the quoted code
+ * reports 139 codes in two or more modules, and almost every one of them is a
+ * LIST rather than an emit — `core/prototyping/mode.ts` names the codes its
+ * relaxation applies to, which raises nothing. Only three forms build a
+ * finding: the code as the first argument to `issue(` / `pushIssue(` on the
+ * same line or the next, and a `code:` property. Matching those brings 139
+ * down to 4, and the four are all real.
+ */
+function emitSitesByCode(root: string): Map<string, readonly string[]> {
+  const known = new Set<string>(EMITTED_RULE_CODES);
+  const sites = new Map<string, Set<string>>();
+  for (const file of sourceFiles(root)) {
+    const relative = toPosixPath(path.relative(root, file));
+    const lines = readFileSync(file, "utf8").split(/\r?\n/u);
+    lines.forEach((line, index) => {
+      const code = /"([A-Z][A-Za-z0-9_.-]{4,})"/u.exec(line)?.[1];
+      if (code === undefined || !known.has(code)) return;
+      const previous = index > 0 ? (lines[index - 1] ?? "").trimEnd() : "";
+      // Plain `includes` rather than a RegExp built from the code: a constructed
+      // pattern has to escape the code, and `\-` is an invalid escape under the `u`
+      // flag rather than a harmless one. Prettier normalises the spacing these
+      // three forms are written with, so exact substrings are enough.
+      const isEmit =
+        /(?:issue|pushIssue)\($/u.test(previous) ||
+        line.includes(`issue("${code}"`) ||
+        line.includes(`pushIssue("${code}"`) ||
+        line.includes(`code: "${code}"`);
+      if (!isEmit) return;
+      const forCode = sites.get(code) ?? new Set<string>();
+      forCode.add(relative);
+      sites.set(code, forCode);
+    });
+  }
+  return new Map([...sites].map(([code, files]) => [code, [...files].sort()]));
+}
+
+describe("a code emitted from more than one module is accounted for", () => {
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const dual = new Map(
+    [...emitSitesByCode(packageRoot)].filter(([, modules]) => modules.length > 1),
+  );
+
+  it("declares every one of them", () => {
+    const undeclared = [...dual.keys()].filter((code) => !DUAL_EMITTED_CODES.has(code)).sort();
+
+    expect(
+      undeclared,
+      `emitted from more than one module and not declared: ${undeclared.join(", ")} — ` +
+        "`QFAI-PROFILE-001` reports by GROUP, so a code whose emitters sit in different " +
+        "compositions needs a group every one of their profiles lists, or the notice denies a " +
+        "gate the run evaluated. Add it to DUAL_EMITTED_CODES naming the group that holds it " +
+        "and why that group's profile set matches its emitters",
+    ).toEqual([]);
+  });
+
+  it("drops a declaration once the code has a single emitter again", () => {
+    const single = [...DUAL_EMITTED_CODES.keys()].filter((code) => !dual.has(code)).sort();
+
+    expect(
+      single,
+      `declared as dual-emitted but now emitted from one module or none: ${single.join(", ")} — ` +
+        "the entry describes a hazard that is gone, and nothing constrains the group choice it " +
+        "argues for any more",
+    ).toEqual([]);
+  });
+
+  it("keeps each declaration's module list equal to what the scan finds", () => {
+    const drifted = [...DUAL_EMITTED_CODES.entries()]
+      .filter(([code, entry]) => {
+        const actual = dual.get(code);
+        return actual !== undefined && actual.join("|") !== [...entry.modules].sort().join("|");
+      })
+      .map(
+        ([code, entry]) =>
+          `${code} (declared ${entry.modules.join(", ")}, found ${(dual.get(code) ?? []).join(", ")})`,
+      )
+      .sort();
+
+    expect(
+      drifted,
+      `declared modules do not match the emit sites: ${drifted.join("; ")} — ` +
+        "the module list is what makes the group choice checkable. Which compositions dispatch " +
+        "these files IS the argument, so an emitter that moved changes it",
+    ).toEqual([]);
+  });
+
+  it("requires a treatment on every entry", () => {
+    const unexplained = [...DUAL_EMITTED_CODES.entries()]
+      .filter(([, entry]) => entry.treatment.trim().length === 0)
+      .map(([code]) => code)
+      .sort();
+
+    expect(unexplained, `declared with no treatment: ${unexplained.join(", ")}`).toEqual([]);
   });
 });

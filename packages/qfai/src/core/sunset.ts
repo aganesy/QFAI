@@ -278,12 +278,33 @@ export const RULE_PROMOTIONS = {
    */
   specPackReOpenDecisionRecord: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-BRREF-001`, `QFAI-BRREF-002` and
+   * `QFAI-BRREF-003` — a ledger's declared review-group key is
+   * malformed, names a rule no Business Rules file declares, or is not the key
+   * the row's own `TC-Refs` derive. Every one of them reads a cell written
+   * against an older `04_Business-Rules.md`, or under the superseded
+   * AC-first derivation, so the rule necessarily lands on ledgers that were
+   * correct under the procedure of their day — including rows already at
+   * `done`, whose remedy is an edit to the cell rather than a transition.
+   */
+  tddListBrRefKey: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed
    * arrives in the first run after the upgrade.
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * The assistant-tree provenance family — `QFAI-ASSETS-004` (a vendored copy
+   * still as qfai wrote it but behind the installed release), `QFAI-ASSETS-005`
+   * (a local fork), `QFAI-ASSETS-006` (a non-overlay addition),
+   * `QFAI-ASSETS-007` (a shipped normative file that is absent) and
+   * `QFAI-ASSETS-008` (the comparison could not be made at all). Nothing
+   * compared the governed layers before, so every project that ever edited one
+   * meets the whole family in the run that first records provenance.
+   */
+  assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the
