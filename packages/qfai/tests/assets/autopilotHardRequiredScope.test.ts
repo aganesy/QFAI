@@ -44,6 +44,23 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
   });
 
+  it("gives one answer for a single candidate, in both places that state it", async () => {
+    // The bucket and the selection flow are the two statements a bare
+    // invocation reads, and they answered the same question differently: one
+    // said a lone candidate never settles the value, the other that it does.
+    // Whichever answer is taken, a reader must not be able to find the other.
+    const skill = await read(tree, SKILL);
+
+    expect(skill).toContain(
+      "Single spec: announce the detected spec and proceed; ask for confirmation only when the scope is ambiguous",
+    );
+    expect(skill).toContain(
+      "One unambiguous candidate settles `primarySpecId`, which is why the hard-required entry is scoped to the branch this flow cannot settle",
+    );
+    // The reading the bucket rules out, in the words the flow used to carry.
+    expect(skill).not.toContain("a lone candidate narrows the choice but never settles it");
+  });
+
   it("leaves no carve-out that lets auto-discovery settle the value alone", async () => {
     // The collision was textual: whichever section the agent read last won.
     const skill = await read(tree, SKILL);
@@ -51,11 +68,11 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).not.toContain("ask for confirmation when scope is ambiguous");
   });
 
-  it("makes the single-spec branch confirm unconditionally, like its two siblings", async () => {
+  it("keeps the two branches auto-discovery cannot settle asking", async () => {
+    // Narrowing the hard-required entry to what this flow cannot settle only
+    // holds while the flow still stops on the two cases it cannot: several
+    // candidates, and none.
     const skill = await read(tree, SKILL);
-    expect(skill).toContain(
-      "Single spec: announce the detected spec and require the user to confirm it before the first TDD item",
-    );
     expect(skill).toContain("Multiple specs: display the candidates and require the user");
     expect(skill).toContain("Zero specs: stop and ask the user to provide the target spec");
   });

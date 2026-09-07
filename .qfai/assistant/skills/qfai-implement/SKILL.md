@@ -43,7 +43,7 @@ When no explicit argument is given, detect the candidate specs — **active spec
 
 ### User Selection Flow
 
-- Single spec: announce the detected spec and require the user to confirm it before the first TDD item — `primarySpecId` is hard-required (see `## Default Autopilot Policy`), so a lone candidate narrows the choice but never settles it.
+- Single spec: announce the detected spec and proceed; ask for confirmation only when the scope is ambiguous. One unambiguous candidate settles `primarySpecId`, which is why the hard-required entry is scoped to the branch this flow cannot settle (see `## Default Autopilot Policy`).
 - Multiple specs: display the candidates and require the user to choose one spec, or to confirm an ordered queue processed one spec at a time.
 - Zero specs: stop and ask the user to provide the target spec explicitly. **An explicitly named spec that is retired stops the same way** — the argument selects a spec, it does not waive the lifecycle check: report the `Status:` it declares and, for `superseded`, its `Superseded-by` successor, and ask the user to name a row in that successor's ledger instead.
 
