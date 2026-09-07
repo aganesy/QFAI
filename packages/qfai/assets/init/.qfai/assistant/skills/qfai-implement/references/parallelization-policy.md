@@ -351,9 +351,12 @@ So:
   `../SKILL.md#post-parallel-integration-verify`, before the verify runs —
   **every cell a worker reports**, not Status and Evidence alone. Those are the
   four the Drift Protocol carves out unconditionally, and `Blocked-By` is among
-  them whenever the worker took the `todo -> blocked` edge inside its slice: the
-  edge is the orchestrator's to write in serial mode because that is where the
-  transition happens, and under parallel dispatch it happens in the worker. A
+  them whenever the worker took an edge to `blocked` inside its slice — from
+  `todo` before it started the row, and otherwise from the active status it had
+  reached, which is the departure status the cell records
+  (`execution-ledger.md#allowed-transitions`). The edge is the orchestrator's to
+  write in serial mode because that is where the transition happens, and under
+  parallel dispatch it happens in the worker. A
   worker cannot write the ledger, and `/qfai-implement`'s Completion step
   reconciles rather than writes, so a cell dropped here is written by nobody:
   an `exception` row lands without the `DR-*` that
@@ -536,9 +539,11 @@ merged row can never reach `done`:
   loses no evidence and adds no status value.
 - Every other returned status is reached by continuing the same replay to it,
   never by jumping: `refactor -> review-fix` for a returned `review-fix`, the
-  active-status edge to `exception` for a returned `exception`, `todo -> blocked`
-  for a row the worker could not start. A returned status with no listed path
-  from `todo` is not written at all — report it as a reconciliation failure and
+  active-status edge to `exception` for a returned `exception`, the active-status
+  edge to `blocked` for a returned `blocked` — from `todo` when the worker never
+  started the row, and otherwise from the status the replay has reached, which
+  is the departure status the returned `Blocked-By` records. A returned status
+  with no listed path from `todo` is not written at all — report it as a reconciliation failure and
   leave the row where the replay stopped, because inventing the edge is what
   this rule exists to prevent.
 - The orchestrator writes `refactor -> done` only once the integration verify,

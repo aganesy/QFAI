@@ -48,6 +48,24 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
   });
 
+  it("gives Blocked-By the write point the ledger's own transitions imply", async () => {
+    // The ledger admits an edge to `blocked` from any active status, and the
+    // cell records the status the row is leaving. Named as `todo -> blocked`,
+    // the writer contract covered only a row parked before it started: one
+    // stopped at `red`, `green`, `refactor` or `review-fix` had no writer for
+    // a cell its own gate then required of it.
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "`Blocked-By` at the `active status -> blocked` transition that fills it",
+    );
+    expect(skill).toContain(
+      "`Blocked-By`, written in the same edit as the status at whichever `active status -> blocked` transition the row takes",
+    );
+    expect(skill).not.toContain(
+      "`Blocked-By`, written at the `todo -> blocked` transition rather than per phase",
+    );
+  });
+
   it("says in Completion that the ledger was already written", async () => {
     // Without this the reworded step still leaves open *when* the values got
     // there, which is the ambiguity the two rules created.
@@ -112,11 +130,16 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
     expect(policy).toContain("`DR-ID` whenever the row carries one");
     // Every cell the worker reports, because the reconcile is the only write
-    // those rows get. `Blocked-By` is among them when the worker took the
-    // `todo -> blocked` edge inside its slice: the edge is the orchestrator's
-    // in serial mode because that is where it happens, and under parallel
-    // dispatch it happens in the worker.
+    // those rows get. `Blocked-By` is among them when the worker took an edge
+    // to `blocked` inside its slice: the edge is the orchestrator's in serial
+    // mode because that is where it happens, and under parallel dispatch it
+    // happens in the worker.
     expect(policy).toContain("**every cell a worker reports**, not Status and Evidence alone");
+    // From whatever status the worker had reached, not from `todo` alone. The
+    // ledger admits an edge to `blocked` from any active status, so a row
+    // parked mid-phase is left with no writer for a cell its own gate requires.
+    expect(policy).toContain("took an edge to `blocked` inside its slice");
+    expect(policy).not.toContain("took the `todo -> blocked` edge inside its slice");
     // Serial mode returns the same three; it has no merge step, not a
     // different contract.
     expect(policy).toContain(
