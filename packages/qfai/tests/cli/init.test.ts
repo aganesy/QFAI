@@ -1830,7 +1830,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
 
       expect(output).toContain("git config: core.symlinks already true");
-      expect(output).toContain("core.symlinks の実効値は false のままです");
+      expect(output).toContain("the effective value of core.symlinks is still false");
       const { stdout: effective } = await execFile("git", ["config", "--get", "core.symlinks"], {
         cwd: linked,
       });
@@ -2732,7 +2732,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       expect(output).toContain("written:");
       // Activation guidance proves instructions were included in the written set
-      expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
+      expect(output).toContain("Created the instructions files for Copilot code review.");
 
       // Case B: Both files exist — re-run
       // The skipped list is behind --verbose; the counts alone cannot name a file.
@@ -4258,7 +4258,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
 
       expect(await readFile(marker, "utf-8")).toBe(huge);
-      expect(output).toContain("上限を超えます");
+      expect(output).toContain("would exceed the");
     } finally {
       await removeTempTree(root);
     }

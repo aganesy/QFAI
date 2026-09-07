@@ -13,6 +13,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
+import { resolveToolVersion } from "../../../src/core/version.js";
 import {
   collectApiStateEnums,
   collectSqlEnumDomains,
@@ -579,6 +581,138 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
+    });
+
+    /**
+     * A value computed at read time is not a contradiction, and until it could
+     * be declared the finding had no valid remedy: widening the domain makes it
+     * possible to STORE a value the contract forbids storing, and deleting it
+     * from the API removes a value the UI requires (#1203).
+     */
+    describe("a value the DB contract declares derived", () => {
+      const DERIVED_DB = [
+        "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+
+      it("is not reported, because nothing stores it", async () => {
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": DERIVED_DB });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues).toEqual([]);
+      });
+
+      it("still reports a value nobody declared", async () => {
+        // The marker answers the rule; it must not be able to silence it.
+        const partial = DERIVED_DB.replace(", powered_off from", " from");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": partial });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
+        expect(domain).toHaveLength(1);
+        expect(domain[0]?.message).toContain("powered_off");
+        expect(domain[0]?.message).not.toContain("standby");
+      });
+
+      it("reports a declaration with no `from` clause rather than reading it", async () => {
+        // Without the clause the marker is a one-word silencer. Reporting it is
+        // what tells the author their declaration was never read — otherwise
+        // the finding they were answering just stays, for no visible reason.
+        const noFrom = DERIVED_DB.replace(" from enabled, connection_status, JST clock", "");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": noFrom });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("解析できません");
+        expect(declaration[0]?.suggested_action).toContain("`from` 以降");
+        // And the values it tried to cover are still reported.
+        expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-040")).toHaveLength(1);
+      });
+
+      it("ignores a half-written value list rather than reading half of it", async () => {
+        const trailingComma = DERIVED_DB.replace("standby, powered_off from", "standby, , from");
+        const { api, dbs } = await seedMany(SIM_LINE_API, {
+          "db-0003-sim-lines.sql": trailingComma,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toHaveLength(1);
+        const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
+        expect(domain[0]?.message).toContain("powered_off, standby");
+      });
+
+      it("takes the declaration severity from its promotion window", async () => {
+        // Read from the pin rather than asserted as a literal: the window opens
+        // at 1.12.0, and a hard-coded `warning` here would start failing then
+        // for a rule that is working exactly as declared.
+        const noFrom = DERIVED_DB.replace(" from enabled, connection_status, JST clock", "");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": noFrom });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const expected = newRuleSeverity(
+          await resolveToolVersion(),
+          RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
+        );
+        expect(issues.find((entry) => entry.code === "QFAI-CONTRACT-041")?.severity).toBe(expected);
+      });
+
+      it("reports a declaration covering a value the DB stores anyway", async () => {
+        // A contradiction, not a redundancy: the line says the value is not
+        // stored and the domain says it is.
+        const stored = DERIVED_DB.replace(
+          "status = standby, powered_off from",
+          "status = active from",
+        );
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": stored });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("DB 側が格納できる: active");
+        expect(declaration[0]?.suggested_action).toContain("矛盾しています");
+      });
+
+      it("reports a declaration covering a value the API never asks for", async () => {
+        const unasked = DERIVED_DB.replace("powered_off from", "retired from");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": unasked });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("API 契約が要求していない: retired");
+        // `standby` did work, so it is not named as stale.
+        expect(declaration[0]?.message).not.toContain("standby");
+      });
+
+      it("does not read prose about a derivation as a declaration", async () => {
+        // The key has to start the line, as `-- Depends on:` does: a comment
+        // explaining the derivation is the natural thing to write above a
+        // column, and it must not silence anything.
+        const prose = DERIVED_DB.replace(
+          "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
+          "-- See CON-DB-0017. Derived (not stored): status = standby from enabled",
+        );
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": prose });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toEqual([]);
+        const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
+        expect(domain[0]?.message).toContain("powered_off, standby");
+      });
     });
 
     it("keeps the single-contract message flat", async () => {

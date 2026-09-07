@@ -36,6 +36,7 @@ const NUL = "\u0000";
 const FORM_FEED = "\u000c";
 const DEL = "\u007f";
 const RIGHT_TO_LEFT_OVERRIDE = "\u202e";
+const BOM = "\ufeff";
 
 interface RunResult {
   status: number | null;
@@ -251,9 +252,8 @@ describe("check-bidi: NUL and C0 controls over the tracked tree", () => {
     expect(result.stdout).not.toContain("tracked paths");
   });
 });
-
-describe("check-bidi: the bidi and BOM scan is unchanged", () => {
-  it("still rejects a bidi override in one of the six named documents", async () => {
+describe("check-bidi: the bidi and BOM scan covers the tracked tree", () => {
+  it("rejects a bidi override in a named consumer document", async () => {
     const dir = await newRepo({
       "README.md": `# Title\n\nplain ${RIGHT_TO_LEFT_OVERRIDE} reversed\n`,
     });
@@ -264,16 +264,71 @@ describe("check-bidi: the bidi and BOM scan is unchanged", () => {
     expect(result.stderr).toContain("README.md: bidi/control character U+202E");
   });
 
-  it("still ignores a bidi override outside that list", async () => {
-    // Widening this half is a separate judgement: the tree carries U+FEFF in
-    // two files today, so it cannot be turned on without deciding about those.
+  it("rejects one in a file an AGENT reads and acts on", async () => {
+    // The half that was unguarded, and the worse half: a reordered line in a
+    // skill body is an instruction that reads one way and executes another.
     const dir = await newRepo({
-      "docs/elsewhere.md": `plain ${RIGHT_TO_LEFT_OVERRIDE} reversed\n`,
+      ".qfai/assistant/skills/qfai-demo/SKILL.md": `# demo\n\nrun ${RIGHT_TO_LEFT_OVERRIDE} it\n`,
+    });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("SKILL.md: bidi/control character U+202E");
+  });
+
+  it("rejects a BOM anywhere in the tree, leading or not", async () => {
+    const dir = await newRepo({
+      "src/a.ts": `${BOM}const a = 1;\n`,
+    });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    // Labelled `BOM`, not `bidi/control` — the script has always separated the
+    // two, and the label is what a reader greps for.
+    expect(result.stderr).toContain("src/a.ts: BOM character U+FEFF at index 0");
+  });
+
+  it("exempts a frozen review record, which quotes what it found", async () => {
+    // A review pack's value is that it says what happened. The tree carries a
+    // BOM inside captured terminal output there — the finding itself — and
+    // editing it to satisfy a guard would falsify the record.
+    const dir = await newRepo({
+      ".qfai/review/review-20260822180000000/R03.md": `saw ${BOM}#!/bin/sh here\n`,
+      ".qfai/review_archive/review-20260101000000000/R01.md": `and ${RIGHT_TO_LEFT_OVERRIDE} here\n`,
     });
 
     const result = runGuard(dir);
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
+  });
+
+  it("does not exempt a frozen record from the CONTROL scan", async () => {
+    // A NUL makes the record unreadable to every text tool, which is not a
+    // thing any record is improved by. The exemption is about rendering only.
+    const dir = await newRepo({
+      ".qfai/review/review-20260822180000000/R03.md": `saw${NUL}this\n`,
+    });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("control character 0x00");
+  });
+
+  it("does not exempt a path that merely starts like one", async () => {
+    // Prefix matching on a directory boundary: `.qfai/reviewer-notes/` is not
+    // `.qfai/review/`, and a guard that cannot tell them apart is one rename
+    // away from exempting a tree nobody decided to exempt.
+    const dir = await newRepo({
+      ".qfai/reviewer-notes/R03.md": `saw ${RIGHT_TO_LEFT_OVERRIDE} here\n`,
+    });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("bidi/control character U+202E");
   });
 });

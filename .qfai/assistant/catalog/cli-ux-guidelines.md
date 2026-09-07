@@ -108,6 +108,40 @@ text 出力の 1 行は、上から順に **最初に一致した規則** で解
 
 > **Note:** `.qfai/contracts/design/design-tokens*.yaml` は **optional supporting artifact** である。init 直後にファイルが存在しなくても異常ではなく、token validator は token file が作成された場合にのみ実行される。
 
+## Message Language
+
+operator 向けに qfai の CLI が出力する文字列は **英語** で書く — これは
+qfai 自身が印字する文字列の規定であり、アシスタントの応答言語は固定しない
+(それは `.qfai/assistant/constitution/constitution.md` の Absolute Rule が
+決める。ユーザの作業言語に従う)。`<CODE>` と `[at <file>]` の形だけでなく、
+`<message>` もこの規定に従う。
+
+対象 (operator-facing surface):
+
+- `usage()` を含む `qfai --help` の全文
+- `error()` / `warn()` / `info()` および stdout/stderr へ直接書く文字列
+- `npx qfai doctor` の check `title` / `message` / `details.nextActions`
+- `Issue.message` — 新規に追加する finding message も同じ規定に従う
+
+対象外:
+
+- ソースコード中のコメント / JSDoc（配布物ではなく、実装者向け）
+- ユーザが自分のリポジトリに置く成果物（spec / contract / discussion pack）の
+  本文。これらはプロジェクトの言語に従う
+
+理由: rule code、`.qfai/contracts/cli/` 配下の CLI contract、および
+`error()` / `info()` 呼び出しの大多数が既に英語であり、単一言語に揃えることで
+log grep / alert rule / runbook が言語を場合分けせずに済む。
+
+> **Known gap:** `src/core/**` には英語化が済んでいない finding message が
+> 残っている。大半は `validators/**` だが、`config.ts` の
+> `QFAI_CONFIG_INVALID` や `waivers.ts` / `report.ts` のように validator 外の
+> `Issue` producer も含む。既存メッセージの移行は段階的に行うが、新規追加は
+> 上記の規定に従う。移行途中のメッセージは `src/**` 全体を走査する meta-test の
+> allowlist に**文言単位**で登録されており、allowlist に無い日本語メッセージは
+> CI で落ちる。既存メッセージを英語化したら該当項目も同じ変更で削除する
+> (行数の空き枠として再利用できない)。
+
 ## Severity Decision Matrix
 
 | Category                                              | Error                                                   | Warning                                                                  |
