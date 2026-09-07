@@ -1313,24 +1313,29 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
   ],
-  // Re-pinned when `Phase: Skeleton` added `!.qfai/evidence/skeleton.md` to
-  // `QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`: the shipped `.gitignore` IS the
-  // generated managed block, so a governance negation moves this digest by
-  // construction. The phase enumerates its `Skeleton debt` into that file, and
-  // every later invocation reads the recorded exit status to decide whether an
-  // entrypoint is already proven. If the file is ignored, both facts exist only
-  // in the working directory that ran the phase.
+  // The shipped `.gitignore` IS the generated managed block, so every governance
+  // negation moves this digest by construction. Four of them are why it stands
+  // where it does:
   //
-  // Derived by running `init` into a fresh root on this tree, not re-typed off
-  // a failure message. That one line is the whole delta: dropping it from what
-  // init writes today reproduces the previous digest `f35a2624…` byte for byte.
-  // Re-derived for the MERGED managed block, which carries both sides' additions:
-  // this branch's `*.qfai-state.tmp` and the two `.qfai/evidence/` negations
-  // (`implement-*.md`, `atdd-*.md`) that arrived with it. Neither predecessor's
-  // digest describes the block that now ships, so this is one pin rather than
-  // two — the map is keyed by file name and cannot hold both.
+  // - `!.qfai/assistant/`, `!.qfai/assistant/**` and
+  //   `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
+  //   `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
+  //   (`git status --ignored`): without them the provenance record never reaches
+  //   a fresh clone, and every untouched governed file from an older release
+  //   then reads as a local fork; without the recursive one the record arrives
+  //   and the rules it vouches for do not.
+  // - `!.qfai/evidence/skeleton.md`. `Phase: Skeleton` enumerates its
+  //   `Skeleton debt` into that file, and every later invocation reads the
+  //   recorded exit status to decide whether an entrypoint is already proven.
+  //   Ignored, both facts exist only in the working directory that ran it.
   //
-  [".gitignore", "c5e25a43ddbbc0802926e0c3a9c8a088113255b09ee100d951132b3450a5fd02"],
+  // Derived by running `qfai init` into a temp root and reading what it wrote,
+  // which is how every predecessor was derived — not copied off a failure
+  // message. Those four lines are the whole delta: dropping exactly them from
+  // the file init writes today reproduces `f35a2624…` byte for byte, which is
+  // what makes this a review of four lines rather than a re-blessing of the
+  // block.
+  [".gitignore", "b9cb24d788d8b8b5ee3bfe83f5138ad1368c3ff09df81081fd31f95c1378890c"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
