@@ -764,6 +764,9 @@ async function syncGovernedAssistantAssets(
  * answer that can be minutes stale. It does not make the check atomic with the
  * write that follows it — no API here can — but the window is now the two
  * syscalls either side of it rather than the length of the sync.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
  */
 export function makeGovernedContainmentGuard(
   destRoot: string,
@@ -801,9 +804,10 @@ function escapedGovernedPathNote(dest: string): string {
 export type GovernedWriteOutcome = "replaced" | "target-changed";
 
 /**
- * Exported for the regression test that pins the `target-changed` branch. The
- * branch is only reachable through a race, so the test reaches it by handing in
- * an `expectedHash` the target does not hold — the same state the race leaves.
+ * @internal Exported for the regression test that pins the `target-changed`
+ * branch — not part of the package's public surface. The branch is only
+ * reachable through a race, so the test reaches it by handing in an
+ * `expectedHash` the target does not hold — the same state the race leaves.
  */
 export async function replaceGovernedAsset(
   source: string,
@@ -1341,6 +1345,10 @@ async function retireWithdrawnGovernedAssets(
  */
 export type GovernedDisplaceOutcome = "displaced" | "regular-file" | { orphaned: string };
 
+/**
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
 export async function displaceUnreadableGovernedAsset(
   dest: string,
 ): Promise<GovernedDisplaceOutcome> {
@@ -1384,10 +1392,11 @@ function quarantineLabel(outcome: GovernedRetireOutcome): string {
 }
 
 /**
- * Exported for the regression test that pins the `changed` branch, which — like
- * the refresh above — is only reachable through a race. The test enters it by
- * naming a hash the file does not hold; an implementation that deleted the
- * pathname rather than the inode it checked destroys the file and fails.
+ * @internal Exported for the regression test that pins the `changed` branch —
+ * not part of the package's public surface. Like the refresh above it is only
+ * reachable through a race. The test enters it by naming a hash the file does
+ * not hold; an implementation that deleted the pathname rather than the inode
+ * it checked destroys the file and fails.
  */
 export async function retireVerifiedGovernedAsset(
   dest: string,

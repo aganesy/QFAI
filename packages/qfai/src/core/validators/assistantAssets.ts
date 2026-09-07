@@ -337,7 +337,7 @@ async function validateAssistantAssetProvenance(
   );
   const windowNote =
     assetProvenanceSeverity === "warning"
-      ? ` ${assetProvenancePromotion} リリースまでは warning、それ以降は error として報告されます。`
+      ? ` Reported as a warning until the ${assetProvenancePromotion} release, and as an error from then on.`
       : "";
 
   let shipped: Record<string, string>;
