@@ -468,6 +468,36 @@ describe("finding code grammar", () => {
     expect(LEGACY_FINDING_CODES).toEqual([...new Set(LEGACY_FINDING_CODES)].sort());
   });
 
+  it("tells a branch holding a frozen-family code what to do with it", async () => {
+    // Four branches met this guard and took four different answers — rename
+    // into an existing area, open a new one, hold, and leave it unresolved —
+    // because the document said only that the registry does not grow.
+    const doc = await readFile(DOC_PATH, "utf-8");
+
+    expect(doc).toContain("## A branch that already emits a frozen-family code");
+    expect(doc).toContain("**Rename to `QFAI-<AREA>-<NNN>`**");
+    expect(doc).toContain("**Check whether the code already exists.**");
+  });
+
+  it("says the prefix strip is what keeps a renamed code's waiver resolving", async () => {
+    // Renaming reads as an operator-facing break until you know the waiver
+    // still matches, and that is the whole reason it is cheap.
+    const doc = await readFile(DOC_PATH, "utf-8");
+
+    expect(doc).toContain("`resolveRuleKeys`");
+    expect(doc).toContain("strips the `QFAI-` prefix");
+    // And the limit of it: the deferred case is now the shapes it cannot reach.
+    expect(doc).toContain("**The strip is narrow, and only the numbered shape gets it.**");
+    expect(doc).toContain("Renaming a legacy code whose shape is **not** `<AREA>-<NNN>`");
+  });
+
+  it("keeps the documented strip in step with the one waivers.ts applies", async () => {
+    // Two statements of one regular expression is how the document would come
+    // to promise an alias the resolver does not give.
+    const waivers = await readFile(path.resolve(SRC_ROOT, "core/waivers.ts"), "utf-8");
+    expect(waivers).toContain("const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\\d{3})$/;");
+  });
+
   it("documents every frozen family in docs/finding-codes.md", async () => {
     const doc = await readFile(DOC_PATH, "utf-8");
     const prefixes = new Set(

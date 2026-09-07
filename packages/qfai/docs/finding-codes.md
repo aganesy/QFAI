@@ -82,8 +82,37 @@ finding is waived by and `TDDLIST_EXCEPTION_PARKED` the `code` it prints (see
    (`QFAI-TEST-001`): a bare entry drifts the moment the gate gains a second
    code, which is exactly how both tables came to omit `QFAI-TEST-002`.
 
+## A branch that already emits a frozen-family code
+
+A branch written before the guard, or against an older copy of it, reaches
+review with a code the registry will not take. The registry does not grow, so
+the branch renames — and the rename is cheaper than it looks, because the
+operator-facing identifier survives it.
+
+1. **Rename to `QFAI-<AREA>-<NNN>`**, following "Adding a code" above. Reuse an
+   `<AREA>` that fits before adding one.
+2. **A numbered legacy rule id keeps resolving on its own.** `resolveRuleKeys`
+   in `src/core/waivers.ts` strips the `QFAI-` prefix, so a finding coded
+   `QFAI-TDDLIST-007` also answers to `TDDLIST-007`, and a
+   `.qfai/waivers.yml` entry written against the old id still matches. The
+   rename is invisible to the waiver, which is what makes it safe to do on a
+   shipped code.
+3. **The strip is narrow, and only the numbered shape gets it.** It matches
+   `QFAI-<AREA>-<NNN>` with a single all-letter area, so `QFAI-CFG-LINK-001`
+   strips to nothing, and a screaming-snake legacy code
+   (`TDDLIST_EXCEPTION_PARKED`) has no numbered id to alias. Renaming one of
+   those needs an explicit alias, which is the work the next section defers.
+4. **Check whether the code already exists.** A family that several branches
+   reached for at once tends to have been settled by whichever landed first:
+   `QFAI-TDDLIST-007` through `-010` are on the default branch already. Adopt
+   the landed spelling rather than minting a parallel one — two codes for one
+   condition is worse than the frozen name was.
+
 ## Not covered here
 
-Renaming a legacy code to its canonical spelling needs an alias table with a
-deprecation window so existing `.qfai/waivers.yml` entries keep resolving. That
-migration, and publishing the inventory as a build artifact, are separate work.
+Renaming a legacy code whose shape is **not** `<AREA>-<NNN>` needs an alias
+table with a deprecation window, because the prefix strip above gives it
+nothing: a `.qfai/waivers.yml` entry written against `TDDLIST_EXCEPTION_PARKED`
+or `R-SKILL-MANIFEST-DRIFT` resolves through neither spelling once the code
+moves. That migration, and publishing the inventory as a build artifact, are
+separate work.
