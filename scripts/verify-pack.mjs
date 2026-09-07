@@ -645,14 +645,23 @@ if (existsSync(skillsLocalDir)) {
 // TODO / TBD goes, which is what the rule reads.
 for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
   const catalogPath = path.join(outputDir, ".qfai", "assistant", "catalog", catalogFile);
+  if (!existsSync(catalogPath)) {
+    // An `ENOENT` here names the path and nothing else, and the reader's next
+    // question is whether the file was renamed or whether init stopped writing
+    // it — which is what decides whether the fill or the package is wrong.
+    throw new Error(
+      `init --force wrote no ${catalogPath}. The four Stage 0 catalogs are what a project fills ` +
+        `before it gates, so this fill has nothing to stand in for.`,
+    );
+  }
   const before = readFileSync(catalogPath, "utf-8");
   const after = before
     .replace(/<(?!\/|!)[^<>\n]+>/g, "verify-pack fixture value")
     .replace(/\b(?:TODO|TBD)\b/g, "verify-pack fixture value");
   if (after === before) {
     throw new Error(
-      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this ` +
-        "stands in for, so a copy with none means the fixture is measuring nothing.",
+      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this stands ` +
+        `in for, so a copy with none means the fixture is measuring nothing.`,
     );
   }
   writeFileSync(catalogPath, after);

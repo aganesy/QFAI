@@ -64,9 +64,16 @@ export async function readRulePromotions(ledgerPath) {
       ts.isIdentifier(node.name) &&
       node.name.text === "RULE_PROMOTIONS"
     ) {
-      const initializer = ts.isAsExpression(node.initializer ?? node)
-        ? node.initializer.expression
-        : node.initializer;
+      // `as const` today, and `satisfies` is the other wrapper a ledger of
+      // this shape attracts. Both leave the object literal one `.expression`
+      // in, and neither changes what the entries say.
+      let initializer = node.initializer;
+      while (
+        initializer !== undefined &&
+        (ts.isAsExpression(initializer) || ts.isSatisfiesExpression(initializer))
+      ) {
+        initializer = initializer.expression;
+      }
       if (initializer !== undefined && ts.isObjectLiteralExpression(initializer)) {
         literal = initializer;
       }

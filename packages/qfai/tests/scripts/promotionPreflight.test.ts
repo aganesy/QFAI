@@ -14,16 +14,20 @@
  * for it and the ledger guard requires every promoted code to take its severity
  * from there.
  */
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
+// A `file:` URL rather than the path: an absolute Windows path starts with a
+// drive letter, which an import specifier reads as a scheme.
 const mod = await import(
-  path.join(repoRoot, "scripts", "promotion-preflight.mjs").replace(/\\/g, "/")
+  pathToFileURL(path.join(repoRoot, "scripts", "promotion-preflight.mjs")).href
 );
 const { LEDGER_REL, findingsAwaitingPromotion, formatAwaitingPromotion, readRulePromotions } = mod;
 
@@ -40,6 +44,38 @@ describe("the promotion ledger, read as data", () => {
       expect(entry.promoteAt, JSON.stringify(entry)).toMatch(/^\d+\.\d+\.\d+$/);
     }
   });
+
+  it.each(["as const", "satisfies Record<string, { introducedIn: string; promoteAt: string }>"])(
+    "reads the literal through a trailing `%s`",
+    async (suffix) => {
+      // The ledger carries one of these today and may carry the other
+      // tomorrow. Both leave the object literal one `.expression` in, and
+      // neither changes what the entries say — but a reader that unwraps only
+      // one of them stops finding the literal at all, which is the failure
+      // this file's other case exists to keep loud.
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-promotion-ledger-"));
+      try {
+        const ledger = path.join(root, "sunset.ts");
+        await writeFile(
+          ledger,
+          [
+            "export const RULE_PROMOTIONS = {",
+            "  /** `QFAI-EXAMPLE-001` — one entry, for the wrapper. */",
+            '  example: { introducedIn: "1.10.0", promoteAt: "1.12.0" },',
+            `} ${suffix};`,
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+
+        expect(await readRulePromotions(ledger)).toEqual([
+          { key: "example", code: "QFAI-EXAMPLE-001", promoteAt: "1.12.0" },
+        ]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("stops rather than reporting nothing when the ledger is not there", async () => {
     // A silent empty read would make the forecast pass on every tree, which is
