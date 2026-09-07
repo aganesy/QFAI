@@ -53,7 +53,9 @@ export const CANDIDATE_TEST_FILE_GLOBS: readonly string[] = [
  *
  * The default excludes apply, so a dependency's vendored tests do not make a
  * layout look present. Without them `**\/*_test.go` matches inside
- * `node_modules` on a repository with no Go in it at all.
+ * `node_modules` on a repository with no Go in it at all. (The pattern carries
+ * no backslash; one is written here because `*` followed by `/` would close
+ * this comment.)
  */
 export async function deriveTestFileGlobs(root: string): Promise<string[]> {
   const derived: string[] = [];

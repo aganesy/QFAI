@@ -60,6 +60,11 @@ beforeEach(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-config-write-"));
   await mkdir(path.join(root, "tests", "unit"), { recursive: true });
   await writeFile(path.join(root, "tests", "unit", "thing.test.ts"), "// a test file\n", "utf-8");
+  // Seeding the sandbox goes through the same mocked module, so its own call
+  // would satisfy "the spy is recording" on a build where init writes nothing
+  // at all — the one reading that makes the assertion below vacuous.
+  renameSpy.mockClear();
+  writeFileSpy.mockClear();
 });
 
 afterEach(async () => {

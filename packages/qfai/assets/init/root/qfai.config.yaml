@@ -33,10 +33,12 @@ validation:
     # about the default.
     #
     # It is left empty on purpose when nothing matched. A language-specific list
-    # seeded regardless of the tree makes the gate silently pass on every other
-    # stack, so the value is derived and never guessed. Run /qfai-configure to
-    # set or refine it; `qfai validate` reports QFAI-TRACE-124 while this is
-    # unset or matches zero files. `qfai init` never rewrites an existing config,
+    # seeded regardless of the tree selects zero files on every other stack, and
+    # the stub scan then reports nothing about a repository it never read — a
+    # clean result that means only that the globs missed. So the value is
+    # derived and never guessed. Run /qfai-configure to set or refine it;
+    # `qfai validate` reports QFAI-TRACE-124 while this is unset or matches zero
+    # files. `qfai init` never rewrites an existing config,
     # so a value tuned here stays.
     #
     # This key also selects the files scanned by the test-stub gate

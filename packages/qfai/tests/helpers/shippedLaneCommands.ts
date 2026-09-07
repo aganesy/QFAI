@@ -1358,13 +1358,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // predecessor's digest describes what ships, and the map is keyed by file
   // name, so this is one pin rather than two.
   //
-  // Derived by running `qfai init` into the E2E's temp root and reading what it
-  // wrote, which is how both predecessors were derived — not copied from a
-  // failure message.
-  // Re-derived once more for the MERGED file: main dropped the three retired
-  // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
-  // comment. Taken by running `qfai init` into a temp root and hashing the file
-  // it wrote, which is how both predecessors were taken.
+  // Derived by running `qfai init` into a temp root and hashing the file it
+  // wrote, never copied from a failure message.
   //
   // Re-pinned again for the `testFileGlobs` comment block, which now describes
   // a derived value: `qfai init` matches each recognised layout against the
@@ -1377,7 +1372,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // keeps the empty list the template ships. That is also the case the comment
   // calls a fact about the repository rather than about the default, so the pin
   // covers the shipped text and the empty-tree behaviour at once.
-  ["qfai.config.yaml", "dca10e4f4e6f07c5d358e7669ad7cce09b26aaa63fcd19f71c0a40245cbe3b5e"],
+  ["qfai.config.yaml", "e683cf23daa705ed6a5a627fd25ad3f05282becf83ad7a7a900b97828db41263"],
 ]);
 
 /**
