@@ -38,7 +38,7 @@ const roots: string[] = [];
 async function freshInit(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
   roots.push(root);
-  await runInit({ dir: root, yes: true });
+  await runInit({ dir: root, force: false, dryRun: false, yes: true });
   return root;
 }
 
@@ -98,7 +98,7 @@ describe("qfai init and root DESIGN.md", () => {
     const authored = path.join(root, "DESIGN.md");
     await writeFile(authored, '---\nbrand:\n  name: "Ours"\n---\n', "utf-8");
 
-    await runInit({ dir: root, yes: true, force: true });
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
     expect(existsSync(authored)).toBe(true);
   });
