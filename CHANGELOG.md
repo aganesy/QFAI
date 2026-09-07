@@ -1001,6 +1001,25 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   phase steps 3b and 5 decide it deterministically, and only the waiver that
   follows needs approval.
 
+- **`qfai --help` documents the per-command exit-code matrix, and an unknown
+  command now exits 1.** The help output carried a `Commands:` and an
+  `Options:` block and nothing else; exit codes appeared only incidentally
+  inside two option descriptions, and `64` / `65` / `66` — live return values
+  from `prototyping iterate` and `prototyping certify` — appeared nowhere. The
+  canonical matrix lives in the framework's own CLI contracts, which are not
+  part of the published package, so a consumer installing qfai from npm could
+  not reach it at all. Treating "non-zero" as one bucket misreads `64`
+  (converged — a success for the prototyping loop) as a failure. A new
+  `Exit codes:` block is rendered from the same constants the commands return,
+  per command rather than as one flat table, since the same number means
+  different things depending on the command. Alongside it, a mistyped
+  top-level command (`qfai vlaidate`, with or without `--help`) now sets exit
+  code 1 instead of printing usage and exiting 0, so a typo is detectable from
+  CI. That is a different row from a CLI-arg error — an unknown flag or a
+  rejected value — which `parseArgs` returns `2` for on every command, the code
+  `.qfai/contracts/cli/qfai-init.md` reserves for it; the block states both, so
+  a caller can tell a mistyped command name from a mistyped flag.
+
 ### Fixed
 
 - **`--force` / `--yes` / `--dry-run` も、読まないコマンドで受理されていた。**

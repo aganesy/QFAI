@@ -13,6 +13,7 @@ import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
+import { formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
@@ -33,6 +34,26 @@ import { resolveToolVersion } from "../core/version.js";
  */
 const UNKNOWN_COMMAND_EXIT_CODE = 1;
 
+/**
+ * The top-level commands the switch below dispatches. Kept as data so the
+ * unknown-command check can run *before* the `--help` branch: `qfai
+ * vlaidate --help` would otherwise print usage and exit 0, contradicting
+ * the `Exit codes:` note that a mistyped command name is a usage error.
+ */
+const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
+  "init",
+  "validate",
+  "report",
+  "doctor",
+  "guardrails",
+  "audit",
+  "sdd",
+  "atdd",
+  "handoff",
+  "discussion",
+  "prototyping",
+]);
+
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, invalidReason, options } = parseArgs(argv, cwd);
 
@@ -40,6 +61,22 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // version is readable from anywhere, including outside a project.
   if (options.version) {
     info(await resolveToolVersion());
+    return;
+  }
+
+  // Before the help branch: `--help` must not turn a mistyped command
+  // name into a successful run.
+  //
+  // `UNKNOWN_COMMAND_EXIT_CODE`, not `options.invalidExitCode`: the two are
+  // different rows of the same table, and the `Exit codes:` block this command
+  // prints says a mistyped command name is a usage error at
+  // `EXIT_CODES.findings` even when `--help` follows it. Borrowing the
+  // CLI-arg-error code here would make the help text the CLI ships disagree
+  // with the code that ships it.
+  if (command !== null && !KNOWN_COMMANDS.has(command)) {
+    error(`Unknown command: ${command}`);
+    info(usage());
+    process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
     return;
   }
 
@@ -363,6 +400,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
 
     default:
+      // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
+      // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
+      // 残す — exit 0 で素通りさせるより、使用法エラーで落とす方が安全。
       error(`Unknown command: ${command}`);
       info(usage());
       process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
@@ -462,6 +502,8 @@ Options:
                                  report: 既定の入出力も validate.spec-<ids>.json / report.spec-<ids>.md へ切り替える
   -h, --help      ヘルプ表示
   -V, --version   バージョン表示（インストール済み qfai の版番を stdout に出力）
+
+${formatExitCodesSection()}
 `;
 }
 

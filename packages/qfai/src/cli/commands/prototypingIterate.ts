@@ -44,6 +44,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
+import { EXIT_CODES } from "../lib/exitCodes.js";
 import { error, info, warn } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
@@ -1001,7 +1002,7 @@ export async function runPrototypingIterate(
       // Persist the stopReason so validator + downstream consumers
       // see the 4-value enum at face value (Phase 4 widening).
       await persistStopReason(protoJsonAbs, "license-verify-fail");
-      return 66;
+      return EXIT_CODES.prototypingLicenseFailure;
     }
   }
 
@@ -2776,12 +2777,12 @@ function emitStop(reason: StopReason): number {
         "layoutAntiPatternsDetected=[], designMdViolations=[]). " +
         "Run `qfai prototyping certify` to seal the run.",
     );
-    return 64;
+    return EXIT_CODES.prototypingStop;
   }
   if (reason === "license-verify-fail") {
     // License verify failure already emits its own diagnostic upstream;
     // this branch records the stop reason consistently with the enum.
-    return 66;
+    return EXIT_CODES.prototypingLicenseFailure;
   }
   if (reason === "input-error") {
     // Input-error class stops are emitted at the CLI boundary (cycle
@@ -2793,7 +2794,7 @@ function emitStop(reason: StopReason): number {
     `qfai prototyping iterate: max iterations (${MAX_ITERATIONS}) reached. ` +
       "Run `qfai prototyping certify` to seal the run.",
   );
-  return 65;
+  return EXIT_CODES.prototypingBudgetExhausted;
 }
 
 /**
