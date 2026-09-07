@@ -22,25 +22,46 @@ const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 
 /**
- * Line endings are normalised to LF on read: `core.autocrlf` hands back CRLF on
- * Windows, and both readers below anchor on `\n` — `subsection` finds a heading
- * by the newline around it, and `flat` joins wrapped lines. Either would miss
- * every match against a CRLF checkout, failing on the file's line endings
- * rather than on its content.
+ * One document, read once per tree and normalised to LF.
+ *
+ * Normalised because both readers below anchor on `\n` — `subsection` finds a
+ * heading by the newline around it, and `flat` joins wrapped lines. Against a
+ * CRLF checkout, which `core.autocrlf` produces on Windows, either would miss
+ * every match and fail on the file's line endings rather than on its content.
+ *
+ * Read once because several cases per tree ask for the same document and
+ * nothing writes it during the run. The promise is cached rather than the
+ * text, so concurrent callers share one read instead of racing to start their
+ * own.
  */
-const read = async (tree: string, rel: string): Promise<string> =>
-  (await readFile(path.join(repoRoot, tree, rel), "utf-8")).replace(/\r\n/g, "\n");
+const cache = new Map<string, Promise<string>>();
+const read = (tree: string, rel: string): Promise<string> => {
+  const key = `${tree}/${rel}`;
+  const hit = cache.get(key);
+  if (hit !== undefined) {
+    return hit;
+  }
+  const pending = readFile(path.join(repoRoot, tree, rel), "utf-8").then((text) =>
+    text.replace(/\r\n/g, "\n"),
+  );
+  cache.set(key, pending);
+  return pending;
+};
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 /** The body of the section `heading` names, up to the next heading of any level. */
 const subsection = (content: string, heading: string): string => {
-  const start = content.indexOf(`\n${heading}\n`);
-  if (start < 0) {
+  // A heading on the first line has no newline before it. Anchoring only on one
+  // returns "" for it, which passes every negative assertion and fails every
+  // positive one for a reason that is not the content.
+  const atStart = content.startsWith(`${heading}\n`);
+  const found = atStart ? 0 : content.indexOf(`\n${heading}\n`) + 1;
+  if (!atStart && found === 0) {
     return "";
   }
-  const after = start + heading.length + 2;
+  const after = found + heading.length + 1;
   const next = content.indexOf("\n#", after);
   return next < 0 ? content.slice(after) : content.slice(after, next);
 };
