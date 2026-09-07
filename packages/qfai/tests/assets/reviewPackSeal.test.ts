@@ -35,7 +35,6 @@ const read = (tree: string, rel: string): Promise<string> =>
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
-/** The body of a `## ` section, up to the next same-level heading. */
 /**
  * Every `<file>#<anchor>` reference in `text`, as whole tokens.
  *
@@ -46,6 +45,7 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 const anchorsIn = (text: string): string[] =>
   Array.from(text.matchAll(/[\w./-]+\.md#[a-z0-9-]+/g), (m) => m[0]);
 
+/** The body of a `## ` section, up to the next same-level heading. */
 const section = (content: string, heading: string): string => {
   // A heading on the first line has no newline before it, so anchoring on one
   // would return "" for it — a silent empty section that passes every

@@ -34,7 +34,7 @@ Review pack seal: <sha256>
 ```
 
 That section is the one part excluded from the P8 audit subject, so writing the
-two fields there does not stale the verdict. It is also the only slot that
+two fields there does not make the verdict stale. It is also the only slot that
 exists on a spec with **no ATDD-owned rows**, where there is no item evidence
 entry to hold the seal at all.
 
