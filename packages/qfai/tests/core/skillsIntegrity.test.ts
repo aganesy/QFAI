@@ -18,26 +18,37 @@ afterEach(() => {
 });
 
 /**
- * Deliberately no `{ timeout: … }` here, and none on the second block below.
+ * Deliberately no `{ timeout: … }` here, and none on `validateSkillsIntegrity`
+ * below.
  *
  * `vitest.knobs.ts` raised `testTimeout` to 120 s and measured why: "ninety-three
  * per cent of every CLI invocation is loading the 1.44 MB bundle", the pool is
  * ten workers, and "15 s was never a budget for this workload. It was a budget
- * for in-process tests, applied to a suite that is subprocess-bound." These two
- * blocks re-imposed exactly that abandoned number, eight times below the
- * project's, on the file that calls `runInit` eleven times (#1218).
+ * for in-process tests, applied to a suite that is subprocess-bound." Both
+ * blocks in this file re-imposed exactly that abandoned number, eight times
+ * below the project's, on the file that calls `runInit` eleven times (#1218).
  *
  * Measured on this tree, no source change between the two runs:
  *
- * | | |
- * | --- | --- |
- * | this file alone | **37.5 s** for 13 cases, slowest case 5.7 s |
- * | under a full `core` run | **101.6 s**, and `recovers from legacy 10_workflow.md` fails |
+ * | run | whole file | slowest case | `recovers from legacy 10_workflow.md` |
+ * | --- | --- | --- | --- |
+ * | this file alone | 37.5 s | 5.7 s | passes in 6.2 s |
+ * | under a full `core` run | 101.6 s | 24.9 s | **fails** |
+ * | the same, inheriting 120 s | 141.9 s | 24.9 s | passes in 15.4 s |
  *
- * The failure is `Test timed out in 15000ms.` — the override's own number, not
+ * Two numbers carry it. The slowest case costs **24.9 s** under the concurrency
+ * the project declares, so a 15 s ceiling was below the cost of the work rather
+ * than near it. And the case that failed completes in **15.4 s** — it was losing
+ * by 375 ms, which is why it was intermittent rather than simply broken.
+ *
+ * The failure is `Test timed out in 15000ms.`, the override's own number and not
  * the project's, which is what identifies the override as the cause rather than
- * the workload. Comfortable alone, past the ceiling under the concurrency the
- * project declares.
+ * the workload.
+ *
+ * The file is SLOWER after this change, 101.6 s to 141.9 s, because a case that
+ * used to abort at 15 s now runs to completion. That is the trade: wall clock
+ * for a lane that does not fail on changes which cannot have caused it. Cutting
+ * the cost means spawning less, which is a different change.
  *
  * Inheriting is the fix rather than restating 120 s locally: the knobs file is
  * the SSOT, and it says the number comes down when `CR-20260823-0001` removes
