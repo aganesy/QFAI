@@ -213,7 +213,7 @@ function describeDbDomain(domain: DbDomain): string {
 /** Which form bounds the field, and — when the candidates disagree — whose. */
 function describeDbConstraint(domain: DbDomain): string {
   if (isEnumOnly(domain)) {
-    return "ENUM (a physical constraint: the insert is rejected)";
+    return "ENUM (a physical constraint: the value is rejected at insert time)";
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
