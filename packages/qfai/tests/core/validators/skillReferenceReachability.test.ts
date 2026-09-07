@@ -555,8 +555,7 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
   });
 
   /**
-   * A citation whose path carries a tilde, which this branch made the token
-   * scan able to span.
+   * A citation whose path carries a tilde, which the token scan can now span.
    *
    * BEFORE the fix, `CITATION_SEGMENT_SOURCE` admitted only
    * `[\p{L}\p{N}\p{M}._-]`, so `~` ended a token: `references/notes~1.md`
