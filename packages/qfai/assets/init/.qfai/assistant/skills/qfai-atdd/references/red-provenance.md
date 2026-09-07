@@ -6,6 +6,14 @@ ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E`,
 are authored here.** This skill therefore writes into a ledger whose status
 lifecycle it does not define.
 
+**The set has one carve-out, and it is stated in
+`../SKILL.md#execution-ledger-the-rows-this-skill-feeds`, not restated here**: an
+`Integration` row whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`
+is outside it. `QFAI-ATDD-112` excludes those levels, so this stage authors no
+test for that row and `/qfai-implement` writes it instead. Every branch below
+applies to the rows this stage owns; that row has no branch, no evidence entry
+and no handoff here.
+
 ## What this skill produces
 
 - **Evidence, not ledger cells.** `/qfai-implement` writes `Status`, `DR-ID`
