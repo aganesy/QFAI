@@ -101,6 +101,7 @@
     "tests/cli/githubAnnotationCap.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
     "tests/cli/initAgentEntryPointRules.test.ts",
+    "tests/cli/initConfigRefinementWrite.test.ts",
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
     "tests/cli/initRunReport.test.ts",
     "tests/cli/prototypingRescope.test.ts",

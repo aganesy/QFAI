@@ -85,11 +85,26 @@ export const EMPTY_TEST_FILE_GLOBS_LINE = "    testFileGlobs: []";
  * so a template whose shape has moved leaves the file alone instead of writing
  * a second `testFileGlobs` key. `initTestGlobDerivation.test.ts` fails on that
  * drift rather than letting it pass silently here.
+ *
+ * Both line endings are recognised, and the one found is the one written back.
+ * A checkout under `core.autocrlf` gives the template CRLF, and matching `\n`
+ * alone would leave every such project with the empty value this exists to
+ * replace — silently, since a template whose shape has moved is the same
+ * no-op.
  */
 export function withDerivedTestFileGlobs(content: string, globs: readonly string[]): string {
-  if (globs.length === 0 || !content.includes(`${EMPTY_TEST_FILE_GLOBS_LINE}\n`)) {
+  if (globs.length === 0) {
+    return content;
+  }
+  const eol = ["\r\n", "\n"].find((candidate) =>
+    content.includes(`${EMPTY_TEST_FILE_GLOBS_LINE}${candidate}`),
+  );
+  if (eol === undefined) {
     return content;
   }
   const rendered = globs.map((glob) => JSON.stringify(glob)).join(", ");
-  return content.replace(`${EMPTY_TEST_FILE_GLOBS_LINE}\n`, `    testFileGlobs: [${rendered}]\n`);
+  const filled = EMPTY_TEST_FILE_GLOBS_LINE.replace("[]", `[${rendered}]`);
+  // A function replacement: `$&` and its siblings are only special in the
+  // string form, and the globs are values rather than a pattern.
+  return content.replace(`${EMPTY_TEST_FILE_GLOBS_LINE}${eol}`, () => `${filled}${eol}`);
 }

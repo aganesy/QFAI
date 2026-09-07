@@ -2296,13 +2296,56 @@ async function aimTestFileGlobsAtRepository(root: string, configPath: string): P
     const before = await readFile(configPath, "utf-8");
     const after = withDerivedTestFileGlobs(before, derived);
     if (after !== before) {
-      await writeFile(configPath, after, "utf-8");
+      await writeConfigByRename(configPath, after);
       info(
         `config: aimed testFileGlobs at ${derived.length} test layout(s) found in this repository`,
       );
     }
   } catch {
     // Deliberately swallowed; see the docblock.
+  }
+}
+
+/**
+ * Replace `target` by rename, keeping its mode.
+ *
+ * Writing over the file truncates it first, so an `ENOSPC`, an `EIO` or a
+ * signal partway through leaves a half-written `qfai.config.yaml` and no copy
+ * of what it replaced — and every later `validate` and `doctor` run reads that
+ * file. The content goes to a temp file beside the target and is renamed over
+ * it, so any failure before the rename leaves the original exactly as it was.
+ * That is what makes the caller's swallowed error safe: the refinement is
+ * skipped, and the config that init already wrote stands.
+ *
+ * The narrower cousin of `replaceFileAtomically`, which additionally re-checks
+ * the directory and the file for concurrent change. Those checks guard a merge
+ * into a file the adopter owns; this one replaces a file the same init run
+ * created moments earlier, and there is no older content to lose.
+ */
+async function writeConfigByRename(target: string, content: string): Promise<void> {
+  const { mode } = await stat(target);
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+  try {
+    // `O_EXCL`: the temp name is ours or nothing is written. Created `0600` and
+    // widened once complete, so the content is never briefly readable under a
+    // mode the original did not carry.
+    const handle = await open(
+      temp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    try {
+      await handle.writeFile(content, "utf-8");
+      await handle.chmod(mode);
+    } finally {
+      await handle.close();
+    }
+    await rename(temp, target);
+  } catch (err: unknown) {
+    // The temp file is this function's alone — leaving it behind would litter
+    // the project root with a partial YAML on every failed refinement.
+    await rm(temp, { force: true });
+    throw err;
   }
 }
 

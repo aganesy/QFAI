@@ -13,7 +13,7 @@
  * repository.
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -124,6 +124,21 @@ describe("withDerivedTestFileGlobs edits the line and nothing else", () => {
 
     expect(withDerivedTestFileGlobs(moved, ["tests/**/*.test.ts"])).toBe(moved);
   });
+
+  it("edits a CRLF template and keeps its line endings", async () => {
+    // A checkout under `core.autocrlf` gives the template CRLF. Matching LF
+    // alone reads as "the line is gone" and returns the file untouched, so
+    // every such project keeps the empty value this function exists to replace.
+    const template = (await readFile(TEMPLATE, "utf-8")).replace(/\n/g, "\r\n");
+
+    const after = withDerivedTestFileGlobs(template, ["tests/**/*.test.ts"]);
+
+    expect(after).toContain(`testFileGlobs: ["tests/**/*.test.ts"]\r\n`);
+    expect(after).not.toContain(EMPTY_TEST_FILE_GLOBS_LINE);
+    // Every line ending stays CRLF: a lone LF here would be the one line in
+    // the file that differs from the rest.
+    expect(after.split("\n").length).toBe(after.split("\r\n").length);
+  });
 });
 
 describe("qfai init writes the derived value", () => {
@@ -135,6 +150,28 @@ describe("qfai init writes the derived value", () => {
 
       const config = await readFile(path.join(root, "qfai.config.yaml"), "utf-8");
       expect(globsLineOf(config)).toBe(`    testFileGlobs: ["tests/**/*.test.ts"]`);
+    });
+  });
+
+  it("replaces the config by rename, keeping its mode and leaving no temp file", async () => {
+    // The refinement rewrites a file every later `validate` and `doctor` run
+    // reads. Writing over it truncates first, so a failure partway through
+    // leaves a half-written config and no copy of what it replaced. The
+    // replacement goes through a temp file beside the target: it is created
+    // `0600` and widened before the rename, and it is this function's alone —
+    // a leftover would put a partial YAML in the project root.
+    await withProject(async (root) => {
+      await plant(root, "tests/unit/thing.test.ts");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const config = path.join(root, "qfai.config.yaml");
+      expect(globsLineOf(await readFile(config, "utf-8"))).toContain(`"tests/**/*.test.ts"`);
+      const mode = (await stat(config)).mode & 0o777;
+      expect(mode, "the temp file's own 0600 must not survive the rename").not.toBe(0o600);
+      const sibling = (await stat(path.join(root, "AGENTS.md"))).mode & 0o777;
+      expect(mode, "the same mode as a root file the same run copied").toBe(sibling);
+      expect((await readdir(root)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
     });
   });
 
