@@ -274,7 +274,11 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
 interface DualEmitter {
   /** Every module with an emit site, package-relative and sorted. */
   readonly modules: readonly string[];
-  /** Which group holds the code, and why that group's profile set is right. */
+  /**
+   * How the code is accounted for: the group that holds it and why that
+   * group's profile set matches its emitters — or, where no group can, the
+   * exemption standing in for one and what makes a group unreachable.
+   */
   readonly treatment: string;
 }
 
