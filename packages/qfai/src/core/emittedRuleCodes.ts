@@ -633,7 +633,6 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [
   "QFAI-LAYER-105",
   "QFAI-LAYER-106",
   "QFAI-LEDGER-001",
-  "QFAI-LINK-001",
   "QFAI-MMD-001",
   "QFAI-MMD-002",
   "QFAI-MMD-003",

@@ -161,6 +161,13 @@ export function stripComments(source: string): string {
   return chars.join("");
 }
 
+/** Every line of `text` carrying Japanese, numbered from 1, in file order. */
+function scanLines(text: string): JapaneseLine[] {
+  return text
+    .split(/\r?\n/)
+    .flatMap((line, index) => (CJK_RE.test(line) ? [{ line: index + 1, text: line.trim() }] : []));
+}
+
 /** Every code line of `source` that carries Japanese text, in file order. */
 export function findJapaneseLines(source: string): JapaneseLine[] {
   // Blanking comments can only remove Japanese, so a file without any at all
@@ -168,9 +175,19 @@ export function findJapaneseLines(source: string): JapaneseLine[] {
   if (!CJK_RE.test(source)) {
     return [];
   }
-  return stripComments(source)
-    .split(/\r?\n/)
-    .flatMap((line, index) => (CJK_RE.test(line) ? [{ line: index + 1, text: line.trim() }] : []));
+  return scanLines(stripComments(source));
+}
+
+/**
+ * Every line of a plain-text document that carries Japanese, in file order.
+ *
+ * No comment handling, because a document has no code to tell prose apart
+ * from: every line is content a reader sees. That is also why nothing here
+ * needs the TypeScript scanner, and why the numbers stay absolute — a report
+ * points at the line of the file, not of some extracted region.
+ */
+export function findJapaneseTextLines(text: string): JapaneseLine[] {
+  return scanLines(text);
 }
 
 /** `file` relative to `from`, with POSIX separators on every platform. */
