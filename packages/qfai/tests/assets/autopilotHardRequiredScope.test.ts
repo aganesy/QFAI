@@ -42,8 +42,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("keeps the hard-required entry at full strength and points at the protocol", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain("`primarySpecId` (when absent from inputs");
+    // The entry has to keep naming the protocol and what it does. Shortened to
+    // the condition alone, it reads as an exemption for whatever that protocol
+    // resolves — the reading this file exists to close.
+    expect(skill).toContain("Spec Auto-Discovery narrows the candidates but does not settle");
     expect(skill).toContain(
-      "a single candidate is announced for the user to confirm rather than proceeded on)",
+      "a single candidate is announced for the user to confirm, rather than proceeded on automatically)",
     );
   });
 
@@ -58,7 +62,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "Single spec: announce the detected spec and require the user to confirm it before the first TDD item",
     );
     expect(skill).toContain("Auto-discovery narrows the candidates; it does not supply the value");
-    expect(skill).toContain("one candidate being the only one is not the user having named it");
+    expect(skill).toContain("a single candidate does not mean the user named it");
   });
 
   it("leaves no carve-out that lets auto-discovery settle the value alone", async () => {

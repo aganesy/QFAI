@@ -121,7 +121,7 @@ There is one base, and it is the project root.
     rather than from the agent. A repository-side derivation may narrow the
     candidates; it never settles the value on the agent's own authority.
 
-  What a missing one costs a run is below.
+  What a missing hard-required value costs a run is below.
 
 - Spend **at most 5 clarifying questions per invocation**, the unit being one
   top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
