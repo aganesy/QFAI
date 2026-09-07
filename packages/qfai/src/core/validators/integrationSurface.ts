@@ -128,9 +128,10 @@ type Broken = {
    * A wrapper whose canonical is gone means the instructions are not in the
    * project at all; a wrapper the OS refuses to follow, over a canonical that
    * reads fine, means they are here and one path does not reach them — which
-   * is every `git worktree` on Windows, where git writes each `.claude/skills/*`
-   * link as a FILE symlink to a directory before that directory exists in the
-   * new worktree. Reporting both as "not applied at all" made the second an
+   * is every `git worktree` on Windows, where git writes each skill wrapper —
+   * every entry of {@link SKILL_WRAPPER_DIRS}, not `.claude/` alone — as a FILE
+   * symlink to a directory before that directory exists in the new worktree.
+   * Reporting both as "not applied at all" made the second an
    * `error` nobody in that workflow could clear, on a tree whose documents are
    * all present.
    */
@@ -1626,7 +1627,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         reachable.map((entry) => entry.relative),
         "change",
         [
-          "This shape appears in every `git worktree`. Git writes each `.claude/skills/*` link as a FILE symlink to a directory — at the moment it writes it the target does not yet exist in the new worktree — and the OS will not follow that. The same paths in the primary checkout are intact.",
+          "This shape appears in every `git worktree`, in every skill wrapper directory rather than `.claude/` alone. Git writes each link as a FILE symlink to a directory — at the moment it writes it the target does not yet exist in the new worktree — and the OS will not follow that. The same paths in the primary checkout are intact.",
           "To relink them in the worktree: check the setting with `git config --get core.symlinks`, set it with `git config core.symlinks true` if it is not already true, then delete the paths named above and run `qfai init`. Windows may also need Developer Mode enabled.",
           "Left as they are, the assistant in that worktree does not load these skills or agents. The documents themselves are under `.qfai/assistant/**` and can be opened at the canonical path.",
         ].join("\n"),
