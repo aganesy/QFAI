@@ -229,14 +229,14 @@ describe("the clarification budget is countable", () => {
     it(`${tree}: the hard-required exemption is scoped to what the run consumes`, async () => {
       const content = await read(tree, CONSTITUTION);
       // Every skill's `Default Autopilot Policy` lists the same three entries,
-      // so an unscoped rule would make `/qfai-verify` demand `companyName`
+      // so an unscoped rule would make `/qfai-verify` demand brand intent
       // from a repository that has no brand surface and stop when unanswered.
       expectPhrase(content, "**scoped to the inputs the requested work actually\n  consumes**");
       expectPhrase(
         content,
         "An input the requested\n  path never reads MUST NOT be asked for and MUST NOT block the run",
       );
-      expectPhrase(content, "executes its quality\n  gates without ever asking for `companyName`");
+      expectPhrase(content, "executes its quality\n  gates without ever asking for brand intent");
       const operating = await read(tree, OPERATING);
       expectPhrase(operating, "**that this invocation actually consumes**");
       expectPhrase(
@@ -332,7 +332,7 @@ describe("the clarification budget is countable", () => {
     it(`${tree}: --auto silences the question, it does not authorize the guess`, async () => {
       // Article X rule 4 is a no-question mode and orders the run to proceed on
       // assumptions; the `hard-required` exemption orders it to ask. Under an
-      // explicit `--auto` an agent missing a consumed `companyName` therefore
+      // explicit `--auto` an agent missing a consumed brand intent therefore
       // had to either break rule 4 or invent an undefaultable value. The ask is
       // what `--auto` removes — the run stops and names the blocker instead.
       const content = await read(tree, CONSTITUTION);

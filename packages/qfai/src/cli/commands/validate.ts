@@ -1905,7 +1905,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-RESEARCH-021":
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
-    "Every `qfai-*` SKILL.md keeps its hard-required bucket within the allowed entries. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
+    "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
 };
 
 /**
@@ -2023,7 +2023,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-RESEARCH-021":
     "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
   "QFAI-AUTOPILOT-001":
-    "Drop the entries the message names from the SKILL.md hard-required bucket. `npx qfai init --force` regenerates the shipped wording.",
+    "Drop the entries the message names from the SKILL.md hard-required bucket, or declare one this skill really consumes for that skill. `npx qfai init --force` regenerates the shipped wording.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

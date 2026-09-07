@@ -195,18 +195,27 @@ ${hardRequired}
     expect(finding?.message ?? "").toContain("brand intent / companyName");
   });
 
-  it("leaves a narrowed bucket alone, and an input only one skill reads", async () => {
-    // A skill may drop an entry it never reaches, and may hard-require an
-    // input of its own: `qfai-configure` cannot write a config without a
-    // `testFileGlobs` proposal that matches a real file, and nothing else
-    // reads one. Reporting either would put a prompt back that buys nothing.
+  it("leaves a narrowed bucket alone", async () => {
+    // A skill may drop an entry it never reaches. Reporting that would put
+    // back a prompt that buys nothing.
+    await writeSkill(root, "qfai-fixture", policyWith("  - brand intent"));
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.find((i) => i.code === "QFAI-AUTOPILOT-001")).toBeUndefined();
+  });
+
+  it("reports an input the skill carrying it does not declare", async () => {
+    // The bucket is open at one end only: a skill may hard-require an input of
+    // its own, and the declaration is what makes that visible in review.
+    // Without it, any name at all passes.
     await writeSkill(
       root,
       "qfai-fixture",
       policyWith("  - brand intent\n  - a `testFileGlobs` proposal that matches a real file"),
     );
     const issues = await validateAutopilotPolicy(root);
-    expect(issues.find((i) => i.code === "QFAI-AUTOPILOT-001")).toBeUndefined();
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("does not declare");
   });
 
   it("reads a retired entry written past a wrapped bullet", async () => {

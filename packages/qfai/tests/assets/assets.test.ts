@@ -22,6 +22,7 @@ import {
 import {
   classifyHardRequiredEntries,
   collectHardRequiredEntries,
+  HARD_REQUIRED_COMMON_ENTRIES,
   RETIRED_HARD_REQUIRED_ENTRIES,
 } from "../../src/core/validators/autopilotPolicy.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
@@ -2642,10 +2643,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // bucket to the entries that do have one — `brand intent` (routed to root
     // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
     //
-    // The set is what a bucket may NOT name. The bucket is open at the other
-    // end: a skill may narrow it, and may hard-require an input only it reads,
-    // so an allowed list would fail on the next legitimate entry rather than
-    // on the defect.
+    // A skill may narrow this bucket, and may hard-require an input only it
+    // reads — declared per skill, so adding one is a reviewed change. What it
+    // may not do is carry an entry nothing declares.
     //
     // Membership is decided by `classifyHardRequiredEntries`, the SAME matcher
     // `validateAutopilotPolicy` emits from, rather than by a test written out
@@ -2661,8 +2661,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const entries = collectHardRequiredEntries(content);
       expect(entries.length, `${relativePath} has no hard-required bucket`).toBeGreaterThan(0);
-      const classified = classifyHardRequiredEntries(entries);
-      offenders.push(...classified.retired.map((entry) => `${relativePath}: ${entry}`));
+      const skillId = path.basename(path.dirname(relativePath));
+      const classified = classifyHardRequiredEntries(entries, skillId);
+      offenders.push(
+        ...[...classified.retired, ...classified.unknown].map(
+          (entry) => `${relativePath}: ${entry}`,
+        ),
+      );
     }
 
     expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
@@ -2691,13 +2696,20 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         "`primarySpecId` (when absent from inputs)",
         "`primarySpecId` (only when Spec Auto-Discovery cannot resolve one — zero candidates)",
       ]),
-    ).toEqual({ retired: [] });
+    ).toEqual({ retired: [], unknown: [] });
 
-    // A narrowed bucket, and a skill-specific input, are both lawful.
-    expect(classifyHardRequiredEntries(["brand intent"]).retired).toEqual([]);
-    expect(
-      classifyHardRequiredEntries(["a `testFileGlobs` proposal that matches a real file"]).retired,
-    ).toEqual([]);
+    // A narrowed bucket is lawful and reports nothing.
+    expect(classifyHardRequiredEntries(["brand intent"])).toEqual({ retired: [], unknown: [] });
+    // A skill-specific input is lawful for the skill that declares it, and for
+    // no other — which is what makes it a declaration rather than a hole.
+    const own = ["a `testFileGlobs` proposal that matches at least one real file"];
+    expect(classifyHardRequiredEntries(own, "qfai-configure").unknown).toEqual([]);
+    expect(classifyHardRequiredEntries(own, "qfai-verify").unknown).toEqual(own);
+    // And an entry nothing declares is reported wherever it appears.
+    expect(classifyHardRequiredEntries(["unreviewedSecret"], "qfai-configure").unknown).toEqual([
+      "unreviewedSecret",
+    ]);
+    expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent", "primaryspecid"]);
     expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname"]);
   });
 });

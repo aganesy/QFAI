@@ -167,11 +167,11 @@ Default policy:
   them.** An input a skill's `Default Autopilot Policy` lists under
   `hard-required` has no default and MUST NOT be guessed once the budget is
   exhausted. The exemption is **scoped to the inputs the requested work actually
-  consumes**: `companyName` and brand intent when the run produces brand-facing
+  consumes**: brand intent when the run produces brand-facing
   output, `primarySpecId` when the run is spec-scoped. An input the requested
   path never reads MUST NOT be asked for and MUST NOT block the run — a
   `/qfai-verify` run on a repository with no brand surface executes its quality
-  gates without ever asking for `companyName`. When a **needed** input is still
+  gates without ever asking for brand intent. When a **needed** input is still
   missing, stop and name what is blocked. Assumptions cover clarifications,
   never inputs the skill declares undefaultable **and** the run requires.
   **An explicit `--auto` skips the asking, not the rule.** Article X rule 4 is a
