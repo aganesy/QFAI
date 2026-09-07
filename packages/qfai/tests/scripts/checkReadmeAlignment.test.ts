@@ -230,7 +230,7 @@ describe("check-readme-alignment: the CI section's workflow claim", () => {
     const dir = await newTempDir();
     const { root, pkg } = await writePair(
       dir,
-      "Into `.github/workflows/` it writes `qfai-validate.yml` and `qfai-tests.yml`.",
+      "Into `.github/workflows/` it writes `qfai-validate.yml`, `qfai-tests.yml` and `qfai-docs.yml`.",
     );
 
     const result = runGuard(["--root", root, "--package", pkg]);
@@ -269,7 +269,8 @@ describe("check-readme-alignment: the CI section's workflow claim", () => {
   // first into a no-op for files that disagree.
   it("still reports line divergence alongside the CI oracle", async () => {
     const dir = await newTempDir();
-    const shared = "Into `.github/workflows/` it writes `qfai-validate.yml` and `qfai-tests.yml`.";
+    const shared =
+      "Into `.github/workflows/` it writes `qfai-validate.yml`, `qfai-tests.yml` and `qfai-docs.yml`.";
     const root = path.join(dir, "README.md");
     const pkg = path.join(dir, "package-README.md");
     await writeFile(root, `# Title\n\n${shared}\n`, "utf-8");

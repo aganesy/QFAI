@@ -90,6 +90,7 @@ notes: <one line of context>
 
 ### Plan
 
+```yaml
 - id: VFY-001
   # unit | integration | acceptance | manual | migration | rollback
   level: unit
@@ -99,7 +100,8 @@ notes: <one line of context>
   owner: dev
   expected: <observable pass condition>
   links:
-  - <evidence path or issue reference>
+    - <evidence path or issue reference>
+```
 
 ## Rationale
 

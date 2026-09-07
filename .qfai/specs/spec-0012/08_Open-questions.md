@@ -3,7 +3,9 @@
 - Historical runtime/mode questions are superseded by [07_Decisions.md](./07_Decisions.md).
 - v1.9.2 Second-Wave: OQ-0152 (cycle-0 skeleton UX shape), OQ-0153 (DESIGN.md patch-zone shape), and OQ-0154 (exploration-mode gate-relaxation scope) are RESOLVED by `_policies/08_Decisions.md` DR-0261 (+ DR-0273), DR-0262, and DR-0263 respectively. No open items are added for REQ-0150 / REQ-0151 / REQ-0152; REQ-0162 / REQ-0165 are straight MUSTs with no deferred decision. See `09_delta.md` § 2026-05-27 — v1.9.2 Second-Wave (spec-0012).
 
-## OQ-0012-0002: `prototyping.json#iterations[]` shape under per-spec namespacing
+## Open Questions
+
+### OQ-0012-0002: `prototyping.json#iterations[]` shape under per-spec namespacing
 
 - Gate: implement
 - Disposition: open
@@ -15,7 +17,7 @@
 - Recommendation: (B) for read locality with `readFrozenSpecsCovered()` / certify aggregation.
 - Resolves: blocks final code landing in `iteration.ts` / `prototypingIterate.ts`.
 
-## OQ-0012-0003: `pivotDirective` retention vs supersede
+### OQ-0012-0003: `pivotDirective` retention vs supersede
 
 - Gate: implement
 - Disposition: open
@@ -27,7 +29,7 @@
 - Recommendation: (A) — directional hint to the generator is independent of the convergence gate.
 - Resolves: blocks reviewer-prompt / generator-prompt reference cleanup.
 
-## OQ-0012-0004: `critique` field cleanup under `*Feel` schema
+### OQ-0012-0004: `critique` field cleanup under `*Feel` schema
 
 - Gate: implement
 - Disposition: open
@@ -39,7 +41,7 @@
 - Recommendation: (A) — six `*Feel` fields already provide structured prose coverage.
 - Resolves: blocks `evaluatorReview.ts` schema implementation.
 
-## OQ-0012-0005: Capture role removal in steering / agent-routing
+### OQ-0012-0005: Capture role removal in steering / agent-routing
 
 - Gate: implement
 - Disposition: open
@@ -51,7 +53,7 @@
 - Recommendation: Retain the role in the catalog for non-prototyping use; remove only the prototyping-specific routing entry. Update via spec-0015 / `_policies/02_routing.md` in a follow-up.
 - Resolves: blocks agent-catalog / agent-routing cleanup.
 
-## OQ-0012-0006: Per-spec iter-dir migration wiring in `prototypingIterate.ts`
+### OQ-0012-0006: Per-spec iter-dir migration wiring in `prototypingIterate.ts`
 
 - Gate: implement
 - Disposition: open
@@ -63,7 +65,7 @@
 - Recommendation: Land alongside the next wave that resolves OQ-0012-0002 (prototyping.json#iterations[] shape) — the iter-dir migration and the JSON-shape migration share the same per-spec namespace and must ship atomically to keep `certify` parsing consistent.
 - Resolves: blocks legacy-to-per-spec layout cutover in `prototypingIterate.ts`. Couples with TDD-0384 deferral noted in the PR #208 description.
 
-## OQ-0012-0007: Reviewer dispatch wiring in `prototypingIterate.ts`
+### OQ-0012-0007: Reviewer dispatch wiring in `prototypingIterate.ts`
 
 - Gate: implement
 - Disposition: open
@@ -75,7 +77,7 @@
 - Recommendation: Wire after OQ-0012-0006 (per-spec layout) lands so the dispatch result has a stable iter-dir target. Couples with TDD-0401 / TDD-0402 (live Playwright runner) — until the runner is shipped, the dispatch wire-in remains a no-op gated on `options.playwrightRunner`.
 - Resolves: blocks Reviewer-orchestration cutover from skill-driven to command-driven dispatch in `prototypingIterate.ts`.
 
-## OQ-0012-0008: `parseEvaluatorReview` runtime wire-in for per-cycle review.json validation
+### OQ-0012-0008: `parseEvaluatorReview` runtime wire-in for per-cycle review.json validation
 
 - Gate: implement
 - Disposition: open
@@ -86,7 +88,7 @@
 - Question: `core/prototyping/evaluatorReview.ts#parseEvaluatorReview` validates the v2.0 `*Feel`-schema reviewer payload (six bounded `*Feel` fields, four ordinal axes, closed-schema unknown-key rejection) with full unit coverage, but no per-cycle review-loader currently invokes it. The candidate read path lives in `core/prototyping/iteration.ts` (single-lineage loader) or `cli/commands/prototypingCertify.ts` (multi-spec aggregator). Wire-in must identify the read path and route every loaded `<screen>.review.json` through `parseEvaluatorReview` so schema drift fails fast at iterate/certify rather than at downstream consumers.
 - Recommendation: Land in the same wave as OQ-0012-0006 / 0007 (per-spec layout + dispatch) so the validator sees the v2.0 file layout it was designed for. Resolves: blocks v2.0 `*Feel` schema runtime enforcement.
 
-## OQ-0012-0009: `validateImageSources` runtime wire-in at certify gate
+### OQ-0012-0009: `validateImageSources` runtime wire-in at certify gate
 
 - Gate: implement
 - Disposition: open
@@ -98,7 +100,7 @@
 - Recommendation: Defer until the handoff-yaml population path (DESIGN.md pool + handoff extraction) lands; until then `validateImageSources` is correctly tested-only. Track the population deferral as a coupled item under the same wave.
 - Resolves: blocks `prototype-handoff.yaml#imageSources[]` schema gate at certify.
 
-## OQ-0012-0010: `DEFAULT_LICENSE_CATALOG` configurability — wire-in via `QfaiConfig.prototyping.licenseCatalog`
+### OQ-0012-0010: `DEFAULT_LICENSE_CATALOG` configurability — wire-in via `QfaiConfig.prototyping.licenseCatalog`
 
 - Gate: implement
 - Disposition: open
@@ -110,7 +112,7 @@
 - Recommendation: Land in a dedicated wave after CHG-002 stabilises — the wire-in is mechanical but touches the cycle-0 freeze path that `licenseVerify` reads. Until then, the in-memory baseline is the documented contract and consumers needing additional sources fork the constant.
 - Resolves: blocks consumer-facing license-catalog extensibility without a fork; closes the untracked TODO at `prototypingIterate.ts#DEFAULT_LICENSE_CATALOG`.
 
-## OQ-0012-0011: Cycle-9 idempotency — single `--cycle 9` invocation on a non-converged 10-iter loop
+### OQ-0012-0011: Cycle-9 idempotency — single `--cycle 9` invocation on a non-converged 10-iter loop
 
 - Gate: implement
 - Disposition: open
@@ -124,7 +126,7 @@
 - Mitigation while deferred: operators who hit this path see the cycle-mismatch diagnostic first followed by exit 65 — the eventual exit code is correct, only the early diagnostic is misleading. SKILL.md Cycle 9 budget exhaustion subsection points operators at the restart-from-cycle-0 recovery path, so the workaround is documented.
 - Resolves: closes the OP-APPEND-079 pattern asymmetry flagged by codex r3269198118 (deferred-followup OQ + tdd/test-list / 16_Traceability-ledger / 06_Test-Cases triad now mirrored in 08_Open-questions). The 09_delta.md OP-APPEND register entry is added under the 14th-wave cluster in `09_delta.md`.
 
-## OQ-0012-0012: Systematic audit + helper consolidation of `path.join(root, config.paths.*, ...)` call sites
+### OQ-0012-0012: Systematic audit + helper consolidation of `path.join(root, config.paths.*, ...)` call sites
 
 - Gate: implement
 - Disposition: open
@@ -138,7 +140,7 @@
 - Mitigation while deferred: workflows using absolute `paths.contractsDir` or `paths.specsDir` overrides observe correct behaviour on the prototyping loop (certify per-(spec × screen) gate + iterate primarySpecId pin, both fixed). Validate-time gates may emit misleading errors but do not corrupt artifacts.
 - Resolves: the bug-class architectural concern; a future regression of the same pattern would have a single SSOT helper to anchor against.
 
-## OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
+### OQ-0012-0001: Airgapped run support (stock-photo fetch over restricted network)
 
 - Gate: ops
 - Disposition: deferred (post-v1; trigger = consumer project files a blocker citing airgapped / network-restricted environment)
@@ -156,7 +158,7 @@
 - Next decision point: Ops gate post-v1 dogfooding.
 - Evidence: discussion-20260516144141078 `11_OQ-Register.md` (OQ-0003 row) and `13_Deferred.md` (OQ-0003 row).
 
-## OQ-0012-0013: a per-spec-only review layout fails `validate`, and `certify` refuses it only when `validate` re-ran after the change
+### OQ-0012-0013: a per-spec-only review layout fails `validate`, and `certify` refuses it only when `validate` re-ran after the change
 
 - Gate: implement
 - Disposition: deferred (trigger = a RECORDED non-seed iteration carrying per-spec review artifacts without the flat `review.json`; a dual-write iteration carrying both satisfies each gate and is NOT the trigger, and unrecorded working directories are outside what either gate inspects, on a CANONICAL-INDEX iteration only)
