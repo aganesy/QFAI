@@ -1,0 +1,1 @@
+../../.agents/rules/repository-language.md
