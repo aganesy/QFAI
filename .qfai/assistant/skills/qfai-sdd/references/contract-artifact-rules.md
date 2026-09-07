@@ -131,6 +131,41 @@ the pairing itself is what the `Reconciled With` column above is for.
 It is a partial check either way: error codes, response-status sets, and non-enum domains are still
 reconciled by the author and the reviewer gate.
 
+### Derived, not stored
+
+A state value the API mandates is sometimes **computed at read time and never stored** — a status
+the screen shows that is a pure function of stored columns plus the clock. `QFAI-CONTRACT-040` has
+no way to know that from the schema, and for such a value both of its remedies are wrong: widening
+the DB domain makes it _possible_ to store a value the contract says must not be stored (and a
+clock-derived value goes stale the moment the clock moves, which is why it is not stored), while
+deleting it from the API removes a value the UI contract requires.
+
+Declare it in the **DB** contract, which is the artifact that owns storage:
+
+```sql
+-- Derived (not stored): status = standby, powered_off from enabled, connection_status, health_status, JST clock
+```
+
+- **The comment marker is required and the key starts the line**, as with `-- Depends on:`, so prose
+  _about_ a derivation is not itself a declaration.
+- **The `from` clause is required.** Naming the inputs is what makes the claim reviewable; without
+  it the marker would be a way to silence the rule rather than a way to answer it.
+- **The value list is all-or-nothing.** An empty element means the author was mid-edit, and the
+  whole declaration is ignored rather than half-read.
+- It is declared on the **DB** side and not as an `x-` extension on the API property on purpose: an
+  API contract asserting "this is not stored" would let the side making the demand silence the side
+  that answers it.
+
+`QFAI-CONTRACT-041` reports a declaration that does no work: one that does not parse — so the
+author believes they answered a finding that is still standing — and one naming a value the API
+does not require, or that the DB domain stores after all. A value **nobody declared** still raises
+`QFAI-CONTRACT-040`, or the marker would be a silencer.
+
+It ships behind a promotion window: `warning` until the release its `RULE_PROMOTIONS` entry names,
+`error` from then on. The format is new, so the first authors to use it are answering another
+finding voluntarily and will get the grammar wrong in the ways the message exists to teach; failing
+the run on a line added to engage with the tool is the worst first experience of it.
+
 ## Executability (MUST)
 
 A contract this file calls "downstream execution truth" has to have been
