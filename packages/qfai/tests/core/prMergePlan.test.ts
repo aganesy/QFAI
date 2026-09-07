@@ -98,12 +98,12 @@ afterEach(async () => {
  * Deliberately no `{ timeout: … }` here, and none on the pagination block below.
  *
  * Both declared 30 s, a quarter of the project's `testTimeout`, on a file that
- * shells out to the `run-pr-merge` script. `vitest.knobs.ts` raised that value
- * to 120 s and recorded why — "ninety-three per cent of every CLI invocation is
- * loading the 1.44 MB bundle", the pool is ten workers, and "15 s was never a
- * budget for this workload. It was a budget for in-process tests, applied to a
- * suite that is subprocess-bound." A local quarter of the measured value is the
- * same mistake at a different scale (#1233).
+ * genuinely spawns: its four `runPrMerge` calls each `spawn("pwsh", …)` to drive
+ * the `run-pr-merge` script (#1233). `vitest.knobs.ts` raised that value to
+ * 120 s over the same class of cost — its measurement is of the qfai binary
+ * rather than of `pwsh`, but its conclusion is the one that applies: "15 s was
+ * never a budget for this workload. It was a budget for in-process tests,
+ * applied to a suite that is subprocess-bound."
  *
  * Observed, one full `core` run on a clean tree:
  *
@@ -119,9 +119,12 @@ afterEach(async () => {
  * run took 22231 ms, so the file was sitting at three quarters of its ceiling
  * while green — the margin was gone before anything failed.
  *
- * `prFixMonitor.test.ts` is the same harness with three spawn sites and declares
- * `{ timeout: 120000 }`. Inheriting reaches the same value without a second copy
- * to update when `CR-20260823-0001` lets the knobs file lower it.
+ * `prFixMonitor.test.ts` is the same harness — 14 `runPrFix` calls through the
+ * same `spawnCommand("pwsh", …)` — and declares `{ timeout: 120000 }`. The more
+ * spawn-heavy of the pair took the project's value; this one took a quarter of
+ * it, and nothing marks either as considered. Inheriting reaches the same number
+ * without a second copy to update when `CR-20260823-0001` lets the knobs file
+ * lower it.
  */
 describe("run-pr-merge plan", () => {
   it("renders pnpm ci:gate when the repo defines a long ci:gate script", async () => {
