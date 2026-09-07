@@ -190,15 +190,15 @@ describe("the summary counts what left the process", () => {
         ).toBeLessThanOrEqual(CAP);
       }
 
-      const note = lines.find((line) => line.includes("上限省略="));
+      const note = lines.find((line) => line.includes("omittedOverLimit="));
       expect(
         note,
         "a truncated run must say which level was truncated and by how much: one number cannot " +
           "express a per-level cap, and silence is what made `annotations=` misleading",
       ).toBeDefined();
-      expect(note ?? "").toMatch(/上限省略=\w+ \d+\/\d+/);
+      expect(note ?? "").toMatch(/omittedOverLimit=\w+ \d+\/\d+/);
       expect(
-        lines.some((line) => line.includes("level ごと 10 件/step")),
+        lines.some((line) => line.includes("at most 10 annotations per level per step")),
         "and it must state the rule, so a reader can tell a cap from a bug",
       ).toBe(true);
     } finally {
