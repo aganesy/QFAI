@@ -4,9 +4,9 @@
  * `/qfai-implement` names the moment each cell is written in three places: the
  * Orchestrator Protocol mandates the write, `### Completion` confirms it
  * happened, and `references/parallelization-policy.md` says who performs it
- * when the phases run inside a worker. Nothing compares the three, so they can
- * name different moments and different cells while each reads as correct on
- * its own.
+ * when the phases run inside a worker. This file is where the three are
+ * compared; nothing else reads them together, and apart they can name
+ * different moments and different cells while each reads as correct on its own.
  *
  * What that costs is invisible until a run is interrupted. A cell whose write
  * point is the end of the run is unwritten for every row that ran before it,
