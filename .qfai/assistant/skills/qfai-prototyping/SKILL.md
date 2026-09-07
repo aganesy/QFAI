@@ -4,8 +4,15 @@ title: QFAI Prototyping (DESIGN.md-driven UX Loop)
 description: "Iterate one prototype through up to 10 cycles of generate-capture-review against a frozen DESIGN.md, focusing on information architecture, navigation flow, usability, and functionality."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-roles: [orchestrator, product-experience-architect, product-surface-reviewer, devops-ci-engineer]
-routing-profile: ui-surface-aware
+roles:
+  [
+    orchestrator,
+    product-experience-architect,
+    product-surface-reviewer,
+    devops-ci-engineer,
+    completion-reviewer,
+  ]
+routing-profile: ui-bearing
 mode: execution-focused
 ---
 
@@ -20,6 +27,16 @@ a frozen brand SSOT (`DESIGN.md`) and a frozen spec set, one lineage per
 budget. Supported surfaces: web, mobile, desktop, mixed. cli surface is
 rejected and `ui_bearing: false` specs are excluded from prototyping
 execution.
+
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- DESIGN.md lock drift / conflict resolution (exit `2` recovery)
+- hard-required inputs absent at cycle 0 (`companyName`, brand intent — see the
+  hard-required bucket under `## Default Autopilot Policy`)
 
 ## Goal
 

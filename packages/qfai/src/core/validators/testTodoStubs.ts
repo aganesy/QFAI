@@ -25,8 +25,10 @@
  *   findings — the remediation this validator advertises. A separate code
  *   keeps the warning waivable no matter what else the run found.
  *
- * `QFAI-TEST-002` (info) names extensions with no dialect, so a clean run on an
- * unsupported stack is not mistaken for evidence of no stubs.
+ * `QFAI-TEST-002` (info) names the states in which the scan produced no
+ * evidence: extensions with no dialect, and an empty
+ * `validation.traceability.testFileGlobs` (the value `qfai init` ships), where
+ * no file is selected at all. Neither may be mistaken for "no stubs".
  *
  * This validator closes the gap by emitting a finding for each stub found,
  * making qfai validate / CI reject the error-severity ones. Projects that need
@@ -40,7 +42,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
-import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { maskJsNonCode } from "./jsSourceMask.js";
@@ -343,14 +345,49 @@ function resolveStubDialect(relFile: string): StubDialect | null {
   return STUB_DIALECTS.find((dialect) => dialect.extensions.includes(ext)) ?? null;
 }
 
+/**
+ * The empty-glob form of `QFAI-TEST-002`: the gate is enabled, but file
+ * selection is empty so nothing at all was scanned.
+ *
+ * `qfai init` ships `validation.traceability.testFileGlobs: []` on purpose, and
+ * the config comment only accounts for the SC traceability gate the same key
+ * governs. Returning no issues here made a never-executed stub scan
+ * indistinguishable from a clean one — the exact non-result-read-as-result this
+ * finding exists to prevent.
+ *
+ * `file` is the config file, not `root`: the thing to edit is
+ * `validation.traceability.testFileGlobs` in qfai.config.yaml. Filing it against
+ * `root` made `normalizeIssuePaths` render it as `.`, so validate.json, the
+ * GitHub annotation and the report hotspot all blamed the repository root, and a
+ * path-scoped waiver on qfai.config.yaml could never match it. Same convention
+ * as the other config findings (`configReferenceIntegrity.ts`).
+ */
+function reportEmptyTestFileGlobs(): Issue {
+  return issue(
+    "QFAI-TEST-002",
+    "テストスタブ検出は有効ですが、`validation.traceability.testFileGlobs` が空のため 0 ファイルしか scan していません。クリーンな結果はスタブ不在の証拠になりません",
+    "info",
+    "qfai.config.yaml",
+    "validation.traceability.testFileGlobs",
+    ["validation.traceability.testFileGlobs"],
+    "canonical",
+    "`/qfai-configure` を実行するか、qfai.config.yaml の `validation.traceability.testFileGlobs` にリポジトリのテスト配置を設定してください。設定するまで QFAI-TEST-001 は 1 件も検出できません。",
+  );
+}
+
 export async function validateTestTodoStubs(root: string, config: QfaiConfig): Promise<Issue[]> {
   if (!config.validation.testStrategy.forbidTestTodoStubs) {
     return [];
   }
 
-  const globs = config.validation.traceability.testFileGlobs;
+  // Normalised before the emptiness test, not after: the config loader accepts
+  // `testFileGlobs: ["   "]`, and a raw-length check reads that as configured
+  // while fast-glob matches nothing — a zero-file scan with no QFAI-TEST-002,
+  // the silent non-result this finding exists to stop. `collectScTestReferences`
+  // normalises the same key the same way, so both scan one file set.
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   if (globs.length === 0) {
-    return [];
+    return [reportEmptyTestFileGlobs()];
   }
 
   const excludeGlobs = Array.from(

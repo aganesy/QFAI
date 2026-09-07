@@ -95,6 +95,10 @@ npx qfai report
 
 ## What you can do (CLI commands)
 
+- `npx qfai --version` (alias `-V`)
+  - Prints the installed QFAI version to stdout and exits 0. It works anywhere, including outside a project
+    with no `qfai.config.yaml`. The same value is also available as the `version` field of
+    `npx qfai doctor --format json`.
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
     (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.
@@ -102,12 +106,15 @@ npx qfai report
 
     | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
     | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-    | `--dir <path>`             | Output directory (default: the current directory).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
     | `--force`                  | Re-generate `.qfai/assistant/{skills,agents}/**` and the published skill/agent wrappers under `.agents/`, `.claude/`, `.codex/` and `.github/`, and prune the legacy wrappers they replace. It also rewrites two kinds of plain (non-wrapper) generated files without asking: the integration READMEs `.agents/README.md`, `.codex/README.md`, `.claude/agents/README.md`, `.github/agents/README.md`, and `.github/copilot-instructions.md` — local edits to those five files are overwritten, so back them up first. `.github/instructions/*.instructions.md` is create-only even under `--force`. The template trees `--force` does not own — `assistant/manifest/**`, `specs/`, `contracts/`, `steering/` and the rest of `.qfai/` — stay create-only. The flag does not narrow what plain `init` always does: the managed `.gitignore` block, the legacy `.qfai/evidence/.gitignore` negations and `git config core.symlinks` are re-applied (and repaired when stale) on every non-dry-run, with or without `--force`. |
     | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
     | `--upgrade-assistant-tree` | Migrate a pre-recut project to the 4-layer tree. Only the two pre-recut surfaces `.qfai/assistant/instructions/` and `.qfai/assistant/steering/` are scanned; `assistant/manifest/` is already the canonical layer, so it is kept in place and never re-copied. This is what the `D-DEPRECATED-PATH` finding is asking for. Files are copied, never deleted: the legacy paths stay until you remove them, and an existing file at a scanned surface's migration target is kept (reported as `W-USER-EDIT-PRESERVED`) — that warning only ever covers those scanned targets. A project left with nothing but `manifest/` has nothing to migrate and is reported as "no pre-recut surfaces ... found".                                                                                                                                                                                                                                                                                                                         |
     | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
     | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review artifacts
@@ -150,6 +157,20 @@ npx qfai report
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
+- `npx qfai sdd preflight`
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
+    resolves the blockers, and writes the summary run-scoped at
+    `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
+    (`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` by default; the run reports the path it wrote),
+    then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
+    `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
+    result on stdout.
+  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
+    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
+    the candidate list instead of silently gating a different pack.
+  - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
+    the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
+    overwritten.
 
 ## ATDD annotation hard gate
 
@@ -405,10 +426,40 @@ Release gate behavior:
 
 QFAI generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
-Into `.github/workflows/` it writes exactly two files — `qfai-validate.yml`
-and `qfai-tests.yml` — and touches nothing else there; both open with a
-`# Generated by \`qfai init\`` line. Configure the rest of CI in your own
-platform and run:
+
+`npx qfai init` also installs two GitHub Actions workflows,
+`.github/workflows/qfai-validate.yml` and `.github/workflows/qfai-tests.yml`.
+It writes exactly those two files into that directory and touches nothing else
+there, and both open with a ``# Generated by `qfai init` `` line. Both trigger on
+every push to `main` or `master` and on every pull request, and both run on the
+runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
+
+- `qfai-validate.yml` runs `npx qfai validate --profile full --fail-on error`.
+  It installs dependencies from whichever lockfile the repository has (pnpm /
+  yarn / npm) and falls back to `npm install` when there is none, and it takes
+  the Node version from your `.nvmrc` or `.node-version`, warning and
+  continuing on Node 20 when you have neither. The pnpm route is the one
+  precondition it stops closed on: the pnpm setup action resolves the pnpm
+  version from `package.json#packageManager` and from nowhere else, so a tree
+  holding a `pnpm-lock.yaml` with no such field fails the job with an
+  annotation naming the field rather than reporting a validation it never ran.
+  Declare `"packageManager": "pnpm@X.Y.Z"` so CI matches the version you
+  develop against. The `full` profile includes the `QFAI-TEST-001` test-todo
+  stub gate, so the job can fail your default branch on findings your existing
+  CI never checked.
+- `qfai-tests.yml` declares one lane per test layer (unit, component,
+  integration, api, e2e) and runs none of them until you opt in: a lane runs
+  only when your `package.json` declares the matching `test:<layer>` script
+  **and** a name-only diff against the base commit selected that lane. On a
+  repository that declares no such script it executes nothing.
+
+Both files are copied create-only — `qfai init` never overwrites an existing
+copy, not even with `--force` — so edit them freely. Deleting one is a choice
+`qfai init` remembers rather than undoes: it records what it installed in
+`.qfai/install-provenance.json` (keep that file committed), and never recreates
+a workflow you removed.
+
+On any other CI platform, configure the job yourself and run:
 
 ```bash
 pnpm ci:gate
@@ -497,6 +548,10 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   └── skills
 │       └── qfai-configure
 │           └── SKILL.md
+├── .github
+│   └── workflows
+│       ├── qfai-tests.yml
+│       └── qfai-validate.yml
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents

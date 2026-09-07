@@ -32,9 +32,15 @@
  * from a failed read would erase the other writer's namespace. So the
  * read-modify-write paths use `readStateStrict`, which refuses to
  * merge onto an empty document when the existing file is unreadable.
+ *
+ * Every mutation runs inside `updateState`, which holds the state-file
+ * lock across the read AND the write. Incrementing through a plain
+ * load-mutate-store would lose an update whenever two runs (two specs,
+ * or two operators) overlap: both read the same snapshot and the later
+ * write erases the earlier increment, delaying an escalation.
  */
 
-import { readStateStrict, readStateTolerant, writeStateFile } from "../state.js";
+import { readStateTolerant, updateState } from "../state.js";
 
 /** Default escalation threshold when the config key is absent/invalid. */
 export const DEFAULT_SCAFFOLD_ESCALATE_CYCLES = 3;
@@ -43,21 +49,34 @@ function attemptKey(specId: string, tcId: string): string {
   return `${specId}:${tcId}`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A counter value is a non-negative integer; anything else reads as 0. */
+function toCounter(value: unknown): number {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0
+  ) {
+    return value;
+  }
+  return 0;
+}
+
 function readAttemptsMap(
   state: Record<string, unknown> | null,
   mapName: string,
 ): Record<string, number> {
   if (state === null) return {};
   const atdd = state.atdd;
-  if (atdd === null || typeof atdd !== "object" || Array.isArray(atdd)) {
-    return {};
-  }
-  const attempts = (atdd as Record<string, unknown>)[mapName];
-  if (attempts === null || typeof attempts !== "object" || Array.isArray(attempts)) {
-    return {};
-  }
+  if (!isRecord(atdd)) return {};
+  const attempts = atdd[mapName];
+  if (!isRecord(attempts)) return {};
   const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(attempts as Record<string, unknown>)) {
+  for (const [k, v] of Object.entries(attempts)) {
     if (typeof v === "number" && Number.isFinite(v) && Number.isInteger(v) && v >= 0) {
       out[k] = v;
     }
@@ -82,32 +101,17 @@ async function recordAttemptInMap(
   specId: string,
   tcId: string,
 ): Promise<number> {
-  const existing = (await readStateStrict(root)) ?? {};
-  const atddField = existing.atdd;
-  const atdd =
-    atddField !== null && typeof atddField === "object" && !Array.isArray(atddField)
-      ? { ...(atddField as Record<string, unknown>) }
-      : {};
-  const attemptsField = atdd[mapName];
-  const attempts =
-    attemptsField !== null && typeof attemptsField === "object" && !Array.isArray(attemptsField)
-      ? { ...(attemptsField as Record<string, unknown>) }
-      : {};
-  const key = attemptKey(specId, tcId);
-  const previousRaw = attempts[key];
-  const previous =
-    typeof previousRaw === "number" &&
-    Number.isFinite(previousRaw) &&
-    Number.isInteger(previousRaw) &&
-    previousRaw >= 0
-      ? previousRaw
-      : 0;
-  const next = previous + 1;
-  attempts[key] = next;
-  atdd[mapName] = attempts;
-  const updated: Record<string, unknown> = { ...existing, atdd };
-  await writeStateFile(root, updated);
-  return next;
+  return updateState(root, (existing) => {
+    const atddField = existing.atdd;
+    const atdd = isRecord(atddField) ? { ...atddField } : {};
+    const attemptsField = atdd[mapName];
+    const attempts = isRecord(attemptsField) ? { ...attemptsField } : {};
+    const key = attemptKey(specId, tcId);
+    const next = toCounter(attempts[key]) + 1;
+    attempts[key] = next;
+    atdd[mapName] = attempts;
+    return { next: { ...existing, atdd }, result: next };
+  });
 }
 
 async function resetAttemptInMap(
@@ -116,31 +120,24 @@ async function resetAttemptInMap(
   specId: string,
   tcId: string,
 ): Promise<void> {
-  const existing = await readStateStrict(root);
-  if (existing === null) return;
-  const atddField = existing.atdd;
-  if (atddField === null || typeof atddField !== "object" || Array.isArray(atddField)) {
-    return;
-  }
-  const atddRecord = { ...(atddField as Record<string, unknown>) };
-  const attemptsField = atddRecord[mapName];
-  if (attemptsField === null || typeof attemptsField !== "object" || Array.isArray(attemptsField)) {
-    return;
-  }
-  const sourceAttempts = attemptsField as Record<string, unknown>;
-  const key = attemptKey(specId, tcId);
-  if (!(key in sourceAttempts)) {
-    return;
-  }
-  const attempts: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(sourceAttempts)) {
-    if (k !== key) {
-      attempts[k] = v;
+  await updateState(root, (existing) => {
+    const noop = { next: null, result: undefined };
+    const atddField = existing.atdd;
+    if (!isRecord(atddField)) return noop;
+    const atddRecord = { ...atddField };
+    const attemptsField = atddRecord[mapName];
+    if (!isRecord(attemptsField)) return noop;
+    const key = attemptKey(specId, tcId);
+    if (!(key in attemptsField)) return noop;
+    const attempts: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(attemptsField)) {
+      if (k !== key) {
+        attempts[k] = v;
+      }
     }
-  }
-  atddRecord[mapName] = attempts;
-  const updated: Record<string, unknown> = { ...existing, atdd: atddRecord };
-  await writeStateFile(root, updated);
+    atddRecord[mapName] = attempts;
+    return { next: { ...existing, atdd: atddRecord }, result: undefined };
+  });
 }
 
 /**

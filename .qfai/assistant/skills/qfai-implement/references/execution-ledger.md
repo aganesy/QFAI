@@ -7,14 +7,85 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 | Column    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001). Allocated per `#tdd-id-allocation` — never by guessing the next value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | TC-Refs   | References to test cases from `06_Test-Cases.md`. Belongs on `Layer = Unit` / `Component` / `Integration` rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Test file | Path to the test file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Selector  | Test selector(s) for targeted execution — one entry, a JSON array of entries, or a glob pattern. A cell that is neither array nor glob is **one** entry whatever punctuation it holds; see "Selector granularity" below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Status    | Current lifecycle status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses. A row swept out of `exception` by `exception -> todo` **keeps** the anomaly's `DR-*` — that is the only record of why it was parked. **A row that enters `exception` again records a new `DR-*` for the new anomaly**, appended, not substituted: the retained one documents an anomaly already resolved, and `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty and its tokens resolvable, so the stale id alone would pass the gate while the current anomaly has no Decision Record at all. Blank otherwise |
 | Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the evidence file this row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row (see "ATDD-owned rows"). **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                    |
+
+## TDD-ID allocation
+
+`TDD-NNNN` is spec-scoped and monotonic, so the next value is `max + 1`
+over every table in the file when authoring serially — including retired,
+`blocked` and `exception` rows — and comes from a block reserved under
+`## TDD-ID reservations` when authors run concurrently. The maximum ranges
+over the upper bound of every reservation bullet as well, and those bullets
+are never deleted: a consumed or abandoned block is closed in place
+(`- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`) so its
+end stays the permanent high-water mark. Drop the bullet and `max + 1` falls
+back into the block's unused tail, reissuing ids the gap was meant to retire
+and colliding with a block still being worked. A deleted row is tombstoned in
+that same section as a single-id bullet
+(`- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <ref>`):
+the Drift Protocol removes such a row rather than resetting it, so without the
+tombstone the id leaves the table and the next allocation reissues it. `<ref>`
+is a `CR-*` on the Drift Protocol path and the `UPDATE:REMOVE` Triage row's
+`Source` (`REQ-XXXX`) on the ordinary `/qfai-sdd` path, which raises no Change
+Request — demanding a `CR-*` there leaves nothing true to write and the
+tombstone gets skipped. An
+empty candidate set has a
+maximum of 0, so a freshly seeded ledger starts at `TDD-0001`; `TDD-9999` is
+the last legal id, because `TDD_ID_FORMAT` accepts exactly four digits — a
+spec that reaches the ceiling rolls over under an approval-required Triage
+row, SPLIT when it owns more than one `CAP-NNNN` and SUPERSEDE when it owns
+exactly one (a count-driven SPLIT of a single-capability spec is rejected at
+`error`), never allocated past. Both exits assume the ceiling came from
+churn; count the still-live rows to tell. Near 9999 they gain nothing — the
+successor reseeds to the same ceiling from the same obligations — and the
+answer is upstream scope, not allocation. Worktree
+separation is
+mandatory for parallel work (`.qfai/assistant/constitution/workflow.md`), so a `max + 1` read
+taken inside one worktree is stale as soon as another appends, and
+`TDDLIST_DUPLICATE_ID` is an `error`: guessing locks out every writer but the
+last. Reserve the block on the shared branch **before** the worktrees split —
+it is a one-line bullet append, so it serializes where a batch of rows cannot.
+Never renumber an id that has already been written outside this ledger (a
+commit message, `.qfai/evidence/implement-*.md`, `.qfai/evidence/atdd-*.md`, a
+`DR-*` cross-reference); a merge does not rewrite those. Full rule, including
+the reservation bullet's shape and why it must not be a markdown table:
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`.
+
+## Declared tier column (optional, seeded at ledger-authoring time)
+
+| Column | Description                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------------ |
+| Tier   | Review tier `/qfai-implement` owes this row. Legal values: `T1`, `T2`, `T3`; `-` when undeclared |
+
+`Tier` sizes the ceremony a row is processed with
+(`volume-policy.md#risk-tier-derive-per-row`). Like `Owning module` it is a
+**declaration made upstream**, and for the same reason: the stage that fixes a
+row's `Layer` already holds every input the tier derivation takes, and the
+consumer needs the answer _before_ it starts the row.
+
+- Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b), from the row's
+  `Layer`, what the item touches, and the criticality list in
+  `volume-policy.md#criticality-outranks-connectedness`.
+- **Blank or `-` means `T1`.** The default runs this way round only because the
+  tier is seeded rather than claimed: a row nobody escalated is a row nobody
+  found a reason to escalate. A ledger **table** carrying no `Tier` column is
+  not covered by that default — read the header of the table the row lives in,
+  not the file, because `/qfai-implement` appends a table per change request and
+  a seeded table can sit beside one that predates the column. Derive the tier of
+  every row in that table before processing it.
+- **Never record it in `Evidence`.** That cell is a pointer, not the payload
+  ("Evidence cell contract" below), and it is written last, by the agent whose
+  ceremony the tier was supposed to size. A tier kept there cannot be read
+  before the work it governs, which is what made `T1` unreachable.
+- A value outside `T1` / `T2` / `T3` raises `QFAI-TDDLIST-010` (error).
+  Blank buys the cheapest tier, so a mistyped one must not quietly buy it too.
 
 ## Declared seam column (optional, required for parallel dispatch)
 
@@ -45,87 +116,12 @@ evidence" asked for exactly what test-first withholds.
 ## Obligation columns (optional, required by layer)
 
 A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one
-every row has; the other two are optional columns that become required when the
-row's layer cannot host a `TC-*`.
+every row has; `US-Refs` and `CON-API-Refs` become required when the row's layer
+cannot host a `TC-*`, and `Blocked-By` is required on a `blocked` row.
 
-| Column       | Description                                                                       |
-| ------------ | --------------------------------------------------------------------------------- |
-| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
-| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
-| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
-
-`Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
-with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
-(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
-what distinguishes a parked `exception` from a row that never started, and
-overloading it would merge the two states the `blocked` status exists to
-separate.
-
-`test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
-so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
-`TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
-
-**Both columns are seeded, not hand-added.** `/qfai-sdd` Phase 2b writes one
-`Layer = E2E` row per active `US-*` and one `Layer = API` row per active
-`CON-API-*` the spec owns, and the shipped ledger template carries the two
-columns in its header for exactly that reason — a row of that layer with nowhere
-to record its obligation is unverifiable, and `validateObligationColumn` reads an
-absent column as "this row carries no such obligation". "Active" is the
-`test-layers.md` exemption: a spec with no user-facing surface owes no `US-*`
-row and a contract at `x-qfai-status: planned` owes no API row, so seeding
-either would park a completion-prohibiting row on a test that must not be
-written. **The surface half is itself conditional**: `QFAI-ATDD-111` is scoped
-by surface type **only in a project that declares at least one UI-bearing
-spec**. Where surface typing is unused the obligation stays project-wide, so
-every `US-*` is active and owes a row — reading that exemption unconditionally
-in such a project drops every E2E row and leaves the gate with nothing to
-clear it. And because that condition is a property of the **project**, a
-`/qfai-sdd` run that adds its first surface signal or removes its last re-runs
-the E2E-row delta over every spec's ledger, not only the spec it targeted.
-
-**A seeded acceptance row's `Test file` and `Selector` are `-` until Phase Red
-step 3b writes them.** Phase 2b seeds the row before the acceptance test exists
-and invents no path for it, and `/qfai-atdd` — which authors the test — never
-writes this ledger; so the path and selector first exist in that stage's handoff
-entry, as the row identity, and this skill copies both into the row in the same
-edit that moves it out of `todo`. That is why the `Test file` existence check
-below starts at `green` and not at `todo`: a seeded row legitimately has no test
-file yet. Naming no writer for the two cells left them at `-` for the row's
-whole life, so the row could be selected, handed over and never run.
-
-The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
-`TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
-so a forbidden placement cannot close a coverage-target TC.
-`TDDLIST_OBLIGATION_LAYER_MISMATCH` likewise rejects a `US-Refs` /
-`CON-API-Refs` value on a layer that does not own it, and — on a ledger whose
-header carries the column — an `E2E` / `API` row that leaves it empty or `-`.
-That last direction is what stops a seeded obligation row from reaching `done`
-with nothing recorded: `TC-Refs` is forbidden on it, so an empty obligation
-cell leaves the row with no auditable target at all. It fires only where the
-column exists, so an eight-column ledger written before these columns shipped is
-a legacy shape, not an error.
-
-**A legacy ledger needs a reader rule, not only that waiver.** Its `E2E` / `API`
-rows recorded their `US-*` / `CON-API-*` in `TC-Refs`, the only cell they had;
-waiving the validator alone leaves such a row selectable but with nothing in the
-column Phase Red step 3 and the per-item evidence contract read, so it stops at
-the handoff. Until the columns exist, read a non-`TC-*` obligation token in
-`TC-Refs` as that row's obligation — the row's `Layer` says which kind it is —
-and record it as the `US-ref` / `CON-API-ref` the evidence contract names. This
-fallback is for reading an existing ledger, never for writing one: the next
-`/qfai-sdd` Phase 2b reseed migrates the ledger, adding both columns and moving
-each token into the one its `Layer` owns as a cell move that keeps `Status`,
-`DR-ID` and `Evidence`.
-
-A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
-without a legal `Layer` the row has no obligation column. Coverage counting
-excludes `API` and `E2E` specifically rather than allowlisting the other three,
-so a mistyped layer keeps counting and is reported by that warning, which names
-the real cause; an allowlist would instead drop the row silently and resurface
-as a coverage error about a TC the author did cover.
-
-Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so
-non-TC obligation IDs are inert to it by design.
+Full rule — the column table, what `Blocked-By` accepts, why `DR-ID` is not
+widened to carry it, and who seeds the two layer columns:
+`obligation-columns.md`.
 
 ## Evidence cell contract
 
@@ -242,7 +238,9 @@ not satisfy the gate on a fresh clone.
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
-as a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
+as a JSON array of names or a glob. A cell that is neither is **one** entry however much punctuation
+it holds — a comma is legal inside a single test name, so nothing splits a bare cell on commas
+(`selector-granularity.md#entry-form`). What is restricted is what a row may _conflate_ — **one
 independently observable boundary per row**, with RED observed per selector entry, and a
 matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
 `TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. If you
@@ -274,7 +272,7 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   available from every status a row can hold, `blocked` and `review-fix`
   included. This list is the complete one and an unlisted edge is prohibited,
   so enumerating five sources here forbade the sweep
-  `constitution/drift-protocol.md` step 5 requires of exactly those two.
+  `.qfai/assistant/constitution/drift-protocol.md` step 5 requires of exactly those two.
   Permitted **only** when an approved upstream change (Drift Protocol step 4
   rerun) invalidated the row's obligation. The invalidating CR/DR ID MUST be
   recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
@@ -330,7 +328,7 @@ so a run that performs an approved reset can still tick it. Preconditions and
 the reset procedure: `references/change-request-reset.md`.
 
 **The reset admits every source status**, not the five a run is most likely to
-be in. `constitution/drift-protocol.md` step 5 sweeps the ledger with
+be in. `.qfai/assistant/constitution/drift-protocol.md` step 5 sweeps the ledger with
 `any status -> todo`, and a row sitting at `blocked` or `review-fix` when the
 upstream obligation moved is exactly a row that has to be swept. Enumerating
 the sources here let this table forbid a transition the Protocol requires, so
@@ -359,6 +357,20 @@ every rule above, but their tests are authored by `/qfai-atdd`
 (`qfai-implement/SKILL.md` Non-goals). The two skills
 therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
+
+**Who seeds them.** `/qfai-sdd` Phase 2b, **at least** one `Layer = Integration`
+row per integration-level `TC-*` — every `Level` whose annotation routes to
+`tests/integration/**` under `QFAI-ATDD-112`: `L3`, the word `integration`, a
+blank cell, a spelling that names no layer (`smoke`), and `system` /
+`acceptance`. Routing, not spelling: the last two are in the layer vocabulary
+and are still not coverage targets, so a "the vocabulary cannot read it" test
+leaves them owned by no group. Alongside
+the coverage-target rows (`references/ledger-preconditions.md#producer`). A
+matrix-shaped TC is seeded one row per independently observable boundary there,
+because `/qfai-atdd` cannot split a row it may not write
+(`selector-granularity.md`). `TDDLIST_TC_NOT_COVERED` never asks for an `L3`
+row, because an `L3` TC is not a coverage target — so an absent `Integration`
+row is an unseeded row, not a spec without integration work.
 
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
@@ -394,17 +406,25 @@ after its surface passes on the first run. So:
   ordinary RED. Its stage gate P1b is where that happens.
 - **The evidence file follows the stage that produced it.**
   `implement-<spec-id>.md` holds the rows this skill runs itself;
-  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
-  because that is the stage that ran the commands. The `Evidence` cell is a
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the `E2E` / `API` /
+  `Integration` rows — every row this section names, not two of the three —
+  because that is the stage that ran the commands. `checkpoint-verification.md`
+  picks the same file for the checkpoint result and seal of those rows. The `Evidence` cell is a
   pointer either way and its anchor names which file. Calling
   `implement-<spec-id>.md` the single home was true while one stage produced
   every pair; it stopped being true the moment another stage did.
   `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
   E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
-  matching prohibition condition append the two reviewer verdicts to **that**
-  file. This skill still runs `completion-reviewer` and
-  `implementation-reviewer` for every row it advances — only the RED provenance
-  came from elsewhere.
+  matching prohibition condition append **every routed reviewer's** verdict to
+  **that** file — `Spec review` and `Code quality review` on every row, and
+  `Prototype parity` as well on a UI-affecting one, because gate item 9 routes
+  `product-surface-reviewer` there too and the routed set is therefore wider
+  than two. This skill still runs those reviewers for every row it advances —
+  only the RED provenance came from elsewhere. A fixed count of two here while
+  item 11 obliged three made `done` depend on which of the two files the runner
+  read, and the parity verdict — the only one that cannot be re-derived from the
+  spec and the diff, because it was taken against a rendered surface that has
+  since moved — was the one it dropped.
 - **`exception` is for a row where both are unavailable** — an obligation with
   no persisted form or no observable surface at L5, recorded with a `DR-*`
   naming what is missing. It is not the routine outcome of surface-first
@@ -425,6 +445,9 @@ after its surface passes on the first run. So:
 - `npx qfai report` counts it inside `open` but prints it separately
   (`open: N (blocked: M)`), so "not started" and "cannot start" are readable
   apart without changing what completion means.
+
+`blocked` is not a completion state and appears in the completion-prohibition
+list, on the same bullet as `todo`.
 
 ## Exception Handling
 
@@ -457,18 +480,18 @@ resolves clean and nothing reports it. Follow the split because the wrong home
 hides a shared decision inside one spec, not because a validator will catch it.
 Do **not** write `07_Decisions.md` or `09_delta.md`.
 
-Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
+Those two are upstream SSOT (`.qfai/assistant/constitution/drift-protocol.md#core-rule`) and
 this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either
 is a protocol violation — while the `exception` transition itself is an ordinary
 inline step of Phase Red that `TDDLIST_EXCEPTION_MISSING_DR` blocks at `error`
 without a `DR-*`. `.qfai/decisions/` is the one home that satisfies both: the
 protocol whitelists **creating** a record there
-(`drift-protocol.md#allowed-exceptions-minimal-whitelist`), and the managed `.gitignore` block
+(`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`), and the managed `.gitignore` block
 already tracks it as a governance record.
 
 The upstream cross-reference is a separate, later write. If the anomaly turns
 out to change an approved obligation, that is drift: raise a Change Request per
-`drift-protocol.md#when-drift-is-detected`, and the owner skill's rerun is what
+`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`, and the owner skill's rerun is what
 records the reference in `07_Decisions.md` / `09_delta.md`. Parking the row does
 not require that to have happened.
 

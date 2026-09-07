@@ -108,6 +108,9 @@ primary spec の判定後、他の active spec を全走査し、ノックオン
 1. `_policies/03_Capabilities.md` と active spec summary を読む（status: active のみ対象）。
 2. 全変更要望に対する Triage table を spec 編集前に構築する。
 3. CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE 行は AskUserQuestion で承認を取得。
+   `--auto` では質問せず自己承認もしない: 該当行は未承認のまま残し、その行のための
+   `CAP-NNNN` を `_policies/03_Capabilities.md` に追加せず、バッチ全体を step 5 の前で
+   停止して当該行を blocker として報告する。
 4. Triage table を以下に永続化:
    - 単一 spec を触る行 → `<spec>/09_delta.md`
    - 複数 spec をまたぐ行（SPLIT / MERGE / SUPERSEDE）または policy のみの変更 → `_policies/10_delta.md`

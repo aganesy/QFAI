@@ -74,11 +74,11 @@ Within that per-item tier, the full suite runs at, and only at:
   in the item's evidence when a project overrides it.
 
 The counted interval is what keeps the cadence sub-quadratic. An AC or BR group
-is **not** a boundary: in a spec where TC and AC are close to one-to-one — as in
-this repository's `spec-0006`, whose `TC-0006-0001..0009` each map to a distinct
-AC and each occupy one ledger row — every row would be the last of its group and
-the per-item full run would be right back. The boundary must be coarser than the
-obligation granularity, so it is defined by count, not by grouping.
+is **not** a boundary: in a spec where TC and AC are close to one-to-one — every
+`TC` mapping to a distinct `AC` and occupying one ledger row — every row would be
+the last of its group and the per-item full run would be right back. The boundary
+must be coarser than the obligation granularity, so it is defined by count, not
+by grouping.
 
 Rows that are not on a boundary are gated on the narrow suite alone: items 6, 7
 and 8 of the 12-point gate are evaluated against it, and the gate item that

@@ -8,13 +8,21 @@ import { resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
 import { changedFilesSince } from "../gitChanges.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
   maskNonSpecRegions,
   parseFirstMarkdownTable,
   splitMarkdownRow,
 } from "../specPackParsers.js";
+// The `DR-*` id class and its two declaration files, shared with the re-open
+// gate in `specPack.ts` so both resolve a `DR-*` against the same files.
+import {
+  collectDeclaredDrIds,
+  DR_DECLARATION_FILES,
+  DR_ID_FORMAT,
+  DR_POLICY_DECLARATION_FILE,
+} from "../decisionRecords.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
@@ -30,6 +38,7 @@ import {
   isWellFormedTcRef,
   isCoverageBearingRow,
   splitTcRefs,
+  resolveDeclaredTcId,
   resolveParentTcId,
   TC_FORBIDDEN_LAYERS,
   TDD_LEDGER_REQUIRED_COLUMNS,
@@ -141,6 +150,16 @@ const VALID_STATUSES = new Set([
   "exception",
 ]);
 
+/**
+ * Every ledger status that still owes work: `VALID_STATUSES` less `done`.
+ *
+ * Derived rather than listed, so a new non-terminal status cannot be added to
+ * the vocabulary and left out of the retirement migration instruction — which
+ * would strand exactly the rows nothing asks for again. `blocked` and
+ * `review-fix` are the two that were missed when this was spelled out by hand.
+ */
+const LIVE_LEDGER_STATUSES = Array.from(VALID_STATUSES).filter((status) => status !== "done");
+
 /** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
 const BLOCKED_BY_COLUMN = "Blocked-By";
 
@@ -152,6 +171,16 @@ const BLOCKED_BY_COLUMN = "Blocked-By";
  * set leaves it with no rule to follow.
  */
 const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
+
+/**
+ * The review tiers a `Tier` cell may name, lower-cased.
+ *
+ * The tier used to be free prose inside `Evidence`, written last by the agent
+ * whose ceremony it decides, and an unrecorded one meant the most expensive
+ * tier — so the cheap tier was the one nobody could reach. It is now a column
+ * the ledger author seeds, and a blank or `-` cell reads as `T1`.
+ */
+const VALID_TIERS = new Set(["t1", "t2", "t3"]);
 
 /**
  * The ledger `Layer` vocabulary, lower-cased. A value outside it is already
@@ -2238,20 +2267,6 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
- * The declared shape of a Decision Record id.
- *
- * `DR-ID` was a hard, `error`-severity precondition for `exception` with no
- * referent anywhere in the toolkit: no ID class, no row schema in either
- * shipped Decisions template, and no validator that resolved the reference. Any
- * non-empty string satisfied the gate, so the one thing a parked row was
- * required to carry was the one thing nothing could check.
- *
- * Kept in step with `ids.ts#STRICT_ID_PATTERNS.DR` — anchored here because this
- * validates one cell rather than scanning prose.
- */
-const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
-
-/**
  * Anything presenting itself as a DR id, so a malformed one is reported rather
  * than ignored.
  *
@@ -2261,10 +2276,6 @@ const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
  * prefix; whether the rest is well formed is what `DR_ID_FORMAT` decides.
  */
 const DR_ID_SHAPED = /^DR[-_\d]/i;
-
-/** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
-const DR_DECLARATION_FILES = ["07_Decisions.md"];
-const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
 
 /**
  * The standalone-record home, relative to the project root.
@@ -2465,24 +2476,19 @@ async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<strin
  * would make an id's validity depend on where it was declared, and would leave
  * the implement stage, which may write nowhere else, with no way to clear the
  * finding but the forbidden upstream write or a waiver.
+ *
+ * The two upstream files are read through `decisionRecords.ts`, which the
+ * re-open gate in `specPack.ts` reads too: one reader, so the two cannot
+ * disagree about where a `DR-*` may be declared. The record directory is this
+ * validator's own — the re-open gate resolves a `Re-opens:` against declaring
+ * headings, which a filename cannot carry.
  */
 async function buildDrDeclarationResolver(
   specDir: string,
   specsRoot: string,
   recordIds: ReadonlySet<string>,
 ): Promise<(drId: string) => boolean> {
-  const declared = new Set<string>();
-  const files = [
-    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
-    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
-  ];
-  for (const file of files) {
-    if (!(await exists(file))) continue;
-    const text = await readSafe(file);
-    for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
-      declared.add(match[0].toUpperCase());
-    }
-  }
+  const declared = await collectDeclaredDrIds(specDir, specsRoot);
   return (drId) => {
     const id = drId.toUpperCase();
     return declared.has(id) || recordIds.has(id);
@@ -2608,6 +2614,46 @@ async function readTestFileContent(root: string, testFile: string): Promise<stri
 }
 
 /**
+ * A `Selector` cell split into entries, per `selector-granularity.md` § Entry form.
+ *
+ * That section is the SSOT for the split and this is its executable half, so the two must agree:
+ * a cell whose first non-space character is `[` and which parses as a JSON array of strings holds
+ * **one entry per element**, and every other cell is exactly **one** entry, whatever punctuation
+ * it carries.
+ *
+ * A cell is never split on commas. A comma is legal inside a single vitest/jest name — this repo
+ * has `falls back to the built-in set, and labels it, when the file is absent` — so a comma split
+ * would invent entries that match nothing.
+ *
+ * The array form has to be parsed here rather than left to the containment check below. An array
+ * reaching that check unsplit matched on its **last** element alone, via the last-identifier
+ * fallback: `["missing_test","existing_test"]` resolved on `existing_test` and reported nothing
+ * about the missing first one, which is the whole failure `TDDLIST_SELECTOR_UNRESOLVED` exists to
+ * report.
+ */
+function selectorEntries(selector: string): string[] {
+  const trimmed = selector.trim();
+  if (!trimmed.startsWith("[")) {
+    return [trimmed];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    // Not a JSON array after all — one entry, exactly as § Entry form says.
+    return [trimmed];
+  }
+  if (
+    Array.isArray(parsed) &&
+    parsed.length > 0 &&
+    parsed.every((element): element is string => typeof element === "string")
+  ) {
+    return parsed;
+  }
+  return [trimmed];
+}
+
+/**
  * Whether a ledger `Selector` names something present in the test file.
  *
  * Selectors are written in whatever the project's runner accepts —
@@ -2621,9 +2667,16 @@ async function readTestFileContent(root: string, testFile: string): Promise<stri
  * Deliberately lenient. Both consumers treat a match as evidence *for* the
  * test's presence, so a false negative costs a warning that a false positive
  * would silently swallow.
+ *
+ * **Every entry must resolve**, not just one. A row carrying several entries is claiming all of
+ * them; one surviving element cannot vouch for a deleted sibling.
  */
 function selectorResolves(selector: string, content: string): boolean {
-  const withoutPath = normalizeSelector(selector);
+  return selectorEntries(selector).every((entry) => entryResolves(entry, content));
+}
+
+function entryResolves(entry: string, content: string): boolean {
+  const withoutPath = normalizeSelector(entry);
   if (withoutPath === null) {
     return false;
   }
@@ -2671,7 +2724,11 @@ function normalizeSelector(selector: string): string | null {
  * `validates the header` must still appear in full, so the `header` fallback stays dead.
  */
 function selectorResolvesVerbatim(selector: string, content: string): boolean {
-  const withoutPath = normalizeSelector(selector);
+  return selectorEntries(selector).every((entry) => entryResolvesVerbatim(entry, content));
+}
+
+function entryResolvesVerbatim(entry: string, content: string): boolean {
+  const withoutPath = normalizeSelector(entry);
   if (withoutPath === null) {
     return false;
   }
@@ -2787,7 +2844,7 @@ export async function validateTddList(
       recordIds,
       srcRelDir,
     );
-    issues.push(...specIssues);
+    issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
 
   return issues;
@@ -2814,6 +2871,47 @@ function observationRevision(section: string): string | null {
     if (value !== null && value.length > 0) return value;
   }
   return rowEvidenceFieldValue(section, "Revision");
+}
+
+/**
+ * Ledger findings on a retired spec are a historical record, not live work.
+ *
+ * SUPERSEDE moves a spec's obligations to its successor and rewrites the
+ * source's `Status:`; deprecation and removal retire one without a successor.
+ * The ledger stayed where it was either way, so a retired spec kept offering
+ * `todo` rows as selectable work, kept demanding a resolution or a waiver for
+ * every parked `exception` row, and kept owing `Evidence` at `error` — for a
+ * spec nobody is allowed to touch, and that no later phase revisits because
+ * triage classification already ignores non-active specs.
+ *
+ * Demoted rather than dropped: the rows are the record of what the retired spec
+ * owed, and an operator migrating the live ones to the successor's ledger has
+ * to be able to list them. `info` keeps them printed while taking them out of
+ * `--fail-on error` / `--fail-on warning`.
+ *
+ * Only a complete declaration retires a ledger: `SpecEntry.status` is set from
+ * the header block alone, only once the retirement carries the companion field
+ * it requires, and — for `superseded` — only once that `Superseded-by` names a
+ * spec that exists to inherit the rows. An absent, unparseable, out-of-header,
+ * half-written or dangling `Status:` leaves the spec current here and is
+ * reported by its own `QFAI-STATUS-00N` rule — which matters because
+ * `--profile tdd` runs this validator without `validateSpecPacks`, so a
+ * demotion it granted on an unvalidated declaration would answer to nothing.
+ */
+function demoteRetiredSpecIssues(issues: readonly Issue[], entry: SpecEntry): Issue[] {
+  const status = entry.status;
+  if (status === undefined || status === "active") {
+    return [...issues];
+  }
+  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (${LIVE_LEDGER_STATUSES.join(" / ")}) to the successor spec's \`${TDD_LIST_REL_PATH}\`, giving each migrated row a TDD-ID the successor's ledger does not already use (TDD-NNNN is ledger-local, so a copied one fails TDDLIST_DUPLICATE_ID there) and remapping every spec-namespaced obligation onto the successor's own IDs — TC-Refs from its 06_Test-Cases.md, and US-Refs on each Layer=E2E row from its 02_User-stories.md. Repoint every Blocked-By naming a migrated row at its new spec-NNNN:TDD-MMMM as well; TDDLIST_BLOCKED_MISSING_REF only checks that the cell is non-empty, so a stale one goes unreported. Reset each migrated in-progress row to Status: todo with an empty DR-ID and Evidence — those cells describe a run against the old obligation — and record the migration in the approved CR. Leave done rows as the historical record.`;
+  return issues.map((found): Issue => {
+    return {
+      ...found,
+      severity: "info",
+      message: `${found.message} [demoted to info: spec-${entry.specNumber} is Status: ${status}]`,
+      suggested_action: migration,
+    };
+  });
 }
 
 /** Statuses at which a row's `Revision` is a claim rather than work in flight. */
@@ -2944,6 +3042,10 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   "TDDLIST_MISSING",
   "TDDLIST_UNKNOWN_REF",
   "TDDLIST_COVERAGE_LAYER_MISMATCH",
+  // Same class, canonical spelling: a coverage row citing a TC whose `Level`
+  // the ledger does not own. Both sides are seed-authored and reconciling them
+  // is a re-scope, which the reader may not make.
+  "QFAI-TCLEVEL-001",
 ]);
 
 /**
@@ -3210,8 +3312,14 @@ async function validateSpecTddList(
   }
 
   // Check 5: TC reference existence
-  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, coverageTargetLevels, unresolved } =
-    await collectTestCaseIds(specDir);
+  const {
+    knownTcIds,
+    unitComponentTcIds,
+    unrecognizedLevels,
+    coverageTargetLevels,
+    undeclaredLevelTcIds,
+    unresolved,
+  } = await collectTestCaseIds(specDir);
   // The offending `Level` cell lives in 06_Test-Cases.md, not in the ledger
   // this validator is otherwise reading. Reporting `relPath` here pointed
   // the CLI, the JSON `file` field and any `scope.paths` waiver at a file
@@ -3262,9 +3370,11 @@ async function validateSpecTddList(
       if (tcRefsCell.length === 0) continue;
       for (const ref of splitTcRefs(tcRefsCell)) {
         const normalized = ref.toUpperCase();
-        const parent = resolveParentTcId(normalized) ?? normalized;
         if (!TC_ID_TOKEN.test(normalized)) continue;
-        if (knownTcIds.has(normalized) || knownTcIds.has(parent)) continue;
+        // The shared resolver, so "which declared TC does this token speak
+        // for" has one answer across every rule that asks it — Check 5d
+        // below reads the same function.
+        if (resolveDeclaredTcId(normalized, knownTcIds) !== undefined) continue;
         issues.push(
           issue(
             "TDDLIST_UNKNOWN_REF",
@@ -3275,6 +3385,89 @@ async function validateSpecTddList(
           ),
         );
       }
+    }
+  }
+
+  // Check 5d: the migration direction — a ledger row that still claims a TC
+  // declaring no `Level`.
+  //
+  // Dropping such a TC from the coverage targets stops *new* rows being seeded
+  // for it, but it cannot unwrite the rows the previous rule already produced:
+  // that rule made a blank cell (or a `06_Test-Cases.md` with no `Level`
+  // column) a coverage target, and `/qfai-sdd` Phase 2b seeded a row per
+  // target. On an upgraded project that row survives, Check 5 keeps accepting
+  // its reference because the TC is still declared, and nothing else looks at
+  // the pairing — so `/qfai-implement` still picks the `todo` row while
+  // `QFAI-ATDD-112` (`error`) demands the same TC's annotated test under
+  // `tests/integration/**`. That is the double ownership this rule exists to
+  // end, surviving in exactly the projects that had it.
+  //
+  // Only a row whose `Layer` claims the ledger's own coverage layers is
+  // reported. `Integration` rows citing the TC agree with its ATDD home rather
+  // than competing with it (`execution-ledger.md#atdd-owned-rows`), `E2E` / API
+  // placements are Check 5c's `error`, and a `Layer` outside the vocabulary is
+  // Check 5a's. A blank `Layer` is reported: it is the shape the old seeding
+  // produced and the one that names no owner at all.
+  //
+  // `warning`, like every other rule that lands on ledgers written before it
+  // existed: the fix is a `/qfai-sdd` rerun or a `Level` declaration, and an
+  // `error` on upgrade would block a branch on a row the project did not write
+  // by hand. It takes that severity from `RULE_PROMOTIONS` rather than a
+  // literal, so the window is declared where every other new rule declares one
+  // (`docs/design-principles.md` P7) instead of being a warning with no route
+  // to `error` — `warning` until the pinned release, `error` from it onwards.
+  const tcLevelUndeclaredPromotion = RULE_PROMOTIONS.tddListTcLevelUndeclared.promoteAt;
+  const tcLevelUndeclaredSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    tcLevelUndeclaredPromotion,
+  );
+  const tcLevelUndeclaredWindowNote =
+    tcLevelUndeclaredSeverity === "warning"
+      ? ` Reported as a warning until the ${tcLevelUndeclaredPromotion} release, then an error`
+      : "";
+  if (undeclaredLevelTcIds.size > 0) {
+    for (const entry of ledgerRows()) {
+      const rawLayer = cell(entry, "Layer").toLowerCase();
+      const claimsLedgerCoverage =
+        rawLayer.length === 0 || rawLayer === "-" || UNIT_COMPONENT_LAYERS.has(rawLayer);
+      if (!claimsLedgerCoverage) continue;
+      // Resolved through `resolveDeclaredTcId`, not compared directly. A
+      // ledger may decompose one declared TC into several rows and cite the
+      // parts as `TC-NNNN-NNNN`, a form Check 5 accepts and `qfai report`
+      // credits to the parent — so a row citing `TC-0001-0001` while
+      // `TC-0001` declares no `Level` is exactly the leftover this rule
+      // exists to name, and a direct comparison let it through. The reported
+      // id is the resolved one: the TC that declares no `Level` is the parent
+      // written in `06_Test-Cases.md`, and naming the sub-ID would point the
+      // reader at a row that file does not contain. De-duplicated, since two
+      // sub-IDs of one parent resolve to the same TC.
+      //
+      // Resolved against `knownTcIds` and *then* tested for an undeclared
+      // `Level`, not resolved against the undeclared set directly: a spec may
+      // declare a sub-ID in its own right, and when it does, that `Level` is
+      // the one in force — a `TC-0001-0001` declaring `L1` under a
+      // `Level`-less `TC-0001` is a legitimate coverage row, not a leftover.
+      const stale = [
+        ...new Set(
+          splitTcRefs(cell(entry, "TC-Refs"))
+            .map((ref) => resolveDeclaredTcId(ref, knownTcIds))
+            .filter((tcId): tcId is string => tcId !== undefined && undeclaredLevelTcIds.has(tcId)),
+        ),
+      ].sort((left, right) => left.localeCompare(right));
+      if (stale.length === 0) continue;
+      issues.push(
+        issue(
+          "QFAI-TCLEVEL-001",
+          `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level.${tcLevelUndeclaredWindowNote}`,
+          tcLevelUndeclaredSeverity,
+          relPath,
+          "tddList.tcLevelUndeclared",
+          stale,
+          "change",
+          `${TEST_CASES_FILE_NAME} で当該 TC に \`Level\`（\`L1\` / \`L2\` なら ledger 所有）を宣言するか、\`/qfai-sdd\` でこの行を退役させてください。Level 未宣言の TC は \`/qfai-atdd\` が \`tests/integration/**\` で所有します。`,
+          { relatedFiles: [testCasesRelPath] },
+        ),
+      );
     }
   }
 
@@ -3638,6 +3831,52 @@ async function validateSpecTddList(
         "Declare one repo-relative path or dotted module path, or `-` when the seam is not declared. " +
           "A row that genuinely owns two modules is a row to split (`references/selector-granularity.md`); " +
           "a list would put the parallel-dispatch gate back to comparing sets it cannot evaluate before RED.",
+      ),
+    );
+  }
+
+  // Phase 2 – Check 9f: the declared tier.
+  //
+  // `Tier` sizes the ceremony `/qfai-implement` owes the row, and a blank cell
+  // now reads as `T1` — the cheapest one — because the tier is seeded upstream
+  // with the row rather than claimed downstream in `Evidence`. That default is
+  // only safe while a value that is *present* is a value that was understood:
+  // `T@`, `Tier 2` or `t2 (authz)` match no tier, and reading them as blank
+  // would hand a row its author escalated the batched ceremony instead.
+  //
+  // Behind a promotion window (`RULE_PROMOTIONS`, design principle P7), for the
+  // reason the registry entry states: the column is new, so the ledgers that
+  // have one filled it against prose rather than against this value set, and
+  // every row whose spelling misses lands on the same upgrade. `warning` until
+  // the pinned release, `error` from it. `resolveToolVersion` resolves rather
+  // than rejects — a read failure returns `"unknown"`, which the comparator
+  // reads as inside the window, so an unreadable version cannot be what turns
+  // this into a build failure.
+  const unknownTierPromotion = RULE_PROMOTIONS.tddListUnknownTier.promoteAt;
+  const unknownTierSeverity = newRuleSeverity(await resolveToolVersion(), unknownTierPromotion);
+  const unknownTierWindowNote =
+    unknownTierSeverity === "warning"
+      ? ` Reported as a warning until the ${unknownTierPromotion} release, then an error.`
+      : "";
+  for (const ref of ledgerRows()) {
+    const tier = cell(ref, "Tier");
+    if (tier.length === 0 || tier === "-") continue;
+    if (VALID_TIERS.has(tier.toLowerCase())) continue;
+    issues.push(
+      issue(
+        "QFAI-TDDLIST-010",
+        `Tier must be T1, T2, T3 or "-", but spec-${specNumber} (${ref.label}) declares "${tier}".${unknownTierWindowNote}`,
+        unknownTierSeverity,
+        relPath,
+        "tddList.tier",
+        undefined,
+        "canonical",
+        "Write one of `T1` / `T2` / `T3`, or `-` when the tier is not declared. " +
+          "Derive it from the row's `Layer`, what the row touches (infrastructure, a " +
+          "public API surface, a contract or persisted schema, UI or rendered output) " +
+          "and the criticality list in `references/volume-policy.md`; a blank or `-` " +
+          "cell is read as `T1`, so an unrecognized value would silently buy the " +
+          "cheapest ceremony.",
       ),
     );
   }

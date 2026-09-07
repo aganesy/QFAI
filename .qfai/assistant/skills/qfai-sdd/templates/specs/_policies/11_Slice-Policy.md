@@ -162,7 +162,11 @@ rows — that is the canonical cascade pattern, not a duplicate.
 2. Build the Triage table for the entire change request before
    any spec edits.
 3. Obtain AskUserQuestion approval for every CREATE / DELETE / SPLIT /
-   MERGE / SUPERSEDE / UPDATE:REMOVE row.
+   MERGE / SUPERSEDE / UPDATE:REMOVE row. Under `--auto` no question is
+   asked and the agent never self-approves: those rows stay unapproved,
+   no `CAP-NNNN` is written to `_policies/03_Capabilities.md` on their
+   behalf, and the batch stops before step 5 with the rows reported as
+   blockers.
 4. Record the Triage table in:
    - per-spec `09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /

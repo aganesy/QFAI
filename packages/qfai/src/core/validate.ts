@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
-import { collectScenarioFiles } from "./discovery.js";
+import { activeScenarioFiles, collectScenarioFiles } from "./discovery.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "./sunset.js";
 import { issue } from "./validators/utils.js";
@@ -17,7 +17,13 @@ import {
   collectScIdsFromScenarioFiles,
   collectScTestReferences,
 } from "./traceability.js";
-import type { Issue, ValidationCounts, ValidationProfile, ValidationResult } from "./types.js";
+import type {
+  Issue,
+  ValidationCounts,
+  ValidationProfile,
+  ValidationResult,
+  ValidationTimings,
+} from "./types.js";
 import { locateToolAgainstProject, resolveToolVersion } from "./version.js";
 import { applyWaivers } from "./waivers.js";
 import { validateContracts } from "./validators/contracts.js";
@@ -25,6 +31,7 @@ import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
+import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import {
   DISCUSSION_PACK_PRODUCERS,
@@ -43,6 +50,7 @@ import {
   validateAgentDefinition,
   validateBpApDb,
   validateContractReferences,
+  validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -62,6 +70,7 @@ import {
   validateSpecIdLinkage,
   validateResearchSummary,
   validateRepositoryHygiene,
+  validateSpecSections,
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
@@ -97,9 +106,21 @@ import {
   validateStaleReferences,
   validateImportLiteEvidencePresence,
 } from "./validators/index.js";
+import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
+const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
+
+/**
+ * Where `runUiuxValidators` leaves what it measured.
+ *
+ * Threaded down instead of returned so the profile runners keep their
+ * `Issue[]` shape. Timing used to travel as two `warning` findings, which put
+ * the host's speed into `counts.warning`; the sink keeps the signal without
+ * letting it reach the issue stream.
+ */
+type TimingsSink = { timings?: ValidationTimings };
 
 export type ValidationOptions = {
   profile?: ValidationProfile;
@@ -135,11 +156,16 @@ export async function validateProject(
   // slips through while `QFAI-SCOPE-00x` reports the misuse.
   const specScope = requestedScope;
 
-  const findings = [
-    ...configIssues,
-    ...scopeIssues,
-    ...(await runProfileValidators(root, config, profile, options.platform, specScope)),
-  ];
+  const timingsSink: TimingsSink = {};
+  const profileRun = await runProfileValidators(
+    root,
+    config,
+    profile,
+    timingsSink,
+    options.platform,
+    specScope,
+  );
+  const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) =>
     isFindingInSpecScope(finding, scopeRoots, specScope),
   );
@@ -148,9 +174,17 @@ export async function validateProject(
   // Traceability is part of the same scoped answer: leaving every spec's
   // Examples in would report a sibling's SC totals, missing IDs and refs as the
   // coverage of the requested slice.
-  const scenarioFiles = (await collectScenarioFiles(specsRoot)).filter((file) =>
-    isPathInSpecScope(file, scopeRoots, specScope),
-  );
+  //
+  // A retired spec is out of the answer for the same reason. Its findings are
+  // already demoted and `qfai report` drops its scenarios from every other
+  // aggregate; counting its SC IDs here put them back into SC Coverage's total
+  // and `missingIds` while `scSources`, built from the active list, could name
+  // no file they came from. `activeScenarioFiles` is the one filter both
+  // commands use, so they cannot drift apart.
+  const scenarioFiles = activeScenarioFiles(
+    await collectScenarioFiles(specsRoot),
+    await collectSpecEntries(specsRoot),
+  ).filter((file) => isPathInSpecScope(file, scopeRoots, specScope));
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
   const { refs: scTestRefs, scan: testFiles } = await collectScTestReferences(
     root,
@@ -166,6 +200,10 @@ export async function validateProject(
     // `ValidationResult` carries it without having to remember to.
     generatedAt: new Date().toISOString(),
     profile,
+    // Reported, not inferred: a run stopped by the integration surface returns
+    // only those findings, and their absence is indistinguishable from a clean
+    // surface to a reader looking at the issue list alone.
+    profileValidatorsRan: profileRun.ranProfileValidators,
     issues,
     counts: countIssues(issues),
     traceability: {
@@ -173,6 +211,7 @@ export async function validateProject(
       testFiles,
     },
     waivers,
+    ...(timingsSink.timings ? { timings: timingsSink.timings } : {}),
   };
 }
 
@@ -260,15 +299,19 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
     // assistant tree they reach.
     case "verify":
     case "full":
+    case "prototyping":
+    case "saas-package":
       // Plus the agents tree, which `validateAgentDefinition` opens by
       // pathname: a canonical agent replaced by a directory gives it `EISDIR`
       // and a FIFO blocks it, either way taking the finding down with the run.
+      //
+      // `prototyping` and `saas-package` run `validateAgentDefinition` too,
+      // and since `QFAI-AGENT-019` / `QFAI-AGENT-015` it reaches the skills
+      // tree as well — it reads every routed skill's `SKILL.md` and `readdir`s
+      // the configured skills directory. Listing only the agents tree for them
+      // left a FIFO at a routed `SKILL.md` blocking the run forever with the
+      // `QFAI-LINK-001` that names it already in hand.
       return [skillsRelative, AGENTS_RELATIVE];
-    case "prototyping":
-    case "saas-package":
-      // These run `validateAgentDefinition` too, and nothing that opens the
-      // skills tree.
-      return [AGENTS_RELATIVE];
     case "sdd":
       return [skillsRelative];
     default:
@@ -432,13 +475,28 @@ async function buildUnusedPlatformIssues(
   ];
 }
 
+/**
+ * What one profile's run produced, and whether its own validators ran at all.
+ *
+ * The two cannot be recovered from the issue list downstream: an aborted run
+ * and a healthy one both return `surface.issues` first, so a caller counting
+ * findings cannot tell "the surface is broken and nothing else was looked at"
+ * from "the surface is broken and everything else passed".
+ */
+type ProfileValidatorRun = {
+  readonly issues: Issue[];
+  /** `false` when the integration-surface inspection stopped the run below. */
+  readonly ranProfileValidators: boolean;
+};
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
   profile: ValidationProfile,
+  timings: TimingsSink,
   platformOption?: string,
   specScope?: SpecScope,
-): Promise<Issue[]> {
+): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
   // so every gate the profile is about was defined by files nothing read. That
@@ -472,15 +530,34 @@ async function runProfileValidators(
     profile,
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
+  // Anchor integrity across the assistant tree runs in every profile too, and
+  // for the same reason: a citation that resolves to no heading is an
+  // instruction that silently does nothing, whichever stage followed it. That
+  // is a property of the installation, not of a stage. Its own walk tolerates
+  // the damage `QFAI-LINK-001` reports, so it cannot take that finding down.
+  //
+  // It therefore runs **before** the short-circuit below and is merged into it.
+  // Behind the short-circuit it never ran at all, so a `QFAI-LINK-002` on the
+  // intact half of the tree stayed hidden until `QFAI-LINK-001` was repaired —
+  // "every profile" is what this rule promises, and structural damage
+  // elsewhere is not a reason to withhold a finding the walk already has.
+  const anchorIssues = await validateAssistantAnchorReferences(root, config);
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return [...toolProvenance, ...unusedPlatform, ...surface.issues];
+    return {
+      issues: [...toolProvenance, ...unusedPlatform, ...surface.issues, ...anchorIssues],
+      ranProfileValidators: false,
+    };
   }
-  return [
-    ...toolProvenance,
-    ...unusedPlatform,
-    ...surface.issues,
-    ...(await runProfileOwnValidators()),
-  ];
+  return {
+    issues: [
+      ...toolProvenance,
+      ...unusedPlatform,
+      ...surface.issues,
+      ...anchorIssues,
+      ...(await runProfileOwnValidators()),
+    ],
+    ranProfileValidators: true,
+  };
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
@@ -489,16 +566,16 @@ async function runProfileValidators(
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
-        return runPrototypingProfileValidators(root, config, platformOption);
+        return runPrototypingProfileValidators(root, config, timings, platformOption);
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
         return runTddValidators(root, config, true, true, true, true, true, true, specScope);
       case "verify":
       case "full":
-        return runFullValidators(root, config, platformOption, specScope);
+        return runFullValidators(root, config, timings, platformOption, specScope);
       case "saas-package":
-        return runSaasPackage(root, config, platformOption);
+        return runSaasPackage(root, config, timings, platformOption);
     }
   }
 }
@@ -506,9 +583,15 @@ async function runProfileValidators(
 async function runSaasPackage(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const prototypingIssues = await runPrototypingProfileValidators(root, config, platformOption);
+  const prototypingIssues = await runPrototypingProfileValidators(
+    root,
+    config,
+    timings,
+    platformOption,
+  );
   return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
@@ -638,12 +721,21 @@ async function runSddValidators(
     // pipe silently shifts the columns every other validator reads.
     ...(await validateMarkdownTableArity(root, config)),
     ...(await validateStatusInSpecs(root, config)),
+    // `validation.require.specSections` is the operator's own strict
+    // required-heading list. It ships empty, so this is a no-op until it is
+    // set; once it is set the list has to bind, or `qfai.config.yaml` records
+    // a gate nothing applies.
+    ...(await validateSpecSections(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config, { specScope })),
     ...(await validateContractReferences(root, config)),
+    // Contract → implementation routing: every `- SSOT modules:` entry under
+    // `.qfai/contracts/**` must resolve on disk, so a renamed or never-written
+    // module cannot keep being asserted by the contract that documents it.
+    ...(await validateContractSsotModules(root, config)),
     ...(await validateSddDesignContractReadiness(root, config, {
       enforceNoPrematurePrototypingContracts,
     })),
@@ -713,10 +805,11 @@ async function runSddValidators(
 async function runPrototypingValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
   return [
-    ...(await runUiuxValidators(root, config, platformOption)),
+    ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
     // Second-wave reviewer-gate findings (prototyping
     // surface). Both detectors no-op when their gating files are
@@ -760,9 +853,10 @@ async function runPrototypingValidators(
 async function runPrototypingProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw = await runPrototypingValidators(root, config, platformOption);
+  const raw = await runPrototypingValidators(root, config, timings, platformOption);
   return await relaxPrototypingIssuesIfExploration(root, raw);
 }
 
@@ -773,8 +867,14 @@ async function relaxPrototypingIssuesIfExploration(
   const { readPrototypingModeForRelax } = await import("./prototyping/modeRead.js");
   const mode = await readPrototypingModeForRelax(root);
   if (mode !== "exploration") return issues;
-  const { relaxIssuesForMode } = await import("./prototyping/mode.js");
-  return [...relaxIssuesForMode(issues, mode)];
+  const { relaxIssuesForMode, buildExplorationRelaxationNotice } =
+    await import("./prototyping/mode.js");
+  const relaxed = [...relaxIssuesForMode(issues, mode)];
+  // Weakening a gate is auditable the way a waiver is: the downgraded
+  // findings carry `relaxedFrom` and this notice puts the mode, its
+  // source file and the affected codes into validate.json + stdout.
+  const notice = buildExplorationRelaxationNotice(relaxed, mode);
+  return notice === null ? relaxed : [...relaxed, notice];
 }
 
 async function runAtddValidators(
@@ -859,12 +959,19 @@ async function runTddValidators(
     // that cannot be applied was invisible to the only profile the stage runs.
     // `full` opts out below because `runSddValidators` already includes it.
     ...(includeContracts ? await validateContracts(root, config) : []),
+    // Same reasoning for the contract -> implementation routing block: the
+    // implementation stage is the one that moves and renames those modules, so
+    // `--profile tdd` — the gate `qfai-implement` names — has to see a
+    // `- SSOT modules:` entry it just made dead. It rides `includeContracts`
+    // so `full` does not report it twice.
+    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
   ];
 }
 
 async function runFullValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
@@ -882,7 +989,7 @@ async function runFullValidators(
     // `full` covers the downstream stage, so it opts INTO the history-based
     // implementation-drift check here and `runTddValidators` opts out below.
     ...(await runSddValidators(root, config, true, false, specScope, false, false, true)),
-    ...(await runPrototypingValidators(root, config, platformOption)),
+    ...(await runPrototypingValidators(root, config, timings, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
@@ -892,14 +999,25 @@ async function runFullValidators(
 async function runUiuxValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
   const uiuxStart = performance.now();
   const platformResult = await detectPlatform(root, config, platformOption);
   const platform = platformResult.platform;
+  // The html-mock pass times itself and reports through here, rather than
+  // being wall-clocked from this side. Its budget is for parsing the mock
+  // blocks, and the parser is a jsdom-backed module loaded lazily inside the
+  // pass at ~910ms; a stopwatch around the call would charge that one-off load
+  // to the budget and report every sub-second `htmlMockTimeout` as an overrun
+  // however fast the blocks actually parsed.
+  //
+  // Stays 0 when there are no mock blocks to parse — nothing was loaded and
+  // nothing was parsed, so there is no cost to attribute.
+  const htmlMockTiming: HtmlMockTiming = { parseMs: 0 };
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
-    () => validateHtmlMock(root, platform, config),
+    () => validateHtmlMock(root, platform, config, htmlMockTiming),
     () => validateMermaidScreenFlow(root, config),
     () => validateBpApDb(root, config),
     () => validateUiDefinitionConsistency(root, config),
@@ -911,16 +1029,12 @@ async function runUiuxValidators(
   const uiuxIssueGroups = await Promise.all(uiuxValidators.map((validator) => validator()));
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
-  const uiuxElapsed = performance.now() - uiuxStart;
-  if (uiuxElapsed > UIUX_VALIDATION_BUDGET_MS) {
-    uiuxIssues.push({
-      code: "QFAI-UIUX-PERF",
-      severity: "warning",
-      category: "canonical",
-      message: `UI/UX validation exceeded budget (${UIUX_VALIDATION_BUDGET_MS}ms). All validators were executed.`,
-      rule: "uiux.performanceBudget",
-    });
-  }
+  timings.timings = {
+    uiuxMs: performance.now() - uiuxStart,
+    uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
+    htmlMockMs: htmlMockTiming.parseMs,
+    htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
+  };
   return uiuxIssues;
 }
 

@@ -55,6 +55,9 @@ releases completion.
       evidence entry records the verdict on either target — the field name does not change — and it
       is not the verdict; the `--profile tdd` run this list ends on reports no `QFAI-REVIEW-*`
       finding, so a pack that never held a UI review passes it (gate item 9).
+      Its `Prototype parity reviewed revision` names the **same** revision as items 6, 7
+      and 8: a parity PASS taken before the surface moved is stale, and it is the one
+      verdict a later reader cannot re-derive from the spec and the diff (gate item 10).
 - [ ] `test-list.md` statuses are accurate **and** each row's `Evidence` anchor resolves to a fresh
       entry in the file its `Layer` owns, with `Review pack seal` and each `Audited evidence hash`
       recomputed, **and the entry's identity copy still matches the ledger row** — `TDD-ID`, `Layer`,
@@ -133,7 +136,7 @@ releases completion.
 - [ ] Every ledger row reached a **terminal** status: `done`, or `exception` whose `DR-ID` names a
       Decision Record recorded as a **user-approved accepted-risk waiver** (a `TDDLIST-001` entry in
       `.qfai/waivers.yml`) — an `exception` whose DR only describes the anomaly is a parked defect.
-      No `todo`, `red`, `green`, `refactor` or `review-fix` row remains. Accurate statuses are a
+      No `todo`, `blocked`, `red`, `green`, `refactor` or `review-fix` row remains. Accurate statuses are a
       different claim: a run that advanced no row records the ones left mid-cycle correctly and still
       may not declare the spec complete (`SKILL.md#completion-prohibition-conditions`).
 - [ ] No `## Cross-spec obligations` entry of the **code-ownership** kind in this spec's evidence
@@ -167,3 +170,13 @@ releases completion.
       formality: record the finding, its owning spec and why it is not this run's work,
       say so in the completion report, and do **not** claim the gate passed, weaken the
       profile or lower `--fail-on`. The repo-wide run belongs to `/qfai-verify`.
+- [ ] The same run reports zero `QFAI-TEST-002` findings a waiver has not marked `suppressed=true`.
+      `QFAI-TEST-002` is `info`, so it never fails `--fail-on error` — it reports that the stub scan
+      produced **no evidence**: an empty `validation.traceability.testFileGlobs` (the value
+      `npx qfai init` ships, under which zero files are scanned and `QFAI-TEST-001` cannot fire at
+      all), or an extension qfai has no stub dialect for. Under either, the zero-`QFAI-TEST-001` box
+      above certifies nothing, so ticking this list on the exit code alone declares completion over
+      an unrun gate. Configure the globs (`/qfai-configure`) and re-run. A waiver does not remove
+      the finding — it stays in the output carrying `suppressed=true`, and that mark is what makes
+      an extension qfai cannot scan a tickable exception rather than a blocker. Do **not** tick the
+      box because the command exited 0.

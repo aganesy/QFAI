@@ -60,10 +60,29 @@ describe("brand catalog step anchor", { timeout: 15000 }, () => {
     );
     expect(await readFile(verifySkillMd, "utf-8")).toMatch(/^##\s+Step 0\.5\b/m);
 
-    const scanned = await fg(["**/*.md"], { cwd: discussionSkillDir, absolute: true });
-    expect(scanned).not.toContain(verifySkillMd);
+    // `fast-glob` returns POSIX-separated paths even with `absolute: true`, and even on
+    // Windows. Both sides of every comparison below are therefore normalised to `/`
+    // rather than to `path.sep`, which is what the two assertions used to do.
+    //
+    // Neither of them worked on Windows, and they failed in opposite directions. The
+    // `startsWith` check compared a `/`-separated result against a `\`-separated prefix,
+    // so it could never be true and the row failed on a tree nobody had touched. The
+    // `not.toContain` check compared against a `\`-separated absolute path, so it could
+    // never match — always passing, checking nothing. A row that cannot fail is the worse
+    // of the two, because it reports as coverage (#1176).
+    const posix = (p: string): string => p.split(path.sep).join("/");
+    const root = posix(discussionSkillDir);
+
+    const scanned = (await fg(["**/*.md"], { cwd: discussionSkillDir, absolute: true })).map(posix);
+    expect(
+      scanned,
+      "a sibling skill's file must not be in the scan: its step numbers are its own namespace",
+    ).not.toContain(posix(verifySkillMd));
+    expect(scanned.length, "the scan must have found files for this to be about").toBeGreaterThan(
+      0,
+    );
     for (const file of scanned) {
-      expect(file.startsWith(discussionSkillDir + path.sep)).toBe(true);
+      expect(file.startsWith(`${root}/`)).toBe(true);
     }
   });
 

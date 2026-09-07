@@ -138,6 +138,23 @@ export const RULE_PROMOTIONS = {
    */
   agentDeveloperInstructionsDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CONTRACT-041` — a `Derived (not stored):` declaration that does no
+   * work: one that does not parse, or one naming a value the API never asks
+   * for or the DB domain stores anyway.
+   *
+   * The window is not about a backlog — nobody has written this marker before,
+   * because the format ships with the rule. It is about the FORMAT being new.
+   * The first authors to use it are answering another finding voluntarily, and
+   * they will get the grammar wrong in exactly the ways the message exists to
+   * teach: a missing `from` clause, a half-written value list. Failing their
+   * run on a line they added to engage with the tool is the worst possible
+   * first experience of it, and the message says everything the error would.
+   *
+   * A minor is enough: by 1.12.0 the format has shipped and been read, and a
+   * declaration still wrong by then is one nobody checked.
+   */
+  derivedNotStoredDeclaration: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
+  /**
    * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
    * Contract sets written before the declaration was required state none, so
    * the rule lands on every one of them at once.
@@ -182,6 +199,28 @@ export const RULE_PROMOTIONS = {
    */
   researchSummarySectionMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * The Research Summary's schema rules, read per entry rather than as text:
+   * `QFAI-RESEARCH-015` (a `source_id` resolving to no `sources[].id`),
+   * `QFAI-RESEARCH-016` (the storage file holds no summary),
+   * `QFAI-RESEARCH-017` (a source entry with no `id`),
+   * `QFAI-RESEARCH-018` and `QFAI-RESEARCH-019` (a best-practice / anti-pattern
+   * or reflection entry missing a required field), `QFAI-RESEARCH-020` (an
+   * unresolvable current-pack pointer) and `QFAI-RESEARCH-021` (an unreplaced
+   * template placeholder).
+   *
+   * One window, because they are one migration: before them the section was
+   * checked by counting list items, so a pack could satisfy every rule that
+   * existed while leaving whole entries unfilled. Every such pack meets the
+   * whole family at once on upgrade — and the pack is written at the start of a
+   * requirement and rarely revisited, so the row that owes the fix is normally
+   * long past. The section-missing rule directly above shipped behind a window
+   * for exactly that population; leaving these at `error` would have latched
+   * the same gate it was opened to keep unlatched. (Its code is deliberately
+   * not spelled in backticks here — the ledger reads every backticked code in
+   * this block as one this entry governs.)
+   */
+  researchSummarySchemaFields: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TRIAGE-008` — a Triage heading that is not the canonical `## Triage`,
    * so no triage validator reads the rows under it. Existing delta files carry
    * whatever heading they were written with.
@@ -202,6 +241,42 @@ export const RULE_PROMOTIONS = {
    * nothing and draws the finding on every one of its rows at once.
    */
   specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-050` — a `- SSOT modules:` entry naming a path that does not
+   * resolve, or one that resolves only by leaving the project root. Nothing
+   * read those paths before, so a route that went stale releases ago has been
+   * sitting in the contract unchallenged and arrives in one run.
+   */
+  contractSsotModuleUnresolved: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-LINK-002` — a `file.md#anchor` citation in the assistant tree whose
+   * target document or heading is not there. Nothing resolved these citations
+   * before, so a tree refreshed in part carries the whole backlog of drifted
+   * anchors the moment the rule arrives — and repairing them is an edit to the
+   * vendored documents, not to the consumer's own work.
+   */
+  assistantAnchorDangling: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPECSECTION-001` — a spec pack missing a heading that
+   * `validation.require.specSections` requires — and `QFAI-SPECSECTION-002`,
+   * an entry of that list that normalises to no heading name at all. Both
+   * arrive with the gate itself: a project that already set the key had
+   * nothing reading it, so every pack that never carried the heading, and
+   * every unusable entry already written, meets the rule in one run.
+   */
+  specSectionsRequiredHeadings: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-DECISION-001`, `QFAI-DECISION-002`, `QFAI-DECISION-003`,
+   * `QFAI-DECISION-004`, `QFAI-DECISION-005`, `QFAI-DECISION-006` and
+   * `QFAI-DECISION-007` — the Delta Rejected Guard's re-open record, checked
+   * for the first time. The record had no status value, no field for the prior
+   * decision and no field for the approval, so every re-open written before
+   * these rules existed is missing fields its author was never asked for, and
+   * a spec that re-adopted a rejected candidate meets the whole backlog at
+   * once. One window covers the seven because they are one guard: an operator
+   * repairing a re-open answers all of them in the same edit.
+   */
+  specPackReOpenDecisionRecord: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
@@ -269,6 +344,53 @@ export const RULE_PROMOTIONS = {
    * at the release that starts warning and closes at the next minor.
    */
   retiredTraceabilityKeys: { introducedIn: "1.10.1", promoteAt: "1.11.0" },
+  /**
+   * The skill / `agent-routing.yml` cross-check, which ships as one rule in
+   * five findings: `QFAI-AGENT-015` (a declared role nothing routes or selects),
+   * `QFAI-AGENT-016` (a `SKILL.md` whose `roles:` or `routing-profile:` cannot
+   * be read), `QFAI-AGENT-017` (a skill that binds itself to the manifest which
+   * the manifest routes nothing to), `QFAI-AGENT-018` (a route whose review
+   * profile is undefined or contradicted by a second route) and
+   * `QFAI-AGENT-019` (a routed agent the skill's `roles:` omits).
+   *
+   * They share one window because they share one cause: nothing compared the
+   * two sides before, so on the release that introduces them every project
+   * whose `roles:` and manifest drifted apart — which is every project that
+   * customised either — meets the whole backlog in a single run.
+   */
+  skillRolesRoutingCrossCheck: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-010` — a `Tier` cell that is neither `T1`/`T2`/`T3` nor
+   * `-`. The column itself is new, so the first ledgers to carry one were
+   * hand-filled against prose rather than against this value set, and a
+   * spelling the rule rejects (`T@`, `Tier 2`, `t2 (authz)`) is a cell its
+   * author believed was fine. Every such row fails at once on upgrade.
+   */
+  tddListUnknownTier: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TCLEVEL-001` — a ledger coverage row still claiming a TC
+   * that declares no `Level`, and so is owned by `/qfai-atdd` under
+   * `tests/integration/**` rather than by `tdd/test-list.md`. The rows this
+   * finds were seeded by the previous rule, which made a `Level`-less TC a
+   * coverage target; every project upgraded from that version meets its whole
+   * backlog at once, on rows nobody wrote by hand.
+   */
+  tddListTcLevelUndeclared: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SKILLS-013` — a file under a skill's `references/` that no reachable
+   * document cites, so no run ever opens it. Progressive disclosure was never
+   * checked before, so a skill tree that grew a reference and lost its citation
+   * meets the whole backlog on the first upgrade.
+   */
+  skillReferenceUnreachable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SKILLS-014` — a document under the skills tree that cannot be read at
+   * all. Nothing read these files before, so an unreadable one (a mode bit, a
+   * dangling symlink, a checkout that never materialised it) is discovered by
+   * the upgrade rather than caused by it, and hard-failing on discovery is the
+   * shape of latch P7 exists to stop.
+   */
+  skillDocumentUnreadable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

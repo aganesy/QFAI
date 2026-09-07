@@ -89,6 +89,27 @@ describe.each(TREES)("%s", (tree) => {
     expect(doc).toContain("That satisfies `Oracle proof`; do not do it twice");
   });
 
+  it("exempts the falsifiability mutation from the ownership rejection", async () => {
+    // The trio breaks the predicate `Satisfied-by` names, which belongs to the
+    // sibling row by construction — read literally, the ownership criterion
+    // rejected every correctly executed `Unit` / `Component` branch-2 row, and
+    // `red-not-observable.md` forbids routing that case to `exception`.
+    const doc = await read(tree, ORACLE);
+    expect(doc).toContain(
+      "**On a _RED not observable_ row the predicate `Satisfied-by` names is the owned code for this check**",
+    );
+    expect(doc).toContain("Anything else is still out of bounds");
+  });
+
+  it("scopes the gatekeeper's carve-out to the evidence branch, not the `Layer`", async () => {
+    // Scoped to a handed-over row it reached only `E2E` / `API` / `Integration`,
+    // leaving the `Unit` / `Component` case the path was written for uncovered.
+    const card = await read(tree, GATEKEEPER);
+    expect(card).toContain(
+      "On a falsifiability row, **the predicate `Satisfied-by` names is the owned code**",
+    );
+  });
+
   it("routes the equivalent-mutant case instead of deadlocking the implementer", async () => {
     // Strengthening the assertion past the contract is reviewer-originated
     // scope, which the drift protocol forbids — so without a route the finding

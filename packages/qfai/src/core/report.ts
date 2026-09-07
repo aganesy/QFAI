@@ -5,6 +5,7 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { collectTddCoverage } from "./reportTddCoverage.js";
 import {
+  activeScenarioFiles,
   collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
   collectScenarioFiles,
@@ -314,6 +315,34 @@ export type ReportTddCoverageSpec = {
   openCount?: number;
   /** Open rows that cannot be started, reported apart from "not started yet". */
   blockedCount?: number;
+  /**
+   * The ATDD-owned `Layer = Integration` rows, counted apart from the
+   * coverage-target arithmetic above.
+   *
+   * Rows, not TCs, and its own pair of fields rather than a contribution to
+   * `unitComponentTotal` / `openCount`: an `L3` TC is not a coverage target, so
+   * the set those counts are computed from excludes it entirely. Without this
+   * a spec whose obligations are all integration-level printed
+   * `coverage-target TCs: 0 / open: 0` beside a ledger full of `todo` rows that
+   * prohibit completion.
+   */
+  integrationRowTotal?: number;
+  /** Integration rows that are neither `done` nor parked at `exception`. */
+  integrationRowOpenCount?: number;
+  /**
+   * The TCs `06_Test-Cases.md` routes to `tests/integration/**`, i.e. the
+   * obligation the rows above are meant to discharge.
+   *
+   * The row counts describe what was seeded; this describes what is owed. They
+   * are different questions, and only the second can see a Phase 2b that never
+   * ran: with no rows the pair above is `0 / 0`, and an integration-level TC
+   * is not a coverage target either, so a spec with no integration test at all
+   * read as finished. No validator reports a missing row either
+   * (`ledger-preconditions.md`), which left both commands silent together.
+   */
+  integrationTcExpected?: number;
+  /** Those of them that no `Layer = Integration` row names in `TC-Refs`. */
+  integrationTcsWithoutRow?: string[];
   missingTcRefs?: string[];
   exceptionRows: Array<{ tddId: string; drId: string }>;
 };
@@ -508,8 +537,20 @@ export async function createReportData(
   const specFiles = (await collectSpecFiles(specsRoot)).filter((file) =>
     isPathInSpecScope(file, scopeRoots, specScope),
   );
-  const scenarioFiles = (await collectScenarioFiles(specsRoot)).filter((file) =>
-    isPathInSpecScope(file, scopeRoots, specScope),
+  // One active list, shared by every scenario aggregate in this report. Filtering
+  // inside `collectTestStrategy` alone left `summary.scenarios` counting a
+  // retired spec's feature that `testStrategy.totalScenarios` had already
+  // dropped — the same report stating two different scenario totals, one of
+  // them history. `validateProject` applies the same filter for the SC coverage
+  // it hands back below, so the two halves of this report agree on which
+  // scenarios exist. The `--spec` scope narrows the list first, and the retired
+  // filter reads the same narrowed `specEntries`, so the two filters compose
+  // instead of one of them silently re-admitting what the other dropped.
+  const scenarioFiles = activeScenarioFiles(
+    (await collectScenarioFiles(specsRoot)).filter((file) =>
+      isPathInSpecScope(file, scopeRoots, specScope),
+    ),
+    specEntries,
   );
   const scenarioCount = await countScenarios(scenarioFiles);
   const testStrategy = await collectTestStrategy(
@@ -1644,6 +1685,34 @@ export function formatReportMarkdown(
       lines.push(
         `- done: ${spec.doneCount} / in-review: ${spec.inReviewCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount} (blocked: ${spec.blockedCount})`,
       );
+      // Printed only when the ledger holds such a row: the line answers "what
+      // is still open outside the coverage set", and a `0 (unfinished: 0)`
+      // beside every unit-only spec is noise, not an answer. The counts above
+      // are silent about these rows by construction — an `L3` TC is not a
+      // coverage target — so a spec whose obligations are all integration-level
+      // read as finished while its rows sat at `todo`.
+      // Printed when the spec either holds such a row or owes one. Gating on
+      // the row count alone hid the worse of the two states: a spec whose
+      // Phase 2b never ran has no rows, so the line vanished exactly where it
+      // had the most to say.
+      const integrationTcsWithoutRow = spec.integrationTcsWithoutRow ?? [];
+      // `?? 0` on both counts, not only on the gate: the second arm prints the
+      // line for a spec that OWES rows and has none, which is exactly the
+      // shape where a producer that never ran leaves both fields unset. The
+      // line then read `Integration rows (ATDD-owned): undefined (unfinished:
+      // undefined)` in the report this PR adds it to.
+      const integrationRowTotal = spec.integrationRowTotal ?? 0;
+      const integrationRowOpenCount = spec.integrationRowOpenCount ?? 0;
+      if (integrationRowTotal > 0 || integrationTcsWithoutRow.length > 0) {
+        lines.push(
+          `- Integration rows (ATDD-owned): ${integrationRowTotal} (unfinished: ${integrationRowOpenCount})`,
+        );
+      }
+      if (integrationTcsWithoutRow.length > 0) {
+        lines.push(
+          `- integration-level TCs with no Integration row (seed in /qfai-sdd Phase 2b): ${integrationTcsWithoutRow.join(", ")}`,
+        );
+      }
       const missingTcRefs = spec.missingTcRefs ?? [];
       if (missingTcRefs.length > 0) {
         lines.push(`- missing TC refs (add to test-list.md): ${missingTcRefs.join(", ")}`);
@@ -2661,6 +2730,10 @@ async function collectLedgerLayerCounts(
     if (!isSpecInScope(entry.specNumber, scope)) {
       continue;
     }
+    // A retired spec's rows are the record of what it delivered, not the
+    // repository's current test-layer distribution — and `validate` has already
+    // stopped gating on them.
+    if (entry.status !== undefined && entry.status !== "active") continue;
     const ledgerPath = path.join(entry.dir, "tdd", "test-list.md");
     let text: string;
     try {
@@ -2758,6 +2831,20 @@ async function collectTestStrategy(
   // Fall back to the ledger when the Gherkin path yielded nothing. `Layer` is a
   // hard-required column of every `tdd/test-list.md`, so on the layered layout
   // it is the only place a layer can actually be read from.
+  //
+  // The TOTAL and the E2E count follow the histogram, and until they did the
+  // report contradicted itself: the buckets summed to N while `totalScenarios`
+  // said 0. That is not only a display defect. `maxE2eScenarioRatio` and
+  // `maxE2eScenarioCount` are compared against these two numbers, so on the
+  // layered layout — the normal shape for a project whose E2E lives in code
+  // rather than in Gherkin — both knobs were compared against zero and could
+  // not fire however many E2E rows the ledger held. A project could set them,
+  // read them in `qfai.config.yaml`, and be told nothing (#1197).
+  //
+  // A ledger row is a TC obligation rather than a parsed scenario, which is why
+  // `layerSource` says which one produced these numbers. It is the same axis:
+  // both count the things the project has undertaken to test, bucketed by
+  // layer.
   let layerSource: ReportTestStrategy["layerSource"] =
     totalScenarios > 0 ? "scenario-tags" : "none";
   if (totalScenarios === 0) {
@@ -2767,6 +2854,8 @@ async function collectTestStrategy(
       for (const [bucket, count] of Object.entries(fromLedger.counts)) {
         layerCounts[bucket as keyof typeof layerCounts] += count;
       }
+      totalScenarios = fromLedger.total;
+      e2eCount = fromLedger.counts.e2e;
     }
   }
 

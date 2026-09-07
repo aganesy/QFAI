@@ -153,12 +153,12 @@ function resolveTemplateDestinationRelativePath(relative: string): string {
 
 function formatConflictMessage(conflicts: string[]): string {
   return [
-    "既存ファイルと衝突しました。安全のため停止します。",
+    "Conflicts with existing files. Stopping to stay safe.",
     "",
-    "衝突ファイル:",
+    "Conflicting files:",
     ...conflicts.map((conflict) => `- ${conflict}`),
     "",
-    "上書きして続行する場合は --force を付けて再実行してください。",
+    "To overwrite them and continue, re-run with --force.",
   ].join("\n");
 }
 
@@ -186,7 +186,7 @@ async function collectTemplateFiles(root: string): Promise<string[]> {
   // successful copy of a tree it never read.
   const kind = await stat(root).catch((error: unknown) => {
     throw new Error(
-      `テンプレートの種別を判定できません: ${root} — ` +
+      `Cannot determine the template entry's kind: ${root} — ` +
         (error instanceof Error ? error.message : String(error)),
       { cause: error },
     );

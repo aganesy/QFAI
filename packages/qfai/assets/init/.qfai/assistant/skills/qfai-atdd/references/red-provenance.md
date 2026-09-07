@@ -10,7 +10,7 @@ lifecycle it does not define.
 
 - **Evidence, not ledger cells.** `/qfai-implement` writes `Status`, `DR-ID`
   and `Evidence` for every row — one writer, as
-  `constitution/drift-protocol.md` grants it. This stage produces the evidence
+  `.qfai/assistant/constitution/drift-protocol.md` grants it. This stage produces the evidence
   those cells point at, in `.qfai/evidence/atdd-<spec-id>.md` under
   `## Ledger rows advanced`, and hands it over.
 - The lifecycle is
@@ -168,6 +168,23 @@ gate condition where it is defined below.
       later — Phase Green does not touch those files — so it is what makes the
       freshness claim checkable rather than asserted.
 
+      **Take the assertion-stripped run here, before step 4 submits the
+      pair.** The handover table below requires `RED assertion-stripped result`
+      on every `observed-red` entry, and nothing downstream supplies it: the
+      consumer's `/qfai-implement` step 3b consumes a handed-over row **without
+      running its own step 4**, which is the only place that skill strips a RED.
+      A row handed over without it therefore owes a field no later step takes,
+      and `qa-gatekeeper` REVISEs it on absence — so a journey with a perfectly
+      natural RED stops here for want of a run this stage could have made in the
+      same minute. Neutralize every assertion this row's selector executes,
+      re-run the RED command unchanged, confirm it **passes**, record the strip
+      diff and that output, and **restore the test immediately**. The procedure,
+      the compilable neutralization for languages that reject unused locals, and
+      the reject conditions are the one in
+      `../../qfai-implement/references/red-admissibility.md` — do not restate
+      them here. Before step 4, because the gatekeeper judges the entry as it
+      stands and this field is inside its audit subject.
+
       **Both are recorded when observed, never reconstructed.**
       `/qfai-implement` Phase Green changes the tree, and its completion gate
       requires the handed-over RED to name the revision it was taken at
@@ -187,7 +204,25 @@ gate condition where it is defined below.
       first leaves the planner nothing but "keep the PASS and open a new row",
       which cannot repair a handoff at the wrong granularity — the row has to be
       split before its RED is taken, not after.
-   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) while no
+      **Take the assertion-stripped run here, before step 4 submits the
+      pair.** The handover table below requires `RED assertion-stripped result`
+      on every `observed-red` entry, and nothing downstream supplies it: the
+      consumer's `/qfai-implement` step 3b consumes a handed-over row **without
+      running its own step 4**, which is the only place that skill strips a RED.
+      A row handed over without it therefore owes a field no later step takes,
+      and `qa-gatekeeper` REVISEs it on absence — so a journey with a perfectly
+      natural RED stops here for want of a run this stage could have made in the
+      same minute. Neutralize every assertion this row's selector executes,
+      re-run the RED command unchanged, confirm it **passes**, record the strip
+      diff and that output, and **restore the test immediately**. The procedure,
+      the compilable neutralization for languages that reject unused locals, and
+      the reject conditions are the one in
+      `../../qfai-implement/references/red-admissibility.md` — do not restate
+      them here. Before step 4, because the gatekeeper judges the entry as it
+      stands and this field is inside its audit subject.
+
+   4. **Submit that run — the RED pair and its assertion-stripped run — to
+      `qa-gatekeeper` (routing phase `red`) while no
       implementation makes that assertion pass — the step 1 seam does not, and
       neither does an existing surface that implements the row's predicate
       wrongly — and wait for PASS.** `qfai-implement/SKILL.md` requires an
@@ -204,7 +239,8 @@ gate condition where it is defined below.
       phase `acceptance-test-engineer` and no backend or frontend agent. The
       surface is built by `/qfai-implement` Phase Green from this handover, and
       the GREEN pair is recorded there. Branch 1's output is the RED pair, its
-      `qa-gatekeeper` PASS, and the `Oracle proof` plan.
+      assertion-stripped run, its `qa-gatekeeper` PASS, and the `Oracle proof`
+      plan.
 
    Stage gate **P1b** is where steps 1-4 happen.
 
@@ -313,16 +349,20 @@ Exactly one form per row, never both and never neither:
 
 | Branch         | Recorded                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                                                                            |
-| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                                                                      |
+| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                         |
+| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `Round 1: RED failure mode: falsifiability`, **`RED test hash` and its manifest**, **`Round 1: Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair                                                                                                                                                    |
 | `exception`    | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects, recorded **before** P1d routes the gate — its audit subject is those plus the `DR-ID` and the DR artifact, so a row without them has nothing reproducible for `qa-gatekeeper` to hash. Then write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 
-`RED failure mode` is on both rows because the consumer's per-item contract
+`Round 1: RED failure mode` is on both rows because the consumer's per-item contract
 requires it before the reviewers run, and neither branch was recording it — an
 otherwise correct ATDD-owned row reached the completion gate missing a mandatory
 field. On an observed RED it is the kind the failure actually was
 (`assertion` | `expected-error`); on branch 2 it is `falsifiability`, which is
-what that form is.
+what that form is. It takes the `Round 1:` prefix because it classifies **a
+round's** RED and this handoff is the row's first round — a later round's RED
+can have a different mode, and writing it bare left the consumer's completion
+gate, which reads that prefix and only it, unable to find the classification at
+all (`../../qfai-implement/references/round-evidence.md`).
 
 Every branch carries the row identity and the obligation reference: the audit
 subject hashes them and the gatekeeper judges before `/qfai-implement` can add
@@ -346,14 +386,30 @@ a table cell: a GFM row is one physical line and a cell ends at every unescaped
 either truncates the proof or breaks every row below it
 (`../../qfai-implement/references/execution-ledger.md#evidence-cell-contract`).
 
-`qa-gatekeeper` requires an `Oracle proof` on **every** item — a named
-production mutation that makes the test fail, or a recorded `equivalent-mutant`
-— because a passing run does not show the test depends on the behaviour the row
-owns. A natural RED is not a substitute: it shows the test failed before the
-code existed, not that it discriminates once the code does. Branch 2 satisfies
-this with the mutation it already performs; branch 1 names the mutation it
-intends and `/qfai-implement` records the run at GREEN, when there is production
-code to mutate.
+`qa-gatekeeper` requires an `Oracle proof` on **every row that reaches `red`** —
+branch 1 and branch 2 — a named production mutation that makes the test fail,
+or a recorded `equivalent-mutant`, because a passing run does not show the test
+depends on the behaviour the row owns. A natural RED is not a substitute: it
+shows the test failed before the code existed, not that it discriminates once
+the code does. Branch 2 satisfies this with the mutation it already performs;
+branch 1 names the mutation it intends and `/qfai-implement` records the run at
+GREEN, when there is production code to mutate. A branch-3 row owes none — it
+never reaches GREEN, and it is reached only when neither form is available, so
+the requirement would ask it for the evidence its branch is defined by not
+having. It **can** stand at a spec-level completion gate, carried there by a
+user-approved `TDDLIST-001` waiver ("Branch 3 does not close a spec on its
+own" below), and the gate does not acquire an `Oracle proof` claim on it there:
+`agents/qa-gatekeeper.md` excludes a branch-3 `exception` from the requirement
+at both gates and judges it on its `DR-*` instead — keyed on the **last
+appended** `DR-*` recording both forms unavailable, not on the status and not on
+any `DR-*` in the cell, since `exception` is reachable from any active status, a
+row parked there after proving its oracle still owes one, and `exception ->
+todo` keeps the old record while a re-entry appends the new one. The same
+exclusion holds at `/qfai-implement`'s completion prohibitions, which otherwise
+demand a GREEN and two reviewer verdicts branch 3 never produces. Its audit
+subject at P1d is the
+row identity and obligation reference plus the `DR-ID` and the DR artifact, as
+the `exception` row above states.
 Criteria: `../../qfai-implement/references/oracle-strength.md`.
 
 The `Evidence` cell is a pointer; the payload lives in
@@ -408,6 +464,16 @@ the ledger's writer under any circumstance — and so does a spec whose only
 active `CON-API-*` belong to other specs. A spec with an **active** obligation
 **it owns** finds a row, and this stage's primary procedure enumerates it and
 builds the handoff from it.
+
+**The `Integration` rows are a different case: they are already there.** Phase 2b
+seeds a `Layer = Integration` row per integration-level `TC-*` too — every
+`Level` whose annotation routes to `tests/integration/**` under `QFAI-ATDD-112`:
+`L3`, `integration`, a blank cell, a spelling that names no layer (`smoke`), and
+`system` / `acceptance`. On a spec whose TCs are all integration-level, a first
+run finds them seeded at `todo`, and they are this run's rows to give provenance
+to — the three branches below apply to them exactly as they do to an `E2E` row.
+Reporting them as "zero rows, nothing to do" leaves `/qfai-implement` Phase Red
+step 3b with no handoff to consume and every one of them stuck at `todo`.
 
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
@@ -485,8 +551,8 @@ nothing later in the flow can produce the approval retroactively.
 ## A `review-fix` row comes back here for a new RED
 
 A reviewer's REVISE that asks for a change to the acceptance test returns the
-row to this stage: `/qfai-implement` does not author those tests and its `red`
-phase has no `acceptance-test-engineer`. What the corrected test owes — a fresh
+row to this stage: an acceptance test is **this** skill's owned artifact and is never edited in `/qfai-implement` (its Non-goals), whatever `agent-routing.yml` routes
+into any phase there — the rule is ownership, not who happens to be available, so it survives a routing change. What the corrected test owes — a fresh
 RED when it fails, the no-round path plus a re-addressed manifest and a proof
 marked stale when it passes, and where the round block goes — is in
 `review-fix-rounds.md`.

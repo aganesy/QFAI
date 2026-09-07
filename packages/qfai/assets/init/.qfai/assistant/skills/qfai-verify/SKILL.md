@@ -64,9 +64,9 @@ When unsure, read inputs in this order:
 - "Full-scan" means every gate that applies to the current stage, not every gate in the repository regardless of stage. Each scope names the profile that produces it, and they must match — a `full`-profile run is recorded as `scope: "full"` whatever stage triggered it.
 - **Prototyping carve-out (local only — see "Mandatory checks": CI rejects narrow profiles).** When `/qfai-verify` is invoked to satisfy the prototyping DONE gate — i.e. Work Order H of `/qfai-prototyping`, before `npx qfai prototyping certify` — the scope is `prototyping`, and the validate run is `npx qfai validate --profile prototyping --fail-on error`. This is NOT a diff-only shortcut and NOT a waiver: it is the phase-isolation contract the certify gate enforces (`prototypingCertify.ts` accepts only `scope="prototyping"`, and `reviewerGate.ts` raises `R-CERTIFY-VERIFY-CIRCULAR` at severity `error` when a `verify.json` carrying `atdd` / `full` / `implement` is present while a prototyping loop is active). A `full` run at that point necessarily fails `QFAI-ATDD-111/112/113`, which are obligations of stage 5 (`/qfai-atdd`) — a stage that has not run yet. Do not clear them with annotation-only tests; declare the prototyping scope instead.
 
-## Verify Output Contract — `.qfai/output/verify.json`
+## Verify Output Contract — `.qfai/report/verify.json`
 
-`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run: it is
+`/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run: it is
 the machine-readable verdict, and `.qfai/evidence/verify-<spec-id>.md` does not
 replace it. `status` is `"PASS"` only when every gate in scope passed, and
 `scope` names the stage this run actually covered — never a stage you did not
@@ -145,7 +145,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - You MUST produce the required evidence file: `.qfai/evidence/verify-<spec-id>.md`.
   - The run-scoped `.qfai/evidence/verify-<spec-id>.md` remains local and ignored by the QFAI-managed block in the project root `.gitignore`.
   - Durable per-item `implement-*.md` and `atdd-*.md` governance records are committed through the managed negations. Do not commit the verify run file; summarize its key outcomes in the PR description instead.
-- You MUST write `.qfai/output/verify.json` per "Verify Output Contract" above. Downstream gates read that file, not the evidence markdown.
+- You MUST write `.qfai/report/verify.json` per "Verify Output Contract" above. Downstream gates read that file, not the evidence markdown.
 - You MUST run the mandatory checks listed below and record outcomes.
 - **This** gate is full-scan, in CI and everywhere else: `npx qfai validate --profile verify --fail-on error`, or the default `npx qfai validate --fail-on error`. A partial profile does not satisfy it, and no waiver or environment makes it satisfy it. That is a statement about the verification gate, not a ban on narrow profiles in CI: `qfai-discussion`, `qfai-prototyping` and `qfai-atdd` each define a narrow profile as their own stage gate, those runs are legitimate under `CI=true`, and `QFAI-VALIDATE-017` (`warning`) marks them as not-full-scan rather than blocking them. The prototyping carve-out below is a local, pre-`certify` run.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
@@ -170,7 +170,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 - A concise evidence summary exists (copy‑paste for PR).
 - The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/constitution/change-classification.md`.
 - Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.
-- Verdict file exists: `.qfai/output/verify.json`, with `status` and `scope` set per "Verify Output Contract".
+- Verdict file exists: `.qfai/report/verify.json`, with `status` and `scope` set per "Verify Output Contract".
 - Completion is approved by a reviewer who did not run the gates.
 
 ## Mandatory checks
@@ -299,7 +299,7 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
    only), **populate them by analyzing the current repository**:
 
 - derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints + standard gate commands from the task-runner manifest (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, …), then CI config, then lockfiles — same order as `constitution/quality.md` (tech.md#standard-commands-copy-paste)
+- derive runtime/tooling versions + constraints + standard gate commands from the task-runner manifest (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, …), then CI config, then lockfiles — same order as `.qfai/assistant/constitution/quality.md` (tech.md#standard-commands-copy-paste)
 - derive repo layout + key directories from the file tree and scripts (structure.md)
 
 1. Do **not** invent facts. If something cannot be verified, write it as:
@@ -427,7 +427,7 @@ If you cannot run these commands (environment limitation):
 
 ## Output
 
-- `.qfai/output/verify.json` — the machine-readable verdict (`status` + `scope`), per "Verify Output Contract". Downstream gates read this file.
+- `.qfai/report/verify.json` — the machine-readable verdict (`status` + `scope`), per "Verify Output Contract". Downstream gates read this file.
 - `.qfai/evidence/verify-<spec-id>.md` — the human-readable evidence summary with all gate results
 - All gates: PASS confirmed
 - Next action suggestion: proceed to PR creation (use your platform workflow), or — for a `scope: "prototyping"` run — proceed to `npx qfai prototyping certify`
@@ -452,7 +452,7 @@ When you declare DONE, include:
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 

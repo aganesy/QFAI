@@ -48,7 +48,7 @@ external-runtime-resource condition all still bind it:
 - **No disjoint split, no fan-out.** A row whose work cannot be divided into
   non-overlapping write ranges runs its roles **one at a time** — the
   item-level gate's DENY-to-serial outcome, applied inside the row. This is not
-  waivable: `constitution/workflow.md#concurrency-stage-independent-mandatory`
+  waivable: `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`
   binds every set of delegated agents that write concurrently, and it requires
   worktree separation whenever they do. In one checkout the second role
   overwrites the first's edits; in separate worktrees the same module comes

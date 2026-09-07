@@ -2,11 +2,11 @@
 
 `.qfai/report/validate.json` is the machine-readable result of
 `npx qfai validate`. It is a **public surface** (`@api` under
-`constitution/change-classification.md`): the skills instruct agents to read it,
+`.qfai/assistant/constitution/change-classification.md`): the skills instruct agents to read it,
 so a key change is a breaking change and takes the `@api` path.
 
 This file is the SSOT for its keys. Before it existed the situation was: the
-skills mandated reading the file, `change-classification.md` called it `@api`,
+skills mandated reading the file, `.qfai/assistant/constitution/change-classification.md` called it `@api`,
 the README called it internal and not a stable contract, and no shipped file
 named a single key — so an agent looking for the findings array guessed
 `findings` and got `undefined` from a file whose array is `issues`.
