@@ -77,7 +77,9 @@ needs its own rule.
   agree or disagree with in isolation.
 - **BR** — one business rule is one independently falsifiable rule. Deletion
   test: if removing half the `Rule` text leaves a complete rule behind, split.
-- **EX** — one example is one concrete input/expected pair for one BR.
+- **EX** — one example is one concrete input/expected pair for one BR. A
+  cohesive rule bundle no single example can demonstrate in isolation may name
+  several `BR-*` in the one `BR-Ref` cell; that is the exception, not the unit.
 - **TC** — one test case is one verification of one AC or EX. `06_Test-Cases.md`
   already requires at least two TCs per AC; the reciprocal signal is a BR whose
   fan-out is 1 while its `Rule` cell is a size outlier against its siblings.
