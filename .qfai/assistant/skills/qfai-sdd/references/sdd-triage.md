@@ -30,15 +30,31 @@ Concretely, before persisting any Triage row:
    state. See `_policies/11_Slice-Policy.md` step 4.
 4. Only when no active spec's scope can absorb the requirement, AND the
    underlying capability is itself new, propose **CREATE**. Add the new
-   `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it in
-   the Triage row's Rationale column. `QFAI-TRIAGE-006` will fail the
-   validator otherwise.
+   `CAP-NNNN` row to `_policies/03_Capabilities.md` _first_ and fill its
+   `Spec` cell with the next unused `spec-NNNN` (never reuse a retired
+   one), then cite the CAP in the Triage row's Rationale column.
+   `QFAI-TRIAGE-006` will fail the validator otherwise, and a row left
+   with an empty `Spec` cell reports `QFAI-SPLIT-106`.
+   Under `--auto` that catalog write is deferred together with the
+   approval it depends on: leave
+   `_policies/03_Capabilities.md` untouched, record the intended
+   `CAP-NNNN` in the Rationale column as a proposal, and let
+   `QFAI-TRIAGE-006` surface next to the missing approver in the same
+   blocker set (steps 5 and 7). An unapproved CREATE row must never leave
+   a new CAP behind in the catalog.
 
-The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
-append-first fallback: when the REQ's capability does not match exactly,
-it still proposes APPEND on the active spec whose title/capability/scope
-shares the most subject tokens. CREATE is emitted only when there is
-**zero** token overlap with any active spec.
+   `QFAI-SPLIT-106` is inside its promotion window, so it is emitted at
+   `warning` and `validate --fail-on error` **still exits 0** while the
+   cell is empty. A blank cell also suppresses `QFAI-SPLIT-103` / `104` /
+   `105` for that row, so no other code stands in for it. Do not treat
+   the exit code as the check here: read the reported findings and
+   confirm no `QFAI-SPLIT-106` remains. The finding's own message names
+   the release it becomes an `error` in.
+
+The triage classifier implements an append-first fallback: when the REQ's
+capability does not match exactly, it still proposes APPEND on the active
+spec whose title/capability/scope shares the most subject tokens. CREATE is
+emitted only when there is **zero** token overlap with any active spec.
 
 ## Operation set (8 first-class)
 
@@ -94,7 +110,9 @@ and that none were added or dropped — in the `Rationale` column of the
 
 ## Inputs
 
-1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
+1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md` — reference
+   input, not normative. Requirement seeds to triage, not obligations to obey;
+   an explicit user requirement or an import-lite source serves the same slot.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
 4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.
@@ -114,13 +132,25 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column.
+   approver in the `Approved By` column. Under `--auto` the row leaves
+   `--auto` scope and no question may be asked — not through
+   AskUserQuestion and not in plain text, operator present or not — so stop
+   at step 7 instead. Never synthesize an `Approved By` value — the column
+   records who authorized the operation, so an invented approver is a false
+   audit record. See `../SKILL.md#--auto-and-approval-required-rows`.
+   One such row stops the whole batch, because
+   Phase 0 onward is a fixed-order pass over the persisted table.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /
      SUPERSEDE) and policy-only changes.
 7. **Stop.** Do not enter Phase 0 until every required-approval row has
    an approver recorded and every CREATE row cites a registered CAP.
+   Stopping here is a reportable outcome, not a failure to repair: leave
+   `Approved By` as `-`, write a `consultation-needed` work-log entry
+   naming each unapproved row with its Operation and target, and report the
+   `QFAI-TRIAGE-005` errors as the reason the run stopped. Under `--auto`,
+   also ask for a rerun without `--auto` so the approvals can be collected.
 
 ## Impact cascade (1 REQ → N rows)
 
@@ -131,7 +161,13 @@ A single requirement frequently affects multiple specs. The agent MUST:
    companion edit:
    - Existing US/AC/BR/EX/TC that references the changed concept →
      **UPDATE:MODIFY** in that spec.
-   - Now-obsolete US/AC/BR/EX/TC → **UPDATE:REMOVE** in that spec.
+   - Now-obsolete US/AC/BR/EX/TC → **UPDATE:REMOVE** in that spec. Removing a
+     coverage-target `TC` also retires its ledger row, and dropping that row
+     takes its `TDD-ID` out of the ledger's maximum — so tombstone the id under
+     `## TDD-ID reservations`, citing this row's `Source`, or the next
+     allocation reissues it
+     (`spec-traceability-rules.md#tdd-execution-ledger`). This path raises no
+     Change Request, so its tombstone cites the Triage row, not a `CR-*`.
    - Glossary / contract impact → record in `_policies/10_delta.md`.
 3. Emit one Triage row per affected spec. The same `Source` (REQ ID) may
    appear on multiple rows — this is the canonical cascade pattern.
@@ -165,6 +201,48 @@ instead of extending the first table. A decorated heading
 Triage validator; put the date or the note in the section body, not in
 the heading.
 
+### `Existing Spec` grammar
+
+`Existing Spec` is the cell that binds the row to the spec it acts on, so
+it has exactly one grammar (enforced by `QFAI-TRIAGE-009`). The **whole
+cell** must be one of these — a valid target with anything else beside it is
+still a rejected cell:
+
+- **One spec** — `spec-NNNN`, e.g. `spec-0003`.
+- **Several specs** — join them with `+`, e.g. `spec-0003+spec-0004`.
+  This is what the classifier emits for a MERGE row. A target may not be
+  repeated: `spec-0003+spec-0003` names one spec in two slots, not two.
+- **Policy-only row** — `_policies`, or a path under it such as
+  `_policies/05_Contracts.md`. Valid on `UPDATE` rows only: `DELETE` /
+  `SPLIT` / `MERGE` / `SUPERSEDE` act on a whole spec directory, and a
+  policy target gives them nothing to act on. A cell that merely contains
+  the word (`not_policies`) resolves to nothing either way, and a path that
+  leaves the directory (`_policies/../spec-0003`) is not a policy target —
+  no segment may be `.` or `..`.
+- **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
+  NOT name the spec it is about to create; the new spec ID belongs in
+  `Subject`. (`(none)` is the legacy spelling of this literal and is still
+  accepted, but new rows should use `-`.) Every other operation needs a real
+  target: the classifier's "no active spec absorbed this removal" DELETE
+  proposal carries `-` as a **placeholder** and must have the spec it
+  removes filled in before the row is persisted, exactly as its CREATE
+  counterpart must have a `CAP-NNNN` filled into `Rationale`.
+
+A **range is not a form**: `spec-0003〜spec-0008` names no spec directory
+and is rejected. Enumerate the specs with `+` instead. Each target is read
+whole, so a suffixed ID (`spec-0003_old`, `spec-0003/01_Spec.md`), an empty
+slot around a separator (`spec-0003+`), trailing prose, or a mix of spec and
+policy targets (`spec-0003+_policies`) is rejected rather than read as the
+`spec-NNNN` it contains.
+
+Every `spec-NNNN` named here must resolve to a directory under
+`.qfai/specs/`. On `DELETE` / `MERGE` / `SPLIT` — whose completion removes
+the directories the row names while the row stays as history — existence is
+read as a state instead: all targets present means the row is not yet
+carried out, all gone means it is and the row is its tombstone. A row where
+only some targets resolve is in neither state and is rejected, which is what
+catches a source that was misspelled or never allocated.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no
@@ -190,11 +268,118 @@ the heading.
 - `QFAI-TRIAGE-008` (warning): the file carries a heading that starts with
   `Triage` but is not a canonical `## Triage` section — its rows are read by
   none of the checks above. Rename the heading to `## Triage`.
+- `QFAI-TRIAGE-009` (error): `Existing Spec` does not follow the grammar
+  above — the cell is empty, uses range notation, carries a malformed or
+  suffixed spec token, holds anything outside the grammar beside a valid
+  target, gives a spec-scoped operation a `_policies` target, names a
+  `spec-NNNN` that has no directory under `.qfai/specs/` (on a removal
+  operation, only when the row's other targets do resolve), names nothing
+  resolvable, or is a non-CREATE row left on `-`.
 
 ## Status field interaction
 
 - SUPERSEDE rewrites the source spec's `01_Spec.md` to
   `Status: superseded` and sets `Superseded-by: spec-NNNN`.
-- DELETE removes the spec directory entirely (record reason in delta).
+- DELETE removes the spec directory entirely and drops the capability's row
+  from `_policies/03_Capabilities.md` (record reason in delta). Leaving the row
+  behind makes `validateSpecSplitByCapability` raise `QFAI-SPLIT-103` for the
+  deleted directory. Surviving specs keep their IDs — see the gap policy in
+  `_policies/11_Slice-Policy.md`.
+  - **A catalog with no `Spec` column must be migrated BEFORE the DELETE, and
+    nothing does it for you.** The gap the surviving IDs leave is absorbed by
+    the DECLARED mapping; a catalog written before that column existed has none,
+    so the derivation falls back to position and reads the gap as a mismatch —
+    `QFAI-SPLIT-103` for a directory that was deliberately removed,
+    `QFAI-SPLIT-104` for every surviving one after it, and `QFAI-SPLIT-105` for
+    the pairing that shifted. All three are `error`.
+  - The migration is one edit: add a `Spec` column to the catalog table and fill
+    **every** row with the directory that capability owns, then delete the row.
+    Half a migration is worse than none — the column's presence, not how many
+    cells are filled, is what selects the declared mapping, so a partially
+    filled column reports `QFAI-SPLIT-106` on each empty cell instead of
+    falling back. `npx qfai init` keeps `.qfai/specs/**` as your data and
+    never rewrites it, `--force` included, so an upgrade will not perform this.
+- SPLIT reassigns the `Spec` cell of every moved `CAP-NNNN` row in
+  `_policies/03_Capabilities.md` to the new directory that now owns it, and the
+  source spec keeps only the capability it retains. A moved row left on the old
+  directory raises `QFAI-SPLIT-106` (two rows claim it), `QFAI-SPLIT-104` (the
+  new directory is owned by no CAP) and `QFAI-SPLIT-105` (the CAP is paired
+  with the wrong `01_Spec.md`).
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.
+
+### Ledger migration (SUPERSEDE / deprecation)
+
+Retiring a spec retires its execution ledger with it, so move the work
+**before** rewriting `Status:`.
+
+**Name the inheritor first.** Only `superseded` carries one in the
+lifecycle schema (`Superseded-by`); `deprecated` and `removed` require
+`Deprecated-at` and nothing else, so for those the spec that takes the
+work over is a triage decision and must be written into the delta row's
+`Rationale` before the bullet is. A retirement with live rows and no
+named inheritor is not ready to be written: either name one, or close
+those rows out first — finish them, or `UPDATE:REMOVE` the obligations
+they cover — so the ledger holds nothing but `done`. `validate` demotes
+every finding the moment the bullet lands, so an undecided target does
+not block anything; it just loses the work quietly. Below, **the
+inheritor** means the `Superseded-by` spec or that recorded decision.
+
+1. Migrate every live row of the source spec's `tdd/test-list.md` into
+   the inheritor's ledger. Live = every `Status` except `done`:
+   `todo` / `blocked` / `red` / `green` / `refactor` / `review-fix` /
+   `exception`. `blocked` is an obligation nobody has started and
+   `review-fix` is a reviewer's REVISE still owed — leaving either
+   behind retires work that was never delivered.
+2. Remap every spec-namespaced obligation on a migrated row onto the
+   inheritor's own IDs — both `TC-Refs` and the `US-Refs` that
+   `Layer=E2E` rows carry instead. `TC-NNNN-MMMM` and `US-NNNN-MMMM`
+   both encode the spec number in `NNNN`, so a copied cell keeps
+   pointing at the retired spec. A copied `TC-Refs` at least fails
+   `TDDLIST_UNKNOWN_REF` in the successor and leaves its matching TC at
+   `TDDLIST_TC_NOT_COVERED`; a copied `US-Refs` fails nothing —
+   `validateObligationColumn()` checks the token's shape and the row's
+   `Layer`, not whether the US exists — so the E2E row stays silently
+   bound to the retired spec's user story. Build both correspondences
+   from the successor's `06_Test-Cases.md` and `02_User-stories.md`; if
+   it has no TC or US for a migrated row, add one there first.
+3. Renumber each migrated row to a `TDD-ID` the successor's ledger does
+   not already use, and keep the old -> new correspondence. `TDD-NNNN`
+   is ledger-local, not spec-namespaced, so two ledgers that both start
+   at `TDD-0001` collide the moment a row is copied: the migrated row
+   fails `TDDLIST_DUPLICATE_ID` (`error`) in the successor while the
+   source row it came from is already demoted to `info` — the work ends
+   up gated nowhere.
+4. Rewrite, through that same correspondence, every `Blocked-By` that
+   names a migrated row. The allowed `spec-NNNN:TDD-MMMM` form carries
+   both the spec and the old ledger-local ID, so a copied cell keeps
+   pointing at the retired spec's row — and
+   `TDDLIST_BLOCKED_MISSING_REF` only checks that the cell is non-empty,
+   so nothing reports the broken reference and the migrated work waits
+   on a blocker no live ledger owes. Blockers that are not migrated rows
+   (`CR-YYYYMMDD-NNNN` IDs, contract paths, rows of a third spec that
+   stays active) are left as written.
+5. Reset every migrated in-progress row to `Status: todo` with an empty
+   `DR-ID` and `Evidence`, and list the migration in the approved
+   `CR-YYYYMMDD-NNNN` that authorises the retirement. A `red` / `green`
+   / `refactor` / `review-fix` / `exception` row's three cells record a
+   run against the **old** obligation and an older revision of the tree;
+   copied over verbatim they assert that the inheritor's freshly mapped
+   TC/US was evidenced by work that never referenced it. Nor may SDD
+   rewrite them into a truthful claim — `spec-traceability-rules.md`
+   gives `Status`, `DR-ID` and `Evidence` to `/qfai-implement`. Resetting
+   is what SDD does own: the row re-enters as unstarted work, the CR
+   carries the re-scope, and `/qfai-implement` takes new evidence against
+   the new obligation. `blocked` keeps its status and its rewritten
+   `Blocked-By`; `todo` has nothing to reset.
+6. Leave `done` rows where they are — they are the historical record of
+   what the retired spec delivered.
+7. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
+   `Superseded-by` must name an **active** spec other than the source;
+   pointing it at a missing, self- or already-retired spec leaves the
+   source gating, because nothing inherited its rows.
+
+`validate` demotes every ledger finding on a non-active spec to `info`,
+matching the rule above that triage ignores such specs. That is what
+stops a retired ledger from gating the repository — and it is also why
+step 1 is mandatory: nothing will ask for those rows again.

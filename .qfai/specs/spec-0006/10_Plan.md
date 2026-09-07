@@ -3,7 +3,7 @@
 - Spec: spec-0006
 - Parent: CAP-0006
 
-## 1. Implementation Strategy
+## Implementation approach
 
 ### Primary Source Files
 
@@ -22,13 +22,30 @@
 | `formatDoctorJson()` | Format doctor data as JSON                                    |
 | `shouldFailDoctor()` | Determine exit code based on failOn and summary counts        |
 
-## 2. Dependencies
+## Test approach
+
+| Layer       | Where                                                                           | What it proves                                                                 |
+| ----------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| unit        | `packages/qfai/tests/core/doctor*.test.ts`                                      | Per-check construction and the text / JSON renderers                           |
+| integration | `packages/qfai/tests/integration/doctorSpec0006.test.ts`                        | `createDoctorData` over a real tree, check by check                            |
+| integration | `packages/qfai/tests/integration/cli/commands/doctorAutoremediate.*.test.ts`    | `--autoremediate` fixes, and that `--dry-run` plans without side effects       |
+| integration | `packages/qfai/tests/integration/cli/commands/doctorClean.*.test.ts`            | `--clean` archives rather than deletes, and leaves tracked files alone         |
+| integration | `packages/qfai/tests/integration/cli/commands/doctorSkillProfile.probe.test.ts` | `--profile <skill>` runtime-dependency probing, including the empty-array skip |
+
+The boundary that must have its own pair of cases rather than one shared case is
+the `workflows.integrity` severity, and BR-0006-0021 says why: the
+`--fail-on error` leg reads `error > 0` only, so it cannot tell `info` from
+`warning`. Drift alone must exit 0 (TC-0006-0032) **and** drift beside an
+unrelated warning must exit 1 (TC-0006-0033). With only the first, an
+implementation that detects nothing at all is green.
+
+## Dependencies
 
 | Dependency       | Content                                     |
 | ---------------- | ------------------------------------------- |
 | spec-0003 (init) | init creates the structure doctor diagnoses |
 
-## 3. Implementation Order
+## Implementation Order
 
 All functionality is already implemented. This spec documents existing behavior.
 
@@ -56,3 +73,12 @@ All functionality is already implemented. This spec documents existing behavior.
 - Skip states: adopter tree に当該 file 不在 → drift として扱わない (declined / missing の分類は REQ-0020 / spec-0003 側)。package 同梱 copy を解決できない (`getInitAssetsDir` 相当が resolve できない / tree 不在) → `info` skip。
 - Out of scope: 上書き / prune / provenance record の**書き込み・schema 所有** (spec-0003 / REQ-0020)。`qfai validate` への finding 追加も行わない。
 - In scope (読み取りのみ): `.qfai/install-provenance.json` の**読み取り**。これは drift 判定の前提条件であり省略できない — entry を持たない name は `adopter-owned` として無視する必要があるため (`CLI-WFSET` §1 / §8)。読み取り専用なので所有権は spec-0003 に残る。
+
+## Risk mitigation
+
+| Risk                                                                                                                                                                | Likelihood / impact | Mitigation                                                                                                                                                   | Trigger to act                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `workflows.integrity` drift is given `warning`, which changes the exit code of every adopter one version behind — the exact population the finding exists to inform | med / high          | Severity is pinned to `info`, the only value whose exit code is unchanged under every `--fail-on`. The contract SSOT is `.qfai/contracts/cli/qfai-doctor.md` | A severity other than `info` is proposed for this check        |
+| The check is copied from `skills.integrity` including its severity mapping, which is the one part that must NOT be copied                                           | med / high          | The 4-state shape is reused; the mapping is stated separately and its falsifiability is pinned by the TC pair above                                          | A diff reuses the `skills.integrity` branch wholesale          |
+| `--autoremediate` deletes or rewrites adopter content while claiming to repair it                                                                                   | low / high          | `--clean` renames into `_archive/` and calls no delete API; config merge is default-keyed, adding only absent keys; `--dry-run` plans without side effects   | Any delete API appears on the autoremediate path               |
+| The repair message names a CLI verb that does not exist yet, so the finding tells an adopter to run nothing                                                         | med / low           | The message body carries the stale path and manual repair text only; a command name is added in the release that ships the command                           | A refresh command lands and the message is not updated with it |

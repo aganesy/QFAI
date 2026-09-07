@@ -44,6 +44,10 @@ Review checklist (from code review best practices):
 - Tests: appropriate unit/integration/e2e coverage; tests fail when code is wrong.
 - Docs/UX: README/RELEASE/usage steps are consistent and copy-pasteable; UI changes make sense.
 - Consistency/style: follow existing conventions; style-only nits should be labeled [NIT].
+- Writing (`.agents/rules/documentation-clarity.md`), for the diff only:
+  - [MAJOR] issue/PR numbers, ticket IDs or team-local names in code or Markdown.
+  - [MINOR] comments that narrate how the work went instead of current behavior.
+  - [NIT] self-evident, repeated or wordy text; phrasing that reads as a literal translation.
 
 Specific checks:
 

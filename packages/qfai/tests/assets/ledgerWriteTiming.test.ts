@@ -87,7 +87,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       tree,
       "assistant/skills/qfai-implement/references/parallelization-policy.md",
     );
-    expect(policy).toContain("the `DR-ID` that status requires");
+    expect(policy).toContain("`DR-ID` where the item's status requires one");
     // "unconditional" is load-bearing since the carve-out was widened to five
     // cells: the reconcile owes the three that are always writable, while
     // `Test file` / `Selector` are owed only while their condition holds.

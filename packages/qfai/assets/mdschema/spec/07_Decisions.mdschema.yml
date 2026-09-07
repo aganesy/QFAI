@@ -1,0 +1,40 @@
+# Document schema: `<specsDir>/spec-NNNN/07_Decisions.md`
+#
+# Spec-scoped decision records. The `Empty State` section is what makes "no
+# decisions yet" a stated fact rather than an absence a reader has to interpret
+# — which is why it is a required section and not an omission.
+
+structure:
+  - heading:
+      pattern: "^# 07 Decisions.*"
+      regex: true
+    description: Decisions that bind this spec only.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## ID scheme$"
+          regex: true
+        description: >-
+          Which ID form this file uses, as a list. Spec-scoped records and
+          policy-level records have different shapes and different homes.
+        optional: true
+        allow_additional: true
+        lists:
+          - min: 1
+
+      - heading:
+          pattern: "^## Decisions$"
+          regex: true
+        description: >-
+          The records. Each is a subsection whose body lists Status, Context,
+          Decision, Consequences and Related.
+        allow_additional: true
+
+      - heading:
+          pattern: "^## Empty State$"
+          regex: true
+        description: >-
+          The stated count when this pack has no decisions. Optional once the
+          section above carries real records.
+        optional: true
+        allow_additional: true

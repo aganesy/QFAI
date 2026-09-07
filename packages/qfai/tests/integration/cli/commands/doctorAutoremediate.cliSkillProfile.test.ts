@@ -151,7 +151,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
     vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async (opts) => {
       seenOptions.push(opts);
-      return { lines: [], disabledInCi: false };
+      return { lines: [], disabledInCi: false, failedRunLogPrunes: [] };
     });
 
     const exit = await runDoctor({
@@ -212,6 +212,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async () => ({
       lines: [],
       disabledInCi: false,
+      failedRunLogPrunes: [],
     }));
 
     function captureStdout(): { restore: () => void; read: () => string } {

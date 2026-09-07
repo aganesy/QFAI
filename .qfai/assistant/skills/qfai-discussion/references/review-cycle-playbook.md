@@ -4,9 +4,15 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 
 ## Required Artifacts
 
-- `review_request.md`
-- `Rxx_<reviewer>.md`
-- `summary.json`
+Every review cycle writes its pack into the shared review tree — the same tree `/qfai-sdd` uses and
+the only one `npx qfai validate` reads. The directory name is `review-` plus a **17-digit**
+timestamp (`YYYYMMDDhhmmssSSS`, the same shape as the discussion pack's own id); any other
+spelling — Unix seconds, milliseconds, an ISO string — is not listed as a pack at all, and a
+tree with no packs only warns, so the cycle passes `--fail-on error` unreviewed:
+
+- `.qfai/review/review-YYYYMMDDhhmmssSSS/review_request.md`
+- `.qfai/review/review-YYYYMMDDhhmmssSSS/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/review-YYYYMMDDhhmmssSSS/summary.json`
 
 ## Cycle Rules
 

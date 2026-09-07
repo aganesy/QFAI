@@ -32,7 +32,12 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Work Orders for each subagent (scope, inputs, outputs, gates)
 - Stage Gates plan + current status
 - Completion report (DoD checklist + evidence links)
-- Evidence summary for `.qfai/evidence/` (gitignored; do not commit)
+- Evidence summary for `.qfai/evidence/` (mostly gitignored; do not commit the
+  regenerable stage logs). The governance records there are the exception and
+  **must** be committed: `implement-<spec-id>.md`, `atdd-<spec-id>.md`,
+  `coverage-depth-*.md`, `change-request-*.md`, `decision-*.md` and
+  `decisions/`. See
+  `.qfai/assistant/constitution/drift-protocol.md#which-evidence-is-committed`.
 
 ## Stop conditions
 
@@ -45,7 +50,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Sign-off
 
 - [ ] Deliverables are complete
-- [ ] Evidence is present (gitignored)
+- [ ] Evidence is present — regenerable logs left gitignored, governance records
+      committed (see Deliverables)
 - [ ] Stage gates are PASS
 - [ ] Reviewer sign-off recorded
 

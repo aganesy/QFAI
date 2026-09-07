@@ -1,7 +1,7 @@
 /**
  * SKILL.md phase-ordering validator.
  *
- * Checks that Phase A appears before Phase B in the Step 11.3 section.
+ * Checks that Phase A appears before Phase B in the Required Process step 9 entry.
  * A mutation swapping their order is a dependency violation.
  */
 
@@ -23,7 +23,7 @@ export function validatePhaseOrdering(skillMdContent: string): PhaseOrderingIssu
       {
         rule: "SKILL-PHASE-ORDER",
         message:
-          "Phase B appears before Phase A in SKILL.md Step 11.3; Phase A (brand selection) MUST precede Phase B (customization).",
+          "Phase B appears before Phase A in SKILL.md Required Process step 9; Phase A (brand selection) MUST precede Phase B (customization).",
       },
     ];
   }

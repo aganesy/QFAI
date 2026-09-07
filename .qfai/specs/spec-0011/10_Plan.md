@@ -1,6 +1,6 @@
 # 10 Plan
 
-## Implementation Strategy
+## Implementation approach
 
 1. TDD micro-cycle engine: Red -> Green -> Refactor -> Done lifecycle
 2. test-list.md parser: 8-column table with status tracking
@@ -10,7 +10,7 @@
 6. Evidence contract: per-item fresh evidence validation
 7. Parallelization policy: independence check, worktree separation, integration verify
 
-## Test Strategy
+## Test approach
 
 - Unit tests: status lifecycle transitions, evidence validation, backward transition rejection
 - Integration tests: full TDD cycle from todo to done, exception handling, parallel dispatch rules
@@ -21,7 +21,7 @@
 - Requires: spec artifacts from `/qfai-sdd` (test-list.md populated by SDD)
 - Consumed by: `/qfai-verify` for validation gate
 
-## Risk
+## Risk mitigation
 
 - Complex agent orchestration may be difficult to test in isolation
 - Mitigation: stop immediately on failed first delegation and return concrete remediation steps for unsupported or misconfigured subagent environments
