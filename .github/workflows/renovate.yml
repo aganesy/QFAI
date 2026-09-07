@@ -214,10 +214,6 @@ jobs:
           git add -A
           git commit -m "chore(deps): re-pin the digests this update invalidated"
 
-          # The remote is re-pointed at the token, because the checkout deliberately kept no
-          # credentials in the work tree.
-          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-
           # The branch still has to EXIST. `.github/renovate.json5` automerges every update, so
           # the pull request this branch belongs to can be merged and its branch deleted while
           # this job is still computing the re-pin — and `git push HEAD:refs/heads/<name>` to a
@@ -237,16 +233,31 @@ jobs:
           # revoked token — and `if ! git ls-remote` collapses the two. Under that collapse a
           # transient failure skips the re-pin silently and leaves the branch red with nothing
           # said, which is the failure mode this whole job exists to remove.
+          #
+          # Asked WITHOUT the credential, through the `origin` the checkout left behind. The
+          # repository is public, so an unauthenticated lookup answers this — the same reason the
+          # guard above fetches `main` that way. Review finding on #1236: handing this a
+          # token-bearing URL puts the token into git's OWN error output on a failed lookup, and
+          # whether that reaches the log then rests on the runner's secret masking rather than on
+          # anything this file controls. A question that does not need the credential does not
+          # carry it, which removes the exposure rather than relying on something to hide it —
+          # and it lets stderr stay visible, so a failure is diagnosable instead of a bare code.
           lookup=0
-          git ls-remote --exit-code --heads "$remote" "${BRANCH_REF#refs/heads/}" > /dev/null || lookup=$?
+          git ls-remote --exit-code --heads origin "${BRANCH_REF#refs/heads/}" > /dev/null || lookup=$?
           if [ "$lookup" -eq 2 ]; then
             echo "renovate repin: ${BRANCH_REF} no longer exists on the remote — the update was merged or dropped while this job ran. Not pushing (a push would recreate the branch)."
             exit 0
           fi
           if [ "$lookup" -ne 0 ]; then
-            echo "::error::renovate repin: could not determine whether ${BRANCH_REF} still exists (git ls-remote exited ${lookup}). Failing rather than pushing blind or skipping the re-pin quietly — re-run this job once the remote answers."
+            echo "::error::renovate repin: could not determine whether ${BRANCH_REF} still exists (git ls-remote exited ${lookup}). The lookup is unauthenticated because this repository is public, so a repository turned private fails here too — check that before treating it as a transient remote error. Failing rather than pushing blind or skipping the re-pin quietly."
             exit 1
           fi
+
+          # The remote is re-pointed at the token, because the checkout deliberately kept no
+          # credentials in the work tree. Built HERE rather than above the lookup: the push is the
+          # one operation that cannot answer its question without the credential, so it is the
+          # only place the credential-bearing string needs to exist.
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
           # Never forced. A rejection means Renovate moved the branch while this ran, and its
           # next run rebuilds the branch from scratch — losing this commit is the correct
