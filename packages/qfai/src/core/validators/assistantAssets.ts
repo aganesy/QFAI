@@ -866,8 +866,38 @@ function isSkillEntryPoint(skillsDir: string, file: string): boolean {
  * names `references/設計.md`. Either separator is accepted, and a leading
  * separator or drive letter is kept rather than dropped, so a path typed in
  * Windows form and a path that is absolute both still name their file.
+ *
+ * `~` is a path character here, not a delimiter. Without it the scan ENDS at
+ * the tilde and the token is whatever follows: `references/notes~1.md` yielded
+ * `1.md`, and an absolute path through a tilde-bearing directory yielded
+ * everything past the tilde. Both spell legal names — `~` is a legal filename
+ * character, backup conventions produce it, and `os.tmpdir()` on Windows is the
+ * 8.3 short form (`C:\Users\RUNNER~1\…`) whenever the profile name exceeds
+ * eight characters (#1211).
+ *
+ * Neither produced a false `QFAI-SKILLS-013` by the time this landed: the
+ * by-path pass covers a target whose own name carries the tilde, and the
+ * `skillsDirPrefix` recovery covers an absolute citation whose truncated tail
+ * still holds that prefix. What was left is the token being WRONG — resolved
+ * through a fallback rather than by the scan, which is the quadratic pass
+ * {@link collectReachableDocuments} keeps small on purpose, and one edit to
+ * either cover away from a live false positive. Admitting the character is the
+ * direct fix; the two covers stay as covers.
  */
-const CITATION_SEGMENT_SOURCE = String.raw`(?:[\p{L}\p{N}\p{M}._-]|%[0-9A-Fa-f]{2})+`;
+const CITATION_SEGMENT_SOURCE = String.raw`(?:[\p{L}\p{N}\p{M}._~-]|%[0-9A-Fa-f]{2})+`;
+/**
+ * The path-ish tokens {@link resolveCitations} will try to resolve, in order.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface. The token is the unit the defect lives in, and every
+ * end-to-end reading of it passes through two fallbacks that can cover a wrong
+ * token up. A case on the reachability graph passes against the broken pattern
+ * — measured — so it could not have pinned this.
+ */
+export function citationTokensIn(content: string): string[] {
+  return [...content.matchAll(DOCUMENT_CITATION_PATTERN)].map((match) => match[0]);
+}
+
 const DOCUMENT_CITATION_PATTERN = new RegExp(
   String.raw`(?:[A-Za-z]:)?[\\/]?${CITATION_SEGMENT_SOURCE}(?:[\\/]${CITATION_SEGMENT_SOURCE})*\.(?:md|ya?ml)\b`,
   "giu",
