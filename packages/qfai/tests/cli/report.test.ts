@@ -58,20 +58,24 @@ async function writeValidationFixture(
  * Measured worst case, slowest first:
  *
  * ```text
- * project `cli` alone — the shape the `test (cli)` job runs
+ * vitest run --project cli          # the shape the `test (cli)` job runs
  *   report(md)                                                   2874ms
  *   runs report with --run-validate                              2570ms
  *
- * whole package in one process — the heaviest load, as node-floor runs it
+ * vitest run                        # every project in one process, as
+ *                                   # node-floor runs it — the heaviest load
  *   keeps sibling specs out of the scoped report body            4149ms
  *   scopes input, output and spec-pack artifacts to --spec       3630ms
  * ```
+ *
+ * Both from `packages/qfai`, with `--silent --reporter=verbose` for the
+ * per-case durations.
  *
  * 4.1 s against 15 s is 3.6x headroom under the heaviest load in the suite —
  * twice the margin `main.test.ts` has at the same ceiling. So 15 s is a budget
  * here, not a value below this file's cost, and a tight ceiling is worth
  * keeping: it fails on a regression that makes a report run minutes long
- * instead of waiting two minutes for the project value to notice.
+ * instead of waiting for the project-level timeout to notice.
  */
 describe("report", { timeout: 15000 }, () => {
   it("runs init -> validate(json) -> report(md)", async () => {
