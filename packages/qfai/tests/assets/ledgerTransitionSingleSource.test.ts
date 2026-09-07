@@ -238,7 +238,7 @@ describe.each(TREES)("%s (`blocked` is reachable after the cycle starts)", (tree
     expect(reference).toContain("**retained round block**");
     expect(reference).toContain("A row carrying no such round was never resumed from `blocked`");
     // The narrow refusal it must not swallow.
-    expect(reference).toContain("On a `Unit` / `Component` / `Integration` row it is **not**");
+    expect(reference).toContain("On a `Unit` / `Component` row it is **not** accepted");
   });
 
   it("lets the gatekeeper accept the one `Satisfied-by` that names its own row", async () => {
@@ -356,15 +356,18 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
     // `Blocked-By`, so by the time that field was written the departure status
     // was already gone and the next session had to guess it — which is also
     // what decides whether the resumption continues a round or opens one.
-    const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain(
+    const columns = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/obligation-columns.md"),
+    );
+    expect(columns).toContain(
       "| Blocked-By | What a `blocked` row is waiting on, and the status it was blocked at.",
     );
-    expect(ledger).toContain("**followed by the status the row was blocked at**");
-    expect(ledger).toContain(
+    expect(columns).toContain("**followed by the status the row was blocked at**");
+    expect(columns).toContain(
       "**Both halves are written by the `Any active status -> blocked` transition itself**",
     );
     // The inbound edge itself has to ask for it, not only the column contract.
+    const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain(
       "Name the blocker **and the status the row is leaving** in `Blocked-By`",
     );
@@ -488,11 +491,14 @@ describe.each(TREES)("%s (the blocked mechanism holds at its edges)", (tree) => 
     // the validator accepts without a departure status is a row no later
     // session can resume. The reference has to state the vocabulary the check
     // applies, or the two drift.
-    const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain(
+    const columns = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/obligation-columns.md"),
+    );
+    expect(columns).toContain(
       "**The departure status is one of `todo` / `red` / `green` / `refactor` / `review-fix`**",
     );
-    expect(ledger).toContain("`TDDLIST_BLOCKED_MISSING_REF` **errors on either half**");
+    expect(columns).toContain("`TDDLIST_BLOCKED_MISSING_REF` **errors on either half**");
+    const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain(
       "`TDDLIST_BLOCKED_MISSING_REF` errors when either half is absent, and when the departure status is not one the edge admits",
     );
@@ -619,7 +625,7 @@ describe.each(TREES)("%s (the resumption reads what was written, not the status 
       "**A verdict already recorded against the moved run is recomputed from this group, not from the round's live RED fields**",
     );
     const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+      await read(tree, "assistant/constitution/references/audited-evidence-hash.md"),
     );
     expect(baseline).toContain(
       "**A round that has moved its observation into the `Interrupted RED` group is hashed from that group**",
@@ -632,10 +638,10 @@ describe.each(TREES)("%s (the resumption reads what was written, not the status 
     // it lets the field be added, removed or rewritten to another departure
     // after the PASS with the recomputation unmoved.
     const baseline = flat(
-      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+      await read(tree, "assistant/constitution/references/audited-evidence-hash.md"),
     );
     expect(baseline).toContain(
-      "the RED pair or the falsifiability trio with `RED failure mode`, and `Resumed-from-blocked` where the round carries one",
+      "with `RED failure mode`, and `Resumed-from-blocked` where the round carries one",
     );
     expect(baseline).toContain(
       "`Resumed-from-blocked` is in the subject because the reviewer reads it",

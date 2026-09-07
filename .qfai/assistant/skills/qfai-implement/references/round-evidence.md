@@ -110,7 +110,7 @@ to end.
   group, not from the round's live RED fields** — the group is that
   observation's audit subject once it has been moved, so the earlier `PASS`
   stays reproducible instead of going stale against a run it never read
-  (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`)
+  (`.qfai/assistant/constitution/references/audited-evidence-hash.md`)
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: Oracle proof` — the production mutation that made this round's test
