@@ -26,6 +26,12 @@
  * translate, not the merging branch's, so they are recorded rather than
  * converted. The rule above still binds the author of a new message; it is
  * addressed to whoever writes the string, and a merge writes none.
+ *
+ * Either way the addition is visible: `cliMessageLanguage.test.ts` pins how
+ * many entries this file may hold, so growing it means editing that number
+ * too. Without the pin an entry could be added for a message that really is in
+ * the tree, every other assertion would still pass, and the list would quietly
+ * stop being a closed record of legacy.
  */
 export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>> = {
   "core/atddTraceability.ts": ["：", "：", "：", "："],
