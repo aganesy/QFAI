@@ -35,10 +35,6 @@ const read = (tree: string, rel: string): Promise<string> =>
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
 /** Splits a markdown table row into trimmed cells. */
-/** Collapse soft wraps so an assertion pins the sentence, not the column
- * it happened to break at. */
-const flat = (markdown: string): string => markdown.replace(/\s+/g, " ");
-
 const cells = (row: string): string[] =>
   row
     .split("|")
@@ -1436,7 +1432,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       // Whitespace-collapsed: the sentence is the rule, the column it wraps at
       // is not.
-      expect(flat(skill)).toContain("the deletion is recorded in whatever authorised it");
+      expect(unwrap(skill)).toContain("the deletion is recorded in whatever authorised it");
     });
 
     it(`${tree}: the deleted row's Evidence pointer still resolves after the row goes`, async () => {
@@ -1610,7 +1606,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         ).toBe(true);
       }
       // The approval is for the deletion, not for the `Level` edit that caused it.
-      expect(flat(approvalPass)).toContain("deleting a ledger row is operator-approved");
+      expect(unwrap(approvalPass)).toContain("deleting a ledger row is operator-approved");
       expect(template).toContain("record the approver in that row's `Approved By`");
     });
 
@@ -1621,19 +1617,19 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // to point at. An unconditional "copy the cell" left the agent inventing
       // a section or refusing to retire the row.
       const template = await read(tree, TEMPLATE);
-      expect(flat(template)).toContain(
+      expect(unwrap(template)).toContain(
         "**A row that never ran has no such section — read the cell to know.**",
       );
-      expect(flat(template)).toContain(
+      expect(unwrap(template)).toContain(
         "no evidence — retired at Status = <status>, never executed",
       );
-      expect(flat(template)).toContain("Never compose a section so the record has something");
+      expect(unwrap(template)).toContain("Never compose a section so the record has something");
       // A row reaches `blocked` or `exception` from any state, so the status
       // alone cannot say the row never ran: one blocked out of `green` carries
       // an anchor that still resolves, and calling it unexecuted would replace
       // a real record with a false one.
-      expect(flat(template)).toContain("**The status alone does not settle it.**");
-      expect(flat(template)).toContain("its `Blocked-By` names the status it left from");
+      expect(unwrap(template)).toContain("**The status alone does not settle it.**");
+      expect(unwrap(template)).toContain("its `Blocked-By` names the status it left from");
 
       const checklists = await read(
         tree,
@@ -1645,7 +1641,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(flat(rules)).toContain("anchors nothing: record `no evidence");
+      expect(unwrap(rules)).toContain("anchors nothing: record `no evidence");
 
       const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
       expect(cr).toContain("`no evidence — retired at Status = <status>, never executed`");
