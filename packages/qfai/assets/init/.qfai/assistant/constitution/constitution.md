@@ -60,8 +60,10 @@ Before producing deliverables, read **project memory**:
    contract and wins**, as `.qfai/assistant/constitution/agent-selection.md` states and
    `QFAI-AGENT-014` repairs — the catalog body is derived from the card, never the other way
    round — and the divergence is a stale mirror to repair
-   (`.qfai/assistant/skills/qfai-atdd/references/stale-manifest.md`). Read the body on demand when no card is
-   in context. Each `agents/<id>.md` card repeats the `developer_instructions` half of this in
+   (`.qfai/assistant/skills/qfai-atdd/references/stale-manifest.md`). With no card in context,
+   read `.qfai/assistant/agents/<id>.md` — the body's source — rather than the mirror, which is
+   the same rule stated for the case where nothing has been loaded yet. Each
+   `.qfai/assistant/agents/<id>.md` card repeats the `developer_instructions` half of this in
    its own `## Inputs you must read`; the full scope is stated here.)
 3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)

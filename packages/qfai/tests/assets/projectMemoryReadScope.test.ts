@@ -50,8 +50,8 @@ async function read(tree: string, rel: string): Promise<string> {
 function articleIII(constitution: string): string {
   const start = constitution.indexOf("## Article III");
   const end = constitution.indexOf("## Article IV");
-  expect(start, "the Article III heading moved").toBeGreaterThanOrEqual(0);
-  expect(end, "the article after Article III moved").toBeGreaterThan(start);
+  expect(start, "the Article III heading is missing").toBeGreaterThanOrEqual(0);
+  expect(end, "the article after Article III is missing").toBeGreaterThan(start);
   return constitution.slice(start, end);
 }
 
@@ -80,7 +80,16 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "Only the entry's `developer_instructions` body is a generated mirror",
     );
     expect(article).toContain("`.qfai/assistant/agents/<id>.md`");
-    expect(article).toContain("on demand");
+    // With nothing loaded, the article sends the reader to the card rather
+    // than to the mirror. Saying only that the body is read when needed left
+    // the mirror as the obvious place to read it from — the one source the
+    // article has just called capable of being stale.
+    // `read` already collapses whitespace, so this compares wording rather
+    // than the column the article happens to wrap at.
+    expect(article).toContain(
+      "With no card in context, read `.qfai/assistant/agents/<id>.md` — the body's source — " +
+        "rather than the mirror",
+    );
   });
 
   it("only lets the skip stand when the card and the catalog body agree", async () => {

@@ -27,8 +27,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
   (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
   `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
   Skip a `developer_instructions` body only when it matches the agent card already in
-  context; when the two differ the card is the role contract and wins. See constitution
-  Article III.)
+  context; when the two differ the card is the role contract and wins. See
+  `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
 - .qfai/discussion/discussion-\*/04_Sources.md
