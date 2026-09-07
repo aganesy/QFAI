@@ -35,10 +35,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Execution proof and evidence summary
 - TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
   the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
-  Return `DR-ID` whenever the row carries one: the `DR-*` an `exception` row is invalid
-  without, and the `CR-*` an approved upstream reset put there, which the row keeps
-  through every later status. The orchestrator writes only what it receives, so a cell
-  left out of the report is a cell nobody can write
+  Return `DR-ID` whenever the row carries one: the `DR-*` that an `exception` row is
+  invalid without, and the `CR-*` that an approved upstream reset put there, which the
+  row keeps through every later status. The orchestrator writes only what it receives,
+  so a cell left out of the report is a cell nobody can write.
 - Gaps and follow-up actions
 
 ## Stop conditions
