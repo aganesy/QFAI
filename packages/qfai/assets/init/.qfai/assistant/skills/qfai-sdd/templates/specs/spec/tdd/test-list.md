@@ -259,13 +259,15 @@ the evidence file.
 
 ## Ledger
 
-The table below is the ledger. `validateTddList` finds it by shape rather than
-by position — `collectLedgerTables` takes **every** table in this file that
-carries all eight required columns and is not inside a fence — so a second
-ledger-shaped table anywhere in the file is read as ledger rows too, and a
-trimmed-down copy of one raises `TDDLIST_REQUIRED_COLUMN_MISSING`. Keep this
-one first all the same: it is the table a reader looks for, and the only one
-this template seeds.
+The **first** markdown table in this file is the ledger — `validateTddList`
+takes it with `parseFirstMarkdownTable`. Keep it first: a table above it is
+read as the ledger instead and raises eight `TDDLIST_REQUIRED_COLUMN_MISSING`
+errors.
+
+Position is not the whole rule. The row-level checks run over **every** table
+in the file that carries all eight required columns and sits outside a fence,
+so a second ledger-shaped table lower down is read as ledger rows too — there
+is no parking spot below.
 
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref |
 | ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ |
