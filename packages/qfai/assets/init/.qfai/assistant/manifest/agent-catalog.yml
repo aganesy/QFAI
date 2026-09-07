@@ -1500,7 +1500,7 @@ agents:
       **And it is the `DR-*` of the _current_ exception, not any `DR-*` in the cell.**
       `exception -> todo` **keeps** the anomaly's `DR-*`, and a row that enters
       `exception` again records a new one **appended, not substituted**
-      (`../skills/qfai-implement/references/execution-ledger.md`). So a row once on
+      (`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`). So a row once on
       branch 3, reset to `todo`, re-run to `red` and parked again by some unrelated
       checkpoint anomaly holds both records side by side, and a rule that asks only
       whether _a_ `DR-*` reports both forms unavailable exempts it on the older one —
@@ -1665,14 +1665,15 @@ agents:
       is on a `Unit` / `Component` row. Keying this on `Layer` alone let exactly those
       rows satisfy falsifiability with no sibling and no production change of their
       own, which is the outcome the last sentence of
-      `../skills/qfai-implement/references/red-not-observable.md` names; that file
+      `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` names;
+      that file
       carries the same two exceptions and this one restates neither.
 
       **A commit id alone does not answer it — REVISE.** A commit that touched
       several routes and a helper names no single predicate, so the ownership check
       below has no boundary to apply and would accept a mutation anywhere inside it.
       The producer contract requires the symbol for this reason
-      (`../skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`); a
+      (`.qfai/assistant/skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`); a
       commit recorded **alongside** the path and symbol is provenance and is fine.
 
       **And the mutation may touch it.** The Oracle Strength Check rejects a mutation
