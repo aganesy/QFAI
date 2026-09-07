@@ -121,8 +121,8 @@ There is one base, and it is the project root.
     guess. The value is either supplied by the user or read off evidence that
     settles it. A `testFileGlobs` proposal is settled that way: a glob either
     matches real files or it does not. `primarySpecId` is not, and a single
-    candidate does not settle it — which spec to work on is a choice, and auto
-    discovery narrows the candidates without making it.
+    candidate does not settle it — which spec to work on is a choice, and
+    auto-discovery narrows the candidates without making it.
 
   What a missing hard-required value costs a run is below.
 
