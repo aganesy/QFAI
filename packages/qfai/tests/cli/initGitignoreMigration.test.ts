@@ -21,6 +21,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { CANONICAL_TIMESTAMP_GLOB } from "../../src/core/packLocator.js";
 import {
   isPathIgnoredByLayers,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
@@ -133,7 +134,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!implement-*.md",
         "!atdd-*.md",
         "!import-lite.md",
-        "!import-lite-[0-9]*.md",
+        `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
       ]) {
         expect(after).toContain(negation);
       }

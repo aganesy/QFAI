@@ -1329,19 +1329,25 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `f35a2624…` byte for byte, which is what makes this a review of three lines
   // rather than a re-blessing of the block.
   //
-  // Re-pinned again when the block gained `!.qfai/evidence/import-lite*.md`.
-  // The evidence directory is ignored wholesale, so the file recording where
-  // an imported spec set's requirements came from never reached a commit —
-  // and the warning that asks for it reads the committed tree. The glob has
-  // no hyphen because both names the check accepts have to arrive: the
-  // run-stamped one, and the copy an operator kept under the shipped
-  // template's own name.
+  // Re-pinned again for the two `import-lite` negations. The evidence
+  // directory is ignored wholesale, so the file recording where an imported
+  // spec set's requirements came from never reached a commit — and the warning
+  // that asks for it reads the committed tree. Two lines, for the two names
+  // the check accepts:
+  //
+  //     !.qfai/evidence/import-lite.md
+  //     !.qfai/evidence/import-lite-[0-9]x17.md
+  //
+  // the copy an operator kept under the shipped template's own name, and the
+  // run-stamped one with its stamp spelled out to the width the check
+  // requires. Anything wider commits a name the check rejects outright, which
+  // is a file in the repository that nothing reads.
   //
   // Derived the same way as its predecessors — `qfai init` into a temp root,
-  // then reading what it wrote — not copied off a failure message. That one
-  // line is the whole delta: dropping it from the file init writes today
+  // then reading what it wrote — not copied off a failure message. Those two
+  // lines are the whole delta: dropping them from the file init writes today
   // reproduces `4e72a478…` byte for byte.
-  [".gitignore", "1ab040774c38537ac04023d7647115adae3cb69097c400e0bd0ff80b6d858dd3"],
+  [".gitignore", "9e975f78ddbcae6d5b56516f2eb60ec37edac2438786187504934dedd3df9ad7"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

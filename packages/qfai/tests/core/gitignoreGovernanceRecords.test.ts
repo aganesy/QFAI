@@ -13,6 +13,7 @@ import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
+import { CANONICAL_TIMESTAMP_GLOB } from "../../src/core/packLocator.js";
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -96,13 +97,15 @@ describe("the managed block keeps governance records tracked", () => {
     // builds from has neither, and `QFAI-DPACK-001` fires on a route the
     // skill documents as supported.
     //
-    // Two entries, and the stamped one requires a digit after the hyphen: the
-    // check rejects `import-lite-draft.md` outright, so committing it would put
-    // a file in the repository that nothing reads.
+    // Two entries, and the stamped one spells the stamp out to its full
+    // width. The check accepts no other width — it rejects the name outright
+    // rather than demoting it — so anything wider commits a file nothing
+    // reads. The width comes from the constant the check matches on, not from
+    // a literal typed here, because a copy is what lets the two drift.
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
     for (const negation of [
       "!.qfai/evidence/import-lite.md",
-      "!.qfai/evidence/import-lite-[0-9]*.md",
+      `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
     ]) {
       expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain(negation);
       expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
@@ -120,10 +123,12 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // regenerable logs, and re-including them was never the point.
     ".qfai/evidence/sdd-spec-0001.md",
     ".qfai/evidence/verify-spec-0001.md",
-    // A hyphenated import-lite name that is not a canonical stamp. The check
-    // rejects it outright rather than reading it as a record, so committing it
-    // would put a file in the repository nothing reads.
+    // Hyphenated import-lite names that are not canonical stamps: one that is
+    // not digits at all, and one that is digits of the wrong width. The check
+    // rejects both outright rather than reading them as records, so committing
+    // either would put a file in the repository nothing reads.
     ".qfai/evidence/import-lite-draft.md",
+    ".qfai/evidence/import-lite-2026.md",
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [
