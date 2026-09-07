@@ -96,8 +96,8 @@ describe("the managed block keeps governance records tracked", () => {
     // builds from has neither, and `QFAI-DPACK-001` fires on a route the
     // skill documents as supported.
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/import-lite-*.md");
-    expect(lines.indexOf("!.qfai/evidence/import-lite-*.md")).toBeGreaterThan(
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/import-lite*.md");
+    expect(lines.indexOf("!.qfai/evidence/import-lite*.md")).toBeGreaterThan(
       lines.indexOf(".qfai/evidence/*"),
     );
   });

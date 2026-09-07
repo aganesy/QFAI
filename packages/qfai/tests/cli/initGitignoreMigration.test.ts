@@ -132,7 +132,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!decisions/**",
         "!implement-*.md",
         "!atdd-*.md",
-        "!import-lite-*.md",
+        "!import-lite*.md",
       ]) {
         expect(after).toContain(negation);
       }

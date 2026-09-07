@@ -2869,8 +2869,9 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   "!atdd-*.md",
   // The import-lite record, for the same reason: on a spec set that arrived
   // without a discussion pack it is the only input source in the repository,
-  // and the nested `*` hides it from the fresh clone that CI validates.
-  "!import-lite-*.md",
+  // and the nested `*` hides it from the fresh clone that CI validates. Both
+  // accepted spellings, run-stamped and template-named.
+  "!import-lite*.md",
 ];
 
 async function ensureLegacyEvidenceIgnoreNegations(

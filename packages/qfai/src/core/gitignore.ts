@@ -149,7 +149,12 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // wrote it — the fresh clone CI builds from has neither the evidence nor a
   // pack, so `QFAI-DPACK-001` fires on every imported spec set, and the
   // provenance every US and AC on that route cites points at nothing.
-  "!.qfai/evidence/import-lite-*.md",
+  // Both spellings the check accepts: the run-stamped name, and the copy kept
+  // under the template's own `import-lite.md`, which `import-lite-*.md` does
+  // not match. Re-including a name the stamp rule would reject costs nothing —
+  // the file becomes trackable, and the check still refuses it as an input
+  // source — while missing one leaves that project with the bug intact.
+  "!.qfai/evidence/import-lite*.md",
   // The Coverage Depth Matrix and the justification behind each `❌` cell.
   // `/qfai-atdd` makes "no unjustified ❌ cells" both a Definition-of-Done
   // condition and a Not-done criterion, and `qa-gatekeeper` REVISEs a missing
