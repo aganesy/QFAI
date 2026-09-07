@@ -217,13 +217,19 @@ runs:
     # the moment a second lockfile appears anywhere in the tree.
     #
     # `node-version` carries the derived floor when the caller asked for it, and is empty
-    # otherwise — `setup-node` ignores an empty value, so the default path is unchanged
-    # and the floor lane needs no second `uses:` of its own. The literal lives in
-    # `engines.node` and nowhere else.
+    # otherwise. The literal lives in `engines.node` and nowhere else.
+    #
+    # EXACTLY ONE of the two reaches `setup-node` on each path, and which one is decided
+    # here rather than inside the action. Passing both and letting precedence discard one
+    # made `setup-node` report "Both node-version and node-version-file inputs are
+    # specified, only node-version will be used" on every floor-lane run — so the lane
+    # whose whole purpose is to prove the declared floor runs green announced that its own
+    # configuration was ambiguous, and the file input was ignored by accident of
+    # precedence rather than by intent.
     - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
       with:
         node-version: ${{ steps.shim.outputs.version }}
-        node-version-file: package.json
+        node-version-file: ${{ steps.shim.outputs.version == '' && 'package.json' || '' }}
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
 

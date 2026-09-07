@@ -712,7 +712,7 @@ async function syncGovernedAssistantAssets(
         skipped.push(dest);
         recorded[relative] = previousHash;
         manualMergeNotes.push(
-          `NOTE: ${dest} was rewritten by another process while it was being updated, so it was left alone (run \`npx qfai init --force\` again).`,
+          `NOTE: ${dest} was rewritten by another process while it was being updated, so it was left alone (run \`qfai init --force\` again).`,
         );
         continue;
       }
@@ -1157,7 +1157,7 @@ async function restoreUnreadableGovernedAsset(
         out.manualMergeNotes.push(
           typeof outcome === "object"
             ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
-            : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`npx qfai init --force\` again).`,
+            : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
         );
         return;
       }
