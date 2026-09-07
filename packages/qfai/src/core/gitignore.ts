@@ -649,38 +649,67 @@ export function negationSamplePath(negation: string): string {
     return body.replace(/\*\.md$/, "spec-0001.md");
   }
   const withContents = body.endsWith("/") ? `${body}sample` : body;
-  // Bracket expressions first, because each becomes one literal character and
-  // may itself contain a `*`. Left standing, `[0-9]` is instantiated as the
-  // four characters `[0-9]`, which no digit-bearing pattern matches — so the
-  // stamped import-lite negation looked unopposed by a later
-  // `import-lite-[0-9]*.md`, and the canonical record stayed ignored.
-  return withContents
-    .replace(/\[!?[^\]]*\]/g, sampleForClass)
-    .replace(/\*\*/g, "sample/leaf")
-    .replace(/\*/g, "sample")
-    .replace(/\?/g, "s");
+  // A scan rather than chained replacements, for the reason `globToRegexSource`
+  // gives: inside a bracket expression the alphabet is different, and the same
+  // parser has to read it. Left as text, `[0-9]` instantiates as the four
+  // characters `[0-9]` — a path no rule written about digits matches, so every
+  // overlap question about the stamped negation answered "no" and a later
+  // `import-lite-[0-9]*.md` looked like no conflict at all.
+  let sample = "";
+  let index = 0;
+  while (index < withContents.length) {
+    const char = withContents[index] ?? "";
+    if (char === "[") {
+      const bracket = bracketExpression(withContents, index);
+      if (bracket !== null) {
+        sample += sampleForClass(bracket.source, withContents.slice(index, bracket.next));
+        index = bracket.next;
+        continue;
+      }
+      // An unterminated `[`. git ignores nothing for such a line, so there is
+      // nothing to instantiate: the character stands for itself.
+    }
+    if (withContents.startsWith("**", index)) {
+      sample += "sample/leaf";
+      index += 2;
+      continue;
+    }
+    if (char === "*") {
+      sample += "sample";
+      index += 1;
+      continue;
+    }
+    if (char === "?") {
+      sample += "s";
+      index += 1;
+      continue;
+    }
+    sample += char;
+    index += 1;
+  }
+  return sample;
 }
 
 /** Characters tried against a bracket expression, in the order they are tried. */
 const CLASS_SAMPLE_CANDIDATES = ["0", "a", "z", "9", "-", "_"];
 
 /**
- * One character a gitignore bracket expression accepts.
+ * One character a bracket expression accepts, or `literal` when none is found.
  *
- * Tried against a short alphabet rather than parsed: the ranges these patterns
- * use are small, and a member found this way is a member under any reading of
- * the syntax. A class no candidate satisfies keeps the literal spelling, which
- * leaves the caller where it was rather than inventing a path.
+ * Tried against a short alphabet rather than solved: `source` is already the
+ * class as a regular expression, so a candidate it matches is a member under
+ * the same reading `gitignorePatternMatches` uses. Keeping the literal spelling
+ * for a class no candidate satisfies leaves the caller where it was rather than
+ * handing it a path the negation does not re-include.
  */
-function sampleForClass(expression: string): string {
-  const body = expression.slice(1, -1);
+function sampleForClass(source: string, literal: string): string {
   let matcher: RegExp;
   try {
-    matcher = new RegExp(`^[${body.startsWith("!") ? `^${body.slice(1)}` : body}]$`);
+    matcher = new RegExp(`^(?:${source})$`);
   } catch {
-    return expression;
+    return literal;
   }
-  return CLASS_SAMPLE_CANDIDATES.find((candidate) => matcher.test(candidate)) ?? expression;
+  return CLASS_SAMPLE_CANDIDATES.find((candidate) => matcher.test(candidate)) ?? literal;
 }
 
 /**

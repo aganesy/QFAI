@@ -85,6 +85,17 @@ describe("negationSamplePath", () => {
     ["!logs/[a-z].txt", "logs/a.txt"],
     ["!logs/[!0-9].txt", "logs/a.txt"],
     ["!logs/?.txt", "logs/s.txt"],
+    // Read with the same parser `gitignorePatternMatches` uses, so a POSIX
+    // class, a leading `]` and an escape are one expression rather than the
+    // first `]` a scan happens to reach.
+    ["!logs/[[:digit:]].txt", "logs/0.txt"],
+    ["!logs/[]a].txt", "logs/a.txt"],
+    // Only the escaped character is a member, so the answer is not one the
+    // candidate order could have reached first.
+    ["!logs/[\\-].txt", "logs/-.txt"],
+    // An unterminated `[` matches nothing in git either, so it stands for
+    // itself and the rest of the path is still instantiated.
+    ["!logs/[0-9/*.txt", "logs/[0-9/sample.txt"],
   ])("%s -> %s", (negation, expected) => {
     expect(negationSamplePath(negation)).toBe(expected);
   });
