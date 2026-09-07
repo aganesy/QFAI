@@ -108,7 +108,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
     expect(baseline).toContain("a glob either matches real files or it does not");
     expect(baseline).toContain(
-      "a single candidate does not settle it — which spec to work is a choice",
+      "a single candidate does not settle it — which spec to work on is a choice",
     );
   });
 
