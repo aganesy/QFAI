@@ -179,7 +179,10 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(issues).toEqual([]);
   });
 
-  it("returns no issues when testFileGlobs is empty", async () => {
+  // `qfai init` ships `testFileGlobs: []`, so this is the state every fresh
+  // project starts in: no file is scanned and QFAI-TEST-001 cannot fire. The
+  // run must say so rather than read as a clean stub scan.
+  it("emits QFAI-TEST-002 instead of a clean result when testFileGlobs is empty", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -188,6 +191,48 @@ describe("spec-0004 validateTestTodoStubs", () => {
     );
 
     const issues = await validateTestTodoStubs(root, configWith({}, { testFileGlobs: [] }));
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    const finding = issues[0];
+    expect(finding?.severity).toBe("info");
+    // The file to edit is qfai.config.yaml. Filing it against `root` would let
+    // normalizeIssuePaths render it as `.`, blaming the repository root in
+    // validate.json / annotations / report hotspots, and no path-scoped waiver
+    // on qfai.config.yaml would match it.
+    expect(finding?.file).toBe("qfai.config.yaml");
+    expect(finding?.rule).toBe("validation.traceability.testFileGlobs");
+    expect(finding?.message).toContain("validation.traceability.testFileGlobs");
+    expect(finding?.suggested_action).toContain("qfai-configure");
+  });
+
+  // The config loader accepts a whitespace-only entry, and fast-glob matches
+  // nothing for it. A raw-length check read that as configured, so the scan ran
+  // over zero files and reported nothing at all — the same silent non-result as
+  // the empty array, reached through a value that looks configured.
+  it("emits QFAI-TEST-002 when testFileGlobs holds only blank entries", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["   ", ""] }),
+    );
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    expect(issues[0]?.file).toBe("qfai.config.yaml");
+  });
+
+  it("stays silent about empty testFileGlobs when the stub gate is off", async () => {
+    const root = await newTempDir();
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({ forbidTestTodoStubs: false }, { testFileGlobs: [] }),
+    );
     expect(issues).toEqual([]);
   });
 

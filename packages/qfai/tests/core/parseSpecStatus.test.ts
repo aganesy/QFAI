@@ -24,6 +24,67 @@ describe("extractBulletField", () => {
   it("ignores values inside other lines", () => {
     expect(extractBulletField("Notes: irrelevant Status: hidden", "Status")).toBeUndefined();
   });
+
+  it("does not read a wrapped value off the next line", () => {
+    // `- Status:` with the value on the following line is not the
+    // `- Name: value` bullet the rule asks for; accepting it would retire a
+    // spec on a declaration `QFAI-STATUS-001` never saw.
+    expect(extractBulletField("- Status:\ndeprecated\n", "Status")).toBeUndefined();
+    expect(extractBulletField("- Deprecated-at:\n  2026-01-01\n", "Deprecated-at")).toBeUndefined();
+  });
+
+  it("fails closed on an empty bullet even when a later one has a value", () => {
+    // The first bullet is the spec's declaration; an empty one is a missing
+    // value, not an invitation to look further down the document.
+    expect(extractBulletField("- Status:\n\n- Status: active\n", "Status")).toBeUndefined();
+  });
+
+  it("still reads a value written on the bullet's own line", () => {
+    expect(extractBulletField("-  Status  :  superseded  \n", "Status")).toBe("superseded");
+    expect(extractBulletField("- Status: active\r\n", "Status")).toBe("active");
+  });
+
+  it("ignores a nested bullet and takes the document's own metadata", () => {
+    // A quoted retirement under `- Notes:` is a child bullet, not this
+    // document's lifecycle — but read as metadata it retires the spec, and
+    // `maskNonSpecRegions` keeps list continuations on purpose, so nothing
+    // else would remove it. The real `- Status: active` below must win.
+    const md = [
+      "- Notes:",
+      "    - Status: deprecated",
+      "    - Deprecated-at: 2026-01-01",
+      "- Status: active",
+      "",
+    ].join("\n");
+    expect(extractBulletField(md, "Status")).toBe("active");
+    expect(extractBulletField(md, "Deprecated-at")).toBeUndefined();
+  });
+
+  it("fails closed when only a nested declaration exists", () => {
+    // No top-level bullet at all: the spec stays current and the missing
+    // declaration is QFAI-STATUS-001's to report, rather than an indented
+    // quotation silently retiring it.
+    const md = ["- Notes:", "    - Status: deprecated", ""].join("\n");
+    expect(extractBulletField(md, "Status")).toBeUndefined();
+  });
+
+  it("requires a space after the bullet marker", () => {
+    // `-Status: deprecated` is not a list item at all — CommonMark needs a
+    // space after the marker, so this renders as literal paragraph text. Read
+    // as metadata it was a complete retirement, and prose alone took a whole
+    // ledger out of the gate with no status rule able to report it.
+    expect(extractBulletField("-Status: deprecated\n", "Status")).toBeUndefined();
+    expect(extractBulletField("-Deprecated-at: 2026-01-01\n", "Deprecated-at")).toBeUndefined();
+    expect(extractBulletField("-Superseded-by: spec-0002\n", "Superseded-by")).toBeUndefined();
+  });
+
+  it("still reads a real bullet, whatever the spacing after the marker", () => {
+    // The guard above must reject the missing space only — a tab or extra
+    // spaces are still a list marker.
+    expect(extractBulletField("- Status: active\n", "Status")).toBe("active");
+    expect(extractBulletField("-\tStatus: active\n", "Status")).toBe("active");
+    expect(extractBulletField("-   Status: active\n", "Status")).toBe("active");
+  });
 });
 
 describe("parseSpec status fields", () => {

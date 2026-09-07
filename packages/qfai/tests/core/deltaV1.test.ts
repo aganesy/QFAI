@@ -3,8 +3,19 @@ import { describe, expect, it } from "vitest";
 import {
   hasLegacyMigrationNotes,
   hasMigrationBullets,
+  isPlaceholderDeltaMeta,
   parseDeltaV1,
 } from "../../src/core/deltaV1.js";
+
+const FILLED_META = {
+  id: "DL-0001",
+  date: "2026-08-22",
+  primary: "Initial",
+  tags: ["@docs"],
+  compat: "Improvement",
+  scope: ["src/core/report.ts"],
+  notes: "shipped the delta template the parser reads",
+};
 
 describe("deltaV1 parser", () => {
   it("detects migration section and non-empty bullet list", () => {
@@ -90,6 +101,40 @@ describe("deltaV1 parser", () => {
     expect(hasLegacyMigrationNotes(entry?.notesBody ?? null)).toBe(true);
   });
 
+  it("recognises the numbered delta heading the templates ship", () => {
+    // Every spec-pack file is titled `NN Title`, so the shipped delta files are
+    // `# 09 Delta` / `# 18 Delta`. Requiring a bare `# Delta` made the parser
+    // disagree with the convention its own templates teach (#545).
+    for (const title of ["# 09 Delta", "# 18 Delta", "# Delta", "# 09 Delta (Migration Record)"]) {
+      expect(parseDeltaV1(`${title}\n`).hasDeltaHeading, title).toBe(true);
+    }
+  });
+
+  it("does not treat an unrelated H1 as a delta heading", () => {
+    for (const title of ["# 09 Decisions", "# 10 Plan", "# 09"]) {
+      expect(parseDeltaV1(`${title}\n`).hasDeltaHeading, title).toBe(false);
+    }
+  });
+
+  it("tells an unfilled skeleton apart from a decision", () => {
+    // The template ships real `primary` / `tags` / `compat` so the first copy
+    // teaches the counted vocabulary; `date` / `scope` / `notes` are the only
+    // evidence that somebody actually wrote something (#545).
+    expect(isPlaceholderDeltaMeta(FILLED_META)).toBe(false);
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, date: "YYYY-MM-DD" })).toBe(true);
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "<one line of context>" })).toBe(true);
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "" })).toBe(true);
+    expect(
+      isPlaceholderDeltaMeta({ ...FILLED_META, scope: ["<file / module this decision touches>"] }),
+    ).toBe(true);
+    // A scope that is only partly filled in is still somebody's work.
+    expect(
+      isPlaceholderDeltaMeta({ ...FILLED_META, scope: ["<placeholder>", "src/core/report.ts"] }),
+    ).toBe(false);
+    // An angle-bracketed value is a placeholder; a comparison is not.
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "p95 < 200ms" })).toBe(false);
+  });
+
   it("treats migration section without bullets as empty", () => {
     expect(hasMigrationBullets("just text")).toBe(false);
     expect(hasMigrationBullets("- ")).toBe(false);
@@ -154,5 +199,150 @@ describe("deltaV1 parser", () => {
     expect(entry?.verificationPlanItems).toHaveLength(2);
     expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
     expect(entry?.verificationPlanItems[1]?.links).toEqual(["issue:123"]);
+  });
+
+  /**
+   * The plan body may be fenced, and both spellings mean the same thing.
+   *
+   * The fence is not cosmetic. A YAML comment indented by two spaces —
+   * `  # unit | integration | ...` — is a legal ATX heading under CommonMark, so
+   * an UNFENCED plan renders its own comments as top-level headings on GitHub.
+   * The shipped `09_delta.md` template did exactly that until it was fenced.
+   *
+   * The unfenced form stays supported rather than being migrated away from:
+   * this parser runs over adopter trees, and every delta written before the
+   * fence was introduced is unfenced.
+   */
+  const planDocument = (planLines: readonly string[]): string =>
+    [
+      "# Delta",
+      "",
+      "## Decision Log",
+      "### DL-20260207-01",
+      "#### Verification",
+      "",
+      "### Plan",
+      ...planLines,
+      "",
+    ].join("\n");
+
+  const UNFENCED_PLAN = [
+    "- id: VFY-001",
+    "  # unit | integration | acceptance | manual | migration | rollback",
+    "  level: unit",
+    "  target: sample",
+    "  method: sample",
+    "  owner: dev",
+    "  expected: sample",
+  ];
+
+  const FENCED_PLAN = ["```yaml", ...UNFENCED_PLAN, "```"];
+
+  it("reads a fenced Verification.Plan block", () => {
+    const entry = parseDeltaV1(planDocument(FENCED_PLAN)).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems).toHaveLength(1);
+    expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
+    expect(entry?.verificationPlanItems[0]?.level).toBe("unit");
+  });
+
+  it("reads fenced and unfenced bodies identically when the plan has no comments", () => {
+    // Backward compatibility, stated as a property rather than assumed: every
+    // delta written before the fence existed is unfenced, and this parser runs
+    // over adopter trees it does not control.
+    const plain = UNFENCED_PLAN.filter((line) => !line.trim().startsWith("#"));
+    const fenced = parseDeltaV1(planDocument(["```yaml", ...plain, "```"])).entries[0];
+    const unfenced = parseDeltaV1(planDocument(plain)).entries[0];
+
+    expect(fenced?.verificationPlanItems).toEqual(unfenced?.verificationPlanItems);
+    expect(fenced?.verificationPlanError).toBeNull();
+    expect(unfenced?.verificationPlanError).toBeNull();
+  });
+
+  it("keeps an indented YAML comment out of the heading scan only when fenced", () => {
+    // This is what the fence is FOR, and the asymmetry is the finding rather
+    // than a defect in the test. `  # unit | integration | …` is a legal ATX
+    // heading under CommonMark — up to three leading spaces are allowed — so an
+    // unfenced plan is cut short at its own first comment, and every field after
+    // it is lost. Fenced, the same bytes parse whole.
+    const fenced = parseDeltaV1(planDocument(FENCED_PLAN)).entries[0];
+    const unfenced = parseDeltaV1(planDocument(UNFENCED_PLAN)).entries[0];
+
+    expect(fenced?.verificationPlanItems[0]?.level).toBe("unit");
+    expect(fenced?.verificationPlanItems[0]?.owner).toBe("dev");
+
+    // Truncated at the comment: the item survives, the fields after it do not.
+    expect(unfenced?.verificationPlanItems[0]?.level).toBe("");
+  });
+
+  it("reads a tilde-fenced Verification.Plan block", () => {
+    // `~~~yaml` is the same block to CommonMark and to any renderer. Reading
+    // only backtick fences left its markers in the text, so a document that
+    // fenced its plan the other legal way failed to parse ON the fence.
+    const entry = parseDeltaV1(planDocument(["~~~yaml", ...UNFENCED_PLAN, "~~~"])).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems[0]?.level).toBe("unit");
+  });
+
+  it("does not end a fenced plan at a nested fence line carrying an info string", () => {
+    // The closer rule is the same one the heading scan uses: same character, at
+    // least as long, no info string. A shorter run, or one with an info string,
+    // is part of the block.
+    const entry = parseDeltaV1(
+      planDocument([
+        "````yaml",
+        "- id: VFY-001",
+        "  # ```yaml is not a closer here",
+        "  level: unit",
+        "  target: sample",
+        "  method: sample",
+        "  owner: dev",
+        "  expected: sample",
+        "````",
+      ]),
+    ).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems[0]?.owner).toBe("dev");
+  });
+
+  it("reports a parse error for a fenced plan whose YAML is not a list", () => {
+    // The fence must not become a way to smuggle an unparsable body past the
+    // check: what is inside it is still validated as a Verification.Plan.
+    const entry = parseDeltaV1(planDocument(["```yaml", "id: VFY-001", "```"])).entries[0];
+
+    expect(entry?.verificationPlanItems).toEqual([]);
+    expect(entry?.verificationPlanError).not.toBeNull();
+  });
+
+  it("treats an empty fenced plan the same as an empty unfenced one", () => {
+    // An author who has not written the plan yet is in a legal state, and was
+    // told so only when they had NOT fenced the section. The extractor answered
+    // "empty block" and "no block here" with the same null, the caller read the
+    // second meaning and fell back to the raw body — fence markers included —
+    // and YAML failed on the markers. So fencing an empty section invented an
+    // error that unfencing it made disappear.
+    const fenced = parseDeltaV1(planDocument(["```yaml", "```"])).entries[0];
+    const bare = parseDeltaV1(planDocument([])).entries[0];
+
+    expect(fenced?.verificationPlanError).toBeNull();
+    expect(fenced?.verificationPlanItems).toEqual([]);
+    expect(fenced?.verificationPlanError).toBe(bare?.verificationPlanError);
+    expect(fenced?.verificationPlanItems).toEqual(bare?.verificationPlanItems);
+  });
+
+  it("does not mistake an empty fence for an absent one", () => {
+    // The other half of the same distinction. "No fenced block here" must keep
+    // meaning "read the text yourself" — every delta written before the fence
+    // was accepted relies on it — so the empty-block answer must not be the one
+    // that reaches the fallback. Asserted through a body a fence would hide:
+    // unfenced, the plan is truncated at its own comment, which is only
+    // observable if the raw text was read.
+    const entry = parseDeltaV1(planDocument(UNFENCED_PLAN)).entries[0];
+
+    expect(entry?.verificationPlanError).toBeNull();
+    expect(entry?.verificationPlanItems[0]?.id).toBe("VFY-001");
   });
 });

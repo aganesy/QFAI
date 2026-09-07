@@ -68,6 +68,25 @@ async function seedRepoWideTestGlobs(root: string): Promise<void> {
   );
 }
 
+/**
+ * Adds a layered ledger linking a BR to an implementation file that is not in
+ * any diff — the state `/qfai-sdd` leaves behind before `/qfai-implement` runs.
+ */
+async function seedLedger(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, ".qfai", "specs", "spec-0001", "16_Traceability-ledger.md"),
+    [
+      "# 16 Traceability Ledger",
+      "",
+      "| BR/AC | Implementation File | Test File |",
+      "| --- | --- | --- |",
+      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
 /** A silent stub at `relDir`, annotated so the ATDD routing rules see it. */
 async function seedStub(root: string, relDir: string): Promise<void> {
   const testDir = path.join(root, ...relDir.split("/"));
@@ -193,8 +212,9 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       ]) {
         expect(notice?.message).toContain(family);
       }
-      // What tdd does run must stay off the list.
-      expect(notice?.message).not.toContain("TDDLIST_*");
+      // What tdd does run must stay off the list — and it runs BOTH halves of
+      // the prefix, so no `TDDLIST_` code may appear at all.
+      expect(notice?.message).not.toContain("TDDLIST_");
     });
   });
 
@@ -207,7 +227,12 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
         expect(notice?.message).toContain('profile="discussion" is a partial profile');
         expect(notice?.message).toContain("QFAI-HYG-*");
-        expect(notice?.message).toContain("TDDLIST_*");
+        // Named per code rather than as `TDDLIST_*`: that glob claimed the seed
+        // half as well, which is a separate group.
+        expect(notice?.message).toContain("TDDLIST_STALE_STATUS");
+        // The required-heading gate is SDD-only, so a discussion run must
+        // declare it unevaluated rather than let the partial PASS look total.
+        expect(notice?.message).toContain("QFAI-SPECSECTION-*");
         expect(notice?.message).not.toContain("QFAI-DPACK-*");
       });
     });
@@ -233,11 +258,73 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("emits no partial-profile notice for the full profile", async () => {
+  it("does not call the full profile partial, but still names what it skips", async () => {
+    // `runFullValidators` disables the two stage-ownership gates
+    // (`QFAI-DCON-019`, `QFAI-DRIFT-*`) and never composes the saas-package
+    // profile at all, so a silent full run would read as coverage of every
+    // gate in the tool. It is not a partial profile either.
     await withProject(async (root) => {
       await runValidate({ root, strict: false });
-      const codes = (await findings(root)).map((entry) => entry.code);
-      expect(codes).not.toContain("QFAI-PROFILE-001");
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.severity).toBe("info");
+      expect(notice?.message).not.toContain("is a partial profile");
+      expect(notice?.message).toContain("evaluated every gate a full scan covers");
+      expect(notice?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
+      expect(notice?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+    });
+  });
+
+  it("says the full profile does not wire the drift gate", async () => {
+    // The claim #1122 reports. `full` and `verify` both call
+    // `runFullValidators`, which passes `includeUpstreamGuard = false`, so
+    // `QFAI-DRIFT-001` — the gate the drift protocol says detects a downstream
+    // phase patching upstream SSOT — never runs. The row this replaces
+    // asserted the silence, so an operator following this notice's own advice
+    // was told a run that never looked had looked.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "full" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.severity).toBe("info");
+      expect(notice?.message).toContain("QFAI-DRIFT-*");
+      expect(notice?.message).toContain("--profile tdd");
+    });
+  });
+
+  it("names only stage-only families for the full profile", async () => {
+    // `FULL_GATE_GROUPS` is `ALL_GATE_GROUPS` minus the three stage-only
+    // groups, so any family here that a full scan DOES cover means a group
+    // `full` runs got dropped from the map.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "full" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).not.toContain("is a partial profile");
+      for (const family of ["QFAI-HYG-*", "QFAI-SKILLS-*", "QFAI-COV-*", "QFAI-ATDD-*"]) {
+        expect(notice?.message).not.toContain(family);
+      }
+    });
+  });
+
+  it("does NOT list drift for --profile tdd, the one profile that runs it", async () => {
+    // The other direction. A fix that listed the family unconditionally would
+    // pass the rows above and be wrong here — `runTddValidators` passes
+    // `includeUpstreamGuard = true`.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "tdd" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).not.toContain("QFAI-DRIFT-*");
+    });
+  });
+
+  it("treats a run with no --profile as the full profile it is", async () => {
+    // The exact command this notice's own advice sends an operator to.
+    // `core/validate.ts` resolves an absent `--profile` to `full`, so the
+    // reason such a run said nothing was the map entry, not the resolution --
+    // and this row is where that end-to-end fact is pinned.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).toContain('profile="full"');
+      expect(notice?.message).toContain("QFAI-DRIFT-*");
     });
   });
 
@@ -328,7 +415,11 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         await runValidate({ root, strict: false, profile: "atdd" });
         const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
         expect(notice?.message).not.toContain("QFAI-TEST-001");
-        expect(notice?.message).toContain("TDDLIST_*");
+        // The rest of the tdd group is still named — moving the stub gate out
+        // of it must not take the ledger families with it. `QFAI-TDDLIST-*` is
+        // the surviving glob: the execution-state codes beside it are listed
+        // one by one, from the constant the seed-shape gate filters on.
+        expect(notice?.message).toContain("QFAI-TDDLIST-*");
       });
     });
   });
@@ -339,6 +430,73 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
       expect(SAAS_PACKAGE_SKIPPED_GATE_FAMILIES[gate] ?? []).not.toHaveLength(0);
     }
+  });
+});
+
+// #536: `/qfai-sdd` owns `16_Traceability-ledger.md` but `--profile sdd` — the
+// gate that skill stops on — never ran the validator that asks for it.
+describe("--profile sdd owns the traceability-ledger gate", () => {
+  it("raises QFAI-TRACE-002 for a ledger-less spec under the sdd profile", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const codes = (await findings(root)).map((entry) => entry.code);
+        expect(codes).toContain("QFAI-TRACE-002");
+      });
+    });
+  });
+
+  it("does not double-report the ledger gate under the full profile", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false });
+      const trace002 = (await findings(root)).filter((entry) => entry.code === "QFAI-TRACE-002");
+      expect(trace002).toHaveLength(1);
+    });
+  });
+
+  it("keeps the ledger gate off the unevaluated list for sdd", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).not.toContain("QFAI-TRACE-002");
+        // But the implementation-drift half is genuinely not evaluated by sdd,
+        // so the notice must keep saying so.
+        expect(notice?.message).toContain("QFAI-TRACE-001");
+        // The execution-state TDD-list gates are still not part of what sdd
+        // evaluates — but the seed half is, so this names a code from the half
+        // it really does skip.
+        expect(notice?.message).toContain("TDDLIST_STALE_STATUS");
+      });
+    });
+  });
+
+  // PR #856 review: `/qfai-sdd` updates BR/AC and the ledger and hands the
+  // implementation to `/qfai-implement`, so the linked code is untouched by
+  // design at this gate. Raising the history-based QFAI-TRACE-001 here would
+  // fail the mandatory `--profile sdd --fail-on error` run on the normal flow.
+  it("never raises QFAI-TRACE-001 under the sdd profile", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedLedger(root);
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const codes = (await findings(root)).map((entry) => entry.code);
+        expect(codes).not.toContain("QFAI-TRACE-001");
+        expect(codes).not.toContain("QFAI-TRACE-003");
+      });
+    });
+  });
+
+  it("keeps the ledger gate on the unevaluated list for tdd's own drift half", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "tdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        // tdd runs both halves.
+        expect(notice?.message).not.toContain("QFAI-TRACE-001");
+        expect(notice?.message).not.toContain("QFAI-TRACE-002");
+      });
+    });
   });
 });
 
