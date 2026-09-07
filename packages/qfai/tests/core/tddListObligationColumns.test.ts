@@ -391,7 +391,12 @@ describe("the shipped ledger schema documents all eight required columns", () =>
       );
       expect(skill).toContain("authored by `/qfai-atdd` (Non-goals)");
       expect(skill).toContain("On a `Layer = E2E` row read `US-ref`");
-      expect(skill).toContain("`Layer = E2E` / `Layer = API` ledger rows are tracked here");
+      // The Non-goals enumeration names `Integration` too: reading `TC-Refs`
+      // on such a row is about which obligation it carries, not about who
+      // writes the test — `/qfai-atdd` does, as it does for `E2E` / `API`.
+      expect(skill).toContain(
+        "`Layer = E2E` / `Layer = API` / `Layer = Integration` ledger rows are tracked here",
+      );
     });
   }
 });

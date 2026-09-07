@@ -75,7 +75,7 @@ describe("Phase 2b's tdd/test-list.md is on the completion surfaces", () => {
       // was written against - the rule being pinned is unchanged.
       const checklists = flat(await read(tree, CHECKLISTS));
       expect(checklists).toContain(
-        "An empty table is a valid outcome when the spec declares no coverage-target TC and no active `US-*` / `CON-API-*`.",
+        "An empty table is a valid outcome only when the spec declares no coverage-target TC, no integration-level TC **and** no active `US-*` / `CON-API-*`.",
       );
     });
 

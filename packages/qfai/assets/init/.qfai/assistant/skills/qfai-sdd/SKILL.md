@@ -289,12 +289,21 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below unless the target is cli-only). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
-7. Phase 2b: Seed each target spec's `tdd/test-list.md` in **three groups**, all
+7. Phase 2b: Seed each target spec's `tdd/test-list.md` in **four groups**, all
    at `Status = todo` — one row per coverage-target TC from `06_Test-Cases.md`,
+   **one `Layer = Integration` row per integration-level TC** from the same file
+   (every `Level` whose ATDD annotation routes to `tests/integration/**`: `L3`,
+   `integration`, blank, a spelling that names no layer like `smoke`,
+   and `system` / `acceptance`; obligation in `TC-Refs`),
    one `Layer = E2E` row per **active** `US-*` from `02_User-stories.md`
    (obligation in `US-Refs`, `TC-Refs` = `-`), and one `Layer = API` row per
    **active** `CON-API-*` the spec **owns** (obligation in `CON-API-Refs`,
    `TC-Refs` = `-`); copy `templates/specs/spec/tdd/test-list.md` when absent.
+   **The two TC groups are exclusive** — read each TC's `Level` once and route
+   it to exactly one, because a TC in both is a TC whose test two skills write —
+   and "one row" is a floor: a matrix-shaped TC is split one row per
+   independently observable boundary, all sharing that `TC-Refs`
+   (`../qfai-implement/references/ledger-preconditions.md#producer`).
    **A seeded E2E/API row leaves `Test file` and `Selector` at `-`, and
    `/qfai-implement` is what fills them.** The acceptance test does not exist
    yet, so this phase must not invent a path for it; `/qfai-atdd` authors it and
@@ -305,9 +314,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    the `green` `Test file` existence check with no test to run, and gate item 10
    with no identity to compare.
    Without the first group `/qfai-implement` starts with zero selectable items;
-   without the other two the ledger cannot hold a `US-*` / `CON-API-*`
+   without the E2E / API groups the ledger cannot hold a `US-*` / `CON-API-*`
    obligation, so an all-`done` ledger reports complete beside a
-   `QFAI-ATDD-111` / `QFAI-ATDD-113` gate at 0%. **Active** is the
+   `QFAI-ATDD-111` / `QFAI-ATDD-113` gate at 0%; and without the integration
+   group an integration-level TC has no row at all — no gate demands one, so a
+   quiet `validate` is what a spec with only such TCs looks like when nothing
+   was implemented. **Active** is the
    `.qfai/assistant/catalog/test-layers.md` exemption: skip a `CON-API-*` whose
    contract declares `x-qfai-status: planned`, and skip a `US-*` in a spec that
    declares no user-facing surface — the latter **only when the project uses
@@ -339,7 +351,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs and newly active obligations append at `todo`, and
    changed / removed TCs are reset or retired under the upstream-reset rule —
-   as is the row of a `US-*` / `CON-API-*` deleted upstream or newly exempt
+   **per boundary within a matrix-shaped TC**, so a boundary the TC no longer
+   declares has its row retired rather than reset back to `todo` — as is the row
+   of a `US-*` / `CON-API-*` deleted upstream or newly exempt
    (`references/sdd-phase-checklists.md`). **An eight-column ledger is migrated
    in the same pass**: add `US-Refs` and `CON-API-Refs` to its header, and move
    the `US-*` / `CON-API-*` its existing `E2E` / `API` rows recorded in
@@ -566,7 +580,7 @@ project_memory:
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)`, exceptions included, before placing any mandatory or blocking agent; span membership never narrows `rerun_policy`.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md` (Tier derived from Layer + what the row touches (infrastructure / public API / CON-\* contract / persisted schema = T2, UI or rendered output = T3) + criticality, seeded with the row and never written into Evidence), one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. That precondition is project-wide, so a run that adds the project's first surface signal or removes its last re-runs the E2E-row delta over every spec's ledger, not the target's alone. A seeded E2E/API row carries `-` in Test file and Selector — the test does not exist yet, `/qfai-atdd` never writes this ledger, and `/qfai-implement` Phase Red step 3b writes both cells from that stage's handoff entry when it advances the row. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync; that route runs Phase 2c itself for a contract it activates with no owner, and leaves the contract at `x-qfai-status: planned` when even that names none, rather than shipping a gate no ledger can clear. The same pass migrates an eight-column ledger: add `US-Refs` / `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
+- Phase 2b seeds each target spec's tdd/test-list.md in four groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md` (Tier derived from Layer + what the row touches (infrastructure / public API / CON-\* contract / persisted schema = T2, UI or rendered output = T3) + criticality, seeded with the row and never written into Evidence), one `Layer = Integration` row per integration-level TC from the same file (every Level whose ATDD annotation routes to the tests/integration tree: L3, integration, blank, a spelling that names no layer, and system / acceptance; TC-Refs), one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); the two TC groups are exclusive and a matrix-shaped TC splits one row per boundary; "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. That precondition is project-wide, so a run that adds the project's first surface signal or removes its last re-runs the E2E-row delta over every spec's ledger, not the target's alone. A seeded E2E/API row carries `-` in Test file and Selector — the test does not exist yet, `/qfai-atdd` never writes this ledger, and `/qfai-implement` Phase Red step 3b writes both cells from that stage's handoff entry when it advances the row. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync; that route runs Phase 2c itself for a contract it activates with no owner, and leaves the contract at `x-qfai-status: planned` when even that names none, rather than shipping a gate no ledger can clear. The same pass migrates an eight-column ledger: add `US-Refs` / `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
 - Exception to that delta: re-derive Tier on every Phase 2b re-run, and a **raised** Tier (T1 -> T2/T3, T2 -> T3) is an upstream reset even for an unchanged TC — return Status to todo and cite the driving CR-\* in DR-ID and in Evidence, keeping the prior Evidence as history. A lowered Tier keeps Status and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets on a visual-prototyping surface (skipped for cli-only); .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

@@ -9,12 +9,17 @@ run.
   test exercises a predicate that row already made pass. The usual case when a
   BR binds several ACs to one common validator. **Not an anomaly** and does
   **not** go to `exception`. Follow the procedure below.
-- **Or, on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`,
-  satisfied by production code no ledger row owns** — a pre-existing route, or
-  one built outside the ledger. Same procedure, and `Satisfied-by` takes the
-  path rather than a row id (step 1). Specific to those rows: their surfaces
-  come from work orders that never appear in the ledger, which is not true of
-  a `Unit` / `Component` / `Integration` row.
+- **Or, on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed
+  over by `/qfai-atdd`, satisfied by production code no ledger row owns** — a
+  pre-existing route, or one built outside the ledger. Same procedure, and
+  `Satisfied-by` takes the path rather than a row id (step 1). Specific to the
+  ATDD-owned rows (`execution-ledger.md#atdd-owned-rows`): their surfaces come
+  from work orders that never appear in the ledger, which is not true of a
+  `Unit` / `Component` row. **`Integration` among them**, because
+  `QFAI-ATDD-112` files every `L3` TC — and every one whose `Level` that
+  vocabulary cannot read — in `tests/integration/**` and `/qfai-atdd` P4 writes
+  those tests, so an integration surface reaches this branch on exactly the
+  terms an `E2E` one does.
 - **Or satisfied by pre-existing production state that no row and no work
   order created** — a regression guard over a property the system already had
   before this spec existed. **Not an anomaly** either: nothing built the
@@ -41,19 +46,27 @@ for the natural RED and let the row proceed to `green` and `done`:
    property was established by a decision rather than by code.
 
    **The production path and symbol** (`src/api/routes/evaluations.py::register`)
-   **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
-   `/qfai-atdd`** — path _and_ symbol, never a commit id on its own. A commit
+   **is accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration`
+   row handed over by `/qfai-atdd`** — path _and_ symbol, never a commit id on
+   its own. A commit
    that touched several routes and a helper names no single predicate, so the
    Oracle Strength Check has no boundary to apply and would take a mutation
    anywhere inside it; `qa-gatekeeper` REVISEs that form for exactly this
    reason. A commit recorded alongside the symbol is provenance and is fine. Those surfaces routinely
    have no ledger row — a pre-existing route, or one built outside the ledger —
    so requiring a row id sent every one of them to `exception`, the terminal
-   state this procedure exists to avoid. On a `Unit` / `Component` /
-   `Integration` row it is **not** accepted: production code no ledger row owns
-   is the "anything else" case above, and `qfai-implement/SKILL.md` Phase Red
-   step 5 sends it to `exception`. Widening the field for every row would let
-   an ordinary TDD row reach `done` with no production change and no sibling.
+   state this procedure exists to avoid. On a `Unit` / `Component` row it is
+   **not** accepted: production code no ledger row owns is the "anything else"
+   case above, and `qfai-implement/SKILL.md` Phase Red step 5 sends it to
+   `exception`. Widening the field for every row would let an ordinary TDD row
+   reach `done` with no production change and no sibling. **`Integration` sits
+   with `E2E` and `API`, not with `Unit` and `Component`**: it is an ATDD-owned
+   row seeded by `/qfai-sdd` Phase 2b and handed over with its provenance, and
+   `../../qfai-atdd/references/red-provenance.md` and
+   `../../../agents/qa-gatekeeper.md`
+   both already accept the path-and-symbol form there — excluding it here made
+   one correct handoff read as `todo -> red` or as a blocking `exception`
+   depending on which file the agent opened.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as

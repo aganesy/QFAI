@@ -358,6 +358,20 @@ every rule above, but their tests are authored by `/qfai-atdd`
 therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 
+**Who seeds them.** `/qfai-sdd` Phase 2b, **at least** one `Layer = Integration`
+row per integration-level `TC-*` — every `Level` whose annotation routes to
+`tests/integration/**` under `QFAI-ATDD-112`: `L3`, the word `integration`, a
+blank cell, a spelling that names no layer (`smoke`), and `system` /
+`acceptance`. Routing, not spelling: the last two are in the layer vocabulary
+and are still not coverage targets, so a "the vocabulary cannot read it" test
+leaves them owned by no group. Alongside
+the coverage-target rows (`references/ledger-preconditions.md#producer`). A
+matrix-shaped TC is seeded one row per independently observable boundary there,
+because `/qfai-atdd` cannot split a row it may not write
+(`selector-granularity.md`). `TDDLIST_TC_NOT_COVERED` never asks for an `L3`
+row, because an `L3` TC is not a coverage target — so an absent `Integration`
+row is an unseeded row, not a spec without integration work.
+
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
 no backend or frontend agent. The surface a journey needs is built by this
@@ -392,8 +406,10 @@ after its surface passes on the first run. So:
   ordinary RED. Its stage gate P1b is where that happens.
 - **The evidence file follows the stage that produced it.**
   `implement-<spec-id>.md` holds the rows this skill runs itself;
-  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
-  because that is the stage that ran the commands. The `Evidence` cell is a
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the `E2E` / `API` /
+  `Integration` rows — every row this section names, not two of the three —
+  because that is the stage that ran the commands. `checkpoint-verification.md`
+  picks the same file for the checkpoint result and seal of those rows. The `Evidence` cell is a
   pointer either way and its anchor names which file. Calling
   `implement-<spec-id>.md` the single home was true while one stage produced
   every pair; it stopped being true the moment another stage did.

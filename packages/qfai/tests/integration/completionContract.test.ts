@@ -80,14 +80,18 @@ describe("item completion checklist end-to-end enforcement", () => {
     // over *every routed* reviewer, not a fixed pair (#571): a UI-affecting row
     // routes `product-surface-reviewer` as well, and a count of two left that
     // verdict unrecorded.
-    // The file is named by item 10, not hard-coded here: an `E2E` / `API` row's
-    // evidence lives in `atdd-<spec-id>.md`, because that is the stage that ran
-    // its RED. Pinning `implement-<spec-id>.md` in this gate is what made a
-    // correctly evidenced ATDD-owned row unable to reach `done`.
+    // The file is named by item 10, not hard-coded here: an `E2E` / `API` /
+    // `Integration` row's evidence lives in `atdd-<spec-id>.md`, because that
+    // is the stage that ran its RED. Pinning `implement-<spec-id>.md` in this
+    // gate is what made a correctly evidenced ATDD-owned row unable to reach
+    // `done`. `Integration` is in the enumeration because `/qfai-sdd` Phase 2b
+    // seeds those rows and `/qfai-atdd` authors their tests.
     expect(c).toMatch(
       /The item's evidence file \(item 10\) is appended with \*\*every routed reviewer's\*\* verdict after items 7-8 returned PASS/,
     );
-    expect(c).toMatch(/`\.qfai\/evidence\/atdd-<spec-id>\.md` for an `E2E` \/ `API` row/);
+    expect(c).toMatch(
+      /`\.qfai\/evidence\/atdd-<spec-id>\.md` for an `E2E` \/ `API` \/ `Integration` row/,
+    );
     expect(c).toMatch(/checkpoint.*verif/i);
   });
 });
