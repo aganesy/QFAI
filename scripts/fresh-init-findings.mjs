@@ -185,9 +185,17 @@ export function parseBaseline(text, where = BASELINE_PATH) {
   }
   const wrong = parsed.findings.filter((entry) => typeof entry !== "string");
   if (wrong.length > 0) {
+    // Shown, not just counted: the reader's next move is to open the file and
+    // find them, and a count does not say where to look. Capped because a
+    // wholly wrong file would otherwise print itself.
+    const shown = wrong
+      .slice(0, 3)
+      .map((entry) => JSON.stringify(entry))
+      .join(", ");
+    const rest = wrong.length > 3 ? `, and ${String(wrong.length - 3)} more` : "";
     throw new Error(
       `${where}: every entry is the \`<severity> <code> <file>\` line \`fingerprint\` writes, and ` +
-        `${String(wrong.length)} is not a string.`,
+        `${String(wrong.length)} is not a string: ${shown}${rest}.`,
     );
   }
   return parsed.findings;

@@ -239,12 +239,14 @@ describe("the committed baseline", () => {
     expect(script).toContain("baselineDiff = formatDiff(findingsDiff)");
     // Printed where it is found as well, since a later step can fail first.
     expect(script).toContain("console.error(baselineDiff)");
-    // And the throw is the last thing the script does.
-    expect(
-      script
-        .trimEnd()
-        .endsWith("if (baselineDiff !== null) {\n  throw new Error(baselineDiff);\n}"),
-    ).toBe(true);
+    // And failing is the last thing the script does. Matched by shape rather
+    // than by spelling, so reformatting the block does not read as removing it.
+    expect(script.trimEnd()).toMatch(
+      /if\s*\(\s*baselineDiff\s*!==\s*null\s*\)\s*\{\s*process\.exitCode\s*=\s*1;?\s*\}$/,
+    );
+    // The diff is already on stderr, so throwing it would print every line a
+    // second time under a stack trace of this file.
+    expect(script).not.toContain("throw new Error(baselineDiff)");
     expect(script).not.toContain("throw new Error(formatDiff(findingsDiff))");
   });
 });

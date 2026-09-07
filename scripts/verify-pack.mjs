@@ -755,6 +755,9 @@ execFileSync("node", [cliPath, "doctor", "--root", outputDir, "--fail-on", "erro
   stdio: "inherit",
 });
 
+// The exit code, not a second copy. The diff was printed where it was found,
+// and throwing it here would repeat every line and wrap them in a stack trace
+// of this file — which says nothing about a finding set that moved.
 if (baselineDiff !== null) {
-  throw new Error(baselineDiff);
+  process.exitCode = 1;
 }

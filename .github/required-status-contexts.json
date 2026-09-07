@@ -203,7 +203,7 @@
         "scripts/check-workflow-hygiene.mjs": "88301295913cd60d28b7ee21243e0b0e4f4d53ae0c0282b2902885de2f2001eb",
         "scripts/derive-e2e-callsites.mjs": "65735263ebda99baed4c1c365b36c752fddb62c36c7efb061de73c514bdb2cda",
         "scripts/fresh-init-findings.json": "12077adc89fc0bf74b5818c127356ab07f86982b6da2caed51a307ab815eea99",
-        "scripts/fresh-init-findings.mjs": "69855bfd9b51be1809a2fa2725f7291857e7e53498c7ec1f529b06fc31da5773",
+        "scripts/fresh-init-findings.mjs": "81538239384f083eae259d10ad9776ba83f5cdc7201e080becd8fd28f5294b0e",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
         "scripts/gen-codex-agents.mjs": "415d5a1aae5a0947b1e8e3e3f757ec08ec0fbe0ef55a964bc87130a3127d8287",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
@@ -212,7 +212,7 @@
         "scripts/pin-stage-evidence-counts.mjs": "b854f878ab13f4fb5382822b7cb158b689beedebefed2f53fd966282654abba3",
         "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
-        "scripts/verify-pack.mjs": "81ccb75487c6e111b90b8d4ef1de283edb6ef0f075483cd352428cee793f5992"
+        "scripts/verify-pack.mjs": "7d0645abecf715a49b4625aae910d58b2b53cef5a3429dc2ed9f1ce7ab319f75"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -361,9 +361,9 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "498b15ffffe1f267",
+        "Verify the toolchain action before running it": "9f5f0007eac399a5",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "5afa465044f3d8dd",
+        "Run build & pack verification": "b4a3aea5a6f17a42",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "e7dc6e5136c17061",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
