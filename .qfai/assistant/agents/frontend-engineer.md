@@ -34,7 +34,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Frontend implementation summary
 - Changed files and affected flows
 - Local verification notes
-- TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
+- TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly). `DR-ID` carries the `DR-*` where the item's status requires one — an `exception` row is invalid without it, and the orchestrator can only write what it was returned
 - Evidence summary for `.qfai/evidence/`
 - Notes on how simplicity, necessity, and reuse were preserved in the chosen implementation
 

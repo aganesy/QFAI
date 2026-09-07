@@ -138,4 +138,42 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(policy).toContain("recovery is re-dispatching the unmerged slices");
     expect(policy).toContain('as "not merged", not as "not attempted"');
   });
+
+  it("tests the slice head, not the row status, before re-dispatching", async () => {
+    // Merging a slice and writing the ledger are two steps. Interrupted
+    // between them, the code is in the trunk and the row is still `todo` —
+    // indistinguishable from a slice that never merged, so a rule keyed on the
+    // status alone applies the same change twice.
+    const policy = await read(
+      tree,
+      "assistant/skills/qfai-implement/references/parallelization-policy.md",
+    );
+    expect(policy).toContain("**Check the slice head before re-dispatching it.**");
+    expect(policy).toContain("ask the trunk whether the slice head is an ancestor of it");
+    // Both answers, and the case that has neither.
+    expect(policy).toContain("**Already merged** — do not re-dispatch");
+    expect(policy).toContain("Reconcile the ledger alone, from the returned report");
+    expect(policy).toContain("A slice with no returned report");
+  });
+
+  it("returns DR-ID from every agent that reports a ledger entry", async () => {
+    // The orchestrator is the only writer, so a cell no agent returns is one
+    // nobody can write. An `exception` row without its `DR-*` is invalid.
+    for (const agent of ["backend-engineer", "frontend-engineer", "acceptance-test-engineer"]) {
+      const doc = await read(tree, `assistant/agents/${agent}.md`);
+      expect(doc, `${agent} does not return DR-ID`).toContain(
+        "TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed",
+      );
+      expect(doc, `${agent} still names the two-cell payload`).not.toContain(
+        "TDD ledger Status + Evidence entry",
+      );
+    }
+    const policy = await read(
+      tree,
+      "assistant/skills/qfai-implement/references/parallelization-policy.md",
+    );
+    // Serial mode returns the same three; it has no merge step, not a
+    // different payload.
+    expect(policy).not.toContain("returns Status + Evidence after");
+  });
 });

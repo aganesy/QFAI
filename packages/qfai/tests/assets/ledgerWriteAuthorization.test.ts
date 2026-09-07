@@ -212,8 +212,8 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain(
       "update `test-list.md` **Status, DR-ID and Evidence** after each phase completes",
     );
-    // Completion reconciles the four cells the carve-out covers, and the
-    // wording moved with the carve-out `Blocked-By` joined.
+    // Completion reconciles the four cells the carve-out covers, `Blocked-By`
+    // among them.
     expect(skill).toContain(
       "`Status`, `DR-ID`, `Evidence` and `Blocked-By` match the per-phase writes",
     );
@@ -239,9 +239,9 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     expect(start, "the Non-goals heading moved").toBeGreaterThanOrEqual(0);
     expect(end, "the section after Non-goals moved").toBeGreaterThan(start);
     const nonGoals = skill.slice(start, end);
-    // The entry used to state the three-cell rule as exhaustive, which
-    // contradicted the protocol it cites. Both halves are asserted contiguous
-    // with their cell lists so that widening one silently is not possible.
+    // The three-cell rule is not exhaustive — stating it as such would
+    // contradict the protocol this entry cites. Both halves are asserted
+    // contiguous with their cell lists, so neither widens silently.
     expect(nonGoals).toContain(
       "`Status` / `DR-ID` / `Evidence` / `Blocked-By` cells are carved out unconditionally",
     );

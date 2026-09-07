@@ -376,7 +376,22 @@ an interrupted **parallel** run leaves every dispatched row at its pre-dispatch
 status, and recovery is re-dispatching the unmerged slices. That is safe
 precisely _because_ no trunk write happened — a discarded worktree holds
 nothing the trunk was owed. Read a `todo` row after an interrupted parallel run
-as "not merged", not as "not attempted", and re-run the slice.
+as "not merged", not as "not attempted".
+
+**Check the slice head before re-dispatching it.** Merging a slice and writing
+the ledger are two steps, so an interruption between them leaves the code in
+the trunk and the row still at `todo`. That row reads exactly like one whose
+slice never merged, and re-dispatching it applies the same change twice —
+a conflict, or a duplicate that lands quietly and disagrees with the evidence.
+So the status is not the test: ask the trunk whether the slice head is an
+ancestor of it.
+
+- **Not merged** — re-dispatch the slice, as above.
+- **Already merged** — do not re-dispatch. Reconcile the ledger alone, from
+  the returned report, which is what the interrupted step was going to do.
+  A slice with no returned report is the one case with neither answer
+  available: stop and report it rather than guessing, since the row's evidence
+  is what a re-run would have to overwrite.
 
 In serial mode the same rule holds with no merge step: the implementation agent
 returns `Status`, `DR-ID` and `Evidence`, the orchestrator writes them.
@@ -533,9 +548,9 @@ merged row can never reach `done`:
   another.
 
 In serial mode the same rule holds with no merge step, and the replay has
-nothing to reconstruct: the implementation agent returns Status + Evidence after
-each phase and the orchestrator writes them then, so the row walks those same
-edges as they happen rather than afterwards.
+nothing to reconstruct: the implementation agent returns `Status`, `DR-ID` and
+`Evidence` after each phase and the orchestrator writes them then, so the row
+walks those same edges as they happen rather than afterwards.
 `RED revision`, `Falsifiability revision` and `Round N: Replacement proof revision` are
 exempt from steps 2 and 3 and carry over unchanged — they are transient
 observations that name their own tree by design
