@@ -41,6 +41,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A failing clean leg of the workflow-hygiene fixtures now names the rule and
+  the paths** (#1314). Both legs asserted the lane's exit code before its
+  findings, so a failure read `expected 1 to be 0` and the lane's own output —
+  which names the rule, the file and the job for every finding — was never
+  printed. The legs fail when the staged tree is incomplete as well as when the
+  workflow trees are, and an exit code alone cannot tell those apart.
+
 - **An imported spec can state its surface, so a CLI-only project is no longer
   read as visual** (#1295). A discussion pack states the classification in its
   `01_Context.md`, and both `/qfai-sdd` Phase 0 and `/qfai-implement`'s visual
