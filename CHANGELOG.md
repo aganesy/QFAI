@@ -4,6 +4,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`QFAI-ASSETS-005` no longer reports the four Stage 0 catalog documents**
+  (`.qfai/assistant/catalog/manifest.md`, `product.md`, `structure.md`,
+  `tech.md`). They ship telling the reader to replace their contents, and
+  `QFAI-ASSETS-003` asks for exactly that — so a project that did it was
+  reported for a local fork, and leaving the placeholder in place was the only
+  state that satisfied both rules. On the documents the skills read for their
+  commands, that is the wrong way round.
+
+  `QFAI-ASSETS-003` still reports what is left unfilled, which is the state
+  that breaks a run. Only the difference is exempt: a copy still holding what
+  qfai wrote is stale as before, and a deleted one is still an absence.
+
 ### Added
 
 - **A rule stating that this repository is written in English**

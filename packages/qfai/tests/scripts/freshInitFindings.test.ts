@@ -1,0 +1,300 @@
+/**
+ * The fresh-init finding set is pinned, and the pin is read in both directions.
+ *
+ * `verify:pack` runs `qfai init` into an empty sandbox and validates it. It used
+ * to require only that the run exit zero, so the reported findings could move
+ * either way without failing anything: a new warning on a tree the tool wrote
+ * joined the list unnoticed, and a fix that removed one was recorded nowhere and
+ * could come back.
+ *
+ * These cases hold the comparison the script now runs, and the shape of the
+ * baseline it reads.
+ */
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+import {
+  BASELINE_PATH,
+  UNPINNED_CODES,
+  UPDATE_ENV,
+  diffFingerprints,
+  fingerprint,
+  fingerprintReport,
+  formatDiff,
+  parseBaseline,
+  parseValidateReport,
+} from "../../../../scripts/fresh-init-findings.mjs";
+
+// tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+describe("fresh-init finding fingerprints", () => {
+  it("keys a finding by severity, code and file", () => {
+    expect(fingerprint({ severity: "warning", code: "QFAI-ASSETS-003", file: ".qfai/a.md" })).toBe(
+      "warning QFAI-ASSETS-003 .qfai/a.md",
+    );
+  });
+
+  it("distinguishes one code reported about different files", () => {
+    // Four rows share `QFAI-ASSETS-003` on a fresh tree. Keyed by code alone
+    // they would collapse into one, and three could disappear unnoticed.
+    const report = {
+      issues: [
+        { severity: "warning", code: "QFAI-ASSETS-003", file: ".qfai/a.md" },
+        { severity: "warning", code: "QFAI-ASSETS-003", file: ".qfai/b.md" },
+      ],
+    };
+
+    expect(fingerprintReport(report)).toEqual([
+      "warning QFAI-ASSETS-003 .qfai/a.md",
+      "warning QFAI-ASSETS-003 .qfai/b.md",
+    ]);
+  });
+
+  it("gives a project-wide finding a file field anyway", () => {
+    // `undefined` sorts and prints inconsistently; `-` is a value.
+    expect(fingerprint({ severity: "info", code: "QFAI-SPACK-000" })).toBe("info QFAI-SPACK-000 -");
+    expect(fingerprint({ severity: "info", code: "QFAI-SPACK-000", file: "" })).toBe(
+      "info QFAI-SPACK-000 -",
+    );
+  });
+
+  it("refuses an issue it cannot fingerprint", () => {
+    // The update path writes whatever it is handed. A report that is not this
+    // shape would be recorded as `undefined undefined -`, and every later
+    // comparison would agree with it — a baseline that pins nothing while
+    // looking pinned.
+    expect(() => fingerprint(null)).toThrow(/not an object/);
+    expect(() => fingerprint({ severity: "info" })).toThrow(/no `code`/);
+    expect(() => fingerprint({ severity: "info", code: "" })).toThrow(/no `code`/);
+    expect(() => fingerprint({ code: "QFAI-A-001" })).toThrow(/severity/);
+    expect(() => fingerprint({ severity: "notice", code: "QFAI-A-001" })).toThrow(/severity/);
+  });
+
+  it("ignores the message, which carries counts that move on their own", () => {
+    const withCount = { severity: "warning", code: "QFAI-ASSETS-003", file: "a.md", message: "19" };
+    const withOther = { severity: "warning", code: "QFAI-ASSETS-003", file: "a.md", message: "20" };
+
+    expect(fingerprint(withCount)).toBe(fingerprint(withOther));
+  });
+
+  it("reads a report that found nothing as an empty set", () => {
+    expect(fingerprintReport({ issues: [] })).toEqual([]);
+  });
+
+  it("leaves out a code that reports on the checkout rather than on the tree", () => {
+    // The sandbox is created inside this repository's work tree, so the diff
+    // behind `QFAI-TRACE-003` resolves against the enclosing checkout: it fires
+    // where the base ref was never fetched and stays silent where it was. Same
+    // tool, same `init` output, two answers — so recording it would pin how the
+    // repository was cloned.
+    const report = {
+      issues: [
+        { severity: "info", code: "QFAI-TRACE-003" },
+        { severity: "info", code: "QFAI-TRACE-003", file: ".qfai/specs/spec-0001" },
+        { severity: "warning", code: "QFAI-ASSETS-003", file: ".qfai/a.md" },
+      ],
+    };
+
+    expect(fingerprintReport(report)).toEqual(["warning QFAI-ASSETS-003 .qfai/a.md"]);
+  });
+
+  it("still refuses a malformed issue carrying a code it would leave out", () => {
+    // The shape check runs on the whole report, not on the part the pin keeps.
+    // Dropping first would let a report be unreadable in the one place nothing
+    // reads it back.
+    expect(() => fingerprintReport({ issues: [{ code: "QFAI-TRACE-003" }] })).toThrow(/severity/);
+  });
+
+  it.each([
+    ["null", null],
+    ["a number", 3],
+    ["an object with no issues", { summary: "ok" }],
+    ["issues that is not a list", { issues: "none" }],
+  ])("refuses a report that is %s", (_name, report) => {
+    // `issues` is a required field of the report. Read as an empty list, each
+    // of these says "the tree produces nothing" — which is a real answer the
+    // comparison then records or matches, so the failure has to be loud.
+    expect(() => fingerprintReport(report, "validate.json")).toThrow(/validate\.json/);
+  });
+});
+
+describe("parsing the report", () => {
+  it("returns what the file holds", () => {
+    expect(parseValidateReport('{"issues":[]}')).toEqual({ issues: [] });
+  });
+
+  it("names the file it could not parse", () => {
+    // The run reads several JSON files, so the parse error alone does not say
+    // which one is malformed.
+    expect(() => parseValidateReport("{", "/tmp/pack/validate.json")).toThrow(
+      /\/tmp\/pack\/validate\.json is not JSON/,
+    );
+  });
+});
+
+describe("comparing against the baseline", () => {
+  it("passes when the tree reports exactly what is recorded", () => {
+    const recorded = ["info QFAI-SPACK-000 -", "warning QFAI-DCON-034 DESIGN.md"];
+
+    expect(diffFingerprints([...recorded], recorded)).toEqual({ added: [], missing: [] });
+  });
+
+  it("reports a finding the baseline does not name", () => {
+    const diff = diffFingerprints(
+      ["info QFAI-SPACK-000 -", "warning QFAI-NEW-001 a.md"],
+      ["info QFAI-SPACK-000 -"],
+    );
+
+    expect(diff.added).toEqual(["warning QFAI-NEW-001 a.md"]);
+    expect(diff.missing).toEqual([]);
+  });
+
+  it("reports a recorded finding that no longer appears", () => {
+    // The direction that makes a fix stay fixed.
+    const diff = diffFingerprints([], ["warning QFAI-DCON-034 DESIGN.md"]);
+
+    expect(diff.added).toEqual([]);
+    expect(diff.missing).toEqual(["warning QFAI-DCON-034 DESIGN.md"]);
+  });
+
+  it("counts repeats, so a third occurrence of a listed pair is new", () => {
+    const twice = ["warning QFAI-ASSETS-003 a.md", "warning QFAI-ASSETS-003 a.md"];
+    const diff = diffFingerprints([...twice, "warning QFAI-ASSETS-003 a.md"], twice);
+
+    expect(diff.added).toEqual(["warning QFAI-ASSETS-003 a.md"]);
+    expect(diff.missing).toEqual([]);
+  });
+
+  it("reports a severity change as one finding gone and one arrived", () => {
+    // A code moving from warning to error is exactly the decision this pin is
+    // for, so it must not pass as "the same finding".
+    const diff = diffFingerprints(["error QFAI-ASSETS-003 a.md"], ["warning QFAI-ASSETS-003 a.md"]);
+
+    expect(diff.added).toEqual(["error QFAI-ASSETS-003 a.md"]);
+    expect(diff.missing).toEqual(["warning QFAI-ASSETS-003 a.md"]);
+  });
+});
+
+describe("the failure text", () => {
+  it("names both directions and how to accept the change", () => {
+    const text = formatDiff({
+      added: ["warning QFAI-NEW-001 a.md"],
+      missing: ["info QFAI-OLD-002 -"],
+    });
+
+    expect(text).toContain("warning QFAI-NEW-001 a.md");
+    expect(text).toContain("info QFAI-OLD-002 -");
+    expect(text).toContain(UPDATE_ENV);
+    // The remedy has to say the baseline is committed, or a run that only
+    // rewrites the file locally looks like the whole fix.
+    expect(text).toContain("commit the baseline in the same change");
+  });
+});
+
+describe("reading the baseline", () => {
+  it("returns the findings a well-formed baseline records", () => {
+    const recorded = ["info QFAI-SPACK-000 -", "warning QFAI-DCON-034 DESIGN.md"];
+
+    expect(parseBaseline(JSON.stringify({ findings: recorded }))).toEqual(recorded);
+  });
+
+  it("accepts a baseline that records nothing, which is a real answer", () => {
+    // "The tree produces no findings" is a state a repository can reach, and
+    // the next arrival has to be reported against it.
+    expect(parseBaseline(JSON.stringify({ findings: [] }))).toEqual([]);
+  });
+
+  it.each([
+    ["not JSON at all", "{"],
+    ["null", "null"],
+    ["an array rather than an object", "[]"],
+    ["an object with no findings", '{"description":"x"}'],
+    ["findings that is not a list", '{"findings":"info A -"}'],
+    ["a findings entry that is not a line", '{"findings":[{"code":"A"}]}'],
+  ])("refuses a baseline that is %s", (_name, text) => {
+    // Read as an empty list instead, each of these is a corrupt pin claiming
+    // the tree is clean — and the comparison then reports every finding the
+    // tree really has as newly arrived, which is a diff nobody can act on.
+    expect(() => parseBaseline(text, "baseline.json")).toThrow(/baseline\.json/);
+  });
+
+  it("refuses a baseline naming a code the comparison leaves out", () => {
+    // Such a line can never be matched, so it reports as gone on every run and
+    // no change to the tree removes it. Named where the fix is to strike it.
+    const text = JSON.stringify({ findings: ["info QFAI-TRACE-003 -"] });
+
+    expect(() => parseBaseline(text, "baseline.json")).toThrow(/QFAI-TRACE-003/);
+  });
+});
+
+describe("the committed baseline", () => {
+  it("is recorded in the shape the comparison reads", () => {
+    const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf-8"));
+
+    expect(Array.isArray(baseline.findings), "findings must be an array").toBe(true);
+    expect(baseline.findings.length, "an empty baseline pins nothing").toBeGreaterThan(0);
+    expect(typeof baseline.description).toBe("string");
+  });
+
+  it("holds each entry in the fingerprint form, sorted", () => {
+    const { findings } = JSON.parse(readFileSync(BASELINE_PATH, "utf-8")) as {
+      findings: string[];
+    };
+
+    for (const entry of findings) {
+      // The three severities `validate.json` reports, and the only ones
+      // `fingerprint` will write.
+      expect(entry, `${entry} is not "<severity> <code> <file>"`).toMatch(
+        /^(error|warning|info) QFAI-[A-Z0-9-]+ \S+$/,
+      );
+    }
+    expect(findings, "a sorted list keeps a re-record to the lines that changed").toEqual(
+      [...findings].sort(),
+    );
+  });
+
+  it("names none of the codes the comparison leaves out", () => {
+    // Read off the set rather than spelled here: a code added to it has to be
+    // struck from the committed file in the same change, or the pin starts
+    // reporting a finding that no longer appears on every run.
+    const { findings } = JSON.parse(readFileSync(BASELINE_PATH, "utf-8")) as {
+      findings: string[];
+    };
+
+    for (const entry of findings) {
+      expect(UNPINNED_CODES, `${entry} is recorded but never read`).not.toContain(
+        entry.split(" ")[1],
+      );
+    }
+  });
+
+  it("sits beside the script that reads it", () => {
+    expect(path.relative(repoRoot, BASELINE_PATH).split(path.sep).join("/")).toBe(
+      "scripts/fresh-init-findings.json",
+    );
+  });
+
+  it("fails the run after the steps that explain the change, not before them", () => {
+    // `report` and `doctor` read the same sandbox the comparison read, and
+    // their output is what a reader opens to see why the set moved. Throwing
+    // at the comparison ends the run holding only the fingerprint list.
+    const script = readFileSync(path.join(repoRoot, "scripts", "verify-pack.mjs"), "utf-8");
+
+    expect(script).toContain("baselineDiff = formatDiff(findingsDiff)");
+    // Printed where it is found as well, since a later step can fail first.
+    expect(script).toContain("console.error(baselineDiff)");
+    // And failing is the last thing the script does. Matched by shape rather
+    // than by spelling, so reformatting the block does not read as removing it.
+    expect(script.trimEnd()).toMatch(
+      /if\s*\(\s*baselineDiff\s*!==\s*null\s*\)\s*\{\s*process\.exitCode\s*=\s*1;?\s*\}$/,
+    );
+    // The diff is already on stderr, so throwing it would print every line a
+    // second time under a stack trace of this file.
+    expect(script).not.toContain("throw new Error(baselineDiff)");
+    expect(script).not.toContain("throw new Error(formatDiff(findingsDiff))");
+  });
+});
