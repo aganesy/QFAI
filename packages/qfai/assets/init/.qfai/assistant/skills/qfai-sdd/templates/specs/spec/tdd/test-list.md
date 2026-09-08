@@ -166,12 +166,108 @@ surface, or its contract went back to `x-qfai-status: planned` — has its row
 retired exactly like a deleted one, and an obligation that became active is
 appended at `todo`.
 
+**Retiring a row means deleting it from the table.** There is no `retired`
+status. The legal values are the eight
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`
+lists — this file states the schema nowhere, on purpose (see `Schema`, below) —
+and any other one is a `TDDLIST_INVALID_STATUS` **error**, so writing
+`Status = retired` fails the run that followed the instruction. Nor is there a parking spot lower
+down: `validateTddList` scores **every** schema-complete table in this file, so
+a row moved under a `## Retired` heading is still read as a ledger row, and a
+trimmed-down copy of it raises `TDDLIST_REQUIRED_COLUMN_MISSING` instead.
+
+**Deleting the row does not delete the test it drove.** Before removing a row
+whose `Test file` and `Selector` name a test that already exists, assign that
+test an owner in the same record, as an explicit downstream action: delete the
+test, or re-point it at a surviving obligation (another row's `TDD-ID`, or a
+`QFAI:` ATDD annotation per `.qfai/assistant/catalog/test-layers.md`).
+`/qfai-sdd` does not edit test code and `/qfai-implement` only selects rows the
+ledger still holds, so a test left unassigned has no owner at all: it keeps
+asserting a retired behaviour until some later change makes the full suite fail,
+with nothing left to trace it back to. When the `Test file` is shared with live
+rows, delete only the named selector and re-check that the selectors those rows
+still name are present in the file afterwards.
+
+Record the removal where the authorisation for it already lives. Which record
+that is depends on how the reseed was reached:
+
+- **Normal `/qfai-sdd` reseed, TC deleted upstream.** The `UPDATE:REMOVE` Triage
+  row was approved by AskUserQuestion and persisted to `09_delta.md`
+  (`_policies/10_delta.md` for a cross-spec row), so that row is the record and
+  Phase 2b just carries out what it approved.
+  Do not open a `CR-*` for a deletion Triage already approved.
+- **Normal `/qfai-sdd` reseed, TC no longer a coverage target.** The TC itself
+  survives with a changed `Level`, so Triage emits `UPDATE:MODIFY` for it and no
+  `UPDATE:REMOVE` row exists to point at. That `UPDATE:MODIFY` row is the
+  record: name the retired `<spec-id>/TDD-NNNN` in it, together with the
+  coverage change that dropped the row. `UPDATE:MODIFY` is approval-free **as an
+  operation** — deleting a ledger row never is, so take the operator's approval
+  for the deletion itself and record the approver in that row's `Approved By`
+  cell, exactly as an `UPDATE:REMOVE` row carries one. Approved there, the row
+  is the record and this path opens no `CR-*` either — do not attach the
+  deletion to an `UPDATE:REMOVE` row that was never raised. Left unapproved it
+  carries no authorisation for the deletion at all, and the row falls back to
+  the Change Request path below.
+- **Drift Protocol owner rerun.** No Triage ran, so the driving `CR-*` is the
+  record: outside a `/qfai-sdd` reseed, removing a row is an upstream change
+  and takes the Change Request path.
+
+Record it as `<spec-id>/TDD-NNNN` (`spec-0001/TDD-0001`) — `TDD-ID` is unique
+only within its spec, so one record retiring rows in two specs cannot tell
+their two `TDD-0001`s apart once both rows are gone. A retired `TDD-ID` is
+**never reused**: allocate the next one above the highest this spec has ever
+issued, counting the ones those retirement records name, so a new row's
+`Evidence` anchor cannot land on a retired cycle's `### TDD-NNNN` section
+(`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`).
+
+Copy the deleted row's `Evidence` cell into that record verbatim. The cell is a
+pointer into the evidence file this row's `Layer` owns —
+`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
+for an `Integration`, `API` or `E2E` row — and the QFAI-managed `.gitignore`
+block re-includes both by name, so the pointer still resolves in a clean
+checkout, on CI and for a second operator. The body stays where it was written;
+the record carries the reference to it, and the cycle's audit trail survives the
+row.
+
+**A row that never ran has no such section — read the cell to know.** Only
+`green`, `refactor`, `review-fix` and `done` are asked for a command and its
+result, so a row retired outside those four may hold an empty `Evidence` cell
+or a bare dash, and the `### TDD-NNNN` it would anchor to does not exist. Write
+that down as what it is, `no evidence — retired at Status = <status>, never
+executed`, and delete the row on it.
+
+**The status alone does not settle it.** A row reaches `blocked` or `exception`
+from any state, so one blocked out of `green` or `refactor` carries the rounds
+it already took and an anchor that still resolves; its `Blocked-By` names the
+status it left from. Transcribe what such a row's cell points at, exactly as
+for a `done` row. Never compose a section so the record has something to point
+at, and never hold a retirement open waiting on evidence a `todo` row was never
+going to produce.
+
+**Nothing beyond the pointer goes into `_policies/10_delta.md`.** When the
+approving Triage row is the cross-spec one persisted there, that file is barred
+from carrying spec-local `US` / `AC` / `BR` / `EX` / `TC` IDs, and the
+layered-traceability scan exempts only the cells of the canonical `## Triage`
+table — anything written beneath or beside that table stays visible to it and
+raises `QFAI-LAYER-100` / `TRACE_SHARED_SCOPE_VIOLATION` at `error`. Pasting an
+evidence body there always trips it, because the `### TDD-NNNN` contract
+requires the row's own `TC-ref` / `US-ref` / `CON-API-ref`; and it would not
+survive a table cell in any case, since a GFM cell is one physical line and ends
+at every unescaped `|`. Keep the `Evidence` pointer in the Triage row's
+`Rationale` cell, which the scan does exempt, and leave the section it names in
+the evidence file.
+
 ## Ledger
 
 The **first** markdown table in this file is the ledger — `validateTddList`
-reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
-parsed as the ledger instead and raises eight
-`TDDLIST_REQUIRED_COLUMN_MISSING` errors.
+takes it with `parseFirstMarkdownTable`. Keep it first: a table above it is
+read as the ledger instead and raises eight `TDDLIST_REQUIRED_COLUMN_MISSING`
+errors.
+
+Position is not the whole rule. The row-level checks run over **every** table
+in the file that carries all eight required columns and sits outside a fence,
+so a second ledger-shaped table lower down is read as ledger rows too — there
+is no parking spot below.
 
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref |
 | ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ |
