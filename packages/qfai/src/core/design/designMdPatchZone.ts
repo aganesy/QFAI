@@ -27,9 +27,9 @@
  * the lock schema needs a second field (e.g. `designMdMajorSha256`)
  * written by `/qfai-sdd` at Phase 0 freeze, and iterate/certify need
  * to compare the live `majorHash` against that stored value (with the
- * existing full-hash comparison kept as a legacy fallback). The
- * helper + validator wiring landed in this PR; the lock contract
- * extension is the missing piece. Tracking under a future-minor milestone.
+ * existing full-hash comparison kept as a legacy fallback). The helper and
+ * validator wiring exist; the lock contract extension is the missing piece,
+ * tracked for a future minor release.
  */
 
 import { createHash } from "node:crypto";

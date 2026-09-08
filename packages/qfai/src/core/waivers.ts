@@ -35,14 +35,14 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * The shape a waiver's `rule:` may take.
  *
- * This used to be `/^[A-Z]+-\d{3}$/`, which accepts **none** of the identifiers
- * `qfai validate` publishes. An operator copying `QFAI-ATDD-112` out of
- * `validate.json` — the only spelling the CLI, the JSON report and the GitHub
- * annotations ever print — got a hard `QFAI-WAIVER-001`, and the form the engine
- * actually keyed on (`ATDD-112`, the capture group inside `resolveRuleKeys`)
- * appeared in no shipped artifact.
+ * `/^[A-Z]+-\d{3}$/` accepts **none** of the identifiers `qfai validate`
+ * publishes: an operator copying `QFAI-ATDD-112` out of `validate.json` —
+ * the only spelling the CLI, the JSON report and the GitHub annotations ever
+ * print — would get a hard `QFAI-WAIVER-001`, since the form the engine
+ * actually keys on (`ATDD-112`, the capture group inside `resolveRuleKeys`)
+ * appears in no shipped artifact.
  *
- * It now accepts every code shape the package emits: `QFAI-ATDD-112`,
+ * It accepts every code shape the package emits: `QFAI-ATDD-112`,
  * `TDDLIST_INVALID_STATUS`, `E_TC_ORPHAN`, `D-SCAFFOLD-PLACEHOLDER`, and the
  * legacy stripped `ATDD-112`.
  */
@@ -529,7 +529,7 @@ async function loadWaivers(
     // `core/validate.ts` and these findings are appended by `src/cli/`
     // afterwards. Telling the operator "unknown rule" sent them looking for a
     // typo that is not there, and the remedy is different: a typo is corrected,
-    // this waiver is removed (#1110).
+    // this waiver is removed.
     if (ruleSeverity === undefined && POST_WAIVER_RULE_CODES.includes(ruleId)) {
       blocked = true;
       validationIssues.push(

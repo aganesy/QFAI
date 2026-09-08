@@ -311,7 +311,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         });
       } else {
         // skills.integrity defaults to `warning`: direct edits to
-        // .qfai/assistant/skills/** are advisory, not active-profile-blocking.
+        //.qfai/assistant/skills/** are advisory, not active-profile-blocking.
         // The doctor 2-group renderer always routes this finding into the
         // advisory group regardless of message wording.
         addCheck(checks, {
@@ -341,10 +341,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // advisory below, the content-identical `ok` state as the `ok` check after it,
   // and the unresolved-packaged-copy skip as the `info` skip after that.
   //
-  // The chain is now TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
-  // whose three members each have an arm — where it previously stated the general
-  // rule "every status without a branch registers nothing" because the skip had no
-  // arm yet. Scoped to the STATUS TESTS on purpose, because DISPATCH is not total:
+  // The chain is TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
+  // whose three members each have an arm. Scoped to the STATUS TESTS on
+  // purpose, because DISPATCH is not total:
   // the `modified.length > 0` paragraph below says why, a `modified` status whose
   // `modified` list is empty matching this arm's status test and still registering
   // nothing. (Named rather than counted in lines — "the conjunct 16 lines below" was
@@ -926,9 +925,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 /**
  * Reports assistant assets that exceed the shipped line ceiling.
  *
- * The ceiling used to be asserted only by the framework's own asset test, which
- * is not published, so a project created by init had no way to check the rule
- * its operating baseline states. Severity is `warning`: an oversized asset is
+ * The framework's own asset test asserts the ceiling too, but it is not
+ * published, so without this check a project created by init has no way to
+ * check the rule its operating baseline states. Severity is `warning`: an oversized asset is
  * authoring drift, not something that stops the active profile.
  */
 async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {

@@ -71,9 +71,9 @@ const REGEX_AFTER_KEYWORD: ReadonlySet<string> = new Set([
  * to open a template literal and blank every line down to the next backtick, taking a real
  * declaration with it.
  *
- * This rule lived in `atddTraceability.ts` and not here, which is the divergence #1154 reports:
- * two readers, two rules, and the one wired to this function had the older one. Whichever reader
- * is wired next inherits whatever is here, so it is here.
+ * The rule is here rather than in `atddTraceability.ts` so that there is one of it: two readers
+ * with two rules drift, and the one wired to this function ends up with the older one. Whichever
+ * reader is wired next inherits whatever is here.
  */
 const CONTROL_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
   "if",
@@ -192,7 +192,7 @@ export type JsMaskOptions = {
    * `false` for a scanner whose subject LIVES in comments — the ATDD
    * annotation scan reads `/* QFAI:SPEC-0001:TC-0001 *\/`, so blanking
    * comments would stop it finding every real annotation while it went on
-   * reading ids out of string and regex literals (#1141). The lexer still
+   * reading ids out of string and regex literals. The lexer still
    * WALKS the comment either way: skipping it is what keeps a `/` inside it
    * from being read as a regex literal.
    */
