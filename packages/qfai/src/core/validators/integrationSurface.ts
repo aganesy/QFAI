@@ -120,6 +120,22 @@ type Broken = {
    * `relative`, which names the wrapper for damage that sits on the canonical.
    */
   unwalkable?: string | undefined;
+  /**
+   * The wrapper does not load the document, but the document itself resolves
+   * and is readable at its canonical path.
+   *
+   * The two are different failures and the operator acts on them differently.
+   * A wrapper whose canonical is gone means the instructions are not in the
+   * project at all; a wrapper the OS refuses to follow, over a canonical that
+   * reads fine, means they are here and one path does not reach them — which
+   * is every `git worktree` on Windows, where git writes each skill wrapper —
+   * every entry of {@link SKILL_WRAPPER_DIRS}, not `.claude/` alone — as a FILE
+   * symlink to a directory before that directory exists in the new worktree.
+   * Reporting both as "not applied at all" made the second an
+   * `error` nobody in that workflow could clear, on a tree whose documents are
+   * all present.
+   */
+  canonicalReachable?: boolean | undefined;
 };
 
 const toPosix = (value: string): string => value.split(path.sep).join("/");
@@ -1329,7 +1345,21 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // target string untouched: the finding clears while the redirect stays.
       // So say the ancestor first, wherever it is found.
       const linkProblem = await canonicalLinkProblem(root, realRoot, wrapper);
+      // Only the unfollowable case can have a readable canonical: `ENOENT`,
+      // `ELOOP` and `ENOTDIR` all say the target itself is gone or unusable,
+      // and an ancestor problem redirects the whole subtree. There the link
+      // string resolves and only the OS refuses to walk it, so the document is
+      // where it should be.
+      const canonicalReachable =
+        unfollowable && linkProblem === null
+          ? await isReadable(
+              wrapper.kind === "skill"
+                ? path.join(wrapper.canonical, "SKILL.md")
+                : wrapper.canonical,
+            )
+          : false;
       broken.push({
+        canonicalReachable,
         relative: wrapper.relative,
         detail:
           linkProblem !== null
@@ -1539,38 +1569,72 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     return { issues: [], unwalkable: [] };
   }
 
-  const sample = broken.slice(0, 12).map((entry) => `${entry.relative} (${entry.detail})`);
-  const overflow =
-    broken.length > sample.length ? ` (他 ${String(broken.length - sample.length)} 件)` : "";
-
   // The sample is what the operator reads; `unwalkable` is what the caller
   // acts on, and it is computed over every entry — including the ones the
-  // sample drops.
+  // sample drops and the ones the reachable finding takes.
   const unwalkable = unwalkablePaths(broken);
 
-  const issues = [
-    issue(
-      "QFAI-LINK-001",
-      `assistant 統合ディレクトリの symlink が壊れています（${String(broken.length)} 件）。skill / agent はこの経路でしか読み込まれないため、これらは現在まったく適用されていません: ${sample.join(", ")}${overflow}`,
-      "error",
-      broken[0]?.relative,
-      "integrationSurface.links",
-      broken.map((entry) => entry.relative),
-      "change",
-      [
-        "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
-        "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
-        "**integration directory の祖先が symlink の場合（`an ancestor is a symlink`）も同様です。** 配下の wrapper は相対 target なので、その祖先が指す先を基準に解決されます。該当する祖先（`.claude` / `.github` など）を実ディレクトリに戻してから `qfai init` を実行してください。",
-        "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
-        "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
-        "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
-        "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init --force` が削除するのは **解決先が `.qfai/assistant/agents/` の直下にある agent wrapper（`.claude/agents/` / `.github/agents/`）と `qfai-` で始まる skill wrapper** だけです（`--force` なしの再実行では消えません）。`web-research` のような prefix を持たない skill の wrapper、および `.qfai/assistant/agents/<sub>/…` のような下位ディレクトリや `.qfai/assistant/skills/…` を指す agent wrapper は prune 対象外なので、報告されたパスを手で削除してください。**canonical 側（`.qfai/assistant/skills/…` / `.qfai/assistant/agents/…`）は init が削除しません。** プロジェクトが独自の skill / agent をそこへ追加している場合と区別できないためで、退役した canonical を消したいときは手で削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください（agent wrapper は解決先が `.qfai/assistant/agents/` 直下かつ現行 roster に無い場合にのみ `--force` で削除されます）。",
-        "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
-        "Windows では Developer Mode の有効化が必要な場合があります。",
-      ].join("\n"),
-      { relatedFiles: broken.slice(1).map((entry) => entry.relative) },
-    ),
-  ];
+  const describe = (entries: readonly Broken[]): string => {
+    const sample = entries.slice(0, 12).map((entry) => `${entry.relative} (${entry.detail})`);
+    const overflow =
+      entries.length > sample.length ? ` (他 ${String(entries.length - sample.length)} 件)` : "";
+    return `${sample.join(", ")}${overflow}`;
+  };
+
+  // Two findings, because they are two repairs and two risks. A wrapper whose
+  // canonical is gone means the instructions are absent from the project; one
+  // the OS will not follow, over a canonical that reads fine, means they are
+  // present and this one path does not reach them. Reporting the second as the
+  // first put an `error` nobody working in a `git worktree` could clear on a
+  // tree that has every document it should.
+  const unreachable = broken.filter((entry) => entry.canonicalReachable !== true);
+  const reachable = broken.filter((entry) => entry.canonicalReachable === true);
+
+  const issues: Issue[] = [];
+  if (unreachable.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-LINK-001",
+        `assistant 統合ディレクトリの symlink が壊れています（${String(unreachable.length)} 件）。skill / agent はこの経路でしか読み込まれないため、これらは現在まったく適用されていません: ${describe(unreachable)}`,
+        "error",
+        unreachable[0]?.relative,
+        "integrationSurface.links",
+        unreachable.map((entry) => entry.relative),
+        "change",
+        [
+          "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
+          "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
+          "**integration directory の祖先が symlink の場合（`an ancestor is a symlink`）も同様です。** 配下の wrapper は相対 target なので、その祖先が指す先を基準に解決されます。該当する祖先（`.claude` / `.github` など）を実ディレクトリに戻してから `qfai init` を実行してください。",
+          "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
+          "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
+          "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
+          "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init --force` が削除するのは **解決先が `.qfai/assistant/agents/` の直下にある agent wrapper（`.claude/agents/` / `.github/agents/`）と `qfai-` で始まる skill wrapper** だけです（`--force` なしの再実行では消えません）。`web-research` のような prefix を持たない skill の wrapper、および `.qfai/assistant/agents/<sub>/…` のような下位ディレクトリや `.qfai/assistant/skills/…` を指す agent wrapper は prune 対象外なので、報告されたパスを手で削除してください。**canonical 側（`.qfai/assistant/skills/…` / `.qfai/assistant/agents/…`）は init が削除しません。** プロジェクトが独自の skill / agent をそこへ追加している場合と区別できないためで、退役した canonical を消したいときは手で削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください（agent wrapper は解決先が `.qfai/assistant/agents/` 直下かつ現行 roster に無い場合にのみ `--force` で削除されます）。",
+          "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
+          "Windows では Developer Mode の有効化が必要な場合があります。",
+        ].join("\n"),
+        { relatedFiles: unreachable.slice(1).map((entry) => entry.relative) },
+      ),
+    );
+  }
+  if (reachable.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-LINK-001",
+        `${String(reachable.length)} wrapper(s) in the assistant integration directories cannot be followed. The canonical documents behind them read fine, so the instructions are in this tree — this path does not reach them: ${describe(reachable)}`,
+        "warning",
+        reachable[0]?.relative,
+        "integrationSurface.links",
+        reachable.map((entry) => entry.relative),
+        "change",
+        [
+          "This shape appears in every `git worktree`, in every skill wrapper directory rather than `.claude/` alone. Git writes each link as a FILE symlink to a directory — at the moment it writes it the target does not yet exist in the new worktree — and the OS will not follow that. The same paths in the primary checkout are intact.",
+          "To relink them in the worktree: check the setting with `git config --get core.symlinks`, set it with `git config core.symlinks true` if it is not already true, then delete the paths named above and run `qfai init`. Windows may also need Developer Mode enabled.",
+          "Left as they are, the assistant in that worktree does not load these skills or agents. The documents themselves are under `.qfai/assistant/**` and can be opened at the canonical path.",
+        ].join("\n"),
+        { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
+      ),
+    );
+  }
 
   return { issues, unwalkable };
 }

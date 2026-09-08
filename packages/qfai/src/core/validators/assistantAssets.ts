@@ -1,18 +1,30 @@
 import { constants } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { access, open, readFile } from "node:fs/promises";
+import { access, open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  ASSISTANT_ASSETS_LOCK_BASENAME,
+  GOVERNED_ASSISTANT_LAYERS,
+  buildShippedAssistantHashes,
+  classifyAssistantAsset,
+  collectGovernedAssistantFiles,
+  hasRealGovernedAssistantParents,
+  hashAssistantAssetFile,
+  readAssistantAssetsLockStatus,
+} from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
 import { hasErrnoCode } from "../fs/errno.js";
 import { parseHeadings } from "../parse/markdown.js";
+import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
+import { getInitAssetsDir } from "../../shared/assets.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
 
@@ -216,6 +228,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
+  issues.push(...(await validateAssistantAssetProvenance(root, assistantDir)));
   issues.push(...(await collectSteeringPlaceholderIssues(root, assistantDir)));
 
   // Every skill-tree document is read once, here, and both the per-`SKILL.md`
@@ -286,6 +299,201 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 }
 
 /**
+ * Compares the vendored `constitution/` and `catalog/` layers against the
+ * release that is actually installed.
+ *
+ * Before this check the only coverage of qfai's own normative tree was two
+ * existence probes, so a project could rewrite the file qfai calls its layer
+ * SSOT and nothing anywhere would say so — downstream reasoning then cites the
+ * fork by line number as though it were shipped policy. The three findings are
+ * separate because the remedies are: a stale copy is refreshed by
+ * `qfai init --force`, a fork needs a human merge decision, and an unshipped
+ * file belongs in a `*.local.md` overlay.
+ *
+ * A project with no recorded provenance is not penalised for that alone: an
+ * absent record is not itself a finding, and only files that also differ from
+ * the installed release are reported. What severity they carry is not fixed
+ * here — the whole family follows the promotion window below, `warning` inside
+ * it and `error` from the release the finding names.
+ */
+async function validateAssistantAssetProvenance(
+  root: string,
+  assistantDir: string,
+): Promise<Issue[]> {
+  // The whole family runs a promotion window (`RULE_PROMOTIONS`,
+  // docs/design-principles P7): nothing compared the governed layers before, so
+  // the first run that records provenance meets every edit a project ever made
+  // to them at once. Shipping that straight at `error` would turn an upgrade
+  // into a latched gate, which is the regression P7 was written after.
+  //
+  // `resolveToolVersion` resolves rather than rejects — a read failure returns
+  // `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates these into a build failure.
+  const assetProvenancePromotion = RULE_PROMOTIONS.assistantAssetProvenance.promoteAt;
+  const assetProvenanceSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    assetProvenancePromotion,
+  );
+  const windowNote =
+    assetProvenanceSeverity === "warning"
+      ? ` Reported as a warning until the ${assetProvenancePromotion} release, and as an error from then on.`
+      : "";
+
+  let shipped: Record<string, string>;
+  try {
+    // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree
+    // segments come from `assistantPaths.ts` in init and in validate alike, so
+    // a future move of `ASSISTANT_DIR` cannot leave the two reading different
+    // trees.
+    shipped = await buildShippedAssistantHashes(
+      path.join(getInitAssetsDir(), ...ASSISTANT_DIR.split("/")),
+    );
+  } catch (error: unknown) {
+    // Not "nothing to report": the comparison could not be made at all. An
+    // install missing a governed layer, an unreadable shipped file, or a
+    // library consumer without the package assets all land here, and returning
+    // no findings let every such tree pass `validate` with its provenance
+    // unchecked — `init` already fails closed on the same condition, so only
+    // this side accepted it. The inability is itself the finding.
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "shipped",
+        error,
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
+  }
+
+  // Every component from the project root down, not just the layer directory.
+  // `lstat` declines to resolve only the path it is given, so a `.qfai` — or a
+  // `.qfai/assistant` — that is a symlink out of the repository still reported a
+  // real `constitution/` on the far side: `validate` would walk and hash an
+  // external tree, pass in silence whenever it matched the release, and take as
+  // long as that tree was big. The same guard `init` applies before it writes.
+  if (!(await hasRealGovernedAssistantParents(root, `${ASSISTANT_DIR}/probe`))) {
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "vendored",
+        new Error(
+          `A component of the path to ${ASSISTANT_DIR}/ is not a real directory (a symlink or junction may point outside the project).`,
+        ),
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
+  }
+
+  const lockStatus = await readAssistantAssetsLockStatus(assistantDir);
+  if (lockStatus.kind === "unreadable") {
+    // Not "no record". A record that is there and unusable leaves the project
+    // looking never-initialised, and every absence the record makes reportable
+    // — a deleted layer above all — goes quiet with it.
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "record",
+        new Error(`${ASSISTANT_ASSETS_LOCK_BASENAME}: ${lockStatus.reason}`),
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
+  }
+  const lock = lockStatus.kind === "lock" ? lockStatus.lock : null;
+  const issues: Issue[] = [];
+  let vendored: string[];
+  try {
+    vendored = await collectGovernedAssistantFiles(assistantDir);
+  } catch (error: unknown) {
+    // Same reasoning on the project's own side. A layer root that is not a real
+    // directory reaches here rather than being walked.
+    return [
+      unverifiableProvenanceIssue(
+        assistantDir,
+        "vendored",
+        error,
+        assetProvenanceSeverity,
+        windowNote,
+      ),
+    ];
+  }
+
+  // The union of both key sets, not just what is on disk. Walking only the
+  // vendored files never classified a governed file the project deleted, so
+  // removing a normative rule was the one edit that passed `validate` in
+  // silence — the exact bypass this check exists to close.
+  const relatives = [...new Set([...Object.keys(shipped), ...vendored])].sort((a, b) =>
+    a.localeCompare(b),
+  );
+
+  // An absence is only reportable inside a layer the project actually has. A
+  // consumer that never ran `init` here, or one still on the pre-recut
+  // `instructions/` + `steering/` layout, is not missing files — it has no
+  // governed layer at all, and reporting every shipped rule at it would be
+  // noise, not governance.
+  const presentLayers = new Set<string>();
+  for (const layer of GOVERNED_ASSISTANT_LAYERS) {
+    if (await isDirectory(path.join(assistantDir, layer))) {
+      presentLayers.add(layer);
+    }
+  }
+
+  // …unless the record says the project once had it. The exclusion above is
+  // about a project that never received a layer, and it read a *deleted* one
+  // the same way: with the layer gone, every shipped file under it was skipped
+  // before `coveredByExistenceProbe` could see it, and QFAI-ASSETS-001/002 were
+  // satisfied by the legacy fallback that `runUpgradeAssistantTree` leaves
+  // behind — so on exactly the layout the upgrade path produces, deleting a
+  // whole layer of normative rules passed `validate` in silence. A lock entry
+  // under that layer is the evidence that qfai did put files there, and the
+  // disappearance is reported once, against the layer, rather than once per
+  // shipped file it used to hold.
+  const recordedLayers = new Set<string>();
+  for (const key of Object.keys(lock?.files ?? {})) {
+    recordedLayers.add(key.split("/")[0] ?? "");
+  }
+  for (const layer of GOVERNED_ASSISTANT_LAYERS) {
+    if (!presentLayers.has(layer) && recordedLayers.has(layer)) {
+      issues.push(
+        missingGovernedLayerIssue(assistantDir, layer, assetProvenanceSeverity, windowNote),
+      );
+    }
+  }
+
+  for (const relative of relatives) {
+    const filePath = path.join(assistantDir, ...relative.split("/"));
+    const status = classifyAssistantAsset(
+      await hashAssistantAssetFile(filePath),
+      shipped[relative],
+      lock?.files[relative],
+    );
+    if (status === "missing" && !presentLayers.has(relative.split("/")[0] ?? "")) {
+      continue;
+    }
+    if (status === "missing" && (await coveredByExistenceProbe(assistantDir, relative))) {
+      // QFAI-ASSETS-001/002 already own these two: reporting the absence again
+      // here would duplicate the finding. They only cover it while the legacy
+      // fallback is *also* absent, though — see `coveredByExistenceProbe`.
+      continue;
+    }
+    const finding = provenanceIssue(
+      status,
+      relative,
+      filePath,
+      assetProvenanceSeverity,
+      windowNote,
+    );
+    if (finding !== null) {
+      issues.push(finding);
+    }
+  }
+
+  return issues;
+}
+
+/**
  * `QFAI-ASSETS-003` — Stage 0 steering files still holding shipped placeholders.
  *
  * Emits one finding per file, naming every `## ` section that still contains
@@ -318,7 +526,7 @@ async function collectSteeringPlaceholderIssues(
   const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
   const windowNote =
     severity === "warning"
-      ? ` ${promoteAt} リリースまでは warning、それ以降は error として報告されます。`
+      ? ` Reported as a warning until the ${promoteAt} release, and as an error from then on.`
       : "";
   const issues: Issue[] = [];
   for (const fileName of STEERING_CATALOG_FILES) {
@@ -348,6 +556,165 @@ async function collectSteeringPlaceholderIssues(
     );
   }
   return issues;
+}
+
+/**
+ * A governed layer the record says qfai populated, which is no longer a
+ * directory at all.
+ *
+ * Reported under `QFAI-ASSETS-007` — the same code a single deleted rule
+ * carries — because it is the same defect at layer granularity, and the same
+ * `npx qfai init` restores it.
+ */
+function missingGovernedLayerIssue(
+  assistantDir: string,
+  layer: string,
+  assetProvenanceSeverity: ProvenanceSeverity,
+  windowNote: string,
+): Issue {
+  return issue(
+    "QFAI-ASSETS-007",
+    `${ASSISTANT_DIR}/${layer}/ is a governed layer recorded in .assets.lock.json, but no directory is there (the whole layer is missing).${windowNote}`,
+    assetProvenanceSeverity,
+    path.join(assistantDir, layer),
+    "assistantAssets.missingVendoredLayer",
+    undefined,
+    "canonical",
+    "Run `qfai init` to restore the shipped files of the missing layer. To take a normative rule out of scope, leave a Change Request rather than deleting it.",
+  );
+}
+
+/**
+ * Governed paths the existence probes above also check, mapped to the legacy
+ * pre-recut path each one falls back to.
+ */
+const EXISTENCE_CHECKED_ELSEWHERE = new Map([
+  ["constitution/drift-protocol.md", path.join("instructions", "drift-protocol.md")],
+  ["catalog/test-layers.md", path.join("steering", "test-layers.md")],
+]);
+
+/**
+ * True when QFAI-ASSETS-001/002 would report this absence itself.
+ *
+ * Those probes accept the legacy pre-recut path, so they report the canonical
+ * file's absence only when the legacy one is missing too. A project part-way
+ * through the recut — which `runUpgradeAssistantTree` produces deliberately,
+ * since it leaves the legacy file behind — has both layouts at once, and
+ * deleting the canonical rule there satisfied the probe from the legacy copy
+ * while this exclusion silenced the provenance check. Removing a normative rule
+ * was reportable in every layout but the one the upgrade path creates.
+ *
+ * The canonical path is checked for the same reason, and the two probes ask a
+ * weaker question than this one: `access` answers "something is reachable
+ * there", while provenance requires a readable **regular file**. A canonical
+ * path left as a symlink, a directory or a FIFO therefore satisfies the probe
+ * and is `missing` here, and deferring to a probe that will stay quiet is how
+ * the absence would go unreported by both.
+ */
+async function coveredByExistenceProbe(assistantDir: string, relative: string): Promise<boolean> {
+  const legacy = EXISTENCE_CHECKED_ELSEWHERE.get(relative);
+  if (legacy === undefined) {
+    return false;
+  }
+  const canonical = path.join(assistantDir, ...relative.split("/"));
+  return !(await exists(canonical)) && !(await exists(path.join(assistantDir, legacy)));
+}
+
+/**
+ * The governed layers could not be compared at all — so say so, rather than
+ * reporting a clean tree.
+ */
+function unverifiableProvenanceIssue(
+  assistantDir: string,
+  side: "shipped" | "vendored" | "record",
+  error: unknown,
+  assetProvenanceSeverity: ProvenanceSeverity,
+  windowNote: string,
+): Issue {
+  const detail = error instanceof Error ? error.message : String(error);
+  const subject =
+    side === "shipped"
+      ? "the shipped assets of the installed qfai release"
+      : side === "record"
+        ? `the project's provenance record (${ASSISTANT_DIR}/${ASSISTANT_ASSETS_LOCK_BASENAME})`
+        : `the project's governed layers under ${ASSISTANT_DIR}/`;
+  return issue(
+    "QFAI-ASSETS-008",
+    `${subject} could not be read, so the provenance of ${GOVERNED_ASSISTANT_LAYERS.map(
+      (layer) => `${layer}/`,
+    ).join(" / ")} was not verified (${detail}).${windowNote}`,
+    assetProvenanceSeverity,
+    assistantDir,
+    "assistantAssets.unverifiableProvenance",
+    undefined,
+    "canonical",
+    "Reinstall qfai, confirm each governed layer exists as a real directory (not a symlink or a junction), then run this again.",
+  );
+}
+
+/**
+ * The severity the whole provenance family carries, resolved once from
+ * `RULE_PROMOTIONS.assistantAssetProvenance`. Threaded in rather than
+ * recomputed per finding so the five codes cannot drift apart, and so the pin —
+ * not a literal beside each `issue(...)` call — is what decides them.
+ */
+type ProvenanceSeverity = "warning" | "error";
+
+function provenanceIssue(
+  status: ReturnType<typeof classifyAssistantAsset>,
+  relative: string,
+  filePath: string,
+  assetProvenanceSeverity: ProvenanceSeverity,
+  windowNote: string,
+): Issue | null {
+  switch (status) {
+    case "shipped":
+      return null;
+    case "stale":
+      return issue(
+        "QFAI-ASSETS-004",
+        `${ASSISTANT_DIR}/${relative} still holds exactly what qfai wrote, but that differs from the content of the installed release (a stale copy).${windowNote}`,
+        assetProvenanceSeverity,
+        filePath,
+        "assistantAssets.staleVendoredAsset",
+        undefined,
+        "canonical",
+        "Run `qfai init --force` to refresh only the files that still hold what qfai wrote to the installed release.",
+      );
+    case "forked":
+      return issue(
+        "QFAI-ASSETS-005",
+        `${ASSISTANT_DIR}/${relative} matches neither the content of the installed release nor the ${ASSISTANT_ASSETS_LOCK_BASENAME} record (a local fork).${windowNote}`,
+        assetProvenanceSeverity,
+        filePath,
+        "assistantAssets.forkedVendoredAsset",
+        undefined,
+        "canonical",
+        "Move the project-specific rule into a `*.local.md` overlay of the same layer and restore the qfai-owned file to its shipped content. If the difference has to be permanent, leave a Change Request.",
+      );
+    case "unshipped":
+      return issue(
+        "QFAI-ASSETS-006",
+        `${ASSISTANT_DIR}/${relative} is a file the installed release does not ship (an addition that is not an overlay).${windowNote}`,
+        assetProvenanceSeverity,
+        filePath,
+        "assistantAssets.unshippedVendoredAsset",
+        undefined,
+        "canonical",
+        "Re-file it as a `*.local.md` overlay: qfai init never writes an overlay and the provenance check never reports one.",
+      );
+    case "missing":
+      return issue(
+        "QFAI-ASSETS-007",
+        `${ASSISTANT_DIR}/${relative} is a normative file the installed release ships, but it is not there as a regular file (missing).${windowNote}`,
+        assetProvenanceSeverity,
+        filePath,
+        "assistantAssets.missingVendoredAsset",
+        undefined,
+        "canonical",
+        "Run `qfai init` to restore the missing shipped file (if a directory or a special file occupies the path, `qfai init --force` replaces it). To take a normative rule out of scope, leave a Change Request rather than deleting it.",
+      );
+  }
 }
 
 /**
@@ -677,6 +1044,14 @@ function collectMissingReviewerGateTerms(section: string): string[] {
     missing.push("not gates/signals");
   }
   return missing;
+}
+
+async function isDirectory(target: string): Promise<boolean> {
+  try {
+    return (await stat(target)).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 async function exists(target: string): Promise<boolean> {

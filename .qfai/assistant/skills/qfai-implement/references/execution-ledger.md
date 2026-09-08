@@ -200,9 +200,11 @@ runs itself; the **ATDD-owned** rows use `atdd-<spec-id>.md`, which is the
 commands, their output, and the reviewer verdicts. The ledger cell records
 the outcome and says where to read the proof:
 
-```
-RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0027`
-```
+### The grammar (MUST)
+
+There is **one** legal shape, capped at **240 characters**, and every half of
+its anchor is bound to the row: `evidence-cell-grammar.md`. The findings that
+police it are in "Evidence cell rules (enforced)" below.
 
 ### Why it cannot hold the payload
 
@@ -250,8 +252,17 @@ assert a cycle has run:
 | ------------------------------ | --------------------------------------------------------------------------------------- | ------------------- |
 | `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | warning, then error |
 | `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning             |
+| `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | warning, then error |
+| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | warning, then error |
+| `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error               |
 | `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | warning, then error |
 | `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | warning, then error |
+
+One more rule reads the row rather than a cell:
+
+| Finding            | Fires when                                              | Severity            |
+| ------------------ | ------------------------------------------------------- | ------------------- |
+| `QFAI-TDDLIST-014` | the row has more cells than the table's header declares | warning, then error |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -262,13 +273,17 @@ are accepted directly.
 ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate.
 
-`TDDLIST_EVIDENCE_EMPTY` is inside a **promotion window**: it is reported as a
-warning until the release the finding itself names, and as an error from that
-release onwards. An empty cell is unambiguous and the rule is not in doubt — but
-it also fires on cells written before the check existed, so an upgrade that
-started erroring on them would latch a gate that was passing. The finding text
-states which release ends the window, so `--fail-on error` keeps working while
-the ledger shows the debt it will owe.
+Four findings are inside a **promotion window**: `TDDLIST_EVIDENCE_EMPTY`,
+`QFAI-TDDLIST-011`, `QFAI-TDDLIST-012` and `QFAI-TDDLIST-014` are reported as
+warnings until the release each finding itself names, and as errors from that
+release onwards. Each rule is right and none is in doubt — but each also fires
+on ledgers written before the check existed, so an upgrade that started erroring
+on them would latch a gate that was passing. An empty cell was always wrong; the
+grammar, the cap and the surplus column arrive with the change that made
+`Evidence` a pointer, so they land on every cell written while the column was
+documented as holding the commands and their output. The finding text states
+which release ends the window, so `--fail-on error` keeps working while the
+ledger shows the debt it will owe.
 
 **A row already at a terminal status satisfies this by backfilling the cell in
 place.** Writing the outcome and its evidence pointer into `Evidence` is not a
@@ -287,6 +302,30 @@ command-shaped, so the status-only rule passes over it — claimed completion wi
 no entry, no verdict and no checkpoint behind it. A project that has moved its ledger onto pointers raises this by
 failing on warnings; one still migrating waives it per path.
 
+The two grammar findings are warnings for the same reason, waivable under
+`QFAI-TDDLIST-011` (malformed) and `QFAI-TDDLIST-012` (oversize). An oversize cell whose
+only other fault is prose is reported **once**, as the cap breach: every cell
+that outgrew the cap did so by holding prose, so the two are one defect to fix.
+A cell that is a well-formed pointer but breaks a **binding** — the RED
+provenance its `Layer` owes, the evidence file its `Layer` and spec own, the
+section its `TDD-ID` names, or a compatibility marker where none is licensed —
+is reported whatever its length. Those ask for a different fix from a cap
+breach, and folding them into it would let `QFAI-TDDLIST-012` waive a violation of
+which "ATDD-owned rows" says "There is no waiver here".
+
+`RED:n-a` on an ATDD-owned row is the one that carries no waiver at all. It is
+its own code, `QFAI-TDDLIST-013`, at `error` — a waiver may only
+target `warning` / `info`, so that is how "There is no waiver here" is spelled.
+Reported as a `QFAI-TDDLIST-011` warning it shared a rule id with every legacy prose
+cell, and waiving the migration silenced it. The other bindings stay warnings:
+they are the migration, and a row that never obtained RED provenance is not a
+formatting defect the grammar introduced.
+
+`QFAI-TDDLIST-014` is a warning under `QFAI-TDDLIST-014`. Cells are read by
+header index, so anything parked past the last declared column is read by
+nothing — a conforming `Evidence` cell followed by a surplus column holding the
+payload passed both the grammar and the cap with no finding at all.
+
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
 `TDDLIST_EXCEPTION_MISSING_DR` gates.
@@ -295,11 +334,13 @@ Freshness is **not** gated: the ledger records no run identity, so no validator
 can distinguish a fresh command+result pair from a copied one. That rule stays
 with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
-A pointer cell satisfies these rules: the `evidence at <path>` form carries a
-path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer. The pointer is also resolved against the file its
-row `Layer` owns; a file that exists only on the machine that produced it does
-not satisfy the gate on a fresh clone.
+A conforming pointer satisfies these rules: `TDDLIST_EVIDENCE_STATUS_ONLY`
+yields to the grammar, so the `GREEN:pass` token in the mandated shape is not
+read as a bare verdict, and the path the grammar requires is one of the command
+shapes the gate accepts. The rules reject a verdict written as prose, not a
+pointer. The pointer is also resolved against the file its row `Layer` owns; a
+file that exists only on the machine that produced it does not satisfy the gate
+on a fresh clone.
 
 ## Selector granularity (MUST)
 
@@ -539,7 +580,9 @@ a spec's surfaces often run before the journey is written, and a test written
 after its surface passes on the first run. So:
 
 - **There is no waiver here.** `todo -> red` still requires an admissible RED,
-  and a first-run pass is still not one.
+  and a first-run pass is still not one. The Evidence grammar enforces it:
+  `RED:n-a` is not a legal provenance on these three layers, so a row that
+  never obtained RED cannot record a conforming pointer.
 - **The falsifiability path is the answer, not `exception`.**
   `red-not-observable.md` already defines the substitute — record `Satisfied-by`,
   mutate the predicate the journey asserts on, watch this row's test fail, restore,

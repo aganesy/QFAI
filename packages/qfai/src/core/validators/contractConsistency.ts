@@ -212,7 +212,7 @@ function describeDbDomain(domain: DbDomain): string {
 /** Which form bounds the field, and — when the candidates disagree — whose. */
 function describeDbConstraint(domain: DbDomain): string {
   if (isEnumOnly(domain)) {
-    return "ENUM (a physical constraint: the value is rejected at insert time)";
+    return "ENUM (a physical constraint: the insert is rejected)";
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
@@ -223,7 +223,7 @@ function describeDbConstraint(domain: DbDomain): string {
   }
   return (
     `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
-    "An ENUM on a same-named column bounds that table's column, so it need not reject the value this API field allows"
+    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
   );
 }
 
@@ -242,11 +242,10 @@ function describeDbConstraint(domain: DbDomain): string {
 function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
   if (enumOnly) {
     return (
-      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - ` +
-      "it is a physical constraint that rejects the value at insert time, " +
-      "so no implementation satisfies both contracts. " +
-      "Add the value to the ENUM (this needs a migration), " +
-      "or correct the API contract's terminal semantics."
+      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - it is a physical ` +
+      "constraint that rejects the value at insert time, so no implementation satisfies both " +
+      "contracts. Add the value to the ENUM (this needs a migration), or correct the API " +
+      "contract's terminal semantics."
     );
   }
   if (fromEnum.length === 0) {

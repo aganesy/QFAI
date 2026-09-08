@@ -11,14 +11,15 @@ master here, never a copy under a tool-specific directory.
 
 ## Rules
 
-| File                       | Rule                                                                                                                                           |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `version-discipline.md`    | The user decides the release version. Guarded by `packages/qfai/scripts/check-branch-version-pin.sh`.                                          |
-| `distributed-surface.md`   | No internal IDs or version markers in the files the npm package ships.                                                                         |
-| `root-additions-policy.md` | Adding a file or directory at the repository root needs explicit user approval.                                                                |
-| `temporary-files.md`       | Every scratch file goes under `tmp/`.                                                                                                          |
-| `document-schema.md`       | The structure of SDD documents is declared in `packages/qfai/assets/mdschema/**` and enforced by `pnpm lint:mdschema` and `pnpm lint:mermaid`. |
-| `documentation-clarity.md` | Writing standard for PRs, issues, code comments and Markdown. The hooks in `.claude/settings.json` restate it.                                 |
+| File                       | Rule                                                                                                                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version-discipline.md`    | The user decides the release version. Guarded by `packages/qfai/scripts/check-branch-version-pin.sh`.                                                                                                                                                       |
+| `distributed-surface.md`   | No internal IDs or version markers in the files the npm package ships.                                                                                                                                                                                      |
+| `root-additions-policy.md` | Adding a file or directory at the repository root needs explicit user approval.                                                                                                                                                                             |
+| `temporary-files.md`       | Every scratch file goes under `tmp/`.                                                                                                                                                                                                                       |
+| `document-schema.md`       | The structure of SDD documents is declared in `packages/qfai/assets/mdschema/**` and enforced by `pnpm lint:mdschema` and `pnpm lint:mermaid`.                                                                                                              |
+| `documentation-clarity.md` | Writing standard for PRs, issues, code comments and Markdown. The hooks in `.claude/settings.json` restate it.                                                                                                                                              |
+| `repository-language.md`   | This repository is written in English. Operator-facing strings are held by `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an allowlist that may only shrink. |
 
 ## Adding a rule
 
