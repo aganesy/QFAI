@@ -642,6 +642,29 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(reachable.has(VALIDATORS_INDEX)).toBe(false);
   });
 
+  it("does not let a glob inside a line comment open a block comment", () => {
+    // The shape `validate.ts` actually carries: a `//` comment naming
+    // `references/*.md`, and a JSDoc further down whose terminator used to
+    // close the `/*` that glob spells. Everything between the two disappeared.
+    const source = [
+      "// Doc governance — `references/*.md` + SKILL.md as warning.",
+      "...(await validateStaleReferences(root, { config })),",
+      "/** Count findings by severity. */",
+      "export function countIssues(issues: Issue[]): ValidationCounts {",
+    ].join("\n");
+
+    // The call between the two comments has to survive, or every name it
+    // mentions silently reads as unwired.
+    expect(referencesName(source, "validateStaleReferences")).toBe(true);
+    expect(stripComments(source)).toContain("export function countIssues");
+
+    // Still a comment stripper: both forms go, in either order, and a `//`
+    // inside a block comment does not end it early.
+    expect(stripComments("/* a\n b */ kept")).not.toContain("a");
+    expect(stripComments("/* has // inside */ kept").trim()).toBe("kept");
+    expect(stripComments("const u = 'https://x';").trim()).toBe("const u = 'https://x';");
+  });
+
   it("the retired /qfai-require validators are gone from the barrel", async () => {
     const barrel = await collectBarrelValidators();
     expect(barrel.has("validateRequireIndexShape")).toBe(false);
