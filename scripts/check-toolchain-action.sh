@@ -2,7 +2,7 @@
 #
 # Refuse a local composite action that reaches a workflow command file — BEFORE any of them runs.
 #
-# Review finding [82]. Every toolchain job in `ci.yml` opens with
+# Every toolchain job in `ci.yml` opens with
 # `uses: ./.github/actions/setup`, and a pull request can edit that action. A step added at the top
 # of it that appends `BASH_ENV=<a script that exits 0>` to the environment file makes every later
 # `shell: bash` step in the job source that script and exit 0 without running its own body —
@@ -41,7 +41,7 @@ fi
 # refuse. So they live in a data file, which the lane's body digest covers along with this script.
 # FIRST: the bytes of every local action, against the pinned list.
 #
-# Review finding [95]. Refusing a command-file name refuses one capability out of many: a step
+# Refusing a command-file name refuses one capability out of many: a step
 # added to this action can also `printf 'process.exit(0)' > scripts/check-workflow-hygiene.mjs`,
 # replacing the lane itself before it runs, or rewrite any verification source in every job that
 # uses the action. Enumerating what a step may DO is the losing side of that argument; what the
@@ -65,7 +65,7 @@ fi
 
 # The tree must hold exactly what the list pins, in both directions and per ROOT.
 #
-# The SET of paths, not how many lines there are. Review finding [112]: comparing counts let a
+# The SET of paths, not how many lines there are. Comparing counts would let a
 # deletion and a duplicate cancel out — drop `setup/action.yml` from the list, put a benign
 # action's line in twice, and `sha256sum -c` verifies the duplicate happily while both counts
 # read 2. The unpinned setup action then runs, and it runs before every verification in the job.

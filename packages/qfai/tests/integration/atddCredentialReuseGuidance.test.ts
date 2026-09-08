@@ -245,6 +245,12 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",
+      // Carriers whose suite is bound through a variable, so the scan cannot
+      // say whether their tests run.
+      "QFAI-ATDD-124",
+      // A spec that declares test cases and owes none of them an annotation.
+      "QFAI-ATDD-125",
+
       // A test case that declares where it is verified, and one that claims
       // `external` while naming no verifier.
       "QFAI-ATDD-126",

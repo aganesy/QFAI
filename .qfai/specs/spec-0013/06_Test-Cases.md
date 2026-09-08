@@ -122,12 +122,11 @@
 - Verify the round-trip identity property for plain ASCII subjects / rationales that contain none of the escape-relevant characters (no `|`, no `\`, no line breaks). Required by BR-0013-0008 (each AC must have at least one normal-type TC). Implemented as the dedicated "happy path" assertion in the round-trip identity describe block in `packages/qfai/tests/core/sddTriage.test.ts`.
 
 <!--
-PR #206 review NxLq / NxQH (architecture-reviewer + implementation-reviewer,
-MAJOR): the placeholder TC introduced at f1064756 was retracted. A
+A placeholder TC for this row was retracted. A
 "coverage placeholder" without an actual test does not legitimately
 satisfy the BR (it would weaken the rule by precedent). The non-normal
-coverage gap on the Type-column-required AC is a pre-existing condition
-that predates this PR. Tracked for separate implementation as OQ-0016
+coverage gap on the Type-column-required AC is a pre-existing condition.
+Tracked for separate implementation as OQ-0016
 — see `_policies/09_Open-questions.md`.
 -->
 

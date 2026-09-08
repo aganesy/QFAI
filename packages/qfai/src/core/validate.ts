@@ -60,6 +60,7 @@ import {
   validateLayeredTraceability,
   validateMermaidScreenFlow,
   validateMermaidEnforcement,
+  validateBusinessFlowTraceability,
   validateOrphanProhibition,
   validatePrototypingEvidence,
   validateScreenIdCasing,
@@ -714,6 +715,11 @@ async function runSddValidators(
         })
       : []),
     ...(await validateMermaidEnforcement(root)),
+    // The business-flow document's ids, and the `- Flow:` citations that reach
+    // them. Beside the mermaid rules because they read the same file: those ask
+    // whether the diagram is there, this asks whether anything can point at
+    // what it draws.
+    ...(await validateBusinessFlowTraceability(root, config)),
     // Preflight input source: a project that has spec packs must be able to
     // point at what they were derived from — a discussion pack `06_REQ.md` or
     // an `.qfai/evidence/import-lite-*.md`. The check was written but never

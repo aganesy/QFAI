@@ -686,10 +686,8 @@
 
 ## CHG-002 Cascade — Cycle-0 Bypass Regression + Traceability Stitch
 
-> Authored 2026-05-19 to register the late-review fixes on PR #208
-> (codex r3264500818 / r3264507311 / r3264508578 + architecture-reviewer
-> r3264511589 + completion-reviewer r3264512364). See `09_delta.md`
-> CHG-002 cascade for the delta note.
+> Authored 2026-05-19 to register the CHG-002 cascade fixes. See
+> `09_delta.md` CHG-002 cascade for the delta note.
 
 ## TC-0012-0396
 
@@ -729,7 +727,7 @@
 - AC-Refs: AC-0012-0047
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify certify falls back to legacy `specsCovered` for pre-Wave-3 evidence that lacks `frozenSpecsCovered`; the per-(spec × screen) presence gate must still flag every missing pair.
+- Verify certify falls back to legacy `specsCovered` for legacy evidence that lacks `frozenSpecsCovered`; the per-(spec × screen) presence gate must still flag every missing pair.
 
 ## TC-0012-0401
 
@@ -777,7 +775,7 @@
 - AC-Refs: AC-0012-0047
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the POSITIVE side of the fallback arm: when `prototyping.json` carries ONLY legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered` field, pre-Wave-3 evidence) and the single (spec, screen) pair has its review.json, certify exits 0 AND `completion-certificate.json#specsCovered` records `["0007"]`. Pre-existing TC-0012-0400 covers the NEGATIVE side (reject on missing review.json under the fallback scope); this case pins the happy-path sealed-cert shape so a future refactor that hard-removes the legacy read is caught by a green-path regression in addition to the red-path one.
+- Verify the POSITIVE side of the fallback arm: when `prototyping.json` carries ONLY legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered` field, legacy evidence) and the single (spec, screen) pair has its review.json, certify exits 0 AND `completion-certificate.json#specsCovered` records `["0007"]`. Pre-existing TC-0012-0400 covers the NEGATIVE side (reject on missing review.json under the fallback scope); this case pins the happy-path sealed-cert shape so a future refactor that hard-removes the legacy read is caught by a green-path regression in addition to the red-path one.
 
 ## TC-0012-0407
 
@@ -793,7 +791,7 @@
 - AC-Refs: AC-0012-0037
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify `resolvePrimaryPrototypingSpec` returns the UI-contract-only spec when neither the strict `surface_type: ui-bearing` marker, the legacy `# … Prototyping …` title heading, nor `qfai.config.yaml#prototyping.primarySpecId` is set — the spec is located by a matching `.qfai/contracts/ui/<spec-id>*.yaml`. Pre-fix the primary resolver returned `undefined` for contract-only projects, so iterate exited 2 with "no primary UI-bearing prototyping spec found" right after the multi-spec precheck cleared. 8th-wave Fix 1 added the contract fallback; this TC pins the spec → test traceability for the previously-unannotated describe block (10th-wave Fix E + Fix I labels the source to `"contract-fallback"`).
+- Verify `resolvePrimaryPrototypingSpec` returns the UI-contract-only spec when neither the strict `surface_type: ui-bearing` marker, the legacy `# … Prototyping …` title heading, nor `qfai.config.yaml#prototyping.primarySpecId` is set — the spec is located by a matching `.qfai/contracts/ui/<spec-id>*.yaml`. Pre-fix the primary resolver returned `undefined` for contract-only projects, so iterate exited 2 with "no primary UI-bearing prototyping spec found" right after the multi-spec precheck cleared. The contract fallback exists for this; this TC pins the spec → test traceability for the previously-unannotated describe block (the source label is `"contract-fallback"`).
 
 ## TC-0012-0409
 
@@ -801,7 +799,7 @@
 - AC-Refs: AC-0012-0037
 - Type: unit
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the `resolveSurfaceUnion` helper (extracted from `evaluateZeroUiBearingPrecheck` in 8th-wave Fix 7) composes the deterministic UNION of every UI-bearing surface signal (strict `surface_type: ui-bearing` frontmatter / UI-contract-only fallback / legacy title-marker / configured-`primarySpecId`-on-disk) and returns it sorted lexicographically + deduplicated. Five `it` blocks cover: (a) empty result when no signal exists; (b) UNION composition across strict + title-marker + primarySpecId-on-disk; (c) UI-contract-only surface recognised via `resolveAllUiBearingSpecs`; (d) deduplication when the same spec id appears via multiple signals; (e) primarySpecId pin ignored when the spec dir is absent. This TC pins the spec → test traceability for the previously-unannotated describe block (10th-wave Fix E).
+- Verify the `resolveSurfaceUnion` helper (extracted from `evaluateZeroUiBearingPrecheck`) composes the deterministic UNION of every UI-bearing surface signal (strict `surface_type: ui-bearing` frontmatter / UI-contract-only fallback / legacy title-marker / configured-`primarySpecId`-on-disk) and returns it sorted lexicographically + deduplicated. Five `it` blocks cover: (a) empty result when no signal exists; (b) UNION composition across strict + title-marker + primarySpecId-on-disk; (c) UI-contract-only surface recognised via `resolveAllUiBearingSpecs`; (d) deduplication when the same spec id appears via multiple signals; (e) primarySpecId pin ignored when the spec dir is absent. This TC pins the spec → test traceability for the previously-unannotated describe block.
 
 ## TC-0012-0410
 
@@ -809,7 +807,7 @@
 - AC-Refs: AC-0012-0049
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the cycle ≥1 mid-loop spec-set drift detector observes the live multi-spec UNION (via `resolveSurfaceUnion`) and not just the resolved primary, so a new strict-marker spec planted mid-loop with a LARGER id than the frozen primary (which keeps the primary resolver's pick stable) is still caught as drift with `new=[<new-id>]`. Pre-fix (10th-wave dead-branch flagged by architecture-reviewer r3265257258 / r3265251225 / r3265260466) the drift detector compared frozen=[primary] vs live=[primary] (same single-spec input passed twice) and missed the addition silently. Frozen set is preserved (no rewrite); drift is deferred to the next `--cycle 0` invocation.
+- Verify the cycle ≥1 mid-loop spec-set drift detector observes the live multi-spec UNION (via `resolveSurfaceUnion`) and not just the resolved primary, so a new strict-marker spec planted mid-loop with a LARGER id than the frozen primary (which keeps the primary resolver's pick stable) is still caught as drift with `new=[<new-id>]`. Comparing frozen=[primary] vs live=[primary] (same single-spec input passed twice) would miss the addition silently. Frozen set is preserved (no rewrite); drift is deferred to the next `--cycle 0` invocation.
 
 ## TC-0012-0411
 
@@ -817,7 +815,7 @@
 - AC-Refs: AC-0012-0043
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
-- Verify per-source URL host binding: when the catalog declares `sourceHosts[source]`, an `imageSources[]` entry whose URL host (`new URL(url).hostname`) is not in the per-source allowlist is rejected with `{code: "license-host-mismatch", source, expectedHosts, url}`. Three `it` blocks cover: (a) rejection of an unapproved host even when the source label is allowlisted (e.g. `source: "unsplash"` + `url: "https://unapproved.example/img.jpg"`); (b) acceptance of a URL whose host is in the per-source allowlist; (c) case-insensitive host comparison. Closes the source-label-only-bypass flagged by codex r3265260657 (P1).
+- Verify per-source URL host binding: when the catalog declares `sourceHosts[source]`, an `imageSources[]` entry whose URL host (`new URL(url).hostname`) is not in the per-source allowlist is rejected with `{code: "license-host-mismatch", source, expectedHosts, url}`. Three `it` blocks cover: (a) rejection of an unapproved host even when the source label is allowlisted (e.g. `source: "unsplash"` + `url: "https://unapproved.example/img.jpg"`); (b) acceptance of a URL whose host is in the per-source allowlist; (c) case-insensitive host comparison. Closes the source-label-only bypass.
 
 ## TC-0012-0412
 
@@ -833,7 +831,7 @@
 - AC-Refs: AC-0012-0043
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the iterate command hard-stops with exit 2 when `prototyping.json#imageSources[]` contains a malformed entry (missing or non-string `url` / `source` / `license`). Pre-fix the malformed entries were silently dropped by `collectImageSources`, and when every entry was malformed the array reduced to `[]`, skipping the exit-66 license gate entirely. Two `it` blocks cover: (a) entry missing `license`; (b) entry whose `url` is a number. Each must surface stderr naming the offending index (`imageSources[0]`) and the offending field. Closes codex r3265260665 (P2). AC-0012-0043 was extended in the 11th late-review wave to enumerate the malformed-imageSources exit-2 class alongside the license-verify exit-66 class so the AC surface matches the implemented + tested behavior (codex r3265479524).
+- Verify the iterate command hard-stops with exit 2 when `prototyping.json#imageSources[]` contains a malformed entry (missing or non-string `url` / `source` / `license`). Pre-fix the malformed entries were silently dropped by `collectImageSources`, and when every entry was malformed the array reduced to `[]`, skipping the exit-66 license gate entirely. Two `it` blocks cover: (a) entry missing `license`; (b) entry whose `url` is a number. Each must surface stderr naming the offending index (`imageSources[0]`) and the offending field. AC-0012-0043 enumerates the malformed-imageSources exit-2 class alongside the license-verify exit-66 class so the AC surface matches the implemented + tested behavior.
 
 ## TC-0012-0414
 
@@ -841,7 +839,7 @@
 - AC-Refs: AC-0012-0043
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
-- Verify attribution is required at the runtime license gate. `licenseVerify` emits `{code: "license-missing-attribution", source, url}` when an `imageSources[]` entry's `attribution` field is undefined or an empty string. The new error code maps to exit 66 alongside the existing license-class rejections. `ImageSource.attribution?: string` is optional at the type level so older fixtures continue to compile; the runtime gate enforces non-empty. Two `it` blocks cover: (a) undefined attribution; (b) empty-string attribution. Closes codex r3265482144 (P2).
+- Verify attribution is required at the runtime license gate. `licenseVerify` emits `{code: "license-missing-attribution", source, url}` when an `imageSources[]` entry's `attribution` field is undefined or an empty string. The new error code maps to exit 66 alongside the existing license-class rejections. `ImageSource.attribution?: string` is optional at the type level so older fixtures continue to compile; the runtime gate enforces non-empty. Two `it` blocks cover: (a) undefined attribution; (b) empty-string attribution.
 
 ## TC-0012-0415
 
@@ -849,7 +847,7 @@
 - AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the cycle ≥ 1 spec-set drift gate compares the live UI-bearing UNION against the cycle-0 frozen UNION (`frozenSurfaceUnion`) — apples-to-apples — instead of the single-spec `frozenSpecsCovered`. A baseline with two strict-marker UI-bearing specs (spec-0001 + spec-0002) seeded with `frozenSpecsCovered=["0001"]` + `frozenSurfaceUnion=["0001","0002"]` must NOT trip the drift gate at cycle 1; the run proceeds with exit 0 and `frozenSurfaceUnion` is preserved unchanged. Pre-fix (10th-wave) the gate compared `frozenSet=["0001"]` against `live=["0001","0002"]` and false-positive-fired `added=[0002]` → exit 2, making convergence unreachable for any multi-UI-bearing baseline. Closes codex r3265480688 (MAJOR/P1).
+- Verify the cycle ≥ 1 spec-set drift gate compares the live UI-bearing UNION against the cycle-0 frozen UNION (`frozenSurfaceUnion`) — apples-to-apples — instead of the single-spec `frozenSpecsCovered`. A baseline with two strict-marker UI-bearing specs (spec-0001 + spec-0002) seeded with `frozenSpecsCovered=["0001"]` + `frozenSurfaceUnion=["0001","0002"]` must NOT trip the drift gate at cycle 1; the run proceeds with exit 0 and `frozenSurfaceUnion` is preserved unchanged. Comparing `frozenSet=["0001"]` against `live=["0001","0002"]` directly would false-positive-fire `added=[0002]` → exit 2, making convergence unreachable for any multi-UI-bearing baseline.
 
 ## TC-0012-0416
 
@@ -857,7 +855,7 @@
 - AC-Refs: AC-0012-0038
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). Implementation correctness relies on `shouldStop` (last.index >= MAX_ITERATION_INDEX → "max-iterations") running BEFORE the expectedNextCycle gate; this regression pins both the exit code AND the stderr discriminator (`/max iterations \(10\) reached/` present in info channel; `/expected --cycle 10/` absent from error channel). Pre-fix the expectedNextCycle gate would have fired first → exit 2 cycle-mismatch. SKILL.md already drops the stateful re-run workaround. AC-Refs binding history: AC-0012-0045 → AC-0012-0044 (14th-wave per codex r3269195807) → AC-0012-0038 (19th-wave per codex r3270052195: cycle-9 idempotency is a 10-cycle terminator-routing concern, not an autonomous-run / no-prompts concern). Closes codex r3265481161 (LOW), codex r3269195807 (MAJOR), and codex r3270214641 (MAJOR 21st-wave consistency fix). Body landed in v1.9.0 (TDD-0436 done).
+- Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). Implementation correctness relies on `shouldStop` (last.index >= MAX_ITERATION_INDEX → "max-iterations") running BEFORE the expectedNextCycle gate; this regression pins both the exit code AND the stderr discriminator (`/max iterations \(10\) reached/` present in info channel; `/expected --cycle 10/` absent from error channel). The expectedNextCycle gate firing first would give exit 2 cycle-mismatch instead. SKILL.md already drops the stateful re-run workaround. AC-Ref is AC-0012-0038: cycle-9 idempotency is a 10-cycle terminator-routing concern, not an autonomous-run / no-prompts concern. Body landed in v1.9.0 (TDD-0436 done).
 
 ## TC-0012-0417
 
@@ -865,7 +863,7 @@
 - AC-Refs: AC-0012-0041
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
-- Verify the wave-11 `parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)` describe block. Closed-schema validation covers the 4 missing-field rejections (`cycle` / `retryCount` / `wallTimeSec` / `softWarnings`), the integer / range / non-finite / string-type rejections, the wave-13 boundary regression (`rejects when cycle exceeds MAX_ITERATION_INDEX` — exercises `cycle: 10 / 99 / 100`, closing the closed-schema upper-bound gap that pre-fix let `cycle: 99` pass), and the SSOT-compliant positive case (`accepts a full SSOT-compliant payload with all 11 required fields`). Closes codex r3265811711 (wave-11 traceability stitch, MAJOR) and codex r3265809796 / r3265811203 / r3265814987 (cycle upper-bound MAJOR / MINOR / NIT, wave-13).
+- Verify the `parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)` describe block. Closed-schema validation covers the 4 missing-field rejections (`cycle` / `retryCount` / `wallTimeSec` / `softWarnings`), the integer / range / non-finite / string-type rejections, a boundary regression (`rejects when cycle exceeds MAX_ITERATION_INDEX` — exercises `cycle: 10 / 99 / 100`, closing the closed-schema upper-bound gap that would otherwise let `cycle: 99` pass), and the SSOT-compliant positive case (`accepts a full SSOT-compliant payload with all 11 required fields`).
 
 ## TC-0012-0418
 
@@ -873,7 +871,7 @@
 - AC-Refs: AC-0012-0046
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the wave-11 four-`it` cluster on the per-spec UI contract resolver `readPerSpecScreens`: `respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)`, `respects the ui-prefixed canonical layout (candidate #3: ui-<bare>.yaml)`, `respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)`, and `uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)`. Pairs with the wave-13 `indexPerSpecScreens` per-spec re-parse fix (`parseUiScreenFile` per-spec winning file) and the multi-file aggregation extension (`chooseWinningFiles`) — those wave-13 fixes preserve the TC-0012-0418 assertions while closing the cross-spec dedup false-negative (codex r3265806993) and the multi-file null-return waste (codex r3265809880). Closes codex r3265811711 (wave-11 traceability stitch, MAJOR).
+- Verify the four-`it` cluster on the per-spec UI contract resolver `readPerSpecScreens`: `respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)`, `respects the ui-prefixed canonical layout (candidate #3: ui-<bare>.yaml)`, `respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)`, and `uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)`. Pairs with the `indexPerSpecScreens` per-spec re-parse fix (`parseUiScreenFile` per-spec winning file) and the multi-file aggregation extension (`chooseWinningFiles`) — those fixes preserve the TC-0012-0418 assertions while closing the cross-spec dedup false-negative and the multi-file null-return waste.
 
 ## TC-0012-0419
 
@@ -881,7 +879,7 @@
 - AC-Refs: AC-0012-0037, AC-0012-0045, AC-0012-0049
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the zero-UI precheck short-circuit branches added by the 15th + 17th late-review waves. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)` — pins the AC-0012-0037 19th-wave clarification that the no-op is cycle-0 only; (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop — AC-0012-0045 class (d) and AC-0012-0049 mid-run spec-set freeze); (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — AC-0012-0045 class (e) 19th-wave addition); (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (pre-12th-wave legacy record path — AC-0012-0045 class (e)). AC-Refs binding corrected from `AC-0012-0044` (autonomous-run / no-prompts — wrong axis) to `AC-0012-0037` + `AC-0012-0045` + `AC-0012-0049` per codex r3270093532 MINOR. Closes codex MAJOR r3270050284 (regression coverage) and codex MINOR r3270050451 (diagnostic discrimination).
+- Verify the zero-UI precheck short-circuit branches. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)` — pins that the no-op is cycle-0 only (AC-0012-0037); (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop — AC-0012-0045 class (d) and AC-0012-0049 mid-run spec-set freeze); (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — AC-0012-0045 class (e)); (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (legacy record path — AC-0012-0045 class (e)). AC-Refs are `AC-0012-0037` + `AC-0012-0045` + `AC-0012-0049`, not `AC-0012-0044` (autonomous-run / no-prompts is the wrong axis).
 
 ## TC-0012-0420
 
@@ -889,7 +887,7 @@
 - AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the 13th-wave legacy-record hard-fail (codex r3265953324 MAJOR/P1) — AC-0012-0045 hard-stop class (e). Fixture: `prototyping.json` with `frozenSpecsCovered: ["0001"]` but NO `frozenSurfaceUnion` field. Expectation: `runPrototypingIterate({cycle: 1})` returns 2; stderr names the missing `frozenSurfaceUnion` field and gives a `--cycle 0` re-seed instruction. CRITICAL: the stderr MUST NOT mention `spec-set drift detected` (the silent fallback to `frozenSpecsCovered` was the very bug closed in the 13th-wave fix). Closes codex MAJOR r3270058882; AC-Ref binding extended to AC-0012-0045 class (e) per codex r3270143584 MINOR (20th-wave AC catalog amendment).
+- Verify the legacy-record hard-fail — AC-0012-0045 hard-stop class (e). Fixture: `prototyping.json` with `frozenSpecsCovered: ["0001"]` but NO `frozenSurfaceUnion` field. Expectation: `runPrototypingIterate({cycle: 1})` returns 2; stderr names the missing `frozenSurfaceUnion` field and gives a `--cycle 0` re-seed instruction. CRITICAL: the stderr MUST NOT mention `spec-set drift detected` — a silent fallback to `frozenSpecsCovered` is exactly the bug this hard-fail prevents.
 
 ## TC-0012-0421
 
@@ -897,7 +895,7 @@
 - AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the 13th-wave `frozenLicenseCatalog` drift gate (codex r3265947252 P2) — AC-0012-0045 hard-stop class (f). Three `it` blocks: (a) tampered `allowedSources` (`pinterest` added) → exit 2 + stderr `drifted from the cycle-0 frozen license catalog`; (b) `sourceHosts` removed entirely (malformed shape) → exit 2; (c) order-permuted catalog → set-equality semantic via `licenseCatalogsEqual` / `recordOfStringArraysEqual` / `stringArraysSetEqual` MUST NOT trip the gate (assertion is the negative — `stderr` does NOT match the drift diagnostic). Pins the in-memory `DEFAULT_LICENSE_CATALOG` SSOT contract: byte-different but semantically equal catalogs MUST NOT trip the gate; any semantic difference MUST. AC-Ref binding corrected from AC-0012-0043 (exit-66 license-verify, wrong axis) to AC-0012-0045 class (f) per codex r3270141326 MAJOR (20th-wave). Closes codex MAJOR r3270057892.
+- Verify the `frozenLicenseCatalog` drift gate — AC-0012-0045 hard-stop class (f). Three `it` blocks: (a) tampered `allowedSources` (`pinterest` added) → exit 2 + stderr `drifted from the cycle-0 frozen license catalog`; (b) `sourceHosts` removed entirely (malformed shape) → exit 2; (c) order-permuted catalog → set-equality semantic via `licenseCatalogsEqual` / `recordOfStringArraysEqual` / `stringArraysSetEqual` MUST NOT trip the gate (assertion is the negative — `stderr` does NOT match the drift diagnostic). Pins the in-memory `DEFAULT_LICENSE_CATALOG` SSOT contract: byte-different but semantically equal catalogs MUST NOT trip the gate; any semantic difference MUST. AC-Ref is AC-0012-0045 class (f), not AC-0012-0043 (exit-66 license-verify is the wrong axis).
 
 ## TC-0012-0422
 
@@ -905,7 +903,7 @@
 - AC-Refs: AC-0012-0052
 - Type: integration
 - Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
-- Verify the wave-14 + wave-15 + wave-16 cumulative semantic changes on the `show-spec` JSON payload — AC-0012-0052 `show-spec` JSON contract. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (wave-16 contract alignment after the wave-15 resolver swap to `resolveSurfaceUnion`). AC-Ref binding corrected from AC-0012-0044 (autonomous-run, wrong axis) to the new AC-0012-0052 (`show-spec` JSON contract) per codex r3270138113 MAJOR (20th-wave). Closes codex MINOR r3270061025.
+- Verify the cumulative semantic changes on the `show-spec` JSON payload — AC-0012-0052 `show-spec` JSON contract. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (contract alignment after the resolver swap to `resolveSurfaceUnion`). AC-Ref is the new AC-0012-0052 (`show-spec` JSON contract), not AC-0012-0044 (autonomous-run is the wrong axis).
 
 ## TC-0012-0423
 
@@ -913,7 +911,7 @@
 - AC-Refs: AC-0012-0037, AC-0012-0049
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
-- Verify the 23rd-wave `hasMatchingUiContract` per-spec subdirectory fallback (codex r3270307469 P1). Five `it` blocks: (a) `accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)` — pre-fix would have returned empty / no-op; (b) `recursively accepts a per-spec subdirectory contract nested in a child folder (1 level deep)`; (c) `recursively accepts a per-spec subdirectory contract nested two levels deep` — pins the unbounded-DFS contract so a future single-level scan cannot regress green (27th-wave per codex r3270624828 MINOR); (d) `does NOT match a per-spec subdirectory that contains no .yaml files`; (e) `does NOT match a per-spec subdirectory whose only file is *.yml (single-l)` — confirms the policy that the subdir branch accepts arbitrary `*.yaml` basenames but `.yml` (single-l) is excluded for parity with the top-level anchored regex. Closes codex P1 r3270307469 (subdir fallback bug), codex MAJOR r3270527912 (traceability stitch), codex MINOR r3270529771 (coverage edge cases), and codex MINOR r3270624828 (unbounded-DFS contract pin).
+- Verify the `hasMatchingUiContract` per-spec subdirectory fallback. Five `it` blocks: (a) `accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)` — a resolver without this fallback would return empty / no-op; (b) `recursively accepts a per-spec subdirectory contract nested in a child folder (1 level deep)`; (c) `recursively accepts a per-spec subdirectory contract nested two levels deep` — pins the unbounded-DFS contract so a future single-level scan cannot regress green; (d) `does NOT match a per-spec subdirectory that contains no .yaml files`; (e) `does NOT match a per-spec subdirectory whose only file is *.yml (single-l)` — confirms the policy that the subdir branch accepts arbitrary `*.yaml` basenames but `.yml` (single-l) is excluded for parity with the top-level anchored regex.
 
 ## TC-0012-0424
 
@@ -921,7 +919,7 @@
 - AC-Refs: AC-0012-0045, AC-0012-0049
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the 30th-wave drift-gate ordering fix (codex r3270687650 P1). Fixture: multi-UI project where `frozenSurfaceUnion = ["0001", "0002"]` records the cycle-0 set but spec-0002's UI marker was removed mid-loop. The recorded iter is fully converged (4 axes exceptional + empty lap + empty dmv) so the pre-30th ordering would have returned exit 64 from `shouldStop` BEFORE the drift gate ran. Post-30th the drift gate fires first → exit 2 with `spec-set drift detected mid-loop` + `removed=[0002]`. Pins the ordering contract: lock-drift classes (designMd hash, frozen union presence + spec-set drift) MUST win over convergence / budget signals. **35th-wave extension (codex r3270897052 MINOR — qa-gatekeeper):** companion `it` block covers hard-stop class (e) — converged loop with `frozenSurfaceUnion` field OMITTED must also exit 2 (`frozenSurfaceUnion is missing or malformed` diagnostic) instead of returning convergence exit 64. Closes the branch-coverage gap where only the `drift.drifted` reorder was pinned. Closes codex P1 r3270687650 + codex MINOR r3270897052.
+- Verify the drift-gate ordering fix. Fixture: multi-UI project where `frozenSurfaceUnion = ["0001", "0002"]` records the cycle-0 set but spec-0002's UI marker was removed mid-loop. The recorded iter is fully converged (4 axes exceptional + empty lap + empty dmv), so running `shouldStop` before the drift gate would return exit 64 instead. The drift gate fires first → exit 2 with `spec-set drift detected mid-loop` + `removed=[0002]`. Pins the ordering contract: lock-drift classes (designMd hash, frozen union presence + spec-set drift) MUST win over convergence / budget signals. Companion `it` block covers hard-stop class (e) — converged loop with `frozenSurfaceUnion` field OMITTED must also exit 2 (`frozenSurfaceUnion is missing or malformed` diagnostic) instead of returning convergence exit 64, closing the branch-coverage gap where only the `drift.drifted` reorder was pinned.
 
 ## TC-0012-0425
 
@@ -929,7 +927,7 @@
 - AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the 32nd-wave certify-side canonical-id validation gate (codex r3270776268 P2 — chatgpt-codex-connector). Fixture: `prototyping.json#frozenSpecsCovered[]` carries a non-canonical id (path-traversal `../../../etc/passwd`, slash-injected `spec-0001/../../escape`, trailing-whitespace (`"0001 "`), leading-whitespace (`" 0001"`, **35th-wave extension** per codex r3270897573 NIT), tab-whitespace (`"\t0001"`, 35th-wave extension), non-numeric `spec-abcd`, or wrong-digit-count `spec-001`); pre-fix `normalizeSpecDirName` only prepended `spec-` and the raw string flowed into `path.join(root, "iter-NN", id, "<screen>.review.json")`, allowing the per-(spec × screen) gate to probe outside the intended `iter-NN/spec-NNNN/` subtree. Post-fix certify exits 2 with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit) named in stderr — refusing to construct any review path from unvalidated input. Companion happy-path it block verifies that canonical bare `0012` and fully-qualified `spec-0007` ids coexist in the same frozen set without false rejection. Closes codex P2 r3270776268 + codex NIT r3270897573.
+- Verify the certify-side canonical-id validation gate. Fixture: `prototyping.json#frozenSpecsCovered[]` carries a non-canonical id (path-traversal `../../../etc/passwd`, slash-injected `spec-0001/../../escape`, trailing-whitespace (`"0001 "`), leading-whitespace (`" 0001"`), tab-whitespace (`"\t0001"`), non-numeric `spec-abcd`, or wrong-digit-count `spec-001`). `normalizeSpecDirName` prepending `spec-` alone, with the raw string flowing into `path.join(root, "iter-NN", id, "<screen>.review.json")`, would let the per-(spec × screen) gate probe outside the intended `iter-NN/spec-NNNN/` subtree. Certify instead exits 2 with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit) named in stderr — refusing to construct any review path from unvalidated input. Companion happy-path it block verifies that canonical bare `0012` and fully-qualified `spec-0007` ids coexist in the same frozen set without false rejection.
 
 ## TC-0012-0426
 
@@ -937,7 +935,7 @@
 - AC-Refs: AC-0012-0045
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the 33rd-wave certify-side absent-vs-malformed `frozenSpecsCovered` discrimination (codex r3270861808 P1). Pre-fix the certify call sites collapsed "missing" and "present-but-malformed" into a single null branch via `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)`, which on a partially-corrupt record would silently fall back to legacy `specsCovered` — downgrading the per-(spec × screen) gate AND cert-sealing scope to the primary spec only. Post-fix a new SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` returns `{kind: "absent" / "malformed" / "ok"}`; certify exits 2 on `malformed`. **36th-wave extension (codex r3270923641 P1):** explicit `null` / `undefined` on a present key are now classified as `malformed`, not `absent` — falling back here would re-open the same evidence-gap. Six parametrized `it` blocks (non-array object / non-array string / empty array / non-string entry / empty-string entry / explicit null) + absent-fallback companion. Companion unit suite covers the classifier with 9 `it` blocks. Closes codex P1 r3270861808 + codex P1 r3270923641.
+- Verify the certify-side absent-vs-malformed `frozenSpecsCovered` discrimination. Collapsing "missing" and "present-but-malformed" into a single null branch via `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)` would, on a partially-corrupt record, silently fall back to legacy `specsCovered` — downgrading the per-(spec × screen) gate AND cert-sealing scope to the primary spec only. A SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` instead returns `{kind: "absent" / "malformed" / "ok"}`; certify exits 2 on `malformed`. Explicit `null` / `undefined` on a present key are classified as `malformed`, not `absent` — falling back for those would re-open the same evidence gap. Six parametrized `it` blocks (non-array object / non-array string / empty array / non-string entry / empty-string entry / explicit null) + absent-fallback companion. Companion unit suite covers the classifier with 9 `it` blocks.
 
 ## TC-0012-0427
 
@@ -945,7 +943,7 @@
 - AC-Refs: AC-0012-0047
 - Type: integration
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the 35th-wave per-spec screens partial-set bug fix (codex r3270911400 P1) and 38th-wave traceability stitch (codex r3271008259 MINOR + r3271011545 MAJOR). 40th-wave AC-Ref rebind from AC-0012-0046 (per-spec iter-dir namespacing) to AC-0012-0047 (certify per-spec presence aggregation) per codex r3271092532 MINOR — the regression pins `readPerSpecScreens()` enumeration semantics on the certify side, not the iter-dir layout regulation that AC-0012-0046 owns. Fixture: multi-file subdir layout where two specs declare the SAME `screenId` (each subdir's own `home.yaml` declaring `home`) plus a unique screen on the second spec (its own `settings.yaml` declaring `settings`). Pre-fix `indexPerSpecScreens()` pre-built a per-spec map from project-wide `screenContracts.sourceRef`; cross-spec dedup kept only ONE sourceRef path for the shared `home`, so the indexed re-parse missed the other spec's `home.yaml` — the gate happily passed without requiring that spec's `home.review.json`. Post-fix certify calls `readPerSpecScreens()` unconditionally; the helper's authoritative `fg()` discovery returns both files for the second spec, so omitting the shared-screenId review.json is correctly rejected.
+- Verify the per-spec screens partial-set bug fix. AC-Ref is AC-0012-0047 (certify per-spec presence aggregation), not AC-0012-0046 (per-spec iter-dir namespacing) — the regression pins `readPerSpecScreens()` enumeration semantics on the certify side, not the iter-dir layout regulation that AC-0012-0046 owns. Fixture: multi-file subdir layout where two specs declare the SAME `screenId` (each subdir's own `home.yaml` declaring `home`) plus a unique screen on the second spec (its own `settings.yaml` declaring `settings`). A per-spec map pre-built from project-wide `screenContracts.sourceRef` with cross-spec dedup would keep only ONE sourceRef path for the shared `home`, so the indexed re-parse would miss the other spec's `home.yaml` — the gate would pass without requiring that spec's `home.review.json`. Certify instead calls `readPerSpecScreens()` unconditionally; the helper's authoritative `fg()` discovery returns both files for the second spec, so omitting the shared-screenId review.json is correctly rejected.
 
 ## TC-0012-0428
 
@@ -953,7 +951,7 @@
 - AC-Refs: AC-0012-0052
 - Type: integration
 - Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
-- Verify the 38th-wave show-spec absent-vs-malformed fix (codex r3271018000 P2). 40th-wave AC-Ref rebind from AC-0012-0045 to AC-0012-0052 (show-spec JSON contract) per codex r3271093350 MINOR — AC-0012-0052 now carries a sub-clause mirroring AC-0012-0045 class (h) onto the show-spec surface so the absent-vs-malformed contract holds across all three CLI surfaces. Pre-fix `runPrototypingShowSpec` used `readStringArrayField(...) ?? readStringArrayField(specsCovered)`, collapsing "absent" and "present-but-invalid" into one null fallback that let a hand-edited multi-spec record silently downgrade to legacy `specsCovered`. Post-fix show-spec consumes the SSOT classifier and exits 2 with a "present but malformed" diagnostic. Fixture: `specsCovered: ["0012"]` + `frozenSpecsCovered: null`. Assertion: show-spec exits 2 and does NOT fall back.
+- Verify the show-spec absent-vs-malformed fix. AC-Ref is AC-0012-0052 (show-spec JSON contract), not AC-0012-0045 — AC-0012-0052 carries a sub-clause mirroring AC-0012-0045 class (h) onto the show-spec surface so the absent-vs-malformed contract holds across all three CLI surfaces. `runPrototypingShowSpec` using `readStringArrayField(...) ?? readStringArrayField(specsCovered)` would collapse "absent" and "present-but-invalid" into one null fallback that lets a hand-edited multi-spec record silently downgrade to legacy `specsCovered`. show-spec instead consumes the SSOT classifier and exits 2 with a "present but malformed" diagnostic. Fixture: `specsCovered: ["0012"]` + `frozenSpecsCovered: null`. Assertion: show-spec exits 2 and does NOT fall back.
 
 ## TC-0012-0429
 
@@ -961,7 +959,7 @@
 - AC-Refs: AC-0012-0037
 - Type: unit
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
-- Verify the 45th-wave `specDirExists` absolute-path fix (codex r3271656121 P1 — chatgpt-codex-connector). Pre-fix `specDirExists()` built the probe path with `path.join(root, specsDir, dirName)`, which silently concatenates an absolute `specsDir` onto root rather than resolving to the absolute path directly. For consumer projects whose `qfai.config.yaml` carries an absolute `paths.specsDir` override and a `prototyping.primarySpecId` pin, the probe missed the on-disk spec dir entirely — `resolveSurfaceUnion()` then dropped the pin and `prototyping iterate --cycle 0` hit the zero-UI short-circuit (exit 0) instead of running the loop. Post-fix `path.resolve()` correctly resets to the latter absolute segment when one is supplied, so the probe finds the spec dir regardless of whether `specsDir` is relative or absolute. Fixture uses `mkdtemp(os.tmpdir())` for the absolute `specsDir`, so the CI matrix exercises POSIX (`/abs/...`) on Linux / macOS lanes and Windows drive-letter (`C:\...`) on the Windows lane — `path.resolve` is platform-aware and treats either as absolute. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
+- Verify the `specDirExists` absolute-path fix. Building the probe path with `path.join(root, specsDir, dirName)` would silently concatenate an absolute `specsDir` onto root rather than resolving to the absolute path directly. For consumer projects whose `qfai.config.yaml` carries an absolute `paths.specsDir` override and a `prototyping.primarySpecId` pin, that would miss the on-disk spec dir entirely — `resolveSurfaceUnion()` would then drop the pin and `prototyping iterate --cycle 0` would hit the zero-UI short-circuit (exit 0) instead of running the loop. `path.resolve()` correctly resets to the latter absolute segment when one is supplied, so the probe finds the spec dir regardless of whether `specsDir` is relative or absolute. Fixture uses `mkdtemp(os.tmpdir())` for the absolute `specsDir`, so the CI matrix exercises POSIX (`/abs/...`) on Linux / macOS lanes and Windows drive-letter (`C:\...`) on the Windows lane — `path.resolve` is platform-aware and treats either as absolute. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
 
 ## TC-0012-0430
 
@@ -969,7 +967,7 @@
 - AC-Refs: AC-0012-0047
 - Type: unit
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the 47th-wave `readPerSpecScreens` absolute-path fix (codex r3271715563 P1 — chatgpt-codex-connector). Pre-fix `readPerSpecScreens()` built the per-spec UI contract probe path with `path.join(root, contractsDirRelative, "ui")`. When `qfai.config.yaml` carries an absolute `paths.contractsDir` override, `path.join` concatenated root + absolute rather than resetting, so per-spec contract files at `<absoluteContractsDir>/ui/spec-NNNN.yaml` were never discovered. The helper returned `null` and certify's per-(spec × screen) gate silently fell back to the project-wide screen list, enforcing the wrong `(spec, screen)` coverage. Post-fix `path.resolve()` resets to the absolute segment when one is supplied, mirroring the wave-45 `specDirExists` fix. Fixture: writes the per-spec contract at an absolute `contractsDir` pointing OUTSIDE `root`; assertion is that `readPerSpecScreens()` returns the declared `home` screen rather than `null`. Cross-platform coverage same as TC-0012-0429 (POSIX / drive-letter via OS-native tmp dir). AC anchor: AC-0012-0047 (certify per-spec presence aggregation).
+- Verify the `readPerSpecScreens` absolute-path fix. Building the per-spec UI contract probe path with `path.join(root, contractsDirRelative, "ui")` would, when `qfai.config.yaml` carries an absolute `paths.contractsDir` override, concatenate root + absolute rather than resetting, so per-spec contract files at `<absoluteContractsDir>/ui/spec-NNNN.yaml` would never be discovered — the helper would return `null` and certify's per-(spec × screen) gate would silently fall back to the project-wide screen list, enforcing the wrong `(spec, screen)` coverage. `path.resolve()` resets to the absolute segment when one is supplied, mirroring the same `specDirExists` fix. Fixture: writes the per-spec contract at an absolute `contractsDir` pointing OUTSIDE `root`; assertion is that `readPerSpecScreens()` returns the declared `home` screen rather than `null`. Cross-platform coverage same as TC-0012-0429 (POSIX / drive-letter via OS-native tmp dir). AC anchor: AC-0012-0047 (certify per-spec presence aggregation).
 
 ## TC-0012-0431
 
@@ -977,7 +975,7 @@
 - AC-Refs: AC-0012-0047
 - Type: unit
 - Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
-- Verify the 49th-wave partner-helper symmetry regression for `readUiContractScreenContracts` (codex r3271867391 P1 — implementation-reviewer + codex r3271867923 MAJOR — qa-gatekeeper). Wave-48 fixed the `path.join` → `path.resolve` switch in `readUiContractScreenContracts` for partner-helper consistency with the wave-47 `readPerSpecScreens` fix, but without a regression test the two helpers' absolute-path symmetry was structurally unpinned — a future `path.join` regression in the project-wide reader would silently break certify on explicit-contracts-dir workflows (project-wide pass returns empty while per-spec pass returns full set → asymmetric screen discovery between the two passes). Fixture: project-wide UI contract file `screens.yaml` written at an absolute `contractsDir` pointing OUTSIDE `root`, with two screens (`home`, `settings`). Assertion: `readUiContractScreenContracts(root, externalContractsDir)` returns both screens (sorted-equal). AC anchor: AC-0012-0047 (certify per-spec presence aggregation — same anchor as TC-0012-0430 to pin the partner-helper symmetry).
+- Verify the partner-helper symmetry regression for `readUiContractScreenContracts`. The `path.join` → `path.resolve` switch in `readUiContractScreenContracts`, made for partner-helper consistency with the `readPerSpecScreens` fix, needs a regression test: without one, the two helpers' absolute-path symmetry stays structurally unpinned — a future `path.join` regression in the project-wide reader would silently break certify on explicit-contracts-dir workflows (project-wide pass returns empty while per-spec pass returns full set → asymmetric screen discovery between the two passes). Fixture: project-wide UI contract file `screens.yaml` written at an absolute `contractsDir` pointing OUTSIDE `root`, with two screens (`home`, `settings`). Assertion: `readUiContractScreenContracts(root, externalContractsDir)` returns both screens (sorted-equal). AC anchor: AC-0012-0047 (certify per-spec presence aggregation — same anchor as TC-0012-0430 to pin the partner-helper symmetry).
 
 ## TC-0012-0432
 
@@ -985,7 +983,7 @@
 - AC-Refs: AC-0012-0037
 - Type: unit
 - Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
-- Verify the 50th-wave `hasMatchingUiContract` file-vs-directory discrimination fix (codex r3271969283 P2 — chatgpt-codex-connector). Pre-fix the direct-match arm used `access(<uiDir>/<specId>.yaml)` to confirm existence, but `access` does NOT distinguish file from directory. A misauthored project that created `<contractsDir>/ui/0007.yaml/` (a DIRECTORY) would have falsely classified spec-0007 as UI-bearing, driving `resolveSurfaceUnion()` / `resolvePrimaryPrototypingSpec()` to report a phantom UI surface and the iterate / drift gates to run against it instead of taking the documented no-op path. Post-fix the direct-match arm uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates. Fixture: UI-only spec (no surface marker, no title marker, no primarySpecId pin) + a directory named `0007.yaml` at the canonical UI-contract path. Assertion: `resolveAllUiBearingSpecs()` returns `[]`. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
+- Verify the `hasMatchingUiContract` file-vs-directory discrimination fix. A direct-match arm using `access(<uiDir>/<specId>.yaml)` to confirm existence would not distinguish file from directory. A misauthored project that created `<contractsDir>/ui/0007.yaml/` (a DIRECTORY) would then falsely classify spec-0007 as UI-bearing, driving `resolveSurfaceUnion()` / `resolvePrimaryPrototypingSpec()` to report a phantom UI surface and the iterate / drift gates to run against it instead of taking the documented no-op path. The direct-match arm instead uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates. Fixture: UI-only spec (no surface marker, no title marker, no primarySpecId pin) + a directory named `0007.yaml` at the canonical UI-contract path. Assertion: `resolveAllUiBearingSpecs()` returns `[]`. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
 
 ## v1.9.1 Defect Remediation Test Cases (CHG-005)
 

@@ -512,7 +512,7 @@ function buildDeprecationIssue(args: {
 }
 
 /**
- * Every `TDDLIST_` code that is NOT seed shape — the execution state a row only
+ * Every ledger code that is NOT seed shape — the execution state a row only
  * carries once `/qfai-implement` has driven it.
  *
  * Derived from the generated registry by subtracting the seed-shape set rather
@@ -520,9 +520,15 @@ function buildDeprecationIssue(args: {
  * one of the two groups: seed shape if it is registered there, execution state
  * otherwise. A hand-written list could leave a new code in neither, which is
  * the shape of the omission this whole table exists to prevent.
+ *
+ * Both spellings of the gate are subtracted, because the seed-shape set holds
+ * part of each. A glob over either prefix would claim that part as well, and
+ * the codes in it would belong to two groups at once.
  */
 const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.filter(
-  (code) => code.startsWith("TDDLIST_") && !TDD_LIST_SEED_SHAPE_CODES.has(code),
+  (code) =>
+    (code.startsWith("TDDLIST_") || code.startsWith("QFAI-TDDLIST-")) &&
+    !TDD_LIST_SEED_SHAPE_CODES.has(code),
 );
 
 /**
@@ -850,16 +856,14 @@ export const GATE_GROUP_FAMILIES = {
   // `QFAI-PROFILE-001`'s own advice (#1122). Stage-only: see
   // `STAGE_ONLY_GATE_GROUPS`.
   drift: ["QFAI-DRIFT-*"],
-  // The remaining `TDDLIST_*` codes report execution state that only exists
-  // after `/qfai-implement` has driven rows, so only its profile evaluates
-  // them. `QFAI-TDDLIST-*` is the canonical spelling of the same gate and every
-  // code it holds today is execution state, so the glob sits here whole.
+  // The remaining ledger codes report execution state that only exists after
+  // `/qfai-implement` has driven rows, so only its profile evaluates them.
   //
-  // The bare `TDDLIST_` half is enumerated, not globbed: `tdd-ledger-seed`
-  // holds the other part of that prefix, and `TDDLIST_*` here claimed both —
-  // so an `sdd` run, which DOES evaluate the seed half, was told
-  // `TDDLIST_MISSING` went unevaluated while it was emitting exactly that.
-  // Derived by subtraction so the two halves cannot overlap or leave a gap.
+  // Both spellings are enumerated, not globbed: `tdd-ledger-seed` holds part
+  // of each prefix, and a glob here claimed that part too — so an `sdd` run,
+  // which DOES evaluate the seed half, was told those codes went unevaluated
+  // while it was emitting exactly them. Derived by subtraction so the two
+  // halves cannot overlap or leave a gap.
   //
   // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
   // `traceability-*` groups below split that prefix, and leaving the glob would
@@ -869,7 +873,7 @@ export const GATE_GROUP_FAMILIES = {
   // `QFAI-TEST-*` as unevaluated on a profile that does evaluate it. One
   // validator emits all three codes, so the whole family moves together.
   "test-stubs": ["QFAI-TEST-*"],
-  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*"],
+  tdd: [...TDD_LIST_EXECUTION_STATE_CODES],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
@@ -1764,6 +1768,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
   "QFAI-ATDD-119":
     "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
+  "QFAI-ATDD-124":
+    "A carrier whose suite is bound through a variable decides at run time whether its tests execute, so the coverage gate reads the annotation and cannot tell a skipped suite from a passing one.",
+  "QFAI-ATDD-125":
+    "A spec that declares test cases and owes none of them an ATDD annotation is named, so a green QFAI-ATDD-112 over a population of zero is not read as coverage.",
+
   "QFAI-ATDD-126":
     "A test case whose own block declares `planned` or `external` owes no annotation here, and the declaration keeps the exit visible rather than silent.",
   "QFAI-ATDD-127":
@@ -1776,6 +1785,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
+  "QFAI-BFLOW-005":
+    "A `- Flow:` citation names a business flow that `_policies/04_Business-Flow.md` declares, so the edge from a story to the flow that realizes it resolves.",
+  "QFAI-BFLOW-006":
+    "Each business flow is declared once, so a story citing one names a single flow.",
   "QFAI-TCLEVEL-001":
     "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
   "QFAI-TCLEVEL-002":
@@ -1980,6 +1993,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No ATDD-owned row records `RED:n-a`: its test is authored by `/qfai-atdd`, so it owes either an observed RED or the falsifiability argument that stands in for one.",
   "QFAI-TDDLIST-014":
     "Every ledger row carries exactly the cells its table's header declares, so no content sits past the last column where the per-column rules cannot read it.",
+  "QFAI-TDDLIST-017":
+    "Every row of a split test case names the one boundary it owns in `Boundary`, so a reseed pairs rows with boundaries by a cell nothing downstream rewrites rather than by the test name.",
+  "QFAI-TDDLIST-018":
+    "No two rows of one test case claim the same boundary: the rows of a split are identified by the (`TC-Refs`, `Boundary`) pair, and a repeated slug leaves one boundary covered by nothing.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications

@@ -161,6 +161,23 @@ export const RULE_PROMOTIONS = {
    */
   derivedNotStoredDeclaration: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
   /**
+   * `QFAI-BFLOW-005` / `QFAI-BFLOW-006` — a story citing a business flow the
+   * flow document does not declare, and a flow declared twice.
+   *
+   * The window is not absorbing a backlog: business-flow IDs ship with these
+   * rules, so no project has one to be wrong about yet. It is there because the
+   * FORMAT is new, and the first authors to write a `- Flow:` line are doing it
+   * voluntarily, to make their E2E tree flow-grained. Failing their run over a
+   * mistyped id on a line they added to engage with the tool is the worst first
+   * experience of it, and the message already says what the error would.
+   *
+   * One entry for both codes: they are two readings of the same edge — a
+   * citation that resolves to no flow, and one that resolves to two — so a
+   * window that closed on one and not the other would leave the edge half
+   * enforced.
+   */
+  businessFlowReferenceUnknown: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-ATDD-127` — a test case claiming `x-qfai-status: external` and naming
    * no verifier.
    *
@@ -272,6 +289,21 @@ export const RULE_PROMOTIONS = {
    * row satisfies it by deleting the surplus, again without a transition.
    */
   tddListRowExtraCells: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-017` — the sibling rows of a split test case name no
+   * boundary, and `QFAI-TDDLIST-018` — two of them name the same one.
+   *
+   * One window for both because they are one obligation seen from its two
+   * sides: the rows of a split are identified by the (test case, boundary)
+   * pair, and a pair is unusable when either half is missing or repeated.
+   *
+   * A window rather than an error from the start, because the cell the rows
+   * are identified by is new. Every ledger seeded before it holds a split
+   * whose rows name nothing, so an error on the introducing release would fail
+   * every project carrying one — including on rows already at `done`, which
+   * satisfy the rule by gaining a slug rather than by a status transition.
+   */
+  tddListSplitBoundary: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
   /**
    * `QFAI-TCLEVEL-002` — a test case whose declared level routes its test to
    * `/qfai-atdd`, cited from a ledger row on a unit or component layer.
