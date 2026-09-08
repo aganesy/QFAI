@@ -2,9 +2,9 @@
  * `--strict` と `--fail-on` の優先順位が CLI 表層から読み取れること。
  *
  * `--fail-on` は `--strict` より優先される。この優先順位そのものは仕様だが、
- * 以前は一切の診断がなく、既定の `text` 出力にも run-log にも実効しきい値が
- * 現れなかった。`--strict` レーンに後から `--fail-on error` を足すと warning
- * ゲートが黙って外れ、差分は「締めた」ようにしか見えない。
+ * 診断が無ければ、既定の `text` 出力にも run-log にも実効しきい値が現れない。
+ * `--strict` レーンに後から `--fail-on error` を足すと warning ゲートが
+ * 黙って外れ、差分は「締めた」ようにしか見えない。
  */
 
 import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";

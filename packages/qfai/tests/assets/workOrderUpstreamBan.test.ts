@@ -1,5 +1,5 @@
 /**
- * The work order states the ban at full strength (#382).
+ * The work order states the ban at full strength.
  *
  * Two constitution files stated the same prohibition with different force.
  * `drift-protocol.md` stated it unconditionally; the work order template —

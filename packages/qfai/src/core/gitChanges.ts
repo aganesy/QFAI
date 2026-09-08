@@ -69,7 +69,7 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * "modified on this branch", and `QFAI-DRIFT-001`'s error count grew as main
  * advanced, on a branch whose review cycle the gate itself makes slow. Gate
  * item 12's step 4 is `qfai validate --fail-on error`, so the gate became a
- * function of wall-clock time rather than of the tree (#1149).
+ * function of wall-clock time rather than of the tree.
  *
  * `<base>...HEAD` is the merge-base comparison, which is what both callers
  * mean: `upstreamSsotGuard` asks whether a downstream phase edited a protected
@@ -190,7 +190,7 @@ export function withoutPathsGoneAtHead(
  * Three answers, not two. {@link getChangedFilesAgainstBase} collapses every
  * failure into an empty set because its caller reads that as "nothing to
  * check"; here the same collapse would read as "the evidence is fresh", which
- * is the silent failure this exists to detect (#1146). An unresolvable
+ * is the silent failure this exists to detect. An unresolvable
  * revision is its own answer and the caller must say something about it.
  *
  * `unresolvable` is not rare or necessarily wrong: a shallow clone or an

@@ -60,12 +60,12 @@ export type LevelClassification = "coverage-target" | "non-coverage" | "unrecogn
 /**
  * Classifies a `Level` cell against the known vocabulary.
  *
- * Previously the check was exclusion-only against a word set the shipped
- * template never produces (`L1`…`L5` matched nothing), so the documented
- * "unit/component only" filter excluded no test case at all and
- * `TDDLIST_TC_NOT_COVERED` demanded a ledger row for every TC. Classifying
- * positively means an unrecognized value is *visible* rather than silently
- * becoming a coverage target.
+ * An exclusion-only check against a word set the shipped template never
+ * produces (`L1`…`L5` matched nothing) would let the documented
+ * "unit/component only" filter exclude no test case at all, and
+ * `TDDLIST_TC_NOT_COVERED` would demand a ledger row for every TC.
+ * Classifying positively means an unrecognized value is *visible* instead of
+ * silently becoming a coverage target.
  *
  * **An undeclared `Level` is not a coverage target.** A blank cell, and a
  * `06_Test-Cases.md` with no `Level` column at all, reach here as `""`, and

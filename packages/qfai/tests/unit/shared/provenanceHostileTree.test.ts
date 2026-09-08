@@ -1,5 +1,5 @@
 /**
- * The four provenance defects PR #794's review found, each with the failure it produces.
+ * Four provenance defects, each with the failure it produces.
  *
  * They are one family: the record is adopter-controlled, and every one of these is a way the
  * reader or the writer trusts it further than it should. Their consequences converge too — three of
@@ -64,7 +64,7 @@ const recordPath = (root: string): string => path.join(root, ".qfai", "install-p
 /**
  * The lock, as the writer now shapes it: a directory whose entry NAMES its holder.
  *
- * Review finding [39]. While the lock was a file whose CONTENTS named its holder, both the
+ * While the lock was a file whose CONTENTS named its holder, both the
  * reclaim and the release identified it by path — read the token, then unlink the name — and a
  * holder stalled past the staleness ceiling deleted whatever had since been published under
  * that name. Naming the holder in the directory ENTRY makes both removals exact: `unlink` names
@@ -246,7 +246,7 @@ describe("a timestamp naming a date that does not exist is not a timestamp", () 
 // ── [66] ─────────────────────────────────────────────────────
 describe("a workflows map has no prototype for a record to replace", () => {
   it("keeps a __proto__ entry as data instead of assigning it to the prototype", async () => {
-    // Review finding [66] filed a chain one step longer than what reproduces, and the difference
+    // filed a chain one step longer than what reproduces, and the difference
     // is worth writing down: it said a `__proto__` value carrying an extra `qfai-tests.yml` key
     // would make that shipped name resolve through the prototype, classifying a first `init` as
     // `declined` forever. Measured — `toWorkflowEntry` returns a FRESH three-field object, so what
@@ -556,8 +556,8 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
 
     // Replaced from INSIDE the mutator, which is the only moment this writer holds the lock. That
     // models the state after another process reclaimed it and published its own: this writer's
-    // marker is gone and somebody else's is there. Review finding [39] measured what the old
-    // release did about it — nothing: it read the token, found its own, and unlinked the PATH,
+    // marker is gone and somebody else's is there. The old
+    // release did nothing about it: it read the token, found its own, and unlinked the PATH,
     // which by then named the other writer's lock. Two of them were then in the section at once,
     // which is the lost update the lock exists to prevent.
     //
@@ -616,8 +616,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     // the cost of an attempt can only make the last poll late.
     //
     // The refresh here stands for ANOTHER PROCESS, which is what a lock is for and what no
-    // in-process fixture can supply. Review finding [46] read it the other way round and was
-    // right to: the production holder had no heartbeat at all, so a writer whose own section ran
+    // in-process fixture can supply: the production holder had no heartbeat at all, so a writer whose own section ran
     // past the ceiling was reclaimed while it was still inside it. That is now `acquireRecordLock`'s
     // own interval, and the row below is what says so.
     const root = await tempRoot();
@@ -674,7 +673,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
   }, 60_000);
 
   it("renews its marker while it holds the lock, on an interval under the ceiling", async () => {
-    // Review finding [46]. The marker was stamped once, at acquisition, so a writer whose
+    // The marker was stamped once, at acquisition, so a writer whose
     // read-modify-write ran longer than the staleness ceiling — a slow disk, a suspended process, a
     // loaded machine — was judged abandoned and reclaimed while it was still inside the section.
     // Two writers in there at once is the lost update this primitive exists to prevent, and it is
@@ -721,7 +720,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
   });
 
   it("removes only what it moved aside, never a path under the lock name", async () => {
-    // Review finding [62], the fourth on this function and the first that could not be answered by
+    // the fourth on this function and the first that could not be answered by
     // checking harder: `lstat` the directory, compare `dev`/`ino`, `lstat` each marker — and the
     // `unlink` still resolved `lockDir/<marker>` through a parent a concurrent process could replace
     // one syscall earlier, landing the removal on an external file of the same name. Every version
@@ -1007,7 +1006,7 @@ describe("a symlinked record is refused on every platform", () => {
 
 describe("the record writer pins the directory it verified", () => {
   it("compares the record directory across the staging write, before the rename", async () => {
-    // Review finding [73]. `ancestorsAreRealDirectories` runs before the `mkdir` and again after it,
+    // `ancestorsAreRealDirectories` runs before the `mkdir` and again after it,
     // and then the write happens — three pathname operations with the same gap between them the
     // reviewer-artifact writers already close. A concurrent process that moves `.qfai` aside and
     // leaves a link in its place has the staging file created on the far side, and the rename
@@ -1055,7 +1054,7 @@ describe("the record writer pins the directory it verified", () => {
 
 describe("releasing a lock does not follow a name that was swapped under it", () => {
   it("leaves an outside file named like its marker exactly where it was", async () => {
-    // Review finding [122]. Release was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
+    // Release was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
     // resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
     // can move the acquired directory aside and leave a symlink to somewhere else in its place —
     // and the marker's name is readable out of the acquired directory, so an external file can be
@@ -1142,7 +1141,7 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
 
 describe("a holder that was reclaimed does not disturb the lock that replaced it", () => {
   it("leaves a successor's lock exactly where it is", async () => {
-    // Review finding [128]. The release freed the canonical NAME before it could tell whose
+    // The release freed the canonical NAME before it could tell whose
     // lock was under it: holder A is judged stale, holder B takes over, A resumes and releases,
     // and A's unconditional `rename` moves B's lock aside. If a third writer then takes the
     // freed name, B's restore fails — and B, still inside its section, is joined by that writer.
@@ -1203,12 +1202,12 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
   it("never moves the canonical name, so it cannot free another holder's", async () => {
     // The row above pins the OUTCOME. This one pins the mechanism, and the mechanism changed.
     //
-    // Release used to check the identity and then rename the lock aside. Those are two
-    // syscalls: a holder that verified its own lock, stalled, was reclaimed as stale and
-    // replaced, and then resumed would move its SUCCESSOR's directory — and if a third writer
-    // took the freed name, the restore declined and two writers were inside the section. That
-    // is review finding [137], and narrowing the window does not close it, because the
-    // operation acted on a NAME rather than on this holder's object.
+    // Checking the identity and then renaming the lock aside would be two syscalls: a holder
+    // that verified its own lock, stalled, was reclaimed as stale and replaced, and then resumed
+    // would move its SUCCESSOR's directory — and if a third writer took the freed name, the
+    // restore would decline and two writers would be inside the section. Narrowing the window
+    // does not close that, because the operation would still act on a NAME rather than on this
+    // holder's object.
     //
     // So it acts on the object. `rmdir` removes a directory only when it is empty, and the only
     // way it becomes empty is this holder unlinking the one marker it created; a successor's
@@ -1242,7 +1241,7 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
   });
 
   it("takes its published identity from the object it staged, not from the name", async () => {
-    // Review finding [134]. The identity was read with `lstat(lockDir)` AFTER the rename, which
+    // The identity was read with `lstat(lockDir)` AFTER the rename, which
     // asks what is at that name NOW — not necessarily what was just put there. A `rename` is
     // atomic, so the object that arrived is the object staged, and the staging directory was
     // read under a private name nothing else could reach.

@@ -1384,7 +1384,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(deltaTemplate).toContain("# 09 Delta");
     expect(deltaTemplate).toContain("## Change Summary");
     // The sections `parseDeltaV1` reads. Without them the file is invisible to
-    // `qfai report`, which then prints zeros as if the run were clean (#545).
+    // `qfai report`, which then prints zeros as if the run were clean.
     // The parse itself is pinned in tests/assets/deltaTemplateParses.test.ts.
     expect(deltaTemplate).toContain("## Update History");
     expect(deltaTemplate).toContain("## Decision Log");
@@ -1405,7 +1405,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(waiversTemplate).toContain("version: 1");
     expect(waiversTemplate).toContain("waivers: []");
     // The worked example must name a rule some validator actually emits, in the
-    // spelling `validate.json` prints. `COMPAT-003` was neither (issue #398).
+    // spelling `validate.json` prints. `COMPAT-003` was neither.
     expect(waiversTemplate).toContain("rule: TDDLIST_UNKNOWN_LEVEL");
     expect(waiversTemplate).not.toContain("COMPAT-");
     expect(waiversTemplate).toContain("expires:");
@@ -2448,9 +2448,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "spec/08_Open-questions.md",
       "spec/09_delta.md",
       "spec/10_Plan.md",
-      // The TDD execution ledger `/qfai-implement` selects from (#223).
+      // The TDD execution ledger `/qfai-implement` selects from.
       "spec/tdd/test-list.md",
-      // The traceability ledger QFAI-TRACE-001 requires (#271).
+      // The traceability ledger QFAI-TRACE-001 requires.
       "spec/16_Traceability-ledger.md",
     ].sort();
 

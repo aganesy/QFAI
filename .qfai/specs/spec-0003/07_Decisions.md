@@ -14,7 +14,7 @@
 
 - Decision: `.github/instructions/` の 2 ファイルは `--force` なしでは create-only。`--force` 時は shipped テンプレートで再生成する
 - Supersedes: 旧決定「`--force` でも上書きしない」（Source: 旧 spec-0017 DR-0022 through DR-0026）。当該記述は本決定により無効
-- Context: これらは QFAI が著者のレビュー指針であり、テンプレート修正を導入済みプロジェクトへ届ける経路が存在しなかった（Issue #749）
+- Context: これらは QFAI が著者のレビュー指針であり、テンプレート修正を導入済みプロジェクトへ届ける経路が存在しなかった
 - Rationale:
   - `--force` なしでは従来どおり create-only なので、ローカル編集が黙って失われることはない
   - 同関数内の `copilot-instructions.md` / 統合 README は既に `--force` で再生成される。同じ配布物カテゴリの契約を揃える
