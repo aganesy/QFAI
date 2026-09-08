@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +7,22 @@ import { describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
+
+/**
+ * Every rule master, read off the directory.
+ *
+ * The two cases below used to iterate a list written beside them, which made
+ * each of them ask about the rules someone remembered to add rather than the
+ * rules that exist: a master registered in neither `README.md` nor
+ * `.claude/rules/` had no entry, so nothing asked about it and both passed.
+ * Read from disk, a master that skips either step is named by the case that
+ * finds it missing.
+ *
+ * Synchronous because `it.each` needs the names while the file is collected.
+ */
+const RULE_MASTERS = readdirSync(path.join(ROOT, ".agents/rules"))
+  .filter((entry) => entry.endsWith(".md") && entry !== "README.md")
+  .sort();
 
 async function readMaybeSymlink(linkPath: string): Promise<string> {
   return readFile(linkPath, "utf-8");
@@ -34,30 +51,24 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     }
   });
 
+  it("finds the rule masters it reads the directory for", () => {
+    // An empty read passes both cases below without asking anything, and the
+    // two ways to get one — a moved directory, a filter that matches nothing —
+    // look identical to a green run.
+    expect(RULE_MASTERS.length, ".agents/rules holds no rule master").toBeGreaterThan(0);
+    expect(RULE_MASTERS, "README.md is the register, not a rule").not.toContain("README.md");
+  });
+
   it(".agents/rules/README.md lists every rule in the directory", async () => {
     const text = await readFile(path.join(ROOT, ".agents/rules/README.md"), "utf-8");
-    for (const name of [
-      "version-discipline.md",
-      "distributed-surface.md",
-      "root-additions-policy.md",
-      "temporary-files.md",
-      "documentation-clarity.md",
-      "repository-language.md",
-    ]) {
-      expect(text).toContain(name);
+    for (const name of RULE_MASTERS) {
+      expect(text, `${name} is a rule master that README.md does not register`).toContain(name);
     }
   });
 
-  it.each([
-    "version-discipline",
-    "distributed-surface",
-    "root-additions-policy",
-    "temporary-files",
-    "documentation-clarity",
-    "repository-language",
-  ])(".claude/rules/%s.md resolves to the master", async (name) => {
-    const link = path.join(ROOT, `.claude/rules/${name}.md`);
-    const master = path.join(ROOT, `.agents/rules/${name}.md`);
+  it.each(RULE_MASTERS)(".claude/rules/%s resolves to the master", async (fileName) => {
+    const link = path.join(ROOT, ".claude/rules", fileName);
+    const master = path.join(ROOT, ".agents/rules", fileName);
     if (await isSymlinkTo(link, master)) {
       // Symlink path: the resolved master must equal the master file.
       expect(await realpath(link)).toBe(await realpath(master));
