@@ -32,6 +32,9 @@ import type * as IntegrationSurface from "../../../../src/core/validators/integr
  */
 let injectedFindings: Issue[] | null = null;
 
+/** Makes the walk fail the way an unreadable directory or link does. */
+let inspectionThrows = false;
+
 /** One `QFAI-LINK-001` at the severity under test. */
 const linkFinding = (severity: Issue["severity"], relative: string): Issue => ({
   code: "QFAI-LINK-001",
@@ -47,13 +50,18 @@ vi.mock("../../../../src/core/validators/integrationSurface.js", async (importOr
   const actual = await importOriginal<typeof IntegrationSurface>();
   return {
     ...actual,
-    validateIntegrationSurface: async (root: string): Promise<Issue[]> =>
-      injectedFindings ?? (await actual.validateIntegrationSurface(root)),
+    validateIntegrationSurface: async (root: string): Promise<Issue[]> => {
+      if (inspectionThrows) {
+        throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+      }
+      return injectedFindings ?? (await actual.validateIntegrationSurface(root));
+    },
   };
 });
 
 afterEach(() => {
   injectedFindings = null;
+  inspectionThrows = false;
 });
 
 /** A skill the shipped roster carries, so its wrapper is in scope. */
@@ -130,7 +138,8 @@ describe("integration.links", () => {
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
       expect(check?.severity).toBe("error");
-      expect(check?.message).toContain("do not resolve");
+      expect(check?.message).toContain("need attention");
+      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-atdd"]);
     });
   });
 
@@ -164,10 +173,82 @@ describe("integration.links", () => {
     });
   });
 
-  it("carries the validator's own remedy rather than one command for every shape", async () => {
-    // Several of these states are not repaired by re-running `init`, and the
-    // one that is does not need `--force` — which would regenerate the skills
-    // tree and lose local edits.
+  it("reports an inspection that could not run at all as an error", async () => {
+    // The validator propagates a permission or I/O failure and takes `validate`
+    // down with it. Reporting the same tree as an advisory would pass `doctor`
+    // under `--fail-on error` while the gate fails — the disagreement this
+    // check exists to remove. A check that could not run has not passed.
+    await withProject(async (root) => {
+      await wireProject(root);
+      inspectionThrows = true;
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.severity).toBe("error");
+      expect(check?.message).toContain("Could not inspect");
+    });
+  });
+
+  it("says nothing a waiver has suppressed", async () => {
+    // `validate` runs its findings through the waiver pass. Reading the raw
+    // validator instead would fail `doctor` on a tree whose gate passes, which
+    // is the same disagreement one layer along.
+    await withProject(async (root) => {
+      await wireProject(root);
+      const suppressed = linkFinding("warning", ".claude/skills/qfai-atdd");
+      injectedFindings = [{ ...suppressed, suppressed: true }];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.severity).toBe("ok");
+    });
+  });
+
+  it("keeps its next action in the language doctor's output is written in", async () => {
+    // The validator's per-shape remedy is written for `validate`'s reader and
+    // is not all English. Copying it into `doctor --format json` would break
+    // that output's language contract on exactly the runs that hit the
+    // shapes carrying the longest remedies.
+    await withProject(async (root) => {
+      await wireProject(root);
+      injectedFindings = [
+        {
+          ...linkFinding("warning", ".claude/skills/qfai-atdd"),
+          suggested_action: "再実行してください",
+        },
+      ];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+      const actions = check?.details?.["nextActions"];
+
+      expect(actions).toEqual([
+        "Run qfai validate and follow the QFAI-LINK-001 finding for these paths",
+      ]);
+      expect(JSON.stringify(actions)).not.toContain("再実行");
+    });
+  });
+
+  it("does not tell the reader a resolving wrapper is not being loaded", async () => {
+    // A wrapper left behind by a retired skill resolves perfectly, and that is
+    // the problem: the assistant is loading instructions this release no longer
+    // ships. Describing every finding as "not being loaded" hid the one case
+    // where something IS loaded and should not be.
+    await withProject(async (root) => {
+      await wireProject(root);
+      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-retired")];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.message).not.toContain("not being loaded");
+      expect(check?.message).not.toContain("do not resolve");
+      expect(check?.message).toContain("QFAI-LINK-001");
+    });
+  });
+
+  it("does not prescribe --force, which repairs more than the wrappers", async () => {
+    // `--force` regenerates the skills tree, the agents and the shipped plain
+    // files, so a reader who follows it loses local edits — and several of
+    // these states are not repaired by re-running `init` at all.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);

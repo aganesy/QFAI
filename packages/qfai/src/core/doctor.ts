@@ -40,6 +40,7 @@ import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./
 import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
+import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
@@ -1242,11 +1243,14 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   try {
     issues = await validateIntegrationSurface(root);
   } catch {
-    // The surface could not be walked at all. Reported rather than thrown: a
-    // check that exists to describe a damaged tree must survive one.
+    // The surface could not be walked at all — a permission or an I/O failure
+    // over a directory or a link. Reported rather than thrown, because a check
+    // that exists to describe a damaged tree must survive one; at `error`,
+    // because the validator propagates this and takes `validate` down with it.
+    // A check that could not run is not a check that passed.
     return {
       id: "integration.links",
-      severity: "warning",
+      severity: "error",
       title,
       message:
         "Could not inspect the integration wrappers (reading a directory or a link failed). " +
@@ -1255,7 +1259,13 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
     };
   }
 
-  const broken = issues.filter((issue) => issue.code === "QFAI-LINK-001");
+  // The same waiver pass `validate` runs. Without it a project that waived this
+  // finding passes the gate and fails the diagnostic, which is the disagreement
+  // this check exists to remove — reintroduced one layer along.
+  const waived = await applyWaivers(root, issues).catch(() => null);
+  const broken = (waived?.issues ?? issues).filter(
+    (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed !== true,
+  );
   if (broken.length === 0) {
     return {
       id: "integration.links",
@@ -1267,7 +1277,7 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   }
 
   const paths = broken.flatMap((issue) => issue.refs ?? []);
-  // The worse of the severities the validator returned. It reports the two
+  // The worse of the severities the findings carry. The validator reports the
   // damage classes separately — a readable canonical document is a `warning`,
   // an unreadable one an `error` — and a tree can hold both.
   const severity: DoctorSeverity = broken.some((issue) => issue.severity === "error")
@@ -1277,19 +1287,21 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
     id: "integration.links",
     severity,
     title,
+    // Counts and paths, not a diagnosis. `QFAI-LINK-001` covers several shapes
+    // and they do not share one sentence: a flattened link is not loaded at
+    // all, while a wrapper left behind by a retired skill resolves perfectly
+    // and is loading instructions this release no longer ships. Asserting
+    // "not being loaded" over both hid the second, which is the worse one.
     message:
-      `${String(paths.length || broken.length)} integration wrapper(s) do not resolve, so the ` +
-      "skills and agents behind them are not being loaded. `qfai validate` reports the same " +
-      "paths as QFAI-LINK-001, with the repair for the damage it found.",
+      `${String(paths.length || broken.length)} integration wrapper(s) need attention. ` +
+      "`qfai validate` reports the same paths as QFAI-LINK-001, and its finding says which " +
+      "damage each one is and how to repair it.",
     details: {
       wrappers: paths,
-      // The validator's own remedy, because it depends on which damage this is:
-      // a flattened link is relinked by `qfai init`, while a canonical document
-      // that is itself unreadable or a wrapper occupied by a real directory is
-      // not repaired by re-running `init` at all.
-      nextActions: broken
-        .map((issue) => issue.suggested_action)
-        .filter((action): action is string => action !== undefined && action.length > 0),
+      // English, because `doctor`'s output is. The per-shape remedy is the
+      // validator's and stays there: pointing at it beats copying text written
+      // to a different contract into this one's JSON.
+      nextActions: ["Run qfai validate and follow the QFAI-LINK-001 finding for these paths"],
     },
   };
 }
