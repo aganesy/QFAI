@@ -142,6 +142,11 @@ function narrowToScope(
     // filed at a spec directory, so an unnarrowed list would put a sibling
     // spec's deferrals in this run's evidence artifact.
     deferredUsIds: result.deferredUsIds.filter(inScope),
+    // And again for `QFAI-ATDD-128`, which names the misfiled test cases by id.
+    // The finding is filed at the specs it names, so a scope holding any one of
+    // them keeps it — and an unnarrowed list would then carry a sibling spec's
+    // ids into this run's message and refs.
+    serviceBoundaryTcIds: result.serviceBoundaryTcIds.filter(inScope),
     forbidden: {
       tcInApi: narrowForbidden(result.forbidden.tcInApi),
       tcInE2e: narrowForbidden(result.forbidden.tcInE2e),

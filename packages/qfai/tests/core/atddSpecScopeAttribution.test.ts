@@ -141,6 +141,27 @@ describe("a scoped run reports only the scoped spec's ids", () => {
     });
   });
 
+  it("narrows the misfiled-level ids too", async () => {
+    // `QFAI-ATDD-128` names the test cases by id and is filed at the specs it
+    // names, so a scope holding any one of them keeps the finding. Without its
+    // own filter the message and refs then carry the sibling spec's ids into a
+    // scoped run's evidence artifact.
+    await withProject(async (root) => {
+      await seed(root, [
+        { specNumber: "0001", usIds: ["US-0001"], tcIds: ["TC-0001"], level: "L5" },
+        { specNumber: "0002", usIds: ["US-0001"], tcIds: ["TC-0001"], level: "L5" },
+      ]);
+      const finding = (
+        await validateAtddCodeTraceability(root, defaultConfig, {
+          specScope: new Set(["0002"]),
+        })
+      ).find((entry) => entry.code === "QFAI-ATDD-128");
+
+      expect(finding?.refs).toEqual(["SPEC-0002:TC-0001"]);
+      expect(finding?.message).not.toContain("SPEC-0001");
+    });
+  });
+
   it("leaves an unscoped run untouched", async () => {
     await withProject(async (root) => {
       await seed(root, SPECS);
