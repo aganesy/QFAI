@@ -361,6 +361,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The cycle table in the prototyping skill renders as a table again** (#1378).
+  A blank line sat between its delimiter row and its body rows, and a blank line
+  ends a table. The three rows rendered as one paragraph of literal text, pipes
+  included, and the header above them labelled nothing — on the four-column
+  mapping of which agent runs each cycle phase and what it produces.
+
+  Deleting the blank line reattaches the rows. The file's recorded width ceiling
+  drops from 899 to 541 with them: table rows are not measured for width,
+  because markdown gives them no continuation, so the three lines were being
+  measured as the prose they had become.
+
 - **The recorded e2e callsite count no longer fails a branch for the base's
   changes** (#1357). A pull request is tested on the merge of the branch with
   its base, so the count a branch pins stops being true the moment the base
