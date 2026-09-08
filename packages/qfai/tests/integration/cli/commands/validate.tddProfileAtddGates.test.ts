@@ -419,10 +419,10 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
         expect(notice?.message).not.toContain("QFAI-TEST-001");
         // The rest of the tdd group is still named — moving the stub gate out
-        // of it must not take the ledger families with it. `QFAI-TDDLIST-*` is
-        // the surviving glob: the execution-state codes beside it are listed
-        // one by one, from the constant the seed-shape gate filters on.
-        expect(notice?.message).toContain("QFAI-TDDLIST-*");
+        // of it must not take the ledger families with it. Those are listed
+        // one by one, by subtracting the constant the seed-shape gate filters
+        // on, since the two gates split one prefix between them.
+        expect(notice?.message).toContain("QFAI-TDDLIST-007");
       });
     });
   });

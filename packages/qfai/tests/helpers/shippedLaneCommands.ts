@@ -1336,14 +1336,23 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The comment block is the whole delta: the rule lines are byte-identical to
   // the ones `c428b147…` covered.
   [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
-  // Re-pinned when the managed block gained the three vendored-assistant
-  // negations — `!.qfai/assistant/`, `!.qfai/assistant/**` and
-  // `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
-  // `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
-  // (`git status --ignored`): without them the provenance record never reaches
-  // a fresh clone, and every untouched governed file from an older release then
-  // reads as a local fork; without the recursive one the record arrives and the
-  // rules it vouches for do not.
+  // The shipped `.gitignore` IS the generated managed block, so every governance
+  // negation moves this digest by construction. Four of them are why it stands
+  // where it does:
+  //
+  // - `!.qfai/assistant/`, `!.qfai/assistant/**` and
+  //   `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
+  //   `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
+  //   (`git status --ignored`): without them the provenance record never reaches
+  //   a fresh clone, and every untouched governed file from an older release
+  //   then reads as a local fork; without the recursive one the record arrives
+  //   and the rules it vouches for do not.
+  // - `!.qfai/evidence/skeleton.md`. `Phase: Skeleton` enumerates its
+  //   `Skeleton debt` into that file, and every later invocation reads the
+  //   record to find the entrypoint's smoke command, re-runs it, and decides
+  //   from THAT exit status whether the entrypoint is still proven.
+  //   Ignored, both the debt and the command exist only in the working
+  //   directory that ran the phase.
   //
   // Derived by running `qfai init` into a temp root and reading what it wrote,
   // which is how every predecessor was derived — not copied off a failure
@@ -1371,10 +1380,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // then reading what it wrote — not copied off a failure message. Those two
   // lines are the whole delta: dropping them from the file init writes today
   // reproduces `4e72a478…` byte for byte.
+  // The skeleton evidence negation is a fourth line on the same footing: the
+  // phase that proves an entrypoint starts writes it, and the evidence
+  // directory is ignored wholesale, so without the negation the proof never
+  // reaches a commit either.
   //
-  // Re-pinned for the review tree. Nothing under `.qfai/review/` is tracked,
-  // so the two lines that carved an exception out of `.qfai/review/*` are
-  // gone:
+  //     !.qfai/evidence/skeleton.md
+  //
+  // Re-pinned for the review tree as well. Nothing under `.qfai/review/` is
+  // tracked, so the two lines that carved an exception out of `.qfai/review/*`
+  // are gone:
   //
   //     !.qfai/review/
   //     !.qfai/review/.legacy-packs
@@ -1385,10 +1400,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //     .qfai/review_archive/*
   //
   // Derived the way its predecessors were — `qfai init` into a temp root, then
-  // reading what it wrote. Those three lines are the whole delta: putting the
-  // two negations back and dropping the archive ignore reproduces
-  // `9e975f78…` byte for byte.
-  [".gitignore", "6c44a3c11e4327a5648f4c432db7221f26c5798ad06a9f0c194daffcf4ef9b5a"],
+  // reading what it wrote.
+  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

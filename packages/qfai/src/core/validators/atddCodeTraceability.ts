@@ -454,6 +454,23 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  if (result.computedSuiteCarriers.length > 0) {
+    const carriers = result.computedSuiteCarriers;
+    issues.push(
+      issue(
+        "QFAI-ATDD-124",
+        `Coverage in ${String(carriers.length)} file(s) rests on a suite bound through a variable, so whether those tests run is decided at runtime and this scan cannot tell: ${carriers.slice(0, 10).join(", ")}${carriers.length > 10 ? ` (and ${String(carriers.length - 10)} more)` : ""}`,
+        "info",
+        carriers[0] ?? result.specsRoot,
+        "atddCodeTraceability.coverage.computedSuiteBinding",
+        carriers,
+        "canonical",
+        "This is not a violation: binding the suite is the ordinary way to write a probe that needs a target the run may not have. It is reported because the coverage gate's only evidence for those obligations is the annotation string, so a skipped suite and a passing one look the same here. Give any obligation whose sole carrier is such a file a second owner that runs unconditionally.",
+        { relatedFiles: carriers.slice(1) },
+      ),
+    );
+  }
+
   issues.push(...buildCarrierOnlyIssues(result, dirs));
 
   if (result.deferredApiContractIds.size > 0) {

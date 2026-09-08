@@ -157,8 +157,19 @@ as deleted, and retiring on it discards a `done` row's `TDD-ID`, `Status` and
 still at `Status = todo` whose seeded selector names a boundary the TC no longer
 declares; when the re-derived set is smaller than the TC's rows that have
 already progressed, stop and raise a `CR-*` instead. Which implemented
-obligation the spec dropped belongs to the change record, and `TDD-ID` is the
-only identity on these rows that nothing downstream rewrites.
+obligation the spec dropped belongs to the change record.
+
+**`Boundary` is that key, paired with `TC-Refs`.** The sibling rows of a split
+`TC-*` repeat that `TC-*` identically and carry serial `TDD-ID`s, so neither
+says which row covers which boundary. `Boundary` does: a short slug for the one
+observable boundary the row owns, seeded here while `Test file` is still `-` and
+never rewritten downstream. Re-deriving the boundary set answers how many
+boundaries the TC has now; it does not answer which row is which, and pairing a
+row with the wrong one moves that row's `Status`, `Evidence` and `TDD-ID` onto
+behaviour they never described — silently, since the row count stays right and
+every row still cites a real TC. Match on the (`TC-Refs`, `Boundary`) pair. The
+pair and not the slug alone: a slug is unique inside its own `TC-*` and nowhere
+wider, so a generic one (`not-found`) recurs across TCs.
 
 The `US-*` and `CON-API-*` rows follow the same rule, with one extra trigger:
 an obligation that **became exempt** — the spec stopped declaring a user-facing
@@ -269,8 +280,8 @@ in the file that carries all eight required columns and sits outside a fence,
 so a second ledger-shaped table lower down is read as ledger rows too — there
 is no parking spot below.
 
-| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref |
-| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ |
+| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref | Boundary |
+| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | ------------- | ---------- | ------ | -------- |
 
 `Blocked-By` is an **optional** column, seeded here so a downstream `blocked`
 row never has to add one — and added to an already-seeded eight-column ledger by
@@ -295,6 +306,14 @@ resolved by any other route is named rather than silently regrouping rows.
 `/qfai-implement` batches its T1 reviews on this value and can close no group
 without it. It is derived from upstream, not from run state, so a reseed
 re-resolves it — that is not the row rewrite the delta rule forbids.
+
+`Boundary` is an **optional** column naming the one observable boundary a row
+owns, and it is what identifies a row among the siblings of a split `TC-*`.
+`/qfai-sdd` Phase 2b writes it and nothing else does, so a review-fix handback
+that replaces the test and rewrites `Selector` leaves it standing. Write `-`,
+or leave the cell empty, on a `TC-*` that holds one row. Once a `TC-*` holds
+more than one, `npx qfai validate` reports siblings that name no boundary and
+two siblings claiming the same one.
 
 ## Schema
 

@@ -292,12 +292,12 @@ function permissionValueFindings(entry, reportedWorkflows) {
  * Line endings and trailing whitespace are normalized, so a checkout that rewrites newlines does
  * not read as an edited verification.
  *
- * `env` is IN the digest. Review finding [24], second escape: the verdict step's whole input is
+ * `env` is IN the digest: the verdict step's whole input is
  * `NEEDS_JSON: ${{ toJSON(needs) }}`, so replacing that expression with a hardcoded all-success
- * map neuters the aggregate verdict while `run` is untouched and every pin still matches.
+ * map would neuter the aggregate verdict while `run` stays untouched and every pin still matches.
  * Measured: the lane exited 0. A step's environment is what it runs on, not decoration.
  *
- * The INVOKED SCRIPTS are in it for the same reason, one level further out. Review finding [36]:
+ * The INVOKED SCRIPTS are in it for the same reason, one level further out:
  * `run: pnpm ci:build-verify` is a reference, and pinning a reference pins the pointer rather
  * than the work — deleting `node ./scripts/check-publish-dry-run.mjs` from that script in the
  * root manifest left this step's digest and its declaration in perfect agreement while the pack
@@ -310,17 +310,17 @@ function permissionValueFindings(entry, reportedWorkflows) {
  * a digest that silently ignored it would agree across the edit that introduced it.
  *
  * The SHELL and the WORKING DIRECTORY are in it, each resolved through the workflow-level and
- * job-level `defaults.run` that a step inherits when it declares neither. Review finding [41]:
- * neither was read at all, and both change what the step does without touching a byte of `run`.
+ * job-level `defaults.run` that a step inherits when it declares neither: both change what the
+ * step does without touching a byte of `run`, so a check that skipped either would miss it.
  * A `shell` is a command template — `bash {0} || true` wraps the body and returns 0 whatever it
  * did — and a `working-directory` changes which manifest `pnpm ci:build-verify` resolves against,
  * so pointing it at a package whose manifest defines a shorter `ci:build-verify` ran different
  * work while the pin over the root manifest still matched. The working directory is also what the
  * script resolution starts from now, rather than the repository root unconditionally.
  *
- * The CONTENTS of the repository's own guard scripts are in it too. Review finding [42]: pinning
+ * The CONTENTS of the repository's own guard scripts are in it too: pinning
  * `run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh` pins the invocation, and
- * replacing that file's body with `exit 0` left the step's name, its `run` and its digest all
+ * replacing that file's body with `exit 0` would leave the step's name, its `run` and its digest all
  * unchanged — so the same neutered guard went green in `lint` and in `build`.
  *
  * Content, but only inside `VERIFIED_SOURCE_ROOTS`. Outside them the PATH is recorded and the
@@ -346,8 +346,8 @@ export function verificationBodyDigest(step, root, runDefaults = {}) {
     with: step["with"],
     // The EFFECTIVE env, merged workflow < job < step.
     //
-    // Review finding [51]: only the step's own `env` was in the digest, and a step inherits its
-    // job's and its workflow's. `BASH_ENV: ${{ github.workspace }}/scripts/noop.sh` declared at
+    // The step's own `env` alone is not enough: a step inherits its
+    // job's and its workflow's too. `BASH_ENV: ${{ github.workspace }}/scripts/noop.sh` declared at
     // job level is sourced by the non-interactive bash GitHub runs BEFORE the step body — with
     // `exit 0` in that file the body never runs and the step reports success, while `run`,
     // `shell`, `working-directory` and every pinned digest are untouched. Two lines somewhere
@@ -405,9 +405,9 @@ function effectiveEnv(inherited, own) {
  * POSIX-sh equivalent, and `SHELLOPTS` / `BASHOPTS` can turn off the `-e` GitHub invokes bash
  * with. `NODE_OPTIONS` does the same one layer down: `--require=<file>` is preloaded before
  * the entry point, so a preload calling `process.exit(0)` makes every `node` and every `pnpm`
- * in the closure succeed without running — review finding [57] measured exactly that on Node
+ * in the closure succeed without running — measured on Node
  * 24. `LD_PRELOAD` and `DYLD_INSERT_LIBRARIES` are the native equivalents. `PATH` is the
- * same capability by another route — review finding [60]: a workspace directory holding an
+ * same capability by another route: a workspace directory holding an
  * executable named `bash`, put first, means every `run:` body in the closure is handed to a
  * shell the pull request wrote, which can return 0 having run nothing. It is not a preload,
  * but it decides WHICH program receives the body, which is the same question.
@@ -421,8 +421,8 @@ function effectiveEnv(inherited, own) {
 /**
  * The command files a step writes to set the environment of LATER steps.
  *
- * Review finding [69]: the env checks read what the YAML DECLARES — workflow, job and step —
- * and a step can set a variable for every step after it by appending to `$GITHUB_ENV`, or
+ * The env checks above read what the YAML DECLARES — workflow, job and step —
+ * but a step can also set a variable for every step after it by appending to `$GITHUB_ENV`, or
  * prepend to `PATH` through `$GITHUB_PATH`. `echo "BASH_ENV=…/noop.sh" >> "$GITHUB_ENV"`
  * before the verdict step neuters it with no declared env anywhere and no pinned digest
  * moved. It is the same capability arriving through a file instead of a key.
@@ -439,7 +439,7 @@ const COMMAND_FILES_REL = path.posix.join(".github", "command-files.txt");
  * The script names a package manager runs at install time.
  *
  * A closed list, and short: these are the hooks `pnpm install` honours, and each of them runs in
- * every job before every verification in that job. Review finding [105].
+ * every job before every verification in that job.
  */
 /** Where the manifests allowed to run code at install time are listed, for both readers. */
 const LIFECYCLE_MANIFESTS_REL = path.posix.join(".github", "lifecycle-manifests.txt");
@@ -448,9 +448,10 @@ const LIFECYCLE_MANIFESTS_REL = path.posix.join(".github", "lifecycle-manifests.
  * The manifests allowed to declare a package-manager lifecycle hook.
  *
  * Read from the tree, and read by `scripts/check-toolchain-action.sh` too — which enforces it
- * BEFORE `pnpm install`, the only moment that helps. Review finding [110]: this was a literal
- * array here, and `pnpm-workspace.yaml` is not that array, so a pull request adding a package
- * with a `prepare` hook had it run before every verification in a manifest nothing examined.
+ * BEFORE `pnpm install`, the only moment that helps. This is a literal
+ * array here, not derived from `pnpm-workspace.yaml`, so a package added to the workspace with a
+ * `prepare` hook would run before every verification in a manifest nothing here examined, unless
+ * this array is updated too.
  *
  * `undefined` for absent or empty, which the caller turns into a finding: a list of what may run
  * code at install time that names nothing is not a permission, it is a gap.
@@ -466,7 +467,7 @@ function lifecycleManifests(root) {
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("#"))
     // Each entry is `<sha256>  <path>`, the digest being of that manifest's lifecycle
-    // projection — review finding [124], which the pre-flight enforces before `pnpm install`.
+    // projection, which the pre-flight enforces before `pnpm install`.
     // The lane reads only the PATH half: what it checks is that the declaration pins an install
     // lifecycle for every manifest the list names, which is a question about the declaration and
     // not about hook bodies. A bare path is still read, so a hand-edited list that has not been
@@ -521,7 +522,7 @@ const MAX_LOCAL_ACTION_DEPTH = 4;
 /**
  * Command files written by a LOCAL composite action, and by any local action it invokes.
  *
- * Review finding [77]. `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
+ * `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
  * composite action's bytes are in no pinned digest — the `uses:` string is the whole of what a
  * verification body records about it — and its own steps were scanned by nothing. Every
  * toolchain job in `ci.yml` opens with `uses: ./.github/actions/setup`, so one
@@ -576,7 +577,7 @@ function localActionCommandFileWrites(root, reference, commandFiles, seen = new 
       out.push({ file: relFile, step: "(whole action)", note: "is unparseable" });
       continue;
     }
-    // COMPOSITE, or refused. Review finding [84]: a local action is not necessarily a list of
+    // COMPOSITE, or refused. A local action is not necessarily a list of
     // steps — `runs: { using: node20, main: index.js }` is a JavaScript action, and GitHub runs
     // that entrypoint in the job like any other step. `index.js` appending `BASH_ENV` to the
     // environment file sets the environment of every step after it, and the scan below found no
@@ -624,8 +625,8 @@ function localActionCommandFileWrites(root, reference, commandFiles, seen = new 
         out.push(...localActionCommandFileWrites(root, nested, commandFiles, seen, depth + 1));
       } else if (nested !== "") {
         // An EXTERNAL action, reported so the caller can check it against the declared set.
-        // Review finding [88]: the recursion followed `./` and nothing else, so
-        // `uses: attacker/action@<sha>` inside a local action ran in the closure with nothing
+        // The recursion follows `./` and nothing else: without this branch,
+        // `uses: attacker/action@<sha>` inside a local action would run in the closure with nothing
         // in this repository reading it — `action-pin` proves the reference is immutable and
         // says nothing about what it does, and the pre-flight reads the checkout rather than
         // the action.
@@ -654,7 +655,7 @@ const PRELOAD_HIJACK_ENV = new Set([
  * The shells GitHub names, which run the step body and return ITS status.
  *
  * Anything else is a command template: `shell: bash {0} || true` runs the body through a wrapper
- * whose exit status is 0 whatever the body did. Review finding [41] — the shipped-workflow suite
+ * whose exit status is 0 whatever the body did — the shipped-workflow suite
  * already rejects that shape for the set QFAI ships; a declared verification in this repository's
  * own tree is exactly the place it must not be available either. A closed list, for the same
  * reason the runner-label rule uses one: the property is membership, and any predicate over the
@@ -893,8 +894,8 @@ const MAX_WALKED_ENTRIES = 1_000;
  * directory.
  *
  * `yamlFilesUnder` answers the empty list for BOTH "absent" and "refused", which is right for a
- * walk and wrong for a report. Review finding [63]: `.github/actions` replaced by a link to a
- * fake composite action inside the repository produced an empty list, no finding, and a green
+ * walk and wrong for a report: `.github/actions` replaced by a link to a
+ * fake composite action inside the repository would produce an empty list, no finding, and a green
  * lane — while `ci.yml`'s toolchain jobs all run `./.github/actions/setup`, so that action could
  * write `BASH_ENV` into `$GITHUB_ENV` and every verification after it would report success
  * having run nothing. The empty-tree check that would have caught it is applied to the workflow
@@ -918,7 +919,7 @@ export function rootIsRefused(root, rel) {
  * Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative.
  *
  * The ROOT is `lstat`ed and refused unless it is a real directory, and no directory ENTRY is
- * descended into unless it is one either. Review finding [45]: this lane runs on a pull request,
+ * descended into unless it is one either: this lane runs on a pull request,
  * over paths the pull request itself controls, and `readdirSync` follows a link — so replacing
  * `.github/workflows` (or `.github/actions`, or the shipped root) with a symlink to `/proc` or to
  * a huge external tree started an unbounded traversal. Every guard downstream is per-FILE and
@@ -935,10 +936,10 @@ export function rootIsRefused(root, rel) {
  * The ceiling is a PARAMETER with the production value as its default, so a row can reach it
  * without laying down five thousand files to do it.
  *
- * Hitting it is a PARTIAL SCAN, and `truncated` is how the caller learns so. Review finding
- * [74]: the ceiling used to stop the recursion and say nothing, so a tree carrying five thousand
+ * Hitting it is a PARTIAL SCAN, and `truncated` is how the caller learns so: the ceiling must not
+ * stop the recursion and say nothing, or a tree carrying five thousand
  * irrelevant entries followed by an unpinned action — or a YAML that weakens the required
- * context — had that YAML never parsed while every rule reported PASS. A short walk is not a
+ * context — would leave that YAML never parsed while every rule reports PASS. A short walk is not a
  * finished one, and the lane must not pass on one.
  *
  * Reported rather than thrown, because a throw is the crash the ceiling exists to avoid: the
@@ -1039,9 +1040,9 @@ function collectJobs(root) {
   const jobs = [];
   const findings = [];
   // The composite-action root, which is scanned by `collectStepSites` and by nothing that
-  // reports on the root itself. Review finding [63]: `ci.yml`'s toolchain jobs all run
+  // reports on the root itself: `ci.yml`'s toolchain jobs all run
   // `./.github/actions/setup`, so a link there pointing at a fake composite action inside the
-  // repository is the whole toolchain — and the scan answered an empty list, silently.
+  // repository is the whole toolchain — and an unreported root would leave that silent.
   if (rootIsRefused(root, ACTIONS_ROOT_REL)) {
     findings.push({
       rule: "job-guardrails",
@@ -1164,20 +1165,20 @@ function checkJobGuardrails(jobs) {
 /**
  * The registries a global install may name.
  *
- * A closed set, and short on purpose. `--registry` was added because a pinned version names WHAT
- * to fetch and not WHERE from; a rule that accepted the flag whatever it pointed at would have
- * accepted `--registry=https://attacker.example` and changed nothing at all. Review finding [91].
+ * A closed set, and short on purpose: a pinned version names WHAT
+ * to fetch and not WHERE from, so a rule that accepted `--registry` whatever it pointed at would
+ * accept `--registry=https://attacker.example` and change nothing at all.
  */
 const TRUSTED_REGISTRIES = ["https://registry.npmjs.org"];
 
 /**
  * Every spelling of `npm install` that npm itself accepts, with a global flag.
  *
- * Review finding [92]: the first version enumerated `install`, `i` and `add`, and npm's own
+ * Enumerating only `install`, `i` and `add` would miss most of them: npm's own
  * `install --help` lists `in`, `ins`, `inst`, `insta`, `instal`, `isnt`, `isnta`, `isntal` and
- * `isntall` besides — `npm in -g corepack` is a global install this rule did not look at. A
- * partial enumeration of an alias table is the same defect as a partial enumeration of the ways
- * a shell can spell a variable, one file over.
+ * `isntall` besides, and `npm in -g corepack` is a global install a narrower rule would not
+ * catch. A partial enumeration of an alias table is the same defect as a partial enumeration of
+ * the ways a shell can spell a variable, one file over.
  *
  * The flag can sit anywhere after the subcommand, and `-g` is the same request as `--global`.
  * The optional group ENDS in whitespace, so the flag is always matched at a token start:
@@ -1190,11 +1191,11 @@ const GLOBAL_INSTALL =
 /**
  * A step body's command lines: comments dropped, continuations joined.
  *
- * Review finding [91], and it is the sharpest kind — the rule was defeated by its own
- * documentation. The pin was checked by asking whether the BODY contained `--registry` and
- * `--ignore-scripts` anywhere, and the body it was written for explains both flags in a comment
- * directly above the command. So reverting the command itself to an unpinned install left every
- * substring in place and the rule green.
+ * The sharpest way this rule can be defeated is by its own
+ * documentation: checking only whether the BODY contains `--registry` and
+ * `--ignore-scripts` anywhere would still match a comment above the command that explains both
+ * flags, even after the command itself reverts to an unpinned install — every substring stays in
+ * place and the rule stays green.
  *
  * A flag belongs to an invocation, so the invocation is what is read: a line whose first
  * non-space character is `#` is prose, and a line ending in `\\` is half of one command.
@@ -1237,7 +1238,7 @@ function shellCommandLines(body) {
  * comes from a different criterion, the way the declaration rule does, so it is announced under its
  * own heading and counted separately. A green run stays readable and the five stay five.
  *
- * Review finding [87], and the finding before it. A pinned VERSION is a name, not a source:
+ * A pinned VERSION is a name, not a source:
  * `npm` resolves its registry from `NPM_CONFIG_REGISTRY` or from a project `.npmrc`, both of
  * which a pull request controls, so `npm install --global corepack@0.35.0` is a request an
  * attacker's registry can answer with a different package — whose bin then runs in a job that
@@ -1265,8 +1266,8 @@ function checkGlobalInstallPins(root, jobs) {
         // answers a different registry, which is the whole of what the flag was added to stop.
         // Both spellings, because `--registry x` and `--registry=x` are one flag.
         //
-        // EVERY occurrence, because npm takes the LAST one. Review finding [99]: reading only the
-        // first accepted `--registry=<trusted> --registry=<attacker>`, which npm resolves to the
+        // EVERY occurrence, because npm takes the LAST one: reading only the
+        // first would accept `--registry=<trusted> --registry=<attacker>`, which npm resolves to the
         // attacker (verified against `npm config get registry` carrying both). A duplicate is
         // refused outright rather than resolved: two answers to one question is not a pin,
         // whichever end this lane were to read from.
@@ -1493,9 +1494,9 @@ function checkActionPins(uses) {
 function readDeclaration(root) {
   // Through the SAME bounded reader the workflows use, and for the same reason.
   //
-  // Review finding [64]: this was a plain `readFileSync`, which follows a link. This lane runs
+  // A plain `readFileSync` would follow a link. This lane runs
   // on a pull request over paths the pull request itself adds, so replacing the declaration with
-  // a symlink to `/dev/zero` or to a FIFO made this read forever — measured on Node 24 — and the
+  // a symlink to `/dev/zero` or to a FIFO would make this read forever — measured on Node 24 — and the
   // `ci:lint` lane held the runner until the job timed out without ever reaching the
   // missing-or-malformed branch below. A required lane that can be made to hang blocks nothing.
   //
@@ -1790,8 +1791,8 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 2b — and the set of jobs it depends on is the declared one, exactly.
     //
-    // Review finding [80]: `${{ toJSON(needs) }}` contains only the jobs still listed in
-    // `needs:`, so deleting a name removes a whole lane from the verdict while the lane keeps
+    // `${{ toJSON(needs) }}` contains only the jobs still listed in
+    // `needs:`, so deleting a name would remove a whole lane from the verdict while the lane keeps
     // running and keeps failing. Property 3 does not notice, because the seven declared items
     // stay reachable through `detect` and `build` — and the topology test that would notice
     // runs inside the `test` job, which is one of the names an attacker deletes.
@@ -1836,9 +1837,9 @@ function checkRequiredContexts(root, jobs) {
     // PROPERTY 2c — and each dependency may be skipped only on the declared condition.
     //
     // The verdict accepts `skipped`, because a documentation-only pull request legitimately
-    // runs none of the gated lanes. That makes the skip decision load-bearing: review finding
-    // [81] pointed at `if: false` on `test`, which skips the lane, is accepted by the verdict,
-    // and is noticed by nothing else in the tree. A job the declaration lists must carry its
+    // runs none of the gated lanes. That makes the skip decision load-bearing: `if: false` on
+    // `test` would skip the lane, be accepted by the verdict,
+    // and be noticed by nothing else in the tree. A job the declaration lists must carry its
     // condition verbatim; a job it does not list must carry none.
     const declaredConditions = isRecord(context.dependencyConditions)
       ? context.dependencyConditions
@@ -1861,8 +1862,8 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 2d — and the outputs those conditions read are wired to steps that exist.
     //
-    // Review finding [81]'s other half: rewiring `detect.outputs.full` to `${{ false }}`, or to
-    // a step output nobody produces, skips every gated lane without touching a condition or a
+    // The other half of the same gap: rewiring `detect.outputs.full` to `${{ false }}`, or to
+    // a step output nobody produces, would skip every gated lane without touching a condition or a
     // line of the classifier. The classifier's own tests are inside one of the lanes that skips.
     // ABSENT is a finding, and so is empty, and so is an entry that is not a mapping. An audit
     // of this file found all three: `gateOutputs` deleted, `{}`, or `{"detect": null}` each
@@ -1937,7 +1938,7 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 2e — and the declared pre-flight refusal runs before anything can disable it.
     //
-    // Review finding [82]. The lane's own report of a poisoned composite action is unreachable
+    // The lane's own report of a poisoned composite action would be unreachable
     // when the poison is in the action the lane's job runs first: `BASH_ENV` makes every later
     // `shell: bash` step exit 0 without running its body. So the refusal moved ahead of the
     // action, and this keeps it there — the step exists, nothing that does work precedes it, and
@@ -1994,8 +1995,8 @@ function checkRequiredContexts(root, jobs) {
           detail: `declares no step named ${JSON.stringify(preflightStep)}, which ${DECLARATION_REL} requires it to run before any local composite action`,
         });
       } else {
-        // What may run before it, and nothing else. Review finding [94]: this counted `run:` and
-        // local `uses:` as work and treated every other step as inert, so an EXTERNAL action could
+        // What may run before it, and nothing else: counting only `run:` and
+        // local `uses:` as work and treating every other step as inert would let an EXTERNAL action
         // sit ahead of the refusal — `action-pin` proves such a reference is immutable and says
         // nothing about what it does. One ahead of the pre-flight can write a command file, or
         // replace the script the pre-flight is about to run, out of the checkout it just made.
@@ -2039,9 +2040,10 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 3b — and the work of the lanes that MAY skip is pinned too.
     //
-    // Review finding [89]: a gated lane was a declared dependency by name and condition, and
-    // nothing else. Replacing `pnpm ci:coverage` with `true` left this lane silent, the job
-    // green and the aggregate green — while no other job in the repository runs that script, so
+    // A gated lane being a declared dependency by name and condition, and
+    // nothing else, is not enough: replacing `pnpm ci:coverage` with `true` would leave this lane
+    // silent, the job green and the aggregate green — while no other job in the repository runs
+    // that script, so
     // the coverage floor stopped being checked at all. Being IN the aggregate is not the same
     // claim as still doing the work.
     //
@@ -2148,9 +2150,9 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 2f — and the values a gated lane expands over are the declared ones.
     //
-    // Review finding [97]: a step named `Run tests (${{ matrix.slice }})` is digested with the
+    // A step named `Run tests (${{ matrix.slice }})` is digested with the
     // EXPRESSION in it, so its digest says nothing about what the expression expands to. A value
-    // rewritten to `unit || true #` hands the shell a command that succeeds whatever the tests
+    // rewritten to `unit || true #` would hand the shell a command that succeeds whatever the tests
     // did; values removed from the list drop whole slices. Neither moves a pinned body, and
     // `matrix-fail-fast` looks only at `fail-fast`.
     const declaredMatrices = isRecord(context.dependencyMatrices)
@@ -2201,7 +2203,7 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 2g — and every local action hashes to what the pre-flight will check.
     //
-    // Review finding [95]: the pre-flight refused a command-file NAME and nothing else, so a step
+    // Refusing a command-file NAME and nothing else would not be enough: a step
     // added to the toolchain action could `printf 'process.exit(0)' > <the hygiene lane>` and
     // replace this program before it ran — or rewrite any verification source, in every job that
     // uses the action. Enumerating what a step may DO is the losing side of that argument; what
@@ -2301,7 +2303,7 @@ function checkRequiredContexts(root, jobs) {
 
     // PROPERTY 2h — and the install lifecycle every job runs is the declared one.
     //
-    // Review finding [105]: `pnpm install --frozen-lockfile` runs `preinstall`, `install`,
+    // `pnpm install --frozen-lockfile` runs `preinstall`, `install`,
     // `postinstall` and `prepare` from the manifests — in EVERY job, inside the composite action,
     // before every verification in that job. They are invoked by the package manager rather than
     // by a step body, so the resolution that follows `pnpm ci:lint` into its script never reaches
@@ -2319,9 +2321,9 @@ function checkRequiredContexts(root, jobs) {
           "declares no `installLifecycle` mapping, so the scripts the package manager runs in every job before every verification are pinned by nothing",
       });
     }
-    // The manifest SET first. Review finding [107]: this loop walked the manifests the
-    // declaration names, so deleting a key here and adding a `prepare` to that manifest
-    // reported nothing — and `pnpm install --frozen-lockfile` runs a workspace package's
+    // The manifest SET first: if this loop only walked the manifests the
+    // declaration names, deleting a key here and adding a `prepare` to that manifest would
+    // report nothing — and `pnpm install --frozen-lockfile` runs a workspace package's
     // lifecycle exactly as it runs the root's.
     const workspaceManifests = lifecycleManifests(root);
     if (workspaceManifests === undefined) {
@@ -2488,15 +2490,15 @@ function checkRequiredContexts(root, jobs) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
       // Resolved once per job: the two outer `defaults.run` levels a step inherits are not
-      // visible from the step object, and both change what it does. Review finding [41].
+      // visible from the step object, and both change what it does.
       const runDefaults = effectiveRunDefaults(inFile[0]?.workflow, job);
-      // A DEPENDENCY that can be skipped performs nothing, whatever its steps say. Review
-      // finding [37]: `always()` on the declared job stands down property 2 for the whole
-      // closure — correctly, since a skipped dependency is the state `always()` is for — and
-      // property 3 then went on counting that dependency's steps as unconditionally
-      // performed. Measured: `if: false` on `build` left the six build-side verification
-      // items reading as performed, the aggregate verdict accepts `skipped`, and the required
-      // context went green with the pack verification and all three self-validates never run.
+      // A DEPENDENCY that can be skipped performs nothing, whatever its steps say:
+      // `always()` on the declared job stands down property 2 for the whole
+      // closure — correctly, since a skipped dependency is the state `always()` is for — but
+      // property 3 must not then go on counting that dependency's steps as unconditionally
+      // performed. Otherwise `if: false` on `build` would leave the six build-side verification
+      // items reading as performed, the aggregate verdict accepting `skipped`, and the required
+      // context going green with the pack verification and all three self-validates never run.
       //
       // So the `always()` exception stays where it belongs — on the aggregate job itself, so
       // that it can classify what its dependencies did — and a condition on a dependency
@@ -2508,9 +2510,9 @@ function checkRequiredContexts(root, jobs) {
           ? `job ${key} if: ${String(job.if)}`
           : undefined;
       // A JOB-level `continue-on-error` discards that job's failure the way a step-level one
-      // discards a step's, and it was checked only on steps. Review finding [52]: putting it on
-      // `ci-pass` itself — the one aggregate the required context sits on — means the verdict can
-      // exit 1 and the context still passes, with every pinned digest and every rule below
+      // discards a step's, so checking it only on steps would miss it: putting it on
+      // `ci-pass` itself — the one aggregate the required context sits on — would mean the verdict
+      // can exit 1 and the context still passes, with every pinned digest and every rule below
       // unchanged. Only absent or the literal `false` is accepted, for the same reason as the
       // step-level rule: an expression reaches the parser as a string, and this lane evaluates
       // none.
@@ -2523,8 +2525,8 @@ function checkRequiredContexts(root, jobs) {
           detail: `is carried by the job ${key}, which declares continue-on-error: ${String(jobContinueOnError)} — that job's failure is discarded, so everything it verifies can fail while this context reports success`,
         });
       }
-      // A `container:` replaces the machine every `run:` in that job executes on. Review finding
-      // [65]: an image whose `/bin/sh` returns 0 having done nothing makes every step in the
+      // A `container:` replaces the machine every `run:` in that job executes on: an image
+      // whose `/bin/sh` returns 0 having done nothing would make every step in the
       // closure succeed — including the aggregate verdict — with `run`, `shell`, `env` and every
       // pinned digest untouched, because the digest describes the step and this describes where
       // it runs. It is the `PATH` and `BASH_ENV` question one level further out, and it takes the
@@ -2549,21 +2551,21 @@ function checkRequiredContexts(root, jobs) {
 
         // ── Two checks that do not care whether the step has a NAME ──────────────────────
         //
-        // Review finding [78]: everything below keys on `step.name`, because property 3 is about
-        // DECLARED items and a declaration names one — so the guard skipping unnamed steps was
-        // right for that and wrong for these. A step needs no name to write `$GITHUB_ENV`, and
-        // `- run: echo "BASH_ENV=…" >> "$GITHUB_ENV"` with no `name:` went past the writer check
-        // untouched. Measured while testing the composite-action scan below: `ci.yml`'s seven
-        // `- uses: ./.github/actions/setup` steps are all unnamed, so the scan was unreachable.
+        // Everything below keys on `step.name`, because property 3 is about
+        // DECLARED items and a declaration names one — but a guard that skips unnamed steps would
+        // be right for that and wrong for these. A step needs no name to write `$GITHUB_ENV`, and
+        // `- run: echo "BASH_ENV=…" >> "$GITHUB_ENV"` with no `name:` would go past a
+        // name-keyed writer check untouched — measured against the composite-action scan below,
+        // where `ci.yml`'s seven `- uses: ./.github/actions/setup` steps are all unnamed.
         //
         // A step that writes one of the workflow command files sets the environment of every step
-        // AFTER it, which no declared-env check can see. Review finding [69]. Recorded against
+        // AFTER it, which no declared-env check can see. Recorded against
         // the JOB rather than against a declared item: the writer need not be a declared
         // verification itself — it only has to run before one.
         //
         // The NAME of the file, anywhere in the body — not an enumeration of the ways a shell can
-        // spell a reference to it. Review finding [72]: the first version matched `$GITHUB_ENV`
-        // and `${{ env.GITHUB_ENV }}`, and `>> "${GITHUB_ENV}"` — the ordinary brace form — went
+        // spell a reference to it: matching only `$GITHUB_ENV`
+        // and `${{ env.GITHUB_ENV }}` would let `>> "${GITHUB_ENV}"` — the ordinary brace form — go
         // straight through. There is no end to that list: a variable holding the path,
         // `printenv`, a here-doc. Reaching the file at all is the thing to refuse.
         //
@@ -2578,11 +2580,11 @@ function checkRequiredContexts(root, jobs) {
           typeof step.name === "string"
             ? `named ${JSON.stringify(step.name)}`
             : `#${String(index + 1)} (unnamed)`;
-        // The `run:` text is not the only place a step can name one. Review finding [79]: a
+        // The `run:` text is not the only place a step can name one: a
         // `with:` value reaches a composite action's own `run:` through `${{ inputs.… }}`, and an
         // `env:` value can carry the path for a body to append to under a different name —
-        // `env: { OUT: $GITHUB_ENV }` and then `echo … >> "$OUT"`. Neither appears in the text
-        // this used to search, and both write the same file. The whole surface the step supplies
+        // `env: { OUT: $GITHUB_ENV }` and then `echo … >> "$OUT"`. Neither would appear in a
+        // `run:`-only search, and both write the same file. The whole surface the step supplies
         // is searched instead: its body, its inputs, and its effective environment's VALUES.
         //
         // (The environment's NAMES are a different rule — `PRELOAD_HIJACK_ENV`, below — because
@@ -2601,7 +2603,7 @@ function checkRequiredContexts(root, jobs) {
         // An EXTERNAL action invoked DIRECTLY by a step in this closure is examined by nothing:
         // the scan below opens an action only when the reference starts with `./`, and
         // `nestedActions` covers what a local action reaches rather than what the closure
-        // itself invokes. Review finding [106]. A SHA pin makes a reference immutable and says
+        // itself invokes. A SHA pin makes a reference immutable and says
         // nothing about what it does.
         if (invoked !== "" && !invoked.startsWith("./")) {
           if (!closureActionsAllowed.includes(invoked)) {
@@ -2664,10 +2666,10 @@ function checkRequiredContexts(root, jobs) {
           if (!performed.has(step.name)) conditional.set(step.name, jobGuard);
         } else if (step.if === undefined) {
           performed.add(step.name);
-          // EVERY digest seen under this name, not the last one. Review finding [24], first escape:
-          // `needsClosure` yields the declaring job first, so hollowing out `ci-pass`'s verdict step
-          // and pasting the original — same name — into `lint` let last-write-wins restore the
-          // pinned digest with no edit to the declaration at all. Measured: the lane exited 0.
+          // EVERY digest seen under this name, not the last one: `needsClosure` yields the
+          // declaring job first, so hollowing out `ci-pass`'s verdict step
+          // and pasting the original — same name — into `lint` would let last-write-wins restore
+          // the pinned digest with no edit to the declaration at all — measured, the lane exited 0.
           //
           // A name is not a step. Collecting the set and requiring every member to match is what
           // makes a second step wearing the name a finding rather than a substitute for the first.
@@ -2725,16 +2727,16 @@ function checkRequiredContexts(root, jobs) {
       }
       if (performed.has(item)) {
         // Performed, unconditionally. The remaining question is whether it still DOES anything:
-        // membership was decided by the step's NAME alone, so review finding [03] pointed out
-        // that replacing `run: pnpm ci:build-verify` with `run: true` under the same name left
+        // membership decided by the step's NAME alone is not enough —
+        // replacing `run: pnpm ci:build-verify` with `run: true` under the same name would leave
         // this lane green while the required context verified nothing. The declaration pins the
         // body, and a body that moves is a change to read — which is what every other pin in
         // this repository means too.
         const pinned = pinnedBodies[item];
         const actual = bodies.get(item);
         if (pinned === undefined) {
-          // Review finding [24]. `pinned !== undefined && …` skipped the comparison entirely for
-          // an item with no digest, so the repair for [03] could be undone in one move: replace a
+          // A `pinned !== undefined && …` guard would skip the comparison entirely for
+          // an item with no digest, so the fix above could be undone in one move: replace a
           // step's `run:` with `true` AND delete that item's key from `verificationBodies`. Done to
           // "Derive the verdict from the serialized needs map", the aggregate job every required
           // context depends on would succeed while lint, test and build failed under it.
@@ -2915,12 +2917,13 @@ export function runHygieneLane(root) {
 /**
  * Write the findings where the Reviewer Gate can read them.
  *
- * Review finding [15]: the lane wrote its findings to stderr as prose, and
+ * The lane by itself only writes its findings to stderr as prose, and
  * `validateReviewerJustification` ingests only `{ findings: [...] }` JSON under `.qfai/review/**`.
- * There was no production bridge between the two anywhere in the repository — the E2E test that
- * demonstrates the ingestion parsed stderr and hand-built the JSON itself, which proves the GATE
- * works and proves nothing about the path reaching it. So a hygiene violation failed the CI log and
- * never once reached the reviewer the shipped-workflows contract promises it reaches.
+ * Without this bridge there is no production path between the two anywhere in the repository — an
+ * E2E test that demonstrates the ingestion by parsing stderr and hand-building the JSON itself
+ * proves the GATE works and proves nothing about the path reaching it. A hygiene violation would
+ * then fail the CI log and never once reach the reviewer the shipped-workflows contract promises
+ * it reaches.
  *
  * The lane writes it, rather than a workflow step converting it: a converter in YAML would be a
  * second parser for this lane's own output, and the first wording change would silently empty it.
@@ -2961,7 +2964,7 @@ function writeReviewerArtifact(root, reportDir, findings) {
 /**
  * Refuses a report directory reached through a link.
  *
- * Every component between `root` and `dir` must be a real directory. Review finding [48]:
+ * Every component between `root` and `dir` must be a real directory:
  * `.qfai/review/**` is gitignored but not unwritable, and a pull request can force-add a path
  * under it — including a directory component that is a symlink, which `mkdirSync` follows
  * without creating anything. This lane runs on an untrusted checkout, from `ci:lint` and from
@@ -3005,10 +3008,10 @@ function refuseLinkedDescent(root, dir) {
 function writeExclusivelyThenRename(target, text) {
   // The parent's IDENTITY — device and inode — pinned across the whole write.
   //
-  // Review finding [71]: comparing only `dev` proves the staging file and the verified directory
+  // Comparing only `dev` proves the staging file and the verified directory
   // are on one filesystem, which a checkout and any other directory on the same volume already
-  // are. So swapping `reportDir` for a link to a sibling directory after the descent check
-  // passed this test, and the rename then replaced an artifact over there.
+  // are: swapping `reportDir` for a link to a sibling directory after the descent check would
+  // still pass this test, and the rename would then replace an artifact over there.
   //
   // The inode is what says it is the SAME directory. It is read before the open and again after
   // it, and once more before the rename — Node has no `openat` or `renameat`, so the identity is

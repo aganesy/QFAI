@@ -152,6 +152,31 @@ describe("scripts/check-doc-clarity.mjs", () => {
       expect(result.status).toBe(0);
     });
 
+    it("exempts a spec pack's own delta log, which records what changed", async () => {
+      // Same case as the changelog by function: the record exists to keep the
+      // citation. Matched by basename, so both spellings the packs use are
+      // covered without listing every pack.
+      const dir = await newRepo({
+        ".qfai/specs/_policies/10_delta.md": "- Superseded by #1234.\n",
+        ".qfai/specs/spec-0001/09_delta.md": "- Raised in #1234.\n",
+      });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(0);
+    });
+
+    it("still checks a spec document that is not a delta log", async () => {
+      // The exemption is the basename, not the pack: a spec's own prose is
+      // written for a reader who has neither the number nor the tracker.
+      const dir = await newRepo({ ".qfai/specs/spec-0001/01_Spec.md": "Raised in #1234.\n" });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(".qfai/specs/spec-0001/01_Spec.md:1");
+    });
+
     it("still checks another rule document in the same directory", async () => {
       // The exemption is two exact paths. Widened to `.agents/rules/` it would
       // take every rule master with it, and those carry no such obligation.

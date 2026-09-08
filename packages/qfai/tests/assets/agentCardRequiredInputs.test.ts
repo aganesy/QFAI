@@ -53,6 +53,22 @@ async function isOnDisk(tree: string, relative: string): Promise<boolean> {
   }
 }
 
+/**
+ * Whether a required input is written by a run rather than shipped.
+ *
+ * The check asks whether a card names a path that is not there. Under these
+ * two directories nothing ever is: the package ships no evidence document and
+ * no report, and each file appears when a phase writes it. A reviewer that
+ * reads one is reading an earlier phase's output, which is a legitimate input
+ * and not a wrong path.
+ *
+ * By directory, not by name, and only these two: a card naming a missing
+ * `catalog/` or `skills/` file is still the defect this check exists for.
+ */
+function isProducedByARun(relative: string): boolean {
+  return relative.startsWith(".qfai/evidence/") || relative.startsWith(".qfai/report/");
+}
+
 describe.each(TREES)("%s: an agent card's required inputs are paths that exist", (tree) => {
   it("finds cards to read, so an empty directory cannot pass the case below", async () => {
     expect((await cardsIn(tree)).length).toBeGreaterThan(0);
@@ -62,6 +78,9 @@ describe.each(TREES)("%s: an agent card's required inputs are paths that exist",
     const missing: string[] = [];
     for (const [name, content] of await cardsIn(tree)) {
       for (const required of extractLiteralRequiredInputs(content)) {
+        if (isProducedByARun(required)) {
+          continue;
+        }
         if (!(await isOnDisk(tree, required))) {
           missing.push(`${name}: ${required}`);
         }
@@ -106,6 +125,22 @@ describe("a required-input bullet may explain itself", () => {
         ]),
       ),
     ).toEqual([]);
+  });
+
+  it("keeps a produced artifact out of the on-disk requirement", () => {
+    // The extractor still reads it — it is a literal path and the bullet names
+    // it — and the on-disk check is what skips it. Asserting the extraction
+    // here keeps the two rules separable: a change that stopped reading the
+    // path at all would pass a weaker test.
+    expect(
+      extractLiteralRequiredInputs(
+        section(["- .qfai/evidence/skeleton.md (the section under review)"]),
+      ),
+    ).toEqual([".qfai/evidence/skeleton.md"]);
+    expect(isProducedByARun(".qfai/evidence/skeleton.md")).toBe(true);
+    expect(isProducedByARun(".qfai/report/validate.json")).toBe(true);
+    // A shipped asset is not excused by living one directory over.
+    expect(isProducedByARun(".qfai/assistant/catalog/tech.md")).toBe(false);
   });
 
   it("drops a path written with a placeholder", () => {

@@ -20,6 +20,54 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A `Boundary` column on the TDD ledger, so the sibling rows of a split test
+  case have a recorded identity** (#1316). A matrix-shaped `TC-*` is seeded one
+  row per independently observable boundary. Every one of those rows repeats
+  that `TC-*` in `TC-Refs` and carries a serial `TDD-ID`, so neither cell says
+  which row covers which boundary.
+
+  Reconciliation re-derived the boundary set from `06_Test-Cases.md` on every
+  pass. That answers how many boundaries the test case has now; it does not
+  answer which row is which. Pairing an existing row with a re-derived boundary
+  read `Selector` and `Test file` — cells `/qfai-implement` owns and a
+  review-fix handback rewrites — so a reseed after such a rewrite could pair a
+  row with a different boundary than the one it was seeded for. The effect was
+  silent: the row count stayed right, every row still cited a real test case,
+  and the coverage crosswalk still balanced. What moved was which boundary a
+  row's `Status`, `Evidence` and `TDD-ID` described.
+
+  `Boundary` is a short slug for the one boundary a row owns, written by
+  `/qfai-sdd` Phase 2b while `Test file` is still `-` and rewritten by nothing
+  downstream. A reseed matches on the (`TC-Refs`, `Boundary`) pair. The pair and
+  not the slug alone, because a slug is unique inside its own test case and
+  nowhere wider — a generic one such as `not-found` recurs across test cases.
+
+  The column is optional, so a ledger seeded before it stays valid and a test
+  case holding one row writes `-`. Once a test case holds more than one row the
+  cell carries the row's identity, and `validate` reports siblings that name no
+  boundary (`QFAI-TDDLIST-017`) and two siblings claiming the same one
+  (`QFAI-TDDLIST-018`). Both are seed shape, so the profile of the phase that
+  writes the cell evaluates them, not only the completion gate.
+
+  Both are behind one promotion window: every ledger
+  seeded before the column holds a split whose rows name nothing, so an error on
+  the introducing release would fail every project carrying one.
+
+- **`validate` names a carrier whose suite is bound at run time** (#1256). A
+  test file can choose its runner entry point while the run starts —
+  `const deployed = LIVE ? describe : describe.skip`, then `deployed(...)` — so
+  whether its tests execute is not decidable from the source. The ATDD coverage
+  gate reads the annotation string and stops, so such a file discharges
+  `QFAI-ATDD-112` whether the runner collects it or skips it, and deleting the
+  production code behind that test case leaves every gate green.
+
+  `QFAI-ATDD-124` (`info`) names those files. It is not a violation: binding
+  the suite is the ordinary way to write a probe that needs a target the run may
+  not have, and there is no release at which that should fail a build. What the
+  finding says is that the gate cannot tell, so an obligation whose sole carrier
+  is one of them needs a second owner that runs unconditionally. A written-out
+  `describe.skip(` is not reported — it is a token any scan can already read.
+
 - **`validate` reports a test case the ledger does not own, cited from a
   coverage row** (#1250). The `Level` a test case declares and the `Layer` of
   the ledger rows citing it were compared in one direction only: a `L1` / `L2`
@@ -196,12 +244,41 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the lanes work correctly on every POSIX runner, so no CI job can tell the two
   spellings apart.
 
+- **A gitignore negation naming a directory re-includes the directory, not
+  everything under it** (#1361). A directory pattern covers its whole subtree
+  when it ignores, because git never descends into an excluded directory. A
+  negation cannot work the same way: gitignore(5) says a file whose parent
+  directory is excluded cannot be re-included.
+
+  The matcher applied the subtree rule to both, so `!.qfai/` — last in the
+  shipped block — outranked every ignore above it, and `isPathIgnoredByLayers`
+  answered "not ignored" for paths `git check-ignore` reports as ignored.
+
+  The shipped default hid it: a narrower negation for each governance record
+  sits below the directory ones and also wins, so the answer was right for the
+  wrong reason. A project that keeps the block but drops one of those narrower
+  lines is where the two parted — and the check that warns about an invisible
+  Coverage Depth Matrix stayed silent in exactly that configuration.
+
 - **A failing clean leg of the workflow-hygiene fixtures now names the rule and
   the paths** (#1314). Both legs asserted the lane's exit code before its
   findings, so a failure read `expected 1 to be 0` and the lane's own output —
   which names the rule, the file and the job for every finding — was never
   printed. The legs fail when the staged tree is incomplete as well as when the
   workflow trees are, and an exit code alone cannot tell those apart.
+
+- **A failing checkpoint has one remedy, and one document states it** (#724).
+  `checkpoint-verification.md#pass-criteria` says a FAIL leaves the row at
+  `refactor` and re-runs the repair. Three other documents each described the
+  failure in their own words, and one of them — the `qa-gatekeeper` card — sent
+  the row to `exception` instead, which is the one thing a FAIL does not do. A
+  row parked there is read as an anomaly and can be carried past the oracle
+  proof it still owes.
+
+  Each of the other documents now names the criteria rather than restating it,
+  and a check reads every Markdown and YAML file on the assistant surface,
+  generated catalogs included, so a second remedy cannot come back in a file
+  nobody thought to look at.
 
 - **The governed-path report case of `assistantAssetProvenance.test.ts` no
   longer depends on the platform's path separator** (#1315). `init` names a
@@ -419,6 +496,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The block also ignores `.qfai/review_archive/*`, the location packs were
   moved to before the current layout put the archive under `.qfai/review/`
   itself.
+
+### Fixed
+
+- **`QFAI-TRACE-003` names the spec directory with one separator** (#1365).
+  The finding joined the configured specs directory with the platform's
+  separator, so a caller reading the validator's own output saw a backslash
+  path on Windows. Nothing shipped wrong — `normalizeIssuePaths` converts
+  `file` before any surface reads it — but twenty-eight assertions across the
+  suite state a finding's `file` as a POSIX literal at that boundary, and this
+  one disagreed with all of them.
+
+  A test that searched `qfai init`'s report for a `path.join` needle is
+  corrected the other way, to match what the report carries (#1363). The report
+  is POSIX on every platform, which the same file already pins.
 
 ## [1.11.0] - 2026-09-07
 
@@ -1608,6 +1699,25 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
   Routing a ledger row **to** `exception` is not an `ask-user` decision — Red
   phase steps 3b and 5 decide it deterministically, and only the waiver that
   follows needs approval.
+
+- **`qfai --help` documents the per-command exit-code matrix, and an unknown
+  command now exits 1.** The help output carried a `Commands:` and an
+  `Options:` block and nothing else; exit codes appeared only incidentally
+  inside two option descriptions, and `64` / `65` / `66` — live return values
+  from `prototyping iterate` and `prototyping certify` — appeared nowhere. The
+  canonical matrix lives in the framework's own CLI contracts, which are not
+  part of the published package, so a consumer installing qfai from npm could
+  not reach it at all. Treating "non-zero" as one bucket misreads `64`
+  (converged — a success for the prototyping loop) as a failure. A new
+  `Exit codes:` block is rendered from the same constants the commands return,
+  per command rather than as one flat table, since the same number means
+  different things depending on the command. Alongside it, a mistyped
+  top-level command (`qfai vlaidate`, with or without `--help`) now sets exit
+  code 1 instead of printing usage and exiting 0, so a typo is detectable from
+  CI. That is a different row from a CLI-arg error — an unknown flag or a
+  rejected value — which `parseArgs` returns `2` for on every command, the code
+  `.qfai/contracts/cli/qfai-init.md` reserves for it; the block states both, so
+  a caller can tell a mistyped command name from a mistyped flag.
 
 ### Fixed
 
