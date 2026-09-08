@@ -945,7 +945,11 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
  */
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   "design-contract-readiness-sdd": "sdd",
-  drift: "tdd",
+  // `tdd` evaluates this group too, and names it as the completion gate. The
+  // notice points at `drift` instead because that is the run an operator can
+  // make on work in flight: `tdd` answers the drift question and every
+  // completion obligation with it, which is not what a mid-branch check wants.
+  drift: "drift",
   "saas-package-profile": "saas-package",
 };
 
@@ -1056,6 +1060,12 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below) and adds
   // its own attestation / handoff gates, which no other profile reaches.
   "saas-package": [...PROTOTYPING_GATE_GROUPS, "saas-package-profile"],
+  // The drift guard alone. The rule binds the downstream stage, so `/qfai-sdd`
+  // — the owner of the files it polices — must not run it, which is why no
+  // wide profile carries it. This profile is that same narrow gate without the
+  // completion obligations `tdd` brings, so CI can evaluate it on every pull
+  // request rather than only at the end of an implementation run.
+  drift: ["drift"],
 };
 
 function isKnownProfile(profile: string): profile is ValidationProfile {

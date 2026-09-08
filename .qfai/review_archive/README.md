@@ -6,9 +6,13 @@
 
 ## Version control policy
 
-Review archive artifacts are **not versioned by default**.
-The `.gitignore` in this directory excludes all archived review packs.
-Only `.gitignore` and `README.md` are tracked.
+A pack archived here is **not tracked**. The `.gitignore` in this directory
+ignores everything but itself and this file.
+
+The packs already in the index are the exception, and they stay there as a
+historical record. An ignore rule decides what git picks up next; it does not
+remove a path the index already holds. So both states sit side by side:
+`git ls-files` lists those packs, and a pack archived today is ignored.
 
 ## Path format
 

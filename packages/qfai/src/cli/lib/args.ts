@@ -43,7 +43,8 @@ export type ParsedArgs = {
       | "tdd"
       | "verify"
       | "full"
-      | "saas-package";
+      | "saas-package"
+      | "drift";
     /**
      * `qfai doctor --profile <skill>` per-skill profile. Distinct from
      * the validate-side `profile` enum above: when `doctor --profile`
@@ -641,7 +642,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             badValue(
               "--profile",
               next,
-              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package",
+              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift",
             ),
           );
         }
@@ -1308,7 +1309,8 @@ function isValidationProfile(
   | "tdd"
   | "verify"
   | "full"
-  | "saas-package" {
+  | "saas-package"
+  | "drift" {
   return (
     value === "discussion" ||
     value === "sdd" ||
@@ -1317,6 +1319,7 @@ function isValidationProfile(
     value === "tdd" ||
     value === "verify" ||
     value === "full" ||
-    value === "saas-package"
+    value === "saas-package" ||
+    value === "drift"
   );
 }

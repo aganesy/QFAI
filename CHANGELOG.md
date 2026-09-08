@@ -4,7 +4,68 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A `drift` validation profile, and the CI workflow `qfai init` writes now
+  runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
+  and nothing else. `full` evaluates every gate group except drift, so the one
+  gate an adopter's CI installs was structurally incapable of failing on a
+  downstream edit to upstream SSOT — the thing the drift protocol calls
+  non-negotiable and says is detected.
+
+  `--profile drift` runs that guard and nothing else. The `tdd` profile still
+  carries it and is unchanged; what it cannot be is the CI answer, because it is
+  also the completion gate and asks a branch for everything a finished one owes.
+
+  The generated workflow gains a second run on pull requests, and its checkout
+  asks for full history there. The guard compares the branch against its base
+  and says nothing when it cannot resolve one, so a shallow clone would have
+  passed without checking.
+
+  `QFAI-PROFILE-001` now names `--profile drift` as the run that evaluates
+  `QFAI-DRIFT-*`, in place of `--profile tdd`.
+
+- **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
+  its leading comment block. A pack outlives what it specifies: a spec that was
+  deleted or superseded is kept as the record of why it went away, and that
+  record cannot carry a consumer view or an applicable NFR for something that
+  no longer exists.
+
+  The two alternatives were worse. Making the record conform means writing
+  fiction; admitting it into the schema weakens the contract for every live
+  pack.
+
+  The marker is per document, has to precede the content, and every ignored
+  file is counted in the run's own output — an exclusion nobody sees is one
+  nobody reviews.
+
 ### Fixed
+
+- **`qfai doctor` reads the path off an agent card's input bullet instead of
+  the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
+  file and then say what it is for. Read whole, that sentence became the
+  required input, and a card whose file is on disk was reported as missing one.
+
+  The path now ends at the first space, `(`, backtick or em dash; the rest is
+  prose. A bullet naming a glob or a `<placeholder>` is still skipped, because
+  neither is a file to find — and both are now judged on the path rather than on
+  the explanation beside it.
+
+- **`--spec` drops a sibling's stub the way it drops a sibling's broken
+  reference** (#1264). `cross-spec-obligations.md` already said a file under the
+  canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec whatever
+  its annotation says. The rule was applied to a broken reference and not to the
+  file itself, so one layout answered two ways: a scoped run dropped a sibling's
+  dangling reference and kept a sibling's stub, and every spec in a repository
+  recorded the same sibling's stub until its owner cleared it.
+
+  A path in that layout now resolves to its spec wherever a scoped run reads
+  one. The directory decides, not the annotation — that is what the rule says,
+  and it is the half a path can answer.
+
+  A test file outside the layout still has no owner and reaches every run, and
+  `--profile full` is unscoped and unchanged. Attribution decides which run
+  reports a stub, never whether the repository is clean.
 
 - **The Drift Protocol no longer justifies its parking rule with a claim the
   ledger contradicts** (#1312). Two shipped documents said only a `todo` row can
@@ -191,6 +252,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   provenance / init-path 各列挙に登録済み。
 
 ### Changed
+
+- **`QFAI-CFG-001` is an error from this release.** Three
+  `validation.traceability` keys were declared, defaulted and parsed while no
+  validator read them: `brMustHaveSc`, `scNoTestSeverity` and
+  `orphanContractsPolicy`. The 1.10.1 line began reporting them at `warning`,
+  and the window closes here.
+
+  A project whose `qfai.config.yaml` still carries any of the three moves from
+  a passing `validate --fail-on error` to a failing one on upgrade, with
+  nothing else changed. The keys were already inert, so the finding is about
+  the file's shape rather than its behaviour, and deleting the key clears it.
 
 - **Reworded the shipped `.agents/rules/*.md` templates for clarity.** Shortened
   sentences, and corrected `temporary-files.md`'s claim that `qfai init` does not
