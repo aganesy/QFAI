@@ -7,6 +7,30 @@ import { SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
+/** The whole assistant tree on both sides — skills, agents, catalogs, manifests. */
+const ASSISTANT_TREES = [
+  path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant"),
+  path.join(repoRoot, ".qfai/assistant"),
+];
+
+/** Every readable `.md` / `.yml` under `root`, recursively. */
+async function markdownAndYamlUnder(root: string): Promise<string[]> {
+  const found: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      if (/\.(?:md|ya?ml)$/.test(entry.name)) found.push(full);
+    }
+  };
+  await walk(root);
+  return found;
+}
+
 /** Shipped surface plus its root mirror. */
 const SKILL_DIRS = [
   path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement"),
@@ -1271,7 +1295,9 @@ describe("qfai-implement gate arity naming", () => {
       );
       expect(reference).toContain("#when-drift-is-detected");
 
-      // No second remedy anywhere else on the shipped surface.
+      // No second remedy in the two documents that state the checkpoint's own
+      // vocabulary. The whole shipped surface is held by the case below this
+      // one: three files cannot support a claim about everywhere.
       const suite = await readFile(path.join(dir, "references", "relevant-test-suite.md"), "utf-8");
       expect(suite).toContain("`checkpoint-verification.md#pass-criteria`");
       expect(suite).not.toContain("`refactor -> exception`");
@@ -1288,6 +1314,32 @@ describe("qfai-implement gate arity naming", () => {
       expect(skill).toContain("This is the only entry that re-selects `refactor`");
       expect(reference).toContain("The preflight resume step (`../SKILL.md`, Phase: Stage 0 +");
     }
+  });
+
+  it("carries no second FAIL remedy anywhere on the shipped assistant surface", async () => {
+    // "defined here and nowhere else" is a claim about the whole tree, and a
+    // check that reads three files cannot support it. One agent card described
+    // a failing checkpoint parking a row at `refactor -> exception` — the
+    // second remedy the rule forbids — and its generated catalog entry carried
+    // the same sentence, both outside every path the case above reads.
+    //
+    // Scoped to the transition, not to the word `exception`: that status is
+    // legal from any active status and is written about all over the tree. What
+    // may not exist twice is a route from a failing checkpoint to it.
+    const offenders: string[] = [];
+    for (const tree of ASSISTANT_TREES) {
+      for (const file of await markdownAndYamlUnder(tree)) {
+        const body = await readFile(file, "utf-8");
+        if (!body.includes("refactor -> exception")) continue;
+        offenders.push(path.relative(repoRoot, file));
+      }
+    }
+
+    expect(
+      offenders.sort(),
+      "a shipped document still routes a failing checkpoint to `exception`, which " +
+        "`checkpoint-verification.md#pass-criteria` says is the one thing a FAIL does not do",
+    ).toEqual([]);
   });
 
   // Resuming an unrelated `refactor` row ahead of what Phase Red step 1 would
