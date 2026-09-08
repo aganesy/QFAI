@@ -410,13 +410,15 @@ describe("the replacement gate has no holes the exclusion could fall through", (
 
   it("keeps the ledger optional for a spec that declares no coverage-target TC", async () => {
     // The other half of the same promise: the escalation is conditional, so a
-    // spec whose TCs are all L3 keeps the warning and gains no error.
+    // spec whose TCs are all L3 gains no error. Nothing is owed, so the notice
+    // saying so is `info` — a warning naming an obligation its own message
+    // calls optional cannot be cleared by anything the operator would do.
     await withSpec(
       { "06_Test-Cases.md": table("| TC-0001 | L3 | AC-0001 | - | s | e |") },
       async (root) => {
         const issues = await validateTddList(root, defaultConfig);
         expect(issues.map((entry) => entry.code)).toEqual(["TDDLIST_MISSING"]);
-        expect(issues[0]?.severity).toBe("warning");
+        expect(issues[0]?.severity).toBe("info");
       },
     );
   });

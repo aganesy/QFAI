@@ -257,12 +257,14 @@ was fabricated.
    `todo`**, and writes nothing else: no other cell, no other file, and no row added, removed or
    re-scoped.
 
-   **Only a `todo` row is parked, because only a `todo` row can be.** `todo -> blocked` is the
-   ledger's one inbound edge to `blocked`
-   (`../skills/qfai-implement/references/execution-ledger.md#allowed-transitions`), and a blocked
-   set routinely names rows past it — a post-RED scope gap is raised from a row at `red` or later, a
-   checkpoint regression from one at `done`. Writing the transition on those would be an illegal
-   move, and the two remaining shapes have their own answers:
+   **Only a `todo` row is parked**, and the restriction is this step's rather than the ledger's:
+   `any active status -> blocked` is a legal edge and `Blocked-By` records the status the row is
+   leaving
+   (`../skills/qfai-implement/references/execution-ledger.md#allowed-transitions`). A blocked set
+   routinely names rows past `todo` — a post-RED scope gap is raised from a row at `red` or later, a
+   checkpoint regression from one at `done` — and for those the transition buys nothing the CR file
+   does not already give, while costing a round trip out of the phase the row is in and back into it
+   from the departure status. The two remaining shapes have their own answers:
    - **A row another open `CR-*` already parked** keeps its `blocked` status and takes this CR's ID
      **appended** to `Blocked-By`, which holds the set of blockers rather than one. Re-writing the
      transition would report a move the row did not make, and replacing the cell would drop the
@@ -274,8 +276,8 @@ was fabricated.
      selection is the mandatory Change-Request preflight, which reads the open CRs before the ledger
      (`../skills/qfai-implement/references/change-request-reset.md`): a row an open in-scope CR's
      blocked set names is not selected. That is the same protection `blocked` gives a `todo` row,
-     taken from the CR file — which is already the record — instead of from a status the row cannot
-     legally hold. On approval the row leaves by the reset that step 4 authorises (`any status` ->
+     taken from the CR file — which is already the record — instead of from a second copy of it in
+     the row's status. On approval the row leaves by the reset that step 4 authorises (`any status` ->
      `todo`), which every one of these statuses admits; on `rejected` or `superseded` it resumes
      from where it stopped. The parking belongs to this step rather than to step 4 for two reasons.
      Step 3's wait for approval spans sessions, and a dependent row left at `todo` across it is
