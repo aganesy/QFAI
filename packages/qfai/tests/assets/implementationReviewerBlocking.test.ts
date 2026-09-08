@@ -2,7 +2,7 @@
  * A mandatory reviewer's verdict has to block (#387).
  *
  * `qfai-implement/SKILL.md` makes `implementation-reviewer` PASS item 8 of the
- * unconditional 11-point gate. But `agent-routing.yml` listed it under
+ * unconditional 12-point gate. But `agent-routing.yml` listed it under
  * `mandatory_agents` and *not* `blocking_agents`, `review-profiles.yml` put it
  * in `conditional_required`, and both of the skill's DONE rules — plus the
  * shared delegation baseline — are phrased over *blocking* reviewers only. An
@@ -134,7 +134,7 @@ describe("routed reviewers block", () => {
       expect(skill).toContain("Every reviewer in `blocking_agents` blocks `done`");
     });
 
-    it(`${tree}: the 11-point gate still names the reviewer`, async () => {
+    it(`${tree}: the 12-point gate still names the reviewer`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
 
       // The alternative fix was to delete item 8. It was not taken, so item 8

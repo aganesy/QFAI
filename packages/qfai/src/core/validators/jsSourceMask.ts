@@ -63,6 +63,27 @@ const REGEX_AFTER_KEYWORD: ReadonlySet<string> = new Set([
   "yield",
 ]);
 
+/**
+ * Keywords whose parenthesised header ends a STATEMENT rather than a value.
+ *
+ * `if (enabled) /^\s*```/.test(value)` is a legal regex literal, and the `)` before it reads as
+ * the end of a call on the character test alone — which leaves the backtick inside the regex free
+ * to open a template literal and blank every line down to the next backtick, taking a real
+ * declaration with it.
+ *
+ * This rule lived in `atddTraceability.ts` and not here, which is the divergence #1154 reports:
+ * two readers, two rules, and the one wired to this function had the older one. Whichever reader
+ * is wired next inherits whatever is here, so it is here.
+ */
+const CONTROL_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
+  "if",
+  "for",
+  "while",
+  "switch",
+  "catch",
+  "with",
+]);
+
 /** Blanks `[start, end)`, keeping newlines, and answers `end` for the caller. */
 function blank(out: string[], start: number, end: number): number {
   for (let i = start; i < end; i += 1) {
@@ -144,47 +165,127 @@ function endOfRegexLiteral(source: string, start: number): number {
       continue;
     }
     if (ch === "/") {
-      return i + 1;
+      // The FLAGS are part of the literal. Left out, they were read as an identifier — and an
+      // identifier sets `endsExpression` from the keyword set, so a flag string that happened to
+      // spell one would have flipped the next `/` from division to regex.
+      let end = i + 1;
+      while (end < source.length && /[A-Za-z]/.test(source[end] ?? "")) {
+        end += 1;
+      }
+      return end;
     }
   }
   return source.length;
 }
 
-export function maskJsNonCode(source: string): string {
+/** End of a `"""` / `\'\'\'` docstring, or end of file when it is never closed. */
+function endOfTripleQuoted(source: string, start: number, fence: string): number {
+  const close = source.indexOf(fence, start + fence.length);
+  return close === -1 ? source.length : close + fence.length;
+}
+
+/** Which span kinds {@link maskJsNonCode} blanks. */
+export type JsMaskOptions = {
+  /**
+   * Blank comment spans. Default `true`.
+   *
+   * `false` for a scanner whose subject LIVES in comments — the ATDD
+   * annotation scan reads `/* QFAI:SPEC-0001:TC-0001 *\/`, so blanking
+   * comments would stop it finding every real annotation while it went on
+   * reading ids out of string and regex literals (#1141). The lexer still
+   * WALKS the comment either way: skipping it is what keeps a `/` inside it
+   * from being read as a regex literal.
+   */
+  readonly comments?: boolean;
+
+  /**
+   * Read `#` as a line comment. Default `false`.
+   *
+   * `true` for the multi-language carrier scan, which meets Python, Ruby and Gherkin. It stays
+   * OFF by default because `#` is not a comment in JavaScript — it opens a private field, and
+   * `this.#count = 1;` under a hash-comment rule loses the rest of its line. `#[` (a Rust
+   * attribute) and `#!` (a shebang) are excluded whatever this says, because neither is one.
+   */
+  readonly hashComments?: boolean;
+
+  /**
+   * Recognise `\"\"\"` / `\'\'\'` docstrings, which span lines. Default `false`.
+   *
+   * `true` for the same scan and for the same reason: a Python docstring is one literal, and
+   * reading it as three empty strings leaves its body as code.
+   */
+  readonly tripleQuoted?: boolean;
+};
+
+export function maskJsNonCode(source: string, options: JsMaskOptions = {}): string {
+  const blankComments = options.comments ?? true;
+  const hashComments = options.hashComments ?? false;
+  const tripleQuoted = options.tripleQuoted ?? false;
   const out = source.split("");
   // Whether the token just read closes an expression. It is the whole
   // regex-vs-division test: `a / b` divides, `= /re/` does not. Comments leave
   // it untouched — they are transparent to the token before them.
   let endsExpression = false;
+  // The identifier last read, for the `(` that may follow it. Whitespace and comments do not
+  // clear it — `if /* why */ (x)` is still a control header — and every other token does.
+  let lastWord = "";
+  // One entry per open `(`: whether it opened a control statement's header. A STACK rather than
+  // the backward walk this rule arrived with, which had to bound itself with a lookback limit to
+  // stay linear and counted parens inside strings and comments on the way. The stack is exact and
+  // costs nothing, because the pass has already skipped those spans by the time it gets here.
+  const controlHeader: boolean[] = [];
   let i = 0;
   while (i < source.length) {
     const ch = source[i] ?? "";
     const next = source[i + 1] ?? "";
-    if (ch === "/" && next === "/") {
-      i = blank(out, i, endOfLineComment(source, i));
+    if (hashComments && ch === "#" && next !== "[" && next !== "!") {
+      const end = endOfLineComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
+    } else if (tripleQuoted && (ch === '"' || ch === "'") && source.startsWith(ch.repeat(3), i)) {
+      i = blank(out, i, endOfTripleQuoted(source, i, ch.repeat(3)));
+      endsExpression = true;
+      lastWord = "";
+    } else if (ch === "/" && next === "/") {
+      const end = endOfLineComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "/" && next === "*") {
-      i = blank(out, i, endOfBlockComment(source, i));
+      const end = endOfBlockComment(source, i);
+      i = blankComments ? blank(out, i, end) : end;
     } else if (ch === "'" || ch === '"') {
       i = blank(out, i, endOfQuoted(source, i, ch));
       endsExpression = true;
+      lastWord = "";
     } else if (ch === "`") {
       i = blank(out, i, endOfTemplate(source, i));
       endsExpression = true;
+      lastWord = "";
     } else if (ch === "/" && !endsExpression) {
       i = blank(out, i, endOfRegexLiteral(source, i));
       endsExpression = true;
+      lastWord = "";
     } else if (WORD.test(ch)) {
       const start = i;
       while (i < source.length && WORD.test(source[i] ?? "")) {
         i += 1;
       }
-      endsExpression = !REGEX_AFTER_KEYWORD.has(source.slice(start, i));
+      lastWord = source.slice(start, i);
+      endsExpression = !REGEX_AFTER_KEYWORD.has(lastWord);
     } else {
       if (!SPACE.test(ch)) {
-        // `)` and `]` close a call, a group or an index — all expressions. A
-        // `}` is left open on purpose: after a block it does not end one, and
-        // reading a regex as a division is the costlier mistake of the two.
-        endsExpression = ch === ")" || ch === "]";
+        if (ch === "(") {
+          controlHeader.push(CONTROL_STATEMENT_KEYWORDS.has(lastWord));
+          endsExpression = false;
+        } else if (ch === ")") {
+          // A control header closes a STATEMENT, so what follows starts a new expression and a
+          // `/` there opens a regex. Every other `)` closes a call or a group, which is a value.
+          // An unmatched `)` falls back to "a value ended", the reading before this rule existed.
+          endsExpression = !(controlHeader.pop() ?? false);
+        } else {
+          // `]` closes an index — an expression. A `}` is left open on purpose: after a block it
+          // does not end one, and reading a regex as a division is the costlier mistake.
+          endsExpression = ch === "]";
+        }
+        lastWord = "";
       }
       i += 1;
     }

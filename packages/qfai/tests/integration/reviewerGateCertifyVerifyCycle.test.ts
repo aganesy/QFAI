@@ -57,7 +57,7 @@ afterEach(async () => {
 });
 
 describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regressed certify path", () => {
-  it("emits R-CERTIFY-VERIFY-CIRCULAR at severity error with 3-part justification when verify.json scope=atdd is consumed at prototyping phase", async () => {
+  it("emits R-CERTIFY-VERIFY-CIRCULAR at severity info with 3-part justification when verify.json scope=atdd is consumed at prototyping phase", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "atdd" });
     // No legacy `phase` field — current iterate output (writeSeedMetadata
     // explicitly deletes it). The reviewer-gate identifies the prototyping
@@ -74,7 +74,11 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(findings.length).toBe(1);
     const f = findings[0];
-    expect(f?.severity).toBe("error");
+    // `info`, not `error`. `qfai prototyping certify` is what refuses a
+    // wrong-phase verdict (exit 2); at error severity a repo-wide `validate`
+    // made `/qfai-verify`'s Completion Contract unsatisfiable outside Work
+    // Order H, because a full-profile run has no honest scope to write (#1097).
+    expect(f?.severity).toBe("info");
     // 3-part justification: (1) certify path, (2) offending validator-output
     // profile, (3) option-B contract clause violated.
     expect(f?.message).toMatch(/\.qfai\/output\/verify\.json/);
@@ -94,8 +98,13 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     const issues = await validateReviewerGate(root, await getConfig(root));
     const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
     expect(findings.length).toBe(1);
-    expect(findings[0]?.severity).toBe("error");
+    expect(findings[0]?.severity).toBe("info");
     expect(findings[0]?.message).toMatch(/full/);
+    // The finding names the way out, which it did not before: "close the loop,
+    // re-run /qfai-verify for Work Order H". Stating the rule without the
+    // remedy is what left the operator with three blocked exits.
+    expect(findings[0]?.message).toMatch(/Work Order H/);
+    expect(findings[0]?.message).toMatch(/scope="prototyping"/);
   });
 });
 

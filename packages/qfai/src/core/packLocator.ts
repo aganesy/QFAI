@@ -94,36 +94,63 @@ export function validatePackName(kind: PackKind, name: string): PackNameValidati
   };
 }
 
-export async function findPacks(rootDir: string, kind: PackKind): Promise<LocatedPack[]> {
-  try {
-    const entries = await readdir(rootDir, { withFileTypes: true });
-    const packs: LocatedPack[] = [];
+export type FindPacksOptions = {
+  /**
+   * How to report a directory-read failure that is *not* "the root does
+   * not exist". `"empty"` (the default) keeps the historical tolerant
+   * behaviour — every failure collapses into an empty list. `"throw"`
+   * rejects instead, so a caller that renders a list to an operator can
+   * tell "no packs exist" apart from "the packs could not be read"
+   * (EACCES, EIO, ENOTDIR, …) rather than reporting an unreadable root
+   * as an empty, successful listing.
+   */
+  onReadFailure?: "empty" | "throw";
+};
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      const validation = validatePackName(kind, entry.name);
-      if (validation.status === "other") {
-        continue;
-      }
-      packs.push({
-        kind,
-        rootDir,
-        path: path.join(rootDir, entry.name),
-        name: entry.name,
-        status: validation.status,
-        isCanonical: validation.isCanonical,
-        isLegacy: validation.isLegacy,
-        isDangerous: validation.isDangerous,
-        timestamp: validation.timestamp,
-      });
-    }
-
-    return packs.sort((left, right) => left.name.localeCompare(right.name));
-  } catch {
-    return [];
+/** Only a genuinely absent root means "there are no packs here". */
+function isMissingRootError(cause: unknown): boolean {
+  if (typeof cause !== "object" || cause === null || !("code" in cause)) {
+    return false;
   }
+  return cause.code === "ENOENT";
+}
+
+export async function findPacks(
+  rootDir: string,
+  kind: PackKind,
+  options: FindPacksOptions = {},
+): Promise<LocatedPack[]> {
+  const entries = await readdir(rootDir, { withFileTypes: true }).catch((cause: unknown) => {
+    if (options.onReadFailure === "throw" && !isMissingRootError(cause)) {
+      throw cause;
+    }
+    return [];
+  });
+
+  const packs: LocatedPack[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const validation = validatePackName(kind, entry.name);
+    if (validation.status === "other") {
+      continue;
+    }
+    packs.push({
+      kind,
+      rootDir,
+      path: path.join(rootDir, entry.name),
+      name: entry.name,
+      status: validation.status,
+      isCanonical: validation.isCanonical,
+      isLegacy: validation.isLegacy,
+      isDangerous: validation.isDangerous,
+      timestamp: validation.timestamp,
+    });
+  }
+
+  return packs.sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export function latestPack(packs: readonly LocatedPack[]): LocatedPack | null {

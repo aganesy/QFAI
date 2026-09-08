@@ -2191,15 +2191,95 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 933
+**And a third time, from a merge rather than a commit.** Bringing `main` into a branch that
+moves `Integration` into the ATDD-owned layer set
+carried that branch's `+17` `it` callsites in `tests/assets/atddRedProvenance.test.ts` into the e2e
+project's globs, taking the count from 925 to 942 — re-derived with the guard's own `CALLSITE` rule at
+each endpoint: 915 at the merge base, 925 at `main`, 932 on the branch, 942 at the merge, and
+`925 + (932 - 915) = 942`. Nothing about `spec-0017` changed here either. The merge is a commit that
+changes a callsite under the two globs, so it owes this line exactly as a direct commit would, and the
+two suite totals above are known-invalid for this tree — not re-run here, because a merge that resolves
+documentation conflicts cannot certify a suite run it did not take.
 
-**That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
-each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
-by a test — deriving them would mean running the suite from inside it — but the thing that INVALIDATES
-them can be: a commit that changes an `it` / `test` callsite under the e2e project's two include globs.
-`stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
-that moves a callsite reddens until the line is corrected, and the totals beside it are known-invalid
-rather than presumed-valid in the window between.
+**And a fourth time, from the same branch's next commit.** Three review threads on that branch's PR
+were answered with three new `it` callsites in `tests/assets/atddRedProvenance.test.ts` — the
+skipped-version upgrade route, the sibling requirement on an `Integration` row the ATDD stage never
+handed over, and the marker-first destination for a `review-fix` round — taking that file from 229 to
+232 and the count from 942 to 945. Every endpoint of the paragraph above was **re-measured** with the
+guard's own `CALLSITE` rule rather than carried forward, because a chain whose earlier terms are
+assumed is the defect this section is a record of: 915 at the merge base (`e420a44f`), 925 at `main`
+(`2643bc3a`), 932 at the branch tip before the merge (`b9e91e12`), 942 at the merge (`02f43e655`) —
+all four unchanged — and `942 + 3 = 945` here. Nothing about `spec-0017` changed in this commit
+either; the two suite totals above stay known-invalid for this tree, and are not re-run here for the
+same reason the merge did not re-run them.
+
+**And a fifth time, from a second merge of `main` into the same branch.** `main` moved from 925 to 927
+while this branch sat — two `it` callsites added to `tests/assets/assets.test.ts`, which is inside the
+e2e project's globs and has nothing to do with `spec-0017` — so bringing `35f74b14d` in takes the count
+to 947. The two deltas are disjoint: `main`'s two are in `assets.test.ts` (72 to 74) and this branch's
+twenty are in `atddRedProvenance.test.ts` (212 to 232), so neither is counted twice. Every endpoint was
+**re-measured** with the guard's own `CALLSITE` rule rather than carried forward, for the reason the
+paragraph above gives: 925 at the previous `main` (`2643bc3a`), 927 at `main` (`35f74b14d`), 945 at the
+branch tip before this merge (`7784f78e`), 947 at this merge — and `945 + (927 - 925) = 947`. Nothing
+about `spec-0017` changed here either; the two suite totals above stay known-invalid for this tree, and
+are not re-run here for the same reason the earlier merge did not re-run them.
+
+**And it moved again — this time in a MERGE, with both parent TIPS individually correct.** Both parents
+of `2a6da1ca9` measure 932 and record 932, so neither branch could have found this by re-measuring its
+own tree at the point it was merged. They are short of the merge in different ways:
+
+| revision                | measured | recorded | how it differs from the merge                                      |
+| ----------------------- | -------- | -------- | ------------------------------------------------------------------ |
+| `60b707fa0` (parent A)  | 932      | 932      | lacks `tests/assets/autoModeApprovalDegrade.test.ts` (5 callsites) |
+| `26a67fbe1` (parent B)  | 932      | 932      | has that file; is one callsite behind on five others (below)       |
+| `2a6da1ca9` (the merge) | **937**  | 932      | takes A's five single-callsite additions AND B's whole new file    |
+
+The five B is behind on: `atddRedProvenance` 212→213, `coverageDepthMatrixHome` 9→10,
+`evidenceCellContainer` 9→10, `evidenceGitignoreClaim` 4→5, `implementCheckpointVerification` 8→9. The
+record is byte-identical in both parents, so the merge carried it through unchanged and nothing
+re-measured after the integration. `test (e2e)`, `node-floor` and `ci-pass` have been red on `main` ever
+since: one stale integer, three required jobs, every open pull request red for a reason none of them
+contains. `git diff 2a6da1ca9 64dfea7ec` under either glob is empty, so the merge is where the whole
+delta enters.
+
+**The claim is about the tips, not about either history.** B's own history does contain a wrong commit:
+at `9ac4c967e0` the same walk measures 920 against a recorded 915, and `fe05265e80` repairs it to 920.
+That is the ordinary branch-local instance of this defect, and B fixed it branch-locally, which is the
+point — a branch that had already caught and repaired its own staleness still merged into an
+inconsistent tree. The two failure modes are independent.
+
+**The obligation therefore belongs to the merge, not to the branch.** The rule below says a commit that
+changes a callsite under the two globs owes a re-measurement, and at their tips both branches had
+honoured it. What neither can honour is a count that is a property of the UNION of two histories:
+`measure(A ∪ B)` is not recoverable from `measure(A)` and `measure(B)`, so the merge commit is the only
+revision at which this number can be made true. A branch-local discipline — including "re-measure last"
+— cannot reach it, and B's `fe05265e80` is the proof that practising it well is not enough. This is the
+strongest argument in this record for deriving the count rather than committing it: a literal that only
+a merge can invalidate has no author to hold responsible for it.
+
+The count and its split across the two include roots are on one line, and both are derived by the same
+walk:
+
+e2e callsites at this tree: 1760 (packages/qfai/tests/assets 1590, packages/qfai/tests/e2e 170)
+**That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
+each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
+the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
+are not the same event: the merge is what carried a count from one parent into a tree that holds both
+parents' callsites, and re-recording the derived count is what corrects it. The numbers are left out
+of this sentence on purpose — naming them here is a second literal only a merge can invalidate, which
+is the defect the paragraph above describes.
+
+**The per-root split used to be prose, and that is what made it recur.** It read as an independent
+second measurement agreeing with the derived total, but nothing produced it except a person typing what
+they had just run, and nothing checked it afterwards. `pin-stage-evidence-counts.mjs` re-pinned the
+total and left the sentence describing an earlier tree, every time; the last such gap read 937 against
+a tree holding 1728. Both numbers come from `deriveE2eCallsites()` — the split is what that walk
+returns on the way to the total — so writing one and typing the other was never the cheaper option.
+
+`stageEvidenceCounts.test.ts` compares the whole line with a fresh walk, so a commit that moves a
+callsite reddens until the line is re-pinned. The split is compared root by root rather than folded
+into the total, which is the one drift a total cannot see: a callsite moving between the two roots
+leaves it unchanged.
 
 It reads "at this tree" rather than naming a revision on purpose. A row cannot name the commit it is
 written in — round 10's `m1` — so pointing the guard at the sequence's last row would either make the row

@@ -1,10 +1,12 @@
 # Research-First Protocol
 
-QFAI が定義する、UI/UX 専門家サブエージェントの作業冒頭リサーチプロトコル。
+QFAI が定義する、`discovery-analyst` サブエージェントの作業冒頭リサーチプロトコル。
+担当は agent-catalog の role id で指定する（agent-selection の SSOT ルールに従い、散文の職務説明では指定しない）。
 
 ## Trigger
 
-`/qfai-discussion` コマンド実行時に自動トリガーされる。
+`/qfai-discussion` コマンド実行時に自動トリガーされる。`discovery-analyst` は agent-routing 上の
+`qfai-discussion` framing phase で mandatory であり、UI の有無にかかわらず本プロトコルを実行する。
 
 ## Output Schema
 
@@ -54,5 +56,5 @@ research_summary:
 
 ## Storage
 
-- `research_summary` はカレントの discussion-pack 内（`## Research Summary` セクション）に記録
+- `research_summary` はカレントの discussion-pack の `04_Sources.md` 内（`## Research Summary` セクション）に記録
 - グローバルには永続保存しない

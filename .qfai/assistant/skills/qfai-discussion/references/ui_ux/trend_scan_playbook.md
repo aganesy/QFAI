@@ -59,13 +59,16 @@ Reject a trend when:
 
 ## Competitive Reference Registry Expectations
 
-For each meaningful competitor or reference pattern, capture:
+Register at least `uiux.competitive_refs_min` references (default: 3) by
+repeating the `### Reference:` block in `04_Sources.md`. For each meaningful
+competitor or reference pattern, capture:
 
 - what was adopted
 - what was rejected
 - how adopted ideas were translated locally
 
-Avoid placeholders such as `TBD`, `N/A`, `TODO`, or empty values.
+Avoid placeholders such as `TBD`, `N/A`, `TODO`, or empty values. The template's
+own bracketed prose (`[What was adopted ...]`) counts as a placeholder too.
 
 ## Good Trend Scan Questions
 
