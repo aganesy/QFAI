@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
+  The rule already wrote two messages: one naming the coverage-target TC the
+  spec declares, and one calling `tdd/test-list.md` optional because it
+  declares none. Both were reported at `warning`, so the second was a warning
+  its own text said nothing could be done about, one per such spec.
+
+  The severity now follows the message. A spec that owes rows is unchanged, and
+  the error it carries — `TDDLIST_TC_NOT_COVERED` — is unchanged as well.
+
 - **`QFAI-ASSETS-005` no longer reports the four Stage 0 catalog documents**
   (`.qfai/assistant/catalog/manifest.md`, `product.md`, `structure.md`,
   `tech.md`). They ship telling the reader to replace their contents, and

@@ -3931,7 +3931,12 @@ async function validateSpecTddList(
         owed > 0
           ? `tdd/test-list.md not found for spec-${specNumber}. It is optional only for a spec that declares no coverage-target TC, and this one declares ${String(owed)}`
           : `tdd/test-list.md not found for spec-${specNumber} (optional: the spec declares no coverage-target TC)`,
-        "warning",
+        // The severity follows the two messages above. A spec that owes rows is
+        // a `warning`, escalated by `TDDLIST_TC_NOT_COVERED` below. A spec that
+        // owes none is `info`: the message calls the file optional, so there is
+        // no action the operator can take, and a warning nobody can clear is
+        // what makes a warning count unreadable.
+        owed > 0 ? "warning" : "info",
         relPath,
         "tddList.fileExists",
         undefined,
