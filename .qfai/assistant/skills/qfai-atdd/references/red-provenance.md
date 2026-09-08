@@ -506,10 +506,12 @@ to — the three branches below apply to them exactly as they do to an `E2E` row
 Reporting them as "zero rows, nothing to do" leaves `/qfai-implement` Phase Red
 step 3b with no handoff to consume and every one of them stuck at `todo`.
 
-Zero is a count, not "nothing to do". The US and CON-API coverage obligations
-are this skill's own (Success Criteria) and are discharged by the tests and
-their annotations, not by ledger rows. Report the row count as zero with that
-reason and carry on with the obligations.
+Zero is a count, not "nothing to do". The US, CON-API and CON-DB coverage
+obligations are this skill's own (Success Criteria) and are discharged by the
+tests and their annotations, not by ledger rows — `CON-DB-*` is row-producing
+nowhere, so a spec with no ATDD-owned rows can still owe every one of its
+active DB contracts an `Integration` test. Report the row count as zero with
+that reason and carry on with the obligations.
 
 **Do not raise it as a request for rows.** Check the exemption and ownership
 first: a spec
@@ -523,9 +525,15 @@ Phase 2b: record it in this stage's report and carry on; it does not become
 writable here. Writing them
 here is not the alternative either: that would make this stage a second writer
 of a single-writer artifact. What the completion gate actually requires is
-`QFAI-ATDD-111` / `QFAI-ATDD-113` clean, which the annotations discharge and
-which this stage does own
-(`../../qfai-implement/SKILL.md`, spec completion conditions).
+`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean **of this spec's own
+findings**, which the annotations discharge and which this stage does own
+(`../../qfai-implement/SKILL.md`, spec completion conditions). `QFAI-ATDD-115`
+is attributed to `.qfai/contracts/**` and survives `--spec`, so a sibling
+spec's uncovered contract keeps a scoped run at exit 1 while owing this stage
+nothing. That run is complete once its own findings are clean and the residue
+is recorded and attributed — `PASS with cross-spec obligations`. Do not read a
+non-zero exit here as work to do: editing a sibling's contract or its tests is
+the one thing this stage must not do.
 
 ## A project whose program does not start yet
 

@@ -39,6 +39,7 @@
     "tests/assets/assetOverflowHome.test.ts",
     "tests/assets/assets.test.ts",
     "tests/assets/atddConDbOwnership.test.ts",
+    "tests/assets/atddDbContractObligationLists.test.ts",
     "tests/assets/atddRequiredScope.test.ts",
     "tests/assets/atddRowSelectorShape.test.ts",
     "tests/assets/atddScaffoldTunableSeed.test.ts",
