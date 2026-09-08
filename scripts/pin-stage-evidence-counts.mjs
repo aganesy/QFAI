@@ -11,9 +11,9 @@
  *
  * Until this existed there was no shipped way to obtain the number, so every
  * contributor the guard reddened re-implemented the walk from the guard's
- * prose — #1065 recorded eight doing it independently in one sweep, and
- * observed that a human resolving the resulting merge conflict sees "two
- * plausible integers" with no hint that the answer is neither. The answer is
+ * prose — eight contributors did it independently in one sweep, landing on
+ * a merge conflict where a human sees "two plausible integers" with no hint
+ * that the answer is neither. The answer is
  * always a fresh derivation, which is what this writes.
  *
  * The derivation is NOT duplicated here: it is imported from

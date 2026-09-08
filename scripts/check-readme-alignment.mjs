@@ -146,7 +146,7 @@ function reportMismatches(options, rootLines, packageLines) {
  *
  * while `qfai init` wrote two of them — contradicting the sentence immediately
  * above it, which lists `.github/**` among the trees QFAI generates. The gate
- * ran clean over that for as long as it stood (#1063).
+ * ran clean over that for as long as it stood.
  *
  * So this oracle is tied to behaviour rather than to the other file: the write
  * set is `shared/shippedWorkflowNames.ts`, which is in-binary by design — its

@@ -695,7 +695,7 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
    * Sources excluded because their findings land after `applyWaivers`. Scanned
    * separately so the codes can be NAMED without being registered: a waiver
    * against one can never match, and `QFAI-WAIVER-004` used to call them
-   * unknown rules, which sent the operator looking for a typo (#1110).
+   * unknown rules, which sent the operator looking for a typo.
    */
   const postWaiver = [];
   for (const file of await listTypeScriptFiles(srcDir)) {

@@ -94,15 +94,15 @@ one.
 **Which files the namespace check covers**, measured against
 `validateLayeredNamespace`:
 
-| file                        | checked | IDs                                                                   |
-| --------------------------- | ------- | --------------------------------------------------------------------- |
-| `02_User-stories.md`        | yes     | `US`                                                                  |
-| `03_Acceptance-Criteria.md` | yes     | `AC`                                                                  |
-| `04_Business-Rules.md`      | yes     | `BR`                                                                  |
-| `05_Examples.md`            | yes     | `EX` / `SC`                                                           |
-| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                         |
-| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs           |
-| `10_Plan.md`                | **no**  | not covered today — see #1101 for whether that is a decision or a gap |
+| file                        | checked | IDs                                                          |
+| --------------------------- | ------- | ------------------------------------------------------------ |
+| `02_User-stories.md`        | yes     | `US`                                                         |
+| `03_Acceptance-Criteria.md` | yes     | `AC`                                                         |
+| `04_Business-Rules.md`      | yes     | `BR`                                                         |
+| `05_Examples.md`            | yes     | `EX` / `SC`                                                  |
+| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                |
+| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs  |
+| `10_Plan.md`                | **no**  | not covered today — open whether that is a decision or a gap |
 
 ## ID and Parent Rules (continued)
 

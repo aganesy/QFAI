@@ -13,7 +13,7 @@
  * while the files an AGENT reads and acts on were outside it entirely. A
  * reordered line in a skill body is an instruction that reads one way and
  * executes another, which is the worse half of the hazard and was the unguarded
- * one (#1202).
+ * one.
  *
  * Widening it was held back by two U+FEFF occurrences, and neither survives as
  * a reason: `designMd.test.ts` had a BOM as the SUBJECT of a case and now

@@ -8,8 +8,8 @@
  * Nothing shipped the measurement, so every contributor who reddened
  * `stageEvidenceCounts.test.ts` had to re-implement this walk from the guard's
  * prose — read the workspace includes, turn them into roots, walk the
- * `*.test.ts` files, count the matching lines. #1065 recorded eight agents
- * doing exactly that, independently, in one sweep.
+ * `*.test.ts` files, count the matching lines — the same manual walk, redone
+ * independently by eight different contributors in one sweep.
  *
  * The per-root split sits on that same line, and is written and checked with
  * the total. It is on the line rather than in the prose beside it because prose
