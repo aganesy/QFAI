@@ -2191,7 +2191,15 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 1750
+**And a third time, from a merge rather than a commit.** Bringing `main` into a branch that
+moves `Integration` into the ATDD-owned layer set
+carried that branch's `+17` `it` callsites in `tests/assets/atddRedProvenance.test.ts` into the e2e
+project's globs, taking the count from 925 to 942 — re-derived with the guard's own `CALLSITE` rule at
+each endpoint: 915 at the merge base, 925 at `main`, 932 on the branch, 942 at the merge, and
+`925 + (932 - 915) = 942`. Nothing about `spec-0017` changed here either. The merge is a commit that
+changes a callsite under the two globs, so it owes this line exactly as a direct commit would, and the
+two suite totals above are known-invalid for this tree — not re-run here, because a merge that resolves
+documentation conflicts cannot certify a suite run it did not take.
 
 **And a fourth time, from the same branch's next commit.** Three review threads on that branch's PR
 were answered with three new `it` callsites in `tests/assets/atddRedProvenance.test.ts` — the
@@ -2252,7 +2260,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 1754 (packages/qfai/tests/assets 1584, packages/qfai/tests/e2e 170)
+e2e callsites at this tree: 1757 (packages/qfai/tests/assets 1587, packages/qfai/tests/e2e 170)
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
 the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
