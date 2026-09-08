@@ -6,6 +6,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The lint lane rejects a merge-conflict marker in a tracked file** (#1349).
+  Nothing asked that question, and an evidence document reached the default
+  branch carrying a `=======` separator, a superseded line and a `>>>>>>>`
+  marker with every lane green.
+
+  Each lane passed for its own reason, and none of them is wrong: Markdown lint
+  reads `=======` as a heading underline and `>>>>>>> ref` as a paragraph,
+  prettier reformats the block rather than rejecting it, and the guard that
+  reads the figure in that paragraph takes the first matching line and stops.
+
+  `scripts/check-conflict-markers.mjs` scans every tracked text file for a line
+  starting with seven `<`, `=`, `>` or `|` followed by a space or the end of the
+  line. The boundary is what keeps a rule of equals signs and `>>>>>>>>` in
+  ASCII art from being findings. Fenced blocks in Markdown are skipped, so a
+  document explaining conflict resolution can show one.
+
 - **A `drift` validation profile, and the CI workflow `qfai init` writes now
   runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
   and nothing else. `full` evaluates every gate group except drift, so the one
