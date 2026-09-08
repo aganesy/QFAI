@@ -172,6 +172,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`QFAI-CFG-001` is an error from this release.** Three
+  `validation.traceability` keys were declared, defaulted and parsed while no
+  validator read them: `brMustHaveSc`, `scNoTestSeverity` and
+  `orphanContractsPolicy`. The 1.10.1 line began reporting them at `warning`,
+  and the window closes here.
+
+  A project whose `qfai.config.yaml` still carries any of the three moves from
+  a passing `validate --fail-on error` to a failing one on upgrade, with
+  nothing else changed. The keys were already inert, so the finding is about
+  the file's shape rather than its behaviour, and deleting the key clears it.
+
 - **Reworded the shipped `.agents/rules/*.md` templates for clarity.** Shortened
   sentences, and corrected `temporary-files.md`'s claim that `qfai init` does not
   add `/tmp/` to `.gitignore` — it does, in the managed block. No rule content
