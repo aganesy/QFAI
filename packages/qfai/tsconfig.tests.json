@@ -231,6 +231,7 @@
     "tests/unit/suppressWorkflowCommands.test.ts",
     "tests/validators/assistantAssets.test.ts",
     "tests/validators/configReferenceIntegrity.test.ts",
+    "tests/validators/dbContractApplyOrder.test.ts",
     "tests/validators/importLite.test.ts",
     "tests/helpers/japaneseMessageScan.ts",
     "tests/unit/cliMessageLanguage.allowlist.ts",
