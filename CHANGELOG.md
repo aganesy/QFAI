@@ -229,6 +229,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Two lint lanes ran on Windows, instead of exiting 0 without looking**
+  (#1367). A script that is both a module and a command asks whether it was
+  spawned by comparing `import.meta.url` with the path in `process.argv[1]`.
+  Building that URL as `` `file://${process.argv[1]}` `` gives a URL only where
+  the path is POSIX: on Windows it yields `file://C:\dir\script.mjs` against an
+  `import.meta.url` of `file:///C:/dir/script.mjs`. The comparison was never
+  true, so the conflict-marker and release-notes lanes exited 0 having scanned
+  nothing — indistinguishable, in the output, from a tree that is clean.
+
+  Both now use `pathToFileURL(process.argv[1]).href`, as the scripts beside them
+  already did. A check holds every `.mjs` under the three script directories to
+  that form, because the failure is only reachable on a platform no runner has:
+  the lanes work correctly on every POSIX runner, so no CI job can tell the two
+  spellings apart.
+
 - **A trailing slash on a configured directory no longer makes a gate evaluate
   nothing and report a pass** (#1368). Readers use these values two ways: joined
   with a child path, where a trailing separator is harmless, and tested as a

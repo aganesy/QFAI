@@ -44,6 +44,7 @@
 import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 /** Seven of one marker character, then a space or the end of the line. */
 const MARKER_RE = /^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/;
@@ -189,6 +190,10 @@ export function run(cwd = process.cwd()) {
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// `pathToFileURL`, not `file://` + the path: on Windows `process.argv[1]` is a
+// drive-letter path with backslashes, which concatenation turns into a string no
+// `import.meta.url` ever equals. The guard then never fires, the lane exits 0
+// having scanned nothing, and a run that never looked reads as a run that passed.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.exit(run());
 }
