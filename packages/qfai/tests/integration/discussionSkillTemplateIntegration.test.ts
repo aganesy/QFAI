@@ -348,7 +348,11 @@ describe("discussion skill template integration", () => {
       implementSkill.split(/^## /m).find((s) => s.startsWith("Visual Review Guard")) ?? "";
     expect(guard, "no Visual Review Guard section").not.toBe("");
     expect(guard).toMatch(/cli-only/);
-    expect(guard).toMatch(/`\.qfai\/contracts\/ui\/\*\.yaml`/);
+    // The configured directory, not the default spelled out. A project that
+    // repoints `paths.contractsDir` has no `.qfai/contracts/ui`, so a guard
+    // naming that path sends its review at a directory that is not there.
+    expect(guard).toMatch(/<contractsDir>\/ui\/\*\*/);
+    expect(guard).not.toMatch(/`\.qfai\/contracts\/ui\//);
   });
 
   // `/qfai-implement` takes ONE spec from an argument or the queue, while
