@@ -209,8 +209,9 @@
         "scripts/pin-guard-bytes.mjs": "2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97",
         "scripts/pin-stage-evidence-counts.mjs": "2707932b1bdce841fa9f2672c6ec0861ed11e27443752a84b960b6b0c00eea4c",
         "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
+        "scripts/promotion-preflight.mjs": "695264d7763306d652559f85066664c70987d6524c2dff5d077adf21c15931b3",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
-        "scripts/verify-pack.mjs": "46046465164986b9dcd5091c95318f507afbe9729d37d9ca4275878b657ae3e4"
+        "scripts/verify-pack.mjs": "d4cee7396dfe6c8eb6ac295eed4ddce29021493c6727dbb2e30db2fe9b22c364"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -359,9 +360,9 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "b672952f1fa3717e",
+        "Verify the toolchain action before running it": "07a76a174401038b",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "9cdede524fb39736",
+        "Run build & pack verification": "11cd826314485ef1",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "e7dc6e5136c17061",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",

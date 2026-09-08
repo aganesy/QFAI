@@ -26,6 +26,12 @@
  * translate, not the merging branch's, so they are recorded rather than
  * converted. The rule above still binds the author of a new message; it is
  * addressed to whoever writes the string, and a merge writes none.
+ *
+ * Either way the addition is visible: `cliMessageLanguage.test.ts` pins how
+ * many entries this file may hold, so growing it means editing that number
+ * too. Without the pin an entry could be added for a message that really is in
+ * the tree, every other assertion would still pass, and the list would quietly
+ * stop being a closed record of legacy.
  */
 export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>> = {
   "core/atddTraceability.ts": ["：", "：", "：", "："],
@@ -320,9 +326,6 @@ export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>>
     "契約ファイルに がありません。",
     "契約ファイルに複数の が宣言されています",
     "契約ファイルの が で始まっていません",
-    "（ リリースまでは 、以降は として報告されます）",
-    "契約ファイルが適用順の依存関係を宣言していません",
-    "には 、 には を追加してください。先に適用すべき契約が無い場合は と明記します。",
     "が宣言している依存先の契約が存在しません",
     "に記載した契約 を実在するものに直すか、該当契約を追加してください。",
     "契約 が重複しています",
