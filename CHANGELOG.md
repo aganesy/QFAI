@@ -20,6 +20,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`validate` reports a skills or agents tree behind the installed release**
+  (#1381). `.qfai/assistant/skills/**` and `agents/**` are copied into a project
+  once and refreshed only by an explicit `qfai init --force`, so a project that
+  upgrades qfai keeps running the skill bodies it initialised with. A `SKILL.md`
+  several releases behind describes a workflow the installed validators no
+  longer implement, and it reads as authoritative because it is checked in.
+  Nothing said so: the provenance family covers `constitution/` and `catalog/`
+  and stops there.
+
+  `QFAI-ASSETS-009` compares each file the release ships under those two layers
+  against the project's copy, and reports **one finding per layer** — the trees
+  hold over a hundred and fifty files between them, and one finding per file
+  would bury every other result. The comparison is against the shipped bytes
+  alone, with no lock entry per file: `--force` overwrites this layer either
+  way, so there is no merge decision for a record to protect.
+
+  The fix hint says the layer is overwritten, local edits included.
+  `QFAI-ASSETS-004` can offer `--force` as a plain refresh because a diverged
+  file is left alone; this layer has no such exemption, and a hint that quietly
+  destroys work is worse than the staleness it clears. Ships at `warning` and
+  becomes an `error` at 1.13.0.
+
 - **A spec that owes no ATDD annotation says so** (#1251). `QFAI-ATDD-112`
   routes each obligation by its test case's declared `Level`, and Unit and
   Component owe none. A spec whose table declares only those therefore has an

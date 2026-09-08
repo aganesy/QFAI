@@ -421,6 +421,18 @@ export const RULE_PROMOTIONS = {
    */
   assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-ASSETS-009` — a layer `qfai init --force` regenerates (`skills/`,
+   * `agents/`) whose files are behind the installed release. Nothing compared
+   * them before, and they are refreshed only by an explicit `--force`, so every
+   * project that upgraded qfai without running one meets this at once — on
+   * files it never edited.
+   *
+   * The window matters more here than elsewhere in the family, because the
+   * remedy overwrites the layer outright. A project that did edit a skill needs
+   * time to move that edit somewhere `--force` will not take it.
+   */
+  assistantRegeneratedLayerStale: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-AUTOPILOT-001` — a `qfai-*` SKILL.md whose hard-required bucket
    * names the retired `companyName`, or an entry the skill does not declare.
    * Installed skills are only refreshed by an explicit `qfai init --force`, so
