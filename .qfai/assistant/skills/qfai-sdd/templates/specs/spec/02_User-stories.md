@@ -8,9 +8,19 @@
 
 - Parent: CAP-XXXX
 - Source: discussion-YYYYMMDDhhmmssSSS#DUS-XXX <!-- pack route: originating pack + story ID. Imported spec set (no pack): import-lite-YYYYMMDDhhmmssSSS#REQ-XXXX. `-` only when neither route produced this item. -->
+- Flow: BF-XXXX <!-- optional; the business flows that realize this story, comma-separated -->
 - Goal: <goal>
 - Non-goals: <non-goal>
 - Notes: <notes>
+
+> **`Flow` binds the story to the business flow that realizes it.** Write the IDs
+> `_policies/04_Business-Flow.md` declares, comma-separated, in this story's own block. A test
+> under `<testsDir>/e2e/**` annotated `QFAI:BF-0001` then answers the E2E obligation of every
+> story naming that flow, so one test covers a flow rather than one test covering a story —
+> which is the grain E2E verifies. The line is optional: a story that names no flow keeps the
+> obligation it already had, answered by a `QFAI:SPEC-XXXX:US-XXXX` annotation as before. The
+> edge runs this way, and only this way, because `_policies/**` must not name a lower-layer ID;
+> see `references/spec-traceability-rules.md`.
 
 > **Deferring a story out of the current slice.** Add a `- x-qfai-status: planned` meta line
 > to this block. That story is then excluded from the E2E coverage obligation (`QFAI-ATDD-111`)

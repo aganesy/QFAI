@@ -46,11 +46,11 @@
  *   - It reads the ledger the SCANNER reads. `testsDir` is repo-root relative, so a `US` annotation
  *     living only under `packages/qfai/tests/e2e/**` is invisible to `QFAI-ATDD-111` — which is why
  *     the ledger exists at all.
- *   - The LEDGER is repo-root relative; the BACKING CORPUS is not. Review finding [09]: the corpus
- *     used to span both trees, and CI runs `pnpm -C packages/qfai test:e2e`, so only the package tree
- *     is ever executed — the root one holds the ledger and nothing else. Two different questions with
- *     two different answers, and reading them off one list is what let a claim be backed by a file
- *     Vitest never opens. `runnerCorpusRoots` derives the corpus from the runner's own include list.
+ *   - The LEDGER is repo-root relative; the BACKING CORPUS is not. CI runs
+ *     `pnpm -C packages/qfai test:e2e`, so only the package tree is ever executed — the root one
+ *     holds the ledger and nothing else. Two different questions with two different answers, and
+ *     reading them off one list would let a claim be backed by a file Vitest never opens.
+ *     `runnerCorpusRoots` derives the corpus from the runner's own include list.
  */
 import { readdir, realpath, stat } from "node:fs/promises";
 import { lstatSync } from "node:fs";
@@ -92,17 +92,16 @@ const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
  * And the file has to be one the RUNNER executes.
  *
  * The E2E project's include is `tests/e2e/**\/*.test.ts`, so a `helpers.ts` or a `fixture.js`
- * sitting beside the suites is read by nobody unless a suite imports it. An earlier revision
- * counted those as backing on the argument that "a file the scanner would not execute still
- * tells a reader the story was written about" — but this guard's whole job is to refuse a
- * ledger claim with no EXECUTING test behind it, and under that rule deleting the real
- * `*.test.ts` while leaving the annotation in a helper kept the ledger green. The corpus is
- * therefore the runner's own file shape.
+ * sitting beside the suites is read by nobody unless a suite imports it. Counting such a file as
+ * backing on the argument that "a file the scanner would not execute still tells a reader the
+ * story was written about" would defeat this guard's whole job, which is to refuse a ledger claim
+ * with no EXECUTING test behind it: deleting the real `*.test.ts` while leaving the annotation in
+ * a helper would keep the ledger green. The corpus is therefore the runner's own file shape.
  *
- * `.test.ts` exactly, and not `.test.<any letters>` — review finding [01]. The E2E project's include
- * ends in `*.test.ts`, so a `backing.test.js` beside the suites is executed by nobody, and the looser
- * pattern let the real TypeScript test be deleted and the annotation moved into a file Vitest never
- * opens. The same hole the helper case had, wearing a different extension.
+ * The pattern has to match `.test.ts` exactly, and not `.test.<any letters>`. The E2E project's
+ * include ends in `*.test.ts`, so a `backing.test.js` beside the suites is executed by nobody; a
+ * looser pattern would let the real TypeScript test be deleted and the annotation moved into a
+ * file Vitest never opens — the same hole the helper case has, wearing a different extension.
  *
  * This pattern and the runner's include are checked against each other in `runnerCorpusRoots` rather
  * than kept equal by hand.
@@ -161,8 +160,9 @@ function testCallDisposition(ts, node) {
 /**
  * Does this test body skip itself on every run?
  *
- * `it("…", (ctx) => { ctx.skip(); … })` is the third spelling in review finding [115], and the
- * only one with no modifier to read. Only a TOP-LEVEL statement of the body counts: a `ctx.skip()`
+ * `it("…", (ctx) => { ctx.skip(); … })` is a third spelling of self-skip, alongside `describe.skip`
+ * and `it.todo`, and the only one with no modifier to read. Only a TOP-LEVEL statement of the body
+ * counts: a `ctx.skip()`
  * inside an `if` is a test that runs somewhere, which is a different question from a test that
  * never runs anywhere, and this guard answers the second one.
  *
@@ -265,11 +265,11 @@ function disabledTestRanges(ts, source, text) {
 /**
  * Blank out the annotations of tests the runner will not execute.
  *
- * Review finding [115]: the backing corpus was the TEXT of every file the runner's include picks
- * up, so `describe.skip`, `it.todo` and a body that always calls `ctx.skip()` backed a claim just
- * as well as a test that ran. Vitest reports those as skipped, not passed, and the lane stays
- * green on the other tests in the project — so the required ledger guard certified a user story
- * that no executed acceptance test covered.
+ * Reading the backing corpus as the TEXT of every file the runner's include picks up would let
+ * `describe.skip`, `it.todo` and a body that always calls `ctx.skip()` back a claim just as well
+ * as a test that ran. Vitest reports those as skipped, not passed, and the lane stays green on the
+ * other tests in the project — so the required ledger guard would certify a user story that no
+ * executed acceptance test covered.
  *
  * Blanked rather than removed, so every remaining annotation keeps its offset and its line.
  *
@@ -294,7 +294,7 @@ export async function redactDisabledTests(text, filePath) {
     throw new Error(
       `check-atdd-annotation-ledger: cannot load the TypeScript parser needed to read ` +
         `${filePath}; whether a test is skipped decides whether it backs a ledger claim, and ` +
-        "a text-level reading of that is exactly what review finding [115] exploited",
+        "a text-level reading of that is exactly what this guard exists to refuse",
     );
   }
   const source = ts.createSourceFile(
@@ -444,11 +444,11 @@ async function readDirectoryInto(current, sources) {
  * required lane — so the size is bounded and the reader is `scripts/lib/bounded-read.mjs`,
  * which refuses a link by name and decides type and size on the descriptor.
  *
- * Review finding [76]: the ledger markdown, the runner's workspace config and every test
- * source were read with a plain `readFile`, which follows a symlink. `tests/e2e/
- * qfai-traceability.md` pointed at `/dev/zero` — or at a FIFO nothing ever writes to — and the
- * required lane hung until the job timed out. A lane that can be made to hang blocks nothing,
- * which is the fail-open this guard exists to close, arriving through its own reader.
+ * Reading the ledger markdown, the runner's workspace config and every test source with a plain
+ * `readFile` would follow a symlink: `tests/e2e/qfai-traceability.md` pointing at `/dev/zero` — or
+ * at a FIFO nothing ever writes to — would hang the required lane until the job timed out. A lane
+ * that can be made to hang blocks nothing, which is the fail-open this guard exists to close,
+ * arriving through its own reader.
  */
 const MAX_LEDGER_BYTES = 4_194_304;
 const MAX_SOURCE_BYTES = 1_048_576;
@@ -459,13 +459,12 @@ const MAX_WALKED_DIRECTORIES = 5_000;
 /**
  * Every test source under `dir`, following a linked subtree that stays INSIDE it.
  *
- * Following links is deliberate and was itself a repair: this repository tracks 83 symlinks,
- * and a walk that skipped a linked directory read a claim backed only inside one as unbacked.
- * What was missing is where the link may point. Review finding [61]: `seen` is keyed by
- * `realpath`, which stops a CYCLE and nothing else — so a directory symlink to `/proc`, or to
- * any large tree outside the corpus, was enumerated without bound, and the required `ci:lint`
- * exhausted memory or timed out before it could report a single ledger finding. A guard that
- * can be made to hang refuses nothing.
+ * Following links is deliberate: this repository tracks 83 symlinks, and a walk that skipped a
+ * linked directory would read a claim backed only inside one as unbacked. What matters is where
+ * the link may point: `seen` keyed by `realpath` stops a CYCLE and nothing else, so a directory
+ * symlink to `/proc`, or to any large tree outside the corpus, would be enumerated without bound,
+ * and the required `ci:lint` would exhaust memory or time out before it could report a single
+ * ledger finding. A guard that can be made to hang refuses nothing.
  *
  * So a directory is descended only when its REAL path is inside `containment`, and the number
  * of directories is capped. Hitting the cap is a hard failure rather than a short walk: a
@@ -638,7 +637,7 @@ function literalText(ts, node) {
 /**
  * The keys a spread inside an object literal could contribute, or `undefined` when unknowable.
  *
- * Review finding [100]: `{ name: "e2e", include: [decoy], ...actual }` is evaluated by Vitest
+ * `{ name: "e2e", include: [decoy], ...actual }` is evaluated by Vitest
  * with `actual.include` winning, and a scan that reads property assignments and ignores
  * `SpreadAssignment` takes the decoy. A trailing spread OVERRIDES what this guard read as a
  * literal, and a leading one can supply a key the literal never mentions — which is how an
@@ -713,10 +712,10 @@ function spreadKeys(ts, source, configPath, spread) {
           else return undefined;
         }
 
-        // …and nothing in that module may touch it afterwards. Review finding [103]: these are
-        // the keys the literal was WRITTEN with, and `Object.assign(projectKnobs, { exclude: […] })`
-        // three lines down adds one at runtime. Vitest would then skip a whole tree of E2E tests
-        // while this guard, reading the initializer alone, called the spread harmless and counted
+        // …and nothing in that module may touch it afterwards. These are
+        // the keys the literal is WRITTEN with, and `Object.assign(projectKnobs, { exclude: […] })`
+        // three lines down could add one at runtime. Vitest would then skip a whole tree of E2E tests
+        // while this guard, reading the initializer alone, would call the spread harmless and count
         // annotations in files the runner never opens — both the E2E lane and the ledger green
         // over user stories nobody verified.
         //
@@ -782,10 +781,10 @@ function refuseDecidingSpreads(ts, source, configPath, objectLiteral, what) {
 /**
  * Whether an object literal carries a key this guard cannot read.
  *
- * Review finding [111]: `["in" + "clude"]: [...]` is a computed property. JavaScript evaluates
- * it to `include` and lets it override an earlier literal one; `propertyValue` skipped it,
- * because a computed name is not an identifier or a string literal. So the decoy `include` was
- * read while Vitest ran the real one — the same override the trailing spread achieved, spelled
+ * `["in" + "clude"]: [...]` is a computed property. JavaScript evaluates
+ * it to `include` and lets it override an earlier literal one. A computed name is not an
+ * identifier or a string literal, so a check that skips it would read the decoy `include`
+ * while Vitest ran the real one — the same override the trailing spread achieves, spelled
  * differently.
  *
  * Evaluating the expression is what this guard parses in order not to do, so an unresolvable key
@@ -891,20 +890,20 @@ async function e2eIncludeGlobs(text, configPath) {
   }
   // Only a call to `defineWorkspace` is unwrapped, and the CALLEE is what says so.
   //
-  // Review finding [70]: any call expression had its first argument taken as the workspace, so
-  // `export default choose(decoy, real)` — a helper returning its SECOND argument — had this
-  // guard read the decoy while Vitest ran the real one. The whole point of parsing was that
+  // Taking any call expression's first argument as the workspace would mean
+  // `export default choose(decoy, real)` — a helper returning its SECOND argument — has this
+  // guard read the decoy while Vitest runs the real one. The whole point of parsing is that
   // the corpus comes from what the runner uses, and taking argument zero of an unidentified
   // function is a guess about that again.
   //
   // `defineWorkspace` is Vitest's own identity function over the array, which is why
   // unwrapping it is reading rather than evaluating. Anything else is refused below, where
   // the array check reports what it found.
-  // The BINDING, not the spelling. Review finding [96]: this compared the callee TEXT, so a
-  // config declaring `const defineWorkspace = (decoy, real) => real` had Vitest run `real` while
-  // this guard took `decoy` as the backing corpus - annotation-only files in a fake tree
-  // certifying every claim. The same substitution the callee check was added to stop, one level
-  // down: it refused an unidentified callee and not a shadowed identified one.
+  // The BINDING, not the spelling: comparing only the callee TEXT would let a
+  // config declaring `const defineWorkspace = (decoy, real) => real` have Vitest run `real` while
+  // this guard takes `decoy` as the backing corpus - annotation-only files in a fake tree
+  // certifying every claim. This is the same substitution the callee check must stop, one level
+  // down: it refuses an unidentified callee and not a shadowed identified one.
   //
   // So the name has to be imported from Vitest and shadowed by nothing. Fail closed, because a
   // call this guard cannot identify is a call whose result it cannot predict.
@@ -973,15 +972,15 @@ async function e2eIncludeGlobs(text, configPath) {
     if (testNode === undefined || !ts.isObjectLiteralExpression(testNode)) continue;
     if (literalText(ts, propertyValue(ts, testNode, "name")) !== "e2e") continue;
     // A spread in the project or in its `test` object can supply — or REPLACE — the include and
-    // exclude lists read below. Review finding [100]: a TRAILING `...actual` wins over an earlier
-    // literal in JavaScript and lost to it here, so the decoy became the corpus.
+    // exclude lists read below. A TRAILING `...actual` wins over an earlier
+    // literal in JavaScript; missing that here would let the decoy become the corpus.
     //
     // Read where it can be read: this repository's own projects spread a knob object that
     // contributes timeouts and pool settings and neither list, which is provably harmless. A
     // spread that contributes either key, or one this guard cannot follow, is refused.
     refuseDecidingSpreads(ts, source, configPath, element, "e2e project");
     refuseDecidingSpreads(ts, source, configPath, testNode, "e2e project's `test` object");
-    // …and a key this guard cannot read at all. Review finding [111].
+    // …and a key this guard cannot read at all.
     for (const [literal, what] of [
       [element, "e2e project"],
       [testNode, "e2e project's `test` object"],
@@ -1008,12 +1007,12 @@ async function e2eIncludeGlobs(text, configPath) {
     throw new Error(
       `check-atdd-annotation-ledger: ${String(found.length)} exported e2e projects in ${configPath}; ` +
         "this guard cannot tell which one the runner uses, and taking the first is how a shadowing " +
-        "declaration went unnoticed",
+        "declaration would go unnoticed",
     );
   }
 
-  // Both lists, because the corpus is what the runner RUNS. Review finding [85]: reading
-  // `include` alone let `exclude: ["tests/e2e/backing.test.ts"]` keep a file in the backing
+  // Both lists, because the corpus is what the runner RUNS. Reading
+  // `include` alone would let `exclude: ["tests/e2e/backing.test.ts"]` keep a file in the backing
   // corpus that Vitest never opens — an annotation-only file discharging a required ledger
   // claim, which is the substitution this guard exists to refuse, arriving through the runner's
   // own configuration.
@@ -1056,25 +1055,25 @@ async function e2eIncludeGlobs(text, configPath) {
 /**
  * The directories the E2E runner actually executes, read out of the runner's own configuration.
  *
- * Review finding [09]: the corpus used to include the repository-root `tests/e2e` as well as the
- * package one, and CI runs `pnpm -C packages/qfai test:e2e`, whose include is relative to
- * `packages/qfai`. Nothing under the root tree is ever executed — it holds the ledger and nothing
- * else — so deleting the real package-side test and leaving the annotation in
- * `tests/e2e/backing.test.ts` at the root kept this guard green over a claim with no running test
- * behind it. Exactly the defect the extension test had, one directory level up.
+ * The corpus must not include the repository-root `tests/e2e` alongside the package one: CI runs
+ * `pnpm -C packages/qfai test:e2e`, whose include is relative to `packages/qfai`. Nothing under
+ * the root tree is ever executed — it holds the ledger and nothing else — so deleting the real
+ * package-side test and leaving the annotation in `tests/e2e/backing.test.ts` at the root would
+ * keep this guard green over a claim with no running test behind it. The same defect the
+ * extension case has, one directory level up.
  *
  * DERIVED, not enumerated. Two lists kept equal by hand are the same defect waiting for the next
  * project to be added, so this reads `vitest.workspace.ts` and takes the `e2e` project's include
  * globs as the answer. An unparseable configuration is a hard failure: a guard that falls back to
  * a built-in list when it cannot read the runner is a guard that silently stops tracking it.
  *
- * Read as SOURCE, not as prose. Review finding [43]: the pattern ran over the raw file, so a
+ * Read as SOURCE, not as prose: running the pattern over the raw file would let a
  * comment declaring an `e2e` project whose include names a fake tree, placed above the real
- * project matched first — and the guard then declared a tree Vitest never opens to be the backing
- * corpus, while a ledger claim was certified by annotation-only files in it. Comments are blanked
+ * project, match first — the guard would then declare a tree Vitest never opens to be the backing
+ * corpus, while a ledger claim is certified by annotation-only files in it. Comments are blanked
  * before the pattern runs, and a file that still yields more than one match is refused rather
  * than resolved by position: two candidate declarations mean this guard cannot tell which one
- * the runner uses, and guessing is how the defect worked.
+ * the runner uses, and guessing is how that would go wrong.
  *
  * @param {string} root repository root
  * @returns {Promise<{ roots: string[], excluded: (file: string) => boolean }>} the directories
@@ -1116,7 +1115,7 @@ export async function runnerCorpusRoots(root) {
     }
     // And the extension the runner names has to be one this guard would collect. These are the two
     // halves of the same fact — what Vitest opens, and what counts as backing — and letting them
-    // disagree is exactly review finding [01] in the other direction: the runner would execute a
+    // disagree runs the same risk in the other direction: the runner would execute a
     // file shape the corpus skips, so a real test would read as no test at all.
     if (!TEST_FILE_PATTERN.test(`x${shape[2]}`)) {
       throw new Error(
@@ -1211,10 +1210,10 @@ async function main() {
       return;
     }
     {
-      // Review finding [27]. A SCOPED run must not pass on a missing ledger. `ci:lint` invokes
-      // this with `--spec 0017`, and returning 0 here skipped the scoped-selected-nothing check
-      // below — so deleting or renaming `tests/e2e/qfai-traceability.md` left the guard green
-      // while it examined nothing at all, for a spec it was configured to hold at zero.
+      // A SCOPED run must not pass on a missing ledger. `ci:lint` invokes
+      // this with `--spec 0017`, and returning 0 here would skip the scoped-selected-nothing check
+      // below — so deleting or renaming `tests/e2e/qfai-traceability.md` would leave the guard
+      // green while it examines nothing at all, for a spec it is configured to hold at zero.
       //
       // Unscoped, an absent ledger really is nothing to check: a repository that has not started
       // certifying has no claims to refuse. Scoped, it is the same fail-open the
@@ -1238,13 +1237,13 @@ async function main() {
   const sources = new Map();
   const { roots: corpusRoots, excluded } = await runnerCorpusRoots(root);
   for (const dir of corpusRoots) {
-    // The repository is the boundary every followed link must resolve inside. Review finding
-    // [61]: without one, a directory symlink to `/proc` or to any large external tree was walked
-    // without bound and this required lane hung instead of reporting.
+    // The repository is the boundary every followed link must resolve inside: without one, a
+    // directory symlink to `/proc` or to any large external tree would be walked without bound
+    // and this required lane would hang instead of reporting.
     for (const [file, text] of await collectTestSources(dir, root)) {
-      // …and a file the RUNNER does not open never backs a claim. Review finding [85].
+      // …and a file the RUNNER does not open never backs a claim.
       if (excluded(file)) continue;
-      // …nor does a test inside it that the runner will not execute. Review finding [115].
+      // …nor does a test inside it that the runner will not execute.
       sources.set(file, await redactDisabledTests(text, file));
     }
   }
