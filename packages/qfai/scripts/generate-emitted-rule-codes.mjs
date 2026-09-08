@@ -101,7 +101,7 @@ const STRING_CONST_RE = new RegExp(
 );
 
 /**
- * A `const NAME = <cond> ? "a" : "b"` binding — one name, several codes.
+ * A `const NAME = <cond> ? "a": "b"` binding — one name, several codes.
  *
  * `designFidelity.ts` picks between `QFAI-FID-010` and `QFAI-FID-011` this way
  * and hands the result to `issue()`, so an identifier-only resolver saw neither
@@ -695,7 +695,7 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
    * Sources excluded because their findings land after `applyWaivers`. Scanned
    * separately so the codes can be NAMED without being registered: a waiver
    * against one can never match, and `QFAI-WAIVER-004` used to call them
-   * unknown rules, which sent the operator looking for a typo (#1110).
+   * unknown rules, which sent the operator looking for a typo.
    */
   const postWaiver = [];
   for (const file of await listTypeScriptFiles(srcDir)) {
@@ -888,7 +888,7 @@ function scanFactoryCalls(source, factories, constants, emissions, aliases) {
 }
 
 /**
- * Split a top-level `cond ? whenTrue : whenFalse` expression.
+ * Split a top-level `cond ? whenTrue: whenFalse` expression.
  *
  * Only the outermost conditional is split, and only where the `?` and its `:`
  * both sit at bracket depth 0; a nested conditional stays inside the branch
@@ -937,8 +937,8 @@ function conditionalBranches(raw) {
  * Every `(code, severity)` pair one factory call can produce.
  *
  * A call that picks both its code and its severity off the same condition —
- * `issue(declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009", …, declaresForm
- * ? "error" : "warning", …)` in `reviewArtifacts.ts` — is read branch by
+ * `issue(declaresForm ? "QFAI-REVIEW-007": "QFAI-REVIEW-009", …, declaresForm
+ * ? "error": "warning", …)` in `reviewArtifacts.ts` — is read branch by
  * branch, so each code keeps the severity it is actually raised at. Pairing
  * them off the cross-product instead would leave every such code's severity
  * unknown and drop it from {@link renderEmittedRuleCodesModule}'s error-only

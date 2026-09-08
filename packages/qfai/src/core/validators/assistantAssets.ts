@@ -203,7 +203,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // .qfai/assistant/constitution/drift-protocol.md. Fall back to the
   // legacy instructions/ path during the compatibility window so
   // projects that have not yet run `qfai init --upgrade-assistant-tree`
-  // pass for now.
+  // still pass.
   const canonicalDriftProtocolPath = path.join(assistantDir, "constitution", "drift-protocol.md");
   const legacyDriftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
   const driftProtocolPath = (await exists(canonicalDriftProtocolPath))
@@ -252,13 +252,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // Every skill-tree document is read once, here, and both the per-`SKILL.md`
   // checks below and the reference graph work from that one map.
   //
-  // `SKILL.md` used to be read twice — once by an unguarded `readFile` in the
-  // loop below, and again by the graph. The unguarded one ran first, so an
-  // unreadable `SKILL.md` rejected this whole validator before
-  // `QFAI-SKILLS-014` — the rule added for exactly that failure — could report
-  // it: the entry point was the one file the rule could never speak about.
-  // Reading once also means the marker checks and the citation graph can never
-  // disagree about a file's bytes.
+  // Reading `SKILL.md` twice — once by an unguarded `readFile` in the loop
+  // below, and again by the graph — would let the unguarded read run first, so
+  // an unreadable `SKILL.md` would reject this whole validator before
+  // `QFAI-SKILLS-014` could report it: the entry point would be the one file
+  // the rule could never speak about. Reading once also means the marker
+  // checks and the citation graph can never disagree about a file's bytes.
   const toolVersion = await resolveToolVersion();
   const { documents, unreadable } = await readSkillDocuments(skillsDir, toolVersion);
   issues.push(...unreadable);
@@ -963,10 +962,10 @@ function isPlaceholderToken(inner: string): boolean {
 /**
  * Bare `TODO` / `TBD` values on one line, in whichever shape the file uses.
  *
- * A bullet (`- Key: TBD`) was the only shape recognised at first, so the
- * Milestones **table** the shipped `product.md` actually carries read as
- * filled once someone typed `| TBD | TBD |` into it, and a section body left
- * as a lone `TBD` line passed the same way. All three are the "placeholder-
+ * Recognising only a bullet (`- Key: TBD`) would let the Milestones **table**
+ * the shipped `product.md` actually carries read as filled once someone typed
+ * `| TBD | TBD |` into it, and let a section body left as a lone `TBD` line
+ * pass the same way. All three are the "placeholder-
  * only text" the Stage 0 baseline names, so all three are counted — per cell
  * for a table row, since each cell is its own value.
  *
@@ -1272,7 +1271,7 @@ function isSkillEntryPoint(skillsDir: string, file: string): boolean {
  * everything past the tilde. Both spell legal names — `~` is a legal filename
  * character, backup conventions produce it, and `os.tmpdir()` on Windows is the
  * 8.3 short form (`C:\Users\RUNNER~1\…`) whenever the profile name exceeds
- * eight characters (#1211).
+ * eight characters.
  *
  * Neither produced a false `QFAI-SKILLS-013` by the time this landed: the
  * by-path pass covers a target whose own name carries the tilde, and the

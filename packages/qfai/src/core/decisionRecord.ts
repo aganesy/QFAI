@@ -107,9 +107,9 @@ function fileSafeIsoStamp(date: Date): string {
  * The write is atomic and collision-safe: the file is created with
  * `writeFile({ flag: "wx" })` (exclusive-create) after `mkdir -p`
  * succeeds. If two callers produce the same millisecond-precision
- * stamp (the previously surfaced race, e.g. rapid consecutive
- * `AskUserQuestion` callbacks or a test seam returning the same
- * `Date`), the second attempt fails with `EEXIST` and the writer
+ * stamp (rapid consecutive `AskUserQuestion` callbacks, or a test seam
+ * returning the same `Date`), the second attempt fails with `EEXIST` and
+ * the writer
  * retries with a counter-suffixed filename (`<stamp>-1.json`,
  * `<stamp>-2.json`, ...) until exclusive create succeeds. Partial
  * writes are not possible because the payload is a single JSON
