@@ -246,12 +246,17 @@
     "tests/unit/cliMessageLanguage.allowlist.ts",
     "tests/unit/cliMessageLanguage.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
+    "tests/cli/dbDrift.test.ts",
+    "tests/core/dbSchemaDrift.test.ts",
+    "tests/integration/dbSchemaDriftEngine.test.ts",
     "tests/validators/reOpenDecisionRecord.test.ts",
     "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uiMarkerPresence.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts",
-    "tests/assets/gateItemBudget.test.ts"
+    "tests/assets/mdschemaRouting.test.ts",
+    "tests/assets/gateItemBudget.test.ts",
+    "tests/core/gitChanges.test.ts"
   ]
 }
