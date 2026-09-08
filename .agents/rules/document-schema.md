@@ -62,30 +62,6 @@ markdownlint を通過する:
 `<!-- mermaid-lint:ignore -->` を置いて個別に除外する。ファイル単位の除外は
 設けない — その下に後から足された図を黙って覆うからである。
 
-## A document that cannot conform
-
-One document opts out of its schema with `<!-- mdschema:ignore -->` in its
-leading comment block.
-
-The case it exists for is a pack that outlives what it specifies. A spec that
-was deleted or superseded is kept as the record of why it went away, and that
-record cannot carry a consumer view or an applicable NFR for something that no
-longer exists. Writing one would be fiction, and admitting it into the schema
-would weaken the contract for every live pack — which rule 1 above already
-rules out.
-
-Three things bound it.
-
-| Bound                                             | Why                                                           |
-| ------------------------------------------------- | ------------------------------------------------------------- |
-| The marker is per document                        | One pack opting out does not excuse the next                  |
-| It must precede the content                       | A marker further down covers a document that reads as checked |
-| Every ignored file is counted in the run's output | An exclusion nobody sees is one nobody reviews                |
-
-The unit differs from the mermaid lane's on purpose. There the subject is one
-diagram, so a file-level exclusion would cover diagrams added later; here the
-subject is the document, and it either conforms or does not.
-
 ## 関連
 
 - 配布物の識別子 leak: `.agents/rules/distributed-surface.md`
