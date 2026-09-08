@@ -558,6 +558,37 @@ describe("a ceiling below the declared testTimeout", () => {
     return found;
   };
 
+  /** Whether a property name reads as `timeout`, however it is written. */
+  const namesTimeout = (name: ts.PropertyName): boolean => {
+    if (ts.isIdentifier(name) || ts.isStringLiteral(name)) return name.text === "timeout";
+    if (ts.isComputedPropertyName(name) && ts.isStringLiteralLike(name.expression)) {
+      return name.expression.text === "timeout";
+    }
+    return false;
+  };
+
+  /**
+   * The ceiling one object-literal property declares, if it declares one.
+   *
+   * Four spellings, and the runner reads them all the same: `timeout: 30_000`,
+   * `"timeout": 30_000`, `["timeout"]: 30_000`, and the shorthand `{ timeout }`
+   * over a name already bound. A check that reads one of them covers only the
+   * files that happen to use it, which is the shape of defect this rule exists
+   * to end.
+   */
+  const timeoutProperty = (
+    property: ts.ObjectLiteralElementLike,
+    constants: ReadonlyMap<string, number>,
+  ): number | undefined => {
+    if (ts.isShorthandPropertyAssignment(property)) {
+      return property.name.text === "timeout" ? constants.get(property.name.text) : undefined;
+    }
+    if (ts.isPropertyAssignment(property) && namesTimeout(property.name)) {
+      return numericValue(property.initializer, constants);
+    }
+    return undefined;
+  };
+
   /**
    * Every ceiling a runner call declares, in either form vitest accepts.
    *
@@ -575,15 +606,9 @@ describe("a ceiling below the declared testTimeout", () => {
         for (const argument of node.arguments) {
           if (ts.isObjectLiteralExpression(argument)) {
             for (const property of argument.properties) {
-              if (
-                ts.isPropertyAssignment(property) &&
-                ts.isIdentifier(property.name) &&
-                property.name.text === "timeout"
-              ) {
-                const value = numericValue(property.initializer, constants);
-                if (value !== undefined) {
-                  found.push({ value, position: property.getStart(source) });
-                }
+              const value = timeoutProperty(property, constants);
+              if (value !== undefined) {
+                found.push({ value, position: property.getStart(source) });
               }
             }
             continue;
