@@ -587,7 +587,29 @@ describe("widestMeasurableLine", () => {
 
   it("skips a table row, which markdown gives no continuation", () => {
     const row = `| ${wide(500)} | b |`;
-    expect(widestMeasurableLine(["| a | b |", "| - | - |", row].join("\n"))).toBe(0);
+    expect(widestMeasurableLine(["| a | b |", "| --- | --- |", row].join("\n"))).toBe(0);
+  });
+
+  it("skips a table written without leading pipes", () => {
+    // The leading pipe is optional in markdown. Keying the exemption on it
+    // measured the rows of a table that omits it, which is a defect with no fix:
+    // the row still cannot wrap.
+    const row = `${wide(500)} | b`;
+    expect(widestMeasurableLine(["a | b", "--- | ---", row].join("\n"))).toBe(0);
+  });
+
+  it("measures prose that merely starts with a pipe", () => {
+    // The other direction of the same defect: a leading pipe was an exemption
+    // any line could claim, which is a way around the ceiling.
+    expect(widestMeasurableLine(`| ${wide(500)}`)).toBe(502);
+  });
+
+  it("measures pipe-carrying lines a blank line cut off from their table", () => {
+    // A blank line ends a table, so what follows renders as a paragraph however
+    // much it looks like rows. Treating it as a table would exempt prose.
+    expect(
+      widestMeasurableLine(["| a | b |", "| --- | --- |", "", `| ${wide(500)} |`].join("\n")),
+    ).toBe(504);
   });
 
   it("skips a fenced block, whose content is verbatim", () => {
@@ -598,6 +620,25 @@ describe("widestMeasurableLine", () => {
     // A fence that never re-opened the measurement would hide every line below
     // the first code sample in the file.
     expect(widestMeasurableLine(["```sh", wide(500), "```", wide(120)].join("\n"))).toBe(120);
+  });
+
+  it("does not let a shorter marker close a longer fence", () => {
+    // A four-backtick block legally quotes a three-backtick sample. Toggling on
+    // any fence line ends it there, and every verbatim line after reads as
+    // prose — which is a false report on content nobody can wrap.
+    const doc = ["````md", "```sh", wide(500), "```", "````", wide(120)].join("\n");
+    expect(widestMeasurableLine(doc)).toBe(120);
+  });
+
+  it("does not let a different marker close a fence", () => {
+    expect(widestMeasurableLine(["```sh", "~~~", wide(500), "```", wide(90)].join("\n"))).toBe(90);
+  });
+
+  it("counts a code point once, however many code units it takes", () => {
+    // `String.prototype.length` counts UTF-16 units, so an emoji reads as two.
+    // Both measuring paths route through one counter; a file that failed one
+    // ceiling and passed the other would make two guards disagree on one rule.
+    expect(widestMeasurableLine("😀".repeat(300))).toBe(300);
   });
 
   it("measures a list item, an ordered item and a paragraph", () => {
@@ -647,7 +688,12 @@ describe("assets.lineBudget width ceiling", () => {
   it("does not fail a wide table row or a wide fenced block", async () => {
     await withTempRoot(async (root) => {
       await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
-        `| ${wide(1200)} |`,
+        // A real table: the delimiter row is what makes the rows above and
+        // below it rows, so the fixture has to carry one.
+        "| head | other |",
+        "| ---- | ----- |",
+        `| ${wide(1200)} | x |`,
+        "",
         "```sh",
         wide(1200),
         "```",
@@ -667,6 +713,53 @@ describe("assets.lineBudget width ceiling", () => {
 
       expect(check?.severity).toBe("warning");
       expect(check?.message).toContain(`900 > ${ASSISTANT_ASSET_MAX_LINE_CHARS} chars`);
+    });
+  });
+
+  it("measures width on a file exempt from the line ceiling", async () => {
+    // The exemption's stated reason is about a roster's LENGTH — one entry per
+    // agent, nothing to move out. None of that is about how wide a line may be,
+    // and a file excused from both would be the one place this rule cannot see.
+    await withTempRoot(async (root) => {
+      const [exemptPath] = [...LINE_BUDGET_EXEMPT.keys()];
+      const relative = (exemptPath ?? "").replace(/^assistant\//, "");
+      await writeRawAsset(root, relative, [wide(900)]);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.exempt.map((entry) => entry.path)).toEqual([exemptPath]);
+      expect(report.wideLines).toEqual([
+        { path: exemptPath, widest: 900, allowed: ASSISTANT_ASSET_MAX_LINE_CHARS },
+      ]);
+    });
+  });
+
+  it("leaves an exempt file's line count unreported however long it is", async () => {
+    await withTempRoot(async (root) => {
+      const [exemptPath] = [...LINE_BUDGET_EXEMPT.keys()];
+      const relative = (exemptPath ?? "").replace(/^assistant\//, "");
+      await writeAsset(root, relative, ASSISTANT_ASSET_MAX_LINES + 50);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.oversized).toEqual([]);
+      expect(report.wideLines).toEqual([]);
+    });
+  });
+
+  it("asks for a wrap on a width overrun, not for a split", async () => {
+    // A two-line file can fail the width ceiling. Telling its author to move a
+    // topic into `references/` asks for a structural change that would not fix
+    // it: what the width ceiling wants is the line wrapped.
+    await withTempRoot(async (root) => {
+      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", ["# Demo", wide(500)]);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+      const actions = check?.details?.["nextActions"];
+
+      expect(JSON.stringify(actions)).toContain("wrap the over-wide prose");
+      expect(JSON.stringify(actions)).not.toContain("move one topic out");
     });
   });
 

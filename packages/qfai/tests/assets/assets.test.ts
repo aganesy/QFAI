@@ -2443,11 +2443,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ).toEqual([]);
   });
 
-  it("keeps the width backlog shrinking and every entry live", () => {
-    // A recorded backlog is only a ratchet while nothing can join it quietly.
-    // The size is pinned so adding a file is an edit a reviewer sees, and each
-    // entry is checked against the file it names: a stale one is a licence
-    // waiting for whatever later takes that path.
+  it("pins every width backlog entry to the file's real width", async () => {
+    // A recorded backlog is only a ratchet while its numbers track the files.
+    // An entry merely ABOVE the real width is a licence: reflow a file from 900
+    // to 500, leave the 900, and it may grow back to 900 with nothing to say so.
+    // So each entry must equal what the file measures — narrowing one is an edit
+    // that lowers its number in the same change.
     expect(
       WIDTH_BUDGET_BACKLOG.size,
       "the width backlog may only shrink — lower this number with the entry you removed, " +
@@ -2456,16 +2457,22 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     const stale: string[] = [];
     const loose: string[] = [];
+    const drifted: string[] = [];
     for (const [relativePath, allowed] of WIDTH_BUDGET_BACKLOG) {
       const absolute = path.join(templateQfaiDir, relativePath);
       if (!existsSync(absolute)) {
         stale.push(relativePath);
         continue;
       }
-      // An entry below the floor is not a backlog entry at all: the file would
-      // pass on the real ceiling, so the line only weakens it.
+      // An entry at or below the floor is not a backlog entry at all: the file
+      // would pass on the real ceiling, so the line only weakens it.
       if (allowed <= ASSISTANT_ASSET_MAX_LINE_CHARS) {
         loose.push(`${relativePath} (${allowed})`);
+        continue;
+      }
+      const widest = widestMeasurableLine(await readFile(absolute, "utf-8"));
+      if (widest !== allowed) {
+        drifted.push(`${relativePath} (recorded ${allowed}, measures ${widest})`);
       }
     }
 
@@ -2473,6 +2480,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(
       loose,
       `at or under ${ASSISTANT_ASSET_MAX_LINE_CHARS} the entry grants nothing — remove it`,
+    ).toEqual([]);
+    expect(
+      drifted,
+      "a backlog entry must be the file's measured width. Lower it to what the file now " +
+        "measures (and delete the entry once that is at or under the ceiling); a number left " +
+        "above the real width is room to grow back into.",
     ).toEqual([]);
   });
 

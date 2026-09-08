@@ -1025,7 +1025,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     unmeasured > 0
       ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
-  const nextActions = assetLineBudgetNextActions([...report.oversized, ...report.wideLines]);
+  const nextActions = assetLineBudgetNextActions(report.oversized, report.wideLines);
   // Both halves in one message. A file can fail either ceiling, and reporting
   // only the count would leave the width failure with no line of its own.
   const overruns = [
@@ -1153,7 +1153,10 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
  * relocate a constitution document or a manifest YAML into an unrelated skill
  * and break the loader contract that reads it from its own layer.
  */
-function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>): string[] {
+function assetLineBudgetNextActions(
+  oversized: ReadonlyArray<{ path: string }>,
+  wide: ReadonlyArray<{ path: string }>,
+): string[] {
   const actions: string[] = [];
   const paths = [...new Set(oversized.map((entry) => entry.path))];
   const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skills/"));
@@ -1164,6 +1167,15 @@ function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>):
   if (hasOtherAsset) {
     actions.push(
       "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
+    );
+  }
+  // A separate action, because the two ceilings ask for different edits. A file
+  // of two lines can fail the width one, and telling its author to move a topic
+  // into `references/` asks for a structural change that would not fix it: what
+  // the width ceiling wants is the line wrapped.
+  if (wide.length > 0) {
+    actions.push(
+      "wrap the over-wide prose — a list item, an ordered item or a paragraph — at the width ceiling; a table row and a fenced block are not measured",
     );
   }
   return actions;

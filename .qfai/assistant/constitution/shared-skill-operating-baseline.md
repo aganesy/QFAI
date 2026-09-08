@@ -58,9 +58,17 @@ them narrower:
 | a table row    | markdown gives it no continuation, so it cannot wrap      |
 | a fenced block | its content is a command, a diagram or a sample, verbatim |
 
-Files that predate the ceiling carry a recorded width of their own, which may
-only shrink: such a file may be edited freely below the width it already had,
-and never past it. Every other file is held at 400.
+A table is found by its delimiter row, not by a leading pipe: that pipe is
+optional, so a table written without one is still a table, and a paragraph
+that opens with one is still a paragraph. Rows a blank line has cut off from
+their delimiter are prose, because that is how they render.
+
+Files that predate the ceiling carry a recorded width of their own. It is the
+width the file actually has, and it may only shrink: edit freely below it,
+never past it, and lower the record in the same change that narrows the file.
+Every other file is held at 400. The exemption from the line ceiling does not
+carry here — its reason is about a file's length, not about how wide one line
+may be.
 
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
