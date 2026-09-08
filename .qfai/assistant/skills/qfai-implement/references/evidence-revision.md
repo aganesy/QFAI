@@ -370,8 +370,11 @@ Consequences:
   parity PASS taken against an earlier rendering stand while the UI moved
   underneath it, and that is the one verdict a later reader cannot re-derive
   from the spec and the diff: it was an observation of a surface that no longer
-  exists. A row that routed no parity reviewer has nothing extra to agree; the
-  rule applies where item 9 does.
+  exists. **It is in that set whatever it answered**: `n/a` is a claim about
+  the tree as much as a PASS is — the `n/a (not UI-affecting)` a row no clause
+  selects records that no declared UI path was touched — so a checkpoint re-fix
+  that adds one makes it false exactly as it makes a stale PASS false
+  (`ui-affecting.md`).
 - **The exceptions are items 3 and 5, on every row, above under _A transient
   observation names its own revision_** and in the table under _Which tree each
   gate item addresses_. A RED is observed before the code that
