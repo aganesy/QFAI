@@ -97,7 +97,15 @@
       ],
       "dependencyMatrices": {
         "test": {
-          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
+          "slice": [
+            "core",
+            "validators",
+            "integration",
+            "e2e",
+            "cli",
+            "unit",
+            "scripts"
+          ]
         }
       },
       "dependencyMatricesNote": [
@@ -142,7 +150,10 @@
         "member of `verificationSet` now, and `detect` carries no condition, so it belongs to the",
         "unconditional set rather than to `gatedVerifications`."
       ],
-      "commandFiles": ["GITHUB_ENV", "GITHUB_PATH"],
+      "commandFiles": [
+        "GITHUB_ENV",
+        "GITHUB_PATH"
+      ],
       "commandFilesNote": [
         "The workflow command files, pinned here and READ from `.github/command-files.txt`.",
         "",
@@ -202,6 +213,7 @@
         "scripts/check-toolchain-action.sh": "fff07d335dc0d74e7c2e6eca7683abd21ae87f7b68e2e39e83467647cc89e180",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
         "scripts/check-workflow-hygiene.mjs": "076cf4ad321d2a61f4ebf288577996129ee24ad3e5de25725470ec0140a86a03",
+        "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "cf2f9fd4c961cf3ffc87c3702f0f0ec0ae84ae9d0e110b8866b31048c0b6622f",
         "scripts/fresh-init-findings.json": "28bf7de140686f8df16666c3d2a9e5a8dd7deaa30d5bbbfcb8eda39494b9ecfe",
         "scripts/fresh-init-findings.mjs": "65221f0f17246de0f092c767138604e49ff671e1ec55a5477f07339fb8ba62f6",
@@ -209,6 +221,7 @@
         "scripts/gen-codex-agents.mjs": "732b21f9b368195dafe1138b288bb755fc19f3c692f1a92c521a01ce88b36136",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
+        "scripts/pin-cli-message-allowlist-count.mjs": "635753d2a837eba74efc62b11dcc6b2174da26988f899317f4c547b07733d71e",
         "scripts/pin-guard-bytes.mjs": "269ee3cc160f1786963cdd1d38f0bee1f580244c9d7dde3f85b002f104e4411d",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "0a16666d8f3cd131b08da4f12950b071e419387edb2e91f5c3e6755866cdf137",
@@ -255,7 +268,9 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"],
+      "nestedActions": [
+        "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"
+      ],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -279,7 +294,9 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"]
+        "mayPrecede": [
+          "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"
+        ]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -363,7 +380,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "65598b82d8bd9ee8",
+        "Verify the toolchain action before running it": "078312b5f9167b33",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "208eb450fdd73d73",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",

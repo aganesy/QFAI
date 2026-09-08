@@ -21,7 +21,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const REVISION = "assistant/skills/qfai-implement/references/evidence-revision.md";
-const IMPLEMENT_SKILL = "assistant/skills/qfai-implement/SKILL.md";
+const RECORD_CONTRACT = "assistant/skills/qfai-implement/references/record-contract.md";
 const ROUND_EVIDENCE = "assistant/skills/qfai-implement/references/round-evidence.md";
 const REVIEW_LAYOUT = "assistant/skills/qfai-implement/references/review-artifact-layout.md";
 const ATDD_SKILL = "assistant/skills/qfai-atdd/SKILL.md";
@@ -143,13 +143,15 @@ describe("the review pack seal has a heading of its own", () => {
     });
 
     it(`${tree}: every consumer cites it by anchor instead of restating it`, async () => {
-      const skill = await read(tree, IMPLEMENT_SKILL);
+      const record = await read(tree, RECORD_CONTRACT);
       const round = await read(tree, ROUND_EVIDENCE);
       const layout = await read(tree, REVIEW_LAYOUT);
 
-      // Gate item 10 is the consumer that recomputes the seal.
-      expect(flat(skill)).toContain(
-        "directory it names (`references/evidence-revision.md#review-pack-seal`)",
+      // Gate item 10 is the consumer that recomputes the seal, and the record
+      // contract carries its rule. The path is relative to `references/`,
+      // where that file sits.
+      expect(flat(record)).toContain(
+        "directory it names (`evidence-revision.md#review-pack-seal`)",
       );
       // The per-round field list names the fields and points at the contract.
       expect(flat(round)).toContain("`Round N: Review pack` — the `review-<timestamp>/` directory");

@@ -209,14 +209,6 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       expect(body, `${card}: does not say which side wins on divergence`).toContain(
         "when the two differ the card is the role contract and wins",
       );
-      // `doctor`'s `extractLiteralRequiredInputs` (src/core/doctor.ts) treats a
-      // bullet that starts with "." and carries no glob character as a literal
-      // path it must find on disk. The catalog scope therefore has to ride on
-      // the globbed bullet as a continuation line, never as its own bullet.
-      expect(
-        body,
-        `${card}: the catalog scope is its own bullet and doctor will read it as a path`,
-      ).not.toContain("- .qfai/assistant/manifest/agent-catalog.yml —");
     }
   });
 

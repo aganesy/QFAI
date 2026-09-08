@@ -21,6 +21,7 @@ const PARTIAL_PROFILES = [
   "atdd",
   "tdd",
   "saas-package",
+  "drift",
 ] as const;
 
 /**
@@ -41,6 +42,7 @@ const EVERY_PROFILE: Record<ValidationProfile, true> = {
   verify: true,
   full: true,
   "saas-package": true,
+  drift: true,
 };
 
 const ALL_PROFILES: readonly ValidationProfile[] = Object.keys(EVERY_PROFILE).filter(
@@ -494,7 +496,10 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
       await withProject(async (root) => {
         const prototyping = await noticeFor(root, "prototyping");
         expect(prototyping?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
-        expect(prototyping?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+        // `--profile drift`, not `--profile tdd`. Both evaluate the guard, and
+        // only one of them can be run on work in flight: `tdd` is the
+        // completion gate and asks for everything a finished branch owes.
+        expect(prototyping?.message).toContain("QFAI-DRIFT-* (`--profile drift`)");
         // Not folded into the "run full" list.
         expect(listedFamilies(prototyping?.message ?? "")).not.toContain("QFAI-DCON-019");
         expect(listedFamilies(prototyping?.message ?? "")).not.toContain("QFAI-DRIFT-*");
@@ -504,7 +509,26 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
         expect(sdd?.message).not.toContain("QFAI-DCON-019");
         const tdd = await noticeFor(root, "tdd");
         expect(tdd?.message).not.toContain("QFAI-DRIFT-*");
+        // The named owner evaluates it too, so it names nothing else to run
+        // for it either.
+        const drift = await noticeFor(root, "drift");
+        expect(drift?.message).not.toContain("QFAI-DRIFT-*");
       });
+    });
+  });
+
+  it("runs the drift guard alone under its own profile", async () => {
+    // The gate CI can run on a branch in flight. `tdd` evaluates the same
+    // guard and every completion obligation with it, so a workflow that wanted
+    // the drift answer had to accept a completion gate on every pull request.
+    await withProject(async (root) => {
+      const notice = await noticeFor(root, "drift");
+      const families = listedFamilies(notice?.message ?? "");
+
+      // Everything else is unevaluated, which is what makes it the narrow gate.
+      expect(families).toContain("QFAI-TDDLIST-*");
+      expect(families).toContain("QFAI-ATDD-*");
+      expect(families).toContain("QFAI-SPECSECTION-*");
     });
   });
 
