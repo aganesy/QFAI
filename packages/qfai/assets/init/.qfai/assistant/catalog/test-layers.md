@@ -277,6 +277,31 @@ and `**Unit and Component owe no ATDD annotation.**` above.
   - `QFAI:CON-API-0001`
   - `QFAI:CON-DB-0001`
 
+### Where the annotation may sit
+
+Two places count, and the second is often the better one:
+
+- a comment, anywhere in the file
+- the **name of a test**, where the id is also visible in the runner's output
+
+```ts
+// QFAI:SPEC-0001:TC-0001
+it("rejects an empty recipient list", ...)
+
+it("QFAI:SPEC-0001:TC-0001 rejects an empty recipient list", ...)
+```
+
+Nothing else in the file counts, and that is deliberate. A fixture holding
+these ids as data — a digest table, a generator, a ledger quoting the id it is
+about — would otherwise read as covering every id it names. A test's name is
+exempt because it is the first argument of a declaration, a position data never
+occupies. A declaration written inside a string is data again, and does not
+count.
+
+So an id in an ordinary string literal is not a reference. `QFAI-ATDD-112`
+reports the obligation as unreferenced even though the id is in the file,
+because from the gate's side it is not.
+
 ## ATDD annotation hard gate
 
 **One reference, not one test.** The gate below asks that each obligation ID

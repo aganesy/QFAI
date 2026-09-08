@@ -39,6 +39,30 @@ export const GOVERNED_ASSISTANT_LAYERS = ["constitution", "catalog"] as const;
 export type GovernedAssistantLayer = (typeof GOVERNED_ASSISTANT_LAYERS)[number];
 
 /**
+ * Assistant layers `qfai init --force` regenerates outright.
+ *
+ * These are as normative as the governed ones — a skill body is what an agent
+ * is told to follow, and an agent definition is who it is told to be — but they
+ * need a different mechanism, because `--force` treats them differently.
+ *
+ * | layer                        | what `--force` does                             | what has to be told apart |
+ * | ---------------------------- | ----------------------------------------------- | ------------------------- |
+ * | `constitution/` `catalog/`   | refreshes a file still matching the record; leaves a diverged one and reports it | stale from forked |
+ * | `skills/` `agents/`          | overwrites every file                           | nothing — only whether it is behind |
+ *
+ * With no merge decision to protect there is nothing to record, so these layers
+ * are outside {@link AssistantAssetsLock} and are compared against the shipped
+ * bytes directly. A lock entry per file would be a hundred and sixty-odd
+ * records that no consumer reads.
+ *
+ * `manifest/` is in neither list. `qfai-configure` is the supported way to edit
+ * it, and `--force` leaves it alone.
+ */
+export const REGENERATED_ASSISTANT_LAYERS = ["skills", "agents"] as const;
+
+export type RegeneratedAssistantLayer = (typeof REGENERATED_ASSISTANT_LAYERS)[number];
+
+/**
  * Maps a POSIX path relative to `.qfai/assistant/` to the sha256 of the
  * content qfai wrote at that path.
  */
@@ -433,6 +457,26 @@ export async function collectGovernedAssistantFiles(assistantRoot: string): Prom
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     await collectGovernedFilesUnder(path.join(assistantRoot, layer), layer, found, true);
   }
+  return found;
+}
+
+/**
+ * Files under one regenerated layer, relative to `assistantRoot`.
+ *
+ * The same walk the governed layers get, and for the same reasons: a layer root
+ * that is not a real directory throws rather than being read through, an absent
+ * one is empty rather than an error, and housekeeping dotfiles are skipped.
+ *
+ * One layer at a time, because these are compared one at a time. A project can
+ * be behind on its skills and current on its agents, and the finding names the
+ * layer whose files differ.
+ */
+export async function collectRegeneratedAssistantFiles(
+  assistantRoot: string,
+  layer: RegeneratedAssistantLayer,
+): Promise<string[]> {
+  const found: string[] = [];
+  await collectGovernedFilesUnder(path.join(assistantRoot, layer), layer, found, true);
   return found;
 }
 

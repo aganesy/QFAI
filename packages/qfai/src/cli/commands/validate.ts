@@ -2014,6 +2014,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every normative file the installed release ships exists in the project as a regular file.",
   "QFAI-ASSETS-008":
     "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
+  "QFAI-ASSETS-009":
+    "The assistant layers `qfai init --force` regenerates (`skills/`, `agents/`) hold what the installed release ships, so the project is not running the skill bodies it initialised with.",
   "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
   "QFAI-TDDLIST-009":

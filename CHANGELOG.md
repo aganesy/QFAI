@@ -6,6 +6,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **An ATDD annotation counts when it is written into a test's name** (#1255).
+  The scan read comments and not string literals, so
+  `it("QFAI:SPEC-0018:TC-0018-0056 …")` did not count and `QFAI-ATDD-112`
+  reported the obligation as unreferenced — while naming a directory that held a
+  passing test whose title was that exact id.
+
+  It is the placement people reach for first, because it is the one place where
+  the id is also in the runner's output, so it is what anyone copies when adding
+  a test. The failure ran in the worst direction: the file read as coverage to
+  every person who opened it, and the gate stayed red.
+
+  Reading only comments was right for the reason it was chosen. A fixture
+  holding these ids as data — a digest table, a generator, a ledger quoting the
+  id it is about — would otherwise read as covering every id it names. A test's
+  name is the one literal that cannot be data: it is the first argument of a
+  declaration, and a table of ids never appears in one. A declaration written
+  inside a string is data again and still does not count, so a generator that
+  emits test files cannot cover an obligation by quoting it.
+
+  `catalog/test-layers.md` now says where an annotation may sit. It described
+  what a carrier is and never said the annotation had to be in a comment.
+
 - **Test files inherit the declared `testTimeout` instead of overriding it**
   (#1246). Ninety-three ceilings across 50 files sat below the project's 120 s
   default, and nothing distinguished one somebody measured from one nobody had
@@ -69,6 +91,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Ships at `warning` and becomes an `error` at 1.13.0. The window is doing real
   work here: the remedy is not a cell edit, so a repository that has been writing
   such rows needs time to plan the re-filing.
+
+- **`validate` reports a skills or agents tree behind the installed release**
+  (#1381). `.qfai/assistant/skills/**` and `agents/**` are copied into a project
+  once and refreshed only by an explicit `qfai init --force`, so a project that
+  upgrades qfai keeps running the skill bodies it initialised with. A `SKILL.md`
+  several releases behind describes a workflow the installed validators no
+  longer implement, and it reads as authoritative because it is checked in.
+  Nothing said so: the provenance family covers `constitution/` and `catalog/`
+  and stops there.
+
+  `QFAI-ASSETS-009` compares each file the release ships under those two layers
+  against the project's copy, and reports **one finding per layer** — the trees
+  hold over a hundred and fifty files between them, and one finding per file
+  would bury every other result. The comparison is against the shipped bytes
+  alone, with no lock entry per file: `--force` overwrites this layer either
+  way, so there is no merge decision for a record to protect.
+
+  The fix hint says the layer is overwritten, local edits included.
+  `QFAI-ASSETS-004` can offer `--force` as a plain refresh because a diverged
+  file is left alone; this layer has no such exemption, and a hint that quietly
+  destroys work is worse than the staleness it clears. Ships at `warning` and
+  becomes an `error` at 1.13.0.
 
 - **A width ceiling beside the line ceiling for shipped assistant assets**
   (#1181). A count of lines bounds reading cost only while a line is a roughly
@@ -382,6 +426,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **The cycle table in the prototyping skill renders as a table again** (#1378).
+  A blank line sat between its delimiter row and its body rows, and a blank line
+  ends a table. The three rows rendered as one paragraph of literal text, pipes
+  included, and the header above them labelled nothing — on the four-column
+  mapping of which agent runs each cycle phase and what it produces.
+
+  Deleting the blank line reattaches the rows. The file's recorded width ceiling
+  drops from 899 to 541 with them: table rows are not measured for width,
+  because markdown gives them no continuation, so the three lines were being
+  measured as the prose they had become.
 
 - **The recorded e2e callsite count no longer fails a branch for the base's
   changes** (#1357). A pull request is tested on the merge of the branch with
