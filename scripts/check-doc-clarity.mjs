@@ -67,11 +67,10 @@ const EXCLUDE_PREFIX = [
  *
  * `CHANGELOG.md` is one because the writing rule sends issue and pull-request
  * numbers there. The rule document is the other, and for the stronger reason:
- * it is the specification of what this guard rejects, so it has to be able to
- * write `#123` and `GH-123` as the examples of what not to write. Excluded by
- * whole file rather than by marker — the marker would name a lane that is not
- * shipped, and the copy under `assets/init/**` goes to projects that do not
- * have it.
+ * it is the specification of what this guard rejects, so it has to spell out
+ * the very shapes below as its own examples. Excluded by whole file rather
+ * than by marker — the marker would name a lane that is not shipped, and the
+ * copy under `assets/init/**` goes to projects that do not have it.
  *
  * The cost is that a real citation added elsewhere in one of these files goes
  * unseen. Both are short and are about this rule, so review covers them.

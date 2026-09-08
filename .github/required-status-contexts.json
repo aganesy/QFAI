@@ -97,7 +97,15 @@
       ],
       "dependencyMatrices": {
         "test": {
-          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
+          "slice": [
+            "core",
+            "validators",
+            "integration",
+            "e2e",
+            "cli",
+            "unit",
+            "scripts"
+          ]
         }
       },
       "dependencyMatricesNote": [
@@ -142,7 +150,10 @@
         "member of `verificationSet` now, and `detect` carries no condition, so it belongs to the",
         "unconditional set rather than to `gatedVerifications`."
       ],
-      "commandFiles": ["GITHUB_ENV", "GITHUB_PATH"],
+      "commandFiles": [
+        "GITHUB_ENV",
+        "GITHUB_PATH"
+      ],
       "commandFilesNote": [
         "The workflow command files, pinned here and READ from `.github/command-files.txt`.",
         "",
@@ -188,7 +199,7 @@
         "scripts/check-atdd-annotation-ledger.mjs": "ef6e9f6b56c81862e3aa613276c7dde87379bfc97a9066fbdc72b123e9bf7f12",
         "scripts/check-bidi.mjs": "b006fcaaa399a3718a55f6e85f12fb3e4f87f22e067d159f6ef05c0f9739e9f4",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
-        "scripts/check-doc-clarity.mjs": "f2979f907a15a93b022d75aada7da58051d9eeb5e3126e635e5e79836d8cdf58",
+        "scripts/check-doc-clarity.mjs": "01f5f7e30c376b37f77796d72122fdae2590d51979c0604910965e46a6898b55",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
         "scripts/check-lifecycle-manifests.mjs": "d1a3354deac4d4e426ce57508f1cbae68c00ec1692a1cedbafd3f0108117dcf7",
         "scripts/check-mdschema.mjs": "4900c69ba7e51c2766ee41579e4b41dd7edc3aaf0915f22b1432a74d8f15bebe",
@@ -202,6 +213,7 @@
         "scripts/check-toolchain-action.sh": "a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777",
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
         "scripts/check-workflow-hygiene.mjs": "e1ce83c5068118002ad93f19cce8da6347fbc1bf53b328e741e421eefabc965d",
+        "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "cf2f9fd4c961cf3ffc87c3702f0f0ec0ae84ae9d0e110b8866b31048c0b6622f",
         "scripts/fresh-init-findings.json": "28bf7de140686f8df16666c3d2a9e5a8dd7deaa30d5bbbfcb8eda39494b9ecfe",
         "scripts/fresh-init-findings.mjs": "65221f0f17246de0f092c767138604e49ff671e1ec55a5477f07339fb8ba62f6",
@@ -209,6 +221,7 @@
         "scripts/gen-codex-agents.mjs": "732b21f9b368195dafe1138b288bb755fc19f3c692f1a92c521a01ce88b36136",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/ts-specifier-hook.mjs": "b6501b31043719b5bb131994fce0aa3ed28b8bf6b4e8d77035610778681dad24",
+        "scripts/pin-cli-message-allowlist-count.mjs": "635753d2a837eba74efc62b11dcc6b2174da26988f899317f4c547b07733d71e",
         "scripts/pin-guard-bytes.mjs": "2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97",
         "scripts/pin-stage-evidence-counts.mjs": "9cf2034c8ce05387e50b7b22c0cd33f2e5ff4544f3e5913e469786044a201099",
         "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
@@ -255,7 +268,9 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"],
+      "nestedActions": [
+        "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"
+      ],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -279,7 +294,9 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"]
+        "mayPrecede": [
+          "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"
+        ]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -363,7 +380,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "d97709d57c9cbe1f",
+        "Verify the toolchain action before running it": "b858cdf70dd91089",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9909088db9df9e88",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",
@@ -371,7 +388,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "fa45de5ba52487cd",
+        "Run lint gate": "7a8573228d6e3c3e",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",
