@@ -5,7 +5,7 @@
  * `.github/instructions/code-review.instructions.md`, and nothing filled it: the marker appeared
  * in the two shipped assets and nowhere else in the package. The release before it shipped
  * concrete TypeScript review rules in that spot, so every project created since got an HTML
- * comment where there had been guidance — half a feature, and worse than either whole (#1167).
+ * comment where there had been guidance — half a feature, and worse than either whole.
  *
  * ## The invariant these rows are built around
  *

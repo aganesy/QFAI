@@ -1,5 +1,5 @@
 /**
- * The Drift Protocol STOP has a blast radius, and CRs compose (#379).
+ * The Drift Protocol STOP has a blast radius, and CRs compose.
  *
  * The protocol said "STOP downstream editing immediately" with no object,
  * "Resume downstream work" with no scope, and "stay in STOP state" with no

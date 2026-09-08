@@ -2,8 +2,7 @@
  * Regression guard: `.qfai/specs/.markdownlint.jsonc` is actually picked up
  * by `markdownlint-cli2` when linting files under `.qfai/specs/`.
  *
- * Rationale (addresses PR #196 review thread on `.qfai/specs/.markdownlint.jsonc`):
- * if `markdownlint-cli2` stops merging the per-directory config, every
+ * Rationale: if `markdownlint-cli2` stops merging the per-directory config, every
  * spec-pack MD013 threshold regressions would start firing again and CI
  * `pnpm ci:lint` would flake on content that has been intentionally exempted.
  *
