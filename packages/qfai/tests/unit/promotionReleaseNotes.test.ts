@@ -87,6 +87,35 @@ function codesIn(block: string): string[] {
   );
 }
 
+/** Order two `MAJOR.MINOR.PATCH` strings; negative when `a` is the earlier one. */
+function compareVersions(a: string, b: string): number {
+  const left = a.split(".").map(Number);
+  const right = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const difference = (left[i] ?? 0) - (right[i] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+/**
+ * The earliest released version at or above `promoteAt`, or `null` when none
+ * has been cut.
+ *
+ * Not `sections.get(promoteAt)`. A pin names the version the escalation was
+ * planned for, and that version need not be released — a project can go from
+ * 1.11.0 straight to 1.13.0, and `newRuleSeverity` compares the running tool
+ * against the pin, so 1.13.0 carries the escalation. Read by exact version,
+ * the release that actually breaks an upgrade is the one release the check
+ * skips.
+ */
+function carryingRelease(promoteAt: string, sections: ReadonlyMap<string, string>): string | null {
+  const carrying = [...sections.keys()]
+    .filter((version) => compareVersions(version, promoteAt) >= 0)
+    .sort(compareVersions);
+  return carrying[0] ?? null;
+}
+
 /** Each released version, mapped to the text of its section. */
 async function releasedSections(): Promise<Map<string, string>> {
   const changelog = await readFile(CHANGELOG, "utf-8");
@@ -122,15 +151,19 @@ describe("a promotion is announced by the release that carries it", () => {
 
     const missing: string[] = [];
     for (const [key, promotion] of Object.entries(RULE_PROMOTIONS)) {
-      const section = sections.get(promotion.promoteAt);
-      if (section === undefined) {
-        // Pinned to a version that has not been cut. Its notes are written
-        // when it is, and requiring them now would fail every open window.
+      const version = carryingRelease(promotion.promoteAt, sections);
+      if (version === null) {
+        // Nothing at or above the pin has been cut. Those notes are written
+        // when one is, and requiring them now would fail every open window.
         continue;
       }
+      // Whole tokens, not substrings: `QFAI-CFG-0010` contains `QFAI-CFG-001`,
+      // and the grammar the codes are read with admits both, so a section
+      // naming only the longer one would answer for the shorter.
+      const named = new Set(codesIn(sections.get(version) ?? ""));
       for (const code of codesIn(blocks.get(key) ?? "")) {
-        if (!section.includes(code)) {
-          missing.push(`${promotion.promoteAt}: ${code} (RULE_PROMOTIONS.${key})`);
+        if (!named.has(code)) {
+          missing.push(`${version}: ${code} (RULE_PROMOTIONS.${key})`);
         }
       }
     }
@@ -154,5 +187,42 @@ describe("a promotion is announced by the release that carries it", () => {
     expect(codesIn(retired), "another entry's code reached this block").not.toContain(
       "QFAI-TDDLIST-010",
     );
+  });
+
+  it("asks the first release at or above the pin, not the pinned version alone", () => {
+    // A pin names the version an escalation was planned for, and that version
+    // need not ship. `newRuleSeverity` compares the running tool against the
+    // pin, so the first release past it carries the escalation — and reading
+    // the pinned version alone skips exactly the release that breaks upgrades.
+    const released = new Map([
+      ["1.13.0", ""],
+      ["1.11.0", ""],
+      ["1.10.2", ""],
+    ]);
+
+    expect(carryingRelease("1.12.0", released)).toBe("1.13.0");
+    // An exact match is still the earliest one at or above the pin.
+    expect(carryingRelease("1.11.0", released)).toBe("1.11.0");
+    // Nothing at or above it has been cut, so nothing owes the notes yet.
+    expect(carryingRelease("1.14.0", released)).toBeNull();
+  });
+
+  it("orders versions by number rather than by string", () => {
+    // `"1.9.0" > "1.10.0"` lexically, and the tree is past 1.9, so a string
+    // comparison would pick the wrong release for every pin in that range.
+    expect(compareVersions("1.9.0", "1.10.0")).toBeLessThan(0);
+    expect(compareVersions("2.0.0", "1.99.99")).toBeGreaterThan(0);
+    expect(compareVersions("1.11.0", "1.11.0")).toBe(0);
+  });
+
+  it("reads a code as a whole token rather than a substring", () => {
+    // A section naming `QFAI-CFG-0010` contains the text of `QFAI-CFG-001`,
+    // and the grammar admits both lengths, so a substring test would let the
+    // longer code answer for a promotion it has nothing to do with.
+    const sections = new Map([["9.9.9", "- **`QFAI-CFG-0010`** and `QFAI-CFG-001-SUFFIX`.\n"]]);
+    const named = new Set(codesIn(sections.get("9.9.9") ?? ""));
+
+    expect(named).toContain("QFAI-CFG-0010");
+    expect(named, "a longer code answered for a shorter one").not.toContain("QFAI-CFG-001");
   });
 });
