@@ -158,11 +158,17 @@ describe("operator-facing CLI message language", () => {
       (total, entries) => total + entries.length,
       0,
     );
+    const rePin =
+      "Run `node scripts/pin-cli-message-allowlist-count.mjs` and land it in the same commit. " +
+      "If this branch changed no entry, the drift is inherited: a merge carries the entries of " +
+      "both parents and neither parent's pin counted them together, so no branch owed this " +
+      "re-pin. Run the same command and land it on its own — it is a re-measurement, not a " +
+      "correction of your change.";
     expect(
       counted,
       counted > ALLOWLISTED_MESSAGE_COUNT
-        ? "the allowlist grew. A new operator-facing message must be English (cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, raise this number in the same change so the addition is reviewed"
-        : "the allowlist shrank — lower this number in the same change, so the migration's progress cannot be spent on a later addition",
+        ? `the allowlist grew. A new operator-facing message must be English (cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, the addition is the base's to translate and this number rises so it is reviewed. ${rePin}`
+        : `the allowlist shrank, so the migration's progress could otherwise be spent on a later addition. ${rePin}`,
     ).toBe(ALLOWLISTED_MESSAGE_COUNT);
   });
 
