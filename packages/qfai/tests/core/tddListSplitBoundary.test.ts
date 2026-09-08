@@ -21,7 +21,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { newRuleSeverity, RULE_PROMOTIONS } from "../../src/core/sunset.js";
-import { validateTddList } from "../../src/core/validators/tddList.js";
+import { validateTddList, validateTddListSeedShape } from "../../src/core/validators/tddList.js";
 import type * as VersionModule from "../../src/core/version.js";
 
 /**
@@ -78,6 +78,28 @@ const row = (tddId: string, tcRefs: string, boundary: string): string =>
 /** A row of the table that has no `Boundary` column. */
 const bareRow = (tddId: string, tcRefs: string): string =>
   `| ${tddId} | ${tcRefs} | Unit | tests/a.test.ts | sel ${tddId} | todo | - | - |`;
+
+/**
+ * A table that can hold every seed group: the two `TC-*` groups keep their
+ * obligation in `TC-Refs`, an `E2E` row in `US-Refs` and an `API` row in
+ * `CON-API-Refs`.
+ */
+const OBLIGATION_HEADERS =
+  "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Boundary |";
+const OBLIGATION_SEP =
+  "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ | -------- |";
+
+/** A row whose obligation sits in the column its `Layer` owns. */
+const obligationRow = (
+  tddId: string,
+  layer: "E2E" | "API",
+  obligation: string,
+  boundary: string,
+): string => {
+  const us = layer === "E2E" ? obligation : "-";
+  const conApi = layer === "API" ? obligation : "-";
+  return `| ${tddId} | - | ${layer} | tests/a.test.ts | sel ${tddId} | todo | - | - | ${us} | ${conApi} | ${boundary} |`;
+};
 
 const unnamed = (issues: Issues): Issues => issues.filter((i) => i.code === "QFAI-TDDLIST-017");
 const duplicated = (issues: Issues): Issues => issues.filter((i) => i.code === "QFAI-TDDLIST-018");
@@ -255,6 +277,101 @@ describe("a split whose rows claim one boundary twice", () => {
         expect(unnamed(issues)).toEqual([]);
       },
     );
+  });
+});
+
+describe("a split of an obligation that is not a test case", () => {
+  // Phase 2b splits a matrix-shaped `US-*` or `CON-API-*` the same way it
+  // splits a matrix `TC-*`, and those rows carry `-` in `TC-Refs`. Grouped by
+  // that column alone they would never enter the check at all.
+
+  it("reports E2E siblings that name no boundary", async () => {
+    await withLedger(
+      [
+        OBLIGATION_HEADERS,
+        OBLIGATION_SEP,
+        obligationRow("TDD-0001", "E2E", "US-0001", "-"),
+        obligationRow("TDD-0002", "E2E", "US-0001", "-"),
+      ],
+      (issues) => {
+        const found = unnamed(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("US-0001");
+        // The boundaries of a user story are stated where the story is, not in
+        // the test-case file.
+        expect(found[0]?.suggested_action).toContain("02_User-stories.md");
+      },
+    );
+  });
+
+  it("reports API siblings that claim one boundary twice", async () => {
+    await withLedger(
+      [
+        OBLIGATION_HEADERS,
+        OBLIGATION_SEP,
+        obligationRow("TDD-0001", "API", "CON-API-0001", "rejects-empty"),
+        obligationRow("TDD-0002", "API", "CON-API-0001", "rejects-empty"),
+      ],
+      (issues) => {
+        const found = duplicated(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("CON-API-0001");
+      },
+    );
+  });
+
+  it("does not pair an E2E row with an API row that happen to share a slug", async () => {
+    // Two obligations, one row each. The key is the obligation and the slug
+    // together, so a generic slug recurring across them is not a duplicate.
+    await withLedger(
+      [
+        OBLIGATION_HEADERS,
+        OBLIGATION_SEP,
+        obligationRow("TDD-0001", "E2E", "US-0001", "not-found"),
+        obligationRow("TDD-0002", "API", "CON-API-0001", "not-found"),
+      ],
+      (issues) => {
+        expect(duplicated(issues)).toEqual([]);
+        expect(unnamed(issues)).toEqual([]);
+      },
+    );
+  });
+});
+
+describe("the gate the writing stage runs", () => {
+  it("carries both codes, so Phase 2b cannot pass its own gate on a bad split", async () => {
+    // `--profile sdd` filters this validator's findings by the seed-shape set.
+    // Outside it, the stage that owns the cell passes while the finding waits
+    // for a later profile — and from the promoting release it arrives there as
+    // an error on a stage forbidden to re-scope a row.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-boundary-seed-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), "# TC\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          HEADERS,
+          SEP,
+          row("TDD-0001", "TC-0001", "-"),
+          row("TDD-0002", "TC-0001", "-"),
+          row("TDD-0003", "TC-0002", "shared"),
+          row("TDD-0004", "TC-0002", "shared"),
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const codes = (await validateTddListSeedShape(root, defaultConfig)).map(
+        (entry) => entry.code,
+      );
+
+      expect(codes).toContain("QFAI-TDDLIST-017");
+      expect(codes).toContain("QFAI-TDDLIST-018");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -797,6 +797,27 @@ export const SPLIT_BOUNDARY_UNNAMED_RULE_ID = "QFAI-TDDLIST-017";
  */
 export const SPLIT_BOUNDARY_DUPLICATED_RULE_ID = "QFAI-TDDLIST-018";
 
+/**
+ * Which column carries a row's obligation, what its ids look like, and where
+ * the boundaries of that obligation are written down.
+ *
+ * The three seed groups keep their obligation in three different columns, and
+ * the split rule applies to all of them: a `US-*` whose acceptance criteria
+ * conflate boundaries is seeded one row per boundary exactly as a matrix
+ * `TC-*` is. A grouping that read `TC-Refs` alone would leave every `E2E` and
+ * `API` sibling out of the check, since those rows carry `-` there.
+ */
+function obligationIdentity(layer: string): { column: string; token: RegExp; source: string } {
+  switch (layer.trim().toLowerCase()) {
+    case "e2e":
+      return { column: "US-Refs", token: /^US-\d{4}(?:-\d{4})?$/, source: "02_User-stories.md" };
+    case "api":
+      return { column: "CON-API-Refs", token: /^CON-API-\d+$/, source: "the API contract" };
+    default:
+      return { column: "TC-Refs", token: TC_ID_TOKEN, source: TEST_CASES_FILE_NAME };
+  }
+}
+
 /** A `Boundary` cell reduced to what identity is compared on. */
 function boundarySlug(value: string): string {
   const trimmed = value.trim();
@@ -4052,6 +4073,14 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // the ledger does not own. Both sides are seed-authored and reconciling them
   // is a re-scope, which the reader may not make.
   "QFAI-TCLEVEL-001",
+  // `Boundary` is Phase 2b's cell and no other phase writes it, so a split it
+  // seeded with no slug, or with one slug twice, is seed damage of exactly the
+  // kind this set exists for. Left out, the writing stage passes its own gate
+  // and the finding first appears at `--profile tdd`, on a stage forbidden to
+  // re-scope a row — and from the promoting release it appears there as an
+  // error nobody downstream may clear.
+  "QFAI-TDDLIST-017",
+  "QFAI-TDDLIST-018",
 ]);
 
 /**
@@ -4619,28 +4648,45 @@ async function validateSpecTddList(
     );
   }
 
-  // Check 5d: the sibling rows of a split TC each name the boundary they own.
+  // Check 5d: the sibling rows of a split obligation each name the boundary
+  // they own.
   //
-  // Re-deriving the boundary set from the spec answers how many boundaries a TC
-  // has now. It does not answer which row is which, and the cells a pairing
-  // could otherwise read — `Selector`, `Test file` — are the executing stage's
-  // to rewrite. `Boundary` is seeded for this and rewritten by nothing
-  // downstream, so it is what a reseed matches on, paired with `TC-Refs`.
+  // Re-deriving the boundary set from the spec answers how many boundaries an
+  // obligation has now. It does not answer which row is which, and the cells a
+  // pairing could otherwise read — `Selector`, `Test file` — are the executing
+  // stage's to rewrite. `Boundary` is seeded for this and rewritten by nothing
+  // downstream, so it is what a reseed matches on, paired with the obligation.
   //
-  // Grouped per `TC-*` token rather than per cell, and each row counted once
-  // for a token however many times its cell repeats it: a row naming the same
-  // TC twice is not two siblings.
-  const rowsByTc = new Map<string, { ref: LedgerRowRef; slug: string; tddId: string }[]>();
+  // **Every seed group can produce a split, not only the two `TC-*` ones.** An
+  // `E2E` row carries its obligation in `US-Refs` and an `API` row in
+  // `CON-API-Refs`, with `TC-Refs` at `-`, and a `US-*` whose acceptance
+  // criteria conflate boundaries is split exactly as a matrix `TC-*` is. Read
+  // through `TC-Refs` alone, those siblings never entered the grouping at all,
+  // so the reseed hazard this check exists for stayed unreported on them.
+  //
+  // Grouped per obligation token rather than per cell, and each row counted
+  // once for a token however many times its cell repeats it: a row naming the
+  // same obligation twice is not two siblings.
+  const rowsByObligation = new Map<
+    string,
+    { ref: LedgerRowRef; slug: string; tddId: string; source: string }[]
+  >();
   for (const ref of ledgerRows()) {
+    const { column, token, source } = obligationIdentity(cell(ref, "Layer"));
     const seen = new Set<string>();
-    for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
-      const tcId = token.toUpperCase();
-      if (!TC_ID_TOKEN.test(tcId) || seen.has(tcId)) continue;
-      seen.add(tcId);
-      const entry = { ref, slug: boundarySlug(cell(ref, "Boundary")), tddId: cell(ref, "TDD-ID") };
-      const bucket = rowsByTc.get(tcId);
+    for (const raw of splitTcRefs(cell(ref, column))) {
+      const id = raw.toUpperCase();
+      if (!token.test(id) || seen.has(id)) continue;
+      seen.add(id);
+      const entry = {
+        ref,
+        slug: boundarySlug(cell(ref, "Boundary")),
+        tddId: cell(ref, "TDD-ID"),
+        source,
+      };
+      const bucket = rowsByObligation.get(id);
       if (bucket) bucket.push(entry);
-      else rowsByTc.set(tcId, [entry]);
+      else rowsByObligation.set(id, [entry]);
     }
   }
 
@@ -4651,22 +4697,27 @@ async function validateSpecTddList(
       ? ` Reported as a warning until the ${splitBoundaryPromotion} release, then an error.`
       : "";
 
-  for (const [tcId, rows] of [...rowsByTc].sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [obligationId, rows] of [...rowsByObligation].sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
     // One row is not a split, so there is nothing to tell apart.
     if (rows.length < 2) continue;
+    // Every row of a split repeats the same obligation in the same column, so
+    // the source they take their boundaries from is one for the whole group.
+    const source = rows[0]?.source ?? TEST_CASES_FILE_NAME;
 
     const unnamed = rows.filter((entry) => entry.slug.length === 0);
     if (unnamed.length > 0) {
       issues.push(
         issue(
           "QFAI-TDDLIST-017",
-          `${tcId} holds ${rows.length} rows in tdd/test-list.md for spec-${specNumber}, and ${unnamed.length} of them name no Boundary (${unnamed.map((entry) => entry.tddId || entry.ref.label).join(", ")}). Sibling rows repeat their TC identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.${splitBoundaryWindowNote}`,
+          `${obligationId} holds ${rows.length} rows in tdd/test-list.md for spec-${specNumber}, and ${unnamed.length} of them name no Boundary (${unnamed.map((entry) => entry.tddId || entry.ref.label).join(", ")}). Sibling rows repeat their obligation identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.${splitBoundaryWindowNote}`,
           splitBoundarySeverity,
           relPath,
           SPLIT_BOUNDARY_UNNAMED_RULE_ID,
-          [tcId],
+          [obligationId],
           "change",
-          `Give each of ${tcId}'s rows a Boundary slug naming the one observable boundary it owns, taken from how 06_Test-Cases.md states that boundary. Add the column to the table's header first if it has none.`,
+          `Give each of ${obligationId}'s rows a Boundary slug naming the one observable boundary it owns, taken from how ${source} states that boundary. Add the column to the table's header first if it has none.`,
         ),
       );
     }
@@ -4683,11 +4734,11 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "QFAI-TDDLIST-018",
-          `${owners.length} rows of ${tcId} in tdd/test-list.md for spec-${specNumber} claim the boundary "${slug}" (${owners.join(", ")}). The pairing key is the (TC-Refs, Boundary) pair, so a repeated slug leaves those rows indistinguishable and one boundary of the split covered by nothing.${splitBoundaryWindowNote}`,
+          `${owners.length} rows of ${obligationId} in tdd/test-list.md for spec-${specNumber} claim the boundary "${slug}" (${owners.join(", ")}). The pairing key is the obligation and the Boundary together, so a repeated slug leaves those rows indistinguishable and one boundary of the split covered by nothing.${splitBoundaryWindowNote}`,
           splitBoundarySeverity,
           relPath,
           SPLIT_BOUNDARY_DUPLICATED_RULE_ID,
-          [tcId, slug],
+          [obligationId, slug],
           "change",
           `Give each row its own Boundary slug. Where two rows really cover one boundary, one of them is a duplicate row and belongs in a Change Request, not in a second slug.`,
         ),
