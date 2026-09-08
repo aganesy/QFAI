@@ -56,7 +56,15 @@ QFAI の npm パッケージとして配布されるファイル群を「配布�
 - smoke test は拡張子のないテキストファイル (`.gitkeep` など) も basename の allowlist で走査する。
 - 3 つの実装は同じ禁止パターン集合を持つ。1 つを変えたら残り 2 つとこのファイルも同時に変える。
 
-`pnpm ci:lint` が pre-build lint と post-build guard を実行し、build job が build 後にもう一度 post-build guard を実行する。
+CI での実行箇所は次のとおり。
+
+| 層               | 実行するジョブとステップ                                      |
+| ---------------- | ------------------------------------------------------------- |
+| pre-build lint   | lint job の `pnpm ci:lint` (`lint:shipping` として)           |
+| post-build guard | lint job と build job の専用ステップ。build job では build 後 |
+| smoke test       | test job                                                      |
+
+post-build guard は `pnpm ci:lint` には入っていない。`ci:lint` から呼べば build 前の `dist/` を見ることになり、それは pre-build lint が別の粒度で見ている対象である。
 
 ## 内部 ID を書いてよい場所
 

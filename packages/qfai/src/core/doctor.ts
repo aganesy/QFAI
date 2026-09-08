@@ -45,6 +45,7 @@ import {
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
+import { planCapCatalogSpecColumn } from "./doctor/capCatalogSpecColumn.js";
 import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 import {
   checkAssistantAssetLineBudget,
@@ -765,6 +766,33 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       legacyImplementationBriefOnly,
     },
   });
+
+  // A catalog written before the `Spec` column existed maps CAP to spec by row
+  // position, and that derivation cannot hold the ID gap an approved DELETE
+  // leaves — so the DELETE cannot be completed until the column is declared.
+  // Reported here and written by `--autoremediate`: the file is the project's
+  // own data, so nothing adds the column as a side effect of an upgrade.
+  const capCatalogPlan = await planCapCatalogSpecColumn(specsRoot);
+  if (capCatalogPlan.state !== "no-catalog") {
+    addCheck(checks, {
+      id: "spec.capCatalogSpecColumn",
+      severity: capCatalogPlan.state === "declared" ? "ok" : "warning",
+      title: "CAP catalog mapping",
+      message:
+        capCatalogPlan.state === "declared"
+          ? "The CAP catalog declares its Spec column"
+          : capCatalogPlan.state === "migratable"
+            ? `The CAP catalog maps CAP to spec by row position (rows=${String(capCatalogPlan.pairs.length)}). Run qfai doctor --autoremediate to declare the Spec column.`
+            : "The CAP catalog maps CAP to spec by row position, and the order does not describe the tree, so the pairing cannot be derived. Declare the Spec column by hand.",
+      details: {
+        state: capCatalogPlan.state,
+        ...(capCatalogPlan.state === "migratable"
+          ? { rows: capCatalogPlan.pairs.map((pair) => `${pair.capId} -> ${pair.specId}`) }
+          : {}),
+        ...(capCatalogPlan.state === "ambiguous" ? { reasons: capCatalogPlan.reasons } : {}),
+      },
+    });
+  }
 
   const guardrailsLoad = await loadDecisionGuardrails(root, {
     specsRoot,
