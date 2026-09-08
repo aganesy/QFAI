@@ -832,13 +832,20 @@ describe(
       const invocations = collectJobSteps(job ?? {})
         .map((step) => String(step["run"] ?? ""))
         .filter((run) => /^\s*npx\s+qfai\s+validate\b/m.test(run));
-      expect(invocations.length, "the delivered validate workflow does not run validate").toBe(1);
-
-      const invocation = invocations[0] ?? "";
-      // The two load-bearing semantic values. A drift in either is the failure the structural gate
-      // exists to catch, and it is invisible to a file-exists check.
-      expect(invocation).toContain("--profile full");
-      expect(invocation).toContain("--fail-on error");
+      // Two lanes share this job: the always-on one, and the drift lane, which
+      // is declared and skipped until the repository opts in. They are asserted
+      // as an ordered pair rather than a count, so a lane that lost its profile
+      // is a failure here and not just a different number.
+      // The profiles in order, not the whole invocations: those literals belong
+      // to the declared shape, and restating them here would put the values in
+      // two places — which the gate's own one-place scan rejects.
+      expect(
+        invocations.map((run) => /--profile\s+(\S+)/.exec(run)?.[1] ?? "(none)"),
+        "the delivered validate workflow does not run the two declared lanes",
+      ).toEqual(["full", "tdd"]);
+      for (const run of invocations) {
+        expect(run).toContain("--fail-on error");
+      }
     });
 
     it("routes a drifted value to the declared shape rather than to a second copy", async () => {

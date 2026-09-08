@@ -1231,7 +1231,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
+  ["qfai-validate.yml", "cfd3c58a6c3406627be013ef8ec3a18ce26a1fa6d513dddaf6ac81a93e68e56e"],
   ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
 ]);
 
@@ -1783,7 +1783,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ (vars.QFAI_CI_DRIFT == \'true\' && github.event_name == \'pull_request\') && \'0\' || \'1\' }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1812,6 +1812,10 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-validate.yml#validate",
     '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate (drift protocol)","if":"${{ vars.QFAI_CI_DRIFT == \'true\' && github.event_name == \'pull_request\' }}","run":"<body cf4a72ba9140cad5bdb9d51352cc8aeb89eada20320498f4b6a272c0f1298a04>"}',
   ],
 ];
 

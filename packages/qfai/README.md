@@ -442,6 +442,14 @@ runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
   develop against. The `full` profile includes the `QFAI-TEST-001` test-todo
   stub gate, so the job can fail your default branch on findings your existing
   CI never checked.
+  It also carries a second lane, `npx qfai validate --profile tdd --fail-on error`,
+  which is the only profile that evaluates the drift-protocol rules
+  (`QFAI-DRIFT-*`). That lane is declared and skipped until you set the
+  repository variable `QFAI_CI_DRIFT` to `true`, and it runs on pull requests
+  only, because the rules diff against the branch you are merging into. Leave it
+  off where specs and contracts are edited in the same pull requests as the code:
+  the rules ask whether an implementation change touched them, and CI cannot tell
+  the two kinds of pull request apart.
 - `qfai-tests.yml` declares one lane per test layer (unit, component,
   integration, api, e2e) and runs none of them until you opt in: a lane runs
   only when your `package.json` declares the matching `test:<layer>` script

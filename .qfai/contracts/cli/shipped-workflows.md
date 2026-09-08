@@ -204,9 +204,27 @@ call:
    target would turn the referencing workflow into a parse error with no repair
    path under create-only install).
 
-Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
-where it resolves to subcommand `validate`, profile `full`, threshold `error`.
-Those three values are asserted today as ad-hoc strings in
+Dimension 5 has its subjects in exactly one shipped file, `qfai-validate.yml`,
+which carries two lanes:
+
+| lane     | subcommand | profile | threshold | inert when                                                             |
+| -------- | ---------- | ------- | --------- | ---------------------------------------------------------------------- |
+| validate | `validate` | `full`  | `error`   | never                                                                  |
+| drift    | `validate` | `tdd`   | `error`   | `vars.QFAI_CI_DRIFT` is not `true`, or the event is not `pull_request` |
+
+The second lane exists because no wide profile evaluates `QFAI-DRIFT-*`: the
+rule binds the downstream stage, and `full` covers the stage that owns those
+files, so running it there would report every authoring edit. It is inert by
+default because CI cannot tell an authoring pull request from an implementing
+one — only the adopter knows which theirs are.
+
+Its inertness is two conditions in two places, and dimension 6 covers both: the
+lane's own `if:`, and the same condition on the checkout's `fetch-depth`. The
+rules diff against the base branch and report nothing when they cannot compute
+that diff, so a shallow checkout does not fail the lane — it passes it while
+checking nothing. The two conditions are therefore asserted as equal.
+
+The invocation values are asserted today as ad-hoc strings in
 `packages/qfai/tests/assets/assets.test.ts` (`DTC-26`); the gate **subsumes and
 replaces** those assertions rather than running alongside them, and the moved
 assertions keep their test-case annotation.

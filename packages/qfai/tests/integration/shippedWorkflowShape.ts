@@ -104,10 +104,27 @@ const SHIPPED_FILENAME_RE = /^qfai-[a-z0-9-]+\.yml$/;
  * from them.
  * ------------------------------------------------------------------ */
 
-/** How a lane is kept declared but not running until the adopter opts in. */
+/**
+ * How a lane is kept declared but not running until the adopter opts in.
+ *
+ * A lane is usually a job, and then `step` is absent. It can also be one step
+ * of a shared job: two lanes that need the same package-manager preamble
+ * cannot be two jobs, because a job cannot reuse another's setup and no
+ * shipped file may reference a second one to share it. Such a lane is gated on
+ * its own step's `if:`, and its identity is the step name.
+ */
 type LaneInertness =
-  /** Gated: the job's `if:` condition names the lane. */
-  | { readonly jobId: string; readonly kind: "opt-in" }
+  /**
+   * Gated: the `if:` condition names what turns the lane on. For a job lane
+   * that is the lane's own id; for a step lane it is the repository variable,
+   * since a step's condition has no reason to repeat the step's name.
+   */
+  | {
+      readonly jobId: string;
+      readonly step?: string;
+      readonly gatedOn: string;
+      readonly kind: "opt-in";
+    }
   /**
    * Never inert: the file is always on and DELETION is the opt-out. A legal
    * answer to this dimension, not a gap — the validate lane's header says
@@ -136,6 +153,7 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     invocations: [],
     lanes: ["unit", "component", "integration", "api", "e2e"].map((jobId) => ({
       jobId,
+      gatedOn: jobId,
       kind: "opt-in",
     })),
   },
@@ -143,8 +161,20 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     name: "qfai-validate.yml",
     invocations: [
       { jobId: "validate", invocation: "qfai validate --profile full --fail-on error" },
+      // The second lane of the same job. No wide profile evaluates
+      // `QFAI-DRIFT-*`, so the drift protocol is gated from `tdd` or from
+      // nothing at all.
+      { jobId: "validate", invocation: "qfai validate --profile tdd --fail-on error" },
     ],
-    lanes: [{ jobId: "validate", kind: "never-inert" }],
+    lanes: [
+      { jobId: "validate", kind: "never-inert" },
+      {
+        jobId: "validate",
+        step: "qfai validate (drift protocol)",
+        gatedOn: "QFAI_CI_DRIFT",
+        kind: "opt-in",
+      },
+    ],
   },
   {
     // The document-shape and Mermaid lane. It invokes no QFAI subcommand — the
@@ -536,6 +566,22 @@ const UNCONDITIONAL_EXIT_ZERO = /^\s*exit\s+0\s*$/;
  * ran a second, undeclared subcommand. The command allow-list one layer out
  * admits both as `npx qfai`, so nothing else was looking.
  */
+/**
+ * A named step's `if:`, or the sentinel for a step that is not there.
+ *
+ * The absent case is distinguished rather than folded into "no condition":
+ * a lane whose step was renamed away would otherwise read as a lane declared
+ * with no gate, which is a different finding and points at the wrong repair.
+ */
+function stepCondition(job: Record<string, unknown>, stepName: string): unknown {
+  for (const step of collectJobSteps(job)) {
+    if (step["name"] === stepName) {
+      return step["if"];
+    }
+  }
+  return "no such step";
+}
+
 function observedInvocations(job: Record<string, unknown>): ParsedInvocation[] {
   const found: ParsedInvocation[] = [];
   for (const step of collectJobSteps(job)) {
@@ -603,10 +649,18 @@ function laneInvocationPins(): ShapePin[] {
       );
       continue;
     }
+    // Grouped by job, because a job's observation is every invocation in it
+    // joined. Two lanes sharing a job declare two invocations, and comparing
+    // either one against the joined observation would report the other as
+    // undeclared.
+    const byJob = new Map<string, string[]>();
     for (const { jobId, invocation } of file.invocations) {
-      const declared = parseDeclaredInvocation(invocation);
+      byJob.set(jobId, [...(byJob.get(jobId) ?? []), invocation]);
+    }
+    for (const [jobId, invocations] of byJob) {
+      const declared = invocations.map(parseDeclaredInvocation);
       for (const render of INVOCATION_ATTRIBUTES) {
-        const expected = render(declared);
+        const expected = declared.map(render).join(" + ");
         pins.push({
           dimension: 5,
           site: `${file.name}:${jobId}`,
@@ -634,7 +688,9 @@ function laneInvocationPins(): ShapePin[] {
 /** Dimension 6: per lane, what keeps it declared but not running. */
 function laneInertnessPins(): ShapePin[] {
   return SHIPPED_FILE_EXPECTATIONS.map((file) => {
-    const gated = file.lanes.filter((lane) => lane.kind === "opt-in").map((lane) => lane.jobId);
+    const gated = file.lanes
+      .filter((lane) => lane.kind === "opt-in")
+      .map((lane) => lane.step ?? lane.jobId);
     const always = file.lanes
       .filter((lane) => lane.kind === "never-inert")
       .map((lane) => lane.jobId);
@@ -667,15 +723,22 @@ function laneInertnessViolations(file: FileExpectation, found: WorkflowFile): st
       problems.push(`${lane.jobId}: lane is not declared`);
       continue;
     }
-    const condition = job["if"];
     if (lane.kind === "opt-in") {
-      if (typeof condition !== "string") {
-        problems.push(`${lane.jobId}: no if: condition`);
-      } else if (!condition.includes(lane.jobId)) {
-        problems.push(`${lane.jobId}: if: condition does not name the lane`);
+      // A step lane is gated on its own step, not on the job: the job carries
+      // the never-inert lane too, so reading the job's `if:` here would ask
+      // the always-on lane to be gated.
+      const gate = lane.step === undefined ? job["if"] : stepCondition(job, lane.step);
+      const name = lane.step ?? lane.jobId;
+      if (gate === "no such step") {
+        problems.push(`${name}: lane is not declared`);
+      } else if (typeof gate !== "string") {
+        problems.push(`${name}: no if: condition`);
+      } else if (!gate.includes(lane.gatedOn)) {
+        problems.push(`${name}: if: condition does not name ${lane.gatedOn}`);
       }
       continue;
     }
+    const condition = job["if"];
     if (condition !== undefined) {
       problems.push(`${lane.jobId}: gated on if: ${String(condition)}`);
     }

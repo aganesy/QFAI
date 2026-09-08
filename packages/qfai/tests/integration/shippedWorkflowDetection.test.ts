@@ -40,6 +40,38 @@ import {
 /** The orchestrator file that owns detection, lanes and verdict. */
 const ORCHESTRATOR = "qfai-tests.yml";
 
+/**
+ * The checkouts allowed to take the full history, and the only ones.
+ *
+ * A full clone is the expensive option, so it is enumerated rather than
+ * permitted: each entry reads a diff against the branch being merged into, and
+ * a shallow checkout has no base to read. The orchestrator's detection job
+ * selects test lanes from a name-only diff; the validate job's drift lane asks
+ * whether this change edited a file an upstream stage owns.
+ *
+ * Both are conditional on their own lane, so neither costs a full clone on a
+ * run where the lane does not fire.
+ */
+const BASE_DIFFING_CHECKOUTS: ReadonlyArray<{ readonly file: string; readonly jobId: string }> = [
+  { file: ORCHESTRATOR, jobId: "detection" },
+  { file: "qfai-validate.yml", jobId: "validate" },
+];
+
+/**
+ * Whether a `fetch-depth` value can produce a full clone.
+ *
+ * `0` asks for one unconditionally. An expression asks for one on the runs
+ * where its condition holds, and a rule reading only the literal would see a
+ * conditional request as no request at all — which is the direction that lets
+ * an unaudited full clone through.
+ */
+function requestsFullHistory(value: unknown): boolean {
+  if (value === 0) {
+    return true;
+  }
+  return typeof value === "string" && value.includes("${{") && /['"]0['"]|\b0\b/.test(value);
+}
+
 /** The full lane superset (value SSOT in the suite per CLI-WFSET §5). */
 const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
 
@@ -281,7 +313,7 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
     expect(body).toContain('"$GITHUB_OUTPUT"');
   });
 
-  it("the full-history request appears on the detection job only, across the whole shipped set", async () => {
+  it("the full-history request appears only on the lanes that diff against the base", async () => {
     /** Occurrences of a mapping key anywhere in a parsed YAML tree. */
     function countKeyOccurrences(node: unknown, key: string): number {
       if (Array.isArray(node)) {
@@ -313,9 +345,9 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
             typeof uses === "string" &&
             uses.startsWith("actions/checkout@") &&
             isRecord(withNode) &&
-            withNode["fetch-depth"] === 0
+            requestsFullHistory(withNode["fetch-depth"])
           ) {
-            if (jobId === "detection" && name === ORCHESTRATOR) {
+            if (BASE_DIFFING_CHECKOUTS.some((lane) => lane.file === name && lane.jobId === jobId)) {
               insideDetectionCheckout += 1;
               detectionFullHistoryRequests += 1;
             } else {
@@ -331,9 +363,9 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
         );
       }
     }
-    // Non-vacuity: the detection job itself must request full history —
-    // the name-only diff needs the base commit locally reachable.
-    expect(detectionFullHistoryRequests).toBe(1);
+    // Non-vacuity: every enumerated lane must actually request it — each one
+    // reads a diff against the base, and a shallow clone has no base to read.
+    expect(detectionFullHistoryRequests).toBe(BASE_DIFFING_CHECKOUTS.length);
     expect(violations).toEqual([]);
   });
 });

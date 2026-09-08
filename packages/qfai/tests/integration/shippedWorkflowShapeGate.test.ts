@@ -437,6 +437,26 @@ function assertShapeGateAccepts(findings: readonly ShapeFinding[]): void {
   expect(findings, renderShapeGateReport(findings)).toEqual([]);
 }
 
+/**
+ * Whether a line states a shape value, rather than a longer command it opens.
+ *
+ * `--profile tdd --fail-on error` is both a shipped lane and the opening of the
+ * per-spec checkpoint command the skills document, which carries a `--spec`
+ * after it. A plain substring test reads the second as a restatement of the
+ * first and sends an author to delete an assertion about a different command.
+ * A value continued by another argument is therefore not a match.
+ */
+function statesTheWholeInvocation(line: string, needle: string): boolean {
+  let from = line.indexOf(needle);
+  while (from !== -1) {
+    if (!/^\s+-/.test(line.slice(from + needle.length))) {
+      return true;
+    }
+    from = line.indexOf(needle, from + 1);
+  }
+  return false;
+}
+
 describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence makes the gate exit 1", () => {
   // One it() per TC-0003-0049 verify bullet.
   //
@@ -512,8 +532,15 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     for (const finding of laneFindings) {
       expect(finding.expected).not.toEqual(finding.actual);
       expect(report).toContain(finding.expected);
+      // Split first: a job carrying two lanes has an expected composed of both
+      // lanes' values joined, and no single literal contains the join. Every
+      // PART must still be owned, which is the property — the gate never prints
+      // a value the shape does not hold.
+      const owned = finding.expected
+        .split(" + ")
+        .every((part) => shapeValueLiterals().some((literal) => literal.includes(part)));
       expect(
-        shapeValueLiterals().some((literal) => literal.includes(finding.expected)),
+        owned,
         `the expected value "${finding.expected}" is not one the declared shape owns`,
       ).toBe(true);
     }
@@ -729,7 +756,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
       const relative = path.relative(TESTS_DIR, filePath).split(path.sep).join("/");
       const lines = (await readFile(filePath, "utf-8")).split(/\r?\n/);
       lines.forEach((line, index) => {
-        if (!needles.some((needle) => line.includes(needle))) {
+        if (!needles.some((needle) => statesTheWholeInvocation(line, needle))) {
           return;
         }
         if (relative === SHAPE_MODULE_REL) {

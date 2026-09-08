@@ -8,6 +8,15 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
+# `full` does NOT evaluate the drift-protocol rules (`QFAI-DRIFT-*`). They are
+# evaluated by `--profile tdd` alone, and the second lane below runs it. That
+# lane is off until you set `QFAI_CI_DRIFT` to `true`, because the rule asks
+# whether an IMPLEMENTATION change edited a spec or a contract, and CI cannot
+# tell an implementation pull request from an authoring one. Turn it on where
+# specs and contracts are authored in their own pull requests; leaving it off
+# is not a silent gap, because the `full` lane prints the omission on every run
+# as QFAI-PROFILE-001.
+#
 # What this file needs from your repository, and how it behaves when it does
 # not get it:
 #
@@ -17,7 +26,9 @@
 # | Runner selector               | `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`                                                           |
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
-# | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Drift lane selector           | `vars.QFAI_CI_DRIFT`, default unset (the drift lane stays skipped)                                      |
+# | Inert when                    | the `full` lane is never inert; delete this file to opt out - `qfai init` will not recreate it           |
+# | Drift lane inert when         | `vars.QFAI_CI_DRIFT` is not `true`, or the event is not a pull request (a push has no base to diff)      |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
 # | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
 # | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
@@ -52,6 +63,12 @@ jobs:
           # Nothing in this job pushes back, so the token never needs to
           # outlive the checkout step.
           persist-credentials: false
+          # Full history, and every remote branch with it, only when the drift
+          # lane at the end of this job will run — that lane needs the base
+          # branch present to diff against. Every other run stays shallow.
+          # `'0'` and `'1'` are quoted because an unquoted `0` is falsy in a
+          # GitHub expression, which would collapse this to `1` always.
+          fetch-depth: ${{ (vars.QFAI_CI_DRIFT == 'true' && github.event_name == 'pull_request') && '0' || '1' }}
       - name: Resolve the package manager (pnpm route fails closed)
         id: package-manager
         shell: bash
@@ -384,3 +401,14 @@ jobs:
           fi
       - name: qfai validate
         run: npx qfai validate --profile full --fail-on error
+      # Declared and skipped until the repository opts in: see the header. The
+      # profile is `tdd` because no wide profile evaluates `QFAI-DRIFT-*`.
+      #
+      # The condition is repeated on the checkout above, which takes the full
+      # history only for this lane. Both must say the same thing: the rules
+      # diff against the base branch, the guard reports nothing when it cannot
+      # compute that diff, and a shallow checkout has no base to compute it
+      # from — so a mismatch does not fail, it passes while checking nothing.
+      - name: qfai validate (drift protocol)
+        if: ${{ vars.QFAI_CI_DRIFT == 'true' && github.event_name == 'pull_request' }}
+        run: npx qfai validate --profile tdd --fail-on error
