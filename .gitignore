@@ -62,6 +62,7 @@ coverage/
 .qfai/evidence/*
 .qfai/discussion/*
 .qfai/review/*
+.qfai/review_archive/*
 .qfai/state.json
 *.qfai-state.tmp
 .qfai/state.json.lock
@@ -76,7 +77,5 @@ coverage/
 !.qfai/evidence/implement-*.md
 !.qfai/evidence/atdd-*.md
 !.qfai/evidence/coverage-depth-*.md
-!.qfai/review/
-!.qfai/review/.legacy-packs
 !.qfai/install-provenance.json
 

@@ -34,7 +34,8 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { exists } from "../validators/utils.js";
-import { loadConfig } from "../config.js";
+import { loadConfig, resolvePath } from "../config.js";
+import { applyCapCatalogSpecColumn, planCapCatalogSpecColumn } from "./capCatalogSpecColumn.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { WOULD_UNTRACK_REASON } from "./archiveVisibility.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
@@ -72,6 +73,14 @@ export type AutoremediateSummary = {
   readonly failedRunLogPrunes: readonly string[];
   /** Review packs recorded as predating `revision_form` by this run. */
   readonly legacyPacksRecorded: readonly string[];
+  /**
+   * CAP ids whose catalog row this run gave a `Spec` cell.
+   *
+   * Empty when the catalog already declares the column, when there is none, and
+   * when the positions do not describe the tree — the last of those is reported
+   * in {@link AutoremediateSummary.lines} rather than written.
+   */
+  readonly capCatalogRowsDeclared: readonly string[];
 };
 
 const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
@@ -265,6 +274,7 @@ export async function runAutoremediate(
       prunedRunLogs: [],
       failedRunLogPrunes: [],
       legacyPacksRecorded: [],
+      capCatalogRowsDeclared: [],
     };
   }
 
@@ -427,6 +437,39 @@ export async function runAutoremediate(
       : `autoremediate: legacy review packs recorded=${String(migration.added.length)}`,
   );
 
+  // (5) Give a legacy CAP catalog the declared `Spec` column.
+  // Written here rather than by `init` because it edits `.qfai/specs/**`, which
+  // is the project's own data and which `init` never rewrites, `--force`
+  // included. All rows or none: the column's presence selects the declared
+  // mapping however few cells carry a value, so a partial write reports a
+  // finding per empty cell instead of falling back to the derivation the
+  // project was working under.
+  const capCatalogRowsDeclared: string[] = [];
+  const catalogConfig = await loadConfig(options.root);
+  const catalogPlan = await planCapCatalogSpecColumn(
+    resolvePath(options.root, catalogConfig.config, "specsDir"),
+  );
+  if (catalogPlan.state === "ambiguous") {
+    lines.push(
+      "autoremediate: CAP catalog Spec column skipped — the row order does not describe the tree:",
+    );
+    for (const reason of catalogPlan.reasons) {
+      lines.push(`  ${reason}`);
+    }
+  } else if (catalogPlan.state === "migratable") {
+    if (options.dryRun) {
+      lines.push(
+        `autoremediate: would declare the CAP catalog Spec column for ${String(catalogPlan.pairs.length)} row(s) (dry-run)`,
+      );
+    } else {
+      await applyCapCatalogSpecColumn(catalogPlan);
+      capCatalogRowsDeclared.push(...catalogPlan.pairs.map((pair) => pair.capId));
+      lines.push(
+        `autoremediate: CAP catalog Spec column declared for ${String(catalogPlan.pairs.length)} row(s)`,
+      );
+    }
+  }
+
   return {
     disabledInCi: false,
     lines,
@@ -436,5 +479,6 @@ export async function runAutoremediate(
     failedRunLogPrunes,
     configFieldsWritten,
     legacyPacksRecorded: migration.added,
+    capCatalogRowsDeclared,
   };
 }
