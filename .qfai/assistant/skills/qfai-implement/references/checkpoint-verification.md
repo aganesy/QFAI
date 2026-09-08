@@ -205,8 +205,14 @@ runs at a per-item boundary, under the condition it states.
    report the checkpoint as passed.
 
 5. **The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is
-   `applicable`** — re-run from `.qfai/evidence/skeleton.md` and appended there with its own
-   exit status (`walking-skeleton.md#the-same-re-run-before-spec-completion`). Steps 2-4 are
+   `applicable`** — resolved from the **current** `catalog/tech.md` and the committed script it
+   names, whose bytes must hash to the `Skeleton script` the record carries, then run and appended
+   to `.qfai/evidence/skeleton.md` with its own exit status
+   (`walking-skeleton.md#the-same-re-run-before-spec-completion`). The command is **not** taken
+   from the record: the record is an editable file, so a command rewritten there to something that
+   always succeeds would carry an old gatekeeper PASS through spec completion. The record is what
+   the run is compared against, never what the run is read from, and a hash that does not match
+   is a FAIL here rather than a re-run of whatever the script now says. Steps 2-4 are
    all satisfiable by a tree that no longer starts: where the tests construct their subject
    directly, the suite stays green after this invocation's own rows have broken the
    composition root, the start-up configuration or the dependency wiring, and no other step

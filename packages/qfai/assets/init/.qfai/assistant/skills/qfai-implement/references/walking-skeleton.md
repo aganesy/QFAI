@@ -156,12 +156,22 @@ satisfies it, though, never the stored record: see `#evidence`.
 3. **Reaches the surface one declared boot obligation names, over the real
    transport the entrypoint speaks** — a socket for a service, stdio for a CLI,
    the queue for a worker — and asserts that reachability alone: the request was
-   served by the process the entrypoint started. The obligation is a `US-*`, or
-   a `CON-API-*` on an API entrypoint, exactly as the exit criterion above says.
-   It asserts nothing about that obligation's outcome; asserting the outcome
-   would need the predicate Bound 1 forbids.
+   served **by the surface the obligation names**, not merely by the process.
+   The obligation is a `US-*`, or a `CON-API-*` on an API entrypoint, exactly as
+   the exit criterion above says. It asserts nothing about that obligation's
+   outcome; asserting the outcome would need the predicate Bound 1 forbids.
+
+   **A response the process would give for a surface it does not have is not
+   reachability.** A web framework answers an unregistered route with its own
+   404, and a script that accepts any response passes on exactly the state this
+   phase exists to detect — the missing seam described above. So the script
+   asserts a response only a registered surface produces, and the evidence says
+   which property it read: a status the unregistered path does not return, a
+   header or body the handler sets, or the router's own listing. "It answered"
+   is not that property.
    **Any answer that process gives counts** — the sentinel of a seam authored
    here, or the real response of a surface that already worked.
+
 4. **Exits non-zero on any failure**, including a start-up timeout. A script
    that reports a failure on stdout and exits 0 proves nothing.
 5. **Names the boot obligation whose surface it reaches** — the `US-*`, or the
