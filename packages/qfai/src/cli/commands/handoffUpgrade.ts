@@ -264,7 +264,7 @@ function quoteArg(value: string): string {
  * `path.resolve` is what makes that guarantee hold. An EXPLICIT
  * `--root` is handed through verbatim by the CLI (`main.ts`'s
  * `resolveRoot` returns it unchanged when it was given on the command
- * line), so a relative `--root ../project` would otherwise survive into
+ * line), so a relative `--root../project` would otherwise survive into
  * the hint — and re-running that pasted command from a different
  * working directory would resolve `../project` onto someone else's
  * tree and `--force` a canonical handoff the operator never named. The

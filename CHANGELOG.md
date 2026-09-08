@@ -146,6 +146,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing else changed. The keys were already inert, so the finding is about
   the file's shape rather than its behaviour, and deleting the key clears it.
 
+- **Reworded the shipped `.agents/rules/*.md` templates for clarity.** Shortened
+  sentences, and corrected `temporary-files.md`'s claim that `qfai init` does not
+  add `/tmp/` to `.gitignore` — it does, in the managed block. No rule content
+  changed.
+
 - **spec / `_policies` の表記揺れを正典へ収束。** `10_Plan.md` は
   実装戦略・`1. Implementation Strategy`・`Implementation Strategy`・
   `Implementation approach` の 4 系統が混在していた。`_policies` の
