@@ -74,10 +74,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 
 ## What validation checks in a `.sql` contract
 
-Scope is **apply-ability, not semantic correctness**. `.sql` used to be the only
-contract kind the validator never parsed — the "this contract does not parse" check
-guarding UI and API files was unreachable for it — so a DB contract that cannot
-run passed `npx qfai validate --profile sdd --fail-on error`. It now has a structural lane:
+Scope is **apply-ability, not semantic correctness**. Without this lane a DB contract
+that cannot run would pass `npx qfai validate --profile sdd --fail-on error`, since the
+"this contract does not parse" check guarding UI and API files does not reach `.sql`.
+The structural lane:
 
 | Finding             | Fires when                                                                    | Severity |
 | ------------------- | ----------------------------------------------------------------------------- | -------- |
@@ -194,6 +194,18 @@ satisfied by a file that cannot run.
   correctness. Neither a syntax-level parse nor a structural comparison would
   have caught the observed defects, so a cheap record of "this was actually
   driven" is what the omission needs.
+
+  One thing about a `db/` contract _is_ checked without a database.
+  `QFAI-CONTRACT-036` reads the DDL: a `REFERENCES` clause names a table, and
+  the contract that creates that table must appear in this file's
+  `-- Depends on:` line. A foreign key's target has to exist when the statement
+  runs, so an undeclared one means the stated apply order does not work — and
+  the three rules that read the dependency line do not read the SQL under it,
+  so nothing else says so.
+
+  The check is narrow on purpose. Only a `REFERENCES` clause counts, a table no
+  contract in the set creates is left alone, and a table two contracts both
+  create is not attributed to either.
 
 The cost of skipping this is not paid in Phase 0. It is paid inside a TDD
 micro-cycle, by an implementer who is forbidden from fixing the contract and has

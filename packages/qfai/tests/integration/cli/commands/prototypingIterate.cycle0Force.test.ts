@@ -183,10 +183,11 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(exit).toBe(0);
   });
 
-  // #1072. `--dry-run` is documented as "display only, make no changes" and was
-  // parsed globally but threaded only into `init` and `doctor`, so this command
-  // performed the cycle-0 reset under it — measured at 27 files and 1,475,551
-  // bytes relocated, with `mutation-log.jsonl` recording every write as real.
+  // `--dry-run` is documented as "display only, make no changes". Without
+  // threading it into this command as well as `init` and `doctor`, the
+  // cycle-0 reset would perform for real under it — measured at 27 files and
+  // 1,475,551 bytes relocated, with `mutation-log.jsonl` recording every
+  // write as real.
   // The negative control for these three cases is the `--force` test above:
   // without `--dry-run` the same fixture DOES get backed up.
   it("--force --dry-run moves nothing and writes nothing (exit 0)", async () => {

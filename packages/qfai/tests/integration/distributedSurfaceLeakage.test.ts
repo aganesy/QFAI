@@ -8,20 +8,16 @@
  * Complements scripts/check-no-internal-version-leakage.sh by checking
  * the *output* of init (post-template-copy), not just the source assets.
  *
- * SSOT note (PR #206 review LtfD / Nv4N): the `PATTERNS` array below is
- * one of THREE semantically-equivalent expressions of the same forbidden
- * class set:
+ * SSOT note: the `PATTERNS` array below is one of THREE equivalent
+ * expressions of the same forbidden class set:
  *   1. `packages/qfai/scripts/lint-shipping.ts` `src-comment` rules
  *      (JS RegExp, pre-build, `src/*.ts` JSDoc scan).
  *   2. `packages/qfai/scripts/check-no-internal-version-leakage.sh`
- *      L21..L45 (POSIX ERE, post-build `dist/` scan).
+ *      (POSIX ERE, post-build `dist/` scan).
  *   3. This file (JS RegExp, smoke against `qfai init` output).
  *
- * Updating one (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context
- * pattern) requires updating ALL THREE in the same PR — Rule of Three
- * has been hit and a single source module is now a reasonable next
- * step, deferred from this PR. See `.agents/rules/distributed-surface.md`
- * "Defenses (4 layers)" for the layered defense overview.
+ * Updating one requires updating all three in the same change. The guard
+ * table in `.agents/rules/distributed-surface.md` lists the layers.
  *
  * The patterns are applied in two dimensions: to file CONTENT and to
  * file NAMES (`scanPathName` below), because `qfai init` copies a path

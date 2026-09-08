@@ -155,6 +155,27 @@ one.
   only thing that makes a discussion ID unique, because every pack restarts its numbering at
   `DUS-001` / `DAC-001-01`. A spec that two packs have updated therefore carries two `Source`
   values that differ only in the pack half.
+- **Import-lite pair.** A spec set imported with no discussion pack at all (the Stage 0
+  missing-pack exception in `SKILL.md`) has no pack half to write, so items it produces carry
+  the evidence pair instead: `import-lite-<ts>#<REQ-ID>`, e.g.
+  `import-lite-20260415101112123#REQ-0007` (the same 17-digit stamp form as a pack). The left half is the basename of the
+  `.qfai/evidence/import-lite-<ts>.md` file Stage 0 wrote, minus the `.md`, and it always
+  carries the stamp. `QFAI-IMPLITE-001` also clears on a copy kept under the template's own
+  name, `import-lite.md`, so that copying the file is enough to answer the warning — but that
+  name is one fixed path, so a later import overwrites it and every pair citing it re-points
+  without a diff. A run that writes `Source` values therefore renames its evidence to the
+  stamped form first, and `import-lite#<REQ-ID>` is not a pair. The right half is
+  the requirement ID as the imported material names it. Material that carries no IDs of its own
+  — a pasted excerpt is the usual case — is numbered in the evidence file instead: Stage 0
+  lists what it read under `## Imported requirements` as `IMP-001`, `IMP-002`, … and items cite
+  those. The numbering has to live there rather than in the spec, because the evidence file is
+  written once per run and never rewritten, so `IMP-001` keeps meaning one line of one import.
+  A `## Sources` anchor is not a substitute: it names a document, so every item drawn from that
+  document would carry the same right half and the pair would stop resolving. Both halves stay required
+  for the same reason as the pack form: the evidence half is what makes the requirement half
+  resolvable, since a second import run restarts from the same external numbering. `-` remains
+  reserved for items with no ancestor of either kind; an import-lite item has one, so it never
+  uses `-`, and it never borrows a discussion ID from a pack that does not exist.
 - `Source` is recorded once per item, in the required artifact: the `- Source:` line of each
   `## US-NNNN` block in `02_User-stories.md`, and the `# Source:` comment inside each AC's
   Gherkin block in `03_Acceptance-Criteria.md`. The optional `AC Catalog` table carries no
@@ -202,7 +223,8 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   tie-break) and compared.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
-  Phase Red.
+  Phase Red. There is no `retired` value: retiring a row is **deleting it from the
+  table** under the ownership split below, not parking it at a status.
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
   covers. `/qfai-implement` owns the `Status`, `DR-ID`, `Evidence` and `Blocked-By` cells
   unconditionally — `Blocked-By` because `todo -> blocked` is an edge that skill owns and
@@ -216,7 +238,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   which states both conditions; adding, removing or re-scoping a row is an upstream change and
   takes the Change Request path — including the rows `/qfai-implement` used to open itself for
   a post-RED scope gap or a checkpoint regression, which now come back here as a Change
-  Request.
+  Request — except when `/qfai-sdd` is reseeding under a Triage row that carries the
+  operator's approval for the removal in its `Approved By` cell, which is then the same
+  approval a Change Request would have collected and is itself the record. Two rows qualify:
+  the approved `UPDATE:REMOVE` row, whose approval `sdd-triage.md` takes by operation; and the
+  `UPDATE:MODIFY` row that drops a TC out of the coverage-target set, whose operation is
+  approval-free but whose row deletion is not, so `sdd-triage.md` takes an approval for
+  that deletion specifically. An `UPDATE:MODIFY` row with no approver recorded authorises
+  no deletion and leaves the row on the Change Request path.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
@@ -330,7 +359,28 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
-- `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
+- `TDD-ID` must match `TDD-NNNN` and be unique within the spec. Because that
+  uniqueness is per spec, the record that authorised a retirement — the approved
+  `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal
+  `/qfai-sdd` reseed, that spec's `UPDATE:MODIFY` row when the TC survives but its
+  `Level` leaves coverage, no `UPDATE:REMOVE` row was raised, the driving `CR-*`
+  on a Drift Protocol owner rerun — names
+  the row as `<spec-id>/TDD-NNNN`: a bare `TDD-0001` cannot be told from another
+  spec's once both rows are deleted. That record carries the deleted row's
+  `Evidence` cell verbatim. The cell is a pointer, and the managed `.gitignore`
+  block re-includes `.qfai/evidence/implement-*.md` and `atdd-*.md` by name, so
+  it still resolves in a clean checkout and the body stays where it was written.
+  A row whose `Evidence` cell is empty or `-` anchors nothing: record
+  `no evidence — retired at Status = <status>, never executed` rather than
+  composing a section for it to name. Read the cell, not the status — a row
+  blocked out of `green` or `refactor` keeps the rounds it already took, and its
+  `Blocked-By` names the status it left from. The same record says what happens
+  to the deleted row's test, which no skill removes on its own.
+  A retired `TDD-ID` is **never reused**: allocate the next one above the highest
+  the spec has ever issued, counting the ones those records retired, so a new
+  row's `Evidence` anchor cannot land on a retired cycle's `### TDD-NNNN` section
+  in the same evidence file. The validator only sees the live ledger, so this one
+  is on the seeding skill.
 - **`TDD-ID` allocation is by reserved block, decided before the workers
   split.** Uniqueness alone does not say who takes the next value.
   `TDD-NNNN` is spec-scoped and monotonic, so that value is `max + 1`

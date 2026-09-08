@@ -1,36 +1,28 @@
 /**
- * Regression coverage for PR #210 wave-2 C1+C2 fixes plus wave-18
- * active-loop signal refinement.
+ * Regression coverage for the certify/verify phase-isolation guard.
  *
- * Two paired defects in the original implementation:
- *   C1 — detectCertifyVerifyCircular read prototyping state from
- *        the legacy path `.qfai/output/prototyping.json`, but the
- *        iterate pipeline writes to the canonical path
- *        `.qfai/evidence/prototyping/prototyping.json`
- *        (PROTOTYPING_JSON_REL). The legacy lookup always missed
- *        in real runs, so R-CERTIFY-VERIFY-CIRCULAR was never
- *        emitted and the phase-isolation guard was a no-op.
- *   C2 — isPrototypingPhase required `prototyping.json#phase ===
- *        "prototyping"`, but writeSeedMetadata explicitly deletes
- *        `body.phase`. No current writer restores it, so the
- *        guard was bypassed even when the canonical path was read.
+ * Two paired defects the guard closes:
+ *   C1 — `detectCertifyVerifyCircular` must read prototyping state from the
+ *        canonical path `.qfai/evidence/prototyping/prototyping.json`
+ *        (PROTOTYPING_JSON_REL), not the legacy `.qfai/output/prototyping.json`:
+ *        the iterate pipeline writes only the canonical path, so a legacy-path
+ *        lookup always misses in real runs and never emits
+ *        R-CERTIFY-VERIFY-CIRCULAR, leaving the phase-isolation guard a no-op.
+ *   C2 — `isPrototypingPhase` must not require `prototyping.json#phase ===
+ *        "prototyping"`: `writeSeedMetadata` explicitly deletes `body.phase`
+ *        and no current writer restores it, so that requirement would bypass
+ *        the guard even when the canonical path is read. Treating any
+ *        well-formed object at the canonical path as a prototyping context
+ *        avoids this.
  *
- * Wave-2 fix: read from PROTOTYPING_JSON_REL and treat any well-formed
- * object at that path as a prototyping context.
- *
- * Wave-18 refinement: presence-only was too loose — once a prior loop
- * left a `prototyping.json` behind, every subsequent verify.json with
- * scope=atdd|full|implement triggered the finding as a false-positive.
- *
- * Wave-19 refinement: the initial wave-18 predicate (`stopReason ===
- * null` AND `acceptedIterationIndex === null`) was too strict —
- * `writeSeedMetadata` persists `acceptedIterationIndex = 0` at cycle
- * 0, so real in-flight runs were short-circuited as if they had
- * completed. The active-loop signal is now `stopReason === null`
- * alone: terminal cause is the only structural slot the iterate
- * pipeline writes when (and only when) the loop actually finishes.
- * Cycle-0 seed populating `acceptedIterationIndex` to a number is
- * still an active loop while `stopReason` remains null.
+ * The active-loop signal is `stopReason === null` alone: terminal cause is the
+ * only structural slot the iterate pipeline writes when (and only when) the
+ * loop actually finishes. Also requiring `acceptedIterationIndex === null`
+ * would be too strict, since `writeSeedMetadata` persists
+ * `acceptedIterationIndex = 0` at cycle 0 and would short-circuit real
+ * in-flight runs as if they had completed. Cycle-0 seed populating
+ * `acceptedIterationIndex` to a number is still an active loop while
+ * `stopReason` remains null.
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
