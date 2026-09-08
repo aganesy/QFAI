@@ -32,7 +32,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   case holding one row writes `-`. Once a test case holds more than one row the
   cell carries the row's identity, and `validate` reports siblings that name no
   boundary (`QFAI-TDDLIST-017`) and two siblings claiming the same one
-  (`QFAI-TDDLIST-018`). Both are behind one promotion window: every ledger
+  (`QFAI-TDDLIST-018`). Both are seed shape, so the profile of the phase that
+  writes the cell evaluates them, not only the completion gate.
+
+  Both are behind one promotion window: every ledger
   seeded before the column holds a split whose rows name nothing, so an error on
   the introducing release would fail every project carrying one.
 

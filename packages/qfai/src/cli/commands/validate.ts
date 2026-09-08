@@ -512,7 +512,7 @@ function buildDeprecationIssue(args: {
 }
 
 /**
- * Every `TDDLIST_` code that is NOT seed shape — the execution state a row only
+ * Every ledger code that is NOT seed shape — the execution state a row only
  * carries once `/qfai-implement` has driven it.
  *
  * Derived from the generated registry by subtracting the seed-shape set rather
@@ -520,9 +520,15 @@ function buildDeprecationIssue(args: {
  * one of the two groups: seed shape if it is registered there, execution state
  * otherwise. A hand-written list could leave a new code in neither, which is
  * the shape of the omission this whole table exists to prevent.
+ *
+ * Both spellings of the gate are subtracted, because the seed-shape set holds
+ * part of each. A glob over either prefix would claim that part as well, and
+ * the codes in it would belong to two groups at once.
  */
 const TDD_LIST_EXECUTION_STATE_CODES: readonly string[] = EMITTED_RULE_CODES.filter(
-  (code) => code.startsWith("TDDLIST_") && !TDD_LIST_SEED_SHAPE_CODES.has(code),
+  (code) =>
+    (code.startsWith("TDDLIST_") || code.startsWith("QFAI-TDDLIST-")) &&
+    !TDD_LIST_SEED_SHAPE_CODES.has(code),
 );
 
 /**
@@ -845,16 +851,14 @@ export const GATE_GROUP_FAMILIES = {
   // `QFAI-PROFILE-001`'s own advice (#1122). Stage-only: see
   // `STAGE_ONLY_GATE_GROUPS`.
   drift: ["QFAI-DRIFT-*"],
-  // The remaining `TDDLIST_*` codes report execution state that only exists
-  // after `/qfai-implement` has driven rows, so only its profile evaluates
-  // them. `QFAI-TDDLIST-*` is the canonical spelling of the same gate and every
-  // code it holds today is execution state, so the glob sits here whole.
+  // The remaining ledger codes report execution state that only exists after
+  // `/qfai-implement` has driven rows, so only its profile evaluates them.
   //
-  // The bare `TDDLIST_` half is enumerated, not globbed: `tdd-ledger-seed`
-  // holds the other part of that prefix, and `TDDLIST_*` here claimed both —
-  // so an `sdd` run, which DOES evaluate the seed half, was told
-  // `TDDLIST_MISSING` went unevaluated while it was emitting exactly that.
-  // Derived by subtraction so the two halves cannot overlap or leave a gap.
+  // Both spellings are enumerated, not globbed: `tdd-ledger-seed` holds part
+  // of each prefix, and a glob here claimed that part too — so an `sdd` run,
+  // which DOES evaluate the seed half, was told those codes went unevaluated
+  // while it was emitting exactly them. Derived by subtraction so the two
+  // halves cannot overlap or leave a gap.
   //
   // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
   // `traceability-*` groups below split that prefix, and leaving the glob would
@@ -864,7 +868,7 @@ export const GATE_GROUP_FAMILIES = {
   // `QFAI-TEST-*` as unevaluated on a profile that does evaluate it. One
   // validator emits all three codes, so the whole family moves together.
   "test-stubs": ["QFAI-TEST-*"],
-  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*"],
+  tdd: [...TDD_LIST_EXECUTION_STATE_CODES],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
