@@ -19,6 +19,12 @@ import {
   isBinary,
   listShippedAssistantFiles,
 } from "../helpers/repositoryAttribution.js";
+import {
+  classifyHardRequiredEntries,
+  collectHardRequiredEntries,
+  HARD_REQUIRED_COMMON_ENTRIES,
+  RETIRED_HARD_REQUIRED_ENTRIES,
+} from "../../src/core/validators/autopilotPolicy.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
@@ -1432,6 +1438,80 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ships a root .gitattributes that pins the SSOT file types to LF", async () => {
+    // The Drift Protocol makes the diff of the shipped SSOT markdown a review
+    // artifact, and every one of those files is LF. Without an attributes file
+    // in the consumer repo, one whole-file rewrite on Windows flips a blob's
+    // line endings and the review degrades to "every line changed".
+    const attributesPath = path.join(templateRootDir, ".gitattributes");
+    expect(existsSync(attributesPath), "root init assets must ship .gitattributes").toBe(true);
+
+    const bytes = await readFile(attributesPath);
+    // The file that declares the repository LF must itself be LF.
+    expect(bytes.includes(0x0d), ".gitattributes must not contain CR").toBe(false);
+
+    const text = bytes.toString("utf-8");
+
+    // Attributes never rewrite a blob that is already in the index, so a
+    // repository that adopts QFAI with protected files already committed as
+    // CRLF stays CRLF until it renormalises once. Seeding the rules without
+    // saying so leaves that project believing it is LF-normalised when it is
+    // not, and the all-lines-changed diff simply waits for the next save.
+    expect(text).toContain("git add --renormalize .qfai");
+
+    const rules = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+    // Every rule must be scoped to a path QFAI owns. A repository-wide `*`
+    // rule reaches product files the framework never wrote: in a project that
+    // committed them as CRLF, dropping this file in reports untouched sources
+    // as fully rewritten, which is the exact noise the seed exists to prevent.
+    for (const rule of rules) {
+      const pattern = rule.split(/\s+/)[0] ?? "";
+      expect(
+        pattern.startsWith(".qfai/") || pattern.startsWith("/"),
+        `.gitattributes rule '${rule}' must be scoped to a QFAI-owned path`,
+      ).toBe(true);
+    }
+
+    for (const pattern of [".qfai/**", "/qfai.config.yaml", "/DESIGN.md"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=lf")),
+        `.gitattributes must pin ${pattern} to eol=lf`,
+      ).toBe(true);
+    }
+    // Windows-only scripts are the documented exception: forcing LF on them
+    // breaks the interpreter that reads them.
+    for (const pattern of [".qfai/**/*.bat", ".qfai/**/*.cmd"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=crlf")),
+        `.gitattributes must keep ${pattern} at eol=crlf`,
+      ).toBe(true);
+    }
+  });
+
+  it("states the LF line-ending policy in the Drift Protocol", async () => {
+    // The attributes file is create-only, so a project that already had one
+    // keeps it and can still produce an EOL-flipped diff. The protocol has to
+    // tell the reviewer adjudicating that diff how to read it.
+    const protocolPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "constitution",
+      "drift-protocol.md",
+    );
+    const protocol = await readFile(protocolPath, "utf-8");
+
+    expect(protocol).toContain(".gitattributes");
+    expect(protocol).toContain("--ignore-cr-at-eol");
+    // Adopting the seed is not the whole migration for a repository whose
+    // protected blobs are already CRLF; the protocol has to name the one-time
+    // renormalisation too.
+    expect(protocol).toContain("--renormalize");
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");
@@ -2365,6 +2445,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "_policies/10_delta.md",
       "_policies/11_Slice-Policy.md",
       "spec/01_Spec.md",
+      // The same document once its spec has retired: the record of why the
+      // obligation went away, which the live schema cannot describe.
+      "spec/01_Spec-retired.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-Criteria.md",
       "spec/04_Business-Rules.md",
@@ -2626,6 +2709,150 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
+  });
+
+  it("pins the hard-required autopilot bucket to exactly the entries a shipped asset consumes", async () => {
+    // `hard-required` is defined as "no default possible; must be supplied
+    // before proceeding", so every entry costs a guaranteed prompt out of the
+    // 0-1 budget the same section opens by declaring. `companyName` bought
+    // nothing: no template slot, no artifact section and no reference file in
+    // the shipped tree ever read it, so the prompt had no consumer. Pin the
+    // bucket to the entries that do have one — `brand intent` (routed to root
+    // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
+    //
+    // A skill may narrow this bucket, and may hard-require an input only it
+    // reads — declared per skill, so adding one is a reviewed change. What it
+    // may not do is carry an entry nothing declares.
+    //
+    // Membership is decided by `classifyHardRequiredEntries`, the SAME matcher
+    // `validateAutopilotPolicy` emits from, rather than by a test written out
+    // again here: two copies of this rule are how one hole reaches both at once.
+    const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
+      cwd: templateQfaiDir,
+      absolute: false,
+    });
+    expect(skillDocs.length, "no shipped qfai-* SKILL.md matched").toBeGreaterThan(5);
+
+    const offenders: string[] = [];
+    for (const relativePath of skillDocs.sort()) {
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      const entries = collectHardRequiredEntries(content);
+      expect(
+        entries.length,
+        `${relativePath} declares no hard-required entry: the bucket is absent, or it is there ` +
+          `and empty`,
+      ).toBeGreaterThan(0);
+      const skillId = path.basename(path.dirname(relativePath));
+      const classified = classifyHardRequiredEntries(entries, skillId);
+      offenders.push(
+        ...[...classified.retired, ...classified.unknown].map(
+          (entry) => `${relativePath}: ${entry}`,
+        ),
+      );
+    }
+
+    expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
+  });
+
+  it("ends the bucket at a sibling bullet however it is indented", () => {
+    // Markdown admits up to three spaces before a top-level bullet, so the
+    // next bucket can open at column three and still be a sibling. A collector
+    // anchored at column zero read that line, and every item under it, as more
+    // hard-required entries — which reports `QFAI-AUTOPILOT-001` against a
+    // policy that says nothing wrong, and fails validate once the window
+    // closes.
+    for (const indent of ["", " ", "  ", "   "]) {
+      const policy = [
+        "- hard-required:",
+        "  - brand intent",
+        `${indent}- ask-user:`,
+        "  - which surface to prototype",
+        "",
+      ].join("\n");
+
+      expect(
+        collectHardRequiredEntries(policy),
+        `a bucket opening at ${indent.length} spaces`,
+      ).toEqual(["brand intent"]);
+    }
+  });
+
+  it("keeps a blank line, a comment and prose inside the bucket", () => {
+    // The other half of the boundary. Only a sibling or a heading closes it,
+    // so a formatting edit cannot hide the entries below itself.
+    const policy = [
+      "- hard-required:",
+      "  - brand intent",
+      "",
+      "<!-- the two the run cannot infer -->",
+      "  prose that belongs to the entry above",
+      "  - `primarySpecId`",
+      "## Next section",
+      "  - never reached",
+      "",
+    ].join("\n");
+
+    expect(collectHardRequiredEntries(policy)).toEqual([
+      "brand intent prose that belongs to the entry above",
+      "`primarySpecId`",
+    ]);
+  });
+
+  it("rejects a retired entry smuggled in beside a pinned one", () => {
+    // The hole the shared matcher closes. Each bullet writes the retired name
+    // beside a live one, so an equality test sees neither; the word match
+    // inside the normalized bullet sees the retired one.
+    for (const smuggled of [
+      "brand intent / companyName",
+      "brand intent, companyName",
+      "`primarySpecId` + companyName",
+    ]) {
+      expect(
+        classifyHardRequiredEntries([smuggled, "brand intent", "`primarySpecId`"]).retired,
+        `a bullet naming two entries must be reported: ${smuggled}`,
+      ).toContain(smuggled);
+    }
+
+    // The decoration the shipped tree really uses reports nothing, including
+    // the long qualifier whose own dash sits inside its parentheses.
+    expect(
+      classifyHardRequiredEntries([
+        "brand intent",
+        "`primarySpecId` (when absent from inputs)",
+        "`primarySpecId` (only when Spec Auto-Discovery cannot resolve one — zero candidates)",
+      ]),
+    ).toEqual({ retired: [], unknown: [] });
+
+    // A narrowed bucket is lawful and reports nothing.
+    expect(classifyHardRequiredEntries(["brand intent"])).toEqual({ retired: [], unknown: [] });
+    // A skill-specific input is lawful for the skill that declares it, and for
+    // no other — which is what makes it a declaration rather than a hole.
+    const own = ["a `testFileGlobs` proposal that matches at least one real file"];
+    expect(classifyHardRequiredEntries(own, "qfai-configure").unknown).toEqual([]);
+    expect(classifyHardRequiredEntries(own, "qfai-verify").unknown).toEqual(own);
+    // And an entry nothing declares is reported wherever it appears.
+    expect(classifyHardRequiredEntries(["unreviewedSecret"], "qfai-configure").unknown).toEqual([
+      "unreviewedSecret",
+    ]);
+    // The same smuggling the retired search closes, one set over: another
+    // skill's declared input written beside a common one. The allowed test
+    // asks only whether *some* permitted name is in the bullet, so the first
+    // half of each of these answers for the second.
+    for (const smuggled of [
+      "brand intent / `testFileGlobs`",
+      "brand intent, testFileGlobs",
+      "`primarySpecId` — a `testFileGlobs` proposal",
+    ]) {
+      expect(
+        classifyHardRequiredEntries([smuggled], "qfai-verify").unknown,
+        `a bullet carrying another skill's input must be reported: ${smuggled}`,
+      ).toEqual([smuggled]);
+      // And lawful for the skill that declares it, which is what keeps this a
+      // declaration rather than a ban.
+      expect(classifyHardRequiredEntries([smuggled], "qfai-configure").unknown).toEqual([]);
+    }
+    expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent", "primaryspecid"]);
+    expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname"]);
   });
 });
 

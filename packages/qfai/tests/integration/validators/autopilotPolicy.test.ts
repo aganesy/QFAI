@@ -140,3 +140,302 @@ describe("TC-0015-0020: validateAutopilotPolicy emits R-AUTOPILOT-POLICY-MISSING
     expect(finding?.message ?? "").toMatch(/\.qfai\/assistant\/skills\/qfai-legacy\/SKILL\.md/);
   });
 });
+
+/**
+ * The bucket's CONTENT, not just its header.
+ *
+ * Before this, `parseAutopilotPolicy` only asked whether a `- hard-required:`
+ * line existed, so an installed project whose SKILL.md still listed the retired
+ * `companyName` passed `qfai validate` for good: installed skills are refreshed
+ * only by an explicit `qfai init --force`, and nothing else read the bucket.
+ */
+describe("validateAutopilotPolicy checks the hard-required bucket's contents", () => {
+  const policyWith = (hardRequired: string): string =>
+    `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- ask-user:
+  - destructive operations
+- hard-required:
+${hardRequired}
+`;
+
+  const CANONICAL = "  - brand intent\n  - `primarySpecId` (when absent from inputs)";
+
+  it("stays silent on the bucket the shipped tree ships", async () => {
+    await writeSkill(root, "qfai-fixture", policyWith(CANONICAL));
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.filter((i) => i.code === "QFAI-AUTOPILOT-001")).toEqual([]);
+  });
+
+  it("reports the retired entry an installed SKILL.md still carries", async () => {
+    await writeSkill(root, "qfai-fixture", policyWith(`${CANONICAL}\n  - companyName`));
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+    // The severity follows the promotion window, so it is derived from the
+    // same registry the validator reads rather than pinned to one release: a
+    // pinned `warning` fails on the version that promotes the rule.
+    const { RULE_PROMOTIONS, newRuleSeverity } = await import("../../../src/core/sunset.js");
+    const { resolveToolVersion } = await import("../../../src/core/version.js");
+    const expected = newRuleSeverity(
+      await resolveToolVersion(),
+      RULE_PROMOTIONS.autopilotHardRequiredDrift.promoteAt,
+    );
+    expect(finding?.severity).toBe(expected);
+    if (expected === "warning") {
+      // Inside the window the message names the release that ends it.
+      expect(finding?.message ?? "").toMatch(/warning until the \d+\.\d+\.\d+ release/);
+    }
+  });
+
+  it("reports a retired entry written beside a pinned one, which a substring test missed", async () => {
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent / companyName\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("brand intent / companyName");
+  });
+
+  it("leaves a narrowed bucket alone", async () => {
+    // A skill may drop an entry it never reaches. Reporting that would put
+    // back a prompt that buys nothing.
+    await writeSkill(root, "qfai-fixture", policyWith("  - brand intent"));
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.find((i) => i.code === "QFAI-AUTOPILOT-001")).toBeUndefined();
+  });
+
+  it("reports an input the skill carrying it does not declare", async () => {
+    // The bucket is open at one end only: a skill may hard-require an input of
+    // its own, and the declaration is what makes that visible in review.
+    // Without it, any name at all passes.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n  - a `testFileGlobs` proposal that matches a real file"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("does not declare");
+  });
+
+  it("reports an undeclared input written beside an allowed one", async () => {
+    // Asked of the whole bullet, the allowed test passes on `brand intent` and
+    // takes whatever shares the line with it — so a bullet joining two names
+    // declares an input nothing has approved and reads as clean. Hard-required
+    // is the bucket that stops a run, so that is the widening this check is
+    // for. Each joined piece answers for itself.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent / an unreviewed secret\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("an unreviewed secret");
+  });
+
+  it("reports an undeclared input written after a dash", async () => {
+    // A dash clause was dropped as a qualifier whatever it held, and the two
+    // whole-bullet searches beside the allowed test look only for names the
+    // policy already knows — retired ones, and ones another skill declares. A
+    // name it has never heard of matched neither and was gone from the reduced
+    // form, so it reached the bucket that stops a run with nothing reported.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent — unreviewedSecret\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("unreviewedSecret");
+  });
+
+  it("keeps a multi-word dash clause as the qualifier it is", async () => {
+    // A qualifier states a condition and reads as prose. One shipped bucket
+    // writes exactly this shape, so treating every dash clause as a name would
+    // make the tree report itself.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith(
+        "  - brand intent\n  - `primarySpecId` — neither this nor the entry above has a defensible default",
+      ),
+    );
+    const issues = await validateAutopilotPolicy(root);
+
+    expect(issues.find((i) => i.code === "QFAI-AUTOPILOT-001")).toBeUndefined();
+  });
+
+  it("keeps a qualifier that holds a joiner as one entry", async () => {
+    // A qualifier is prose and may carry a comma or a slash of its own. Split
+    // there, one entry would read as several and the bucket every skill ships
+    // would report itself.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n  - `primarySpecId` (absent from inputs, and no default)"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.filter((i) => i.code === "QFAI-AUTOPILOT-001")).toEqual([]);
+  });
+
+  it.each(["- hard-required:", "* hard-required:", "  - Hard-Required :"])(
+    "finds the bucket opened by `%s` and reads what is nested under it",
+    async (header) => {
+      // The bucket is located by one pattern and its header's tail read by
+      // another. Held together here: a spelling only one of them accepts is a
+      // policy located one way and collected another.
+      await writeSkill(
+        root,
+        "qfai-fixture",
+        `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- ask-user:
+  - destructive operations
+${header}
+    - companyName
+`,
+      );
+      const issues = await validateAutopilotPolicy(root);
+      const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+      expect(finding?.message ?? "").toContain("companyName");
+    },
+  );
+
+  it("reads an entry written on the bucket header line", async () => {
+    // `- hard-required: companyName` is the header and an entry at once.
+    // Read as a header and nothing else, the bucket collected nothing — and an
+    // empty bucket is a narrowing this check permits, so the one spelling that
+    // hides an entry was the one spelling that reported nothing.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- ask-user:
+  - destructive operations
+- hard-required: companyName
+`,
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("reads a retired entry written in a trailing clause", async () => {
+    // A trailing dash clause qualifies one entry, so the reduced form used to
+    // compare names drops it. A withdrawn name written there is still written.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent — companyName\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("reads a retired entry written past a wrapped bullet", async () => {
+    // The continuation of a wrapped bullet is not itself a bullet. Ending the
+    // bucket there dropped the rest of the entry and everything after it.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent, and\n    companyName\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("reads a retired entry written after a blank line", async () => {
+    // A hand-edited or reformatted SKILL.md carries blank lines between
+    // bullets. Ending the bucket at one made inserting a blank line enough to
+    // hide everything below it.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n\n  - companyName\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("reads a retired entry written after a comment", async () => {
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent\n<!-- kept for the next release -->\n  - companyName"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("companyName");
+  });
+
+  it("stops at the next bucket rather than reading its bullets", async () => {
+    // The bucket still ends somewhere. A bullet belonging to `ask-user` is not
+    // a hard-required entry, and reading it would report the wrong bucket.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- hard-required:
+  - brand intent
+  - \`primarySpecId\`
+- ask-user:
+  - companyName
+`,
+    );
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.map((i) => i.code)).toEqual([]);
+  });
+
+  it("does not report the bucket twice when the bucket header itself is absent", async () => {
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+- ask-user:
+  - destructive operations
+`,
+    );
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.map((i) => i.code)).toEqual(["R-AUTOPILOT-POLICY-MISSING"]);
+  });
+});

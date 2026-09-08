@@ -191,6 +191,16 @@ export const RULE_PROMOTIONS = {
    */
   contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CONTRACT-037` — a `data-qfai` marker a UI contract declares that no
+   * source file mentions. The condition is invisible today: the traceability
+   * between contract and code runs one way, from a test to the contract, so an
+   * element nobody built is named by no test and appears on neither side of
+   * any check. A project that has been passing may hold several at once, and
+   * the fix is to build the element or drop the declaration — neither of which
+   * is a same-day edit.
+   */
+  uiMarkerNotRendered: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-PLATFORM-003` — a `--platform` the requested profile never reads.
    * The flag has parsed on every profile for as long as it has existed, so
    * every CI matrix that passes it uniformly across profiles meets the finding
@@ -249,6 +259,19 @@ export const RULE_PROMOTIONS = {
    * row satisfies it by deleting the surplus, again without a transition.
    */
   tddListRowExtraCells: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TCLEVEL-002` — a test case whose declared level routes its test to
+   * `/qfai-atdd`, cited from a ledger row on a unit or component layer.
+   *
+   * The sibling rule in the other direction ships at `warning` for the same
+   * reason and says so out loud: a ledger written before the crosswalk existed
+   * can carry the mismatch, and escalating on the introducing release hands a
+   * consumer a zero-length window. This direction has the larger backlog of
+   * the two, because nothing has ever reported it — the report that produced
+   * the rule found three such rows in one spec of twelve, none of them named
+   * by any gate.
+   */
+  tddListNonCoverageOnCoverageRow: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
   /**
    * `QFAI-TDDLIST-011` — an `Evidence` cell that does not match the grammar.
    * The grammar arrives with the rule that made the cell a pointer, so it lands
@@ -365,6 +388,14 @@ export const RULE_PROMOTIONS = {
    * meets the whole family in the run that first records provenance.
    */
   assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-AUTOPILOT-001` — a `qfai-*` SKILL.md whose hard-required bucket
+   * names the retired `companyName`, or an entry the skill does not declare.
+   * Installed skills are only refreshed by an explicit `qfai init --force`, so
+   * every project that installed before the entry was retired still lists it
+   * and would meet this at once.
+   */
+  autopilotHardRequiredDrift: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
   /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the

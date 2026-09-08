@@ -54,17 +54,42 @@ markdownlint は「整形された Markdown か」だけを見る。フェンス
 プレースホルダを含むテンプレート図は、開始フェンスの直前行に `<!-- mermaid-lint:ignore -->` を置いて個別に除外する。
 ファイル単位の除外は設けない。後から足された図を黙って覆うためである。
 
+## One path, two document shapes
+
+A `01_Spec.md` specifies something while its spec is live, and records why the
+spec went away once it is not. Those are two documents at the same path. A
+retired pack cannot carry a consumer view or an applicable NFR for something
+that no longer exists, and admitting that shape into the live schema would
+weaken the contract for every pack that still specifies something — which
+rule 1 above already rules out.
+
+A manifest entry may therefore carry `when:`, a regular expression read against
+the document's own text.
+
+| Entry                   | `when:`                                  | Governs                      |
+| ----------------------- | ---------------------------------------- | ---------------------------- |
+| `spec-overview`         | none                                     | a pack that still specifies  |
+| `spec-overview-retired` | a terminal `Status:` in the front matter | the record a retired pack is |
+
+A file the predicate matches is checked against that entry and dropped from the
+entry on the same path that has no predicate, so the two partition the
+documents rather than running one document against two contracts.
+
+Two rules bound it, both held by `tests/assets/mdschemaSchemas.test.ts`:
+
+- At most one entry per pattern may omit `when:`. A second unpredicated entry is
+  what would put a document under two contracts, with the loser invisible in the
+  summary.
+- A predicated entry shares its pattern with another entry. A `when:` on a
+  pattern nothing else claims is a filter, not a route: the documents it does
+  not match are then checked by nothing, and that gap reads in the summary
+  exactly like a pack nobody has written yet.
+
 ## A document that cannot conform
 
-One document opts out of its schema with `<!-- mdschema:ignore -->` in its
-leading comment block.
-
-The case it exists for is a pack that outlives what it specifies. A spec that
-was deleted or superseded is kept as the record of why it went away, and that
-record cannot carry a consumer view or an applicable NFR for something that no
-longer exists. Writing one would be fiction, and admitting it into the schema
-would weaken the contract for every live pack — which rule 1 above already
-rules out.
+A document opts out of its schema with `<!-- mdschema:ignore -->` in its leading
+comment block. This is the answer for a shape no schema describes; where a shape
+has one, `when:` routes to it instead.
 
 Three things bound it.
 

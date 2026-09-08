@@ -10,9 +10,13 @@
   - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration)
   - `packages/qfai/src/core/doctor/` — the side-effecting remediations
     reached only through `--clean` / `--autoremediate`
-    (`autoremediate.ts`, `cleanReviewPacks.ts`, `cleanRunLogs.ts`,
+    (`autoremediate.ts`, `capCatalogSpecColumn.ts`,
+    `cleanReviewPacks.ts`, `cleanRunLogs.ts`,
     `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
-    `staleTtl.ts`) with `archiveVisibility.ts` deciding, for one pack,
+    `staleTtl.ts`) — `capCatalogSpecColumn.ts` plans the migration that
+    gives a legacy CAP catalog its declared `Spec` column, and is read
+    by the `spec.capCatalogSpecColumn` check as well, which reports the
+    condition without writing — with `archiveVisibility.ts` deciding, for one pack,
     whether the archive move would take it out of version control —
     `--clean` refuses the move when it would, because a rename into a
     git-ignored directory deletes a tracked pack from the repository
