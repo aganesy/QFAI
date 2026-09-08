@@ -48,7 +48,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/assets/ledgerWriteAuthorization.test.ts",
   "tests/assets/ledgerWriteOwnership.test.ts",
   "tests/assets/matrixRowSplitOwnership.test.ts",
-  "tests/assets/mdschemaSchemas.test.ts",
   "tests/assets/nondeterministicGates.test.ts",
   "tests/assets/obligationReconciliationPhase.test.ts",
   "tests/assets/oracleStrength.test.ts",

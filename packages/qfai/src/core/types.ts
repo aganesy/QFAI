@@ -62,7 +62,11 @@ export type ValidationProfile =
   | "tdd"
   | "verify"
   | "full"
-  | "saas-package";
+  | "saas-package"
+  // Runs the drift guard alone. `tdd` evaluates it too, and is also the
+  // completion gate, so a run that only wants the drift answer had to accept
+  // every completion obligation with it.
+  | "drift";
 
 export type ValidationTraceability = {
   sc: ScCoverage;

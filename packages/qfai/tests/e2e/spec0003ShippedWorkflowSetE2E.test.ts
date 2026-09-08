@@ -832,13 +832,16 @@ describe(
       const invocations = collectJobSteps(job ?? {})
         .map((step) => String(step["run"] ?? ""))
         .filter((run) => /^\s*npx\s+qfai\s+validate\b/m.test(run));
-      expect(invocations.length, "the delivered validate workflow does not run validate").toBe(1);
+      // Two runs: the wide scan, and the drift gate the wide scan does not evaluate.
+      expect(invocations.length, "the delivered validate workflow does not run validate").toBe(2);
 
-      const invocation = invocations[0] ?? "";
-      // The two load-bearing semantic values. A drift in either is the failure the structural gate
+      const [wide = "", drift = ""] = invocations;
+      // The load-bearing semantic values. A drift in any of them is the failure the structural gate
       // exists to catch, and it is invisible to a file-exists check.
-      expect(invocation).toContain("--profile full");
-      expect(invocation).toContain("--fail-on error");
+      expect(wide).toContain("--profile full");
+      expect(wide).toContain("--fail-on error");
+      expect(drift).toContain("--profile drift");
+      expect(drift).toContain("--fail-on error");
     });
 
     it("routes a drifted value to the declared shape rather than to a second copy", async () => {
