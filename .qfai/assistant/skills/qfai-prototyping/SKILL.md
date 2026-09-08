@@ -35,7 +35,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-que
 Skill-specific examples:
 
 - DESIGN.md lock drift / conflict resolution (exit `2` recovery)
-- hard-required inputs absent at cycle 0 (`companyName`, brand intent — see the
+- hard-required inputs absent at cycle 0 (brand intent — see the
   hard-required bucket under `## Default Autopilot Policy`)
 
 ## Goal
@@ -392,7 +392,6 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `companyName`
   - brand intent
   - `primarySpecId` (when absent from inputs)
 

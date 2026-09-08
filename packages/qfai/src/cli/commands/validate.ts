@@ -671,6 +671,11 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-EX-*",
     "QFAI-TC-*",
     "QFAI-LEDGER-*",
+    // The autopilot-policy validator's newer codes take the canonical grammar
+    // (`docs/finding-codes.md`), so they no longer fall under the `R-*` glob
+    // its two legacy siblings still use. Both spellings must be listed or the
+    // partial-profile notice under-states what skipping `sdd` left unchecked.
+    "QFAI-AUTOPILOT-*",
     "E_*",
     // Worklog surface, assistant tree migration, skill doc references and
     // stale references — all sdd-only compositions.
@@ -2028,6 +2033,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`.qfai/state.json#discussion.currentId` resolves to a discussion pack on disk, so the Research Summary is read from the pack the operator selected.",
   "QFAI-RESEARCH-021":
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
+  "QFAI-AUTOPILOT-001":
+    "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
 };
 
 /**
@@ -2144,6 +2151,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Run `qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
   "QFAI-RESEARCH-021":
     "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
+  "QFAI-AUTOPILOT-001":
+    "Drop the entries the message names from the SKILL.md hard-required bucket, or declare one this skill really consumes for that skill. `qfai init --force` regenerates the shipped wording.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */
