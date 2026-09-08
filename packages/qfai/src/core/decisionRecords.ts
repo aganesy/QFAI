@@ -263,7 +263,7 @@ function closeFenceRe(token: string): RegExp | null {
  *
  * Multi-line HTML comments are removed the same way {@link maskNonSpecRegions}
  * removes them, and for the same reason: a block a project disabled by wrapping
- * it in `<!-- ... -->` is not a declaration. Reading one as a record would let a
+ * it in `<!--... -->` is not a declaration. Reading one as a record would let a
  * commented-out `Status: re-open` and a commented-out approval satisfy the delta
  * back-reference — the hard gate would pass on an approval nobody gave. Fence
  * state wins over comment state (a `<!--` inside a quoted sample is sample

@@ -418,7 +418,7 @@ export async function validateScaffoldPlaceholder(
     // exceed threshold once escalation has fired and the placeholder
     // remains across further passes), `escalationNote` describes the
     // threshold boundary. Pre-fix the error note said "after N
-    // cycles" alongside a `(5/3 ...)` progress note which read as
+    // cycles" alongside a `(5/3...)` progress note which read as
     // "did this happen at 3 or at 5?" — codex r3338411701.
     // Pluralization: `scaffoldEscalateCycles: 1` is a supported
     // operator setting (`shouldEscalate` fires at `threshold >= 1`),

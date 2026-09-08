@@ -33,7 +33,7 @@ export type TCEntry = {
   acRefs: string[];
   /**
    * Optional `US-Refs:` user-story references. Captured from any
-   * cell in table-form Test-Cases; surfaced as `// US refs: ...`
+   * cell in table-form Test-Cases; surfaced as `// US refs:...`
    * comments in the emitted scaffold so traceability survives the
    * skeleton round-trip (BR-0008-0008: scaffold output references
    * related `US-*` / `CON-API-*` via comments). Comment format is
@@ -44,7 +44,7 @@ export type TCEntry = {
   /**
    * Optional `CON-API-Refs:` API contract references. Captured from
    * any cell in table-form Test-Cases; surfaced as
-   * `// CON-API refs: ...` comments in the emitted scaffold
+   * `// CON-API refs:...` comments in the emitted scaffold
    * (lowercase + space-separated, matching the existing
    * `// AC refs:` / `// EX refs:` style).
    */
@@ -371,7 +371,7 @@ export function isStillPlaceholder(fileBody: string, tcId: string): boolean {
  * "Pristine" is therefore judged on the EXECUTABLE body: every line from the
  * first non-comment, non-blank one onward must be byte-for-byte the dialect's
  * own `buildBody(tcId)`. The comment header above it is skipped rather than
- * compared, because its reference lines (`// AC refs: ...`) track the spec's
+ * compared, because its reference lines (`// AC refs:...`) track the spec's
  * Test-Cases catalogue and legitimately differ from the run that wrote the
  * file. CRLF and trailing whitespace are normalised so a checkout that
  * rewrote line endings is not mistaken for operator work.

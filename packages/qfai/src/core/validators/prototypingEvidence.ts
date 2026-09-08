@@ -366,7 +366,7 @@ export async function validatePrototypingEvidence(
     );
   }
 
-  // stopReason consistency. Distinguish three cases (PR #206 review LWrk):
+  // stopReason consistency. Distinguish three cases:
   //   1. Missing field entirely → required field error with actionable
   //      message ("add stopReason: null/...").
   //   2. Field present but value out of enum → value error with the raw
@@ -989,19 +989,20 @@ function isAcceptedScreenId(id: string): boolean {
  * without the hyphen — see `isAcceptedScreenId`). Case is not part of the test:
  * `Main.Screen` and `main_screen` are equally accepted.
  *
- * The name still says "casing" because that is what the check used to be. The
- * issue source `prototypingEvidence.screenIdCasing` is what consumers grep,
- * filter and waive on, so it is left alone and the behaviour is stated here
- * instead. The rule code did move — `QFAI-PROT-008` -> `QFAI-PROT-010` — because
+ * The name still says "casing" because the issue source
+ * `prototypingEvidence.screenIdCasing` is what consumers grep, filter and
+ * waive on, so it stays even though the check now does more than compare
+ * case; the behaviour is stated here instead. The rule code moved —
+ * `QFAI-PROT-008` -> `QFAI-PROT-010` — because
  * `prototyping/specIdLinkage.ts` also emits `QFAI-PROT-008`, and one code owned
  * by two modules cannot be grepped, filtered or waived apart at all.
  *
- * This was previously a blanket hyphen ban demanding underscore casing — a
- * convention that appears in no shipped document, that the shipped screen
- * contract template violates by prescribing `SCR-001`, that `slugifyScreenId`
- * violates by emitting hyphens, and that `SAFE_SCREEN_ID_PATTERN` (the
- * canonical screen-id pattern used by the evidence validator in this same
- * profile) explicitly permits. Following qfai's own template guaranteed a
+ * A blanket hyphen ban demanding underscore casing would enforce a convention
+ * that appears in no shipped document, that the shipped screen contract
+ * template violates by prescribing `SCR-001`, that `slugifyScreenId` violates
+ * by emitting hyphens, and that `SAFE_SCREEN_ID_PATTERN` (the canonical
+ * screen-id pattern used by the evidence validator in this same profile)
+ * explicitly permits. Following qfai's own template would guarantee a
  * blocking failure with no config switch and no migration command.
  *
  * The severity is `warning`, not `error`: no re-casing migration exists, and a

@@ -92,6 +92,7 @@
     "tests/assets/sddStage0PrototypingOptional.test.ts",
     "tests/assets/sddTestListMandatoryOutput.test.ts",
     "tests/assets/skillDelegationTool.test.ts",
+    "tests/assets/skillEditAuthority.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/skillUserQuestionsSection.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",

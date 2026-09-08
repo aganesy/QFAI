@@ -359,7 +359,7 @@ async function canonicalState(filePath: string): Promise<PathState> {
     // and it was the same failure: re-thrown, it ended `qfai validate` with a
     // stack trace instead of a finding naming a path to repair.
     if (code === "ENOTDIR") return { kind: "not-a-directory" };
-    // No `EPERM` case here on purpose. The condition #1095 is about is a
+    // No `EPERM` case here on purpose. The Windows condition this guards is a
     // symlink with the wrong Windows reparse type, and `lstat` **succeeds** on
     // one of those — it is `stat` that refuses. An `EPERM` reaching this catch
     // is therefore something else (a permission or filesystem failure on a path
@@ -875,7 +875,7 @@ async function realpathOrNull(filePath: string): Promise<string | null> {
 /**
  * Whether `linkPath` is a symlink whose target is a **directory**.
  *
- * The Windows condition #1095 is about is a FILE symlink pointing at a
+ * The Windows condition this guards is a FILE symlink pointing at a
  * directory, which the OS refuses to resolve. "Is a symlink" is not that test:
  * this module also walks `.claude/agents/*.md` and `.github/agents/*.agent.md`,
  * whose canonical is a `.md` file and whose git-written file symlink is already
@@ -920,7 +920,7 @@ async function statOrNull(
     if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return "cycle";
     // A Windows file symlink pointing at a directory: intact, and unfollowable.
     // The wrapper naming it is as broken as one whose target is missing, and
-    // propagating it took `qfai validate` down with no counts (#1095).
+    // propagating it took `qfai validate` down with no counts.
     //
     // Confirmed to be a DIRECTORY symlink first. This function also inspects a
     // plain canonical `SKILL.md` and an agent wrapper's `.md`, so converting
@@ -1324,7 +1324,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // symlink to a directory there, which the OS refuses to follow. Re-thrown,
       // it ended `qfai validate` with a bare `EPERM: operation not permitted`
       // and no counts, no finding code and no `validate.json` — a gate with no
-      // verdict (#1095).
+      // verdict.
       const code = (error as NodeJS.ErrnoException | null)?.code;
       // `EPERM` only for a symlink whose TARGET IS A DIRECTORY. The scan also
       // walks `.claude/agents/*.md` and `.github/agents/*.agent.md`, whose

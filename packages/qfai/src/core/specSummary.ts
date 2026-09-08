@@ -103,7 +103,7 @@ export function extractScopeBullets(md: string, label: "In" | "Out"): string[] {
   // line that holds the label down to the next non-indented bullet or
   // blank line.
   //
-  // Note (PR #206 review #41): the label regex `^\s*-\s*In\s*:\s*(.*)$`
+  // Note: the label regex `^\s*-\s*In\s*:\s*(.*)$`
   // uses the `m` flag, so `\s*` at the front can absorb leading `\n`
   // characters left over from preceding blank lines. This means
   // `labelMatch.index` may point to the run of leading newlines rather
