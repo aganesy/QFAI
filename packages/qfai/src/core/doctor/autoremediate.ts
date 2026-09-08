@@ -84,13 +84,13 @@ const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
  * The document's top-level mapping keys, or `null` when the file is not a
  * mapping this pass may safely append to.
  *
- * Presence used to be decided by a raw-text `^review:` regex, which reads a
- * *spelling* rather than the document. `"review":` and `'review' :` are valid
- * YAML for the same key, so a config that set `staleTtlDays: 30` under a quoted
- * key was misread as unset: the pass appended a second `review:` block, which
- * either makes the file invalid (duplicate key) or — on a last-wins reader —
- * silently replaces the operator's 30 with 14. Parsing answers for every
- * spelling of the key at once.
+ * A raw-text `^review:` regex would read a *spelling* rather than the document.
+ * `"review":` and `'review':` are valid YAML for the same key, so a config
+ * that set `staleTtlDays: 30` under a quoted key would misread as unset: the
+ * pass would append a second `review:` block, which either makes the file
+ * invalid (duplicate key) or — on a last-wins reader — silently replaces the
+ * operator's 30 with 14. Parsing the document answers for every spelling of
+ * the key at once.
  *
  * `null` is also the answer for a document that does not parse or is not a
  * mapping (a list, a scalar): appending text to it cannot be made safe, so the

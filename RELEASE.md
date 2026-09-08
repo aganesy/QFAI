@@ -78,8 +78,8 @@ GitHub Release の本文も `release.yml` が同じセクションを抽出し�
 
 - **`GITHUB_TOKEN` で push した tag は他の workflow を起動しません。** 職務トークンで tag を
   打つと `release.yml` が発火せず、リリースが無言で止まります。
-- ワークフロー側の `permissions:` を `contents: read` のまま保てるため、`BR-0017-0016` の
-  「最小スコープからの逸脱はちょうど3件」という閉じた集合を広げずに済みます。
+- ワークフロー側の `permissions:` を `contents: read` のまま保てるため、最小権限から
+  外れる箇所を増やさずに済みます。
 
 secret が未設定なら、両ワークフローとも理由を述べて失敗します（黙って何もしないことはありません）。
 

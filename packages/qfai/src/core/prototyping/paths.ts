@@ -1,11 +1,8 @@
 /**
  * Single source of truth for prototyping evidence paths.
  *
- * The literal strings used to live in 6+ separate `const` declarations
- * across iterate / certify / validators. Each duplicate was an
- * opportunity for path drift (PR #207 review caught two such
- * regressions). New code MUST import these constants instead of
- * hard-coding the strings.
+ * Every duplicate of these literals is an opportunity for path drift.
+ * New code MUST import these constants instead of hard-coding the strings.
  */
 
 /** Project-root relative directory holding all prototyping evidence. */
