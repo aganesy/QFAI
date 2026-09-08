@@ -207,6 +207,7 @@
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
     "tests/scripts/conflictMarkers.test.ts",
     "tests/scripts/boundedRead.test.ts",
+    "tests/scripts/checkDocClarity.test.ts",
     "tests/scripts/deriveE2eCallsites.test.ts",
     "tests/scripts/deriveCliMessageAllowlistCount.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
