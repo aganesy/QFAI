@@ -418,6 +418,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   moved to before the current layout put the archive under `.qfai/review/`
   itself.
 
+### Fixed
+
+- **`QFAI-TRACE-003` names the spec directory with one separator** (#1365).
+  The finding joined the configured specs directory with the platform's
+  separator, so a caller reading the validator's own output saw a backslash
+  path on Windows. Nothing shipped wrong — `normalizeIssuePaths` converts
+  `file` before any surface reads it — but twenty-eight assertions across the
+  suite state a finding's `file` as a POSIX literal at that boundary, and this
+  one disagreed with all of them.
+
+  A test that searched `qfai init`'s report for a `path.join` needle is
+  corrected the other way, to match what the report carries (#1363). The report
+  is POSIX on every platform, which the same file already pins.
+
 ## [1.11.0] - 2026-09-07
 
 ### Added
