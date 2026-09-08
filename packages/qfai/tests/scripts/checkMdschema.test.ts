@@ -301,9 +301,30 @@ describe("reading the opt-out marker", () => {
     ["the first line", `${IGNORE_MARKER}\n# Title\n`, true],
     ["after a blank line", `\n${IGNORE_MARKER}\n# Title\n`, true],
     ["after another comment", `<!-- a note -->\n${IGNORE_MARKER}\n# Title\n`, true],
+    [
+      "after a comment spanning lines",
+      `<!-- a note\n  over two lines -->\n${IGNORE_MARKER}\n`,
+      true,
+    ],
+    ["indented up to three spaces", `   ${IGNORE_MARKER}\n# Title\n`, true],
     ["below a heading", `# Title\n${IGNORE_MARKER}\n`, false],
     ["absent", "# Title\n", false],
     ["in an empty document", "", false],
+    // Four spaces or a tab opens an indented code block, so the line renders
+    // as text rather than as a comment. A marker written there exempts
+    // nothing, which is what keeps the "put it in the leading comment block"
+    // rule from having a way around it.
+    ["indented four spaces", `    ${IGNORE_MARKER}\n# Title\n`, false],
+    ["indented with a tab", `\t${IGNORE_MARKER}\n# Title\n`, false],
+    // The comment ends mid-line, so what follows is content and the block is
+    // over before the marker is reached.
+    [
+      "after content on a comment's closing line",
+      `<!-- a note --> and text\n${IGNORE_MARKER}\n`,
+      false,
+    ],
+    // A marker inside a comment is comment text, not a marker.
+    ["inside a comment", `<!-- a note\n${IGNORE_MARKER}\n# Title\n`, false],
   ])("reads a marker %s as %s", (_where, text, expected) => {
     expect(optsOutOfSchema(text)).toBe(expected);
   });

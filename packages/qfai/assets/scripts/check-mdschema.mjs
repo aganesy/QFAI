@@ -243,22 +243,51 @@ function readManifest() {
 export const IGNORE_MARKER = "<!-- mdschema:ignore -->";
 
 /**
+ * Up to three leading spaces, which is the indent Markdown still reads as
+ * HTML. A fourth space, or a tab, opens an indented code block: the line then
+ * renders as text and is not a comment at all, so a marker written there must
+ * not exempt anything.
+ */
+const HTML_BLOCK_INDENT = /^ {0,3}(?![ \t])/;
+
+const COMMENT_CLOSE = "-->";
+
+/**
  * Whether a document opts out, read from its leading comment block.
  *
  * Leading, because a marker further down would cover a document a reader
  * scrolling past the first screen assumes is checked. Blank lines and other
- * HTML comments may precede it — a file may open with a note about itself —
- * but the first line of content ends the block.
+ * HTML comments may precede it — a file may open with a note about itself,
+ * over as many lines as it needs — but the first line of content ends the
+ * block.
  *
  * @param {string} text the document's contents
  */
 export function optsOutOfSchema(text) {
+  let inComment = false;
   for (const line of text.split(/\r?\n/)) {
+    if (inComment) {
+      const close = line.indexOf(COMMENT_CLOSE);
+      if (close === -1) continue;
+      inComment = false;
+      // Anything after the close on the same line is content, and content ends
+      // the block.
+      if (line.slice(close + COMMENT_CLOSE.length).trim().length > 0) return false;
+      continue;
+    }
+    if (line.trim().length === 0) continue;
+    if (!HTML_BLOCK_INDENT.test(line)) return false;
+
     const trimmed = line.trim();
     if (trimmed === IGNORE_MARKER) return true;
-    if (trimmed.length === 0) continue;
-    if (trimmed.startsWith("<!--") && trimmed.endsWith("-->")) continue;
-    return false;
+    if (!trimmed.startsWith("<!--")) return false;
+
+    const close = line.indexOf(COMMENT_CLOSE);
+    if (close === -1) {
+      inComment = true;
+      continue;
+    }
+    if (line.slice(close + COMMENT_CLOSE.length).trim().length > 0) return false;
   }
   return false;
 }
