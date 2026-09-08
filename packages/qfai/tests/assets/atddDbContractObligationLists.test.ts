@@ -97,7 +97,13 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     );
     // The deferral form travels with the obligation: a reader who only meets
     // the rule here must still learn it has an out-of-slice escape.
-    expect(atdd).toContain("`-- x-qfai-status: planned` on its own file, never left uncovered.");
+    // "on its own file" said nothing about placement. The parser accepts the
+    // marker only as a standalone comment line, so a reader who appended it to
+    // a statement in that file left the contract active and the gate firing.
+    expect(atdd).toContain(
+      "`-- x-qfai-status: planned` **on a line of its own** — leading whitespace is allowed, trailing SQL is not",
+    );
+    expect(atdd).not.toContain("`-- x-qfai-status: planned` on its own file");
   });
 
   it("Mandatory Output 3, the not-done test and Completion Criteria step 1 all list it", async () => {
