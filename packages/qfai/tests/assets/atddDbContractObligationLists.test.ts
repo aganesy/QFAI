@@ -253,7 +253,9 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     expect(atdd).toContain(
       "plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its own**",
     );
-    expect(atdd).toContain("carries no `QFAI-ATDD-115` obligation in this slice");
+    expect(atdd).toContain(
+      "A contract that does declare it is deferred: it owes no `QFAI-ATDD-115` coverage in this slice",
+    );
     // The regression: an unqualified count sweeps the deferred contracts back
     // in, and the deferral sentence beside it has to name this row too.
     expect(atdd).not.toContain("plus the `CON-DB-*` this spec references.");
@@ -292,11 +294,29 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     expect(provenance).not.toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` clean");
   });
 
+  it("carries the marker's standalone-line condition into project_memory", async () => {
+    // The summary is what an agent resumes from without reopening the body. A
+    // marker appended after a statement is not read, so a summary that names
+    // the token and not its position hands back a contract that stays active
+    // and a gate that still fires.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "defer an out-of-slice contract with `-- x-qfai-status: planned` on a line of its own, never appended after a statement",
+    );
+  });
+
   it("says why the deferred ones are out, beside the count itself", async () => {
     // A reader who meets the count and not the reason fills it in from "every
     // declared", which is the overcount this row exists to prevent.
     const atdd = flat(await read(tree));
-    expect(atdd).toContain("which carries no `QFAI-ATDD-115` obligation in this slice");
+    // The deferred contract is the subject, stated as its own sentence. Hung
+    // off the definition of `active` as a relative clause, the exemption read
+    // as belonging to the active contract — which is the one that does owe the
+    // coverage, so the sentence said the opposite of the rule it explains.
+    expect(atdd).toContain(
+      "A contract that does declare it is deferred: it owes no `QFAI-ATDD-115` coverage in this slice",
+    );
+    expect(atdd).not.toContain("which carries no `QFAI-ATDD-115` obligation in this slice");
   });
 
   it.each(["test-design-analyst", "qa-strategist"])(
