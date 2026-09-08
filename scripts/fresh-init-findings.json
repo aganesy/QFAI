@@ -1,0 +1,16 @@
+{
+  "description": "Findings a fresh `qfai init` produces under `verify:pack`. Compared in both directions by severity, code and file.",
+  "findings": [
+    "info QFAI-CONTRACT-000 .qfai/contracts/api",
+    "info QFAI-CONTRACT-000 .qfai/contracts/db",
+    "info QFAI-CONTRACT-000 .qfai/contracts/ui",
+    "info QFAI-PROFILE-001 -",
+    "info QFAI-SPACK-000 .qfai/specs",
+    "info QFAI-TEST-002 qfai.config.yaml",
+    "info QFAI-TOOL-001 -",
+    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/manifest.md",
+    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/product.md",
+    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/structure.md",
+    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/tech.md"
+  ]
+}

@@ -1,4 +1,7 @@
 import { execFileSync } from "node:child_process";
+// `console` is a global at runtime, but the lane's `no-undef` does not know
+// that in a module. `node:console` exports the same instance as its default.
+import console from "node:console";
 import {
   existsSync,
   lstatSync,
@@ -13,6 +16,16 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
 
+import {
+  BASELINE_PATH,
+  UPDATE_ENV,
+  diffFingerprints,
+  fingerprintReport,
+  formatDiff,
+  parseValidateReport,
+  readBaseline,
+  writeBaseline,
+} from "./fresh-init-findings.mjs";
 import {
   findingsAwaitingPromotion,
   formatAwaitingPromotion,
@@ -707,16 +720,20 @@ execFileSync(
   },
 );
 
-// Two questions of the same report, asked of the file rather than the console:
-// `--fail-on error` lets a warning past, so the run stays green while the list
-// a reader scans before shipping carries an entry no change to the product can
-// remove.
+// Three questions of the same report, asked of the file rather than the
+// console: `--fail-on error` lets a warning past, so the run stays green while
+// the list a reader scans before shipping moves underneath it.
+//
+// The seeded review pack must not be the reason for a finding about itself.
 //
 // A rule inside a promotion window is a warning today and an error from the
 // release its pin names, and the severity follows the version of the tool that
 // is running. So a pin is otherwise only observed on the release it blocks:
-// this same gate, run against this same sandbox. And the seeded review pack
-// must not be the reason for a finding about itself.
+// this same gate, run against this same sandbox.
+//
+// And the finding set as a whole is compared against what was recorded, in
+// both directions — a new warning on a tree the tool wrote is a decision, and
+// a finding that is gone should stay gone.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
   throw new Error(
@@ -724,7 +741,10 @@ if (!existsSync(validateJsonPath)) {
       `produced, so they have nothing to read without it.`,
   );
 }
-const validateReport = JSON.parse(readFileSync(validateJsonPath, "utf-8"));
+const validateReport = parseValidateReport(
+  readFileSync(validateJsonPath, "utf-8"),
+  validateJsonPath,
+);
 // Stated rather than defaulted to an empty list. A report whose `issues` is
 // not a list is one these checks cannot read, and reading it as "no findings"
 // gives the answer they exist to withhold — the pass would then mean the file
@@ -754,6 +774,31 @@ if (awaitingPromotion.length > 0) {
   throw new Error(formatAwaitingPromotion(awaitingPromotion));
 }
 
+const freshFindings = fingerprintReport(validateReport, validateJsonPath);
+
+if (process.env[UPDATE_ENV] === "1") {
+  writeBaseline(freshFindings);
+  console.log(
+    `Recorded ${freshFindings.length} findings in ${toPosix(path.relative(root, BASELINE_PATH))}.`,
+  );
+}
+
+// Held rather than thrown at the comparison. `report` and `doctor` read the
+// same sandbox, and their output is what a reader opens to see why the set
+// moved — so failing before them costs the run the evidence it was collecting.
+// Printed here as well, because a later step can fail first and this has to
+// survive that.
+let baselineDiff = null;
+if (process.env[UPDATE_ENV] !== "1") {
+  const findingsDiff = diffFingerprints(freshFindings, readBaseline());
+  if (findingsDiff.added.length > 0 || findingsDiff.missing.length > 0) {
+    baselineDiff = formatDiff(findingsDiff);
+    console.error(baselineDiff);
+  } else {
+    console.log(`A fresh init validates to the recorded ${freshFindings.length} findings.`);
+  }
+}
+
 execFileSync("node", [cliPath, "report", "--root", outputDir, "--out", reportPath], {
   stdio: "inherit",
 });
@@ -765,3 +810,10 @@ if (!existsSync(reportPath)) {
 execFileSync("node", [cliPath, "doctor", "--root", outputDir, "--fail-on", "error"], {
   stdio: "inherit",
 });
+
+// The exit code, not a second copy. The diff was printed where it was found,
+// and throwing it here would repeat every line and wrap them in a stack trace
+// of this file — which says nothing about a finding set that moved.
+if (baselineDiff !== null) {
+  process.exitCode = 1;
+}
