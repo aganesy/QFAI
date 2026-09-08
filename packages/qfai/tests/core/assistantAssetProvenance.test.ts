@@ -413,17 +413,23 @@ describe("assistant asset provenance", () => {
       written.push(line.trim().slice(2));
     }
     const notes = lines.filter((line) => line.startsWith("NOTE:"));
+    // The two surfaces spell a path differently: a `written paths:` bullet is
+    // the project-relative path with `/` on every platform, and a `NOTE:` line
+    // carries the absolute destination with the platform's own separator. The
+    // subject here is which surface names the path, so both sides are read with
+    // one separator and the difference cannot decide the outcome.
+    const slashes = (value: string): string => value.replaceAll("\\", "/");
     const reportOf = (needle: string): { written: number; notes: number } => ({
-      written: written.filter((entry) => entry.includes(needle)).length,
-      notes: notes.filter((line) => line.includes(needle)).length,
+      written: written.filter((entry) => slashes(entry).includes(needle)).length,
+      notes: notes.filter((line) => slashes(line).includes(needle)).length,
     });
 
     // Still the content qfai recorded writing, so the governed sync refreshes
     // it — once, and never also as a path it skipped.
-    expect(reportOf(path.join("catalog", "test-layers.md"))).toEqual({ written: 1, notes: 0 });
+    expect(reportOf("catalog/test-layers.md")).toEqual({ written: 1, notes: 0 });
     // Diverged, so it is left byte-identical and named once as a manual merge,
     // and never claimed as written.
-    expect(reportOf(path.join("constitution", "quality.md"))).toEqual({ written: 0, notes: 1 });
+    expect(reportOf("constitution/quality.md")).toEqual({ written: 0, notes: 1 });
     // No staging file is left behind by the atomic refresh.
     const catalogEntries = await readdir(path.join(assistantDir, "catalog"));
     expect(catalogEntries.filter((entry) => entry.includes("qfai-staging"))).toEqual([]);

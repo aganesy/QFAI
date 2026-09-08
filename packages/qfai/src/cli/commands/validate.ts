@@ -741,6 +741,9 @@ export const GATE_GROUP_FAMILIES = {
     // `validateDbContractApplyOrder`, composed by `validateContracts` beside
     // `-031` and reachable from the same two profiles.
     "QFAI-CONTRACT-036",
+    // `validateUiMarkerPresence`, composed in the same place and reachable from
+    // the same two profiles.
+    "QFAI-CONTRACT-037",
     "QFAI-CONTRACT-040",
     // `-041` shipped after this list did, and the explicit enumeration that
     // keeps the wildcard from over-claiming is also what stops a new code
@@ -942,7 +945,11 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
  */
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   "design-contract-readiness-sdd": "sdd",
-  drift: "tdd",
+  // `tdd` evaluates this group too, and names it as the completion gate. The
+  // notice points at `drift` instead because that is the run an operator can
+  // make on work in flight: `tdd` answers the drift question and every
+  // completion obligation with it, which is not what a mid-branch check wants.
+  drift: "drift",
   "saas-package-profile": "saas-package",
 };
 
@@ -1053,6 +1060,12 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below) and adds
   // its own attestation / handoff gates, which no other profile reaches.
   "saas-package": [...PROTOTYPING_GATE_GROUPS, "saas-package-profile"],
+  // The drift guard alone. The rule binds the downstream stage, so `/qfai-sdd`
+  // — the owner of the files it polices — must not run it, which is why no
+  // wide profile carries it. This profile is that same narrow gate without the
+  // completion obligations `tdd` brings, so CI can evaluate it on every pull
+  // request rather than only at the end of an implementation run.
+  drift: ["drift"],
 };
 
 function isKnownProfile(profile: string): profile is ValidationProfile {
@@ -1877,6 +1890,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
+  // Reads the implementation tree rather than another declaration, so it too
+  // carries a promotion window (`core/sunset.ts`) and reaches `error` only at
+  // its pinned release.
+  "QFAI-CONTRACT-037":
+    "Every `data-qfai` marker a UI contract writes literally is mentioned by at least one file under the configured source directory, so an element the contract declares is one something on the screen renders.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
   "QFAI-CONTRACT-041":

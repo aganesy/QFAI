@@ -6,9 +6,20 @@
 
 ## Version control policy
 
-Review artifacts are **not versioned by default**.
-The `.gitignore` in this directory excludes all generated review packs.
-Only `.gitignore` and `README.md` are tracked.
+A new review pack is **not tracked**. The QFAI managed block in the
+**repo-root `.gitignore`** (written by `qfai init`) ignores everything under
+`.qfai/review/`, and this directory holds no `.gitignore` of its own — the root
+block is the single source of truth.
+
+The packs already in the index are the exception, and they stay there as a
+historical record. An ignore rule decides what git picks up next; it does not
+remove a path the index already holds. So both states sit side by side:
+`git ls-files` lists those packs, and a pack created today is ignored.
+
+Tracking a pack is a supported choice, not an accident. `QFAI-REVIEW-008`
+reports a missing recommended ignore at `info` and says so, `qfai init` never
+re-adds a line a project removed, and `doctor --clean` refuses to archive a
+tracked pack into an ignored directory.
 
 Each review pack must include:
 
@@ -31,11 +42,6 @@ Routing SSOT:
     ├── R02_<reviewer>.md
     └── summary.json
 ```
-
-Git ignore management: `review-*/` packs are ignored via the QFAI managed
-block in the **repo-root `.gitignore`** (added/updated by `qfai init`).
-`.qfai/review/` itself does **not** contain a nested `.gitignore`; the
-single managed block in the repo root is the SSOT.
 
 ## summary.json (minimum schema; prefer v2.0 for new packs)
 

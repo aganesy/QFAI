@@ -2,6 +2,7 @@ import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
+import { runDbDrift } from "./commands/dbDrift.js";
 import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
@@ -171,6 +172,17 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.yes ? { yes: true } : {}),
         });
         process.exitCode = exitCode;
+      }
+      return;
+    case "db-drift":
+      {
+        const resolvedRoot = await resolveRoot(options, options.dbDriftFormat === "json");
+        process.exitCode = await runDbDrift({
+          root: resolvedRoot,
+          ...(options.dbDriftFormat !== undefined ? { format: options.dbDriftFormat } : {}),
+          ...(options.dbDriftOut !== undefined ? { outPath: options.dbDriftOut } : {}),
+          ...(options.failOn === "never" ? { failOn: "never" as const } : {}),
+        });
       }
       return;
     case "guardrails":
@@ -380,6 +392,7 @@ Commands:
   validate                     Check specs, contracts and references
   report                       Emit validation results and aggregates
   doctor                       Diagnose config, paths and output preconditions
+  db-drift                     Compare the DB contracts with the migrations as schemas (needs paths.migrationsDir)
   guardrails                   Extract / check Decision Guardrails (list|extract|check)
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
@@ -427,7 +440,8 @@ Options:
   --format <text|json>         doctor / prototyping preflight / discussion list: output format
   --active                     discussion list: show the active session pointer instead of listing packs
   --strict                     validate/report: exit 1 on warning or worse
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: select the validation profile
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
+                                drift runs the drift guard alone: the same gate tdd carries, without the completion obligations
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
   --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)

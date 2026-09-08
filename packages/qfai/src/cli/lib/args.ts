@@ -43,7 +43,8 @@ export type ParsedArgs = {
       | "tdd"
       | "verify"
       | "full"
-      | "saas-package";
+      | "saas-package"
+      | "drift";
     /**
      * `qfai doctor --profile <skill>` per-skill profile. Distinct from
      * the validate-side `profile` enum above: when `doctor --profile`
@@ -63,6 +64,8 @@ export type ParsedArgs = {
     guardrailsKeyword?: string;
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
+    dbDriftFormat?: "text" | "json";
+    dbDriftOut?: string;
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
     /** `rescope --remove <surface-id>`, repeatable. */
@@ -641,7 +644,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             badValue(
               "--profile",
               next,
-              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package",
+              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift",
             ),
           );
         }
@@ -713,6 +716,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.doctorOut = next;
         } else if (command === "report") {
           options.reportOut = next;
+        } else if (command === "db-drift") {
+          options.dbDriftOut = next;
         } else {
           markInvalid(notValidHere("--out"));
         }
@@ -1278,6 +1283,13 @@ function applyFormatOption(
     }
     return false;
   }
+  if (command === "db-drift") {
+    if (value === "text" || value === "json") {
+      options.dbDriftFormat = value;
+      return true;
+    }
+    return false;
+  }
   return false;
 }
 
@@ -1308,7 +1320,8 @@ function isValidationProfile(
   | "tdd"
   | "verify"
   | "full"
-  | "saas-package" {
+  | "saas-package"
+  | "drift" {
   return (
     value === "discussion" ||
     value === "sdd" ||
@@ -1317,6 +1330,7 @@ function isValidationProfile(
     value === "tdd" ||
     value === "verify" ||
     value === "full" ||
-    value === "saas-package"
+    value === "saas-package" ||
+    value === "drift"
   );
 }

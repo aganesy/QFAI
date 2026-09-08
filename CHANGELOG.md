@@ -6,6 +6,127 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A scheduled lane that holds each published release body against the
+  changelog section it was built from** (#1336). `release.yml` checks out the
+  tagged commit, cuts the `## [X.Y.Z] - …` section out of `CHANGELOG.md` at
+  that SHA, and creates the release once. Nothing reads the file again, so an
+  entry added to a released section afterwards is in the repository and not in
+  the notes anyone reads. Measured on `v1.11.0`: its section has gained two
+  entries since the tag, one of them the promotion of `QFAI-CFG-001` to an
+  error — which is what turns a passing `validate --fail-on error` into a
+  failing one for anyone upgrading.
+
+  `scripts/check-release-notes.mjs` compares entries, not bytes. A body is
+  edited by hand and GitHub normalises line endings, so a text comparison would
+  report formatting as drift and bury the one thing that matters. An entry is a
+  top-level bullet's own line, where the bolded title lives, normalised for
+  whitespace.
+
+  The section is the authority for what a body must carry, not for what it may
+  not: a body holding an entry the section does not is an edit somebody made on
+  purpose, and reporting that would make every deliberate note a failure. A body
+  the release workflow had to cut at the 125,000-character cap is compared as a
+  prefix, since it legitimately lacks the tail of its section.
+
+  It reports and does not repair. Rewriting a published body is a wider
+  permission than any lane here holds, and would silently discard those
+  deliberate edits. `permissions:` is `contents: read` and the token only reads
+  each release.
+
+  `schedule` and `workflow_dispatch`, never `pull_request`. Drift is a property
+  of what is published, not of a branch, and a pull request that did not cause
+  it should not fail for it — so the check appears on no pull request and
+  branch protection needs no new context.
+
+- **The lint lane rejects a merge-conflict marker in a tracked file** (#1349).
+  Nothing asked that question, and an evidence document reached the default
+  branch carrying a `=======` separator, a superseded line and a `>>>>>>>`
+  marker with every lane green.
+
+  Each lane passed for its own reason, and none of them is wrong: Markdown lint
+  reads `=======` as a heading underline and `>>>>>>> ref` as a paragraph,
+  prettier reformats the block rather than rejecting it, and the guard that
+  reads the figure in that paragraph takes the first matching line and stops.
+
+  `scripts/check-conflict-markers.mjs` scans every tracked text file for a line
+  starting with seven `<`, `=`, `>` or `|` followed by a space or the end of the
+  line. The boundary is what keeps a rule of equals signs and `>>>>>>>>` in
+  ASCII art from being findings. Fenced blocks in Markdown are skipped, so a
+  document explaining conflict resolution can show one.
+
+- **A retired spec pack has a template and a schema of its own** (#1324). A spec
+  that was deleted or superseded is kept as the record of why it went away. That
+  record cannot carry a consumer view or an applicable NFR for something that no
+  longer exists, so it had no schema and was tolerated rather than checked —
+  including the `Superseded-by` bullet a reader following a stale reference
+  depends on.
+
+  Three pieces, in the order each needs the one before it.
+  1. `templates/specs/spec/01_Spec-retired.md` seeds the record: the status
+     bullets, and a `## Retirement` section saying why the spec stopped applying
+     and where its obligations went.
+  2. `spec/01_Spec-retired.mdschema.yml` states that contract, and is registered
+     in the manifest.
+  3. A manifest entry may carry `when:`, a regular expression read against the
+     document's own text. It is what lets one path carry two document shapes.
+
+  A `01_Spec.md` whose front matter declares `superseded`, `deprecated` or
+  `removed` is checked against the retired schema and dropped from the live one,
+  so the two partition the documents rather than running one document against
+  two contracts. A pack that is still live is unaffected.
+
+  Two invariants replace the old "every pattern is unique" rule, which was a
+  proxy for them: at most one entry per pattern may omit `when:`, and a
+  predicated entry shares its pattern with another entry — a `when:` on a pattern
+  nothing else claims is a filter, and the documents it misses would then be
+  checked by nothing.
+
+- **`qfai db-drift` compares the DB contracts with the migrations as schemas**
+  (#1332). `.qfai/contracts/db/**` is the schema a project declares; its
+  migrations are what actually builds the database. Nothing compared the two, so
+  they drift and every signal stays green — one measured tree differed by 58
+  columns the migrations had, 6 the contracts had, and 28 declared differently,
+  with a passing suite that proved things about the migration schema and nothing
+  about the contracts.
+
+  The command applies each side to its own in-process Postgres and reports the
+  columns they disagree about: present on one side only, or declared with a
+  different type, nullability or default.
+
+  | Exit code | Meaning                                            |
+  | --------- | -------------------------------------------------- |
+  | 0         | the two agree, or the project is out of scope      |
+  | 1         | they differ                                        |
+  | 2         | a file would not apply, or the engine is not there |
+
+  `--format json`, `--out <path>` and `--fail-on never` are accepted.
+
+  Set `paths.migrationsDir` to the project's migration directory. A project
+  without one is out of scope, not in violation: the command says so and exits 0.
+
+  It is a command rather than a `validate` rule because it needs a database, and
+  `qfai validate` starts no processes. The engine is loaded only when the
+  command runs, so a project that never runs it never pays for it.
+
+- **A `drift` validation profile, and the CI workflow `qfai init` writes now
+  runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
+  and nothing else. `full` evaluates every gate group except drift, so the one
+  gate an adopter's CI installs was structurally incapable of failing on a
+  downstream edit to upstream SSOT — the thing the drift protocol calls
+  non-negotiable and says is detected.
+
+  `--profile drift` runs that guard and nothing else. The `tdd` profile still
+  carries it and is unchanged; what it cannot be is the CI answer, because it is
+  also the completion gate and asks a branch for everything a finished one owes.
+
+  The generated workflow gains a second run on pull requests, and its checkout
+  asks for full history there. The guard compares the branch against its base
+  and says nothing when it cannot resolve one, so a shallow clone would have
+  passed without checking.
+
+  `QFAI-PROFILE-001` now names `--profile drift` as the run that evaluates
+  `QFAI-DRIFT-*`, in place of `--profile tdd`.
+
 - **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
   its leading comment block. A pack outlives what it specifies: a spec that was
   deleted or superseded is kept as the record of why it went away, and that
@@ -21,6 +142,48 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **A failing clean leg of the workflow-hygiene fixtures now names the rule and
+  the paths** (#1314). Both legs asserted the lane's exit code before its
+  findings, so a failure read `expected 1 to be 0` and the lane's own output —
+  which names the rule, the file and the job for every finding — was never
+  printed. The legs fail when the staged tree is incomplete as well as when the
+  workflow trees are, and an exit code alone cannot tell those apart.
+
+- **The governed-path report case of `assistantAssetProvenance.test.ts` no
+  longer depends on the platform's path separator** (#1315). `init` names a
+  written path with `/` on every platform and a skipped one in a `NOTE:` line
+  carrying the absolute destination with the platform's own separator. The case
+  built one needle for both surfaces with `path.join`, so on Windows the
+  written-path needle carried a backslash, matched nothing, and the case failed
+  on a tree nobody had changed. Both sides are now read with one separator.
+
+- **An imported spec can state its surface, so a CLI-only project is no longer
+  read as visual** (#1295). A discussion pack states the classification in its
+  `01_Context.md`, and both `/qfai-sdd` Phase 0 and `/qfai-implement`'s visual
+  review read it there. A spec taken in through import-lite has no pack and had
+  nowhere to state it, so both fell to the same default and treated every such
+  spec as visual — which asks a CLI project for a root `DESIGN.md`, a design
+  contract and a prototype, none of which exist on that path.
+
+  The import-lite evidence template gains a `## Surface` section carrying
+  `primary_surface` and `secondary_surfaces`. That file is what a spec's
+  `Source` pair already names, so both skills reach the classification by
+  following a reference the spec carries.
+
+  Neither skill guesses when nothing states a surface: both stop and ask.
+  Assuming visual leaves a CLI project unable to proceed, and assuming `cli`
+  strips a visual one of its review.
+
+- **`qfai doctor` reads the path off an agent card's input bullet instead of
+  the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
+  file and then say what it is for. Read whole, that sentence became the
+  required input, and a card whose file is on disk was reported as missing one.
+
+  The path now ends at the first space, `(`, backtick or em dash; the rest is
+  prose. A bullet naming a glob or a `<placeholder>` is still skipped, because
+  neither is a file to find — and both are now judged on the path rather than on
+  the explanation beside it.
 
 - **`--spec` drops a sibling's stub the way it drops a sibling's broken
   reference** (#1264). `cross-spec-obligations.md` already said a file under the
@@ -88,6 +251,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qfai wrote is stale as before, and a deleted one is still an absence.
 
 ### Added
+
+- **`QFAI-CONTRACT-037` reports a UI contract marker nothing on the screen
+  carries** (#1263). The traceability between a UI contract and the code ran one
+  way: a test could only name a `data-qfai` marker the contract declares. That
+  catches a typo in a test and cannot catch a missing element, because an
+  element nobody built is also an element no test names. A contract could
+  declare an element, mark it `required: true`, and have it rendered by nothing,
+  with every profile green.
+
+  The rule reads the markers a UI contract writes literally and looks for each
+  one under the configured source directory. A contract that names no marker is
+  asked for nothing, so projects that never adopted the convention see no
+  change.
+
+  A marker counts as rendered when its text appears anywhere in the source, not
+  only where the attribute is written out. A framework that renders it through a
+  variable still writes the marker somewhere, and requiring the literal
+  attribute would report every marker in such a project at once.
+
+  It is a warning until 1.13.0, then an error.
 
 - **Every test suite is now accounted for as type-checked or knowingly not**
   (#1288). `tsconfig.tests.json#include` is an enumeration rather than a
