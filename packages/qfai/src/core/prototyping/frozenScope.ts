@@ -1,5 +1,5 @@
 /**
- * The cycle-0 frozen scope, and which of it still resolves (#1099).
+ * The cycle-0 frozen scope, and which of it still resolves.
  *
  * Read by both `QFAI-PROT-011` — which REPORTS a frozen surface that no longer
  * resolves — and `prototyping rescope`, which REMOVES one. They have to agree

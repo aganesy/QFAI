@@ -1,57 +1,42 @@
-# QFAI Cross-AI Rules (Master)
+# Cross-AI Rules (Master)
 
-This directory is the **single source of truth** for repository rules
-that apply to every AI agent (Claude Code, Codex, GitHub Copilot, …).
+This directory is the single source of truth for the rules that apply to every
+AI agent working in this repository (Claude Code, Codex, GitHub Copilot, and
+others).
 
-Each rule is a plain Markdown file. AI-specific entrypoints
+Each rule is a plain Markdown file. The tool-specific entry points
 (`.claude/rules/*.md`, `AGENTS.md`, `.github/copilot-instructions.md`,
-`.codex/README.md`) consume these files via symlink or by direct
-reference. **Do not author rule content under any AI-specific
-directory; edit the master here.**
+`.codex/README.md`) reach these files by symlink or by reference. Edit the
+master here, never a copy under a tool-specific directory.
 
 ## Rules
 
-- `version-discipline.md` — branch-name version pin and the prohibition
-  on AI-driven version bumps. Enforced by
-  `packages/qfai/scripts/check-branch-version-pin.sh`.
-- `distributed-surface.md` — npm distributed-surface discipline (no
-  internal IDs / version markers leak into shipped files).
-- `root-additions-policy.md` — repository-root file/dir creation
-  requires explicit user approval.
-- `temporary-files.md` — all scratch artifacts go under `tmp/`.
-- `document-schema.md` — SDD ドキュメントの構造は `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と `pnpm lint:mermaid` が強制する。
-- `documentation-clarity.md` — writing standard for PRs, issues, code
-  comments and Markdown. Reminded automatically by the hooks in
-  `.claude/settings.json`.
-- `repository-language.md` — this repository is written in English.
-  Operator-facing strings are enforced by
-  `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog
-  by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an
-  allowlist that may only shrink. The rest is held by review.
+| File                       | Rule                                                                                                                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version-discipline.md`    | The user decides the release version. Guarded by `packages/qfai/scripts/check-branch-version-pin.sh`.                                                                                                                                                       |
+| `distributed-surface.md`   | No internal IDs or version markers in the files the npm package ships.                                                                                                                                                                                      |
+| `root-additions-policy.md` | Adding a file or directory at the repository root needs explicit user approval.                                                                                                                                                                             |
+| `temporary-files.md`       | Every scratch file goes under `tmp/`.                                                                                                                                                                                                                       |
+| `document-schema.md`       | The structure of SDD documents is declared in `packages/qfai/assets/mdschema/**` and enforced by `pnpm lint:mdschema` and `pnpm lint:mermaid`.                                                                                                              |
+| `documentation-clarity.md` | Writing standard for PRs, issues, code comments and Markdown. The hooks in `.claude/settings.json` restate it.                                                                                                                                              |
+| `repository-language.md`   | This repository is written in English. Operator-facing strings are held by `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and the changelog by `packages/qfai/tests/unit/changelogLanguage.test.ts`, each against an allowlist that may only shrink. |
 
-## Adding a new rule
+## Adding a rule
 
-1. Author `<name>.md` here as a plain document.
-2. Register it in `AGENTS.md` (universal entrypoint at repo root).
-3. Add `.claude/rules/<name>.md` symlink (`ln -s ../../.agents/rules/<name>.md`).
-4. If the rule must reach Codex / Copilot, add a short reference in
+1. Write `<name>.md` here as a plain document.
+2. List it in `AGENTS.md`, the universal entry point at the repository root.
+3. Add the symlink `.claude/rules/<name>.md` (`ln -s ../../.agents/rules/<name>.md`).
+4. If Codex or Copilot must see the rule, add a one-line reference in
    `.github/copilot-instructions.md` and `.codex/README.md`.
 
-## Windows symlink note
+## Symlinks on Windows
 
-Git for Windows handles `.claude/rules/*.md` symlinks correctly only
-when both of the following are true:
+Git for Windows checks out `.claude/rules/*.md` as symlinks only when both hold:
 
-- The repository was cloned with `git config --global core.symlinks true`
-  (or repo-local equivalent).
-- The user has Developer Mode enabled (Settings → System → For developers
-  → Developer Mode: ON), or has the SeCreateSymbolicLinkPrivilege right.
+- the repository was cloned with `core.symlinks=true`;
+- the user has Developer Mode on, or holds the `SeCreateSymbolicLinkPrivilege` right.
 
-If neither holds, the symlinks materialise as one-line text files whose
-content is the relative target path (e.g.
-`../../.agents/rules/version-discipline.md`). The
-`agentsRulesSurface` integration test accepts this fallback by
-validating that the materialised path resolves back to the master file
-rather than insisting on byte-for-byte content equality. Claude
-sessions on such checkouts should read the master at
-`.agents/rules/<name>.md` directly.
+Otherwise each link becomes a one-line text file containing the relative
+target path, such as `../../.agents/rules/version-discipline.md`. The
+integration test accepts that form as long as the path resolves to the master.
+On such a checkout, read the master under `.agents/rules/` directly.

@@ -8,8 +8,8 @@
  * structural enforcement via `pnpm ci:lint`.
  *
  * Allowed roots:
- *   - review-*      .qfai/review/<pack-name>/  (or tmp/<pack-name>/)
- *   - discussion-*  .qfai/discussion/<pack-name>/  (or tmp/<pack-name>/)
+ *   - review-*.qfai/review/<pack-name>/  (or tmp/<pack-name>/)
+ *   - discussion-*.qfai/discussion/<pack-name>/  (or tmp/<pack-name>/)
  *
  * Scope (per the pack-location lint scope decision):
  *   The lane inspects ONLY the changed paths in scope of the current

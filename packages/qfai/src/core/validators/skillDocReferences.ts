@@ -50,9 +50,9 @@ const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
 // Every `qfai-*` skill MUST declare a trailing `project_memory:` block.
 // The block surfaces remembered-context invariants the skill expects
 // downstream agents to honor. The validator emits a warning when
-// missing (severity intentionally kept at warning for now to avoid
-// breaking projects mid-migration; will escalate to error once the
-// seeded asset templates uniformly carry the block).
+// missing (warning rather than error so projects mid-migration are
+// not broken; it becomes error once the seeded asset templates
+// uniformly carry the block).
 const QFAI_SKILL_ID_RE = /^qfai-/;
 
 export async function validateSkillDocReferences(

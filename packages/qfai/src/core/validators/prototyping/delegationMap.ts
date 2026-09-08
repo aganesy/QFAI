@@ -116,9 +116,8 @@ export function validateDelegationMapIssues(
       // concern handled outside this validator).
       continue;
     }
-    // Non-string values used to be filtered out in stateGate.extractDelegationMap
-    // and slipped through silently. Flag them explicitly so malformed entries
-    // like { UI実装: 123 } surface a real violation. (Codex review on PR #201.)
+    // Flag non-string values explicitly so malformed entries like
+    // { UI実装: 123 } surface a real violation instead of slipping through.
     if (typeof rawRole !== "string") {
       issues.push(
         issue(
