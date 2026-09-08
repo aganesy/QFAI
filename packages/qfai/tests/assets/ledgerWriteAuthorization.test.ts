@@ -210,11 +210,13 @@ describe.each(TREES)("%s", (tree) => {
     // sentence bolded. What matters here is that the instruction names both
     // columns and fires per phase, so the assertion tracks the shipped spelling.
     expect(skill).toContain(
-      "update `test-list.md` **Status and Evidence** after each phase completes",
+      "update `test-list.md` **Status, DR-ID and Evidence** after each phase completes",
     );
-    // `Blocked-By` joined the unconditional set, so Completion names four
-    // cells now — the wording moved with the carve-out it mirrors.
-    expect(skill).toContain("final Status, DR-ID, Evidence and Blocked-By values");
+    // Completion reconciles the four cells the carve-out covers, `Blocked-By`
+    // among them.
+    expect(skill).toContain(
+      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` match the writes the Orchestrator Protocol mandates",
+    );
   });
 });
 
@@ -237,9 +239,9 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     expect(start, "the Non-goals heading moved").toBeGreaterThanOrEqual(0);
     expect(end, "the section after Non-goals moved").toBeGreaterThan(start);
     const nonGoals = skill.slice(start, end);
-    // The entry used to state the three-cell rule as exhaustive, which
-    // contradicted the protocol it cites. Both halves are asserted contiguous
-    // with their cell lists so that widening one silently is not possible.
+    // The three-cell rule is not exhaustive — stating it as such would
+    // contradict the protocol this entry cites. Both halves are asserted
+    // contiguous with their cell lists, so neither widens silently.
     expect(nonGoals).toContain(
       "`Status` / `DR-ID` / `Evidence` / `Blocked-By` cells are carved out unconditionally",
     );
@@ -255,12 +257,20 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     const heading = "### Completion";
     expect(skill, "the Completion heading moved").toContain(heading);
     const completion = skill.slice(skill.indexOf(heading));
+    // The step reconciles the four unconditional cells rather than writing
+    // them for the first time (`ledgerWriteTiming.test.ts` owns that framing),
+    // so the anchor is the reconcile spelling — but it still has to name the
+    // four as the unconditional set, which is what the conditional pair is
+    // being distinguished *from*.
     expect(completion).toContain(
-      "final Status, DR-ID, Evidence and Blocked-By values — the four cells the Drift Protocol carve-out covers unconditionally",
+      "`Status`, `DR-ID` and `Evidence` after each phase, and `Blocked-By` at the `active status -> blocked` transition that fills it. Those are the four cells the Drift Protocol carve-out covers unconditionally",
     );
     expect(completion).toContain(
       "`Test file` and `Selector` are covered too, but only while their stated condition still holds",
     );
+    // One-way: a condition that has ceased to hold is not re-openable at
+    // Completion, which is the half a deferral would rely on.
+    expect(completion).toContain("the conditions are one-way");
   });
 
   it("enumerates the owned cells where the schema is defined, not just the heading", async () => {
