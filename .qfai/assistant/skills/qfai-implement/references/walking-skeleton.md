@@ -55,9 +55,16 @@ first spec proved the API server has proved nothing about its worker.
 
 So: enumerate the entrypoints `catalog/structure.md` declares and that the
 in-scope specs reach, and run the phase for each one that the evidence file has
-no passing record for. A queued spec that shares an entrypoint already proven
-does not repeat it (`volume-policy.md#advancing-the-queue`); a queued spec that reaches
-a **different** entrypoint runs the phase for that one before its first row.
+no passing record for. **The enumeration spans the whole queue, in this one
+pass**: `plan` frames the invocation over every confirmed spec, so the
+entrypoints of every queued spec are known here and are proven here. A queued
+spec that shares an entrypoint already proven does not repeat it
+(`volume-policy.md#advancing-the-queue`); one that reaches a **different**
+entrypoint has that entrypoint proven in this same pass, ahead of its first
+row. Nothing re-enters this phase at a queue transition, which is what
+`plan-phase.md` states from the other side — and proving an entrypoint starts
+puts no spec in flight, so covering the queue here does not begin work on a
+spec the queue has not reached.
 
 ## Exit criterion
 

@@ -80,10 +80,10 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(finding?.file).toContain(path.join("catalog", "tech.md"));
     expect(finding?.refs).toContain("Standard commands (copy-paste)");
     // Every `<...>` slot in the section `qfai-implement` Stage 0 must read.
-    // Eight since `<smoke command>` joined `<typecheck command>` and
-    // `<pack command>` in the shipped section; the number tracks the asset,
-    // which is what this row is for.
-    expect(finding?.message).toContain("Standard commands (copy-paste) (8)");
+    // Nine since the smoke entry became one line per entrypoint, so the
+    // operator fills the entrypoint's name as well as its command; the number
+    // tracks the asset, which is what this row is for.
+    expect(finding?.message).toContain("Standard commands (copy-paste) (9)");
     expect(finding?.loc?.line).toBeGreaterThan(0);
   });
 
