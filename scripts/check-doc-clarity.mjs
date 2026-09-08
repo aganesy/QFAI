@@ -57,8 +57,30 @@ const EXCLUDE_PREFIX = [
   // edit. The source under packages/qfai/assets/init/** is scanned instead.
   ".qfai/assistant/",
   ".codex/agents/",
+  // A symlink to the master in .agents/rules/, so a finding would name a
+  // path that cannot be edited. The master is scanned instead.
+  ".claude/rules/",
 ];
-const EXCLUDE_EXACT = new Set(["CHANGELOG.md"]);
+
+/**
+ * Files whose subject is the forbidden shapes themselves.
+ *
+ * `CHANGELOG.md` is one because the writing rule sends issue and pull-request
+ * numbers there. The rule document is the other, and for the stronger reason:
+ * it is the specification of what this guard rejects, so it has to spell out
+ * the very shapes below as its own examples. Excluded by whole file rather
+ * than by marker — the marker would name a lane that is not shipped, and the
+ * copy under `assets/init/**` goes to projects that do not have it.
+ *
+ * The cost is that a real citation added elsewhere in one of these files goes
+ * unseen. Both are short and are about this rule, so review covers them.
+ */
+const EXCLUDE_EXACT = new Set([
+  "CHANGELOG.md",
+  ".agents/rules/documentation-clarity.md",
+  "packages/qfai/assets/init/root/.agents/rules/documentation-clarity.md",
+]);
+
 /**
  * A spec pack's own delta log (`_policies/10_delta.md`, `spec-NNNN/09_delta.md`
  * or another file ending `_delta.md`) is the same case as `CHANGELOG.md` by

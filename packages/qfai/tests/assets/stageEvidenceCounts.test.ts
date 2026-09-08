@@ -24,6 +24,7 @@
  * compared, only counted. All of that is addressed below.
  */
 import { createHash } from "node:crypto";
+import { readdirSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -159,15 +160,50 @@ async function sealOf(packDir: string): Promise<string> {
   return createHash("sha256").update(lines.join(""), "utf8").digest("hex");
 }
 
+/**
+ * A pack directory this stage opened.
+ *
+ * The tree is shared: earlier stages left packs there, and a lane writes its own
+ * output beside them, so neither the directory's existence nor its entry count
+ * answers this.
+ */
+function isStagePack(name: string, isDirectory: boolean): boolean {
+  return isDirectory && /^review-\d+$/.test(name) && name >= FIRST_PACK;
+}
+
 /** Pack directories this stage opened, oldest first. No date window: round 5 found one there. */
 async function packsOnDisk(): Promise<string[]> {
   const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
   return entries
-    .filter((entry) => entry.isDirectory() && /^review-\d+$/.test(entry.name))
+    .filter((entry) => isStagePack(entry.name, entry.isDirectory()))
     .map((entry) => entry.name)
-    .filter((name) => name >= FIRST_PACK)
     .sort();
 }
+
+/**
+ * Whether this checkout carries any pack this stage opened.
+ *
+ * Review artifacts sit outside version control, so a fresh clone has none while
+ * the record that counts them stays tracked. The two guards that read the tree
+ * run wherever it exists and are skipped by name where it does not: measuring an
+ * absent tree as zero reports a correct record as wrong, and passing silently
+ * over an absent subject is the failure this whole file exists to catch.
+ *
+ * Synchronous because `it.skipIf` is decided when the file is collected, and
+ * asked with the same predicate the counts use rather than with the directory's
+ * existence.
+ */
+const HAS_STAGE_PACKS = ((): boolean => {
+  try {
+    return readdirSync(path.join(ROOT, ".qfai/review"), { withFileTypes: true }).some((entry) =>
+      isStagePack(entry.name, entry.isDirectory()),
+    );
+  } catch {
+    // No such directory, or one that cannot be read. Either way there is
+    // nothing for the counts below to be measured against.
+    return false;
+  }
+})();
 
 describe("the stage evidence's counts are derived, not typed", () => {
   it("reasons about every file it added against the rejected options", async () => {
@@ -733,75 +769,80 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ).toBe(formatRecordLine(measured));
   });
 
-  it("derives the round and response counts `## Final status` certifies with", async () => {
-    // The three numbers in "**ten** rounds, **29** reviewer responses, **28 REVISE and one PASS**"
-    // were correct when checked and derived by nothing — and their correctness has a lifetime of ONE
-    // ROUND. That is not a hypothetical: rounds 4, 5, 6, 7 and 10 each found this sentence a round
-    // behind, five findings of one shape, which is the strongest signal in this record that a number
-    // nothing derives goes stale on schedule.
-    //
-    // Two of the three are mechanically derivable and are derived here. The verdict split is not:
-    // reviewers do not write their verdict in one parseable form. Measured over this stage's 17 closed
-    // packs and their 50 reports — 5 carry `**Verdict: X**`, 14 carry `Verdict: **X**`, and 46 carry a
-    // line holding both the word and a token. The figure that stood here, "two of twenty-nine", was
-    // wrong in numerator and denominator; round 18 filed it and it was not applied. Inventing a marker
-    // now would only pin the reports written after it.
-    // What IS pinnable is the arithmetic — the split must SUM to the derived response count — and that
-    // is exactly the failure mode all five findings had: a round landed, the total moved, and the
-    // split stayed where it was.
-    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-    const packs = await packsOnDisk();
-    // **Responses are counted over CLOSED packs only.** Counting the in-flight one made this row red for
-    // the duration of every round: a reviewer's report lands, the certified total is stale, and the
-    // required `e2e` leg exits 1 until the round ends — which the stage cannot fix without editing the
-    // subject mid-round, the one thing the round's own rules forbid. Round 15's gatekeeper measured this
-    // tree green and then red four minutes later with nothing between but a sibling's report landing.
-    //
-    // The sentence certifies rounds that are OVER, so that is what it counts. The newest pack is excluded
-    // for the same reason the seal rule below excludes it: it is not finished. The ROUND count still
-    // covers every pack, because opening one is what makes a round exist.
-    const closed = packs.slice(0, -1);
-    const responses = (
-      await Promise.all(
-        closed.map(async (pack) => {
-          const entries = await readdir(path.join(ROOT, ".qfai/review", pack));
-          return entries.filter((name) => /^R0\d+_.*\.md$/.test(name)).length;
-        }),
-      )
-    ).reduce((sum, count) => sum + count, 0);
+  it.skipIf(!HAS_STAGE_PACKS)(
+    "derives the round and response counts `## Final status` certifies with",
+    async () => {
+      // The three numbers in "**ten** rounds, **29** reviewer responses, **28 REVISE and one PASS**"
+      // were correct when checked and derived by nothing — and their correctness has a lifetime of ONE
+      // ROUND. That is not a hypothetical: rounds 4, 5, 6, 7 and 10 each found this sentence a round
+      // behind, five findings of one shape, which is the strongest signal in this record that a number
+      // nothing derives goes stale on schedule.
+      //
+      // Two of the three are mechanically derivable and are derived here. The verdict split is not:
+      // reviewers do not write their verdict in one parseable form. Measured over this stage's 17 closed
+      // packs and their 50 reports — 5 carry `**Verdict: X**`, 14 carry `Verdict: **X**`, and 46 carry a
+      // line holding both the word and a token. The figure that stood here, "two of twenty-nine", was
+      // wrong in numerator and denominator; round 18 filed it and it was not applied. Inventing a marker
+      // now would only pin the reports written after it.
+      // What IS pinnable is the arithmetic — the split must SUM to the derived response count — and that
+      // is exactly the failure mode all five findings had: a round landed, the total moved, and the
+      // split stayed where it was.
+      const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+      const packs = await packsOnDisk();
+      // **Responses are counted over CLOSED packs only.** Counting the in-flight one made this row red for
+      // the duration of every round: a reviewer's report lands, the certified total is stale, and the
+      // required `e2e` leg exits 1 until the round ends — which the stage cannot fix without editing the
+      // subject mid-round, the one thing the round's own rules forbid. Round 15's gatekeeper measured this
+      // tree green and then red four minutes later with nothing between but a sibling's report landing.
+      //
+      // The sentence certifies rounds that are OVER, so that is what it counts. The newest pack is excluded
+      // for the same reason the seal rule below excludes it: it is not finished. The ROUND count still
+      // covers every pack, because opening one is what makes a round exist.
+      const closed = packs.slice(0, -1);
+      const responses = (
+        await Promise.all(
+          closed.map(async (pack) => {
+            const entries = await readdir(path.join(ROOT, ".qfai/review", pack));
+            return entries.filter((name) => /^R0\d+_.*\.md$/.test(name)).length;
+          }),
+        )
+      ).reduce((sum, count) => sum + count, 0);
 
-    const certified =
-      /\*\*(\w+)\*\* rounds, \*\*(\d+)\*\* reviewer responses, \*\*(\d+) REVISE and (\w+) PASS\*\*/.exec(
-        evidence,
-      );
-    expect(
-      certified,
-      "`## Final status` states the three counts in the pinned form",
-    ).not.toBeNull();
-    if (certified === null) return;
+      const certified =
+        /\*\*(\w+)\*\* rounds, \*\*(\d+)\*\* reviewer responses, \*\*(\d+) REVISE and (\w+) PASS\*\*/.exec(
+          evidence,
+        );
+      expect(
+        certified,
+        "`## Final status` states the three counts in the pinned form",
+      ).not.toBeNull();
+      if (certified === null) return;
 
-    const wrong: string[] = [];
-    const statedRounds = WORDS[certified[1] ?? ""];
-    if (statedRounds !== packs.length) {
-      wrong.push(
-        `rounds: record says ${certified[1] ?? "?"}, ${String(packs.length)} packs on disk`,
+      const wrong: string[] = [];
+      const statedRounds = WORDS[certified[1] ?? ""];
+      if (statedRounds !== packs.length) {
+        wrong.push(
+          `rounds: record says ${certified[1] ?? "?"}, ${String(packs.length)} packs on disk`,
+        );
+      }
+      const statedResponses = Number(certified[2]);
+      if (statedResponses !== responses) {
+        wrong.push(
+          `responses: record says ${String(statedResponses)}, disk holds ${String(responses)}`,
+        );
+      }
+      const revise = Number(certified[3]);
+      const pass = WORDS[certified[4] ?? ""] ?? Number.NaN;
+      if (revise + pass !== responses) {
+        wrong.push(
+          `the verdict split sums to ${String(revise + pass)} against ${String(responses)} responses`,
+        );
+      }
+      expect(wrong, "a count in `## Final status` that the packs on disk do not support").toEqual(
+        [],
       );
-    }
-    const statedResponses = Number(certified[2]);
-    if (statedResponses !== responses) {
-      wrong.push(
-        `responses: record says ${String(statedResponses)}, disk holds ${String(responses)}`,
-      );
-    }
-    const revise = Number(certified[3]);
-    const pass = WORDS[certified[4] ?? ""] ?? Number.NaN;
-    if (revise + pass !== responses) {
-      wrong.push(
-        `the verdict split sums to ${String(revise + pass)} against ${String(responses)} responses`,
-      );
-    }
-    expect(wrong, "a count in `## Final status` that the packs on disk do not support").toEqual([]);
-  });
+    },
+  );
 
   it("derives the ledger cross-tabulation from the ledger", async () => {
     // Five numbers over a file this stage READS and `/qfai-implement` WRITES, so every one can move
@@ -864,57 +905,60 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ]);
   });
 
-  it("names every pack on disk, with a recomputing seal for each closed one", async () => {
-    // Two rules, because a seal is fixed at "when the last reviewer response lands" while the request
-    // is committed BEFORE the reviewers launch — the practice that stopped the tree moving under
-    // round 1's reviewers. The newest pack is in flight: it must be DISCLOSED and cannot carry a seal
-    // yet. Every older pack is closed and must carry one that recomputes.
-    //
-    // The first version required a seal for all of them, which made this suite red at the commit that
-    // added it, in a required CI leg, and no honest edit could green it during a round.
-    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-    const packs = await packsOnDisk();
-    expect(packs.length, "this stage has opened at least one pack").toBeGreaterThan(0);
+  it.skipIf(!HAS_STAGE_PACKS)(
+    "names every pack on disk, with a recomputing seal for each closed one",
+    async () => {
+      // Two rules, because a seal is fixed at "when the last reviewer response lands" while the request
+      // is committed BEFORE the reviewers launch — the practice that stopped the tree moving under
+      // round 1's reviewers. The newest pack is in flight: it must be DISCLOSED and cannot carry a seal
+      // yet. Every older pack is closed and must carry one that recomputes.
+      //
+      // The first version required a seal for all of them, which made this suite red at the commit that
+      // added it, in a required CI leg, and no honest edit could green it during a round.
+      const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+      const packs = await packsOnDisk();
+      expect(packs.length, "this stage has opened at least one pack").toBeGreaterThan(0);
 
-    const named = [...evidence.matchAll(/Review pack:\s+`?\.qfai\/review\/(review-\d+)\/?`?/g)].map(
-      (match) => match[1] ?? "",
-    );
-    expect(
-      [...named].sort(),
-      "every pack this stage opened must be named — round 4 found the record saying three against four",
-    ).toEqual(packs);
+      const named = [
+        ...evidence.matchAll(/Review pack:\s+`?\.qfai\/review\/(review-\d+)\/?`?/g),
+      ].map((match) => match[1] ?? "");
+      expect(
+        [...named].sort(),
+        "every pack this stage opened must be named — round 4 found the record saying three against four",
+      ).toEqual(packs);
 
-    // Seal VALUES, compared. Round 5 found the previous version counting them with `.length`, so a
-    // wrong hash was invisible.
-    const sealed = new Map(
-      [
-        ...evidence.matchAll(
-          /Review pack:\s+`?\.qfai\/review\/(review-\d+)\/?`?[^\n]*\nReview pack seal:\s+`?([0-9a-f]{64})`?/g,
-        ),
-      ].map((match) => [match[1] ?? "", match[2] ?? ""]),
-    );
+      // Seal VALUES, compared. Round 5 found the previous version counting them with `.length`, so a
+      // wrong hash was invisible.
+      const sealed = new Map(
+        [
+          ...evidence.matchAll(
+            /Review pack:\s+`?\.qfai\/review\/(review-\d+)\/?`?[^\n]*\nReview pack seal:\s+`?([0-9a-f]{64})`?/g,
+          ),
+        ].map((match) => [match[1] ?? "", match[2] ?? ""]),
+      );
 
-    // Three rules, and the third one replaces a rule that was wrong in the other direction. The
-    // previous version REQUIRED the newest pack to be unsealed — which meant it went red exactly when
-    // that pack was correctly sealed, i.e. at the completion gate, and stayed red until a further
-    // round opened a directory. Round 6 measured that. The newest pack may be sealed or not; what must
-    // hold is that every OLDER pack has a seal, and that every seal recorded — newest included —
-    // recomputes.
-    const wrong: string[] = [];
-    for (const pack of packs.slice(0, -1)) {
-      if (!sealed.has(pack)) wrong.push(`${pack}: closed and carries no recorded seal`);
-    }
-    for (const [pack, recorded] of sealed) {
-      const actual = await sealOf(path.join(ROOT, ".qfai/review", pack));
-      if (recorded !== actual) {
-        wrong.push(
-          `${pack}: recorded ${recorded.slice(0, 12)}…, recomputes ${actual.slice(0, 12)}…`,
-        );
+      // Three rules, and the third one replaces a rule that was wrong in the other direction. The
+      // previous version REQUIRED the newest pack to be unsealed — which meant it went red exactly when
+      // that pack was correctly sealed, i.e. at the completion gate, and stayed red until a further
+      // round opened a directory. Round 6 measured that. The newest pack may be sealed or not; what must
+      // hold is that every OLDER pack has a seal, and that every seal recorded — newest included —
+      // recomputes.
+      const wrong: string[] = [];
+      for (const pack of packs.slice(0, -1)) {
+        if (!sealed.has(pack)) wrong.push(`${pack}: closed and carries no recorded seal`);
       }
-    }
-    expect(
-      wrong,
-      "a closed pack with no seal, or any recorded seal that does not recompute",
-    ).toEqual([]);
-  });
+      for (const [pack, recorded] of sealed) {
+        const actual = await sealOf(path.join(ROOT, ".qfai/review", pack));
+        if (recorded !== actual) {
+          wrong.push(
+            `${pack}: recorded ${recorded.slice(0, 12)}…, recomputes ${actual.slice(0, 12)}…`,
+          );
+        }
+      }
+      expect(
+        wrong,
+        "a closed pack with no seal, or any recorded seal that does not recompute",
+      ).toEqual([]);
+    },
+  );
 });

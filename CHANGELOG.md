@@ -4,7 +4,45 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The validation contract moved out of the acceptance-test Definition of Done
+  and into a reference** (#1243). One bullet in that section was 1,047
+  characters, twice the length of any other, and a bullet nobody skims is a
+  contract nobody reads. `cross-spec-obligations.md` now carries it under
+  `## The validation the Definition of Done asks for` — the two parts the
+  result is read in, why the second exists, and what an unattributable finding
+  still means — and the bullet names the obligation and cites that anchor.
+
+  The paragraph cap in the Definition-of-Done guard comes back down to 700, just
+  above the longest bullet the section now carries. It had been raised to 1,200
+  to admit this one, which left the margin the cap was chosen for gone.
+
 ### Added
+
+- **`validate` reports a test case the ledger does not own, cited from a
+  coverage row** (#1250). The `Level` a test case declares and the `Layer` of
+  the ledger rows citing it were compared in one direction only: a `L1` / `L2`
+  test case referenced from another layer raised
+  `TDDLIST_COVERAGE_LAYER_MISMATCH`. The reverse was reported by nothing.
+
+  It is the worse of the two. A `L3` / `L4` / `L5` test case cited from a
+  `Layer = Unit` or `Layer = Component` row is claimed by that row for the
+  ledger and by `QFAI-ATDD-112` for the directory its `Level` names. Both gates
+  pass — one because the row is there, the other because the annotation is —
+  and each credits the other with covering the test case. The row count a
+  delivery plan is sized from then counts work nobody owes, and nothing in
+  either direction says so.
+
+  `QFAI-TCLEVEL-002` names the test case, its declared level and the layers of
+  the rows claiming it. An `Integration` / `API` / `E2E` row for the same test
+  case is the shape Phase 2b seeds and is not reported, and a row whose `Layer`
+  is outside the vocabulary is left to `TDDLIST_UNKNOWN_LAYER` rather than
+  given a second finding.
+
+  Behind a promotion window on the same reasoning its sibling states: a ledger
+  written before the crosswalk existed can carry the mismatch, so escalating on
+  the introducing release would hand a consumer a zero-length window.
 
 - **A scheduled lane that holds each published release body against the
   changelog section it was built from** (#1336). `release.yml` checks out the
@@ -347,6 +385,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   platform, so the shim is out of the path rather than chosen more carefully.
   `shell: true` was the other way to spawn a `.cmd`, and it would hand the
   argument list — document paths — to the command interpreter.
+
+### Changed
+
+- **Review artifacts are outside version control** (#1358). The `.gitignore`
+  block `qfai init` writes ignored `.qfai/review/*` and then re-included two
+  paths: the directory itself, and the record naming the packs that predate the
+  strict `revision` form. Both are retired, so nothing under a review directory
+  is committable.
+
+  An existing project picks this up on the next `qfai init`, which strips the
+  two lines from its managed block the way it strips every earlier retired
+  line. Packs a project already committed stay committed — `.gitignore` does
+  not untrack a path that is in the index — and the guard that stops
+  `doctor --clean` from archiving a tracked pack into an ignored directory is
+  unchanged, so that choice is still respected where it was made.
+
+  The block also ignores `.qfai/review_archive/*`, the location packs were
+  moved to before the current layout put the archive under `.qfai/review/`
+  itself.
 
 ## [1.11.0] - 2026-09-07
 

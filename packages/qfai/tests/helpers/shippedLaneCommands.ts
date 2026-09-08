@@ -1371,7 +1371,24 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // then reading what it wrote — not copied off a failure message. Those two
   // lines are the whole delta: dropping them from the file init writes today
   // reproduces `4e72a478…` byte for byte.
-  [".gitignore", "9e975f78ddbcae6d5b56516f2eb60ec37edac2438786187504934dedd3df9ad7"],
+  //
+  // Re-pinned for the review tree. Nothing under `.qfai/review/` is tracked,
+  // so the two lines that carved an exception out of `.qfai/review/*` are
+  // gone:
+  //
+  //     !.qfai/review/
+  //     !.qfai/review/.legacy-packs
+  //
+  // and one ignore joined the block, for the archive location packs were moved
+  // to before the archive moved under `.qfai/review/` itself:
+  //
+  //     .qfai/review_archive/*
+  //
+  // Derived the way its predecessors were — `qfai init` into a temp root, then
+  // reading what it wrote. Those three lines are the whole delta: putting the
+  // two negations back and dropping the archive ignore reproduces
+  // `9e975f78…` byte for byte.
+  [".gitignore", "6c44a3c11e4327a5648f4c432db7221f26c5798ad06a9f0c194daffcf4ef9b5a"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

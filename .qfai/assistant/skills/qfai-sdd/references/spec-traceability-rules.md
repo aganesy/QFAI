@@ -94,15 +94,15 @@ one.
 **Which files the namespace check covers**, measured against
 `validateLayeredNamespace`:
 
-| file                        | checked | IDs                                                          |
-| --------------------------- | ------- | ------------------------------------------------------------ |
-| `02_User-stories.md`        | yes     | `US`                                                         |
-| `03_Acceptance-Criteria.md` | yes     | `AC`                                                         |
-| `04_Business-Rules.md`      | yes     | `BR`                                                         |
-| `05_Examples.md`            | yes     | `EX` / `SC`                                                  |
-| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                |
-| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs  |
-| `10_Plan.md`                | **no**  | not covered today — open whether that is a decision or a gap |
+| file                        | checked | IDs                                                                   |
+| --------------------------- | ------- | --------------------------------------------------------------------- |
+| `02_User-stories.md`        | yes     | `US`                                                                  |
+| `03_Acceptance-Criteria.md` | yes     | `AC`                                                                  |
+| `04_Business-Rules.md`      | yes     | `BR`                                                                  |
+| `05_Examples.md`            | yes     | `EX` / `SC`                                                           |
+| `06_Test-Cases.md`          | yes     | `TC` / `CASE`                                                         |
+| `09_delta.md`               | **no**  | a delta records what happened, including another spec's IDs           |
+| `10_Plan.md`                | **no**  | How-only: it declares no items, and an approach cites what governs it |
 
 ## ID and Parent Rules (continued)
 
@@ -302,6 +302,16 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   own `Level`, which then speaks for it. Do not
   silence it by moving the row to `Layer=Integration` unless `/qfai-atdd`
   really owns the test that row points at.
+- The `Level` and the row's `Layer` are checked against each other in **both**
+  directions, and each way is a `warning`:
+  - `TDDLIST_COVERAGE_LAYER_MISMATCH` — a TC declaring `L1` / `L2` referenced
+    only from rows of another layer. The row still counts as coverage.
+  - `QFAI-TCLEVEL-002` — a TC declaring `L3` / `L4` / `L5` cited from a
+    `Layer = Unit` or `Layer = Component` row. That row claims the TC for this
+    ledger while `QFAI-ATDD-112` claims it for the directory its `Level`
+    names, so both gates pass and each credits the other. An `Integration` /
+    `API` / `E2E` row for the same TC is the shape Phase 2b seeds and is not
+    reported.
 - `Status=exception` requires a non-empty DR-ID. An `exception` row is not a
   dead end: a Drift Protocol sweep may reset it to `todo` like any other status
   when the rerun changed the obligation it was raised against.

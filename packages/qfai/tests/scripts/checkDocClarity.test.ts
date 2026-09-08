@@ -1,13 +1,25 @@
 /**
  * Spawn-based tests for `scripts/check-doc-clarity.mjs`.
  *
- * The guard has two scopes (`--scope changed`, the default, and `--scope
- * all`), a comment-only reading of source files versus a whole-line reading
- * of Markdown, and several exclusion mechanisms that must not silently widen
- * to cover content the rule still applies to. Both scopes and every
- * exclusion class are exercised here directly against a real git repository,
- * since the guard's own logic depends on `git ls-files` and `git diff`
- * rather than a fixture list it could be handed instead.
+ * The guard keeps identifiers that mean nothing outside this repository —
+ * issue and pull-request numbers, review references — out of source comments
+ * and Markdown prose. What it reads, what it exempts and what it gates on are
+ * pinned below, and then the real tree is measured on the surface where the
+ * rule's harm actually lands.
+ *
+ * The exemptions are the part worth testing. A file whose subject IS the
+ * forbidden shapes has to be able to write them, and there are exactly two:
+ * the changelog, where the writing rule sends those numbers, and the rule
+ * document itself. Both are named by exact path rather than by directory, so
+ * a case below writes a second document beside the rule and asserts it is
+ * still checked — an exclusion widened to the directory would let every rule
+ * master carry citations unseen.
+ *
+ * The default scope is the other half. A repository this size has a backlog
+ * no single change should be blocked on, so only added and modified lines
+ * fail. A test that ran the whole tree would pass for a guard that had lost
+ * that distinction, which is why both directions are exercised against a real
+ * git history rather than a fixture.
  */
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -28,7 +40,7 @@ interface RunResult {
   stderr: string;
 }
 
-function runGuard(cwd: string, args: string[] = []): RunResult {
+function runGuard(cwd: string, args: readonly string[] = []): RunResult {
   const child = spawnSync("node", [SCRIPT, ...args], { cwd, encoding: "utf-8" });
   return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "" };
 }
@@ -39,214 +51,197 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-function git(dir: string, args: string[]): void {
-  spawnSync("git", args, { cwd: dir, encoding: "utf-8" });
+function git(cwd: string, args: readonly string[]): void {
+  const child = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  if (child.status !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${child.stderr ?? ""}`);
+  }
 }
 
 async function writeFiles(dir: string, files: Record<string, string>): Promise<void> {
   for (const [relative, content] of Object.entries(files)) {
     const target = path.join(dir, relative);
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, content, "utf-8");
+    await writeFile(target, content);
   }
 }
 
-/** A one-commit repository on `main`, everything already committed. */
+/** A repository with tracked files, since the scan reads git's list. */
 async function newRepo(files: Record<string, string>): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-check-doc-clarity-"));
   tempDirs.push(dir);
-  git(dir, ["init", "--quiet", "--initial-branch=main"]);
-  git(dir, ["config", "user.email", "test@example.com"]);
+  git(dir, ["init", "--quiet", "-b", "main"]);
+  git(dir, ["config", "user.email", "test@example.invalid"]);
   git(dir, ["config", "user.name", "test"]);
   await writeFiles(dir, files);
   git(dir, ["add", "--all"]);
+  return dir;
+}
+
+/** The same, with the files committed on `main` so a diff scope has a base. */
+async function newRepoWithHistory(files: Record<string, string>): Promise<string> {
+  const dir = await newRepo(files);
   git(dir, ["commit", "--quiet", "-m", "base"]);
   return dir;
 }
 
-/**
- * Branches off `newRepo`'s `main` and commits `files` there, so `main` and
- * `HEAD` diverge — the shape `--scope changed` needs to compute a merge base
- * against. Committing straight onto `main` instead would make it and `HEAD`
- * the same ref, and every diff against "the branch's own tip" is empty.
- */
-async function branchAndCommit(dir: string, files: Record<string, string>): Promise<void> {
-  git(dir, ["checkout", "--quiet", "-b", "work"]);
-  await writeFiles(dir, files);
-  git(dir, ["add", "--all"]);
-  git(dir, ["commit", "--quiet", "-m", "change"]);
-}
+const CITATION = "an issue number a consuming repository cannot resolve";
 
-describe("check-doc-clarity: pattern detection (--scope all)", () => {
-  it("passes a repository with no local identifiers", async () => {
+describe("scripts/check-doc-clarity.mjs", () => {
+  it("reports an issue number in a source comment", async () => {
     const dir = await newRepo({
-      "src/clean.ts": "// A comment with no local identifiers.\nexport const a = 1;\n",
-      "docs/notes.md": "# Notes\n\nOrdinary prose, no citations.\n",
+      "src/thing.ts": `// ${CITATION}, see #1234\nexport const a = 1;\n`,
     });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(0);
-  });
-
-  it.each([
-    ["issue-or-pr-number", "// fixed in #1234, see the tracker.\n"],
-    ["gh-issue-number", "// see GH-1234 for background.\n"],
-    ["pr-or-issue-word", "// closed by PR #1234.\n"],
-    ["codex-review-id", "// flagged by codex r3271234567.\n"],
-    ["review-wave-label", "// an 18th-wave regression.\n"],
-    ["review-wave-label (reverse order)", "// fixed in wave-12 of review.\n"],
-    ["review-shortcode-list", "// review ABCD/EFGH raised this.\n"],
-    ["review-finding-bracket", "// Review finding [42] measured this.\n"],
-  ])("flags %s in a source comment", async (_label, comment) => {
-    const dir = await newRepo({ "src/file.ts": `${comment}export const a = 1;\n` });
 
     const result = runGuard(dir, ["--scope", "all"]);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("local identifier");
+    expect(result.stderr).toContain("src/thing.ts:1");
+    expect(result.stderr).toContain("issue-or-pr-number");
   });
 
-  it("does not flag a local identifier outside a comment in a source file", async () => {
-    const dir = await newRepo({
-      "src/file.ts": 'export const url = "https://example.com/issues/#1234";\n',
-    });
+  it("leaves the same shape alone outside a comment", async () => {
+    // The rule covers comments and prose. A fragment in a string literal is
+    // data the program uses, and rewriting it would change behaviour.
+    const dir = await newRepo({ "src/thing.ts": 'export const anchor = "#1234";\n' });
 
     const result = runGuard(dir, ["--scope", "all"]);
 
     expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no local identifiers found");
   });
 
-  it("flags a local identifier anywhere in a Markdown file, not only in a fence", async () => {
-    const dir = await newRepo({ "docs/notes.md": "Fixed in PR #1234.\n" });
+  it("reports an issue number in Markdown prose", async () => {
+    const dir = await newRepo({ "docs/guide.md": `Not covered today — see #1101.\n` });
 
     const result = runGuard(dir, ["--scope", "all"]);
 
     expect(result.status).toBe(1);
+    expect(result.stderr).toContain("docs/guide.md:1");
   });
 
-  it("skips a fenced code block in Markdown", async () => {
-    const dir = await newRepo({
-      "docs/notes.md": ["# Notes", "", "```text", "PR #1234", "```", ""].join("\n"),
+  describe("the files whose subject is the forbidden shapes", () => {
+    it("exempts the rule document, which has to name what it forbids", async () => {
+      const dir = await newRepo({
+        ".agents/rules/documentation-clarity.md": "- issue and pull-request numbers (`#123`)\n",
+      });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(0);
     });
 
-    const result = runGuard(dir, ["--scope", "all"]);
+    it("exempts the copy of it that ships", async () => {
+      // Shipped to projects that do not have this guard, so it cannot carry a
+      // suppression marker either — the exemption is the only route.
+      const dir = await newRepo({
+        "packages/qfai/assets/init/root/.agents/rules/documentation-clarity.md":
+          "- issue and pull-request numbers (`#123`, `GH-123`)\n",
+      });
 
-    expect(result.status).toBe(0);
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(0);
+    });
+
+    it("exempts the changelog, where the writing rule sends those numbers", async () => {
+      const dir = await newRepo({ "CHANGELOG.md": "- Fixed the thing (#1234)\n" });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(0);
+    });
+
+    it("exempts a spec pack's own delta log, which records what changed", async () => {
+      // Same case as the changelog by function: the record exists to keep the
+      // citation. Matched by basename, so both spellings the packs use are
+      // covered without listing every pack.
+      const dir = await newRepo({
+        ".qfai/specs/_policies/10_delta.md": "- Superseded by #1234.\n",
+        ".qfai/specs/spec-0001/09_delta.md": "- Raised in #1234.\n",
+      });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(0);
+    });
+
+    it("still checks a spec document that is not a delta log", async () => {
+      // The exemption is the basename, not the pack: a spec's own prose is
+      // written for a reader who has neither the number nor the tracker.
+      const dir = await newRepo({ ".qfai/specs/spec-0001/01_Spec.md": "Raised in #1234.\n" });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(".qfai/specs/spec-0001/01_Spec.md:1");
+    });
+
+    it("still checks another rule document in the same directory", async () => {
+      // The exemption is two exact paths. Widened to `.agents/rules/` it would
+      // take every rule master with it, and those carry no such obligation.
+      const dir = await newRepo({ ".agents/rules/version-discipline.md": "Raised in #1234.\n" });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(".agents/rules/version-discipline.md:1");
+    });
+
+    it("skips the symlinked mirror, which cannot be edited where it is found", async () => {
+      const dir = await newRepo({ ".claude/rules/documentation-clarity.md": "See #1234.\n" });
+
+      const result = runGuard(dir, ["--scope", "all"]);
+
+      expect(result.status).toBe(0);
+    });
   });
 
-  it("rejects an unknown --scope value", () => {
-    const result = spawnSync("node", [SCRIPT, "--scope", "bogus"], {
-      cwd: REPO_ROOT,
-      encoding: "utf-8",
+  describe("the default scope", () => {
+    it("passes on a backlog line no commit on this branch touched", async () => {
+      const dir = await newRepoWithHistory({ "src/old.ts": `// legacy note, see #1234\n` });
+      git(dir, ["checkout", "--quiet", "-b", "topic"]);
+      await writeFiles(dir, { "src/new.ts": "// a note with no citation\n" });
+      git(dir, ["add", "--all"]);
+      git(dir, ["commit", "--quiet", "-m", "add"]);
+
+      const result = runGuard(dir);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("no local identifiers in the changed lines");
+      // The backlog is real; the default scope simply does not gate on it.
+      expect(runGuard(dir, ["--scope", "all"]).status).toBe(1);
     });
 
-    expect(result.status).toBe(2);
+    it("fails on a line this branch added", async () => {
+      const dir = await newRepoWithHistory({ "src/old.ts": "// a note with no citation\n" });
+      git(dir, ["checkout", "--quiet", "-b", "topic"]);
+      await writeFiles(dir, {
+        "src/old.ts": `// a note with no citation\n// and now, see #1234\n`,
+      });
+      git(dir, ["add", "--all"]);
+      git(dir, ["commit", "--quiet", "-m", "add"]);
+
+      const result = runGuard(dir);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("src/old.ts:2");
+    });
   });
 });
 
-describe("check-doc-clarity: exclusions", () => {
-  it("does not scan a path under an excluded prefix", async () => {
-    const dir = await newRepo({
-      ".qfai/evidence/discussion-1.md": "Filed as PR #1234.\n",
-    });
+describe("the shipped surface", () => {
+  it("carries no identifier that resolves to nothing in a consuming repository", () => {
+    // The rule's stated harm lands here and only here: everything under
+    // `assets/init/**` is copied into a project that cannot resolve any of
+    // these numbers. `src/**` and `tests/**` have the same rule and a backlog
+    // the default scope handles; this surface is held at zero.
+    const result = runGuard(REPO_ROOT, ["--scope", "all"]);
 
-    const result = runGuard(dir, ["--scope", "all"]);
+    const shipped = [...result.stderr.split("\n"), ...result.stdout.split("\n")].filter((line) =>
+      line.startsWith("packages/qfai/assets/"),
+    );
 
-    expect(result.status).toBe(0);
-  });
-
-  it("does not scan CHANGELOG.md", async () => {
-    const dir = await newRepo({ "CHANGELOG.md": "## [1.0.0]\n\n- Fixed in PR #1234.\n" });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(0);
-  });
-
-  it("does not scan a spec pack's own delta log", async () => {
-    const dir = await newRepo({
-      ".qfai/specs/spec-0001/09_delta.md": "Filed from #1105.\n",
-      ".qfai/specs/_policies/10_delta.md": "Adopted per PR #192.\n",
-    });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(0);
-  });
-
-  it("still scans a file that merely ends in delta without the underscore", async () => {
-    const dir = await newRepo({ "docs/agenda.md": "Filed from #1105.\n" });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(1);
-  });
-
-  it("does not flag a wave label naming a tracked change's delivery batch", async () => {
-    const dir = await newRepo({
-      ".qfai/specs/spec-0012/tdd/test-list.md":
-        "| TDD-0453 | done | CHG-005 wave-1. New module. |\n",
-    });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(0);
-  });
-
-  it("does not flag a deferred wave batch with no change id yet", async () => {
-    const dir = await newRepo({
-      ".qfai/specs/spec-0012/tdd/test-list.md":
-        "| TDD-0401 | todo | (Wave 1 deferred) | Requires live wiring. |\n",
-    });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(0);
-  });
-
-  it("still flags a review-round wave label with no change id on the line", async () => {
-    const dir = await newRepo({
-      "src/file.ts": "// the 18th-wave fix for this regression\nexport const a = 1;\n",
-    });
-
-    const result = runGuard(dir, ["--scope", "all"]);
-
-    expect(result.status).toBe(1);
-  });
-});
-
-describe("check-doc-clarity: --scope changed", () => {
-  it("passes a change that adds no local identifier, even with a large existing backlog", async () => {
-    const dir = await newRepo({ "src/legacy.ts": "// PR #1 legacy citation, pre-existing.\n" });
-    await branchAndCommit(dir, { "src/new.ts": "// A clean new comment.\nexport const a = 1;\n" });
-
-    const result = runGuard(dir, ["--scope", "changed"]);
-
-    expect(result.status).toBe(0);
-  });
-
-  it("fails a change that adds a new local identifier", async () => {
-    const dir = await newRepo({ "src/existing.ts": "export const a = 1;\n" });
-    await branchAndCommit(dir, {
-      "src/existing.ts": "// closed by PR #999\nexport const a = 1;\n",
-    });
-
-    const result = runGuard(dir, ["--scope", "changed"]);
-
-    expect(result.status).toBe(1);
-  });
-
-  it("does not fail on a pre-existing identifier the change did not touch", async () => {
-    const dir = await newRepo({
-      "src/existing.ts": "// PR #1 legacy citation\nexport const a = 1;\nexport const b = 2;\n",
-    });
-    await branchAndCommit(dir, {
-      "src/existing.ts": "// PR #1 legacy citation\nexport const a = 1;\nexport const b = 3;\n",
-    });
-
-    const result = runGuard(dir, ["--scope", "changed"]);
-
-    expect(result.status).toBe(0);
+    expect(shipped).toEqual([]);
   });
 });
