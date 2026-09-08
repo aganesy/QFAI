@@ -396,6 +396,7 @@ Fill steering templates with repo evidence.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
 - For `steering/manifest.md`, explicitly record **Evidence** and **Assumptions** (if evidence is missing).
+- For `catalog/structure.md#ui-surface-paths-ssot`, replace the placeholder bullets with the repo's actual UI globs, or with the single bullet `none` when the repo renders no user-visible surface. `TBD` is not a terminal state for this one field: `/qfai-implement` decides UI-affecting rows from it (`skills/qfai-implement/references/ui-affecting.md`), and an unresolved section leaves that decision unevaluable.
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)
 
@@ -493,12 +494,12 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `companyName`
   - brand intent
   - `primarySpecId` (when absent from inputs)
-  - a `testFileGlobs` proposal that matches at least one real file (Step 5), and
-    a resolved tooling choice / runnable path (CRITICAL CONSTRAINTS) — neither
-    has a defensible default, and a guess is saved as if it were evidence
+  - a `testFileGlobs` proposal that matches at least one real file (Step 5)
+  - a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)
+    — neither this nor the proposal above has a defensible default, and a guess
+    is saved as if it were evidence
 
 A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry — `approval-required governance operations` — with the operations its own run cannot authorize for itself. It MUST NOT introduce an entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 

@@ -1,0 +1,65 @@
+name: Release notes drift
+
+# A published release body is built once, from the `CHANGELOG.md` section at the tagged commit,
+# and nothing reads the file again. An entry added to a released section afterwards is in the
+# repository and not in the notes anyone reads.
+#
+# This reports that. It does not repair it: rewriting a published body is a wider permission
+# than any lane here holds, and a body can also carry an edit somebody made on purpose, which a
+# rewrite would discard. `permissions:` is therefore the minimal `{ contents: read }`, and the
+# token is used only to READ each release.
+#
+# `schedule` and `workflow_dispatch`, never `pull_request`. Drift is a property of what is
+# published, not of a branch, and a pull request that did not cause it should not fail for it.
+# The check name this reports therefore appears on no pull request and nothing in branch
+# protection has to be configured for it.
+on:
+  schedule:
+    # Weekly. The drift appears when a released section is edited, which is rare, and a daily
+    # run would spend the API budget to answer the same question. The minute is deliberately
+    # not :00 — GitHub's own docs warn that runs scheduled on the hour are delayed the most.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Compare only this version (e.g. 1.11.0). Empty compares every released section."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-notes-drift
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # No toolchain step. The script imports `node:fs` and calls `fetch`, so it
+      # needs neither an install nor a chosen Node, and the runner image ships
+      # one. Setting a version up here would put a second answer in the tree to
+      # the question the shared toolchain definition already answers.
+
+      - name: Compare each published body with its section
+        # The dispatch input reaches the shell through the environment, never
+        # through `${{ }}` inside the script: an expression is substituted as
+        # text before bash sees it, so a value carrying shell syntax would run
+        # as part of the command rather than be read as an argument.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ONLY_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${ONLY_VERSION:-}" ]; then
+            node ./scripts/check-release-notes.mjs --version "$ONLY_VERSION"
+          else
+            node ./scripts/check-release-notes.mjs
+          fi

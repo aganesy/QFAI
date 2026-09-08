@@ -773,6 +773,16 @@ export const EVIDENCE_RED_PROVENANCE_RULE_ID = "QFAI-TDDLIST-013";
 export const ROW_EXTRA_CELLS_RULE_ID = "QFAI-TDDLIST-014";
 
 /**
+ * A test case the ledger does not own, cited from a row that claims it.
+ *
+ * The crosswalk had one direction: a coverage-target TC referenced only from a
+ * non-coverage row. The reverse went unreported and is the worse of the two —
+ * an `L3` TC on a `Layer = Unit` row is claimed by this ledger and by
+ * `QFAI-ATDD-112` at once, so both gates pass and each credits the other.
+ */
+export const NON_COVERAGE_ON_COVERAGE_ROW_RULE_ID = "QFAI-TCLEVEL-002";
+
+/**
  * The anchor this row owes, as an operator reads it.
  *
  * Naming the concrete file — `.qfai/evidence/atdd-spec-0007.md#<heading>`,
@@ -4019,6 +4029,11 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // the ledger does not own. Both sides are seed-authored and reconciling them
   // is a re-scope, which the reader may not make.
   "QFAI-TCLEVEL-001",
+  // The crosswalk's other direction, on the same terms: a TC whose declared
+  // `Level` sends its test to `/qfai-atdd`, cited from a unit or component
+  // row. `Level` and `Layer` are both seed-authored, so the repair is a
+  // re-scope and the reader may not make it.
+  "QFAI-TCLEVEL-002",
 ]);
 
 /**
@@ -4343,6 +4358,7 @@ async function validateSpecTddList(
     unitComponentTcIds,
     unrecognizedLevels,
     coverageTargetLevels,
+    nonCoverageLevels,
     undeclaredLevelTcIds,
     unresolved,
   } = await collectTestCaseIds(specDir);
@@ -5551,10 +5567,14 @@ async function validateSpecTddList(
   // coverage-target TC is uncovered — a fenced-only or commented-out ledger
   // then silenced the one gate L1/L2 have. An empty set cites no layer, so the
   // loop below reports each TC as not covered, which is the honest answer.
-  if (unitComponentTcIds.size > 0) {
-    // TC -> the row layers that cite it. A set, not a boolean: the coverage
-    // question and the crosswalk question are both answered from it.
-    const citedLayers = new Map<string, Set<string>>();
+  // TC -> the row layers that cite it. A set, not a boolean: the coverage
+  // question and both directions of the crosswalk are answered from it.
+  //
+  // Built outside the guard below, which asks whether this spec has any
+  // coverage target. A spec whose test cases are all `L3` has none, and it is
+  // exactly the spec whose rows the reverse crosswalk reads.
+  const citedLayers = new Map<string, Set<string>>();
+  {
     const cite = (tcId: string, layer: string): void => {
       const layers = citedLayers.get(tcId) ?? new Set<string>();
       layers.add(layer);
@@ -5588,6 +5608,9 @@ async function validateSpecTddList(
         }
       }
     }
+  }
+
+  if (unitComponentTcIds.size > 0) {
     for (const tcId of unitComponentTcIds) {
       const layers = citedLayers.get(tcId);
       if (layers === undefined) {
@@ -5643,6 +5666,59 @@ async function validateSpecTddList(
         ),
       );
     }
+  }
+
+  // Phase 2 – Check 10b: the other direction of the same crosswalk.
+  //
+  // Check 10 asks whether a coverage-target TC sits on the layer its `Level`
+  // names. Nothing asked the reverse, and the reverse is the worse half: a
+  // `Level = L3` TC cited from a `Layer = Unit` row is claimed by this ledger
+  // AND by `QFAI-ATDD-112`, which routes it to `tests/integration/**`. Both
+  // gates pass, each on the assumption that the other covered it, and the row
+  // count the delivery plan is sized from counts work nobody owes.
+  //
+  // Only a row on a COVERAGE layer contradicts the level. An `Integration` /
+  // `API` / `E2E` row for such a TC is the shape Phase 2b seeds, so it is not
+  // reported.
+  const nonCoverageOnCoverageRowPromotion =
+    RULE_PROMOTIONS.tddListNonCoverageOnCoverageRow.promoteAt;
+  const nonCoverageOnCoverageRowSeverity = newRuleSeverity(
+    resolvedToolVersion,
+    nonCoverageOnCoverageRowPromotion,
+  );
+  const nonCoverageOnCoverageRowWindowNote =
+    nonCoverageOnCoverageRowSeverity === "warning"
+      ? ` Reported as a warning until the ${nonCoverageOnCoverageRowPromotion} release, then an error.`
+      : "";
+  for (const [tcId, level] of [...nonCoverageLevels].sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    const layers = citedLayers.get(tcId);
+    // No row at all is the ordinary state: the TC is owed to `/qfai-atdd`.
+    if (layers === undefined) continue;
+    // A layer outside the vocabulary is already `TDDLIST_UNKNOWN_LAYER`, and a
+    // blank one says nothing, so neither is evidence. Same rule as Check 10.
+    const decisive = [...layers].filter((layer) => KNOWN_LEDGER_LAYERS.has(layer));
+    if (decisive.length !== layers.size || decisive.length === 0) continue;
+    const claiming = decisive.filter((layer) => UNIT_COMPONENT_LAYERS.has(layer)).sort();
+    if (claiming.length === 0) continue;
+    issues.push(
+      issue(
+        "QFAI-TCLEVEL-002",
+        `TC "${tcId}" declares Level=${level.toUpperCase()} in ${TEST_CASES_FILE_NAME}, so its test is written by /qfai-atdd — but spec-${specNumber} cites it from Layer=${claiming
+          .map((layer) => layer.toUpperCase())
+          .join(
+            ", ",
+          )} row(s) in tdd/test-list.md, which claims it for this ledger. The TC then has two owners and each gate passes on the other's account.${nonCoverageOnCoverageRowWindowNote}`,
+        nonCoverageOnCoverageRowSeverity,
+        relPath,
+        NON_COVERAGE_ON_COVERAGE_ROW_RULE_ID,
+        [tcId, level],
+        "change",
+        `Give the row the Layer the TC's Level names (L3 → INTEGRATION, L4 → API, L5 → E2E), retire it if /qfai-atdd already covers the TC, or change the Level in ${TEST_CASES_FILE_NAME} to L1 / L2 if this ledger really owns it.`,
+        { relatedFiles: [testCasesRelPath] },
+      ),
+    );
   }
 
   return issues;

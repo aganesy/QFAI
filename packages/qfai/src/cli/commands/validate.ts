@@ -671,6 +671,11 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-EX-*",
     "QFAI-TC-*",
     "QFAI-LEDGER-*",
+    // The autopilot-policy validator's newer codes take the canonical grammar
+    // (`docs/finding-codes.md`), so they no longer fall under the `R-*` glob
+    // its two legacy siblings still use. Both spellings must be listed or the
+    // partial-profile notice under-states what skipping `sdd` left unchecked.
+    "QFAI-AUTOPILOT-*",
     "E_*",
     // Worklog surface, assistant tree migration, skill doc references and
     // stale references — all sdd-only compositions.
@@ -1769,6 +1774,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-TCLEVEL-001":
     "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
+  "QFAI-TCLEVEL-002":
+    "No tdd/test-list.md unit or component row cites a TC whose declared Level (L3/L4/L5) sends its test to /qfai-atdd. Such a row claims the TC for the ledger while QFAI-ATDD-112 claims it for the directory the Level names, so both gates pass on the other's account.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
@@ -2032,6 +2039,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `primary` / `secondary` source entry dates itself with `retrieved` (YYYY-MM-DD), the date it was observed. Those sources were never published, so `published` has no true value for them and the freshness figure is read over published sources only.",
   "QFAI-RESEARCH-023":
     "Every `sources[].type` is one the Source Registry defines: `primary`, `secondary` or `external`. An entry that declares none is read as `external`.",
+  "QFAI-AUTOPILOT-001":
+    "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
 };
 
 /**
@@ -2152,6 +2161,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Add `retrieved: YYYY-MM-DD` to the entry, recording when the evidence was observed. If the source was in fact published, declare `type: external` and give it `published` instead.",
   "QFAI-RESEARCH-023":
     "Set the entry's `type` to `primary`, `secondary` or `external`, or drop the field to have it read as `external`.",
+  "QFAI-AUTOPILOT-001":
+    "Drop the entries the message names from the SKILL.md hard-required bucket, or declare one this skill really consumes for that skill. `qfai init --force` regenerates the shipped wording.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */
