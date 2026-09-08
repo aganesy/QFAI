@@ -11,7 +11,7 @@
  * Contract follows the `CaptureScreenFn` type exported by the iterate
  * command: receives `{ screenId, url, pngPath, htmlPath }`, returns
  * `{ ok, durationMs, reason? }`. On a Playwright-missing failure the
- * runner returns `{ ok: false, reason: "playwright not installed; ..." }`
+ * runner returns `{ ok: false, reason: "playwright not installed;..." }`
  * so iterate can surface the actionable hint via its existing error
  * path (exit 2). The runner never throws on a missing optional dep.
  */
@@ -104,8 +104,8 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
     // resolution before screenshot, operators pass their own
     // `captureScreen` via DI (which may use `networkidle` or a
     // domain-specific wait helper). A future contract extension could
-    // surface a `--capture-wait-until` flag; for now the DI hook
-    // covers the SPA case without expanding the operator surface.
+    // surface a `--capture-wait-until` flag; the DI hook covers the SPA
+    // case without expanding the operator surface.
     const response = await page.goto(args.url, { waitUntil: "load" });
     // Playwright's page.goto does NOT throw on HTTP 4xx/5xx by default;
     // it resolves with the Response object. Reject non-2xx (and null,

@@ -168,7 +168,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
       // surface the layout problem separately.
       continue;
     }
-    // Common checks (PR #206 review #42): Status / Triage validation is
+    // Common checks: Status / Triage validation is
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds, specStatuses)));
@@ -180,7 +180,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // (per `_policies/11_Slice-Policy.md` Decision procedure). The
   // per-entry loop above does not include `_policies/` so the same
   // Triage validators (QFAI-TRIAGE-001..006) must be invoked separately
-  // (PR #206 review LW-F). Without this branch, CREATE rows in the
+  // Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
   issues.push(...(await validatePoliciesDeltaTriage(specsRoot, toolVersion, knownSpecIds)));
@@ -668,7 +668,7 @@ const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
 
 /**
  * Type guard for the canonical triage Operation labels (top-level + UPDATE).
- * Replaces a bare `as` assertion at the call site (PR #206 review #34).
+ * Replaces a bare `as` assertion at the call site.
  */
 function isTriageTopLevelLabel(value: string): value is "UPDATE" | TriageTopLevelOp {
   return TRIAGE_TOP_LEVEL_LABELS.has(value);
@@ -676,8 +676,7 @@ function isTriageTopLevelLabel(value: string): value is "UPDATE" | TriageTopLeve
 
 /**
  * Type guard for the canonical triage UPDATE Sub-op labels. Replaces a
- * bare `as TriageUpdateSubOp` assertion at the call site
- * (PR #206 review #37).
+ * bare `as TriageUpdateSubOp` assertion at the call site.
  */
 function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
   return TRIAGE_SUB_OPS.has(value);
@@ -725,10 +724,10 @@ type TriageSection = {
 /**
  * canonical な `## Triage` セクションを **すべて** 返す。
  *
- * 以前は最初の 1 つだけを読んでいたため、skill 再実行で 2 つ目以降の
- * セクションに積まれた行が QFAI-TRIAGE-* の検査対象から丸ごと外れて
- * いた。セクション内の複数テーブル対応 (PR #206 review LWri) は
- * セクションをまたげないので、呼び出し側で全セクションを走査する。
+ * skill を再実行すると 2 つ目以降のセクションに行が積まれる。最初の
+ * セクションだけを読むと、それらの行が QFAI-TRIAGE-* の検査対象から外れる。
+ * セクション内の複数テーブル対応はセクションをまたげないので、呼び出し側で
+ * 全セクションを走査する。
  *
  * 走査前に `maskNonSpecRegions` で非仕様領域 (fenced code block / HTML
  * コメント / indented code) を blank する。delta が自分の書式を例示する
@@ -845,10 +844,9 @@ export async function validateCreateRowCapabilityRefs(
   const issues: Issue[] = [];
   for (const section of sections) {
     // Triage section MAY contain multiple tables (e.g. when authors split
-    // a large change into themed sub-tables). Earlier behaviour read only
-    // the first table, letting CREATE rows in subsequent tables bypass
-    // QFAI-TRIAGE-006 entirely (PR #206 review LWri). Walk every table so
-    // the structural CAP-NNNN gate is uniform.
+    // a large change into themed sub-tables). Reading only the first table
+    // would let CREATE rows in later tables bypass QFAI-TRIAGE-006, so walk
+    // every table and keep the structural CAP-NNNN gate uniform.
     const tables = parseAllMarkdownTables(section.body);
     for (const [tableIndex, table] of tables.entries()) {
       const scopeLabel = buildTriageScopeLabel(
@@ -866,8 +864,8 @@ export async function validateCreateRowCapabilityRefs(
 
 /**
  * Resolve the known CAP set. When the capabilities catalog is missing
- * or unreadable, intentionally treat the known set as empty (PR #206
- * review #39). The caller will then surface QFAI-TRIAGE-006 for every
+ * or unreadable, intentionally treat the known set as empty. The caller
+ * will then surface QFAI-TRIAGE-006 for every
  * CREATE row that references a CAP, which is the desired structural
  * behaviour: append-first regression should fail loud rather than
  * silently skip when the SSOT cannot be loaded. A separate validator
@@ -1134,8 +1132,8 @@ export function validateTriageSection(
     //   triage-skip is still caught the moment someone tries to use
     //   the Triage table for real work.
     //
-    // TODO(QFAI-PR206-followup): once the operational backfill PR
-    // ships (PR #206 review #4), promote this to `error` so that
+    // TODO: once existing spec packs carry a Triage section, promote this
+    // to `error` so that
     // missing Triage sections become structurally impossible.
     issues.push(
       issue(
@@ -1157,7 +1155,7 @@ export function validateTriageSection(
   }
 
   // Validate every canonical `## Triage` section, and every table inside
-  // each of them (PR #206 review LWri covered the tables only).
+  // each of them.
   for (const section of sections) {
     issues.push(
       ...validateTriageSectionBody(section, sections.length, deltaPath, toolVersion, knownSpecIds),
@@ -1267,7 +1265,7 @@ function validateTriageRows(
       continue;
     }
     // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
-    // a bare type assertion (PR #206 review #34).
+    // a bare type assertion.
     const opUpper = opUpperRaw;
 
     // QFAI-TRIAGE-009 is orthogonal to the Sub-op / approval gates below,
@@ -1302,11 +1300,11 @@ function validateTriageRows(
         // Fail-fast: skip the QFAI-TRIAGE-005 (approval) check for this
         // row so an invalid Sub-op does not double-report alongside an
         // approval issue. The next pass with a corrected Sub-op will
-        // re-evaluate approval (PR #206 review #37).
+        // re-evaluate approval.
         continue;
       }
       // `subUpper` is now narrowed to `TriageUpdateSubOp` without a
-      // bare type assertion (PR #206 review #37).
+      // bare type assertion.
       if (subUpper === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
         issues.push(
           issue(
@@ -1897,10 +1895,9 @@ function validateLayeredNamespace(
       mismatched,
       "canonical",
       `${path.basename(filePath)} の ${prefix} ID を spec-${entry.specNumber} に合わせて修正してください。` +
-        // The old remedy asked the author to do the one thing they cannot: the
-        // mismatched ID belongs to ANOTHER spec, so 「make it match this one」 is
-        // not a repair. The supported form was undiscoverable except by tripping
-        // the validator repeatedly (#1101).
+        // The mismatched ID belongs to ANOTHER spec, so 「make it match this one」
+        // is not a repair the author can perform. Name the supported form here,
+        // where the author reads it.
         "別 spec が所有する ID を参照したい場合は、その spec の contract id " +
         "(`CON-DB-*` / `CON-API-*` / `CON-UI-*`) を引用してください — `BR-*` / `US-*` などの " +
         "レイヤー ID を直接参照することはこの検査が禁止します。所有 spec は対象 spec の " +

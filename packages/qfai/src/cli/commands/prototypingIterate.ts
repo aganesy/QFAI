@@ -442,7 +442,7 @@ export async function runPrototypingIterate(
     // The CLI surface defaults `--cycle` to 9 when the operator
     // omits it (see main.ts `prototypingCycle ?? 9`); the
     // peek-without-cycle entry path (used by integration tests that
-    // bypass the CLI parser via `as unknown as ...`) is still routed
+    // bypass the CLI parser via `as unknown as...`) is still routed
     // to the same cycle-9 default. We read `options.cycle` through
     // `unknown` so the "undefined sentinel" branch is reachable at
     // runtime without tripping `@typescript-eslint/no-unnecessary-
@@ -488,12 +488,12 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  // Converged-loop guard. MUST run before any write path — the
-  // iteration directory used to be created unconditionally a few
-  // hundred lines below, so `--cycle N` against an already-sealed loop
-  // produced a fresh `iter-NN/` holding `iterate-plan.json` +
-  // `iterate-context.json`, printed "iter-NN ready", and exited 0. That
-  // debris is not inert: `certify`'s `findStaleIterDirs` guard
+  // Converged-loop guard. MUST run before any write path — creating the
+  // iteration directory unconditionally, as happens a few hundred lines
+  // below, would let `--cycle N` against an already-sealed loop produce a
+  // fresh `iter-NN/` holding `iterate-plan.json` + `iterate-context.json`,
+  // print "iter-NN ready", and exit 0. That debris is not inert:
+  // `certify`'s `findStaleIterDirs` guard
   // hard-fails on exactly those directories. The state needed to refuse
   // is the same `stopReason` / `acceptedIterationIndex` pair the
   // `--check-convergence` peek reads; it just has to be read here
@@ -1312,7 +1312,7 @@ async function runCapturePath(
       // Playwright import (Playwright is imported lazily inside the
       // function body), so a missing Playwright package does NOT reach
       // this branch — that surfaces via the runner's own structured
-      // refusal ("playwright not installed; ..."). This catch only
+      // refusal ("playwright not installed;..."). This catch only
       // fires when the ESM bundle itself is broken (the file is
       // missing, a typo / circular import sneaks in, or the dist tree
       // is corrupt). Production paths normally do not reach here.
@@ -2220,7 +2220,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // against a fresh loop that never authored it, with no in-flow repair
   // path short of hand-editing the state file.
   delete body.executionPlan;
-  // codex AGjFy: clear the completion-claim trio. Without this, restarting
+  // Clear the completion-claim trio. Without this, restarting
   // a previously completed loop deletes `completion-certificate.json` from
   // disk but the in-memory claim fields (`completionClaimed: true`,
   // `phase: "completed"`, `completionCertificate: {...}`) survive in
