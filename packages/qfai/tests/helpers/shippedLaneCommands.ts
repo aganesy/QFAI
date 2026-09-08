@@ -1372,15 +1372,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // predecessor's digest describes what ships, and the map is keyed by file
   // name, so this is one pin rather than two.
   //
-  // Derived by running `qfai init` into the E2E's temp root and reading what it
-  // wrote, which is how both predecessors were derived — not copied from a
-  // failure message.
-  // Re-derived once more for the MERGED file: main dropped the three retired
-  // `validation.traceability` knobs and reworded the `forbidTestTodoStubs`
-  // comment, and this branch seeds `testFileGlobs`. Neither predecessor digest
-  // describes what ships. Taken by running `qfai init` into a temp root and
-  // hashing the file it wrote, which is how both predecessors were taken.
-  ["qfai.config.yaml", "ed3b8b5e22a67ba6a83a81aa1a83d0db8ca39ba5f262b68895135ef9a57acf90"],
+  // Derived by running `qfai init` into a temp root and hashing the file it
+  // wrote, never copied from a failure message.
+  //
+  // Re-pinned again for the `testFileGlobs` comment block, which now describes
+  // a derived value: `qfai init` matches each recognised layout against the
+  // tree it runs in and writes the ones that select a file. The whole delta is
+  // that comment — restoring the previous wording reproduces `ed3b8b5e…` byte
+  // for byte.
+  //
+  // A byte pin still holds even though the value now varies by repository. The
+  // root this runs against has no test file, so no layout matches and the key
+  // keeps the empty list the template ships. That is also the case the comment
+  // calls a fact about the repository rather than about the default, so the pin
+  // covers the shipped text and the empty-tree behaviour at once.
+  ["qfai.config.yaml", "e683cf23daa705ed6a5a627fd25ad3f05282becf83ad7a7a900b97828db41263"],
 ]);
 
 /**
