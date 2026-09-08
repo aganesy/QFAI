@@ -1,15 +1,15 @@
 /**
  * Pins the profile boundary of the CHG-006 exploration relaxation.
  *
- * `mode.ts` scopes the medium relaxation to "the prototyping profile", but the
- * downgrade used to be applied inside `runPrototypingValidators` — the helper
- * `runFullValidators` also calls. Its trigger is a file committed to the
- * repository under test (`.qfai/evidence/prototyping/prototyping.json#mode`),
- * nothing resets it when the project leaves the prototyping stage, and the last
- * explicit mode is inherited forward. So a loop abandoned mid-exploration
- * silently downgraded four gates of `--profile verify` — the run
- * `qfai-verify/SKILL.md` calls full-scan and unweakenable — from `error` to
- * `warning`, permanently.
+ * `mode.ts` scopes the medium relaxation to "the prototyping profile". Applying
+ * the downgrade inside `runPrototypingValidators` instead — the helper
+ * `runFullValidators` also calls — would not respect that scope: its trigger is
+ * a file committed to the repository under test
+ * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
+ * the project leaves the prototyping stage, and the last explicit mode is
+ * inherited forward. A loop abandoned mid-exploration would then silently
+ * downgrade four gates of `--profile verify` — the run `qfai-verify/SKILL.md`
+ * calls full-scan and unweakenable — from `error` to `warning`, permanently.
  *
  * The fixture is the minimum that raises `QFAI-CRIT-008` at `error`: one
  * critique evidence file whose desktop section is `verdict: PASS` and whose

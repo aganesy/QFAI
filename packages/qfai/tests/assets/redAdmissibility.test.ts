@@ -383,7 +383,7 @@ describe.each(TREES)("%s", (tree) => {
     // outside the audit subject can be back-filled after the PASS.
     expect(await read(tree, PROVENANCE)).toContain(
       // Both round fields carry the `Round N:` prefix the closed list requires
-      // (#654), so the handover row names them prefixed.
+      // so the handover row names them prefixed.
       "`Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`",
     );
     expect(await read(tree, DELEGATION)).toContain(

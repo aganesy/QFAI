@@ -1,5 +1,5 @@
 /**
- * defaultCaptureScreen HTTP response-status guard (Codex P1 wave-13).
+ * defaultCaptureScreen HTTP response-status guard.
  *
  * Playwright's page.goto resolves with a Response object (not throws)
  * on HTTP 4xx/5xx, so the runner MUST inspect the response and reject
