@@ -14,15 +14,14 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// #224 moved the per-round field list into `references/round-evidence.md`
+// The per-round field list lives in `references/round-evidence.md`
 // (progressive disclosure: SKILL.md has a line budget). The contract is still
 // shipped, so these obligations read the skill and its references together.
 //
-// Every reference, not a named one. This file used to hardcode
-// `round-evidence.md`, and the next extraction the budget forced — the
-// per-item evidence contract — broke it on text that had not changed, only
-// moved. The budget guarantees more extractions; naming them one at a time
-// means re-learning this each time.
+// Every reference, not a named one: hardcoding `round-evidence.md` would break
+// on the next extraction the budget forces — the per-item evidence contract —
+// moving text that had not otherwise changed. The budget guarantees more
+// extractions; naming them one at a time means re-learning this each time.
 const implementReferencesDir = path.join(path.dirname(implementSkillPath), "references");
 
 let content: string | undefined;

@@ -1,6 +1,6 @@
 /**
  * Spawn-based tests for `scripts/check-no-internal-version-leakage.sh`
- * defense branches added in PR #206.
+ * defense branches.
  *
  * The leakage guard's *positive* path (real distributed surfaces have
  * zero hits) is already covered by the integration smoke test

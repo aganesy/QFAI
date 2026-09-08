@@ -1,5 +1,5 @@
 /**
- * `constitution/quality.md` no longer names a package manager (#390).
+ * `constitution/quality.md` no longer names a package manager.
  *
  * Three shipped constitution files answered "what are the gate commands?"
  * differently. `workflow.md` and `constitution.md` Article VIII hedge

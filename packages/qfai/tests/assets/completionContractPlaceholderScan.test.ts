@@ -1,6 +1,6 @@
 /**
  * The Completion Contract's placeholder scan no longer lists tokens the
- * constitution mandates writing (#525).
+ * constitution mandates writing.
  *
  * `TBD` is what Article II and `thinking.md` require for an honestly-unknown
  * fact, and `OQ` / `OPEN QUESTION` are the framework's own ID prefix and the

@@ -1,5 +1,5 @@
 /**
- * `Prototype parity` needs a recording obligation, not just a field (#571).
+ * `Prototype parity` needs a recording obligation, not just a field.
  *
  * `qfai-implement/SKILL.md` makes prototype parity PASS item 9 of the gate and
  * gives it a named field in the per-item evidence contract, but the two

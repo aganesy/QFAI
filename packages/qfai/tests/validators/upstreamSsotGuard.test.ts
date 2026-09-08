@@ -138,8 +138,9 @@ describe("validateUpstreamSsotGuard", () => {
   it("is silenced by an approved Change Request declaring the path in `## Impact scope`", async () => {
     // The section is the CR's declaration of what it covers, and a declaration
     // is what an exemption rests on. This row was written against
-    // `## Proposed change`, which is prose: the exemption used to be a
-    // substring match over the whole body, so any section did (#1121).
+    // `## Proposed change`, which is prose: an exemption based on a
+    // substring match over the whole body would treat any section as
+    // sufficient.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -193,7 +194,7 @@ describe("validateUpstreamSsotGuard", () => {
   it("is NOT silenced by a prohibition, which used to read as a permission", async () => {
     // The sharpest form of the defect: a CR that FORBIDS the edit granted it
     // the moment `Status` reached `approved`, because the guard asked only
-    // whether the path appeared somewhere in the body (#1121).
+    // whether the path appeared somewhere in the body.
     const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\n" });
     await commitEdits(root, {
       ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 2;\n",
@@ -460,8 +461,8 @@ describe("validateUpstreamSsotGuard", () => {
     // THIS BRANCH", and for such a file that sentence is false — so the error
     // count grew as `origin/main` advanced, on a branch whose review cycle the
     // gate itself makes slow. Gate item 12's step 4 is
-    // `qfai validate --fail-on error`, which made the gate a function of
-    // wall-clock time rather than of the tree (#1149).
+    // `qfai validate --fail-on error`, which makes the gate a function of
+    // wall-clock time rather than of the tree.
     const root = await newRepo({
       ".qfai/contracts/db/branch-owned.sql": "SELECT 1;\n",
       ".qfai/contracts/api/main-owned.yaml": "openapi: 3.0.0\n",

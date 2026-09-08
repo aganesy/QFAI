@@ -1,5 +1,5 @@
 /**
- * The work-log surface's contract is published (#395).
+ * The work-log surface's contract is published.
  *
  * `qfai init` creates `.qfai/steering/` and writes a README and an entry
  * template that both point at `.qfai/contracts/cli/worklog-entry.schema.md` as

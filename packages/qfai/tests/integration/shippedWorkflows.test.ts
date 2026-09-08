@@ -428,11 +428,10 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
           // `command -v yarn` is not that query: a stale shim, or a yarn that cannot resolve
           // its own cache, satisfies it and still fails where it matters.
           //
-          // Read from the COMMANDS, with `#` lines dropped first. Measured: the step's own
-          // comment explains why the query is what it is, so a body-wide search found
-          // `yarn cache dir` in the prose and reported a probe that had been removed from the
-          // code. That is the second time in this change a row matched a sentence about a
-          // thing instead of the thing.
+          // Read from the COMMANDS, with `#` lines dropped first. A body-wide search matches
+          // a sentence about the thing rather than the thing itself: the step's own comment
+          // explains why the query is what it is, so such a search finds `yarn cache dir` in
+          // the prose and reports a probe that was removed from the code.
           const commands = deciding
             .split(/\r?\n/)
             .map((line) => line.trim())
@@ -468,10 +467,10 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
     expect(violations).toEqual([]);
   });
   it("keeps all four lockfile branches deciding the setup-node cache, wherever that decision lives", async () => {
-    // The decision used to be a nested ternary in `cache:` itself. It moved into a step, because
-    // an expression cannot ask whether the package manager is on PATH and `cache: yarn` sends
-    // setup-node to `yarn cache dir` before anything has installed Yarn — which failed the job on
-    // a runner carrying neither Yarn nor Corepack.
+    // The decision has to live in a step, not a nested ternary in `cache:` itself: an expression
+    // cannot ask whether the package manager is on PATH, and `cache: yarn` sends setup-node to
+    // `yarn cache dir` before anything has installed Yarn — which fails the job on a runner
+    // carrying neither Yarn nor Corepack.
     //
     // What this row protects is unchanged and is not the ternary: every lockfile the shipped lane
     // supports must still decide the cache, and no `cache:` may collapse to a single literal that

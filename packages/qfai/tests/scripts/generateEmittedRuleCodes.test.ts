@@ -395,7 +395,7 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(registered).not.toContain("QFAI-EXAMPLE-100");
 
     // But NAMED, in its own list, so `applyWaivers` can say the true thing
-    // rather than calling it an unknown rule (#1110).
+    // rather than calling it an unknown rule.
     const postWaiver = written.slice(written.indexOf("POST_WAIVER_RULE_CODES"));
     expect(postWaiver).toContain('"QFAI-EXAMPLE-100"');
     expect(postWaiver).not.toContain('"QFAI-EXAMPLE-101"');
