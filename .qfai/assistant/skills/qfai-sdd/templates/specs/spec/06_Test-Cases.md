@@ -98,6 +98,46 @@ other TC with no declared `Level`. Declare a `Level` for every TC — leaving th
 cell blank hands the TC to `/qfai-atdd`, which is rarely what a unit-level
 oracle wants.
 
+### Verified somewhere this repository cannot reach
+
+Some acceptance criteria are true of the deployment rather than of the code — a
+TLS floor, a redirect the platform terminates. No layer the annotation gate
+routes to can observe them: an integration test never crosses TLS, and an E2E
+test against a plaintext local server asserting it would be a lie.
+
+A test case says so in **its own block**, not in the table:
+
+```markdown
+## TC-0004: the origin refuses TLS 1.1 and accepts 1.2
+
+- Level: L3
+- x-qfai-status: external
+- x-qfai-verified-by: a scheduled probe asserts the handshake against the
+  deployed origin (`.github/workflows/deployment-watchdog.yml`)
+```
+
+Two values, and the second one costs more:
+
+| value      | means                                   | needs                    |
+| ---------- | --------------------------------------- | ------------------------ |
+| `planned`  | the test is not written yet             | nothing; remove it later |
+| `external` | the obligation is met outside this tree | `x-qfai-verified-by`     |
+
+`external` without `x-qfai-verified-by` suspends nothing: the obligation stands
+and `QFAI-ATDD-127` reports it. The pointer is what makes this an exit rather
+than a way to silence the gate — it puts the thing that actually checks the
+obligation where the next reader will find it.
+
+**Writing the block is the cost, and it is deliberate.** A marker cheap enough
+to put in a table cell gets applied to every row that looks deployment-bound,
+including the ones an in-process test could have covered all along. Lifting the
+row out of the table is the moment to ask which kind this really is.
+
+Neither value is a way to leave an obligation unmet. A test case that nothing
+verifies anywhere belongs in neither state — and retiring the row instead walks
+up `QFAI-COV-203` and `QFAI-COV-201` until the requirement itself is gone, which
+is not the answer either.
+
 ### Type column values
 
 - `normal` — Happy path / expected successful behavior.

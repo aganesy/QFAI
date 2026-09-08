@@ -48,6 +48,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A test case can say where it is verified** (#1252). Some acceptance criteria
+  are true of the deployment rather than of the code — a TLS floor, a redirect
+  the platform terminates — and no layer the annotation gate routes to can
+  observe them. Every exit was closed: annotating anyway makes the gate green
+  over a test that checks something else, a waiver may not cover an error, and
+  retiring the row walks up `QFAI-COV-203` and `QFAI-COV-201` until the
+  requirement itself is deleted.
+
+  A test case now declares its own status in its own block:
+
+  | value      | means                                   | needs                    |
+  | ---------- | --------------------------------------- | ------------------------ |
+  | `planned`  | the test is not written yet             | nothing; remove it later |
+  | `external` | the obligation is met outside this tree | `x-qfai-verified-by`     |
+
+  `QFAI-ATDD-126` (`info`) names both, with the pointer, so the exit stays
+  visible rather than reading as coverage. `external` without
+  `x-qfai-verified-by` suspends nothing: the obligation stands and
+  `QFAI-ATDD-127` reports it, because a marker that only says "not here" is the
+  blanket silencer this exit was designed not to be.
+
+  The marker lives in a `## TC-NNNN` block and not in the table, and that cost
+  is deliberate. A marker cheap enough for a table cell gets applied to every
+  row that looks deployment-bound, including rows an in-process test could have
+  covered all along.
+
+  `QFAI-WAIVER-002` now names these alternatives. It said waivers on error
+  findings are forbidden and not what to do instead.
+
 - **A spec that owes no ATDD annotation says so** (#1251). `QFAI-ATDD-112`
   routes each obligation by its test case's declared `Level`, and Unit and
   Component owe none. A spec whose table declares only those therefore has an

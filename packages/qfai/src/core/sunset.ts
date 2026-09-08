@@ -178,6 +178,19 @@ export const RULE_PROMOTIONS = {
    */
   businessFlowReferenceUnknown: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
   /**
+   * `QFAI-ATDD-127` — a test case claiming `x-qfai-status: external` and naming
+   * no verifier.
+   *
+   * The window absorbs no backlog: the marker ships with the rule, so nobody
+   * can be carrying this state yet. It is there because the FORMAT is new. The
+   * first authors to reach for the marker are doing it to keep an obligation in
+   * the spec that no test layer can observe — engaging with the tool — and they
+   * will get the second line wrong before they get it right. Failing their run
+   * on the line they added for that reason is the worst first experience of it,
+   * and the message says everything the error would.
+   */
+  tcExternalWithoutVerifier: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
    * Contract sets written before the declaration was required state none, so
    * the rule lands on every one of them at once.

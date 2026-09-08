@@ -171,6 +171,13 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // test to owe — so there is no release at which it should fail a build. The
   // finding exists because the fact was invisible, not because it is wrong.
   "QFAI-ATDD-125",
+
+  // A test case whose own block says where it is verified. `planned` defers it
+  // and `external` records that the obligation is met outside the repository;
+  // both are declared intent, so there is no release at which either should
+  // fail a build. Promoting it would make the exit unusable for the case it
+  // exists for.
+  "QFAI-ATDD-126",
 ];
 
 // tests/core/<this file> -> packages/qfai

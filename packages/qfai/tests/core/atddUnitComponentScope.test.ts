@@ -1739,3 +1739,136 @@ describe("a spec that owes nothing says so", () => {
     );
   });
 });
+
+describe("a test case that says where it is verified", () => {
+  /**
+   * A spec whose test cases are declared as blocks rather than table rows.
+   *
+   * The marker lives in a block on purpose, so a fixture for it has to write
+   * one — the table form cannot carry the two meta lines.
+   */
+  const withBlocks = async (
+    blocks: string[],
+    task: (root: string) => Promise<void>,
+  ): Promise<void> => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-status-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        ["# 06 Test Cases", "", ...blocks, ""].join("\n"),
+        "utf-8",
+      );
+      await task(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  };
+
+  const find = (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>, code: string) =>
+    issues.find((entry) => entry.code === code);
+
+  it("suspends the obligation for a planned test case", async () => {
+    await withBlocks(
+      ["## TC-0001: not written yet", "", "- Level: L3", "- x-qfai-status: planned"],
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+
+        expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+        const deferred = find(issues, "QFAI-ATDD-126");
+        expect(deferred?.severity).toBe("info");
+        expect(deferred?.message).toContain("SPEC-0001:TC-0001");
+        expect(deferred?.message).toContain("planned");
+      },
+    );
+  });
+
+  it("suspends it for an external test case that names its verifier", async () => {
+    await withBlocks(
+      [
+        "## TC-0001: the origin refuses TLS 1.1",
+        "",
+        "- Level: L3",
+        "- x-qfai-status: external",
+        "- x-qfai-verified-by: a scheduled probe against the deployed origin",
+      ],
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+
+        expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+        expect(codes(issues)).not.toContain("QFAI-ATDD-127");
+        // The pointer travels with the finding: the point of the marker is that
+        // the next reader can find the thing that actually checks it.
+        expect(find(issues, "QFAI-ATDD-126")?.message).toContain(
+          "a scheduled probe against the deployed origin",
+        );
+      },
+    );
+  });
+
+  it("keeps the obligation when external names no verifier", async () => {
+    // The pointer is the whole cost of the exit. Without it the line says only
+    // "not here", which is the blanket silencer this marker exists not to be.
+    await withBlocks(
+      ["## TC-0001: the origin refuses TLS 1.1", "", "- Level: L3", "- x-qfai-status: external"],
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+
+        expect(codes(issues)).toContain("QFAI-ATDD-112");
+        const unsupported = find(issues, "QFAI-ATDD-127");
+        expect(unsupported).toBeDefined();
+        expect(unsupported?.refs).toEqual(["SPEC-0001:TC-0001"]);
+        expect(unsupported?.suggested_action).toContain("x-qfai-verified-by");
+        expect(codes(issues)).not.toContain("QFAI-ATDD-126");
+      },
+    );
+  });
+
+  it("ships the external rule behind a promotion window", async () => {
+    await withBlocks(
+      ["## TC-0001: a", "", "- Level: L3", "- x-qfai-status: external"],
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        // The marker ships with the rule, so nobody carries this state yet. The
+        // window is for the author writing the first one, not for a backlog.
+        expect(find(issues, "QFAI-ATDD-127")?.severity).toBe("warning");
+      },
+    );
+  });
+
+  it("does not let one block's marker reach the next test case", async () => {
+    await withBlocks(
+      [
+        "## TC-0001: marked",
+        "",
+        "- Level: L3",
+        "- x-qfai-status: planned",
+        "",
+        "## TC-0002: not marked",
+        "",
+        "- Level: L3",
+      ],
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(find(issues, "QFAI-ATDD-112")?.refs).toEqual(["SPEC-0001:TC-0002"]);
+        expect(find(issues, "QFAI-ATDD-126")?.refs).toEqual(["SPEC-0001:TC-0001"]);
+      },
+    );
+  });
+
+  it("does not read a marker out of a fenced example", async () => {
+    // A format sample showing the marker must not defer a real test case, on
+    // the same terms as every other collector over this file.
+    await withBlocks(
+      ["## TC-0001: real", "", "- Level: L3", "", "```markdown", "- x-qfai-status: planned", "```"],
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(codes(issues)).toContain("QFAI-ATDD-112");
+        expect(codes(issues)).not.toContain("QFAI-ATDD-126");
+      },
+    );
+  });
+});
