@@ -40,6 +40,18 @@ written by `init`, never reported by `validate`, and never overwritten. See
 `manifest/` is different: it is project configuration, edited through
 `/qfai-configure`, and is not covered by the record.
 
+## Skills and agents
+
+`skills/` and `agents/` are QFAI's too, and they work the other way round.
+`npx qfai init` copies them once; only `npx qfai init --force` refreshes them,
+and it overwrites the whole layer, local edits included. There is no record and
+no overlay, because there is no merge to make.
+
+So the project keeps whatever skill bodies and agent definitions it initialised
+with until someone runs `--force`. `npx qfai validate` reports a layer that is
+behind the installed release (`QFAI-ASSETS-009`), once for the layer rather than
+once per file. Save any local edit you mean to keep before refreshing.
+
 ## Validation
 
 `npx qfai validate` checks that the wrappers still resolve to the documents above.

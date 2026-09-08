@@ -32,6 +32,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Waived wrappers are left alone, on the pass `validate` runs, so a project that
   has decided to keep one does not have that decision undone unattended.
 
+### Fixed
+
+- **A test's git sandbox no longer races git's own background maintenance**
+  (#1394). `git commit` starts `git maintenance run --auto`, and `gc.autoDetach`
+  defaults to true, so that process is detached and outlives the commit the test
+  waited on. It keeps writing into `.git/objects/pack`, and a test removing its
+  sandbox afterwards failed with `ENOTEMPTY` on that directory — with its
+  assertions already passed, on a branch touching none of the code involved.
+
+  `maintenance.auto=false` is now declared through the environment in a per-file
+  test setup, so every git a test spawns inherits it. Twenty test files build a
+  real repository and eleven of them removed it without retrying; this reaches
+  all of them, and every fixture added later, rather than asking each test to
+  remember.
+
+  `gc.auto=0` is not an alternative. It decides what maintenance does once it has
+  started, not whether `git commit` starts it.
+
 ### Changed
 
 - **`qfai doctor` reports the broken integration wrappers `validate` reports**
@@ -133,6 +151,50 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   to admit this one, which left the margin the cap was chosen for gone.
 
 ### Added
+
+- **`validate` reports a test case row filed at L4 or L5** (#1260).
+  `catalog/test-layers.md` has always said a `TC-*` row's `Level` stays within
+  L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so a row at either
+  level is an obligation filed under the wrong ID type rather than a test case
+  that happens to be high-layer.
+
+  The routing table already promised that such a row would be "reported once, by
+  the rule that names the real cause". No rule did. The row surfaced only through
+  the routing legend in `QFAI-ATDD-112`'s fix text, which named a directory the
+  same document tells a reader not to use — and a reader who followed it filed
+  the obligation deeper rather than re-filing it.
+
+  `QFAI-ATDD-128` reads the row's own `Level`, not where its annotation ended up:
+  covering the test case does not make the row less misfiled. It names the ID
+  type to re-file under, and says that re-filing is an upstream change — the row
+  goes together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX
+  concretizes, or the parent is left with no reference.
+
+  Ships at `warning` and becomes an `error` at 1.13.0. The window is doing real
+  work here: the remedy is not a cell edit, so a repository that has been writing
+  such rows needs time to plan the re-filing.
+
+- **`validate` reports a skills or agents tree behind the installed release**
+  (#1381). `.qfai/assistant/skills/**` and `agents/**` are copied into a project
+  once and refreshed only by an explicit `qfai init --force`, so a project that
+  upgrades qfai keeps running the skill bodies it initialised with. A `SKILL.md`
+  several releases behind describes a workflow the installed validators no
+  longer implement, and it reads as authoritative because it is checked in.
+  Nothing said so: the provenance family covers `constitution/` and `catalog/`
+  and stops there.
+
+  `QFAI-ASSETS-009` compares each file the release ships under those two layers
+  against the project's copy, and reports **one finding per layer** — the trees
+  hold over a hundred and fifty files between them, and one finding per file
+  would bury every other result. The comparison is against the shipped bytes
+  alone, with no lock entry per file: `--force` overwrites this layer either
+  way, so there is no merge decision for a record to protect.
+
+  The fix hint says the layer is overwritten, local edits included.
+  `QFAI-ASSETS-004` can offer `--force` as a plain refresh because a diverged
+  file is left alone; this layer has no such exemption, and a hint that quietly
+  destroys work is worse than the staleness it clears. Ships at `warning` and
+  becomes an `error` at 1.13.0.
 
 - **A width ceiling beside the line ceiling for shipped assistant assets**
   (#1181). A count of lines bounds reading cost only while a line is a roughly
@@ -446,6 +508,62 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **`check-mdschema --scope changed` no longer reports a document's old
+  violations as this branch's** (#1360). The flag selects the documents a branch
+  touched and validated each one whole, so a document predating the schema
+  failed in full. Editing one line of a legacy document reported every violation
+  it already had — in one measured run, 55 of them for a four-line change, none
+  about the changed lines.
+
+  That made the migration the flag exists to allow impossible to land
+  incrementally: the first edit to a legacy document had to carry all of it.
+
+  Each touched document is now judged against its own state at the merge base.
+
+  | at the merge base | at the head | verdict                                |
+  | ----------------- | ----------- | -------------------------------------- |
+  | not there         | fails       | this branch's — fail                   |
+  | conforms          | fails       | this branch's — fail                   |
+  | fails             | fails       | pre-existing — reported, does not fail |
+
+  A document the base checked against a different contract — routed elsewhere by
+  a `when:` predicate, or opted out — counts as not there, since this is the
+  first run that could hold it to this schema.
+
+  The unit is the document, not the violation: a branch adding an eleventh
+  violation to a document that already had ten still passes. `mdschema` renders
+  the same text for every `--format`, so a violation-level ratchet would couple
+  the lane to one release's wording, and a reflowed message would report
+  everything as new.
+
+  `--scope all` is unchanged. It is the migration view, and every violation is
+  its subject.
+
+- **The rule summary in `AGENTS.md` no longer contradicts its own master**
+  (#1392). `.agents/rules/documentation-clarity.md` forbids issue and pull
+  request numbers in source and Markdown, and exempts four surfaces: the pull
+  request body, the issue body, the commit message and `CHANGELOG.md`. The
+  one-line summary listed the prohibition and dropped the exemption, so read on
+  its own it forbade what the master directs — and `CHANGELOG.md` is Markdown.
+
+  A reviewer following the summary reports every changelog entry as a
+  violation, which is the convention all 78 of them follow.
+
+  A guard now holds any entry point that enumerates the identifiers to naming
+  the exemption in the same bullet. It reads the bullet rather than the file,
+  because every one of these documents mentions the changelog somewhere else.
+
+- **The cycle table in the prototyping skill renders as a table again** (#1378).
+  A blank line sat between its delimiter row and its body rows, and a blank line
+  ends a table. The three rows rendered as one paragraph of literal text, pipes
+  included, and the header above them labelled nothing — on the four-column
+  mapping of which agent runs each cycle phase and what it produces.
+
+  Deleting the blank line reattaches the rows. The file's recorded width ceiling
+  drops from 899 to 541 with them: table rows are not measured for width,
+  because markdown gives them no continuation, so the three lines were being
+  measured as the prose they had become.
 
 - **The recorded e2e callsite count no longer fails a branch for the base's
   changes** (#1357). A pull request is tested on the merge of the branch with

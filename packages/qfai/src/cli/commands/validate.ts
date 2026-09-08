@@ -1777,6 +1777,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A test case whose own block declares `planned` or `external` owes no annotation here, and the declaration keeps the exit visible rather than silent.",
   "QFAI-ATDD-127":
     "A test case claiming `x-qfai-status: external` names where the obligation is verified instead; without that pointer the marker is a silencer and the obligation stands.",
+  "QFAI-ATDD-128":
+    "A TC row's declared Level stays within L1-L3. L4 belongs to CON-API-* and L5 to US-*, so a row at either level is an obligation filed under the wrong ID type rather than a test case that happens to be high-layer.",
   "QFAI-ATDD-131":
     "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
   "QFAI-ATDD-132":
@@ -2012,6 +2014,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every normative file the installed release ships exists in the project as a regular file.",
   "QFAI-ASSETS-008":
     "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
+  "QFAI-ASSETS-009":
+    "The assistant layers `qfai init --force` regenerates (`skills/`, `agents/`) hold what the installed release ships, so the project is not running the skill bodies it initialised with.",
   "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
   "QFAI-TDDLIST-009":
