@@ -131,9 +131,20 @@ For each such row:
    history can date that advance: `git log -p` sees only committed state, so it
    settles on the **previous** advance, and where that one predates the split a
    row moved forward today is marked as legacy. **Refuse the marker for that
-   row** — report it in one line (the row, and that its advance is uncommitted)
-   and record no fingerprint for the run. Committing the ledger and re-running
-   is the way out.
+   row** and record no fingerprint for the run. **Report it in one line — the
+   row, that its advance is uncommitted, and the way out: commit the ledger and
+   re-run this pass**, which the missing fingerprint already schedules for the
+   next Preflight. A refusal that names no remedy reads as a dead end, and this
+   one is a single commit away from an answer.
+   - **The working-tree line is not read as the advance instead.** It carries
+     the row's anchor and no date for it, and an anchor on its own is what
+     `## What the marker does not license` says cannot separate a legacy row
+     from a new one written to the wrong file. Dating the vendored contract in
+     the tree rather than the advance would close that gap, at the price of a
+     third source of truth about when a layer moved — one this file would then
+     have to keep agreeing with the history it already reads, per layer and per
+     upgrade path. One commit is the cheaper answer, and it is the same
+     fail-closed direction every other refusal here takes.
 3. Find the commit that **last advanced** the row from the row's **patch
    history**, not with `git log -S`. The id is on both sides of a status-only
    change, and `-S` matches a filepair only when one side contains the string,

@@ -227,6 +227,41 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TDDLIST-012` — an `Evidence` cell past the character
+   * cap. The cap arrives with the rule that made the cell a pointer, so it
+   * lands on every cell written while the column was documented as holding the
+   * commands and their output — which is most of them, and on rows already at
+   * `done`. A terminal row satisfies it by moving the payload into the evidence
+   * file and leaving the anchor in the cell; that is an edit to the cell, not a
+   * status transition, so the row needs none.
+   */
+  tddListEvidenceCellOversize: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-014` — a ledger row carrying cells its table's header
+   * does not declare. Nothing read past the last column before, so a surplus
+   * cell was never reported and ledgers accumulated them silently. A terminal
+   * row satisfies it by deleting the surplus, again without a transition.
+   */
+  tddListRowExtraCells: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-011` — an `Evidence` cell that does not match the grammar.
+   * The grammar arrives with the rule that made the cell a pointer, so it lands
+   * on every cell written while the column was documented as holding the
+   * commands and their output — which is most of them, and on rows already at
+   * `done`. A terminal row satisfies it by rewriting the cell into the mandated
+   * shape; that is an edit to the cell, not a status transition, so the row
+   * needs none.
+   */
+  tddListEvidenceCellMalformed: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-013` — `RED:n-a` on an ATDD-owned row. The provenance token
+   * is new, so a row seeded before it carries whatever the cell held, and an
+   * ATDD-owned row that reached `done` under the old contract has no legal
+   * transition left that could re-observe a RED. The remedy is the same cell
+   * edit, recording the provenance the run actually had.
+   */
+  tddListEvidenceRedProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
    * declared grammar, or names a spec that is not on disk. The grammar is new,
    * so every delta file written before it carries whatever spelling its author
@@ -295,6 +330,16 @@ export const RULE_PROMOTIONS = {
    * arrives in the first run after the upgrade.
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * The assistant-tree provenance family — `QFAI-ASSETS-004` (a vendored copy
+   * still as qfai wrote it but behind the installed release), `QFAI-ASSETS-005`
+   * (a local fork), `QFAI-ASSETS-006` (a non-overlay addition),
+   * `QFAI-ASSETS-007` (a shipped normative file that is absent) and
+   * `QFAI-ASSETS-008` (the comparison could not be made at all). Nothing
+   * compared the governed layers before, so every project that ever edited one
+   * meets the whole family in the run that first records provenance.
+   */
+  assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the

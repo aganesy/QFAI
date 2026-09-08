@@ -26,6 +26,12 @@
  * translate, not the merging branch's, so they are recorded rather than
  * converted. The rule above still binds the author of a new message; it is
  * addressed to whoever writes the string, and a merge writes none.
+ *
+ * Either way the addition is visible: `cliMessageLanguage.test.ts` pins how
+ * many entries this file may hold, so growing it means editing that number
+ * too. Without the pin an entry could be added for a message that really is in
+ * the tree, every other assertion would still pass, and the list would quietly
+ * stop being a closed record of legacy.
  */
 export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>> = {
   "core/atddTraceability.ts": ["：", "：", "：", "："],
@@ -203,7 +209,6 @@ export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>>
     "に必須 がありません。",
     "に セクションがありません。",
     "に 観点が不足しています（不足 ）。",
-    "リリースまでは 、それ以降は として報告されます。",
     "ファイル に未置換のテンプレート値が 件残っています（該当セクション ）。",
     "を実行し、 を実測値に置き換えてください。特に の は が コマンドの唯一の取得元とするため、未記入のままだと が実行不能になります。",
     "までは 、以降は です。",
@@ -791,7 +796,6 @@ export const SRC_JAPANESE_ALLOWLIST: Readonly<Record<string, readonly string[]>>
     "列に （ ）または （ ）を記載し、対応する を のいずれかに用意してください。 な は再開の記録であって の記録ではないので、 を併記してください（ ）。",
     "を もしくは の形式に直してください。宣言先は です。",
     "該当の を のいずれかに用意してください。このいずれでもない場所で管理している場合に限り、 に の を登録してください。",
-    "実行したコマンドとその結果は ファイルに記録し、 列には結果の要約とその への だけを書いてください（例 — ）。コマンドと出力をセルへ直接貼ると、改行や が台帳の行を打ち切ったり列をずらしたりします（ ）。 のような終端の行は、 を変えずに セルだけを追記します（ の追記は状態遷移ではありません）。実行記録が残っていない場合は ファイルに を作成し、その をセルに記録してください。まだサイクルを実行していない場合の合法な回復手順は ごとに異なります",
     "列を の形にし、そのファイルに セクションを追加してください。移行途中のレガシー行は に の を登録してください。",
     "列を に向け、そのファイルに セクションを追加してください。",
     "のような判定だけの記述は無効です。実行したコマンドを併記してください（例 → ）。",

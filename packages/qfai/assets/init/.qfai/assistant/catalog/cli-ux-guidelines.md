@@ -123,6 +123,11 @@ qfai 自身が印字する文字列の規定であり、アシスタントの応
 - `npx qfai doctor` の check `title` / `message` / `details.nextActions`
 - `Issue.message` — 新規に追加する finding message も同じ規定に従う
 
+移行中の日本語メッセージは一覧に記録され、その一覧は**縮むだけ**である。
+翻訳したら同じ変更でその項目を削る。項目を増やすのは、開いている branch が
+base の新しいメッセージを取り込む merge のときだけで、その場合も件数の pin を
+同じ変更で動かす — 増えたことがレビューで見えるようにするため。
+
 対象外:
 
 - ソースコード中のコメント / JSDoc（配布物ではなく、実装者向け）
@@ -141,6 +146,26 @@ log grep / alert rule / runbook が言語を場合分けせずに済む。
 > allowlist に**文言単位**で登録されており、allowlist に無い日本語メッセージは
 > CI で落ちる。既存メッセージを英語化したら該当項目も同じ変更で削除する
 > (行数の空き枠として再利用できない)。
+
+## Command Invocation
+
+operator に実行させるコマンドの綴りは、**その文章を誰が読む時点か**で決まる。
+
+| 出力元                                                                                | 綴り                    | 理由                                                                               |
+| ------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| 配布ドキュメント（`.qfai/assistant/**`、生成ファイルのヘッダ）                        | `npx qfai <subcommand>` | qfai が起動する前に読まれる。project dependency なので global bin は無いことが前提 |
+| 実行時メッセージ（`error()` / `warn()` / `info()`、`Issue.message`、doctor の check） | `qfai <subcommand>`     | すでに動いている qfai が印字している                                               |
+
+実行時メッセージが launcher を付けないのは、**どの launcher で起動されたかを
+その process が知らない**ため。`npx` 前置、package script、global bin のいずれで
+起動されても同じ文字列が出るので、1 つの launcher を名指しすると残り 2 つの
+読み手には誤りになる。operator は自分が今使った入口を知っている。
+
+配布ドキュメントは逆で、まだ何も動いていない時点で読まれる。裸の綴りは
+`node_modules/.bin` に PATH が通っていない環境で 127 になるため、確実に動く
+`npx` を書く。この向きは `tests/assets/canonicalQfaiLauncher.test.ts` が強制する。
+
+実行時メッセージ側は `tests/unit/cliMessageLanguage.test.ts` が固定する。
 
 ## Severity Decision Matrix
 
