@@ -887,12 +887,12 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 - Subject:
   - `_policies/08_Decisions.md` DR-0269 Statement — hard-required bucket enumeration
   - `_policies/06_Glossary.md` "autopilot policy" row — same enumeration
-- Change: hard-required は `companyName` / brand intent / `primarySpecId` の 3 項目から、brand intent / `primarySpecId` の 2 項目に縮小。
-- Rationale: hard-required は「default 不可能ゆえ着手前に必ず訊く」bucket であり、1 項目 = 1 回の確定 prompt。`companyName` は配布ツリー上に consumer が存在しない (template slot / artifact section / `references/*.md` のいずれからも読まれない) ため、同 section が宣言する 0-1 prompt 予算を無条件に消費するだけだった。
+- Change: hard-required narrows from three entries — `companyName` / brand intent / `primarySpecId` — to two: brand intent / `primarySpecId`.
+- Rationale: hard-required is the bucket for inputs that cannot be defaulted and must be asked for before work starts, so each entry is one guaranteed prompt. Nothing in the distributed tree reads `companyName` — no template slot, no artifact section, no `references/*.md` — so it spent the section's own 0-1 prompt budget unconditionally and returned nothing.
 - Cascade:
-  - `spec-0015/01_Spec.md` / `03_Acceptance-Criteria.md` / `04_Business-Rules.md` — 同一列挙の同期。該当 AC / BR の spec ローカル ID は `spec-0015/09_delta.md` が記録する (`_policies` は spec ローカル ID を参照しない)
-  - `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md` 7 件の `## Default Autopilot Policy` から該当 bullet を削除し、root `.qfai/` mirror へ同期
-  - `packages/qfai/src/core/validators/autopilotPolicy.ts` の JSDoc 列挙を同期
-- Approval: 非 approval-gated。UPDATE:MODIFY は `_policies/11_Slice-Policy.md` §Triage の AskUserQuestion 対象外 (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE のみ) のため、AskUserQuestion テンプレートは起動していない。
-- ID 安定性: DR-0269 は renumber せず statement のみ改訂。spec-0015 側の AC / BR も ID 据え置き (詳細は `spec-0015/09_delta.md`)。
-- 配布物影響: 配布サーフェス (`assets/init/.qfai/assistant/skills/qfai-*/SKILL.md`) の本文のみ。内部 ID / version marker の増減なし。
+  - `spec-0015/01_Spec.md` / `03_Acceptance-Criteria.md` / `04_Business-Rules.md` — the same enumeration. The spec-local IDs of the affected AC and BR are recorded in `spec-0015/09_delta.md`, because `_policies` does not reference spec-local IDs
+  - The bullet is removed from `## Default Autopilot Policy` in seven `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md` files, and mirrored to the root `.qfai/` tree
+  - The JSDoc enumeration in `packages/qfai/src/core/validators/autopilotPolicy.ts` follows
+- Approval: not approval-gated. `_policies/11_Slice-Policy.md` §Triage puts only CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE behind AskUserQuestion, so an UPDATE:MODIFY does not raise the template.
+- ID stability: DR-0269 keeps its number and only its statement is revised. The AC and BR on the spec-0015 side keep their IDs as well; `spec-0015/09_delta.md` has the detail.
+- Distributed surface: prose only, in `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md`. No internal ID or version marker is added or removed.

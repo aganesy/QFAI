@@ -144,11 +144,21 @@ export function decorationOnly(bullet: string): string {
  * dash of its own, and dropping from that dash leaves an unclosed parenthesis
  * behind.
  *
- * Anything that joins two names — `/`, `+`, a comma — survives into the result,
- * so a bullet naming two entries does not equal either of them.
+ * A dash clause is a qualifier only when it is more than one word. A qualifier
+ * states a CONDITION and reads as prose — "neither this nor the proposal above
+ * has a defensible default" — while a single word after a dash is a name, and
+ * dropping it is how an unregistered input reaches the bucket unseen: the two
+ * whole-bullet searches beside this one look for names the policy already
+ * knows, so a name it has never heard of matches neither and the reduced form
+ * no longer holds it. A one-word clause is kept, and
+ * {@link splitJoinedEntries} then answers for it separately.
  *
- * Not for the retired-name search: this drops a trailing clause, and a retired
- * name written in one is exactly what that search is for. Use
+ * Anything that joins two names — `/`, `+`, a comma, a retained dash — survives
+ * into the result, so a bullet naming two entries does not equal either of
+ * them.
+ *
+ * Not for the retired-name search: this drops a multi-word clause, and a
+ * retired name written in one is exactly what that search is for. Use
  * {@link decorationOnly} there.
  *
  * @internal Exported for direct unit-testing — not part of the package's
@@ -158,7 +168,7 @@ export function normalizeHardRequiredEntry(bullet: string): string {
   return bullet
     .replace(/[`*_]/g, "")
     .replace(/\s*\([^)]*\)\s*$/, "")
-    .replace(/\s*[—–-]\s+.*$/, "")
+    .replace(/\s*[—–-]\s+\S+\s+.*$/, "")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -254,6 +264,11 @@ export function collectHardRequiredEntries(content: string): string[] {
  * declares an input nothing has approved and reads as clean. Each piece
  * answering for itself is what closes that.
  *
+ * A dash joins too, because {@link normalizeHardRequiredEntry} keeps a one-word
+ * dash clause: that clause is a name rather than a condition, and left inside
+ * its neighbour it would be carried in by an allowed-name search that only asks
+ * whether SOME permitted name is present.
+ *
  * Parentheses are skipped because a qualifier is prose and may hold any of
  * these characters: `primarySpecId (absent from inputs, and no default)` is one
  * entry with one qualifier rather than two entries.
@@ -261,6 +276,11 @@ export function collectHardRequiredEntries(content: string): string[] {
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
+/** The three dashes a bullet writes between an entry and what follows it. */
+function isDash(char: string): boolean {
+  return char === "—" || char === "–" || char === "-";
+}
+
 export function splitJoinedEntries(normalized: string): string[] {
   const pieces: string[] = [];
   let depth = 0;
@@ -271,7 +291,7 @@ export function splitJoinedEntries(normalized: string): string[] {
     } else if (char === ")") {
       depth = Math.max(0, depth - 1);
     }
-    if (depth === 0 && (char === "/" || char === "+" || char === ",")) {
+    if (depth === 0 && (char === "/" || char === "+" || char === "," || isDash(char))) {
       pieces.push(current);
       current = "";
       continue;

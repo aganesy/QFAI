@@ -245,6 +245,39 @@ ${hardRequired}
     expect(finding?.message ?? "").toContain("an unreviewed secret");
   });
 
+  it("reports an undeclared input written after a dash", async () => {
+    // A dash clause was dropped as a qualifier whatever it held, and the two
+    // whole-bullet searches beside the allowed test look only for names the
+    // policy already knows — retired ones, and ones another skill declares. A
+    // name it has never heard of matched neither and was gone from the reduced
+    // form, so it reached the bucket that stops a run with nothing reported.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith("  - brand intent — unreviewedSecret\n  - `primarySpecId`"),
+    );
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toContain("unreviewedSecret");
+  });
+
+  it("keeps a multi-word dash clause as the qualifier it is", async () => {
+    // A qualifier states a condition and reads as prose. One shipped bucket
+    // writes exactly this shape, so treating every dash clause as a name would
+    // make the tree report itself.
+    await writeSkill(
+      root,
+      "qfai-fixture",
+      policyWith(
+        "  - brand intent\n  - `primarySpecId` — neither this nor the entry above has a defensible default",
+      ),
+    );
+    const issues = await validateAutopilotPolicy(root);
+
+    expect(issues.find((i) => i.code === "QFAI-AUTOPILOT-001")).toBeUndefined();
+  });
+
   it("keeps a qualifier that holds a joiner as one entry", async () => {
     // A qualifier is prose and may carry a comma or a slash of its own. Split
     // there, one entry would read as several and the bucket every skill ships
