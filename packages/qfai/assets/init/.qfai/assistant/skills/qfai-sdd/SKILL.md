@@ -490,8 +490,13 @@ with no visual secondary surface). `/qfai-discussion` authors no root
 `validators/designContractReadiness.ts` skips `QFAI-DCON-030` / `-031` on
 the same condition — so demanding a freeze here would only re-block the
 pack on a token tree nothing reads. Read the classification from the
-active discussion pack `01_Context.md`; when there is no pack, treat the
-target as visual and run the freeze.
+active discussion pack `01_Context.md`. A spec taken in through import-lite
+has no pack, so read it instead from the `## Surface` section of the
+import-lite evidence its own provenance names (`Source: import-lite-<ts>#...`).
+When neither states a surface, **stop and ask** for one rather than running
+the freeze: a project whose only surface is a CLI cannot produce a root
+`DESIGN.md`, a design contract or a prototype, so assuming visual leaves it
+with no way forward at all.
 
 1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If
    missing, stop and ask the user to run `/qfai-discussion` (which
