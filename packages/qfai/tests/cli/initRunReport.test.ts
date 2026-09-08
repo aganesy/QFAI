@@ -49,7 +49,7 @@ function reportedCount(output: string, heading: string): number {
   return line === undefined ? 0 : Number(line.slice(prefix.length));
 }
 
-describe("qfai init run report", { timeout: 60000 }, () => {
+describe("qfai init run report", () => {
   it("enumerates the paths a --dry-run would write, in the future tense", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
     try {
