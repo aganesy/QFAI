@@ -396,9 +396,9 @@ same upstream artifact.
 
 ## Reviewer-originated obligations
 
-The rules above govern a downstream phase **editing** upstream SSOT. This section governs the
-mirror case: a downstream reviewer **originating** a requirement that upstream SSOT does not
-contain. Both are drift.
+The rules above govern a downstream phase **editing** upstream SSOT. This section governs the mirror
+case: a downstream reviewer **originating** a requirement that upstream SSOT does not contain. Both
+are drift.
 
 ### Defect or new scope: decide this first
 
@@ -410,18 +410,16 @@ A finding is a **defect in the deliverable under review** — not new scope — 
 demonstrable from the changed artifacts themselves: the reviewer can point at the code or evidence
 and show it is wrong on its own terms. Typical shapes:
 
-- **correctness** — the code does not do what the artifact it implements says it does: an
-  unhandled rejection, an unreachable or inverted branch, a contract the code itself declares and
-  then breaks;
-- **security / data integrity** — missing validation on an input the code already treats as
-  trusted, credential or personal-data exposure, an injection or traversal path opened by the
-  change;
-- **code quality** — a regression against a gate the repository already runs (lint, types, tests)
-  or against a named constitution / catalog rule.
+- **correctness** — the code does not do what the artifact it implements says it does: an unhandled
+  rejection, an unreachable or inverted branch, a contract the code itself declares and then breaks;
+- **security / data integrity** — missing validation on an input the code already treats as trusted,
+  credential or personal-data exposure, an injection or traversal path opened by the change;
+- **code quality** — a regression against a gate the repository already runs (lint, types, tests) or
+  against a named constitution / catalog rule.
 
-These findings are **blocking**. Their provenance is the deliverable plus the defect class, never
-an `AC-*`: requiring an acceptance criterion for them would oblige a reviewer who has just
-demonstrated a bug to pass it.
+These findings are **blocking**. Their provenance is the deliverable plus the defect class, never an
+`AC-*`: requiring an acceptance criterion for them would oblige a reviewer who has just demonstrated
+a bug to pass it.
 
 A finding is **reviewer-originated scope** only when satisfying it would add product behaviour or
 a quality bar that upstream SSOT does not contain and the changed artifacts do not already imply.
@@ -532,10 +530,10 @@ is one queue per spec, and it is defined by a destination, an owner, an entry sh
   individual row out of `done`, which is the whole point of the class.
 - **When the record cannot be repaired honestly.** Repair means writing what the run actually did,
   which needs the round's artifacts to still say what that was. Where they do not — nothing
-  reconciles the entry with any run — the finding was never a record defect: what is missing is
-  not a correct record of the work but any evidence the work happened, which is the integrity case
-  above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path.
-  There is no third exit: an entry closes on a corrected record or on a blocking finding.
+  reconciles the entry with any run — the finding was never a record defect: what is missing is not
+  a correct record of the work but any evidence the work happened, which is the integrity case
+  above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path. There
+  is no third exit: an entry closes on a corrected record or on a blocking finding.
 - **Re-attest a repair in a pack of its own; never re-run it, and never edit a sealed one.** A
   defect inside a `Satisfied-by`, a round block or any other phase-authored field sits inside the
   exact bytes a reviewer's `Audited evidence hash` covers, and the completion gate recomputes that
@@ -546,20 +544,19 @@ is one queue per spec, and it is defined by a destination, an owner, an entry sh
   and the queue entry's `<CODE>`.
 - **The re-attestation is a new review pack, and the pack it supersedes is left untouched.** A
   verdict lives in a `review-<timestamp>/` pack fixed by a `Review pack seal` the completion gate
-  recomputes, so replacing that verdict's `Audited evidence hash` line where it is stored breaks
-  the seal by construction, and replacing only the evidence file's copy leaves the sealed reviewer
+  recomputes, so replacing that verdict's `Audited evidence hash` line where it is stored breaks the
+  seal by construction, and replacing only the evidence file's copy leaves the sealed reviewer
   response carrying a hash nothing agrees with. Write the re-attestation as its own
-  `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash
-  it recorded — it was correct over the bytes it read — and its pack keeps recomputing. The
-  evidence entry records `Record re-attestation` beside the verdict it supersedes, with its own
-  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate
-  recomputes the superseding hash and both seals, which is what makes the re-attestation an
-  artifact a validator can see rather than an untraceable edit. No code runs, no row changes
-  status, and it spends no round — it opens none, so it is not a `Round N:` pack. The revision a
-  verdict names excludes `.qfai/evidence/**`, so by construction nothing outside the record moved.
-  **A repair that would move the revision is not a record repair**: it is a change to the
-  deliverable and takes the ordinary path. A repaired entry whose verdict carries no
-  re-attestation is still an open entry.
+  `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash it
+  recorded — it was correct over the bytes it read — and its pack keeps recomputing. The evidence
+  entry records `Record re-attestation` beside the verdict it supersedes, with its own
+  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate recomputes
+  the superseding hash and both seals, which is what makes the re-attestation an artifact a
+  validator can see rather than an untraceable edit. No code runs, no row changes status, and it
+  spends no round — it opens none, so it is not a `Round N:` pack. The revision a verdict names
+  excludes `.qfai/evidence/**`, so by construction nothing outside the record moved. **A repair that
+  would move the revision is not a record repair**: it is a change to the deliverable and takes the
+  ordinary path. A repaired entry whose verdict carries no re-attestation is still an open entry.
 
 An unconsumed queue would make the class worse than what it replaced: the round is gone and the
 defect is gone with it. The drain is what pays for dropping the round.
@@ -582,6 +579,50 @@ defect is gone with it. The drain is what pays for dropping the round.
   hiding a file; it does not stage one. Left untracked, the anchor resolves on
   the machine that ran the gate and nowhere else — the state the negation was
   added to end. Commit them with the change whose obligations they discharge.
+
+### Line endings in the artifacts under review
+
+The paths QFAI owns are shipped and maintained LF-normalised, and `npx qfai init` seeds a
+`.gitattributes` at the project root that keeps them that way: the `.qfai/**` tree and five files
+beside it. Each is named on its own, because a partial list migrates a partial set:
+
+`#core-rule` reaches further than this — it also lists production and test artifacts another spec's
+completed implementation guarantees — and those are not QFAI's to pin. Their line endings are the
+project's policy, below.
+
+| path                                  | seeded by             |
+| ------------------------------------- | --------------------- |
+| `.qfai/**`                            | every `npx qfai init` |
+| `qfai.config.yaml`                    | every `npx qfai init` |
+| `DESIGN.md`                           | the design stage      |
+| `.github/workflows/qfai-validate.yml` | the shipped lanes     |
+| `.github/workflows/qfai-tests.yml`    | the shipped lanes     |
+| `.github/workflows/qfai-docs.yml`     | the shipped lanes     |
+
+It sets no repository-wide rule on purpose: the rest of the tree keeps whatever line-ending policy
+the project already chose, so seeding the file never rewrites product code the framework does not
+own.
+
+Attributes do not reach backwards. A blob already committed as CRLF stays CRLF in the index no
+matter what the new file declares, so a repository that adopts QFAI after the fact migrates the
+protected paths once — `git add --renormalize .qfai`, adding any of the five root paths above that
+were themselves committed CRLF — recorded as its own commit. Skipping that step only defers the
+all-lines-changed diff to the day someone re-saves one of those files with LF endings, and
+renormalising part of the set defers it for the rest.
+
+That seed is create-only, so a project that already had a `.gitattributes` keeps its own and a
+whole-file rewrite on Windows can still flip a protected blob from LF to CRLF. Such a diff reads as
+"all lines changed" and is not evidence of drift on its own — re-read it with the revision range the
+detector itself uses, `git diff --ignore-cr-at-eol <baseBranch>...HEAD -- <path>`; a bare `git diff`
+compares the working tree against the index and will show nothing for a change that is already
+committed. An empty patch there means the change is EOL-only. `QFAI-DRIFT-001` reads the branch diff
+with `--ignore-cr-at-eol` too, so it does not report those paths and no Change Request is owed for
+them.
+
+Line endings that git hides are still real bytes on disk. A working-tree file saved as CRLF stages
+back to LF and shows no diff, but content hashes read the file as it lies, so a frozen `DESIGN.md`
+can fail its lock check while git calls it unchanged. Re-save that file with LF endings — do not
+re-freeze the lock to match the CRLF bytes.
 
 ## Non-negotiable constraints
 
