@@ -471,8 +471,8 @@ describe(
         //
         // The fixture no longer RESOLVES, and the change is deliberate: the
         // guard checks the value to its END, so `pnpm@10.15.0` followed by
-        // anything is not a pnpm version. (It used to be accepted on its first
-        // digit alone, which is the hole this row's sibling rule closed.) So
+        // anything is not a pnpm version. (Accepting it on its first digit
+        // alone would reopen the hole this row's sibling rule closed.) So
         // the guard now authors exactly ONE annotation of its own, and that is
         // the only workflow command line this channel may carry — every other
         // `::`-leading line would be one the manifest value forged.

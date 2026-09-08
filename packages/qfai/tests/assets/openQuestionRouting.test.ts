@@ -1,6 +1,6 @@
 /**
  * The Completion Checklist routes open questions instead of demanding a
- * forbidden write (#614).
+ * forbidden write.
  *
  * Four shipped skills carried an identical mandatory box asking that open
  * questions be logged "to the proper OQ file". None of the four owns an OQ

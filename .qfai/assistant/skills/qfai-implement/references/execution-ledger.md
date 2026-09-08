@@ -382,6 +382,14 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   completion, the upstream reset needs an approved `CR-*` that by definition does
   not exist yet, and leaving the row at `green` throws away the `Blocked-By` this
   status exists to hold and re-derives the determination on every pass.
+  Also write the `.qfai/steering/<id>.md` work-log entry for the stop —
+  `Blocked-By` names WHAT the row waits on, the entry is what was tried and what
+  the next session picks up. `QFAI-TDDLIST-015` reports while no open
+  (non-`archived`) `kind: blocker` / `kind: handoff` entry names this spec —
+  through its own `scope:`, or through `links:` on a `scope: global` entry. It is
+  a warning inside its migration window and an error from the release the finding
+  names, so a stop recorded before the check existed is not an upgrade that fails
+  on the spot.
 - `blocked` -> `todo` (the blocker cleared **with this row's obligation intact**).
   This is a **resumption, not a backward transition**: nothing upstream changed, so
   nothing is being undone. A row blocked on an unresolved `CR-*` may take it
@@ -439,6 +447,13 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   `Resumed-from-blocked` field and the round block left behind are the audit trail a
   sibling row id provides in the ordinary case. Weakening the correct test until it
   fails is forbidden here as everywhere.
+  **Close the entry that accounted for the stop**: set its `status:` to
+  `archived` in the same edit that moves the row. `QFAI-TDDLIST-015` is satisfied
+  by any open entry naming the spec, so an entry left open outlives the stop it
+  described — resume once and it stands in for every later stop of that spec, and
+  forgetting the next work-log entry is never reported. An entry that still
+  accounts for something else stays open; write the new stop its own entry rather
+  than reusing this one.
 - `blocked` -> `review-fix` (the blocker cleared on a row that was blocked
   **while reworking a `REVISE`**, with this row's obligation intact). The same
   resumption as the edge above, differing only in destination, and taken on
@@ -474,8 +489,8 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   keeps the anomaly's DR-ID alongside the reset ID. A reset without a recorded
   approval is a backward transition and is prohibited.
 - `exception` -> `todo` — **anomaly resolved**, the item re-enters the cycle
-  from the start. This is the exit `exception` previously lacked; without it a
-  parked item could never be un-parked without a lifecycle violation. Distinct
+  from the start. Without this exit a parked item could never be un-parked
+  without a lifecycle violation. Distinct
   from the upstream reset above: nothing upstream changed, so it needs no CR/DR
   approval — the anomaly's own DR-ID stays in place.
 - A reset row is at `todo`, so it owes no test file until it reaches `green`.

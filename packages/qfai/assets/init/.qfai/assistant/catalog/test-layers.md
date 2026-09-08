@@ -346,13 +346,12 @@ below, and no annotation obligation asks for it.
     `qfai-atdd/SKILL.md` puts Unit and Component out of its scope, and the
     crosswalk above gives L1/L2 no mandated directory — only L3-L5 are
     directory-pinned and only those three roots are scanned.
-  - Previously L1/L2 fell through to `<testsDir>/integration/**` — the fallback for a spec
-    with no `Level` column at all — so every declared Unit and Component TC was an `error`
-    demanding an annotation in a directory this file says is not its home. `QFAI-WAIVER-002`
-    refuses waivers on `error` rules, so a project that filed unit tests where L1's own entry
-    says to had no exit, and the only validator-clean path was duplicating every annotation
-    into `<testsDir>/integration/**` — the all-integration collapse named under Anti-patterns
-    below.
+  - L1/L2 must not fall through to `<testsDir>/integration/**`, the fallback for a spec
+    with no `Level` column at all. That would make every declared Unit and Component TC an
+    `error` demanding an annotation in a directory this file says is not its home, and
+    `QFAI-WAIVER-002` refuses waivers on `error` rules, so the only validator-clean path
+    would be duplicating every annotation into `<testsDir>/integration/**` — the
+    all-integration collapse named under Anti-patterns below.
   - **They are still gated, by the other stage.** Every coverage-target `TC-*`
     owes a `tdd/test-list.md` row, and `TDDLIST_TC_NOT_COVERED` (`error`)
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
@@ -526,8 +525,8 @@ implementation), so drop the modifier rather than delete the test.
 
 `QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
 Without it a clean run on an unsupported stack is indistinguishable from a
-checked one — the detector used to be JS-only while file selection was
-stack-agnostic, so every other stack got a clean result that meant nothing.
+checked one: file selection is stack-agnostic, so a stack the detector has no
+dialect for would get a clean result that meant nothing.
 
 The same finding also reports an empty `validation.traceability.testFileGlobs`,
 the value `npx qfai init` ships: the stub gate then selects no file at all, so

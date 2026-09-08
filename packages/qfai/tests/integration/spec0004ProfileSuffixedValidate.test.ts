@@ -129,7 +129,7 @@ describe("TC-0004-0057: legacy .qfai/output/validate.json path retained under de
     // BR-0004-0026: the compatibility write runs for the whole window and is
     // NOT gated on evidence. A consumer reading `.qfai/output/` from a fresh
     // clone has left no evidence to find, so withholding the write would break
-    // it before the announced sunset (#238 review).
+    // it before the announced sunset.
     await runValidate({
       root,
       strict: false,

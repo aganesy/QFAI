@@ -187,7 +187,7 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       expect(notice?.message).toContain('profile="tdd" is a partial profile');
       expect(notice?.message).toContain("QFAI-COV-*");
       expect(notice?.message).toContain("not full-scan coverage");
-      // The gates this PR added must not be listed as unevaluated.
+      // The atdd gates must not be listed as unevaluated.
       expect(notice?.message).not.toContain("QFAI-ATDD-*");
     });
   });
@@ -275,7 +275,7 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
   });
 
   it("says the full profile does not wire the drift gate", async () => {
-    // The claim #1122 reports. `full` and `verify` both call
+    // `full` and `verify` both call
     // `runFullValidators`, which passes `includeUpstreamGuard = false`, so
     // `QFAI-DRIFT-001` — the gate the drift protocol says detects a downstream
     // phase patching upstream SSOT — never runs. The row this replaces
@@ -433,7 +433,7 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
   });
 });
 
-// #536: `/qfai-sdd` owns `16_Traceability-ledger.md` but `--profile sdd` — the
+// `/qfai-sdd` owns `16_Traceability-ledger.md` but `--profile sdd` — the
 // gate that skill stops on — never ran the validator that asks for it.
 describe("--profile sdd owns the traceability-ledger gate", () => {
   it("raises QFAI-TRACE-002 for a ledger-less spec under the sdd profile", async () => {
@@ -471,7 +471,7 @@ describe("--profile sdd owns the traceability-ledger gate", () => {
     });
   });
 
-  // PR #856 review: `/qfai-sdd` updates BR/AC and the ledger and hands the
+  // `/qfai-sdd` updates BR/AC and the ledger and hands the
   // implementation to `/qfai-implement`, so the linked code is untouched by
   // design at this gate. Raising the history-based QFAI-TRACE-001 here would
   // fail the mandatory `--profile sdd --fail-on error` run on the normal flow.

@@ -1,5 +1,5 @@
 /**
- * Drift Protocol severity tiers (#378).
+ * Drift Protocol severity tiers.
  *
  * The protocol used to recognise exactly one kind of drift and prescribe one
  * response: STOP, write a CR carrying "options (at least 3) and
@@ -82,7 +82,7 @@ describe("drift protocol distinguishes intent drift from defect drift", () => {
       // axis that softened it would be a regression, not a fix.
       expect(drift).toContain("Downstream skills must not patch upstream SSOT directly.");
       // Step 1 still opens with the STOP. Its *scope* was narrowed to the
-      // affected artifact and its dependents (#444), which is why this asserts
+      // affected artifact and its dependents, which is why this asserts
       // the opening rather than the whole sentence — what matters here is that
       // a drift class cannot skip the halt.
       expect(drift).toContain("1. STOP downstream editing");
@@ -125,7 +125,7 @@ describe("drift protocol distinguishes intent drift from defect drift", () => {
 });
 
 /**
- * A discussion pack is non-normative reference material for `/qfai-sdd` (#1070).
+ * A discussion pack is non-normative reference material for `/qfai-sdd`.
  *
  * The pack used to be classified upstream, which forced an SDD run to repair or
  * re-run a transient discovery artifact before it could write the artifacts that
