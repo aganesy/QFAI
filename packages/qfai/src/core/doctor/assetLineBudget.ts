@@ -152,15 +152,17 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
 export const WIDTH_BACKLOG_SIZE = 20;
 
 /**
- * A blockquote marker run, and the indentation before it.
+ * The container a line sits in: indentation, blockquote markers, and the list
+ * marker of an item whose content starts on the same line.
  *
  * Stripped before anything else is read, because a fence or a table inside a
  * blockquote or a list is still one. CommonMark measures a fence's indent from
- * its container's content column, not from column zero, so a `> ` prefix or a
- * list's indentation would otherwise hide the fence and every verbatim line
- * under it would read as prose.
+ * its container's content column, not from column zero, so a `> ` prefix, a
+ * list's indentation, or the `- ` of an item opening a fence on its own line
+ * would otherwise hide the fence and every verbatim line under it would read as
+ * prose.
  */
-const CONTAINER_PREFIX_RE = /^[\s>]*/;
+const CONTAINER_PREFIX_RE = /^(?:[\s>]|(?<=^|[\s>])(?:[-*+]|\d{1,9}[.)])(?=\s))*/;
 
 /**
  * An opening fence: the marker run, captured so a closer can be checked
@@ -180,8 +182,16 @@ const CONTAINER_PREFIX_RE = /^[\s>]*/;
  */
 const FENCE_OPEN_RE = /^(`{3,}|~{3,})/;
 
-/** A table's delimiter row. It must carry a pipe, or a bare rule would match. */
-const TABLE_DELIMITER_RE = /^\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/;
+/**
+ * A table's delimiter row.
+ *
+ * It must carry a pipe, or a bare `---` rule would match. One column is a valid
+ * table (`| head |` over `| --- |`), and its delimiter has a single cell with
+ * pipes on both sides rather than a pipe between cells — so requiring a
+ * separator between two cells rejects it and measures its rows as prose.
+ */
+const TABLE_DELIMITER_RE =
+  /^(?:\|(?:\s*:?-{3,}:?\s*\|)+|\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?)\s*$/;
 
 /** The line with any blockquote or list container prefix removed. */
 function withoutContainer(text: string): string {

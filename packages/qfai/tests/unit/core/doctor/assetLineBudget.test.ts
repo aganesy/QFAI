@@ -634,6 +634,30 @@ describe("widestMeasurableLine", () => {
     expect(widestMeasurableLine(["```sh", "~~~", wide(500), "```", wide(90)].join("\n"))).toBe(90);
   });
 
+  it("skips a one-column table", () => {
+    // `| head |` over `| --- |` is a valid table. Its delimiter has one cell
+    // with pipes on both sides rather than a pipe between two, so a pattern
+    // demanding a separator between cells rejects it and measures its rows.
+    const doc = ["| head |", "| --- |", `| ${wide(500)} |`].join("\n");
+    expect(widestMeasurableLine(doc)).toBe(0);
+  });
+
+  it("skips a fence opened on a list item's own line", () => {
+    const doc = ["- ```sh", `  ${wide(500)}`, "  ```"].join("\n");
+    expect(widestMeasurableLine(doc)).toBe(0);
+  });
+
+  it("skips a fence opened on an ordered item's own line", () => {
+    const doc = ["1. ```sh", `   ${wide(500)}`, "   ```"].join("\n");
+    expect(widestMeasurableLine(doc)).toBe(0);
+  });
+
+  it("still measures an ordinary list item", () => {
+    // The list marker is stripped to find a container, not to excuse the line:
+    // a packed bullet is the shape this ceiling exists to catch.
+    expect(widestMeasurableLine(`- ${wide(500)}`)).toBe(502);
+  });
+
   it("skips a fenced block inside a blockquote", () => {
     // CommonMark measures a fence's indent from its container's content column.
     // A `> ` prefix would otherwise hide the fence, and every verbatim line
@@ -777,6 +801,25 @@ describe("assets.lineBudget width ceiling", () => {
 
       expect(JSON.stringify(actions)).toContain("wrap the over-wide prose");
       expect(JSON.stringify(actions)).not.toContain("move one topic out");
+    });
+  });
+
+  it("counts the line ceiling over the files it actually held", async () => {
+    // The exempt file is measured for width and not for length, so counting it
+    // into "all N are within 800 lines" would claim a check that did not run on
+    // it — and contradict the exemption note in the same sentence.
+    await withTempRoot(async (root) => {
+      const [exemptPath] = [...LINE_BUDGET_EXEMPT.keys()];
+      const relative = (exemptPath ?? "").replace(/^assistant\//, "");
+      await writeAsset(root, relative, ASSISTANT_ASSET_MAX_LINES + 50);
+      await writeAsset(root, "skills/qfai-demo/SKILL.md", 10);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+      expect(check?.severity).toBe("ok");
+      expect(check?.message).toContain("all 1 assistant assets held to the line ceiling");
+      expect(check?.message).toContain("all 2 are within the line width");
     });
   });
 

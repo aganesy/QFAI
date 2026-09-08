@@ -2415,9 +2415,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // runs 9,104 characters and costs the count one unit. This is the other
     // half, and the two are read together — width alone permits a thin file of
     // a thousand short lines, the count alone permits a packed one.
+    // Case-insensitive, because the runtime scan lowercases the extension
+    // before testing it. A `.MD` asset is measured by `qfai doctor` and would
+    // not have been matched here, so a wide line in one could reach the package
+    // and then warn on a tree its author never edited.
     const assetFiles = await fg(["assistant/**/*.{md,yml,yaml}"], {
       cwd: templateQfaiDir,
       absolute: false,
+      caseSensitiveMatch: false,
     });
     expect(assetFiles.length, "no shipped assets matched — the glob is wrong").toBeGreaterThan(50);
 

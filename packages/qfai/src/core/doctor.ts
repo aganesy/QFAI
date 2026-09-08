@@ -997,10 +997,15 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       // shipped files carrying a recorded width are inside their own number and
       // over the default one, so naming the default here would tell a reader the
       // opposite of what was checked.
+      // Two counts, because the two ceilings measure different populations.
+      // Every scanned asset is held to a width; the exempt ones are not held to
+      // a line count, so saying "all N are within 800 lines" would claim a check
+      // that did not run on them — and contradict the exemption note beside it.
       message:
-        `all ${report.scanned} assistant assets are within ${report.maxLines} lines ` +
-        `and within the line width each is held to (${report.maxLineChars} unless the ` +
-        `shipped file carries a recorded width)${exemptNote}`,
+        `all ${String(report.scanned - report.exempt.length)} assistant assets held to the ` +
+        `line ceiling are within ${report.maxLines} lines, and all ${report.scanned} are ` +
+        `within the line width each is held to (${report.maxLineChars} unless the shipped ` +
+        `file carries a recorded width)${exemptNote}`,
       details,
     };
   }
