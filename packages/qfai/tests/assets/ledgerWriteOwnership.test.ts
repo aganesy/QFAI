@@ -41,7 +41,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain("update `test-list.md` **Status and Evidence** after each phase");
     // The payload goes to the evidence file; the cell takes the outcome and
     // the anchor. Asserting the old "verbatim into the cell" wording pinned an
-    // instruction that corrupts the ledger gate item 10 reads (#464).
+    // instruction that corrupts the ledger gate item 10 reads.
     expect(skill).toContain(
       "recording the delegated agent's one-word RED/GREEN outcome plus the anchor",
     );
@@ -236,7 +236,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const contract = (await read(tree, SKILL)) + (await read(tree, REVISION));
     for (const field of [
       // A round field, so it carries the `Round N:` prefix the closed list gives
-      // every one of them (#654) — which is exactly what this case is for: the
+      // every one of them — which is exactly what this case is for: the
       // policy must name the field the contract defines.
       "Round N: Replacement proof revision",
       "Round N: Review pack",

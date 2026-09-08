@@ -138,15 +138,14 @@ function reportMismatches(options, rootLines, packageLines) {
 /**
  * Second oracle: the CI section's workflow claim, against the write set.
  *
- * Line-identity is the only thing this guard used to check, and "aligned" was
- * being read as "correct". It is not: two READMEs that are wrong in the same
- * way are perfectly aligned, and both said
+ * Line-identity alone cannot tell "aligned" from "correct": two READMEs that
+ * are wrong in the same way are perfectly aligned. Both saying
  *
  *   It does not generate GitHub Actions workflows.
  *
  * while `qfai init` wrote two of them — contradicting the sentence immediately
- * above it, which lists `.github/**` among the trees QFAI generates. The gate
- * ran clean over that for as long as it stood (#1063).
+ * above it, which lists `.github/**` among the trees QFAI generates — is
+ * exactly the kind of shared error line-identity alone would miss.
  *
  * So this oracle is tied to behaviour rather than to the other file: the write
  * set is `shared/shippedWorkflowNames.ts`, which is in-binary by design — its

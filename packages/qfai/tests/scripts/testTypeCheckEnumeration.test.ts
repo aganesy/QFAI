@@ -3,14 +3,13 @@
  *
  * `tsconfig.tests.json#include` is an ENUMERATION rather than `tests/**\/*.ts`, and its own
  * `$comment` gives the measured reason: a whole-tree glob reports hundreds of pre-existing errors in
- * suites this change never touched. So the list is the boundary between what this change owns and
- * what it does not — and a boundary that nothing checks drifts.
+ * suites the enumeration never touched. So the list is the boundary between what is checked and
+ * what is not — and a boundary that nothing checks drifts.
  *
- * Review finding [120] is the second time a file this change owns was left off it. The first was a
- * newly added suite; the second was `workflowHygieneRequiredContext.test.ts`, SPLIT out of an
- * enumerated file when that file grew too slow to run in one worker. `pnpm check-types` reads only
- * this config for the test tree and Vitest does not type-check at runtime, so most of the
- * required-context guard could carry a type error and the required job would still be green.
+ * A suite SPLIT out of an enumerated file (e.g. when that file grows too slow to run in one
+ * worker) can be left off the enumeration just as easily as a newly added one. `pnpm check-types`
+ * reads only this config for the test tree and Vitest does not type-check at runtime, so a suite
+ * left off carries no type check at all and the required job would still be green.
  *
  * The tree is now split in two and both halves are stated: what `include` covers, and what
  * `typeCheckEnumeration.allowlist.ts` records as knowingly uncovered. A suite in neither is one
@@ -115,10 +114,9 @@ describe("the test tree's type-check enumeration", () => {
     ).toEqual([]);
   });
   it("holds every suite that enforces a shipped-asset budget", () => {
-    // #1066: `assets.test.ts` owns the 500-line shipped-asset ceiling and was
-    // itself outside the enumeration, so the guard that keeps the shipped
-    // surface honest was the one thing nothing type-checked. Enumerating it
-    // surfaced a real `TS2345` it had been carrying.
+    // `assets.test.ts` owns the 500-line shipped-asset ceiling. Left outside
+    // the enumeration, the guard that keeps the shipped surface honest would
+    // be the one thing nothing type-checks.
     //
     // The rule is decidable from the tree without an inventory: a suite that
     // imports the budget helper is enforcing the budget, and a budget guard
