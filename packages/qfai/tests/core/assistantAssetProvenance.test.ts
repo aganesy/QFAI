@@ -137,6 +137,32 @@ describe("assistant asset provenance", () => {
     },
   );
 
+  it.each(["manifest.md", "product.md", "structure.md", "tech.md"])(
+    "does not call a filled-in %s stale once its content is what the lock records",
+    async (fileName) => {
+      // The other half of the same question. `stale` means the file matches the
+      // lock and not the release, and its remedy is `qfai init --force`, which
+      // rewrites the file. On a document the project owns, the lock recording
+      // the adopted content is the ordinary result of re-locking, and the
+      // remedy then destroys the content the project was told to write.
+      //
+      // So the pair has to be exempt together: reported as a fork, filling the
+      // document in is a finding, and reported as stale, the fix for that
+      // finding deletes the work.
+      const root = await makeProject();
+      const assistantDir = path.join(root, ".qfai", "assistant");
+      const adopted = `# ${fileName}\n\nWhat this project actually does.\n`;
+      await writeFile(path.join(assistantDir, "catalog", fileName), adopted, "utf-8");
+      const lock = await readAssistantAssetsLock(assistantDir);
+      await writeAssistantAssetsLock(assistantDir, {
+        files: { ...(lock?.files ?? {}), [`catalog/${fileName}`]: hashAssistantAssetText(adopted) },
+      });
+
+      const issues = await validateAssistantAssets(root, defaultConfig);
+      expect(issues.filter((found) => found.code === "QFAI-ASSETS-004")).toEqual([]);
+    },
+  );
+
   it("still reports a catalog file the project deleted", async () => {
     // The exemption is for a difference, not for an absence: a catalog the
     // skills read is gone, and nothing else reports that.
