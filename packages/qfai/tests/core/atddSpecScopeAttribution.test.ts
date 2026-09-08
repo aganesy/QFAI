@@ -688,6 +688,25 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
     });
   });
 
+  it("does not list a sibling spec's misfiled rows in a scoped run", async () => {
+    // `QFAI-ATDD-128` names the misfiled ids and is filed at `specsRoot`, which
+    // belongs to every scope — so without narrowing, a `--spec 0002` run reports
+    // spec-0001's L4/L5 rows whether or not spec-0002 has any of its own.
+    await withProject(async (root) => {
+      await seed(root, [
+        { specNumber: "0001", usIds: ["US-0001"], tcIds: ["TC-0001"], level: "L5" },
+        { specNumber: "0002", usIds: ["US-0001"], tcIds: ["TC-0001"], level: "L3" },
+      ]);
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      const found = scoped.find((entry) => entry.code === "QFAI-ATDD-128");
+      expect(found?.message ?? "").not.toContain("SPEC-0001");
+      expect(found?.refs ?? []).not.toContain("SPEC-0001:TC-0001");
+    });
+  });
+
   it("does not read a spec number from a fixture below the owning directory", async () => {
     // `tests/integration/spec-0002/fixtures/api/spec-0001/**` — the inner pair
     // is spelled exactly like the layout, so scanning from the end returned

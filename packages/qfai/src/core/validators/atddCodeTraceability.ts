@@ -141,6 +141,12 @@ function narrowToScope(
     // the finding is filed at a spec directory, which survives the scope
     // filter, so the scoped evidence artifact named another spec's ids.
     unitComponentTcIds: result.unitComponentTcIds.filter(inScope),
+    // And again for the misfiled rows. `QFAI-ATDD-128` names them by id and is
+    // filed at a spec directory, so an unnarrowed list puts a sibling spec's
+    // rows in this run's message, refs and annotations — with the requested
+    // spec among the related files, the finding survives the later filter and
+    // carries the other spec's ids with it.
+    misfiledLevelTcIds: result.misfiledLevelTcIds.filter(inScope),
     // Same terms again: `QFAI-ATDD-118` names the deferred stories by id and is
     // filed at a spec directory, so an unnarrowed list would put a sibling
     // spec's deferrals in this run's evidence artifact.
@@ -628,18 +634,25 @@ export async function validateAtddCodeTraceability(
   // A `TC-*` row declaring L4 or L5. `catalog/test-layers.md` states that a
   // test case's `Level` stays within L1-L3 — L4's goal is a `CON-API-*` and
   // L5's is a `US-*` — so such a row is an obligation filed under the wrong ID
-  // type. The routing table already says a misfiled row should be "reported
-  // once, by the rule that names the real cause"; before this the constraint
-  // was stated and checked by nothing, and the row surfaced only as a fix
-  // instruction naming a directory the same document tells a reader not to use.
+  // type. The routing table routes it to that layer rather than rejecting it so
+  // the row is reported once, by the rule that names the real cause, instead of
+  // twice as uncovered in one directory and forbidden in another. This is that
+  // rule.
   if (result.misfiledLevelTcIds.length > 0) {
     const refs = result.misfiledLevelTcIds;
     const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
     const severity = newRuleSeverity(await resolveToolVersion(), TC_LEVEL_MISFILED_PROMOTION);
+    // The window says so in the finding itself, which is what the promotion
+    // policy asks of a rule inside one: an operator reading `--fail-on error`
+    // output can see the release the warning becomes a failure at.
+    const windowNote =
+      severity === "warning"
+        ? ` Reported as a warning until the ${TC_LEVEL_MISFILED_PROMOTION} release, and as an error from then on.`
+        : "";
     issues.push(
       issue(
         "QFAI-ATDD-128",
-        `${String(refs.length)} test case(s) declare a Level of L4/API or L5/E2E, which files a service-boundary contract or a journey as a test case: ${refs.join(", ")}`,
+        `${String(refs.length)} test case(s) declare a Level of L4/API or L5/E2E, which files a service-boundary contract or a journey as a test case: ${refs.join(", ")}.${windowNote}`,
         severity,
         home.file,
         "atddCodeTraceability.coverage.tcLevelMisfiled",

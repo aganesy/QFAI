@@ -294,13 +294,10 @@ export type AtddCodeTraceabilityResult = {
    * derives to either means the obligation is filed under the wrong ID type —
    * not that the test case is an L4/L5 test.
    *
-   * The routing table already routes such a row to `tests/api/**` or
-   * `tests/e2e/**` rather than rejecting it, and says why: so a misfiled row is
-   * reported once, by the rule that names the real cause, instead of twice as
-   * "uncovered in integration" and "forbidden in api". This is that rule. Until
-   * it existed the constraint was stated and checked by nothing, and the row
-   * was visible only through a fix instruction pointing at a directory the same
-   * document tells a reader not to use.
+   * The routing table sends such a row to `tests/api/**` or `tests/e2e/**`
+   * rather than rejecting it, so that the row is reported once by the rule
+   * naming the real cause (`QFAI-ATDD-128`) instead of twice as "uncovered in
+   * integration" and "forbidden in api".
    *
    * Every declared row, not only the ones missing an annotation: the defect is
    * the row's own `Level`, and covering it changes nothing about that.
