@@ -66,6 +66,7 @@
     "playwright": "^1.52.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^20.19.39",
     "@vitest/coverage-v8": "^2.1.8",

@@ -6,6 +6,15 @@ paths:
   skillsDir: .qfai/assistant/skills
   srcDir: src
   testsDir: tests
+  # Where the project's migrations live. Left unset because qfai cannot guess
+  # it, and a project without migrations is not in violation of anything.
+  #
+  # `qfai db-drift` is the only reader. It applies the DB contracts and the
+  # migrations to separate in-process databases and reports the columns they
+  # disagree about. With no value here it says the project is out of scope and
+  # stops, rather than comparing the contracts against an empty directory and
+  # calling every column a difference.
+  # migrationsDir: migrations
 validation:
   failOn: error
   require:
