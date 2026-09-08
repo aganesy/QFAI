@@ -36,6 +36,38 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   seeded before the column holds a split whose rows name nothing, so an error on
   the introducing release would fail every project carrying one.
 
+- **A scheduled lane that holds each published release body against the
+  changelog section it was built from** (#1336). `release.yml` checks out the
+  tagged commit, cuts the `## [X.Y.Z] - …` section out of `CHANGELOG.md` at
+  that SHA, and creates the release once. Nothing reads the file again, so an
+  entry added to a released section afterwards is in the repository and not in
+  the notes anyone reads. Measured on `v1.11.0`: its section has gained two
+  entries since the tag, one of them the promotion of `QFAI-CFG-001` to an
+  error — which is what turns a passing `validate --fail-on error` into a
+  failing one for anyone upgrading.
+
+  `scripts/check-release-notes.mjs` compares entries, not bytes. A body is
+  edited by hand and GitHub normalises line endings, so a text comparison would
+  report formatting as drift and bury the one thing that matters. An entry is a
+  top-level bullet's own line, where the bolded title lives, normalised for
+  whitespace.
+
+  The section is the authority for what a body must carry, not for what it may
+  not: a body holding an entry the section does not is an edit somebody made on
+  purpose, and reporting that would make every deliberate note a failure. A body
+  the release workflow had to cut at the 125,000-character cap is compared as a
+  prefix, since it legitimately lacks the tail of its section.
+
+  It reports and does not repair. Rewriting a published body is a wider
+  permission than any lane here holds, and would silently discard those
+  deliberate edits. `permissions:` is `contents: read` and the token only reads
+  each release.
+
+  `schedule` and `workflow_dispatch`, never `pull_request`. Drift is a property
+  of what is published, not of a branch, and a pull request that did not cause
+  it should not fail for it — so the check appears on no pull request and
+  branch protection needs no new context.
+
 - **The lint lane rejects a merge-conflict marker in a tracked file** (#1349).
   Nothing asked that question, and an evidence document reached the default
   branch carrying a `=======` separator, a superseded line and a `>>>>>>>`
