@@ -14,7 +14,7 @@ import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
-import { formatExitCodesSection } from "./lib/exitCodes.js";
+import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
@@ -32,8 +32,12 @@ import { resolveToolVersion } from "../core/version.js";
  * defect this branch closed: the `default:` arm used to print `Unknown command`
  * and exit 0. A `--flag`-shaped first token never reaches here — the parser
  * catches it, leaves `command` null, and the invalid-args branch above exits 2.
+ *
+ * Read from `EXIT_CODES.findings` rather than written as `1`. That entry's own
+ * documentation names this case among the ones it carries, so the number has a
+ * single source and cannot drift from the table `--help` prints.
  */
-const UNKNOWN_COMMAND_EXIT_CODE = 1;
+const UNKNOWN_COMMAND_EXIT_CODE = EXIT_CODES.findings;
 
 /**
  * The top-level commands the switch below dispatches. Kept as data so the
