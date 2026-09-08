@@ -875,18 +875,24 @@ describe("qfai-implement checkpoint verification contract", () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
       const item10 = gateItem(skill, 10);
+      // Item 10 states the obligation and cites the rule; the substitution is
+      // written in the contract it cites.
+      expect(item10).toContain("`references/record-contract.md`");
+      const record = (
+        await readFile(path.join(dir, "references/record-contract.md"), "utf-8")
+      ).replace(/\s+/g, " ");
 
-      expect(item10).toContain(
+      expect(record).toContain(
         "**A `## Shared-artifact re-verify` entry naming this row is read in place of the per-item observations it re-took**",
       );
-      expect(item10).toContain("not only to clear the `RED test hash` mismatch above");
-      expect(item10).toContain(
+      expect(record).toContain("not only to clear the `RED test hash` mismatch above");
+      expect(record).toContain(
         "items 5, 7-9 and 12 are satisfied by what it carries at the `Revision` it names",
       );
       // The block's revision is the one the substituted items agree on.
-      expect(item10).toContain("That `Revision` is then the one those items agree on.");
+      expect(record).toContain("That `Revision` is then the one those items agree on.");
       // Over-correction pin: the entry is still not rewritten, and item 3 keeps its own.
-      expect(item10).toContain("that row's own entry is deliberately not rewritten");
+      expect(record).toContain("that row's own entry is deliberately not rewritten");
 
       // The reference states the same rule from the boundary's side.
       const criteria = flat(

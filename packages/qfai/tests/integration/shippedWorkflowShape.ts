@@ -141,8 +141,12 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
   },
   {
     name: "qfai-validate.yml",
+    // Two runs in one job. `full` evaluates every gate group except drift, so
+    // on its own the lane cannot fail on a downstream edit to upstream SSOT.
+    // The `drift` profile is that gate alone, and the second run carries it.
     invocations: [
       { jobId: "validate", invocation: "qfai validate --profile full --fail-on error" },
+      { jobId: "validate", invocation: "qfai validate --profile drift --fail-on error" },
     ],
     lanes: [{ jobId: "validate", kind: "never-inert" }],
   },
@@ -603,10 +607,19 @@ function laneInvocationPins(): ShapePin[] {
       );
       continue;
     }
+    // Grouped per lane, because a lane may run more than one invocation and the
+    // observed side renders every run it finds, joined in order. Pinned one at
+    // a time, a single declared value would be compared against that joined
+    // string, and the second run would read as drift even when the contract is
+    // what asks for it.
+    const declaredByJob = new Map<string, string[]>();
     for (const { jobId, invocation } of file.invocations) {
-      const declared = parseDeclaredInvocation(invocation);
+      declaredByJob.set(jobId, [...(declaredByJob.get(jobId) ?? []), invocation]);
+    }
+    for (const [jobId, invocations] of declaredByJob) {
+      const declared = invocations.map(parseDeclaredInvocation);
       for (const render of INVOCATION_ATTRIBUTES) {
-        const expected = render(declared);
+        const expected = declared.map(render).join(" + ");
         pins.push({
           dimension: 5,
           site: `${file.name}:${jobId}`,

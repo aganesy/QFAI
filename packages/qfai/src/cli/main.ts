@@ -427,7 +427,8 @@ Options:
   --format <text|json>         doctor / prototyping preflight / discussion list: output format
   --active                     discussion list: show the active session pointer instead of listing packs
   --strict                     validate/report: exit 1 on warning or worse
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: select the validation profile
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
+                                drift runs the drift guard alone: the same gate tdd carries, without the completion obligations
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
   --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)
