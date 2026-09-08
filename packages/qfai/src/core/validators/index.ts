@@ -9,6 +9,7 @@ export { validateImportLiteEvidencePresence } from "./importLite.js";
 export { validateLayerCoverage } from "./layerCoverage.js";
 export { validateLayeredTraceability } from "./layeredTraceability.js";
 export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
+export { validateBusinessFlowTraceability } from "./businessFlowTraceability.js";
 export { validateContractReferences } from "./contractReferences.js";
 export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";

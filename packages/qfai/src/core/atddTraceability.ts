@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "./config.js";
+import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessFlow.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
 import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
@@ -388,6 +389,12 @@ export async function evaluateAtddCodeTraceability(
   const specTcIds = specRefs.tc;
   const tcLevels = specRefs.tcLevels;
 
+  // The flow-to-story map, so one `QFAI:BF-0001` on an E2E test can answer for
+  // every story that names that flow. Empty on a project that has declared no
+  // flow ids, which leaves every obligation exactly where it already was: the
+  // edge is additive, and nothing here can create an obligation or remove one.
+  const flowStories = storiesByFlow(await scanBusinessFlows(root, config));
+
   for (const file of scanResult.files) {
     const kind = resolveTestKind(file, {
       e2eRoot,
@@ -442,6 +449,19 @@ export async function evaluateAtddCodeTraceability(
       }
       if (kind === "e2e") {
         recordSpecRef(usRefs, ref.spec, `US-${ref.id}`, file);
+      }
+    }
+
+    // A flow annotation stands for the stories that cite the flow. Only under
+    // `e2e`, and only for a flow the document declares: an id that resolves to
+    // no story credits nothing, so the obligation stays and names itself.
+    if (kind === "e2e") {
+      for (const flowId of parseTestFlowRefs(text)) {
+        for (const story of flowStories.get(flowId) ?? []) {
+          if (hasSpecId(specUsIds, story.specId, story.usId)) {
+            recordSpecRef(usRefs, story.specId, story.usId, file);
+          }
+        }
       }
     }
 
