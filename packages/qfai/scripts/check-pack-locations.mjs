@@ -125,9 +125,17 @@ function readChangedFromGit(baseRef) {
   //     pack on the PR branch would otherwise slip through.
   const set = new Set();
   try {
-    const staged = execFileSync("git", ["diff", "--name-only", "--cached", "HEAD"], {
-      encoding: "utf-8",
-    });
+    const staged = execFileSync(
+      "git",
+      // Lower-case `d` EXCLUDES deletions. The lane reports a pack
+      // introduced outside its allowed root, and a removal is the
+      // opposite: without this, deleting a legacy pack from a
+      // disallowed location reports every file in it as a new
+      // violation, and the only way to land the removal is to keep
+      // the pack.
+      ["diff", "--name-only", "--diff-filter=d", "--cached", "HEAD"],
+      { encoding: "utf-8" },
+    );
     for (const line of staged.split("\n")) {
       const t = line.trim();
       if (t.length > 0) set.add(t);
@@ -149,6 +157,13 @@ function readChangedFromGit(baseRef) {
       // token is the path that should be considered.
       const t = line.trim();
       if (t.length === 0) continue;
+      // The two status codes come before the path, and `D` in either
+      // means the path is gone in that stage. Read from the untrimmed
+      // line, because the leading code of an unstaged change is a
+      // space that `trim` removes — which would shift ` D` to `D` and
+      // read a deletion's code as the path's first character.
+      const codes = line.slice(0, 2);
+      if (codes.includes("D")) continue;
       const arrow = t.indexOf(" -> ");
       const raw = arrow >= 0 ? t.slice(arrow + 4) : t.slice(2).trim();
       if (raw.length > 0) set.add(raw);
@@ -167,9 +182,11 @@ function readChangedFromGit(baseRef) {
   // case is already covered by the staged/status reads above.
   const effectiveBase = baseRef && baseRef.length > 0 ? baseRef : "origin/main";
   try {
-    const diff = execFileSync("git", ["diff", "--name-only", `${effectiveBase}...HEAD`], {
-      encoding: "utf-8",
-    });
+    const diff = execFileSync(
+      "git",
+      ["diff", "--name-only", "--diff-filter=d", `${effectiveBase}...HEAD`],
+      { encoding: "utf-8" },
+    );
     for (const line of diff.split("\n")) {
       const t = line.trim();
       if (t.length > 0) set.add(t);

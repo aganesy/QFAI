@@ -1630,10 +1630,13 @@ agents:
 
       **The status alone does not carry the exclusion; the `DR-*` does.** `exception`
       is reachable from **any** active status, so a row that reached `red`, proved its
-      oracle and was parked by a failing checkpoint at `refactor -> exception` is an
-      `exception` that already owed a proof — and owes it still. Apply the exclusion
-      only where the `DR-*` records that **both** proof forms were unavailable, which
-      is the finding that puts a row on branch 3. A `DR-*` recording any other anomaly
+      oracle and was later parked as an anomaly is an `exception` that already owed a
+      proof — and owes it still. A failing checkpoint is not one of the routes that
+      park it: the row stays at `refactor` and the repair is re-run, which
+      `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md#pass-criteria`
+      defines and nothing else does. Apply the exclusion only where the `DR-*` records
+      that **both** proof forms were unavailable, which is the finding that puts a row
+      on branch 3. A `DR-*` recording any other anomaly
       leaves the row's `Oracle proof` obligation exactly where its `red` left it, and
       absence or invalidity is REVISE there as anywhere. A `DR-*` naming no
       unavailability at all is already REVISE under "Branch 3 gets its own verdict",
