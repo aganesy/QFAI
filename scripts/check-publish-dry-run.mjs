@@ -28,7 +28,7 @@ const KNOWN_NOISE = [/requires you to be logged in/, /No \.npmignore file found/
  *
  *     npm error You cannot publish over the previously published versions: 1.10.0.
  *
- * `build` carries this repository's required status context, so the effect was that the required
+ * `build` carries this repository's required status context, so the required
  * context could not pass on any branch while the current version is published.
  */
 /**
@@ -79,12 +79,12 @@ export function verifyAlreadyPublished(pkgDir) {
 
   // The registry is NAMED here, and the query does not run inside the package.
   //
-  // Review finding [49]: `npm view` reads `.npmrc` from its cwd, and a pull request can add
-  // `packages/qfai/.npmrc` with `registry=<anything>`. A registry the pull request controls then
-  // answers this question — and the whole point of this function is that it is the ONE thing the
-  // pull request cannot write. With a fake registry returning the manifest's own name and
-  // version, the dry-run reported the already-published failure and this confirmed it, so the
-  // required `build` context went green over a version nobody had published.
+  // `npm view` reads `.npmrc` from its cwd, and a pull request can add
+  // `packages/qfai/.npmrc` with `registry=<anything>`. A registry the pull request controls would
+  // then answer this question — and the whole point of this function is that it is the ONE thing
+  // the pull request cannot write. With a fake registry returning the manifest's own name and
+  // version, the dry-run would report the already-published failure and this would confirm it, so
+  // the required `build` context would go green over a version nobody had published.
   //
   // `--registry` on the command line outranks every config file, and running from a directory
   // outside the repository means no project `.npmrc` is read at all. Both, because either alone
@@ -121,13 +121,14 @@ export function verifyAlreadyPublished(pkgDir) {
 /**
  * Whether a tarball was really built, established by a SEPARATE process and by a file on disk.
  *
- * The tolerated case rests on "the pack itself built", and the first version of this check read
- * that off the dry-run's own output — npm's `=== Tarball Details ===` banner. Review finding [06]
- * named why that establishes nothing: `prepublishOnly`, `prepack` and `prepare` all run BEFORE the
+ * The tolerated case rests on "the pack itself built", and reading
+ * that off the dry-run's own output — npm's `=== Tarball Details ===` banner — establishes
+ * nothing: `prepublishOnly`, `prepack` and `prepare` all run BEFORE the
  * pack, npm's own documentation says so, and a pull request can change any of them. A lifecycle
- * script printing that banner and the already-published sentence, then exiting non-zero, reproduced
- * the entire tolerated signature with no tarball in existence — and the required `build` context
- * went green over a pack that never ran. Text from the same child is not evidence about that child.
+ * script printing that banner and the already-published sentence, then exiting non-zero, would
+ * reproduce the entire tolerated signature with no tarball in existence — and the required `build`
+ * context would go green over a pack that never ran. Text from the same child is not evidence about
+ * that child.
  *
  * So this runs `npm pack --json` into a temporary directory and checks three things a lifecycle
  * script cannot fake between them:
@@ -156,19 +157,19 @@ export function verifyTarballIndependently(pkgDir) {
     return { ok: false, reason: `could not create a directory to pack into: ${String(error)}` };
   }
   try {
-    // `--ignore-scripts`, and it is the whole repair for review finding [50].
+    // `--ignore-scripts` is the whole repair here.
     //
     // npm writes its accounting as JSON to stdout, and every lifecycle script it runs writes to
-    // the SAME stdout. The parse below used to walk back from the last `]` for a slice that
-    // parsed — which a `postpack`, or a background child it starts that outlives the pack, can
-    // satisfy by appending an array of its own describing a tarball it has since swapped in. The
-    // size and both digests then come from the attacker's array and match the attacker's file,
-    // and every check below agrees.
+    // the SAME stdout. Walking back from the last `]` for a slice that
+    // parses — which a `postpack`, or a background child it starts that outlives the pack, can
+    // satisfy by appending an array of its own describing a tarball it has since swapped in — would
+    // let the size and both digests come from the attacker's array and match the attacker's file,
+    // with every check below agreeing.
     //
     // With scripts off there is no other writer on that stdout, so the whole of it is npm's and
     // the parse can demand exactly that. This is the INDEPENDENT proof — `npm publish --dry-run`
     // above still runs the lifecycle in full, and it is what would catch a `prepack` that fails.
-    // What this establishes is narrower and is the thing that was forgeable: that npm itself
+    // What this establishes is narrower, and is the forgeable thing above: that npm itself
     // packed an archive, and that the bytes on disk are the ones it accounted for.
     const packed = runNpm(["pack", "--json", "--ignore-scripts", "--pack-destination", outDir], {
       cwd: pkgDir,
@@ -183,10 +184,9 @@ export function verifyTarballIndependently(pkgDir) {
     // The WHOLE of stdout, parsed as one value. With `--ignore-scripts` npm is the only writer on
     // it, so anything else there is a reason to refuse rather than something to search past.
     //
-    // The previous version searched: it walked back from the last `]` for a slice that parsed,
-    // because `prepack` (tsup, ANSI colour codes containing `[`) wrote a build log in front of
-    // npm's array. Searching is what made a second array indistinguishable from the first —
-    // review finding [50].
+    // Searching — walking back from the last `]` for a slice that parses, to skip past a build
+    // log `prepack` (tsup, ANSI colour codes containing `[`) writes in front of npm's array — is
+    // what would make a second, attacker-supplied array indistinguishable from the first.
     let report;
     try {
       report = JSON.parse((packed.stdout ?? "").trim());
@@ -343,14 +343,14 @@ export function classifyDryRun(result, tarballProof, publishedProof) {
     // `prepare` all run BEFORE the pack —
     // npm's own documentation says so — and a pull request can change any of them. One that prints
     // `npm notice === Tarball Details ===` and the already-published wording, then exits non-zero,
-    // satisfied both patterns with no tarball ever built, and the required `build` context passed.
-    // Text a lifecycle script can print is not evidence about what npm did after printing it.
+    // would satisfy both patterns with no tarball ever built, and the required `build` context
+    // would pass. Text a lifecycle script can print is not evidence about what npm did after
+    // printing it.
     //
-    // BOTH conjuncts are now established outside this child, and the second one had to move for
-    // the same reason as the first. Hardening only the tarball left the tolerance as
-    // `forgeable-text AND unforgeable-tarball`, and two escapes were measured through the text:
-    // `npm pack` does not run `prepublishOnly` at all, so a `prepublishOnly` printing the
-    // registry's sentence and exiting 1 still reached `ok: true`; and a `prepack` can branch on
+    // BOTH conjuncts are established outside this child. Hardening only the tarball and leaving
+    // the tolerance as `forgeable-text AND unforgeable-tarball` would leave two escapes through
+    // the text: `npm pack` does not run `prepublishOnly` at all, so a `prepublishOnly` printing the
+    // registry's sentence and exiting 1 would still reach `ok: true`; and a `prepack` can branch on
     // npm's own `npm_command` to behave during `pack` and not during `publish`.
     //
     // So the already-published claim is put to the REGISTRY (`verifyAlreadyPublished`, a separate
@@ -401,11 +401,11 @@ export function classifyDryRun(result, tarballProof, publishedProof) {
 /**
  * The npm CLI that ships with the Node running this script, as an absolute path.
  *
- * Review finding [98]: this script runs through a `pnpm` script, so its PATH begins with
+ * This script runs through a `pnpm` script, so its PATH begins with
  * `node_modules/.bin` — a directory a pull request fills by adding a dependency. A workspace
  * package declaring a `npm` bin replaces every `npm` call here with a program that exits 0, and
- * the independent tarball and registry proofs below never run at all. Measured by the reviewer:
- * a fake `npm` first on PATH made this whole script exit 0 with no output.
+ * the independent tarball and registry proofs below never run at all: a fake `npm` first on PATH
+ * would make this whole script exit 0 with no output.
  *
  * The identity has to come from somewhere the pull request does not control. `process.execPath`
  * is the Node the runner installed, and npm sits beside it in the same installation — two

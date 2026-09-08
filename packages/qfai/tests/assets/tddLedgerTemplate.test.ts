@@ -211,6 +211,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         // it — so it sits with them rather than beside `TC-Refs` it derives
         // from. Position is free; `validateTddList` resolves by name.
         "BR-Ref",
+        // What tells the sibling rows of a split apart. Seeded here so a split
+        // never has to add a column to say which row covers which boundary —
+        // the same reason `Blocked-By` above ships in the header.
+        "Boundary",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
     });
@@ -1080,9 +1084,34 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       const template = await read(tree, TEMPLATE);
       expect(template).not.toContain("match the\nexisting rows to it by `Selector`");
       expect(template).toContain("**`Selector` is not that key.**");
-      expect(template).toContain(
-        "`TDD-ID` is the\nonly identity on these rows that nothing downstream rewrites",
+      // And the template says which cell is. `TDD-ID` is not an answer: it is a
+      // serial, so it says which row without ever saying which boundary.
+      expect(template).toContain("**`Boundary` is that key, paired with `TC-Refs`.**");
+      expect(checklists).toContain("key the pairing on `Boundary`");
+    });
+
+    it(`${tree}: Boundary is seeded upstream and rewritten by nothing downstream`, async () => {
+      // The cell exists to be the one thing a reseed can pair on. That holds
+      // only while the executing stage leaves it alone — the two cells it may
+      // rewrite, `Test file` and `Selector`, are exactly the ones a pairing
+      // would otherwise read.
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
+      expect(rules).toContain("`CON-API-Refs` and `Boundary` carry the row's obligation");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("Leave\n`Boundary` as you found it");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Seed each split row's `Boundary` while `Test file` is still");
     });
 
     it(`${tree}: system and acceptance are routed to the Integration group`, async () => {

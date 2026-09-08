@@ -3337,7 +3337,11 @@ describe("qfai init", () => {
       });
 
       await expect(access(gitkeep)).rejects.toThrow();
-      expect(output).toContain(path.join(".qfai", "assistant", "constitution", ".gitkeep"));
+      // POSIX needle, because that is what the report carries: every path
+      // `qfai init` prints goes through `toPosixRelative`, and two assertions
+      // in this file already pin the reports as backslash-free. A `path.join`
+      // needle agrees with that only on a platform whose separator is `/`.
+      expect(output.replaceAll("\\", "/")).toContain(".qfai/assistant/constitution/.gitkeep");
       expect(output).toMatch(/removed legacy files/);
     } finally {
       await removeTempTree(root);

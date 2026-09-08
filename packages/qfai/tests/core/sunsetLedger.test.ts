@@ -160,6 +160,12 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // error. Promoting it would fail every shallow CI clone on the pin date for
   // the shape of its checkout rather than for anything in the repository.
   "QFAI-TRACE-003",
+  // A carrier whose suite is bound through a variable, so what runs is decided
+  // at runtime. Binding the suite is the ordinary way to write a probe that
+  // needs a target the run may not have, so the finding says the coverage gate
+  // cannot tell whether those tests execute — not that the file is wrong. There
+  // is no release at which a legitimate probe should fail the build.
+  "QFAI-ATDD-124",
 ];
 
 // tests/core/<this file> -> packages/qfai
