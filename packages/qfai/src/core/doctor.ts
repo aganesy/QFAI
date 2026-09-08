@@ -1219,14 +1219,19 @@ async function inspectSkillsIntegrity(
 /**
  * Whether the integration wrappers a skill is loaded through actually resolve.
  *
- * This asks the same question `validate` asks, through the same code, because
- * the two answering differently is the defect. `skills.integrity` compares
- * CONTENT and passes on a tree whose wrappers are broken: the targets resolve
- * for git and for a content hash, while the OS will not follow the link. Both
- * were right, and only one of them was wired to anything, so `doctor` reported
- * a healthy tree while `validate` failed it — and `doctor` is where an operator
- * looks. Reading it as "the environment is fine, so the error must be real" is
- * the reading that costs the most time.
+ * Asks the question `validate` asks, through the same code and at the severity
+ * that code chose, so the two cannot disagree about one tree. `skills.integrity`
+ * answers a different question — whether the CONTENT matches — and a tree whose
+ * wrappers are broken passes it, because the canonical documents behind them are
+ * untouched.
+ *
+ * Severity is carried, not decided here. `QFAI-LINK-001` is a `warning` when the
+ * canonical document is readable and an `error` when it is not, and choosing one
+ * of them for both would put this check and the gate on opposite sides of
+ * `--fail-on error` for the same tree.
+ *
+ * The remedy is carried for the same reason: it depends on which damage the
+ * validator found, and several shapes are not fixed by re-running `init` at all.
  *
  * A wrapper that was never created is not damage and is not reported here; the
  * validator draws that line, and this check inherits it by not drawing its own.
@@ -1262,19 +1267,29 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   }
 
   const paths = broken.flatMap((issue) => issue.refs ?? []);
+  // The worse of the severities the validator returned. It reports the two
+  // damage classes separately — a readable canonical document is a `warning`,
+  // an unreadable one an `error` — and a tree can hold both.
+  const severity: DoctorSeverity = broken.some((issue) => issue.severity === "error")
+    ? "error"
+    : "warning";
   return {
     id: "integration.links",
-    // `error`, matching the validator: a skill is loaded through this path and
-    // nothing else, so a broken wrapper is not advisory — those skills are not
-    // running at all.
-    severity: "error",
+    severity,
     title,
     message:
       `${String(paths.length || broken.length)} integration wrapper(s) do not resolve, so the ` +
-      "skills and agents behind them are not being loaded. Run qfai init --force to rewrite them.",
+      "skills and agents behind them are not being loaded. `qfai validate` reports the same " +
+      "paths as QFAI-LINK-001, with the repair for the damage it found.",
     details: {
       wrappers: paths,
-      nextActions: ["Run qfai init --force to rewrite the integration wrappers"],
+      // The validator's own remedy, because it depends on which damage this is:
+      // a flattened link is relinked by `qfai init`, while a canonical document
+      // that is itself unreadable or a wrapper occupied by a real directory is
+      // not repaired by re-running `init` at all.
+      nextActions: broken
+        .map((issue) => issue.suggested_action)
+        .filter((action): action is string => action !== undefined && action.length > 0),
     },
   };
 }
