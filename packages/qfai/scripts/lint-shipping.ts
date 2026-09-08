@@ -48,7 +48,7 @@ type PatternRule = {
    *     `scripts/check-no-internal-version-leakage.sh` so the same
    *     leakage classes (spec-0010+, internal `vN.M[.P]`, internal
    *     trace IDs) are caught at lint time on source instead of only
-   *     after a build (PR #206 review Ntbp option B).
+   *     after a build.
    */
   appliesTo: ReadonlyArray<Target>;
   /**
@@ -107,7 +107,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     name: "framework-source-path",
     // The `(?<!:\/\/\S*)` guard keeps the relative-path arm off URLs:
     // `https://example.com/core/api.ts` is an external document, not a
-    // citation of this framework's tree (PR #1019 review). The
+    // citation of this framework's tree. The
     // `packages/qfai/` arm carries no such guard — that literal names
     // the framework's own source even inside a link.
     re: /packages\/qfai\/|(?<!:\/\/\S*)\b(?:src\/)?(?:core|cli)\/[A-Za-z0-9_./-]*\.ts\b/,
@@ -122,7 +122,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // like a markdown line does.
     scanShippedComments: true,
   },
-  // PR #206 review Ntbp / NwM- / Nv2- / Nv_Q: catch internal-ID and
+  // Catch internal-ID and
   // internal-version leakage in src JSDoc BEFORE it ships via
   // `dist/*.d.ts`. tsup strips comments from `.js` outputs but RETAINS
   // them in `.d.ts` declarations, so JSDoc is part of the distributed
@@ -158,7 +158,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
-    // PR #206 review NzSK: scope mirrors `INTERNAL_SPEC_RE` — only
+    // Scope mirrors `INTERNAL_SPEC_RE` — only
     // spec-0010+ paths are forbidden; spec-0001..0009 sample-tier
     // paths in src JSDoc are tolerated (matches the leakage script
     // and smoke test, which both implicitly cover paths via the
@@ -205,7 +205,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
-    // PR #208 11th late-review wave (codex r3265386185, LOW): catch
+    // Catch
     // internal open-question IDs (OQ-NNNN-NNNN) at the same pre-build
     // layer that already catches DEC / DR / CAP / spec internal IDs.
     // OQ entries live in `.qfai/specs/spec-NNNN/08_Open-questions.md`
@@ -344,7 +344,7 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
   const applicableRules = PATTERNS.filter((rule) => rule.appliesTo.includes(targetCategory));
   // src/*.ts files get a SECOND set of rules that run ON comment lines
   // (the inverse of the comment-skip below). These catch JSDoc leakage
-  // into dist/*.d.ts (PR #206 review Ntbp).
+  // into dist/*.d.ts.
   const srcCommentRules =
     targetCategory === "src"
       ? PATTERNS.filter((rule) => rule.appliesTo.includes("src-comment"))
@@ -375,7 +375,7 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
       // `init-runtime`, so it has NO `src-comment` rules — but its
       // comments are copied verbatim into the consuming repo, so the
       // reader-facing rules still apply there, exactly as they do for
-      // YAML comments below (PR #1019 review).
+      // YAML comments below.
       const tsCommentRules =
         targetCategory === "src"
           ? srcCommentRules
@@ -404,7 +404,7 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // install-site assumptions — EXCEPT for rules flagged
     // `scanShippedComments`, which are about what a human reader can open.
     // Those comments ship verbatim via `qfai init`, so they keep running
-    // here (PR #1019 review).
+    // here.
     const isYaml = absolutePath.endsWith(".yaml") || absolutePath.endsWith(".yml");
     const lineRules =
       isYaml && YAML_COMMENT_LINE_RE.test(line)
