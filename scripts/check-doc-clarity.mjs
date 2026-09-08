@@ -10,9 +10,9 @@
  * full scope (which also asks for plain wording and no process narration):
  * those are judgment calls a human or an LLM review makes well and a
  * regex makes badly. What a regex makes well is a small set of shapes
- * that never legitimately appear in either surface — a `#1234` shorthand,
- * a `codex r1234567` review reference, a "12th-wave" label — so that is
- * what this checks.
+ * that never legitimately appear in either surface — a numbered-hash
+ * shorthand, a review-tool comment reference, an ordinal wave label —
+ * so that is what this checks.
  *
  * Two scopes:
  *   --scope changed (default) — only lines ADDED or MODIFIED versus the
@@ -69,14 +69,15 @@ const MARKDOWN_EXTENSIONS = new Set([".md"]);
  * prose line in Markdown. Kept to identifiers with no legitimate reading
  * in either surface:
  *
- *   - `#1234` (an issue or PR shorthand) — excludes a preceding word
- *     character or `&` so it does not fire on an HTML entity or a
- *     hex-adjacent token.
- *   - `GH-1234`, `PR #1234`, `pull request #1234`.
- *   - `codex r1234567` — the review tool's own comment id.
- *   - `12th-wave` — an ordinal label from a retired review process.
- *   - `review ABCD / EFGH` — a short-code review reference list.
- *   - `review finding [12]` — a bracketed finding number.
+ *   - a hash mark directly followed by digits (an issue or PR shorthand) —
+ *     excludes a preceding word character or `&` so it does not fire on an
+ *     HTML entity or a hex-adjacent token.
+ *   - "GH-" or "PR #" or "pull request #" followed by digits.
+ *   - the review tool's own comment id, "codex r" followed by digits.
+ *   - an ordinal "wave" label from a retired review process, e.g. twelfth.
+ *   - a short-code review reference list, "review " followed by two codes
+ *     joined by a slash or comma.
+ *   - a bracketed finding number after the words "review finding".
  */
 const PATTERNS = [
   { name: "issue-or-pr-number", re: /(?<![\w&])#\d{2,6}\b/g },
