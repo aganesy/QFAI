@@ -168,9 +168,78 @@ const HARDCODED_HELPERS = new Set(["issue", "makeIssue"]);
 const SEVERITY_ARG_INDEX = 2;
 const SUGGESTED_ACTION_ARG_INDEX = 7;
 const NON_ERROR_SEVERITY_RE = /^"(?:warning|info)"$/;
+/** Comment text an argument carries, which is not part of its expression. */
+const COMMENT_RE = /\/\/[^\n]*|\/\*[\s\S]*?\*\//g;
 
 function isPresentValue(value: string): boolean {
   return value !== "" && value !== "undefined";
+}
+
+/**
+ * The two branches of a conditional expression, or `null` when the text is not
+ * one at the top level.
+ *
+ * Scanned rather than matched because the branches may themselves contain `?`
+ * and `:` — a nested conditional, an optional chain, a nullish coalesce, or a
+ * type annotation inside a nested call. The split is the `:` that closes the
+ * first top-level `?`.
+ */
+function conditionalBranches(text: string): [string, string] | null {
+  let depth = 0;
+  let open = -1;
+  let pending = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"' || ch === "'" || ch === "`") {
+      i = skipString(text, i);
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") {
+      depth++;
+      continue;
+    }
+    if (ch === ")" || ch === "]" || ch === "}") {
+      depth--;
+      continue;
+    }
+    if (depth !== 0) continue;
+    if (ch === "?") {
+      // `?.` and `??` are not conditionals, and both consume the next char.
+      if (text[i + 1] === "." || text[i + 1] === "?") {
+        i++;
+        continue;
+      }
+      if (open === -1) open = i;
+      pending++;
+      continue;
+    }
+    if (ch === ":" && pending > 0) {
+      pending--;
+      if (pending === 0) {
+        return [text.slice(open + 1, i), text.slice(i + 1)];
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Whether a severity argument provably never produces `error`.
+ *
+ * A rule whose severity depends on what it found writes a conditional rather
+ * than a literal. Reading only literals put every such rule into the
+ * error-capable census, which then demanded catalog metadata and a remediation
+ * for a code that cannot reach `error` down any branch.
+ *
+ * A conditional is read only when every branch is itself a non-error severity.
+ * Anything else keeps the conservative default and stays error-capable: the
+ * census should err towards demanding metadata rather than skipping it.
+ */
+function isNonErrorSeverity(expression: string): boolean {
+  const text = expression.replace(COMMENT_RE, " ").trim();
+  if (NON_ERROR_SEVERITY_RE.test(text)) return true;
+  const branches = conditionalBranches(text);
+  return branches !== null && branches.every((branch) => isNonErrorSeverity(branch));
 }
 
 /**
@@ -245,7 +314,7 @@ function readCallSites(source: string, constants: Map<string, string>): Emission
       code,
       // A computed severity expression is treated as error-capable: the catalog
       // requirement should err towards demanding metadata, not towards skipping it.
-      errorCapable: !NON_ERROR_SEVERITY_RE.test(severity),
+      errorCapable: !isNonErrorSeverity(severity),
       hasSuggestedAction: isPresentValue(suggested),
     });
   }
@@ -282,7 +351,7 @@ function readObjectSites(source: string, constants: Map<string, string>): Emissi
 
     sites.push({
       code,
-      errorCapable: !NON_ERROR_SEVERITY_RE.test(severity),
+      errorCapable: !isNonErrorSeverity(severity),
       hasSuggestedAction: isPresentValue(properties.get("suggested_action") ?? ""),
     });
   }
@@ -490,7 +559,7 @@ function readFactorySites(
         if (code === null) continue;
         sites.push({
           code,
-          errorCapable: !NON_ERROR_SEVERITY_RE.test(readBinding(template.severity, args)),
+          errorCapable: !isNonErrorSeverity(readBinding(template.severity, args)),
           hasSuggestedAction: isPresentValue(readBinding(template.suggestedAction, args)),
         });
       }

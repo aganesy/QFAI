@@ -68,6 +68,7 @@
     "tests/assets/implementWorklogObligation.test.ts",
     "tests/assets/initUpgradeCopySemantics.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
+    "tests/assets/mdschemaSchemas.test.ts",
     "tests/assets/openQuestionRouting.test.ts",
     "tests/assets/outputLanguageSingleSource.test.ts",
     "tests/assets/packGateQualifier.test.ts",
@@ -80,6 +81,7 @@
     "tests/assets/researchFirstProtocolWiring.test.ts",
     "tests/assets/retiredSpecSelection.test.ts",
     "tests/assets/retractedClaims.test.ts",
+    "tests/assets/reviewIgnoreOwnership.test.ts",
     "tests/assets/reviewPackSeal.test.ts",
     "tests/assets/reviewPayloadSchemaShipped.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
@@ -203,6 +205,7 @@
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/deriveE2eCallsites.test.ts",
+    "tests/scripts/deriveCliMessageAllowlistCount.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/freshInitFindings.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
@@ -227,6 +230,7 @@
     "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
+    "tests/unit/promotionReleaseNotes.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
@@ -245,6 +249,7 @@
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts",
+    "tests/assets/gateItemBudget.test.ts",
     "tests/core/gitChanges.test.ts"
   ]
 }

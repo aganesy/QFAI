@@ -1232,7 +1232,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
+  // Re-pinned when the lane gained the drift gate and the conditional checkout
+  // depth that gate needs.
+  ["qfai-validate.yml", "d4968abdb0951ff7210fc400aaecb3bea8cb52e3a46f4bbb23941b55f6a6df37"],
   ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
 ]);
 
@@ -1839,8 +1841,12 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
     '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
   ],
   [
+    // Re-pinned when the drift gate below was added. The checkout asks for full
+    // history on a pull request, because the gate compares this branch against
+    // its base and a shallow clone has no merge base to compare from. A push
+    // keeps the shallow fetch, where the gate does not run.
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1869,6 +1875,14 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-validate.yml#validate",
     '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+  ],
+  [
+    // The `full` profile above evaluates every gate group except drift, so on
+    // its own the lane cannot fail on a downstream edit to upstream SSOT. Pull
+    // requests only: the gate compares against a base branch and says nothing
+    // when it cannot resolve one.
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate (drift protocol)","if":"github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
   ],
 ];
 

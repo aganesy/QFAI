@@ -512,10 +512,16 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     for (const finding of laneFindings) {
       expect(finding.expected).not.toEqual(finding.actual);
       expect(report).toContain(finding.expected);
-      expect(
-        shapeValueLiterals().some((literal) => literal.includes(finding.expected)),
-        `the expected value "${finding.expected}" is not one the declared shape owns`,
-      ).toBe(true);
+      // A lane that runs more than one invocation renders its attributes
+      // joined, so the expected value is composed of one part per run. Each
+      // part still has to come from the shape module — the composition is the
+      // differ's, the values are not.
+      for (const part of finding.expected.split(" + ")) {
+        expect(
+          shapeValueLiterals().some((literal) => literal.includes(part)),
+          `the expected value "${part}" is not one the declared shape owns`,
+        ).toBe(true);
+      }
     }
 
     // The TC's "exit 1": the verdict assertion that passes on a clean tree

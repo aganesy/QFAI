@@ -270,7 +270,7 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       expect(notice?.message).not.toContain("is a partial profile");
       expect(notice?.message).toContain("evaluated every gate a full scan covers");
       expect(notice?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
-      expect(notice?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+      expect(notice?.message).toContain("QFAI-DRIFT-* (`--profile drift`)");
     });
   });
 
@@ -286,7 +286,10 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
       expect(notice?.severity).toBe("info");
       expect(notice?.message).toContain("QFAI-DRIFT-*");
-      expect(notice?.message).toContain("--profile tdd");
+      // The narrow profile, not the completion gate: `tdd` evaluates the guard
+      // too and asks for everything a finished branch owes with it, so it is
+      // not the run to name to someone who wants the drift answer now.
+      expect(notice?.message).toContain("--profile drift");
     });
   });
 

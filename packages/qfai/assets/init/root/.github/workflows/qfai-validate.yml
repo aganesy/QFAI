@@ -8,6 +8,10 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
+# `full` evaluates every gate group except drift, so a second step runs
+# `qfai validate --profile drift --fail-on error` on pull requests. Without it
+# nothing here could fail on a downstream edit to upstream SSOT.
+#
 # What this file needs from your repository, and how it behaves when it does
 # not get it:
 #
@@ -52,6 +56,11 @@ jobs:
           # Nothing in this job pushes back, so the token never needs to
           # outlive the checkout step.
           persist-credentials: false
+          # The drift gate below compares this branch against its base, and
+          # that comparison needs the merge base — which a shallow clone does
+          # not have. Full history on a pull request; a push keeps the shallow
+          # fetch, because the gate does not run there.
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
       - name: Resolve the package manager (pnpm route fails closed)
         id: package-manager
         shell: bash
@@ -384,3 +393,15 @@ jobs:
           fi
       - name: qfai validate
         run: npx qfai validate --profile full --fail-on error
+      # The `full` profile above evaluates every gate group except drift, so on
+      # its own this workflow cannot fail on a downstream edit to upstream SSOT
+      # — the one thing the drift protocol calls non-negotiable. The `drift`
+      # profile is that gate on its own; `tdd` carries it too, along with the
+      # completion obligations, which a branch still in flight cannot meet.
+      #
+      # Pull requests only: the gate compares against `baseBranch` from
+      # qfai.config.yaml (default `origin/main`) and says nothing when it cannot
+      # resolve it, so a run without a base branch would pass without checking.
+      - name: qfai validate (drift protocol)
+        if: github.event_name == 'pull_request'
+        run: npx qfai validate --profile drift --fail-on error

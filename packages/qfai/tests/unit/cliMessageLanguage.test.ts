@@ -158,11 +158,27 @@ describe("operator-facing CLI message language", () => {
       (total, entries) => total + entries.length,
       0,
     );
+    // The two directions get different advice on purpose. A shrink is always
+    // owed and the re-pin is the whole answer. A growth is the case this number
+    // exists to stop, so it is not sent to a command that would clear it: the
+    // one growth that is legitimate takes a flag, named here rather than
+    // offered as the default step.
+    const rePin =
+      "Run `node scripts/pin-cli-message-allowlist-count.mjs` and land it in the same commit. " +
+      "If this branch changed no entry, the drift is inherited: a merge carries the entries of " +
+      "both parents and neither parent's pin counted them together, so no branch owed this " +
+      "re-pin. Run the same command and land it on its own — it is a re-measurement, not a " +
+      "correction of your change.";
     expect(
       counted,
       counted > ALLOWLISTED_MESSAGE_COUNT
-        ? "the allowlist grew. A new operator-facing message must be English (cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, raise this number in the same change so the addition is reviewed"
-        : "the allowlist shrank — lower this number in the same change, so the migration's progress cannot be spent on a later addition",
+        ? "the allowlist grew. A new operator-facing message must be English " +
+            "(cli-ux-guidelines.md, Message Language), so translate the messages the added entries " +
+            "name and delete them rather than raising this number. The one growth that is not that " +
+            "is a merge taking entries the base added: re-pin with " +
+            "`node scripts/pin-cli-message-allowlist-count.mjs --allow-increase`, which raises the " +
+            "number as a line a reviewer is asked about."
+        : `the allowlist shrank, so the migration's progress could otherwise be spent on a later addition. ${rePin}`,
     ).toBe(ALLOWLISTED_MESSAGE_COUNT);
   });
 
