@@ -81,6 +81,7 @@
     "tests/assets/researchFirstProtocolWiring.test.ts",
     "tests/assets/retiredSpecSelection.test.ts",
     "tests/assets/retractedClaims.test.ts",
+    "tests/assets/reviewIgnoreOwnership.test.ts",
     "tests/assets/reviewPackSeal.test.ts",
     "tests/assets/reviewPayloadSchemaShipped.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
