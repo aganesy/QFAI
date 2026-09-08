@@ -29,7 +29,7 @@ const MODERN_FLOWCHART_RE = /^\s*flowchart\s+(TD|TB|BT|RL|LR)\s*$/m;
 /** Matches terminal nodes: nodes whose display text contains "End", "終了", or "完了" */
 const TERMINAL_TEXT_RE = /\b(?:end|terminal|finish|complete|done|終了|完了)\b/i;
 
-/** Matches error nodes by prefix or :::error class */
+/** Matches error nodes by prefix or:::error class */
 const ERROR_NODE_CLASS_RE = /:::\s*error\b/;
 const ERROR_PREFIX_RE = /^err-/;
 

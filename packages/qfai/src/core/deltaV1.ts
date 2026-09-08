@@ -410,7 +410,7 @@ function parseVerificationPlan(body: string | null): {
   // parser runs over adopter trees it does not control.
   //
   // A fence is worth accepting because the unfenced form is not inert Markdown.
-  // A YAML comment indented by two spaces — `  # unit | integration | ...` — is
+  // A YAML comment indented by two spaces — `  # unit | integration |...` — is
   // a legal ATX heading under CommonMark, so an unfenced plan renders its own
   // comments as top-level headings on GitHub. The shipped template hit exactly
   // that. Reading the fence lets the template be correct Markdown without

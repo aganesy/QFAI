@@ -27,6 +27,45 @@ const cells = (s: string): string => s.replace(/\s+/g, " ");
 
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/change-request.md";
 
+const RESET = "assistant/skills/qfai-implement/references/change-request-reset.md";
+
+describe("a withdrawn Change Request releases the rows it parked", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the preflight enumerates every in-scope CR, not only the live ones`, async () => {
+      // A `rejected` / `superseded` CR authorises no reset, so a preflight that
+      // enumerates only the approved and open ones never sees that its blocked
+      // set has gone — and the rows it parked have no other exit.
+      const reset = flat(await read(tree, RESET));
+
+      expect(reset).toContain("**Every one of them, whatever its `Status`.**");
+      expect(reset).toContain("the `rejected` and `superseded` ones are what step 3 reads");
+    });
+
+    it(`${tree}: the released row resumes rather than taking the reset`, async () => {
+      // The reset's `DR-ID` records an approved change that invalidated the
+      // row's obligation. A withdrawn change invalidated nothing, so writing it
+      // there would send the next reader looking for an obligation that was
+      // never replaced.
+      const reset = flat(await read(tree, RESET));
+
+      expect(reset).toContain("A row no longer in the union takes `blocked -> todo`");
+      expect(reset).toContain("`Blocked-By` cleared, **no `DR-ID`**");
+      expect(reset).toContain("the round's `Resumed-from-blocked` recorded");
+    });
+
+    it(`${tree}: a row still blocked by another CR is not released`, async () => {
+      // The union, not this CR's own list: a row can sit in several blocked
+      // sets, and one of them resolving says nothing about the others.
+      const reset = flat(await read(tree, RESET));
+
+      expect(reset).toContain(
+        "A CR that resolved without authorising a reset leaves that union by the same rule an approved one does.",
+      );
+      expect(reset).toContain("Remove only the resolved CR's ID from `Blocked-By`");
+    });
+  }
+});
+
 describe("a Change Request is a defined artifact", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the template carries the approval-record fields`, async () => {
@@ -55,7 +94,7 @@ describe("a Change Request is a defined artifact", () => {
       expect(drift).toContain("fill `Resolution` and set `Applied at`");
 
       // The gate cites the condition from SKILL.md; the condition itself is
-      // stated in the reference under the progressive-disclosure split (#414).
+      // stated in the reference under the progressive-disclosure split.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(flat(skill)).toContain("`Applied at` is populated — approval alone");
 
@@ -112,7 +151,7 @@ describe("a Change Request is a defined artifact", () => {
 
     it(`${tree}: the DR-ID column and the reset rule agree`, async () => {
       // The ledger column table moved out of SKILL.md into this reference under
-      // the progressive-disclosure budget (#414), so the column definition is
+      // the progressive-disclosure budget, so the column definition is
       // asserted where it now lives.
       const ledger = await read(
         tree,
@@ -135,7 +174,7 @@ describe("a Change Request is a defined artifact", () => {
 
     it(`${tree}: a retained CR-ID does not stand in for an exception's DR-ID`, async () => {
       // Exception handling moved alongside the column table into the ledger
-      // reference (#414); assert it where it lives.
+      // reference; assert it where it lives.
       const ledger = await read(
         tree,
         "assistant/skills/qfai-implement/references/execution-ledger.md",
@@ -472,7 +511,7 @@ describe("a Change Request is a defined artifact", () => {
       // A single positive definition of "resolved": everything else is
       // unresolved, so a half-filled record cannot slip through. The gate cites
       // it from SKILL.md; the conditions themselves live in the reference under
-      // the progressive-disclosure split (#414).
+      // the progressive-disclosure split.
       expect(skill).toContain(
         "`references/change-request-reset.md#when-an-in-scope-cr-counts-as-resolved`",
       );

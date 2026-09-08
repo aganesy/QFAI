@@ -1,7 +1,7 @@
 /**
  * `--format github` writes workflow commands, and a workflow command is a line protocol.
  *
- * Review finding [40]. Every field in `::error file=...::message` is parsed by position and by
+ * Every field in `::error file=...::message` is parsed by position and by
  * separator, so any value interpolated into it that carries a newline, a `%`, a `:` or a `,` is not
  * data — it is syntax. The message half was escaped from the start; the location metadata was not.
  *

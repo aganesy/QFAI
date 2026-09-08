@@ -69,12 +69,11 @@ export async function runCanonicalUixValidators(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  // The admission probe used to be `<root>/01_Spec.md`, and both call sites
-  // pass the repo root. `01_Spec.md` is a *spec* file that no discussion pack
-  // contains — a pack has `01_Context.md`, which is what everything behind this
-  // gate then reads. So every validator behind this gate was inert on every
-  // documented invocation, including
-  // `qfai validate --profile discussion --fail-on error`.
+  // An admission probe of `<root>/01_Spec.md` would be inert on every
+  // documented invocation, including `qfai validate --profile discussion
+  // --fail-on error`: `01_Spec.md` is a *spec* file that no discussion pack
+  // contains — a pack has `01_Context.md`, which is what everything behind
+  // this gate reads, and both call sites pass the repo root.
   const packRoots = await resolvePackRoots(root, config);
   if (packRoots.length === 0) {
     return [];

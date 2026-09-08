@@ -378,12 +378,12 @@ const LOCK_POLL_MS = 75;
  * How long a waiter keeps trying before it gives up. It must exceed `LOCK_STALE_MS`, or the
  * reclaim path is unreachable from inside a single run.
  *
- * It did not: patience used to be an ITERATION COUNT, 200 polls, and at the 25ms poll of the day
- * that was five seconds against a ten-second ceiling — so a lock left by a run killed less than
- * five seconds earlier could never be judged abandoned before the waiter gave up. `qfai init`
- * then threw `another process is writing the record` and its rollback DELETED the workflows it
- * had just copied, over a holder that no longer existed. The constant's own promise, that a
- * crashed run cannot wedge the command permanently, was true only across runs and not within one.
+ * It did not: an ITERATION COUNT of 200 polls, at the 25ms poll of the day, is five seconds
+ * against a ten-second ceiling — so a lock left by a run killed less than five seconds earlier
+ * could never be judged abandoned before the waiter gave up. `qfai init` would then throw
+ * `another process is writing the record`, and its rollback would delete the workflows it had
+ * just copied, over a holder that no longer exists. An iteration count keeps the promise that a
+ * crashed run cannot wedge the command permanently only across runs, never within one.
  *
  * A DURATION rather than that iteration count, and the difference is the invariant above. As
  * `attempts * poll` the ceiling comparison held only at the nominal sleep, so it was restated
@@ -412,8 +412,7 @@ const LOCK_PATIENCE_MS = 15_000;
  * a property of the move. It is a property of how long the reclaimer waits to be scheduled, and
  * a CI runner sharing a box with six other vitest projects moves it. A run that exceeded the
  * budget was told `the provenance lock was replaced between publishing it and reading it back`
- * and failed, about a lock that had been restored under it, on a documentation-only pull request
- * (#1190).
+ * and failed, about a lock that had been restored under it, on a documentation-only pull request.
  *
  * What this budget covers is now only the window in which the name yields NO OBJECT: any object
  * at the name answers the question immediately, matching or not. "No object" is what `lstat`
@@ -1015,8 +1014,7 @@ export function createWorkflowProvenanceEntry(
 /**
  * The record's bytes, or `undefined` for anything that is not a regular file within the ceiling.
  *
- * The posture and the reasons live in `shared/boundedRead.ts`, which two other call sites needed
- * identically — PR #794's review found the same defect in each of them separately.
+ * The posture and the reasons live in `shared/boundedRead.ts`, which two other call sites share.
  */
 async function readBoundedRecord(filePath: string): Promise<string | undefined> {
   const bytes = await readBoundedRegularFile(filePath, MAX_RECORD_BYTES);

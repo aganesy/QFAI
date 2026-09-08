@@ -406,8 +406,8 @@ async function readDirectoryInto(current, sources) {
     entries = await readdir(current, { withFileTypes: true });
   } catch (error) {
     // A tree that is not there contributes nothing, and neither does one the OS refuses to descend.
-    // `ELOOP` was previously unhandled, so a symlink cycle answered exit 3 — "no measurement taken" —
-    // instead of being skipped and measured around.
+    // Leaving `ELOOP` unhandled would answer exit 3 — "no measurement taken" — for a symlink cycle
+    // instead of skipping it and measuring around it.
     if (isMissing(error) || isLoop(error)) return found;
     throw error;
   }
@@ -590,7 +590,7 @@ function parseArguments(args) {
     const argument = args[index];
     const inline = /^--spec=(.*)$/.exec(argument ?? "");
     if (argument === "--spec" || inline !== null) {
-      // Repeated, this used to be last-wins with no message: `--spec 0017 --spec 0018` scoped to 0018
+      // Repeated last-wins with no message would let `--spec 0017 --spec 0018` scope to 0018
       // silently. That is the same shape this function exists to close — an invocation whose scope is
       // not what it appears to be — one turn further in, so it is a usage error like any other.
       if (sawSpecFlag) {

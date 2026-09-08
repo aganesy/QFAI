@@ -57,12 +57,12 @@ describe("TC-0013-0002: Contract Index Alignment", () => {
 
 // TC-0013-0003: Usable-Source Preflight Stop
 //
-// Restated under CR-20260903-0001 (#1070). The old assertion was that SKILL.md
-// contains the token `discussion-pack` and mentions preflight, which was true of
-// a stage that stopped on any thin pack. The obligation is now the narrower one:
-// an incomplete or contradictory pack continues, and only the absence of every
-// source stops the stage. Both directions are asserted, because the token check
-// would pass on a stage that had lost either half.
+// The obligation is the narrower one: an incomplete or contradictory pack
+// continues, and only the absence of every source stops the stage. Asserting
+// only that SKILL.md contains the token `discussion-pack` and mentions
+// preflight would also pass a stage that stopped on any thin pack. Both
+// directions are asserted, because the token check would pass on a stage
+// that had lost either half.
 describe("TC-0013-0003: Usable-Source Preflight Stop", () => {
   it("SKILL.md stops Stage 0 only when no usable source exists", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
