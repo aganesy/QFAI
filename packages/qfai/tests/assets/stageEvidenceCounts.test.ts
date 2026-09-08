@@ -729,7 +729,7 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // still checks the COMMITTED LITERAL against the tree — sharing the
     // derivation does not make it self-referential, because the literal is not
     // derived from anything at read time.
-    const { deriveE2eCallsites, formatRecordLine, recordedE2eCallsites } =
+    const { deriveE2eCallsites, deriveE2eCallsitesAtBase, formatRecordLine, recordedE2eCallsites } =
       await import("../../../../scripts/derive-e2e-callsites.mjs");
     const measured = await deriveE2eCallsites();
     const recorded = await recordedE2eCallsites();
@@ -744,29 +744,57 @@ describe("the stage evidence's counts are derived, not typed", () => {
       );
     }
 
-    // Two readers hit this, and the command they run is the same for both. What
-    // differs is RESPONSIBILITY: one of them changed a callsite and owes the
-    // re-pin, the other inherited the drift from a merge and owes nothing. The
-    // message used to address only the first. "Land it in the same commit as the
-    // callsite edit" is advice a reader cannot follow when their branch has no
-    // callsite edit — which is the case this fires in most often, because a
-    // MERGE moves the total while both parent tips are individually correct
-    // A reader told to do something impossible reasonably concludes
-    // the guard is broken, and the record's own prose has that happening twice.
+    // RESPONSIBILITY, and it is computable rather than left to the reader.
+    //
+    // A pull request is checked out as the MERGE of the branch and the base, so
+    // the number a branch pins is a fact about a tree that does not exist until
+    // merge time. It stops being true the moment the base gains a callsite —
+    // whoever else merged, and whatever this branch touched. Asserting on it
+    // regardless turned every open pull request red each time any other one
+    // landed, and the re-pin that followed corrected nothing: the next merge to
+    // the base reddened it again.
+    //
+    // Worse than the churn is what it teaches. A guard that is red for reasons
+    // the diff does not contain is one people re-pin without reading, which is
+    // the state that lets a real drift through.
+    //
+    // So the branch's own delta is measured. `deriveE2eCallsitesAtBase()`
+    // counts the tree this branch was built on, and the two counts either side
+    // of it separate the cases the message below has always described:
+    //
+    //   this branch moved the count   -> it owes the pin, and this fails
+    //   the base moved it             -> nothing this branch did, and it does not
+    //
+    // Where git cannot answer — no default branch and no merge commit — the
+    // answer is to fail as before. An unanswerable question is not a licence.
     const branchOwesIt =
-      "If this branch changed an `it` / `test` callsite under the `e2e` project, run " +
+      "This branch changed an `it` / `test` callsite under the `e2e` project, so run " +
       "`node scripts/pin-stage-evidence-counts.mjs` and land it in the same commit as the edit.";
-    const nobodyOwesIt =
-      "If it did not, the drift is inherited: a merge carries the callsites of both parents and " +
-      "neither parent's pin counted them together, so no branch owed this re-pin. Run the same " +
-      "command and land it on its own — it is a re-measurement, not a correction of your change.";
+    const recordedLine = formatRecordLine(recorded);
+    const measuredLine = formatRecordLine(measured);
+
+    if (recordedLine !== measuredLine) {
+      const atBase = await deriveE2eCallsitesAtBase();
+      if (atBase !== null && formatRecordLine(atBase) === measuredLine) {
+        // The tree holds exactly what the base holds, so this branch moved
+        // nothing. Reported rather than asserted: the pin is the base's to
+        // carry, and the next commit that does change a callsite re-derives it.
+        // eslint-disable-next-line no-console
+        console.warn(
+          `stage evidence: the record states \`${recordedLine}\`; the tree holds ` +
+            `\`${measuredLine}\`. Every one of those callsites is the base's — this branch ` +
+            "changed none — so the drift is inherited and no re-pin is owed here.",
+        );
+        return;
+      }
+    }
+
     // Compared as the formatted line rather than field by field, so a failure prints the line the
     // record should carry — which is the thing the reader has to end up with.
     expect(
-      formatRecordLine(recorded),
-      `the record states \`${formatRecordLine(recorded)}\`; the tree holds ` +
-        `\`${formatRecordLine(measured)}\`. ${branchOwesIt} ${nobodyOwesIt}`,
-    ).toBe(formatRecordLine(measured));
+      recordedLine,
+      `the record states \`${recordedLine}\`; the tree holds \`${measuredLine}\`. ${branchOwesIt}`,
+    ).toBe(measuredLine);
   });
 
   it.skipIf(!HAS_STAGE_PACKS)(

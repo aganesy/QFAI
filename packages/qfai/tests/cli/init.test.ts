@@ -186,10 +186,7 @@ function atddPhaseIds(source: string): string[] {
   return ids;
 }
 
-// This suite exercises end-to-end init flows with extensive filesystem I/O
-// (temp dirs, template copying, globbing), so we use a higher timeout to
-// avoid flaky failures on slow or heavily loaded CI runners.
-describe("qfai init", { timeout: 60000 }, () => {
+describe("qfai init", () => {
   it("treats a dangling symlink at the destination as occupied", async () => {
     // `access` follows the link, so a dangling one answered "free" and the copy
     // that followed wrote through it — `copyFile` resolves the symlink and

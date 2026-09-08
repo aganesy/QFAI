@@ -6,6 +6,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Test files inherit the declared `testTimeout` instead of overriding it**
+  (#1246). Ninety-three ceilings across 50 files sat below the project's 120 s
+  default, and nothing distinguished one somebody measured from one nobody had
+  looked at since it was typed.
+
+  Measured, the overrides were not doing the job they were there for. Two files
+  had ceilings _below their own cost_: under a full-suite run they timed out
+  nine cases between them, though both pass alone in under four seconds. At the
+  other end, 33 of the 38 files measured used under 6% of their ceiling — most
+  under 1%.
+
+  A ceiling above a file's cost buys one thing, a faster failure on a hang. It
+  costs a red lane for a reason the change does not contain, which is the worst
+  shape of flake: it teaches readers to ignore red. Two minutes on a hang, once,
+  is the better trade.
+
+  All 93 are removed. A subprocess kill timeout is a different thing and is
+  untouched — it bounds a spawned process, not a test.
+
+  A guard now requires any future sub-default ceiling to carry a comment naming
+  the duration that was measured. Cost is not visible in the source; whether the
+  declaration states a measurement is. It reads the syntax tree, so every form
+  the runner accepts is one subject — the trailing argument, a named constant,
+  each spelling of the option property, a title written as a template, and a
+  runner the file derived or imported under another name. A named ceiling
+  resolves from the scope it is used in, so two blocks binding the same name are
+  two ceilings rather than whichever was read last.
+
 - **The validation contract moved out of the acceptance-test Definition of Done
   and into a reference** (#1243). One bullet in that section was 1,047
   characters, twice the length of any other, and a bullet nobody skims is a
@@ -47,6 +75,57 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   `qfai doctor` reports both ceilings under `assets.lineBudget`, naming the
   width each file was held to.
+
+- **A test case can say where it is verified** (#1252). Some acceptance criteria
+  are true of the deployment rather than of the code — a TLS floor, a redirect
+  the platform terminates — and no layer the annotation gate routes to can
+  observe them. Every exit was closed: annotating anyway makes the gate green
+  over a test that checks something else, a waiver may not cover an error, and
+  retiring the row walks up `QFAI-COV-203` and `QFAI-COV-201` until the
+  requirement itself is deleted.
+
+  A test case now declares its own status in its own block:
+
+  | value      | means                                   | needs                    |
+  | ---------- | --------------------------------------- | ------------------------ |
+  | `planned`  | the test is not written yet             | nothing; remove it later |
+  | `external` | the obligation is met outside this tree | `x-qfai-verified-by`     |
+
+  `QFAI-ATDD-126` (`info`) names both, with the pointer, so the exit stays
+  visible rather than reading as coverage. `external` without
+  `x-qfai-verified-by` suspends nothing: the obligation stands and
+  `QFAI-ATDD-127` reports it, because a marker that only says "not here" is the
+  blanket silencer this exit was designed not to be.
+
+  The marker lives in a `## TC-NNNN` block and not in the table, and that cost
+  is deliberate. A marker cheap enough for a table cell gets applied to every
+  row that looks deployment-bound, including rows an in-process test could have
+  covered all along.
+
+  `QFAI-WAIVER-002` now names these alternatives. It said waivers on error
+  findings are forbidden and not what to do instead.
+
+- **A spec that owes no ATDD annotation says so** (#1251). `QFAI-ATDD-112`
+  routes each obligation by its test case's declared `Level`, and Unit and
+  Component owe none. A spec whose table declares only those therefore has an
+  obligation population of zero, and the gate never names it — correctly, but
+  silently.
+
+  Deleting every annotation in such a spec changes no output. The reasonable
+  reading of an unchanged run is that the gate is blind to the spec, and
+  settling it otherwise meant reading the compiled scanner. In one repository
+  358 of 476 test cases were outside the rule, so a green `QFAI-ATDD-112` was
+  compatible with three quarters of the table having no acceptance test.
+
+  Three things now say it:
+  - `QFAI-ATDD-125` (`info`) names each spec that declares test cases and owes
+    none, with the count and both readings — the levels are wrong, or the spec
+    genuinely has no acceptance obligation.
+  - `QFAI-ATDD-117` breaks its count down per spec rather than listing every
+    exempt id across the repository and truncating at ten.
+  - `summary.json` records `tcCensus`: per spec, how many test cases are
+    declared, exempt and owed. An empty `missing.tc` says nothing about the size
+    of the set it is empty of.
 
 - **A business flow has an ID, and an E2E test can answer for one** (#1208).
   `_policies/04_Business-Flow.md` ships as the SSOT for how the system is used
@@ -281,6 +360,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **The recorded e2e callsite count no longer fails a branch for the base's
+  changes** (#1357). A pull request is tested on the merge of the branch with
+  its base, so the count a branch pins stops being true the moment the base
+  gains a callsite — whoever merged, and whatever the branch touched. With
+  several pull requests open, every merge turned the rest red, each needing a
+  re-merge and a re-pin that the next merge undid.
+
+  `stageEvidenceCounts.test.ts` now measures the base's own count and compares.
+  A branch that changed a callsite under the `e2e` project still fails and still
+  owes `node scripts/pin-stage-evidence-counts.mjs` in the same commit. Drift
+  the branch did not cause is reported and passes. Where git cannot answer, it
+  fails as before.
+
+  The `test` and `node-floor` jobs check out two commits rather than one. At the
+  default depth the merge commit is grafted to no parents at all, so the base is
+  unreachable and the question cannot be asked.
 
 - **Two lint lanes ran on Windows, instead of exiting 0 without looking**
   (#1367). A script that is both a module and a command asks whether it was

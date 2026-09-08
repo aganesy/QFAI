@@ -11,9 +11,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-// This suite runs end-to-end CLI flows (`init` + `doctor`) with real
-// filesystem work, so we keep a higher timeout to prevent CI flakiness.
-describe("doctor", { timeout: 60000 }, () => {
+describe("doctor", () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const cwd = path.join(root, "packages", "app");

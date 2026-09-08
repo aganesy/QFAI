@@ -11,7 +11,7 @@ function makeConfig(overrides?: Partial<QfaiConfig>): QfaiConfig {
   return { ...defaultConfig, ...overrides };
 }
 
-describe("Render Critique Loop validation", { timeout: 15000 }, () => {
+describe("Render Critique Loop validation", () => {
   let root: string;
 
   beforeEach(async () => {

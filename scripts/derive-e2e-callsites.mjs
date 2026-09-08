@@ -38,9 +38,13 @@
  * turn into a root is REPORTED, never dropped: a walk that silently narrows
  * measures less than the project runs, which is worse than one that is absent.
  */
+import { execFile } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+
+const run = promisify(execFile);
 
 /** scripts/<this file> -> repo root */
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -131,6 +135,128 @@ export async function deriveE2eCallsites() {
     total += count;
   }
   return { total, perRoot, roots };
+}
+
+/**
+ * `{ total, perRoot }` for the tree at one git revision, or `null` where the
+ * revision cannot be read.
+ *
+ * The same walk as {@link deriveE2eCallsites}, over `git` rather than the
+ * filesystem, and — deliberately — over the same {@link CALLSITE_LINE}. A
+ * second spelling of "what counts as a callsite" is what would make the two
+ * measurements incomparable, which is the one thing this answer cannot afford:
+ * it is subtracted from the working tree's count, so an off-by-one in either
+ * walk reads as a change the branch made.
+ *
+ * `null` rather than a throw. The caller uses this to tell a branch's own drift
+ * from the base's, and where git cannot answer there is no such distinction to
+ * draw — a shallow clone with no merge base is a tree, not a fault.
+ */
+export async function deriveE2eCallsitesAt(rev) {
+  const roots = await e2eIncludeRoots();
+  const perRoot = {};
+  let total = 0;
+  for (const root of roots) {
+    let listing;
+    try {
+      const { stdout } = await run("git", ["ls-tree", "-r", "--name-only", "-z", rev, "--", root], {
+        cwd: REPO_ROOT,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      listing = stdout;
+    } catch {
+      return null;
+    }
+    const files = listing.split("\0").filter((name) => /\.test\.ts$/.test(name));
+    let count = 0;
+    for (const file of files) {
+      let text;
+      try {
+        const { stdout } = await run("git", ["show", `${rev}:${file}`], {
+          cwd: REPO_ROOT,
+          maxBuffer: 64 * 1024 * 1024,
+        });
+        text = stdout;
+      } catch {
+        return null;
+      }
+      count += text.split(/\r?\n/).filter((line) => CALLSITE_LINE.test(line)).length;
+    }
+    perRoot[root] = count;
+    total += count;
+  }
+  return { total, perRoot, roots };
+}
+
+/**
+ * The revisions this tree's count may be measured against to find **this
+ * branch's** own change, best answer first.
+ *
+ * Two of them, because the two places this runs know different things.
+ *
+ * | where                     | what is available                  | which answer |
+ * | ------------------------- | ---------------------------------- | ------------ |
+ * | a clone with the default branch | `origin/main`                | the fork point |
+ * | a pull-request checkout   | one merge commit, no other ref     | its first parent |
+ *
+ * The fork point comes first because it is right in both shapes. The first
+ * parent is right only where `HEAD` is the merge a pull-request checkout
+ * produces: after a local `git merge` of the default branch it is the branch's
+ * own previous commit, and the base's callsites would then read as the
+ * branch's.
+ */
+async function baseRevisionCandidates() {
+  let head = "";
+  const candidates = [];
+  try {
+    const { stdout } = await run("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT });
+    head = stdout.trim();
+  } catch {
+    // Not a repository, or no commits. Nothing below can be asked either.
+    return candidates;
+  }
+  try {
+    const { stdout } = await run("git", ["merge-base", "origin/main", "HEAD"], { cwd: REPO_ROOT });
+    if (stdout.trim() !== "") candidates.push(stdout.trim());
+  } catch {
+    // No `origin/main`: a shallow checkout fetches one ref. The next candidate
+    // is the one that shape does answer.
+  }
+  try {
+    const { stdout } = await run("git", ["rev-list", "--parents", "-n", "1", "HEAD"], {
+      cwd: REPO_ROOT,
+    });
+    // `<commit> <parent…>`, so three or more fields is a merge. A shallow
+    // checkout grafts `HEAD` to no parents at all, which is why the depth the
+    // workflow asks for is two rather than the default one.
+    const parents = stdout.trim().split(/\s+/);
+    if (parents.length >= 3 && parents[1] !== undefined) candidates.push(parents[1]);
+  } catch {
+    // A commit with no history to walk.
+  }
+  // `HEAD` is never its own base. On the default branch the merge base with
+  // `origin/main` is `HEAD` itself, and measuring the tree against itself would
+  // make every drift read as inherited — the check answering yes to a question
+  // it was not asked.
+  return candidates.filter((rev) => rev !== head);
+}
+
+/**
+ * `{ total, perRoot }` for the tree this branch was built on, or `null` where
+ * git cannot answer.
+ *
+ * A candidate is used only if it can actually be measured. Naming a revision
+ * and reading it are separate questions in a shallow clone: the parent SHAs are
+ * written in the merge commit, while the objects they point at may never have
+ * been fetched. Asking for the measurement is the only check that settles both,
+ * so that is what this does — in order, first answer wins.
+ */
+export async function deriveE2eCallsitesAtBase() {
+  for (const rev of await baseRevisionCandidates()) {
+    const measured = await deriveE2eCallsitesAt(rev);
+    if (measured !== null) return measured;
+  }
+  return null;
 }
 
 /**

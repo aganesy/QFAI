@@ -60,42 +60,14 @@ async function writeValidationFixture(
 }
 
 /**
- * The 15 s ceiling is deliberate, and measured.
+ * This file inherits the project's `testTimeout` and declares none of its own.
  *
- * This file makes 23 `runInit` and 26 `runReport` calls — more than any other
- * file that declares a ceiling below the project's `testTimeout`. Call count is
- * not the cost, though: a ceiling is per test, and these calls are spread one
- * or two to a case rather than piled into one.
- *
- * Measured worst case, slowest first:
- *
- * Each command selects the slice a CI job selects, plus the two flags that
- * make per-case durations visible. The selection is CI's; the flags are the
- * measurement's, and `test:cli` / `test` carry neither.
- *
- * ```text
- * # the slice `test (cli)` runs
- * vitest run --project cli --silent --reporter=verbose
- *   report(md)                                                   2874ms
- *   runs report with --run-validate                              2570ms
- *
- * # every project in one process, the slice node-floor runs — the heaviest load
- * vitest run --silent --reporter=verbose
- *   keeps sibling specs out of the scoped report body            4149ms
- *   scopes input, output and spec-pack artifacts to --spec       3630ms
- * ```
- *
- * Both from `packages/qfai`. `--reporter=verbose` prints the per-case
- * durations; `--silent` is what keeps them readable, since this file streams
- * `qfai validate` output to stdout and would otherwise bury them.
- *
- * 4.1 s against 15 s is 3.6x headroom under the heaviest load in the suite —
- * twice the margin `main.test.ts` has at the same ceiling. So 15 s is a budget
- * here, not a value below this file's cost, and a tight ceiling is worth
- * keeping: it fails on a regression that makes a report run minutes long
- * instead of waiting for the project-level timeout to notice.
+ * It is the heaviest caller of `runInit` and `runReport` in the suite, and
+ * under a full run its slowest cases take several times what they take alone.
+ * A ceiling below the project value would sit under that cost rather than
+ * above it, and would fail for the load rather than for anything in the diff.
  */
-describe("report", { timeout: 15000 }, () => {
+describe("report", () => {
   it("runs init -> validate(json) -> report(md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -994,7 +966,7 @@ describe("report", { timeout: 15000 }, () => {
   });
 });
 
-describe("report exit code", { timeout: 15000 }, () => {
+describe("report exit code", () => {
   type SeedCounts = { info: number; warning: number; error: number };
 
   /** Build the `issues[]` a given `counts` claims, so the two never disagree. */
@@ -1164,7 +1136,7 @@ describe("report exit code", { timeout: 15000 }, () => {
   });
 });
 
-describe("report --run-validate shares the validate migration gate", { timeout: 30000 }, () => {
+describe("report --run-validate shares the validate migration gate", () => {
   /**
    * `report --run-validate` is the documented single-step CI usage, so it owes
    * the operator the same legacy-path migration gate `qfai validate` applies.

@@ -357,7 +357,7 @@ describe("citation tokens", () => {
   });
 });
 
-describe("skill reference reachability", { timeout: 30000 }, () => {
+describe("skill reference reachability", () => {
   it("reports only the reference no reachable document names", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
     try {
