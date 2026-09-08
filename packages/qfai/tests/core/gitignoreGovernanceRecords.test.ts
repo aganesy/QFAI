@@ -13,6 +13,7 @@ import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
+import { CANONICAL_TIMESTAMP_GLOB } from "../../src/core/packLocator.js";
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -101,6 +102,28 @@ describe("the managed block keeps governance records tracked", () => {
     expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/implement-*.md");
     expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/atdd-*.md");
   });
+
+  it("re-includes the import-lite record, the only input source on that route", () => {
+    // A spec set imported without a discussion pack has no pack to commit, so
+    // this file is the whole of its provenance. Ignored, the fresh clone CI
+    // builds from has neither, and `QFAI-DPACK-001` fires on a route the
+    // skill documents as supported.
+    //
+    // Two entries, and the stamped one spells the stamp out to its full
+    // width. The check accepts no other width — it rejects the name outright
+    // rather than demoting it — so anything wider commits a file nothing
+    // reads. The width comes from the constant the check matches on, not from
+    // a literal typed here, because a copy is what lets the two drift.
+    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
+    for (const negation of [
+      "!.qfai/evidence/import-lite.md",
+      `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
+    ]) {
+      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain(negation);
+      expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
+    }
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).not.toContain("!.qfai/evidence/import-lite*.md");
+  });
 });
 
 describe("git honours the managed block against a broad pre-existing rule", () => {
@@ -112,6 +135,12 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // regenerable logs, and re-including them was never the point.
     ".qfai/evidence/sdd-spec-0001.md",
     ".qfai/evidence/verify-spec-0001.md",
+    // Hyphenated import-lite names that are not canonical stamps: one that is
+    // not digits at all, and one that is digits of the wrong width. The check
+    // rejects both outright rather than reading them as records, so committing
+    // either would put a file in the repository nothing reads.
+    ".qfai/evidence/import-lite-draft.md",
+    ".qfai/evidence/import-lite-2026.md",
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [
@@ -120,6 +149,11 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // Evidence anchor against.
     ".qfai/evidence/implement-spec-0001.md",
     ".qfai/evidence/atdd-spec-0001.md",
+    // The stand-in for a discussion pack on the imported-spec-set route, named
+    // with the canonical 17-digit run stamp, and the template-named copy the
+    // check also accepts.
+    ".qfai/evidence/import-lite-20260101000000000.md",
+    ".qfai/evidence/import-lite.md",
     ".qfai/decisions/CR-0001.md",
     ".qfai/evidence/skeleton.md",
   ];

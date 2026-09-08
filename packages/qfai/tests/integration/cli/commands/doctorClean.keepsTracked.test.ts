@@ -6,7 +6,7 @@
 // has — that rename takes the pack out of version control: git sees the files
 // disappear, and the next commit removes them. The pack survives on the
 // operator's disk and nowhere else, and the deletion reads as intentional in
-// review, done by a command called "remediate" (#1157).
+// review, done by a command called "remediate".
 //
 // A real git repository is built per row, because the condition is a fact about
 // git's index and ignore rules and nothing else can stand in for it. The

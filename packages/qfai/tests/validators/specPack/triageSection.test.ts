@@ -118,11 +118,11 @@ describe("validateTriageSection", () => {
   });
 
   it("does not double-fire QFAI-TRIAGE-005 when QFAI-TRIAGE-004 already invalidated the Sub-op", () => {
-    // PR #206 review #37: an UPDATE row with an unknown Sub-op (here
-    // "REMOVE-WRONG") and an empty Approved By column should report
-    // QFAI-TRIAGE-004 only. Previously the validator continued past
-    // the Sub-op check and also emitted QFAI-TRIAGE-005 against the
-    // same row, conflating an enum issue with an approval issue.
+    // An UPDATE row with an unknown Sub-op (here "REMOVE-WRONG") and an
+    // empty Approved By column should report QFAI-TRIAGE-004 only.
+    // Continuing past the Sub-op check to also validate Approved By
+    // would emit QFAI-TRIAGE-005 against the same row, conflating an
+    // enum issue with an approval issue.
     const text = buildDelta([
       ["REQ-1", "drop something", "spec-0001", "UPDATE", "REMOVE-WRONG", "-", "-"],
     ]);
@@ -146,8 +146,8 @@ describe("validateTriageSection", () => {
 
   it("validates every canonical `## Triage` section, not just the first", () => {
     // A re-run of the SDD skill appends a second `## Triage` section rather
-    // than extending the first table. Reading only the first section left
-    // every later row ungated (issue #619).
+    // than extending the first table. Reading only the first section would
+    // leave every later row ungated.
     const text = [
       "# 09 Delta",
       "",
@@ -839,13 +839,12 @@ describe("validateCreateRowCapabilityRefs (QFAI-TRIAGE-006)", () => {
   });
 
   it("still emits QFAI-TRIAGE-006 when capabilities file is missing (treats all CAPs as unknown)", async () => {
-    // PR #206 review #39 / #47: when the CAP catalog cannot be read,
-    // `validateCreateRowCapabilityRefs` intentionally treats the known
-    // set as empty so that every cited CAP is reported as unregistered.
-    // The append-first guard should fail loud, not silently skip, when
-    // the SSOT is unavailable — the test name now reflects that
-    // behaviour explicitly so future readers do not mistake "ignores"
-    // for a no-op.
+    // When the CAP catalog cannot be read, `validateCreateRowCapabilityRefs`
+    // intentionally treats the known set as empty so that every cited CAP
+    // is reported as unregistered. The append-first guard should fail
+    // loud, not silently skip, when the SSOT is unavailable — the test
+    // name reflects that behaviour explicitly so readers do not mistake
+    // "ignores" for a no-op.
     const text = buildDelta([
       ["REQ-5", "new feature", "(none)", "CREATE", "-", "user@host", "introduces CAP-0099"],
     ]);

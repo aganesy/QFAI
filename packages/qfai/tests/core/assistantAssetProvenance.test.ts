@@ -120,6 +120,35 @@ describe("assistant asset provenance", () => {
     expect(forked[0]?.file).toContain("test-layers.md");
   });
 
+  it.each(["manifest.md", "product.md", "structure.md", "tech.md"])(
+    "does not call a filled-in %s a fork",
+    async (fileName) => {
+      // These four ship telling the reader to replace their contents, and the
+      // skills read them for their commands. Reported as a fork, the rule that
+      // asks for the placeholders to be replaced and the rule that reads the
+      // shipped bytes disagree: leaving the template in place is then the only
+      // state that satisfies both.
+      const root = await makeProject();
+      const target = path.join(root, ".qfai", "assistant", "catalog", fileName);
+      await writeFile(target, "# Filled in\n\nWhat this project actually does.\n", "utf-8");
+
+      const issues = await validateAssistantAssets(root, defaultConfig);
+      expect(issues.filter((found) => found.code === "QFAI-ASSETS-005")).toEqual([]);
+    },
+  );
+
+  it("still reports a catalog file the project deleted", async () => {
+    // The exemption is for a difference, not for an absence: a catalog the
+    // skills read is gone, and nothing else reports that.
+    const root = await makeProject();
+    await rm(path.join(root, ".qfai", "assistant", "catalog", "tech.md"));
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-007");
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.file).toContain("tech.md");
+  });
+
   it("separates a stale copy from a fork by what qfai recorded writing", async () => {
     const root = await makeProject();
     const assistantDir = path.join(root, ".qfai", "assistant");

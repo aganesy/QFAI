@@ -60,6 +60,7 @@ import {
   RETIRED_LINE_SUCCESSORS,
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
+import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
   extractManagedRulesSection,
@@ -2953,6 +2954,15 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // fresh clone and CI that the root negation was added for saw neither file.
   "!implement-*.md",
   "!atdd-*.md",
+  // The import-lite record, for the same reason: on a spec set that arrived
+  // without a discussion pack it is the only input source in the repository,
+  // and the nested `*` hides it from the fresh clone that CI validates. Both
+  // accepted spellings, run-stamped and template-named. The stamp is spelled
+  // out to its full width, which is the only width the check accepts: any
+  // other suffix is rejected there rather than demoted, so a wider negation
+  // would commit a file nothing reads.
+  "!import-lite.md",
+  `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
 ];
 
 async function ensureLegacyEvidenceIgnoreNegations(

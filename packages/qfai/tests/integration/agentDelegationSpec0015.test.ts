@@ -435,7 +435,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
   });
 });
 
-// TC-0015-0011 follow-up (#248 review): the taxonomy has to be usable
+// The taxonomy has to be usable
 // without mis-routing a permanent failure into a pointless wait, and the
 // status vocabulary has to admit the value the taxonomy mandates.
 describe("delegation failure taxonomy is actionable", () => {

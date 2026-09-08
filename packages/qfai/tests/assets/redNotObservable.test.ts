@@ -85,7 +85,7 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
       // absolute, they force either an unclosable item or a fabricated RED.
       const skill = await read(tree, SKILL);
       // main moved the checklist body into `references/final-checklist.md`
-      // under the progressive-disclosure budget (#414); SKILL.md now points at
+      // under the progressive-disclosure budget; SKILL.md now points at
       // it, so the boxes are asserted where they are actually ticked.
       const pointer = between(skill, "## FINAL CHECKLIST", "## Completion Checklist");
       expect(pointer).toContain("`references/final-checklist.md`");

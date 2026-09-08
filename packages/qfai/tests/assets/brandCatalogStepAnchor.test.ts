@@ -69,7 +69,7 @@ describe("brand catalog step anchor", { timeout: 15000 }, () => {
     // so it could never be true and the row failed on a tree nobody had touched. The
     // `not.toContain` check compared against a `\`-separated absolute path, so it could
     // never match — always passing, checking nothing. A row that cannot fail is the worse
-    // of the two, because it reports as coverage (#1176).
+    // of the two, because it reports as coverage.
     const posix = (p: string): string => p.split(path.sep).join("/");
     const root = posix(discussionSkillDir);
 

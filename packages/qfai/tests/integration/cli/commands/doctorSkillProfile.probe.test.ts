@@ -126,8 +126,8 @@ describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
 });
 
 // Regression: `[ok]` must mean "a manifest was located and it declares
-// zero runtimeDependencies" — never "nothing was probed". A typo'd or
-// renamed `--profile <skill>` previously produced the same green line
+// zero runtimeDependencies" — never "nothing was probed". Without this check,
+// a typo'd or renamed `--profile <skill>` would produce the same green line
 // as a real skill.
 describe("doctor --profile <skill> does not report [ok] when nothing was probed", () => {
   async function runAndFind(root: string, skill: string): Promise<DoctorJson["checks"][number]> {

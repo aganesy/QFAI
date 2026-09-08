@@ -44,6 +44,24 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 const STEERING_CATALOG_FILES = ["manifest.md", "product.md", "structure.md", "tech.md"] as const;
 
 /**
+ * The same four files, keyed the way the provenance walk keys them.
+ *
+ * They are seeded once and owned by the project afterwards, so a difference
+ * from the shipped copy is what they are for. Reported as a local fork, the two
+ * rules that read them contradict each other: `QFAI-ASSETS-003` asks for the
+ * placeholders to be replaced, and `QFAI-ASSETS-005` reports the file the
+ * moment they are — leaving the placeholder in place the only state that
+ * satisfies both, on the documents the skills read for their commands.
+ *
+ * Only the fork is exempt. A copy still holding what qfai wrote is stale in the
+ * ordinary way and refreshes without losing anything, and a deleted one is
+ * still an absence.
+ */
+const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set(
+  STEERING_CATALOG_FILES.map((fileName) => `catalog/${fileName}`),
+);
+
+/**
  * An unreplaced angle-bracket placeholder, e.g. `<test command>`.
  *
  * Deliberately narrow: the inner text may not span a line or nest another
@@ -477,6 +495,12 @@ async function validateAssistantAssetProvenance(
       // QFAI-ASSETS-001/002 already own these two: reporting the absence again
       // here would duplicate the finding. They only cover it while the legacy
       // fallback is *also* absent, though — see `coveredByExistenceProbe`.
+      continue;
+    }
+    if (status === "forked" && ADOPTER_OWNED_ASSETS.has(relative)) {
+      // Filling these in is the instruction they carry, so the difference is
+      // the finished state rather than a fork. What is left unfilled is
+      // `QFAI-ASSETS-003`, which reads the same four files.
       continue;
     }
     const finding = provenanceIssue(
