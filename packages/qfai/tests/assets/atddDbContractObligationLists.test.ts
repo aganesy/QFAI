@@ -133,7 +133,7 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     const atdd = flat(await read(tree));
     // Which CON-DB are counted is pinned separately, below.
     expect(atdd).toContain(
-      "plus the **active** `CON-DB-*` this spec references — active meaning the contract does not declare `-- x-qfai-status: planned`",
+      "plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its own**",
     );
     expect(atdd).toContain("| Integration | #TC |");
     expect(atdd).toContain("`L3`/no-`Level` TCs + active `CON-DB-*`");
@@ -251,7 +251,7 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
   it("counts the active CON-DB, not every declared one", async () => {
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "plus the **active** `CON-DB-*` this spec references — active meaning the contract does not declare `-- x-qfai-status: planned`",
+      "plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its own**",
     );
     expect(atdd).toContain("carries no `QFAI-ATDD-115` obligation in this slice");
     // The regression: an unqualified count sweeps the deferred contracts back
