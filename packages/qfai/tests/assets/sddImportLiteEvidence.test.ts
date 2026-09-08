@@ -404,6 +404,46 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
   });
 });
 
+describe.each(QFAI_TREES)("%s carries the surface an import has no pack to state", (tree) => {
+  /**
+   * A discussion pack states the surface in its `01_Context.md`, and two skills
+   * read it there. An import has no pack, so without a place to state it both
+   * fell to the same default and every imported spec read as visual — which a
+   * project whose only surface is a CLI cannot satisfy, because none of the
+   * artifacts a visual target is asked for exist on that path.
+   */
+  it("names the field and its values in the evidence template", async () => {
+    const template = flat(await read(tree, TEMPLATE_REL));
+
+    expect(template).toContain("## Surface");
+    expect(template).toContain("primary_surface: <cli | web | mobile | desktop | mixed>");
+    expect(template).toContain("secondary_surfaces:");
+    // The same words the discussion pack's own classification uses, so one
+    // reader does not have to learn two vocabularies for one question.
+    expect(template).toContain("cli-only target");
+  });
+
+  it("sends both skills to that section, and neither to a default", async () => {
+    const sdd = flat(await read(tree, SKILL_REL));
+    const implement = flat(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+
+    for (const [name, text] of [
+      ["qfai-sdd", sdd],
+      ["qfai-implement", implement],
+    ] as const) {
+      expect(text, name).toContain("`## Surface` section of the import-lite evidence");
+      expect(text, name).toContain("Source: import-lite-<ts>#...");
+      expect(text, name).toContain("stop and ask");
+    }
+
+    // The default that made an import unworkable. Guessing either way is
+    // wrong: visual demands artifacts a CLI project cannot produce, and cli
+    // strips a visual one of its review.
+    expect(sdd, "qfai-sdd").not.toContain("when there is no pack, treat the target as visual");
+    expect(implement, "qfai-implement").not.toContain("treat the target as visual when neither");
+  });
+});
+
 describe("the detector is reachable from the public validate profiles", () => {
   it("reports QFAI-IMPLITE-001 through validateProject --profile sdd", async () => {
     // A detector with no caller reports nothing, and a gate reporting nothing
