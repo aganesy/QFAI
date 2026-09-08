@@ -20,6 +20,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A `Boundary` column on the TDD ledger, so the sibling rows of a split test
+  case have a recorded identity** (#1316). A matrix-shaped `TC-*` is seeded one
+  row per independently observable boundary. Every one of those rows repeats
+  that `TC-*` in `TC-Refs` and carries a serial `TDD-ID`, so neither cell says
+  which row covers which boundary.
+
+  Reconciliation re-derived the boundary set from `06_Test-Cases.md` on every
+  pass. That answers how many boundaries the test case has now; it does not
+  answer which row is which. Pairing an existing row with a re-derived boundary
+  read `Selector` and `Test file` — cells `/qfai-implement` owns and a
+  review-fix handback rewrites — so a reseed after such a rewrite could pair a
+  row with a different boundary than the one it was seeded for. The effect was
+  silent: the row count stayed right, every row still cited a real test case,
+  and the coverage crosswalk still balanced. What moved was which boundary a
+  row's `Status`, `Evidence` and `TDD-ID` described.
+
+  `Boundary` is a short slug for the one boundary a row owns, written by
+  `/qfai-sdd` Phase 2b while `Test file` is still `-` and rewritten by nothing
+  downstream. A reseed matches on the (`TC-Refs`, `Boundary`) pair. The pair and
+  not the slug alone, because a slug is unique inside its own test case and
+  nowhere wider — a generic one such as `not-found` recurs across test cases.
+
+  The column is optional, so a ledger seeded before it stays valid and a test
+  case holding one row writes `-`. Once a test case holds more than one row the
+  cell carries the row's identity, and `validate` reports siblings that name no
+  boundary (`QFAI-TDDLIST-017`) and two siblings claiming the same one
+  (`QFAI-TDDLIST-018`). Both are seed shape, so the profile of the phase that
+  writes the cell evaluates them, not only the completion gate.
+
+  Both are behind one promotion window: every ledger
+  seeded before the column holds a split whose rows name nothing, so an error on
+  the introducing release would fail every project carrying one.
+
 - **`validate` names a carrier whose suite is bound at run time** (#1256). A
   test file can choose its runner entry point while the run starts —
   `const deployed = LIVE ? describe : describe.skip`, then `deployed(...)` — so
