@@ -74,10 +74,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 
 ## What validation checks in a `.sql` contract
 
-Scope is **apply-ability, not semantic correctness**. `.sql` used to be the only
-contract kind the validator never parsed — the "this contract does not parse" check
-guarding UI and API files was unreachable for it — so a DB contract that cannot
-run passed `npx qfai validate --profile sdd --fail-on error`. It now has a structural lane:
+Scope is **apply-ability, not semantic correctness**. Without this lane a DB contract
+that cannot run would pass `npx qfai validate --profile sdd --fail-on error`, since the
+"this contract does not parse" check guarding UI and API files does not reach `.sql`.
+The structural lane:
 
 | Finding             | Fires when                                                                    | Severity |
 | ------------------- | ----------------------------------------------------------------------------- | -------- |

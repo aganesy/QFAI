@@ -63,23 +63,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(await realpath(link)).toBe(await realpath(master));
       return;
     }
-    // Non-symlink fallback. There are two distinct sub-cases here
-    // (PR #206 review #11):
-    //
-    //   1. The checkout was on a platform / git config that supports
-    //      symlinks but for some reason the file was committed as a
-    //      regular file. Then content equality with the master is the
-    //      right contract.
-    //   2. Windows + Git for Windows without `core.symlinks=true` /
-    //      Developer Mode. The link materialises as a one-line text
-    //      file containing the relative target path (e.g.
-    //      `../../.agents/rules/version-discipline.md`). Content
-    //      equality fails by construction; we should accept this as a
-    //      documented platform limitation rather than a contract
-    //      violation. AGENTS.md's "Cross-AI rules" section instructs
-    //      Windows users to enable `core.symlinks=true`; the
-    //      structural guarantee on Windows is that the link CONTENT is
-    //      the relative target path string.
+    // Non-symlink fallback, two shapes:
+    //   1. The file was committed as a regular file on a platform that
+    //      supports symlinks. Content equality with the master is the
+    //      contract.
+    //   2. Windows without `core.symlinks=true` / Developer Mode. Git writes
+    //      the link as a one-line text file holding the relative target path
+    //      (e.g. `../../.agents/rules/version-discipline.md`). Content
+    //      equality fails by construction, so the contract is that the path
+    //      resolves to the master. `.agents/rules/README.md` documents the
+    //      setup.
     const linked = await readMaybeSymlink(link);
     const trimmed = linked.trim();
     const looksLikeRelativePath = /^\.\.\/.+\.md$/.test(trimmed);

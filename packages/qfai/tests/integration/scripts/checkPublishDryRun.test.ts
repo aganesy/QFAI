@@ -2,8 +2,8 @@
  * `scripts/check-publish-dry-run.mjs` — the pack verification that failed the required status
  * context on every pull request.
  *
- * Found by running the layered CI scaffold for the first time (PR #794). `npm publish --dry-run`
- * exits non-zero when the working version is already on the registry, and that is the NORMAL state
+ * `npm publish --dry-run` exits non-zero when the working version is already on the registry,
+ * and that is the NORMAL state
  * of a feature branch: the version in `package.json` is whatever `main` carries, and once that
  * version is released every pull request inherits it. The dry-run still builds the tarball and
  * lists its contents — which is the failure this check exists to catch — and then refuses on
@@ -29,7 +29,7 @@ import {
 
 const REPO_ROOT = path.resolve(__dirname, "../../../../..");
 
-/** The verbatim tail of the failure observed on PR #794's `build` job. */
+/** The verbatim tail of a `build` job failure from publishing an already-released version. */
 const ALREADY_PUBLISHED_STDERR = [
   "npm warn publish This command requires you to be logged in to https://registry.npmjs.org/ (dry-run)",
   "npm error You cannot publish over the previously published versions: 1.10.0.",
