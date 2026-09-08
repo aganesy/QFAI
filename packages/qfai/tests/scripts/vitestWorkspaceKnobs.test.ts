@@ -488,9 +488,8 @@ describe("a ceiling below the declared testTimeout", () => {
   /** The runner entry points that take a per-test ceiling. */
   const RUNNERS = new Set(["it", "test", "describe", "suite", "bench"]);
 
-  /** A comment about the ceiling, within the five lines above it. */
   /**
-   * What a stated reason has to contain.
+   * What a stated reason has to contain, in the five lines above the ceiling.
    *
    * The word alone is not a measurement. "Keep this timeout because it prevents
    * the test from hanging forever" says what every timeout is for and nothing
@@ -537,15 +536,6 @@ describe("a ceiling below the declared testTimeout", () => {
   };
 
   /**
-   * A ceiling written as a number, however it is spelled.
-   *
-   * A file-local `const` is resolved, because `{ timeout: TIMEOUT }` and
-   * `{ timeout: 90_000 }` are the same declaration with the number named. A
-   * value this cannot resolve is left alone rather than guessed at: reporting
-   * an unresolved expression as sub-default would fail a ceiling nobody can
-   * read from the source.
-   */
-  /**
    * The expression with its type-only wrappers removed.
    *
    * `30_000 as const`, `30_000 satisfies number` and `(30_000)` are the same
@@ -565,32 +555,94 @@ describe("a ceiling below the declared testTimeout", () => {
     return current;
   };
 
-  const numericValue = (
-    node: ts.Expression | undefined,
-    constants: ReadonlyMap<string, number>,
-  ): number | undefined => {
-    if (node === undefined) return undefined;
-    const inner = unwrap(node);
-    if (ts.isNumericLiteral(inner)) return Number(inner.text.replace(/_/g, ""));
-    if (ts.isIdentifier(inner)) return constants.get(inner.text);
-    return undefined;
+  /** A number bound to a name, and the node that binding is visible in. */
+  type NumericBinding = { scope: ts.Node; value: number };
+  type NumericConstants = ReadonlyMap<string, readonly NumericBinding[]>;
+
+  /** Whether a node holds its own block-scoped bindings. */
+  const isScope = (node: ts.Node): boolean =>
+    ts.isSourceFile(node) ||
+    ts.isBlock(node) ||
+    ts.isModuleBlock(node) ||
+    ts.isCaseBlock(node) ||
+    ts.isForStatement(node) ||
+    ts.isForOfStatement(node) ||
+    ts.isForInStatement(node);
+
+  /** The nearest node a binding declared at this one is visible in. */
+  const enclosingScope = (node: ts.Node): ts.Node => {
+    let current: ts.Node = node;
+    while (current.parent !== undefined && !isScope(current)) {
+      current = current.parent;
+    }
+    return current;
   };
 
-  /** `const NAME = 90_000` declarations, so a named ceiling resolves. */
-  const numericConstants = (source: ts.SourceFile): Map<string, number> => {
-    const found = new Map<string, number>();
+  /**
+   * `const NAME = 90_000` declarations, kept per scope rather than per file.
+   *
+   * Two `describe` blocks may each bind `TIMEOUT`, and one table for the whole
+   * file would let whichever was read last answer for both — so a sub-default
+   * ceiling in the first block would resolve to the second block's larger number
+   * and pass with no reason given.
+   */
+  const numericConstants = (source: ts.SourceFile): NumericConstants => {
+    const found = new Map<string, NumericBinding[]>();
     const visit = (node: ts.Node): void => {
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
         const initializer = node.initializer;
         const inner = initializer === undefined ? undefined : unwrap(initializer);
         if (inner !== undefined && ts.isNumericLiteral(inner)) {
-          found.set(node.name.text, Number(inner.text.replace(/_/g, "")));
+          const bindings = found.get(node.name.text) ?? [];
+          bindings.push({
+            scope: enclosingScope(node),
+            value: Number(inner.text.replace(/_/g, "")),
+          });
+          found.set(node.name.text, bindings);
         }
       }
       ts.forEachChild(node, visit);
     };
     visit(source);
     return found;
+  };
+
+  /**
+   * The number a name holds where it is used, read from the nearest scope out.
+   *
+   * A name bound only in a scope this use is not inside resolves to nothing, and
+   * an unresolved ceiling is left alone rather than guessed at: reporting one as
+   * sub-default would fail a number nobody can read from the source.
+   */
+  const boundValue = (
+    name: string,
+    use: ts.Node,
+    constants: NumericConstants,
+  ): number | undefined => {
+    const bindings = constants.get(name);
+    if (bindings === undefined) return undefined;
+    for (let scope: ts.Node | undefined = use; scope !== undefined; scope = scope.parent) {
+      const here = bindings.find((binding) => binding.scope === scope);
+      if (here !== undefined) return here.value;
+    }
+    return undefined;
+  };
+
+  /**
+   * A ceiling written as a number, however it is spelled.
+   *
+   * A `const` is resolved, because `{ timeout: TIMEOUT }` and
+   * `{ timeout: 90_000 }` are the same declaration with the number named.
+   */
+  const numericValue = (
+    node: ts.Expression | undefined,
+    constants: NumericConstants,
+  ): number | undefined => {
+    if (node === undefined) return undefined;
+    const inner = unwrap(node);
+    if (ts.isNumericLiteral(inner)) return Number(inner.text.replace(/_/g, ""));
+    if (ts.isIdentifier(inner)) return boundValue(inner.text, inner, constants);
+    return undefined;
   };
 
   /** Whether a property name reads as `timeout`, however it is written. */
@@ -613,10 +665,12 @@ describe("a ceiling below the declared testTimeout", () => {
    */
   const timeoutProperty = (
     property: ts.ObjectLiteralElementLike,
-    constants: ReadonlyMap<string, number>,
+    constants: NumericConstants,
   ): number | undefined => {
     if (ts.isShorthandPropertyAssignment(property)) {
-      return property.name.text === "timeout" ? constants.get(property.name.text) : undefined;
+      return property.name.text === "timeout"
+        ? boundValue(property.name.text, property.name, constants)
+        : undefined;
     }
     if (ts.isPropertyAssignment(property) && namesTimeout(property.name)) {
       return numericValue(property.initializer, constants);
@@ -625,22 +679,70 @@ describe("a ceiling below the declared testTimeout", () => {
   };
 
   /**
+   * The names that declare a test in this file.
+   *
+   * `it` and `test` are the ones vitest exports, but a file may bind its own —
+   * `const fixtureTest = test.extend({…})` — or import one under another name. A
+   * fixed list would let every ceiling declared through such a name pass without
+   * a reason, so the names are read from the file and followed until no new one
+   * appears: a runner derived from a derived runner is still a runner.
+   */
+  const runnerNames = (source: ts.SourceFile): ReadonlySet<string> => {
+    const names = new Set(RUNNERS);
+    const claim = (name: string): boolean => {
+      if (names.has(name)) return false;
+      names.add(name);
+      return true;
+    };
+    for (let grew = true; grew; ) {
+      grew = false;
+      const visit = (node: ts.Node): void => {
+        if (ts.isImportSpecifier(node) && names.has((node.propertyName ?? node.name).text)) {
+          grew = claim(node.name.text) || grew;
+        }
+        if (
+          ts.isVariableDeclaration(node) &&
+          ts.isIdentifier(node.name) &&
+          node.initializer !== undefined
+        ) {
+          const root = runnerName(unwrap(node.initializer));
+          if (root !== undefined && names.has(root)) {
+            grew = claim(node.name.text) || grew;
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
+    return names;
+  };
+
+  /**
    * Whether this call declares a test at all.
    *
-   * Not every call rooted at `test` takes a ceiling. `test.extend({ timeout })`
-   * defines a fixture, and `describe.each(rows)` takes the table — an object
-   * there is data, and reading it as a ceiling would demand a measurement
-   * comment for a fixture named `timeout`.
+   * Not every call rooted at a runner takes a ceiling. `test.extend({ timeout })`
+   * defines a fixture and `describe.each(rows)` takes the table — an object in
+   * either position is data, and reading it as a ceiling would demand a
+   * measurement comment for a fixture field named `timeout`.
    *
-   * A test declaration is the call that takes the name and the body, so it is
-   * recognised by that shape: a string first and a function among the rest.
+   * A test declaration is the call that takes a name and a body, so it is
+   * recognised by that shape. The name may be written as a template, which is
+   * how most of this suite writes a parameterised one, and the body may be a
+   * function written inline or one already bound to a name.
    */
   const declaresATest = (node: ts.CallExpression): boolean => {
     const [first] = node.arguments;
-    if (first === undefined || !ts.isStringLiteralLike(first)) return false;
-    return node.arguments.some(
-      (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
-    );
+    if (first === undefined) return false;
+    const title = unwrap(first);
+    if (!ts.isStringLiteralLike(title) && !ts.isTemplateExpression(title)) return false;
+    return node.arguments
+      .slice(1)
+      .some(
+        (argument) =>
+          ts.isArrowFunction(argument) ||
+          ts.isFunctionExpression(argument) ||
+          ts.isIdentifier(argument),
+      );
   };
 
   /**
@@ -652,13 +754,14 @@ describe("a ceiling below the declared testTimeout", () => {
    */
   const declaredCeilings = (
     source: ts.SourceFile,
-    constants: ReadonlyMap<string, number>,
+    constants: NumericConstants,
   ): { value: number; position: number }[] => {
+    const runners = runnerNames(source);
     const found: { value: number; position: number }[] = [];
     const visit = (node: ts.Node): void => {
       if (
         ts.isCallExpression(node) &&
-        RUNNERS.has(runnerName(node.expression) ?? "") &&
+        runners.has(runnerName(node.expression) ?? "") &&
         declaresATest(node)
       ) {
         for (const argument of node.arguments) {
@@ -738,5 +841,69 @@ describe("a ceiling below the declared testTimeout", () => {
         "file's cost only buys a faster failure on a hang while costing a red lane for a " +
         "reason the change does not contain.",
     ).toEqual([]);
+  });
+
+  /** The ceilings the reader finds in one source, smallest first. */
+  const ceilingsIn = (code: string): number[] => {
+    const source = ts.createSourceFile("sample.test.ts", code, ts.ScriptTarget.Latest, true);
+    return declaredCeilings(source, numericConstants(source))
+      .map((ceiling) => ceiling.value)
+      .sort((a, b) => a - b);
+  };
+
+  // The scan above passes on a tree that declares no sub-default ceiling, which
+  // is also what a reader that sees nothing would report. These pin the reading
+  // itself: each case is a spelling vitest accepts, and every one of them was at
+  // some point a way to declare a ceiling this guard could not see.
+  it.each([
+    ["a plain title", `it("a", { timeout: 30_000 }, () => {});`],
+    ["a template title", "it(`a ${x}`, { timeout: 30_000 }, () => {});"],
+    ["a body bound to a name", `it("a", run, 30_000);`],
+    ["the trailing form", `it("a", () => {}, 30_000);`],
+    ["a quoted property", `it("a", { "timeout": 30_000 }, () => {});`],
+    ["a computed property", `it("a", { ["timeout"]: 30_000 }, () => {});`],
+    ["a named ceiling", `const T = 30_000;\nit("a", { timeout: T }, () => {});`],
+    ["a shorthand property", `const timeout = 30_000;\nit("a", { timeout }, () => {});`],
+    ["a type-wrapped constant", `const T = 30_000 as const;\nit("a", { timeout: T }, () => {});`],
+    [
+      "a runner the file derived",
+      `const fixtureTest = test.extend({ db: 1 });\nfixtureTest("a", { timeout: 30_000 }, () => {});`,
+    ],
+    [
+      "a runner imported under another name",
+      `import { it as check } from "vitest";\ncheck("a", { timeout: 30_000 }, () => {});`,
+    ],
+  ])("reads a ceiling declared with %s", (_shape, code) => {
+    expect(ceilingsIn(code)).toEqual([30_000]);
+  });
+
+  it("reads a name from its own scope rather than the last one in the file", () => {
+    // Both blocks bind `TIMEOUT`. One table for the whole file would let the
+    // second binding answer for the first, so the sub-default ceiling would
+    // resolve to 120_000 and pass with nothing said about it.
+    const ceilings = ceilingsIn(
+      [
+        `describe("first", () => {`,
+        `  const TIMEOUT = 30_000;`,
+        `  it("a", { timeout: TIMEOUT }, () => {});`,
+        `});`,
+        `describe("second", () => {`,
+        `  const TIMEOUT = 120_000;`,
+        `  it("b", { timeout: TIMEOUT }, () => {});`,
+        `});`,
+      ].join("\n"),
+    );
+
+    expect(ceilings).toEqual([30_000, 120_000]);
+  });
+
+  it.each([
+    ["a fixture definition", `const fixtureTest = test.extend({ timeout: 30_000 });`],
+    ["a parameter table", `describe.each([{ timeout: 30_000 }])("a", () => {});`],
+  ])("reads no ceiling from %s", (_shape, code) => {
+    // An object in either position is data. Reporting it would demand a measured
+    // duration for a fixture field or a table column that happens to be named
+    // `timeout`, which is a failure nobody can act on.
+    expect(ceilingsIn(code)).toEqual([]);
   });
 });
