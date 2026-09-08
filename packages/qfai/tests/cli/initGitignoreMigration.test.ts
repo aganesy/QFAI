@@ -129,6 +129,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!implement-*.md",
         "!atdd-*.md",
         "!coverage-depth-*.md",
+        "!skeleton.md",
         "!decisions/",
         "!decisions/**",
         "!implement-*.md",

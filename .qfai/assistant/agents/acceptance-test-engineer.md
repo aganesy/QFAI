@@ -40,7 +40,14 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Acceptance test plan and implemented coverage
 - Mapping from US / TC / CON-API / CON-DB to test assets
 - Execution proof and evidence summary
-- TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
+- TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed, returned to
+  the orchestrator (which owns the `test-list.md` write; do not edit that file directly).
+  Return `DR-ID` whenever the row carries one: the `DR-*` that an `exception` row is
+  invalid without, and the `CR-*` that an approved upstream reset put there, which the
+  row keeps through every later status. Return `Blocked-By` as well whenever the status
+  you return is `blocked`: it records the status the row is leaving, and the ledger gate
+  rejects a `blocked` row without it. The orchestrator writes only what it receives,
+  so a cell left out of the report is a cell nobody can write.
 - Gaps and follow-up actions
 
 ## Stop conditions

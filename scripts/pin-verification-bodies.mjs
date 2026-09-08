@@ -10,8 +10,8 @@
  * It imports the lane's own `verificationBodyDigest` rather than restating it. The previous version
  * of this tool lived outside version control and carried a hand-copied copy of that function, which
  * is two sources of truth for one number — and the first edit to either one is where they start
- * disagreeing. Review finding [36] added the invoked package scripts to the digest, which is
- * exactly the sort of edit a copy would have missed.
+ * disagreeing. The digest also covers the invoked package scripts — exactly
+ * the sort of addition a copy would have missed.
  *
  * Usage:
  *
@@ -60,8 +60,8 @@ function main(root) {
 
     // Both sets. `gatedVerifications` names the work of the lanes that may skip, and its
     // digests live in the same `verificationBodies` map — a tool that pinned only the
-    // unconditional set would leave every gated item unpinned, which is precisely the state
-    // review finding [89] reported.
+    // unconditional set would leave every gated item unpinned, which is precisely the
+    // failure state this guards against.
     const bodies = {};
     const items = [
       ...(context.verificationSet ?? []),

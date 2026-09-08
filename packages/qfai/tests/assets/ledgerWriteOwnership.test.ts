@@ -36,9 +36,11 @@ const read = async (tree: string, rel: string): Promise<string> =>
   flat(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
 
 describe.each(QFAI_TREES)("%s", (tree) => {
-  it("writes both columns the gate reads, not just Status", async () => {
+  it("writes the two columns the gate reads and the DR-ID an exception owes", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("update `test-list.md` **Status and Evidence** after each phase");
+    expect(skill).toContain(
+      "update `test-list.md` **Status, DR-ID and Evidence** after each phase",
+    );
     // The payload goes to the evidence file; the cell takes the outcome and
     // the anchor. Asserting the old "verbatim into the cell" wording pinned an
     // instruction that corrupts the ledger gate item 10 reads.
@@ -64,7 +66,11 @@ describe.each(QFAI_TREES)("%s", (tree) => {
 
   it("says what a worker returns instead of writing", async () => {
     // Without this the ban is a prohibition with no replacement, and the
-    // evidence simply stops existing.
+    // evidence simply stops existing. The three a worker returns — `Status`,
+    // `DR-ID` and `Evidence` — because the orchestrator's reconcile is the
+    // only write an `exception` row's mandatory `DR-*` can come from. The
+    // carve-out's fourth cell, `Blocked-By`, is written at the transition
+    // that fills it, which a merged slice has not taken.
     const policy = await read(tree, POLICY);
     expect(policy).toContain("final `Status`, its `DR-ID`");
     expect(policy).toContain("and the `Evidence` payload");
@@ -283,10 +289,24 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   for (const agent of IMPLEMENTATION_AGENTS) {
     it(`${agent} owes the ledger entry, so its stop condition no longer blocks it`, async () => {
       const card = await read(tree, `assistant/agents/${agent}.md`);
-      expect(card).toContain("TDD ledger Status + Evidence entry for each item processed");
+      expect(card).toContain(
+        "TDD ledger `Status`, `DR-ID` and `Evidence` entry for each item processed",
+      );
       // And the boundary is stated in the same line, so "deliver it" is not
       // read as "write the file".
       expect(card).toContain("which owns the `test-list.md` write; do not edit that file directly");
+    });
+
+    it(`${agent} owes \`Blocked-By\` when it returns \`blocked\``, async () => {
+      // The orchestrator writes only what it receives, and the ledger gate
+      // rejects a `blocked` row with no `Blocked-By`. A three-cell payload
+      // therefore has no way to record a blocker the worker found, and a
+      // worker following the card to the letter produces a row the gate
+      // refuses.
+      const card = await read(tree, `assistant/agents/${agent}.md`);
+
+      expect(card).toContain("Return `Blocked-By` as well whenever the status");
+      expect(card).toContain("`blocked`");
     });
   }
 });

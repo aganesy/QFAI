@@ -62,6 +62,18 @@ describe("the managed block keeps governance records tracked", () => {
     );
   });
 
+  it("keeps the Phase: Skeleton record trackable", () => {
+    // `walking-skeleton.md` requires the enumerated `Skeleton debt` to land in
+    // the skeleton's own commit, and every later invocation reads the recorded
+    // exit status to decide whether an entrypoint is already proven. Ignored,
+    // both hold only inside the working directory that ran the phase.
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/skeleton.md");
+    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
+    expect(lines.indexOf("!.qfai/evidence/skeleton.md")).toBeGreaterThan(
+      lines.indexOf(".qfai/evidence/*"),
+    );
+  });
+
   it("re-includes the per-item evidence the completion gate anchors into", () => {
     // Gate item 10 resolves every `test-list.md` Evidence anchor against
     // `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
@@ -133,9 +145,6 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   /** Governance records that must stay reachable. */
   const stillTracked = [
     ".qfai/evidence/decisions/2026-01-01T00-00-00.000Z.json",
-    ".qfai/evidence/implement-spec-0001.md",
-    ".qfai/evidence/atdd-spec-0001.md",
-    ".qfai/decisions/CR-0001.md",
     // The two files gate item 10 names, and the only ones it resolves an
     // Evidence anchor against.
     ".qfai/evidence/implement-spec-0001.md",
@@ -145,7 +154,23 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // check also accepts.
     ".qfai/evidence/import-lite-20260101000000000.md",
     ".qfai/evidence/import-lite.md",
+    ".qfai/decisions/CR-0001.md",
+    ".qfai/evidence/skeleton.md",
   ];
+
+  // This repository uses its own root `.qfai/` as an installed QFAI tree, and
+  // the skeleton phase writes its evidence there. The generated block and the
+  // per-directory ignore both have to carry the negation here too, or the
+  // record the phase requires in its own commit never enters one.
+  it("this repository's own ignores keep the skeleton evidence trackable", async () => {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const repoRoot = path.resolve(here, "..", "..", "..", "..");
+    expect(await isIgnored(repoRoot, ".qfai/evidence/skeleton.md")).toBe(false);
+    // The negation is scoped to the one file: a stage log beside it, which no
+    // negation names, stays ignored. Not `implement-*` / `atdd-*` — the
+    // completion gate anchors into those, so they carry negations of their own.
+    expect(await isIgnored(repoRoot, ".qfai/evidence/verify-spec-0001.md")).toBe(true);
+  });
 
   async function isIgnored(root: string, relativePath: string): Promise<boolean> {
     try {
