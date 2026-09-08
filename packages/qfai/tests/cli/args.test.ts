@@ -275,7 +275,7 @@ describe("parseArgs", () => {
     expect(parsed.options.invalidExitCode).toBe(2);
   });
 
-  // CHG-006 second-wave flag parsing (spec-0012):
+  // Flag parsing for spec-0012:
   //   --emit-skeletons / --skeleton-mode / --mode under `prototyping iterate`.
 
   it("parses --emit-skeletons on prototyping iterate (default-OFF without the flag)", () => {

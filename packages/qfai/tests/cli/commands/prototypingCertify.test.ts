@@ -11,11 +11,11 @@
  * `packages/qfai/tests/cli/prototypingCertify.test.ts` (TC-3.6.x +
  * earlier multi-screen HTML / lock / stale-iter cases).
  *
- * Simplification documented in the task brief: UI contracts are
- * project-wide today (one `screens:` list under `.qfai/contracts/ui/`),
- * so the same declared-screen set applies to every spec in the frozen
- * set. Per-spec screen contracts (a per-(spec × screen) declaration
- * surface) are deferred to Wave 1's reviewerDispatch work.
+ * Simplification: UI contracts are project-wide today (one `screens:`
+ * list under `.qfai/contracts/ui/`), so the same declared-screen set
+ * applies to every spec in the frozen set. Per-spec screen contracts (a
+ * per-(spec × screen) declaration surface) are out of scope, deferred to
+ * the reviewerDispatch work.
  */
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -794,16 +794,14 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
 describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred over legacy specsCovered)", () => {
   // QFAI:SPEC-0012:TC-0012-0399
   it("iterates the cycle-0-frozen multi-spec set (frozenSpecsCovered) — not the legacy single-spec specsCovered — when both fields are present", async () => {
-    // Regression for the Wave-3 multi-spec write: `iterate --cycle 0`
-    // persists the FULL UI-bearing set under `frozenSpecsCovered` and
-    // leaves `specsCovered` populated with only the resolved primary
-    // spec. Pre-fix, the certify per-(spec × screen) gate read
-    // `specsCovered` and therefore only enforced presence for the
-    // primary spec; a frozen-set secondary spec could be entirely
-    // missing review.json files and certify still sealed the
-    // certificate. Post-fix, certify reads `frozenSpecsCovered` first
-    // (falling back to `specsCovered` only when the multi-spec field
-    // is absent).
+    // `iterate --cycle 0` persists the FULL UI-bearing set under
+    // `frozenSpecsCovered` and leaves `specsCovered` populated with only the
+    // resolved primary spec. The certify per-(spec × screen) gate must read
+    // `frozenSpecsCovered` first (falling back to `specsCovered` only when
+    // the multi-spec field is absent) — reading `specsCovered` alone would
+    // only enforce presence for the primary spec, letting a frozen-set
+    // secondary spec go entirely missing its review.json files while
+    // certify still seals the certificate.
     const root = await newTempDir();
     await seedMinimalProject(root);
     // Seed spec-0007 on disk for parity with the multi-spec fixture in
@@ -815,10 +813,10 @@ describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred o
       "---\nsurface_type: ui-bearing\n---\n\n# spec-0007\n",
       "utf-8",
     );
-    // Mimic the Wave-3 production shape: specsCovered = [primary],
-    // frozenSpecsCovered = [primary, secondary]. Pre-fix the certify
-    // gate iterated only specsCovered = ["0001"] and silently passed
-    // even though spec-0007 has zero review.json files.
+    // Mimic the production shape: specsCovered = [primary],
+    // frozenSpecsCovered = [primary, secondary]. A gate that iterated only
+    // specsCovered = ["0001"] would silently pass even though spec-0007 has
+    // zero review.json files.
     await seedAllGatesPass(root, {
       specsCovered: ["0001"],
       frozenSpecsCovered: ["0001", "0007"],
@@ -979,15 +977,15 @@ describe("qfai prototyping certify (single-spec flat-iter no longer skips the pe
 describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives sealed cert.specsCovered when both fields are populated)", () => {
   // QFAI:SPEC-0012:TC-0012-0405
   it("seals the completion certificate with the multi-spec frozen set (frozen wins over legacy specsCovered) when both fields are populated and every (spec, screen) pair has its review.json", async () => {
-    // 7th late-review wave: TC-0012-0399 (the
+    // TC-0012-0399 (the
     // existing precedence test) is a NEGATIVE assertion — it confirms
     // the multi-spec read by observing certify reject when the
     // secondary spec's review.json is missing. This complementary
     // POSITIVE assertion confirms the *sealed certificate* records the
     // full frozen set (not just the legacy primary spec) when every
-    // pair is present. Pre-fix this happy-path was uncovered at the
-    // certify call-site; only the unit-level `specsCovered.ts` tests
-    // exercised the precedence directly.
+    // pair is present: only the unit-level `specsCovered.ts` tests
+    // exercised the precedence directly, leaving this happy path
+    // uncovered at the certify call-site.
     const root = await newTempDir();
     await seedMinimalProject(root);
     await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
@@ -997,7 +995,7 @@ describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives seal
       "utf-8",
     );
     // Legacy single-spec field carries only the primary; frozen field
-    // carries the multi-spec set. Production write shape circa Wave-3.
+    // carries the multi-spec set. This is the current production write shape.
     await seedAllGatesPass(root, {
       specsCovered: ["0007"],
       frozenSpecsCovered: ["0007", "0012"],
@@ -1023,17 +1021,17 @@ describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives seal
 
 describe("qfai prototyping certify (TC-0012-0406: legacy-only specsCovered fallback seals cleanly when frozenSpecsCovered absent)", () => {
   // QFAI:SPEC-0012:TC-0012-0406
-  it("seals the completion certificate with the legacy specsCovered single-spec scope when frozenSpecsCovered is entirely absent (pre-Wave-3 evidence)", async () => {
-    // 7th late-review wave: companion to
+  it("seals the completion certificate with the legacy specsCovered single-spec scope when frozenSpecsCovered is entirely absent (legacy evidence)", async () => {
+    // Companion to
     // TC-0012-0405. TC-0012-0400 (the existing fallback test) is a
     // NEGATIVE assertion (certify rejects when a fallback-scoped spec
     // is missing review.json). This POSITIVE assertion confirms the
     // sealed certificate records the legacy single-spec scope when the
-    // multi-spec field is entirely absent. Pre-Wave-3 evidence must
+    // multi-spec field is entirely absent. Legacy evidence must
     // still round-trip cleanly without spurious zero-spec certificates.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // No frozenSpecsCovered field at all — pre-Wave-3 prototyping.json
+    // No frozenSpecsCovered field at all — legacy prototyping.json
     // shape. Legacy specsCovered carries the single resolved primary.
     await seedAllGatesPass(root, { specsCovered: ["0007"] });
     await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
@@ -1060,16 +1058,16 @@ describe("qfai prototyping certify (TC-0012-0406: legacy-only specsCovered fallb
 
 describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback when frozenSpecsCovered absent)", () => {
   // QFAI:SPEC-0012:TC-0012-0400
-  it("falls back to specsCovered for pre-Wave-3 evidence that lacks frozenSpecsCovered", async () => {
+  it("falls back to specsCovered for legacy evidence that lacks frozenSpecsCovered", async () => {
     // Backward-compat sentinel: when `frozenSpecsCovered` is entirely
-    // absent (pre-Wave-3 prototyping.json), the gate continues to
+    // absent (a legacy prototyping.json), the gate continues to
     // iterate `specsCovered`. Pin this so the fallback path is not
     // accidentally regressed by a future refactor that hard-removes
     // the legacy read.
     const root = await newTempDir();
     await seedMinimalProject(root);
     // No frozenSpecsCovered key at all; specsCovered carries the
-    // multi-spec set in this pre-Wave-3 shape.
+    // multi-spec set in this legacy shape.
     await seedAllGatesPass(root, { specsCovered: ["0012", "0007"] });
     await mkdir(path.join(root, ".qfai/specs/spec-0007"), { recursive: true });
     await writeFile(
@@ -1101,12 +1099,12 @@ describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback w
 
 describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope the (spec × screen) gate)", () => {
   // QFAI:SPEC-0012:TC-0012-0407
-  // 9th late-review wave: when per-spec UI
+  // When per-spec UI
   // contracts declare a non-uniform screen set (spec-0001 → home only;
   // spec-0002 → settings only), the per-(spec × screen) gate must use
   // each spec's OWN contract — not the cross-product of every spec
-  // against the union project-wide screen list. Pre-fix the cross-product
-  // demanded `spec-0001/settings.review.json` + `spec-0002/home.review.json`
+  // against the union project-wide screen list, which would demand
+  // `spec-0001/settings.review.json` + `spec-0002/home.review.json`
   // that should never exist per the per-spec contract.
   it("uses each spec's per-spec UI contract instead of demanding the project-wide cross-product", async () => {
     const root = await newTempDir();
@@ -1158,13 +1156,13 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     expect(exit).toBe(0);
   });
 
-  // 11th late-review wave: the per-spec
+  // The per-spec
   // UI contract resolver `readPerSpecScreens` supports 5 file-naming
-  // candidates but only candidate #1 (`spec-NNNN.yaml`) was exercised
-  // by tests. Add explicit coverage for #2 (`<bare>.yaml`) and #3
+  // candidates but only candidate #1 (`spec-NNNN.yaml`) is exercised
+  // elsewhere. This adds explicit coverage for #2 (`<bare>.yaml`) and #3
   // (`ui-<bare>.yaml`) so the alternate canonical layouts have
   // present-path assertions matching the README documentation.
-  // QFAI:SPEC-0012:TC-0012-0418 — wave-11 traceability stitch for the
+  // QFAI:SPEC-0012:TC-0012-0418 — traceability for the
   // four canonical-layout `it` blocks below (#2 bare-numeric / #3
   // ui-prefixed / #5 recursive subdir / #1 first-hit-wins).
   it("respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)", async () => {
@@ -1223,11 +1221,10 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     expect(exit).toBe(0);
   });
 
-  // Fix D regression: recursive subdir layout
-  // `<contractsDir>/ui/<spec-id>/<sub>.yaml` is now a supported per-spec
-  // layout (candidate #5). Pre-fix the per-spec reader missed this
-  // shape, fell through to the project-wide list, and re-opened the
-  // 9th-wave cross-product false-positive.
+  // `<contractsDir>/ui/<spec-id>/<sub>.yaml` is a supported per-spec layout
+  // (candidate #5). The per-spec reader must not miss this shape and fall
+  // through to the project-wide list, which would re-open a cross-product
+  // false positive.
   it("respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1257,11 +1254,10 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     expect(exit).toBe(0);
   });
 
-  // Fix C regression: true first-hit-wins precedence. When both
+  // True first-hit-wins precedence. When both
   // candidate #1 (`spec-NNNN.yaml`) and candidate #3 (`ui-NNNN.yaml`)
-  // exist on disk, only #1 is used. Pre-fix the reader unioned both
-  // files which produced surprising cross-file behaviour on authoring
-  // forks.
+  // exist on disk, only #1 is used — unioning both files would produce
+  // surprising cross-file behaviour on authoring forks.
   it("uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1656,7 +1652,7 @@ describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override
   // `/abs/contracts/ui/spec-NNNN.yaml`, and certify silently fell
   // back to the project-wide screen list — enforcing the wrong
   // `(spec, screen)` coverage for explicit-contracts-dir workflows.
-  // Mirrors the wave-45 `specDirExists` fix for `paths.specsDir`.
+  // Mirrors the same `specDirExists` fix for `paths.specsDir`.
   // Cross-platform: this regression holds for POSIX `/abs/...` and
   // Windows drive-letter `C:\...` / UNC `\\host\share\...` absolutes;
   // the OS-native `mkdtemp` fixture exercises whichever applies on
@@ -1684,31 +1680,23 @@ describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override
 });
 
 describe("readUiContractScreenContracts (TC-0012-0431: absolute paths.contractsDir override — partner-helper consistency)", () => {
-  // codex r3271867391 P1 (implementation-reviewer) + r3271867923 MAJOR
-  // (qa-gatekeeper, 49th-wave): wave-48 fixed
-  // `readUiContractScreenContracts` (`path.join` → `path.resolve`) for
-  // partner-helper consistency with the wave-47 `readPerSpecScreens`
-  // fix, but did not add a regression test. The two helpers have the
-  // SAME responsibility — `readUiContractScreenContracts` is the
-  // project-wide screen reader, `readPerSpecScreens` is the per-spec
-  // reader — and both must respect absolute `paths.contractsDir`
-  // overrides identically. Without a test, a future `path.join`
-  // regression here would silently break certify on
-  // explicit-contracts-dir workflows (project-wide pass returns
-  // empty while per-spec returns full set → asymmetric screen
-  // discovery between the two passes). This test pins the partner-
-  // helper symmetry directly via the exported function so the
-  // wave-47 / wave-48 coverage parity is structural.
+  // `readUiContractScreenContracts` (the project-wide screen reader) and
+  // `readPerSpecScreens` (the per-spec reader) have the SAME responsibility
+  // and both must respect absolute `paths.contractsDir` overrides
+  // identically — both use `path.resolve`, not `path.join`. Without a test,
+  // a `path.join` regression in either one would silently break certify on
+  // explicit-contracts-dir workflows (project-wide pass returns empty while
+  // per-spec returns full set → asymmetric screen discovery between the two
+  // passes). This test pins the partner-helper symmetry directly via the
+  // exported function so the coverage parity is structural.
   it("discovers project-wide UI screens when contractsDir is an absolute path OUTSIDE root", async () => {
     const root = await newTempDir();
     const externalContractsDir = await newTempDir();
     // Author a project-wide UI contract file at the ABSOLUTE
-    // contractsDir (not under root). With the pre-wave-48
-    // `path.join(root, absoluteContractsDir, "ui")`, the reader
-    // would scan `<root>/<absoluteContractsDir>/ui/**/*.yaml`
-    // (empty) and return an empty list. Post-wave-48
-    // `path.resolve()` resets to the absolute path and discovers
-    // the file.
+    // contractsDir (not under root). `path.join(root, absoluteContractsDir,
+    // "ui")` would scan `<root>/<absoluteContractsDir>/ui/**/*.yaml` (empty)
+    // and return an empty list; `path.resolve()` instead resets to the
+    // absolute path and discovers the file.
     const uiDir = path.join(externalContractsDir, "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(

@@ -86,9 +86,8 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     // `new URL(":::", "not-a-base")` throws (`:::` is not a valid URL
     // and `"not-a-base"` is not a valid absolute base) — the catch
     // branch surfaces both args verbatim in the reason string. This
-    // pins the operator-facing flag rename of the catch branch
-    // (`--target-url=` instead of the internal `targetUrl=` field
-    // name), which is the part the wave-10 diff explicitly changed.
+    // pins the operator-facing flag naming of the catch branch
+    // (`--target-url=`, not the internal `targetUrl=` field name).
     const result = composeCaptureUrl(":::", "not-a-base");
     expect(result.ok).toBe(false);
     if (result.ok) {

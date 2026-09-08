@@ -576,7 +576,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     const acceptedDir = path.join(root, ".qfai/evidence/prototyping/iter-01");
     await writeFile(path.join(acceptedDir, "home.html"), CLEAN_FINAL_HTML, "utf-8");
     await writeFile(path.join(acceptedDir, "settings.html"), CLEAN_FINAL_HTML, "utf-8");
-    // CHG-002 AC-0012-0047: certify also requires
+    // AC-0012-0047: certify also requires
     // `iter-NN/spec-NNNN/<screen>.review.json` for every frozen spec ×
     // declared screen pair. The fixture's frozen spec set is
     // `["0012"]` (seeded by seedAllGatesPass), and the UI contracts
@@ -673,13 +673,9 @@ describe("qfai prototyping show-spec", () => {
     expect(await runPrototypingShowSpec({ root })).toBe(2);
   });
 
-  // 18th late-review wave (codex r3270061025, MINOR — qa-gatekeeper).
-  // Direct regression coverage for the 14th-wave + 15th/16th-wave
-  // show-spec JSON payload semantic changes: payload now carries
-  // `frozenSpecsCoveredSource` discriminant (14th-wave codex
-  // r3269198684), `liveUiBearing` uses `resolveSurfaceUnion` and is
-  // emitted as `string[]` (15th + 16th-wave). Pre-fix the existing
-  // tests only smoke-checked the exit code.
+  // Regression coverage for the show-spec JSON payload's field semantics: the payload carries a
+  // `frozenSpecsCoveredSource` discriminant, and `liveUiBearing` uses `resolveSurfaceUnion` and is
+  // emitted as `string[]`. Earlier tests only checked the exit code.
   // QFAI:SPEC-0012:TC-0012-0422 — pairs with AC-0012-0044 (show-spec
   // operator-facing surface).
   it("TC-0012-0422 (a): legacy record without frozenSpecsCovered emits frozenSpecsCoveredSource=specsCovered", async () => {
@@ -744,7 +740,7 @@ describe("qfai prototyping show-spec", () => {
     }
   });
 
-  it("TC-0012-0422 (c): liveUiBearing is a string[] (contract-aligned post-wave-16)", async () => {
+  it("TC-0012-0422 (c): liveUiBearing is a string[] (contract-aligned)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
     await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
@@ -778,16 +774,15 @@ describe("qfai prototyping show-spec", () => {
     }
   });
 
-  // show-spec previously read `frozenSpecsCovered` via the same
+  // show-spec must not read `frozenSpecsCovered` via a plain
   // `readStringArrayField(...) ?? readStringArrayField(specsCovered)`
-  // pattern that wave-33 fixed on the certify side. That let a
-  // hand-edited / partially-corrupt multi-spec record silently
-  // downgrade the reported scope to the legacy `specsCovered` field
-  // even though iterate / certify both treat the same malformed
-  // `frozenSpecsCovered` as a hard error — operators and automation
-  // making recovery decisions from show-spec output were misled.
-  // show-spec now consumes the SSOT classifier and fails closed on
-  // `malformed`.
+  // fallback: a hand-edited / partially-corrupt multi-spec record would
+  // then silently downgrade the reported scope to the legacy
+  // `specsCovered` field, even though iterate / certify both treat the
+  // same malformed `frozenSpecsCovered` as a hard error — misleading
+  // operators and automation making recovery decisions from show-spec
+  // output. show-spec instead consumes the SSOT classifier and fails
+  // closed on `malformed`.
   it("TC-0012-0428: exits 2 with a 'present but malformed' diagnostic when frozenSpecsCovered is present but invalid (does NOT fall back to legacy specsCovered)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });

@@ -1202,12 +1202,12 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
   it("never moves the canonical name, so it cannot free another holder's", async () => {
     // The row above pins the OUTCOME. This one pins the mechanism, and the mechanism changed.
     //
-    // Release used to check the identity and then rename the lock aside. Those are two
-    // syscalls: a holder that verified its own lock, stalled, was reclaimed as stale and
-    // replaced, and then resumed would move its SUCCESSOR's directory — and if a third writer
-    // took the freed name, the restore declined and two writers were inside the section. That
-    // is review finding [137], and narrowing the window does not close it, because the
-    // operation acted on a NAME rather than on this holder's object.
+    // Checking the identity and then renaming the lock aside would be two syscalls: a holder
+    // that verified its own lock, stalled, was reclaimed as stale and replaced, and then resumed
+    // would move its SUCCESSOR's directory — and if a third writer took the freed name, the
+    // restore would decline and two writers would be inside the section. Narrowing the window
+    // does not close that, because the operation would still act on a NAME rather than on this
+    // holder's object.
     //
     // So it acts on the object. `rmdir` removes a directory only when it is empty, and the only
     // way it becomes empty is this holder unlinking the one marker it created; a successor's

@@ -1009,11 +1009,11 @@ export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   // point of asking.
   "yarn cache",
   // The VERSION and the REGISTRY are both part of the exact string, and that is the enumeration
-  // working as intended: review finding [55] pinned the version because an unpinned install
-  // fetches whatever the registry calls latest at the moment the job runs, and review finding
-  // [83] pinned the source because a version names WHAT to fetch and not WHERE from — `npm`
-  // takes its registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to
-  // be a change a reviewer reads here too.
+  // working as intended: the version has to be pinned, because an unpinned install fetches
+  // whatever the registry calls latest at the moment the job runs, and the source has to be
+  // pinned too, because a version names WHAT to fetch and not WHERE from — `npm` takes its
+  // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to be a change
+  // a reviewer reads here too.
   //
   // `--ignore-scripts` is in the string rather than in `ALLOWED_FLAGS` for the reason the whole
   // tier exists: `npm install` is denied a bare package argument, so widening its flag set would
@@ -2033,8 +2033,8 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
-  // three-dot one on a pull request — review finding [32]. Its value comes from `github.event_name`,
-  // a closed set GitHub controls, and the body compares it to one literal. It reaches no program.
+  // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
+  // GitHub controls, and the body compares it to one literal. It reaches no program.
   ["QFAI_EVENT_NAME", "${{ github.event_name }}"],
   ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
 ]);

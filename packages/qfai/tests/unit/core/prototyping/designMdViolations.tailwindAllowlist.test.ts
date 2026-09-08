@@ -63,7 +63,7 @@ describe("Tailwind preflight allowlist", () => {
   });
 });
 
-describe("Head stylesheet scanning (PR #210 wave-12 Codex P2)", () => {
+describe("Head stylesheet scanning", () => {
   it("flags color literals authored in <head><style> by the operator", () => {
     // Operator-authored stylesheet in <head> is in scope: a hex
     // literal that does not appear in DESIGN.md.colors must surface
@@ -86,7 +86,7 @@ describe("Head stylesheet scanning (PR #210 wave-12 Codex P2)", () => {
   });
 
   it("does not surface color literals nested inside --tw-* declarations (declaration-level strip)", () => {
-    // No banner comment and no universal-reset selector, so post-wave-14
+    // No banner comment and no universal-reset selector, so
     // the block is NOT classified as preflight at the block level. The
     // `--tw-ring-color: #abcdef;` and `--tw-shadow-color: rgba(...);`
     // declarations are still stripped from the scan surface by
@@ -97,15 +97,14 @@ describe("Head stylesheet scanning (PR #210 wave-12 Codex P2)", () => {
     expect(out.filter((v) => v.kind === "color")).toEqual([]);
   });
 
-  it("flags operator-authored color literals in a head block that ALSO carries a --tw-* declaration (PR #210 wave-14 false-negative fix)", () => {
-    // Pre-wave-14 the bare presence of `--tw-` anywhere in the block
-    // classified the entire <style> as Tailwind preflight and dropped
-    // it from the scan surface. That allowed an operator-authored
-    // `color: #ff0000;` (NOT in DESIGN.md) sitting next to a single
-    // `--tw-ring-offset-width: 0px;` declaration to silently pass the
-    // drift check. Post-wave-14 the block is kept (no banner, no
-    // universal-reset) and `SHADOW_DECL_STRIP_RE` strips only the
-    // `--tw-*: ...` declaration, leaving the operator-authored
+  it("flags operator-authored color literals in a head block that ALSO carries a --tw-* declaration", () => {
+    // The bare presence of `--tw-` anywhere in the block must not classify the
+    // entire <style> as Tailwind preflight and drop it from the scan surface:
+    // that would let an operator-authored `color: #ff0000;` (NOT in
+    // DESIGN.md) sitting next to a single `--tw-ring-offset-width: 0px;`
+    // declaration silently pass the drift check. Instead the block is kept
+    // (no banner, no universal-reset) and `SHADOW_DECL_STRIP_RE` strips only
+    // the `--tw-*: ...` declaration, leaving the operator-authored
     // `color: #ff0000;` in scope where it surfaces as drift.
     const html = `<!doctype html><html><head><style>.brand { --tw-ring-offset-width: 0px; color: #ff0000; }</style></head><body><div class="brand"></div></body></html>`;
     const out = findDesignMdViolations(html, baseDesignMd());
@@ -113,8 +112,8 @@ describe("Head stylesheet scanning (PR #210 wave-12 Codex P2)", () => {
   });
 
   it("still excludes a head block carrying the banner comment even when an operator-authored color sits next to it", () => {
-    // Counterpart to the wave-14 false-negative fix: banner = strong
-    // signal, block-level skip stays in force. An operator who places
+    // Counterpart to the previous case: banner = strong signal, block-level
+    // skip stays in force. An operator who places
     // their own color literal INSIDE a preflight-banner block is
     // explicitly opting that block out of the scan; the banner is the
     // contract boundary.
