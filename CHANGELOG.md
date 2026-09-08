@@ -20,6 +20,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A spec that owes no ATDD annotation says so** (#1251). `QFAI-ATDD-112`
+  routes each obligation by its test case's declared `Level`, and Unit and
+  Component owe none. A spec whose table declares only those therefore has an
+  obligation population of zero, and the gate never names it — correctly, but
+  silently.
+
+  Deleting every annotation in such a spec changes no output. The reasonable
+  reading of an unchanged run is that the gate is blind to the spec, and
+  settling it otherwise meant reading the compiled scanner. In one repository
+  358 of 476 test cases were outside the rule, so a green `QFAI-ATDD-112` was
+  compatible with three quarters of the table having no acceptance test.
+
+  Three things now say it:
+  - `QFAI-ATDD-125` (`info`) names each spec that declares test cases and owes
+    none, with the count and both readings — the levels are wrong, or the spec
+    genuinely has no acceptance obligation.
+  - `QFAI-ATDD-117` breaks its count down per spec rather than listing every
+    exempt id across the repository and truncating at ten.
+  - `summary.json` records `tcCensus`: per spec, how many test cases are
+    declared, exempt and owed. An empty `missing.tc` says nothing about the size
+    of the set it is empty of.
+
 - **`validate` reports a test case the ledger does not own, cited from a
   coverage row** (#1250). The `Level` a test case declares and the `Layer` of
   the ledger rows citing it were compared in one direction only: a `L1` / `L2`

@@ -257,6 +257,39 @@ function testPathSpecNumber(file: string, testsRoot: string): string | null {
 /** The per-layer directories `qfai atdd scaffold` writes under the tests root. */
 const LAYER_DIRS: ReadonlySet<string> = new Set(["integration", "api", "e2e", "atdd"]);
 
+/** `SPEC-0007:TC-0007-0001` -> `0007`. */
+const REF_SPEC_RE = /^SPEC-(\d{4}):/;
+
+/** What one spec's TC table owes, and what it does not. */
+type SpecTcCensus = { specNumber: string; declared: number; exempt: number; owed: number };
+
+/**
+ * Per spec: how many TCs it declares, how many the `Level` routing exempts, and
+ * how many are left owing an annotation.
+ *
+ * The counts are the point. A rule reporting no findings over a population of
+ * zero reads exactly like one reporting none over a population of 118, and a
+ * flat list of every exempt id across every spec cannot tell them apart — which
+ * is how a green `QFAI-ATDD-112` gets read as "coverage is fine" while three
+ * quarters of the TC table is outside it.
+ */
+function censusBySpec(result: AtddCodeTraceabilityResult): SpecTcCensus[] {
+  const exemptBySpec = new Map<string, number>();
+  for (const ref of result.unitComponentTcIds) {
+    const specNumber = REF_SPEC_RE.exec(ref)?.[1];
+    if (specNumber !== undefined) {
+      exemptBySpec.set(specNumber, (exemptBySpec.get(specNumber) ?? 0) + 1);
+    }
+  }
+  return [...result.specTcIds]
+    .map(([specNumber, ids]) => {
+      const exempt = exemptBySpec.get(specNumber) ?? 0;
+      return { specNumber, declared: ids.size, exempt, owed: ids.size - exempt };
+    })
+    .filter((entry) => entry.declared > 0)
+    .sort((left, right) => left.specNumber.localeCompare(right.specNumber));
+}
+
 function specAttribution(
   refs: readonly string[],
   specsRoot: string,
@@ -323,6 +356,15 @@ type AtddTraceabilitySummary = {
    * ATDD owes nothing for them and `tdd/test-list.md` is the gate.
    */
   excludedUnitComponentTc: string[];
+  /**
+   * Per spec, the TC population `QFAI-ATDD-112` is measured over.
+   *
+   * `missing.tc: []` says nothing about the size of the set it is empty of. A
+   * downstream gate reading only that cannot tell a spec whose every TC is
+   * covered from one that owes no TC at all, which is the same reading a green
+   * run gives a person.
+   */
+  tcCensus: { spec: string; declared: number; exempt: number; owed: number }[];
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -433,13 +475,26 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  const census = censusBySpec(result);
+
   if (result.unitComponentTcIds.length > 0) {
     const ids = result.unitComponentTcIds;
     const unitComponentHome = specAttribution(ids, result.specsRoot, result.declaredSpecDirs);
+    // Per spec, not one flat list. A truncated run of ids across every spec
+    // cannot show that one of them contributes 35 of the 358 and owes nothing,
+    // which is the fact a reader needs to tell an exempt spec from a covered
+    // one.
+    const perSpec = census
+      .filter((entry) => entry.exempt > 0)
+      .map(
+        (entry) =>
+          `spec-${entry.specNumber}: ${String(entry.exempt)} exempt / ${String(entry.owed)} owed`,
+      )
+      .join("; ");
     issues.push(
       issue(
         "QFAI-ATDD-117",
-        `宣言 Level が Unit / Component の TC は ATDD の注釈義務対象外です（${String(ids.length)} 件）: ${ids.slice(0, 10).join(", ")}${ids.length > 10 ? ` (他 ${String(ids.length - 10)} 件)` : ""}`,
+        `${String(ids.length)} test case(s) declare a Unit or Component Level, so they owe no ATDD annotation. ${perSpec}`,
         "info",
         // The specs these ids name, not the specs root: filed at the root the
         // finding belongs to every scope, so a scoped run reported it whether
@@ -450,6 +505,46 @@ export async function validateAtddCodeTraceability(
         "canonical",
         "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
         { relatedFiles: unitComponentHome.relatedFiles },
+      ),
+    );
+  }
+
+  // A spec that declares TCs and owes none of them an annotation. Its own
+  // statement, separate from the exempt ids above, because it is the fact that
+  // was invisible: `QFAI-ATDD-112` never names such a spec, so deleting every
+  // annotation in it changes no output, and the reasonable reading of that is
+  // that the gate is broken rather than that the spec is outside it.
+  //
+  // `info`, not `warning`. The shape is legitimate — a spec whose obligations
+  // are all pure-logic has no acceptance test to owe — and it is common enough
+  // that a warning would fail runs on correct trees and teach readers to ignore
+  // the level, which is the failure this finding exists to correct. What was
+  // missing is the sentence, not the severity. The Levels being wrong is the
+  // other reading, and the message names it so a reviewer can check.
+  const exemptSpecs = census.filter((entry) => entry.owed === 0);
+  if (exemptSpecs.length > 0) {
+    const refs = exemptSpecs.map((entry) => `SPEC-${entry.specNumber}`);
+    const home = specAttribution(
+      exemptSpecs.map((entry) => `SPEC-${entry.specNumber}:`),
+      result.specsRoot,
+      result.declaredSpecDirs,
+    );
+    issues.push(
+      issue(
+        "QFAI-ATDD-125",
+        `Declares test cases and owes no ATDD annotation for any of them: ${exemptSpecs
+          .map(
+            (entry) =>
+              `spec-${entry.specNumber} (all ${String(entry.declared)} are Unit or Component)`,
+          )
+          .join(", ")}`,
+        "info",
+        home.file,
+        "atddCodeTraceability.coverage.specFullyExempt",
+        refs,
+        "canonical",
+        "`QFAI-ATDD-112` is green for this spec because the population is zero, not because anything is covered. If that is intended, `/qfai-implement` holds these through `tdd/test-list.md` (`TDDLIST_TC_NOT_COVERED`, an error). If it is not, read the `Level` column of `06_Test-Cases.md`: a test case whose oracle observes acceptance, declared L1 or L2, produces exactly this shape.",
+        { relatedFiles: home.relatedFiles },
       ),
     );
   }
@@ -874,6 +969,12 @@ async function writeAtddTraceabilityReport(
       ),
     },
     excludedUnitComponentTc: result.unitComponentTcIds,
+    tcCensus: censusBySpec(result).map((entry) => ({
+      spec: entry.specNumber,
+      declared: entry.declared,
+      exempt: entry.exempt,
+      owed: entry.owed,
+    })),
     unknown: result.unknown.map((entry) => ({
       file: entry.file,
       token: entry.token,

@@ -160,6 +160,11 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // error. Promoting it would fail every shallow CI clone on the pin date for
   // the shape of its checkout rather than for anything in the repository.
   "QFAI-TRACE-003",
+  // A spec that declares TCs and owes none an ATDD annotation. The shape is
+  // legitimate — a spec whose obligations are all pure-logic has no acceptance
+  // test to owe — so there is no release at which it should fail a build. The
+  // finding exists because the fact was invisible, not because it is wrong.
+  "QFAI-ATDD-125",
 ];
 
 // tests/core/<this file> -> packages/qfai
