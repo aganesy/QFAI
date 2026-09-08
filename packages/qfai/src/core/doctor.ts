@@ -1237,6 +1237,19 @@ async function inspectSkillsIntegrity(
  * A wrapper that was never created is not damage and is not reported here; the
  * validator draws that line, and this check inherits it by not drawing its own.
  */
+/**
+ * The worst severity in `issues`, or `null` when there are none.
+ *
+ * A finding reaches this check at `error`, `warning` or `info` — the last when
+ * a waiver lowered it without suppressing it — and the check has to sit on the
+ * same side of every `--fail-on` threshold as the gate, not only `error`.
+ */
+function worstSeverity(issues: readonly Issue[]): DoctorSeverity | null {
+  if (issues.some((issue) => issue.severity === "error")) return "error";
+  if (issues.some((issue) => issue.severity === "warning")) return "warning";
+  return issues.length > 0 ? "info" : null;
+}
+
 async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   const title = "Integration wrappers (.claude / .codex / .agents / .github)";
   let issues: Issue[];
@@ -1263,32 +1276,68 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   // finding passes the gate and fails the diagnostic, which is the disagreement
   // this check exists to remove — reintroduced one layer along.
   const waived = await applyWaivers(root, issues).catch(() => null);
-  const broken = (waived?.issues ?? issues).filter(
+  const applied = waived?.issues ?? issues;
+
+  // The waiver pass reports on its own input as well as on the findings: a
+  // waiver file that does not parse, or one written at the unsupported
+  // extension, comes back as `QFAI-WAIVER-001`. Keeping only the link findings
+  // dropped those, so `validate` failed on the waiver file while `doctor`
+  // passed — the same disagreement this check exists to remove, over the file
+  // that decides what the check is allowed to stay quiet about.
+  //
+  // The suppressions themselves are still read. A file that fails to parse
+  // yields no waivers at all, so there is nothing there to distrust; the one
+  // fault that leaves working suppressions behind is a stray `.yaml` beside a
+  // valid `.yml`, and those suppressions are the project's, correctly parsed.
+  const waiverFaults = applied.filter(
+    (issue) => issue.code === "QFAI-WAIVER-001" && issue.suppressed !== true,
+  );
+  const broken = applied.filter(
     (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed !== true,
   );
+
   if (broken.length === 0) {
+    const suppressed = applied.filter(
+      (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed === true,
+    ).length;
+    if (waiverFaults.length > 0) {
+      return {
+        id: "integration.links",
+        // The gate fails on the waiver file whatever the wrappers look like, so
+        // a clean sweep of the wrappers is not a passing check here.
+        severity: worstSeverity(waiverFaults) ?? /* c8 ignore next */ "error",
+        title,
+        message:
+          "No unwaived integration wrapper findings, but the waiver file itself is rejected. " +
+          "`qfai validate` reports it as QFAI-WAIVER-001.",
+        details: {},
+      };
+    }
     return {
       id: "integration.links",
       severity: "ok",
       title,
-      message: "Every integration wrapper resolves to the skill or agent it names",
-      details: {},
+      // A waiver silences a finding; it does not repair the wrapper. Saying
+      // every wrapper resolves would report a tree as sound on the strength of
+      // a decision to stop being told about it.
+      message:
+        suppressed === 0
+          ? "Every integration wrapper resolves to the skill or agent it names"
+          : `No unwaived integration wrapper findings (${String(suppressed)} waived — still unrepaired)`,
+      details: suppressed === 0 ? {} : { waivedFindings: suppressed },
     };
   }
 
   const paths = broken.flatMap((issue) => issue.refs ?? []);
-  // The worst of the severities the findings carry, across all three a finding
-  // can arrive at. The validator reports the damage classes separately — a
-  // readable canonical document is a `warning`, an unreadable one an `error` —
-  // and a waiver can downgrade either to `info` without suppressing it.
-  // Collapsing everything short of `error` to `warning` put `doctor` on the far
-  // side of `validation.failOn: warning` from a `validate` that passes on that
-  // downgrade, which is the disagreement this check exists to remove.
-  const severity: DoctorSeverity = broken.some((issue) => issue.severity === "error")
-    ? "error"
-    : broken.some((issue) => issue.severity === "warning")
-      ? "warning"
-      : "info";
+  // The worst severity anything in this run carries — the wrapper findings and
+  // the waiver pass's own. The validator reports the damage classes separately
+  // (a readable canonical document is a `warning`, an unreadable one an
+  // `error`) and a waiver can downgrade either to `info` without suppressing
+  // it, so collapsing everything short of `error` to `warning` put this check
+  // on the far side of `validation.failOn: warning` from a `validate` that
+  // passes on the downgrade.
+  const severity: DoctorSeverity =
+    worstSeverity([...broken, ...waiverFaults]) ?? /* c8 ignore next */ "warning";
   return {
     id: "integration.links",
     severity,
