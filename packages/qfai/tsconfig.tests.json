@@ -102,6 +102,7 @@
     "tests/assets/tddIdAllocation.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
+    "tests/assets/uiAffectingDefinition.test.ts",
     "tests/assets/uiContractGuideRationale.test.ts",
     "tests/assets/uiContractGuideReachability.test.ts",
     "tests/assets/verifyEvidenceSections.test.ts",
@@ -205,6 +206,7 @@
     "tests/integration/spec0017OwnWorkflowScope.test.ts",
     "tests/integration/spec0017TuningChangeScope.test.ts",
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
+    "tests/scripts/conflictMarkers.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/deriveE2eCallsites.test.ts",
     "tests/scripts/deriveCliMessageAllowlistCount.test.ts",
@@ -246,12 +248,17 @@
     "tests/unit/cliMessageLanguage.allowlist.ts",
     "tests/unit/cliMessageLanguage.test.ts",
     "tests/validators/justificationCatalogEmitters.test.ts",
+    "tests/cli/dbDrift.test.ts",
+    "tests/core/dbSchemaDrift.test.ts",
+    "tests/integration/dbSchemaDriftEngine.test.ts",
     "tests/validators/reOpenDecisionRecord.test.ts",
     "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uiMarkerPresence.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts",
-    "tests/assets/gateItemBudget.test.ts"
+    "tests/assets/mdschemaRouting.test.ts",
+    "tests/assets/gateItemBudget.test.ts",
+    "tests/core/gitChanges.test.ts"
   ]
 }
