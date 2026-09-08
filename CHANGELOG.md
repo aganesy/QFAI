@@ -36,6 +36,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   seeded before the column holds a split whose rows name nothing, so an error on
   the introducing release would fail every project carrying one.
 
+- **`qfai db-drift` compares the DB contracts with the migrations as schemas**
+  (#1332). `.qfai/contracts/db/**` is the schema a project declares; its
+  migrations are what actually builds the database. Nothing compared the two, so
+  they drift and every signal stays green — one measured tree differed by 58
+  columns the migrations had, 6 the contracts had, and 28 declared differently,
+  with a passing suite that proved things about the migration schema and nothing
+  about the contracts.
+
+  The command applies each side to its own in-process Postgres and reports the
+  columns they disagree about: present on one side only, or declared with a
+  different type, nullability or default.
+
+  | Exit code | Meaning                                            |
+  | --------- | -------------------------------------------------- |
+  | 0         | the two agree, or the project is out of scope      |
+  | 1         | they differ                                        |
+  | 2         | a file would not apply, or the engine is not there |
+
+  `--format json`, `--out <path>` and `--fail-on never` are accepted.
+
+  Set `paths.migrationsDir` to the project's migration directory. A project
+  without one is out of scope, not in violation: the command says so and exits 0.
+
+  It is a command rather than a `validate` rule because it needs a database, and
+  `qfai validate` starts no processes. The engine is loaded only when the
+  command runs, so a project that never runs it never pays for it.
+
 - **A `drift` validation profile, and the CI workflow `qfai init` writes now
   runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
   and nothing else. `full` evaluates every gate group except drift, so the one
