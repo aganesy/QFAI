@@ -30,11 +30,16 @@ const CAP_CATALOG_HEADING = /^ {0,3}(#{1,6})\s*cap\s*catalog\s*(?:\([^)]*\)|（[
 const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
 
 /**
- * Body of the `## CAP Catalog` section, or `null` when the document has no
- * such heading. The section ends at the next heading of the same or a higher
- * level, mirroring `extractTestCaseTableSection`.
+ * The `## CAP Catalog` section's body and the line it starts on, or `null` when
+ * the document has no such heading. The section ends at the next heading of the
+ * same or a higher level, mirroring `extractTestCaseTableSection`.
+ *
+ * The offset is returned beside the body so a caller that has to WRITE back —
+ * the `Spec` column migration — can name the line in the whole document rather
+ * than in the slice. Deriving it a second time is what would let the writer and
+ * this reader disagree about which table they are looking at.
  */
-function extractCapCatalogSection(text: string): string | null {
+function locateCapCatalogSection(text: string): { body: string; startLine: number } | null {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const start = lines.findIndex((line) => CAP_CATALOG_HEADING.test(line));
   if (start === -1) {
@@ -50,7 +55,71 @@ function extractCapCatalogSection(text: string): string | null {
       break;
     }
   }
-  return lines.slice(start + 1, end).join("\n");
+  return { body: lines.slice(start + 1, end).join("\n"), startLine: start + 1 };
+}
+
+/** Body of the `## CAP Catalog` section, or `null` when there is no heading. */
+function extractCapCatalogSection(text: string): string | null {
+  return locateCapCatalogSection(text)?.body ?? null;
+}
+
+/**
+ * Where the catalog table sits in a capabilities document, in whole-document
+ * line numbers.
+ *
+ * Exported for the `Spec` column migration, which edits the very table this
+ * file reads. It resolves the table through {@link parseDeclaredCatalog}'s own
+ * rules — mask first, prefer the `## CAP Catalog` section, take the FIRST
+ * confirmed CAP table — so a migration cannot fill in a column on one table
+ * while the validator grades another.
+ */
+export type CapCatalogTableLocation = {
+  /** Line of the header row. */
+  readonly headerLine: number;
+  /** Line of the GFM delimiter row, always `headerLine + 1`. */
+  readonly delimiterLine: number;
+  /** Index of the CAP column among the header cells. */
+  readonly capColumn: number;
+  /** Index of the spec column, or `-1` when the table declares none. */
+  readonly specColumn: number;
+  /** Lines of the body rows that name a CAP, in table order. */
+  readonly rowLines: readonly number[];
+  /** The CAP each of {@link rowLines} names first, positionally aligned. */
+  readonly rowCapIds: readonly string[];
+};
+
+export function locateCapCatalogTable(text: string): CapCatalogTableLocation | null {
+  const masked = maskNonSpecRegions(text.replace(/\r\n/g, "\n"));
+  const section = locateCapCatalogSection(masked);
+  const offset = section?.startLine ?? 0;
+  const lines = (section?.body ?? masked).split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = tableCells(lines[index] ?? "");
+    if (header.length === 0) continue;
+    const capColumn = header.findIndex((cell) => CAP_HEADER_RE.test(cell));
+    if (capColumn < 0) continue;
+    if (!isDelimiterRow(tableCells(lines[index + 1] ?? ""))) continue;
+    const specColumn = header.findIndex((cell) => SPEC_HEADER_RE.test(cell));
+    const rowLines: number[] = [];
+    const rowCapIds: string[] = [];
+    for (let row = index + 2; row < lines.length; row += 1) {
+      const cells = tableCells(lines[row] ?? "");
+      if (cells.length === 0) break;
+      const capId = (cells[capColumn] ?? "").match(CAP_ID_CELL_RE)?.[0];
+      if (capId === undefined) continue;
+      rowLines.push(offset + row);
+      rowCapIds.push(capId);
+    }
+    return {
+      headerLine: offset + index,
+      delimiterLine: offset + index + 1,
+      capColumn,
+      specColumn,
+      rowLines,
+      rowCapIds,
+    };
+  }
+  return null;
 }
 
 function hasCapIdColumn(table: MarkdownTable): boolean {
