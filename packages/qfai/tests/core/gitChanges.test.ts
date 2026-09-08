@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
+import { defaultConfig, loadConfig, type QfaiConfig } from "../../src/core/config.js";
 import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../../src/core/gitChanges.js";
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
 
@@ -289,14 +289,51 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
   });
 
-  // The case above states the POSIX form and holds on a runner whose separator
-  // is already `/` however the finding was built, so it cannot see this fix at
-  // all. This one can, on any platform: the configured directory carries a
-  // backslash, and the finding must not.
+  /**
+   * The config an adopter gets for a `paths.specsDir` written this way, read
+   * through the real loader rather than assembled here: the spelling is
+   * settled at load, so a test that built the value itself would prove nothing
+   * about what a project's own `qfai.config.yaml` produces.
+   */
+  async function configWithSpecsDir(root: string, specsDir: string): Promise<QfaiConfig> {
+    await write(root, "qfai.config.yaml", `baseBranch: base\npaths:\n  specsDir: '${specsDir}'\n`);
+    const { config: loaded } = await loadConfig(root);
+    return loaded;
+  }
+
+  // A configured directory is joined with a child path in some readers and
+  // tested as a prefix in others. The prefix form built `.qfai/specs//`, which
+  // no repository path starts with, so every changed file was skipped, the
+  // spec set came back empty and the gate reported a pass over nothing.
   //
-  // A trailing-slash directory was tried here too and is not this test's
-  // subject: it produces no finding, because the spec-change detection misses
-  // the directory before any path is rendered. Filed separately.
+  // All three spellings name one directory and reach one finding: the loader
+  // settles the separators and the finding renders what it is given in POSIX
+  // form, so how the config was written does not reach the report.
+  it.each([".qfai/specs/", ".qfai/specs//", ".qfai\\specs\\"])(
+    "reads the same specs directory written as %s",
+    async (specsDir) => {
+      const root = await newRepo({
+        ...layeredSpecBase,
+        ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+        ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+        "src/core/module.ts": MODULE_BODY,
+      });
+      git(root, "rm", "-r", ".qfai/specs/spec-0001");
+      git(root, "commit", "-m", "delete the spec");
+
+      const written = await configWithSpecsDir(root, specsDir);
+      const issues = await validateTraceabilityIntegrity(root, written);
+      const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
+
+      expect(uninspectable).toHaveLength(1);
+      expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
+    },
+  );
+
+  // The case above reads the directory through the loader, which settles the
+  // spelling. A config assembled in code keeps whatever separator it was given,
+  // so this one reaches the rendering with a backslash still in the value and
+  // holds on a runner whose own separator is already `/`.
   it("renders the spec directory as one POSIX path when the config carries a backslash", async () => {
     const specsDir = ".qfai\\specs";
     const root = await newRepo({
@@ -316,6 +353,41 @@ describe("validateTraceabilityIntegrity across a rename", () => {
 
     expect(uninspectable).toHaveLength(1);
     expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
+  });
+
+  // The two other ways the detection can select nothing — a diff it cannot
+  // take, and a spec the diff names that the tree no longer holds — each say
+  // so. A directory that is not there said nothing at all, which is the same
+  // output as a clean run.
+  it("reports a specs directory that is not in the repository", async () => {
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+      "src/core/module.ts": MODULE_BODY,
+    });
+
+    const written = await configWithSpecsDir(root, ".qfai/spec");
+    const issues = await validateTraceabilityIntegrity(root, written);
+    const missing = issues.filter(
+      (entry) => entry.code === "QFAI-TRACE-003" && entry.file === ".qfai/spec",
+    );
+
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.message).toContain("ran over nothing");
+  });
+
+  it("says nothing about a specs directory that is there", async () => {
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+      "src/core/module.ts": MODULE_BODY,
+    });
+
+    const issues = await validateTraceabilityIntegrity(root, config);
+
+    expect(issues.filter((entry) => entry.file === ".qfai/specs")).toEqual([]);
   });
 
   it("passes a ledger row updated to the rename's destination", async () => {
