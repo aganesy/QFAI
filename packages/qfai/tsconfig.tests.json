@@ -101,6 +101,7 @@
     "tests/assets/tddIdAllocation.test.ts",
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/triageColonShorthand.test.ts",
+    "tests/assets/uiAffectingDefinition.test.ts",
     "tests/assets/uiContractGuideRationale.test.ts",
     "tests/assets/uiContractGuideReachability.test.ts",
     "tests/assets/verifyEvidenceSections.test.ts",

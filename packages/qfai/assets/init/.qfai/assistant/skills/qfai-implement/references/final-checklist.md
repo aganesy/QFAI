@@ -55,6 +55,9 @@ releases completion.
       evidence entry records the verdict on either target — the field name does not change — and it
       is not the verdict; the `--profile tdd` run this list ends on reports no `QFAI-REVIEW-*`
       finding, so a pack that never held a UI review passes it (gate item 9).
+      Whether a row is UI-affecting is decided by `ui-affecting.md`, not by the implementer,
+      and the answer is recorded either way: the verdict together with the number of the
+      clause that selected the row, or `n/a (not UI-affecting)` where no clause does.
       Its `Prototype parity reviewed revision` names the **same** revision as items 6, 7
       and 8: a parity PASS taken before the surface moved is stale, and it is the one
       verdict a later reader cannot re-derive from the spec and the diff (gate item 10).
