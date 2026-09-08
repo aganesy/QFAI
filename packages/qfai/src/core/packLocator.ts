@@ -50,7 +50,20 @@ const PACK_RULES: Record<PackKind, PackRule> = {
  * the SDD preflight selects — has to admit exactly the same width, or one of
  * them starts accepting names the other rejects.
  */
-export const CANONICAL_TIMESTAMP_RE = /^\d{17}$/;
+export const CANONICAL_TIMESTAMP_DIGITS = 17;
+
+export const CANONICAL_TIMESTAMP_RE = new RegExp(`^\\d{${String(CANONICAL_TIMESTAMP_DIGITS)}}$`);
+
+/**
+ * The stamp written as a glob, for the callers that cannot run a regex.
+ *
+ * A `.gitignore` negation decides which of these files reach a commit, and it
+ * has only character classes to say it with. Built from the width above so the
+ * two admit the same names: a glob written by hand drifts the moment the width
+ * moves, and it drifts silently — the file is committed, or it is not, and
+ * nothing compares the two rules.
+ */
+export const CANONICAL_TIMESTAMP_GLOB = "[0-9]".repeat(CANONICAL_TIMESTAMP_DIGITS);
 
 export function parsePackTimestamp(kind: PackKind, name: string): string | null {
   const rule = PACK_RULES[kind];

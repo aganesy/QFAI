@@ -200,7 +200,10 @@ describe("importLite profile wiring", () => {
   it("qfai-sdd Stage 0 tells the agent how to produce the evidence file", async () => {
     const skill = await readFile(SKILL_MD, "utf-8");
     expect(skill).toContain("QFAI-IMPLITE-001");
-    expect(skill).toContain(".qfai/evidence/import-lite-<17-digit timestamp>.md");
+    // The name and what fills its placeholder, so the agent can build it
+    // without leaving the step. `<ts>` is the spelling used throughout.
+    expect(skill).toContain(".qfai/evidence/import-lite-<ts>.md");
+    expect(skill).toContain("`<ts>` is the 17-digit run stamp");
     expect(skill).toContain("templates/evidence/import-lite.md");
   });
 });
@@ -275,22 +278,35 @@ describe("QFAI-IMPLITE-001 input-source shape", () => {
 });
 
 describe("import-lite evidence filenames", () => {
-  // `isFile()` succeeds for a real entry whose name carries surrounding
-  // whitespace, but trimming it for the match and then joining the trimmed form
-  // returned a path that does not exist: the validator and the full/verify gate
-  // passed the project while the preflight summary pointed at an unreadable
-  // file.
-  it("returns the real filename when it carries surrounding whitespace", async () => {
-    const root = await newRoot();
-    await seedSpec(root);
-    await seedEvidence(root, " import-lite.md");
+  // The accepted set is the set `init` writes `.gitignore` negations for, and
+  // a gitignore pattern is matched as written. A name outside it can hold a
+  // filled-in record and still be excluded, which clears the gate on the
+  // machine that wrote it and leaves a fresh clone with no input source at all
+  // — the state `QFAI-DPACK-001` exists to report.
+  it.each([" import-lite.md", "import-lite.md ", "IMPORT-LITE.MD", "Import-Lite.md"])(
+    "does not accept `%s`, which the ignore rules do not re-include",
+    async (filename) => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await seedEvidence(root, filename);
 
-    const selected = await findImportLiteEvidence(root);
+      expect(await findImportLiteEvidence(root)).toBeNull();
+    },
+  );
 
-    expect(selected).not.toBeNull();
-    expect(path.basename(selected ?? "")).toBe(" import-lite.md");
-    await expect(readFile(selected ?? "", "utf-8")).resolves.toContain("import-lite");
-  });
+  it.each(["import-lite.md", "import-lite-20260101000000000.md"])(
+    "accepts `%s`",
+    async (filename) => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await seedEvidence(root, filename);
+
+      const selected = await findImportLiteEvidence(root);
+
+      expect(path.basename(selected ?? "")).toBe(filename);
+      await expect(readFile(selected ?? "", "utf-8")).resolves.toContain("import-lite");
+    },
+  );
 });
 
 describe("import-lite evidence content", () => {
@@ -862,7 +878,10 @@ describe("import-lite in the shipped Stage 0 guidance", () => {
     const body = stageZero.slice(0, stageZero.indexOf("\n## Stage 1"));
 
     expect(body).toContain("templates/evidence/import-lite.md");
-    expect(body).toContain(".qfai/evidence/import-lite-<17-digit timestamp>.md");
+    // The playbook is reached on its own, so it defines the placeholder too.
+    // Flattened: the sentence is the rule, the column it wraps at is not.
+    expect(body).toContain(".qfai/evidence/import-lite-<ts>.md");
+    expect(body.replace(/\s+/g, " ")).toContain("`<ts>` is the 17-digit run stamp");
     expect(body).toContain("QFAI-IMPLITE-001");
   });
 

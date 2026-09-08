@@ -738,6 +738,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-020",
     "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
+    // `validateDbContractApplyOrder`, composed by `validateContracts` beside
+    // `-031` and reachable from the same two profiles.
+    "QFAI-CONTRACT-036",
     "QFAI-CONTRACT-040",
     // `-041` shipped after this list did, and the explicit enumeration that
     // keeps the wildcard from over-claiming is also what stops a new code
@@ -1872,6 +1875,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034": "Every declared contract has a row in a contract index.",
   "QFAI-CONTRACT-035":
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
+  "QFAI-CONTRACT-036":
+    "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
   "QFAI-CONTRACT-041":
@@ -1982,6 +1987,17 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // names a tier the ceremony rules recognise.
   "QFAI-TDDLIST-010":
     "Every filled `Tier` cell in a TDD Execution Ledger names one of `T1`, `T2`, `T3` or `-`, so the ceremony a row owes is the one its author declared.",
+  // The other `TDDLIST_*` codes read the ledger alone and stay generic; this
+  // one pairs the ledger with the steering surface, so the expected state has
+  // to name both halves or the reader cannot tell which artifact is missing.
+  "QFAI-TDDLIST-015":
+    "A spec whose `tdd/test-list.md` holds `Status=blocked` rows also has a `.qfai/steering/` work-log entry accounting for the stop, associated with the spec by `scope: spec-NNNN` or by a `scope: global` entry's `links`.",
+  // The companion to the row above, and it earns a catalog entry for the same
+  // reason: once its severity follows a promotion pin rather than a `warning`
+  // literal, the code is error-capable and the reader of an `expected:` line
+  // needs to be told the expectation is about the surface, not about any spec.
+  "QFAI-TDDLIST-016":
+    "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",
   "QFAI-RESEARCH-015":
     "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
   "QFAI-RESEARCH-016":

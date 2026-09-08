@@ -1,5 +1,5 @@
 /**
- * Phase 2b's `tdd/test-list.md` is on the two completion surfaces (#582).
+ * Phase 2b's `tdd/test-list.md` is on the two completion surfaces.
  *
  * `/qfai-sdd` has a phase whose entire purpose is one file, yet neither of the
  * lists a finished run is checked against named it: `## Mandatory Outputs` in

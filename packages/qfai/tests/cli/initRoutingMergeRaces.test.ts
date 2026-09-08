@@ -136,7 +136,7 @@ describe("the routing merge under concurrent writes", () => {
   // `if (process.platform === "win32") return true` — "Windows has no
   // meaningful `fchown`", as `init.ts` says — so `handle.chown` is never
   // called and `refuseStagingChown`'s simulated `EPERM` cannot happen. The
-  // decline then never triggers and the merge proceeds (#1133).
+  // decline then never triggers and the merge proceeds.
   it.skipIf(process.platform === "win32")(
     "declines rather than taking over a manifest whose owner it cannot restore",
     async () => {

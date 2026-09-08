@@ -285,10 +285,10 @@ By that discriminator these two error-class codes **belong in** the catalog,
 following the `R-PACK-LOCATION-DRIFT` precedent. Registering them is deliberately
 **deferred, not waived**: the catalog header states that adding a code extends a
 closed requirement contract and must move in lockstep with the owning spec and
-the reviewer SSOTs, which is outside this change's atomic slice. Until that
-lockstep change lands, the gate surfacing them without a justification demand is
-a **known temporary divergence, not a principle**. The owning spec records the
-deferral and names every SSOT that must move together; see `spec-0015`.
+the reviewer SSOTs — a lockstep change not yet made. Until it lands, the gate
+surfacing them without a justification demand is a **known temporary
+divergence, not a principle**. The owning spec records the deferral and names
+every SSOT that must move together; see `spec-0015`.
 
 ## 7. Detection surface
 

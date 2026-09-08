@@ -1,5 +1,5 @@
 /**
- * The SSOT mirror is checked in both directions (#396).
+ * The SSOT mirror is checked in both directions.
  *
  * `sync-init-to-root.mjs` iterated the **source** file list only, and `ci:gate`
  * then asserted drift with `git diff --exit-code .qfai/`. A committed path under

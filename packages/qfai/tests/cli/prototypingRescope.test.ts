@@ -1,5 +1,5 @@
 /**
- * `prototyping rescope` — the in-loop route out of a retired surface (#1099).
+ * `prototyping rescope` — the in-loop route out of a retired surface.
  *
  * The issue's cost was that every available action was wrong: editing
  * `frozenSurfaceUnion` was exit-2 lock drift, editing `review.json` was
