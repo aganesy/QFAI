@@ -196,6 +196,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A gitignore negation naming a directory re-includes the directory, not
+  everything under it** (#1361). A directory pattern covers its whole subtree
+  when it ignores, because git never descends into an excluded directory. A
+  negation cannot work the same way: gitignore(5) says a file whose parent
+  directory is excluded cannot be re-included.
+
+  The matcher applied the subtree rule to both, so `!.qfai/` — last in the
+  shipped block — outranked every ignore above it, and `isPathIgnoredByLayers`
+  answered "not ignored" for paths `git check-ignore` reports as ignored.
+
+  The shipped default hid it: a narrower negation for each governance record
+  sits below the directory ones and also wins, so the answer was right for the
+  wrong reason. A project that keeps the block but drops one of those narrower
+  lines is where the two parted — and the check that warns about an invisible
+  Coverage Depth Matrix stayed silent in exactly that configuration.
+
 - **A failing clean leg of the workflow-hygiene fixtures now names the rule and
   the paths** (#1314). Both legs asserted the lane's exit code before its
   findings, so a failure read `expected 1 to be 0` and the lane's own output —
