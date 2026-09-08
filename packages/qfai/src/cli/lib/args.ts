@@ -64,6 +64,8 @@ export type ParsedArgs = {
     guardrailsKeyword?: string;
     /** --format <text|json> for `qfai guardrails list|extract|check`. */
     guardrailsFormat?: "text" | "json";
+    dbDriftFormat?: "text" | "json";
+    dbDriftOut?: string;
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
     /** `rescope --remove <surface-id>`, repeatable. */
@@ -714,6 +716,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.doctorOut = next;
         } else if (command === "report") {
           options.reportOut = next;
+        } else if (command === "db-drift") {
+          options.dbDriftOut = next;
         } else {
           markInvalid(notValidHere("--out"));
         }
@@ -1275,6 +1279,13 @@ function applyFormatOption(
   if (command === "guardrails") {
     if (value === "text" || value === "json") {
       options.guardrailsFormat = value;
+      return true;
+    }
+    return false;
+  }
+  if (command === "db-drift") {
+    if (value === "text" || value === "json") {
+      options.dbDriftFormat = value;
       return true;
     }
     return false;
