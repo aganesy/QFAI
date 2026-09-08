@@ -246,3 +246,34 @@ describe("the reported directories follow the configured testsDir", () => {
     }
   });
 });
+
+describe("a test case whose Level reaches past the layers a TC may own", () => {
+  // The layer catalog says a `TC-*` row's `Level` stays within L1-L3: L4's goal
+  // is `CON-API-*` and L5's is `US-*`, so an oracle deriving to either means the
+  // obligation is misfiled. The gate routes such a row by its declared level
+  // anyway, as a safety net — and being silent, the net read as permission.
+  it.each([["L4", "api"] as const, ["L5", "e2e"] as const])(
+    "reports a %s test case even when its annotation satisfies the gate",
+    async (level, kind) => {
+      await withProject({ testCases: tcTable(level), annotationIn: kind }, (issues) => {
+        const codes = issues.map((entry) => entry.code);
+        // The row is answered — this is the shape that passes every gate today.
+        expect(codes).not.toContain("QFAI-ATDD-112");
+
+        const misfiled = issues.find((entry) => entry.code === "QFAI-ATDD-128");
+        expect(misfiled?.severity).toBe("info");
+        expect(misfiled?.refs).toEqual(["SPEC-0001:TC-0001"]);
+        // Both routes out, including the one for an obligation that fits
+        // neither `CON-API-*` nor `US-*`.
+        expect(misfiled?.suggested_action).toContain("CON-API-*");
+        expect(misfiled?.suggested_action).toContain("x-qfai-verified-by");
+      });
+    },
+  );
+
+  it.each([["L1"], ["L2"], ["L3"]])("says nothing about a %s test case", async (level) => {
+    await withProject({ testCases: tcTable(level), annotationIn: "integration" }, (issues) => {
+      expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-128");
+    });
+  });
+});

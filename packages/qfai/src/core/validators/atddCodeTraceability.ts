@@ -515,6 +515,35 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  // A test case whose declared `Level` puts its oracle at the service boundary
+  // or on a full-system journey. The layer catalog rules this out — L4's goal is
+  // `CON-API-*` and L5's is `US-*`, so an oracle deriving to either means the
+  // obligation is misfiled — and nothing said so. The annotation gate routes
+  // such a row by its declared level, so a project could file one, annotate it
+  // in the matching directory, and pass every gate while holding the shape the
+  // documentation calls wrong.
+  //
+  // `info`, and permanently: the routing is a deliberate safety net, so a tree
+  // relying on it is not broken, and failing it would take the net away from
+  // the trees it was put there for.
+  if (result.serviceBoundaryTcIds.length > 0) {
+    const boundaryRefs = result.serviceBoundaryTcIds;
+    const boundaryHome = specAttribution(boundaryRefs, result.specsRoot, result.declaredSpecDirs);
+    issues.push(
+      issue(
+        "QFAI-ATDD-128",
+        `${String(boundaryRefs.length)} test case(s) declare an API or E2E Level, which the layer catalog reserves for CON-API-* and US-*: ${boundaryRefs.slice(0, 10).join(", ")}${boundaryRefs.length > 10 ? ` (and ${String(boundaryRefs.length - 10)} more)` : ""}`,
+        "info",
+        boundaryHome.file,
+        "atddCodeTraceability.coverage.serviceBoundaryLevel",
+        boundaryRefs,
+        "canonical",
+        "Re-file the obligation as `CON-API-*` or `US-*`, moving the whole chain — the `EX-*` it verifies and the `BR-*`/`AC-*` that EX concretizes — rather than deleting the row alone, which reports `QFAI-COV-201` / `QFAI-COV-203` instead. A transport or deployment obligation is the case that fits neither: an oracle with no operation, path or body is not an API contract, and a handshake nobody performs is not a user story. Keep that one at `L3` and declare it in its own block with `- x-qfai-status: external` and `- x-qfai-verified-by: <what checks it>`, naming the scheduled probe or platform setting that actually holds the property.",
+        { relatedFiles: boundaryHome.relatedFiles },
+      ),
+    );
+  }
+
   if (result.computedSuiteCarriers.length > 0) {
     const carriers = result.computedSuiteCarriers;
     issues.push(

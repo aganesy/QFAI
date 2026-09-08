@@ -34,8 +34,15 @@ spans two layers is two TC rows.
 boundary (L4) or on a full-system journey (L5) is a misfiled obligation —
 record it as `CON-API-*` or `US-*`, not as a `TC-*` row. If one is declared
 anyway, the ATDD gate routes it to `<testsDir>/api/**` or `<testsDir>/e2e/**`
-by its declared `Level`; that routing is a safety net, not a licence to file
-L4/L5 as `TC-*`.
+by its declared `Level` and `QFAI-ATDD-128` reports the row at `info`; that
+routing is a safety net, not a licence to file L4/L5 as `TC-*`.
+
+One obligation fits neither target: a transport or deployment constraint — a
+TLS floor, a redirect the platform terminates. It declares no operation, path
+or body, so it is not an API contract, and nobody performs a handshake, so it
+is not a user story. That one stays a `TC-*` at `L3` and says where it is
+verified, under [Verified somewhere this repository cannot
+reach](#verified-somewhere-this-repository-cannot-reach).
 
 `<testsDir>` is `paths.testsDir` from `qfai.config.yaml` (default `tests`); the
 traceability scan follows the configured value, so write the paths relative to

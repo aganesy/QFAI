@@ -178,6 +178,12 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // fail a build. Promoting it would make the exit unusable for the case it
   // exists for.
   "QFAI-ATDD-126",
+
+  // A test case declaring an API or E2E Level. The layer catalog calls the
+  // shape a misfiling, and the annotation gate routes it anyway as a safety
+  // net. Promoting it would take that net away from the trees it was put there
+  // for, so the finding says what the shape is and never fails a build over it.
+  "QFAI-ATDD-128",
 ];
 
 // tests/core/<this file> -> packages/qfai

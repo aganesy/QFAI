@@ -287,6 +287,21 @@ export type AtddCodeTraceabilityResult = {
    */
   unitComponentTcIds: string[];
   /**
+   * `TC-*` refs whose declared `Level` puts the oracle at the service boundary
+   * or on a full-system journey.
+   *
+   * The layer catalog says a `TC-*` row's `Level` stays within L1-L3: L4's goal
+   * is `CON-API-*` and L5's is `US-*`, so an oracle deriving to either means the
+   * obligation is misfiled rather than that the test case is an L4/L5 test. The
+   * annotation gate still routes such a row by its declared level, which is a
+   * safety net rather than a licence — and, being silent, it read as one.
+   *
+   * Reported rather than failed, for the reason the safety net exists: a tree
+   * that has been relying on the routing is not broken, and escalating would
+   * fail it for a shape the gate has been quietly accepting all along.
+   */
+  serviceBoundaryTcIds: string[];
+  /**
    * Carrier files whose suite is bound through a variable, so nothing static —
    * including this scan — can say whether their tests run.
    *
@@ -629,6 +644,7 @@ export async function evaluateAtddCodeTraceability(
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
     unitComponentTcIds: unitComponentTc,
+    serviceBoundaryTcIds: collectServiceBoundaryTcIds(tcLevels),
     deferredTcIds: deferredTc,
     unsupportedTcStatusIds: unsupportedTc,
     specsRoot,
@@ -1138,6 +1154,27 @@ function resolveTcHomeKind(
   tcId: string,
 ): AtddTestKind | null {
   return resolveAtddHomeKind(tcLevels.get(spec)?.get(tcId.toUpperCase()));
+}
+
+/**
+ * Every declared `TC-*` whose `Level` routes it to the API or E2E directory.
+ *
+ * Read from the declared levels rather than from the missing set, because the
+ * shape is a misfiling whether or not anything answers it: a row that IS
+ * annotated in `<testsDir>/e2e/**` is the case that passes every gate today and
+ * is the one the layer catalog rules out.
+ */
+function collectServiceBoundaryTcIds(tcLevels: Map<string, Map<string, string>>): string[] {
+  const refs: string[] = [];
+  for (const [spec, levels] of tcLevels) {
+    for (const [tcId, level] of levels) {
+      const kind = resolveAtddHomeKind(level);
+      if (kind === "api" || kind === "e2e") {
+        refs.push(`SPEC-${spec}:${tcId}`);
+      }
+    }
+  }
+  return refs.sort((left, right) => left.localeCompare(right));
 }
 
 /**

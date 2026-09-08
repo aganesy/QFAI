@@ -255,6 +255,9 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       // `external` while naming no verifier.
       "QFAI-ATDD-126",
       "QFAI-ATDD-127",
+      // A test case declaring an API or E2E Level, which the layer catalog
+      // reserves for CON-API-* and US-*.
+      "QFAI-ATDD-128",
       "QFAI-ATDD-131",
       "QFAI-ATDD-132",
       "QFAI-ATDD-133",

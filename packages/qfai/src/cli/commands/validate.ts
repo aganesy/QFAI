@@ -1777,6 +1777,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A test case whose own block declares `planned` or `external` owes no annotation here, and the declaration keeps the exit visible rather than silent.",
   "QFAI-ATDD-127":
     "A test case claiming `x-qfai-status: external` names where the obligation is verified instead; without that pointer the marker is a silencer and the obligation stands.",
+  "QFAI-ATDD-128":
+    "A test case's Level stays within L1-L3, because L4's goal is `CON-API-*` and L5's is `US-*`; an oracle deriving to either is a misfiled obligation, and the annotation gate's routing of it is a safety net rather than a licence.",
   "QFAI-ATDD-131":
     "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
   "QFAI-ATDD-132":

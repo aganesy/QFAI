@@ -6,6 +6,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`validate` names a test case whose `Level` reaches past the layers a `TC-*`
+  may own** (#1259). The layer catalog says a `TC-*` row's `Level` stays within
+  L1-L3, because L4's goal is `CON-API-*` and L5's is `US-*`: an oracle deriving
+  to either means the obligation is misfiled. The annotation gate routes such a
+  row by its declared level anyway, as a safety net — and being silent, the net
+  read as permission. A project could file an L5 `TC-*`, annotate it under
+  `<testsDir>/e2e/**`, and pass every gate while holding the shape the
+  documentation calls wrong.
+
+  `QFAI-ATDD-128` reports it at `info`, and stays there. The routing is
+  deliberate, so a tree that has been relying on it is not broken, and failing
+  it would take the net away from the trees it was put there for.
+
+  The remedy names both exits, because one obligation fits neither. A transport
+  or deployment constraint — a TLS floor, a redirect the platform terminates —
+  declares no operation, path or body, so it is not an API contract, and nobody
+  performs a handshake, so it is not a user story. That one stays a `TC-*` at
+  `L3` and records where it is verified, with `x-qfai-status: external` and the
+  pointer beside it.
+
 - **Test files inherit the declared `testTimeout` instead of overriding it**
   (#1246). Ninety-three ceilings across 50 files sat below the project's 120 s
   default, and nothing distinguished one somebody measured from one nobody had
