@@ -6,6 +6,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A `drift` validation profile, and the CI workflow `qfai init` writes now
+  runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
+  and nothing else. `full` evaluates every gate group except drift, so the one
+  gate an adopter's CI installs was structurally incapable of failing on a
+  downstream edit to upstream SSOT — the thing the drift protocol calls
+  non-negotiable and says is detected.
+
+  `--profile drift` runs that guard and nothing else. The `tdd` profile still
+  carries it and is unchanged; what it cannot be is the CI answer, because it is
+  also the completion gate and asks a branch for everything a finished one owes.
+
+  The generated workflow gains a second run on pull requests, and its checkout
+  asks for full history there. The guard compares the branch against its base
+  and says nothing when it cannot resolve one, so a shallow clone would have
+  passed without checking.
+
+  `QFAI-PROFILE-001` now names `--profile drift` as the run that evaluates
+  `QFAI-DRIFT-*`, in place of `--profile tdd`.
+
 - **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
   its leading comment block. A pack outlives what it specifies: a spec that was
   deleted or superseded is kept as the record of why it went away, and that
@@ -21,6 +40,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **`qfai doctor` reads the path off an agent card's input bullet instead of
+  the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
+  file and then say what it is for. Read whole, that sentence became the
+  required input, and a card whose file is on disk was reported as missing one.
+
+  The path now ends at the first space, `(`, backtick or em dash; the rest is
+  prose. A bullet naming a glob or a `<placeholder>` is still skipped, because
+  neither is a file to find — and both are now judged on the path rather than on
+  the explanation beside it.
 
 - **`--spec` drops a sibling's stub the way it drops a sibling's broken
   reference** (#1264). `cross-spec-obligations.md` already said a file under the
