@@ -375,7 +375,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "a5f6a7eaab9aa8f6",
+        "Run lint gate": "28f01c4bc5506527",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",
