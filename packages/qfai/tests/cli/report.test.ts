@@ -60,40 +60,12 @@ async function writeValidationFixture(
 }
 
 /**
- * The 15 s ceiling is deliberate, and measured.
+ * This file inherits the project's `testTimeout` and declares none of its own.
  *
- * This file makes 23 `runInit` and 26 `runReport` calls — more than any other
- * file that declares a ceiling below the project's `testTimeout`. Call count is
- * not the cost, though: a ceiling is per test, and these calls are spread one
- * or two to a case rather than piled into one.
- *
- * Measured worst case, slowest first:
- *
- * Each command selects the slice a CI job selects, plus the two flags that
- * make per-case durations visible. The selection is CI's; the flags are the
- * measurement's, and `test:cli` / `test` carry neither.
- *
- * ```text
- * # the slice `test (cli)` runs
- * vitest run --project cli --silent --reporter=verbose
- *   report(md)                                                   2874ms
- *   runs report with --run-validate                              2570ms
- *
- * # every project in one process, the slice node-floor runs — the heaviest load
- * vitest run --silent --reporter=verbose
- *   keeps sibling specs out of the scoped report body            4149ms
- *   scopes input, output and spec-pack artifacts to --spec       3630ms
- * ```
- *
- * Both from `packages/qfai`. `--reporter=verbose` prints the per-case
- * durations; `--silent` is what keeps them readable, since this file streams
- * `qfai validate` output to stdout and would otherwise bury them.
- *
- * Those isolated numbers are what a ceiling below the project value cannot be
- * read from. Under a full-suite run this file's seven slowest cases each exceed
- * 15 s — a factor of more than 4.7 against the same cases measured alone — so a
- * 15 s ceiling here was below the file's cost, not a budget above it. It now
- * inherits `testTimeout`, whose own measurement is about the cost this file has.
+ * It is the heaviest caller of `runInit` and `runReport` in the suite, and
+ * under a full run its slowest cases take several times what they take alone.
+ * A ceiling below the project value would sit under that cost rather than
+ * above it, and would fail for the load rather than for anything in the diff.
  */
 describe("report", () => {
   it("runs init -> validate(json) -> report(md)", async () => {

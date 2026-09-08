@@ -489,7 +489,22 @@ describe("a ceiling below the declared testTimeout", () => {
   const RUNNERS = new Set(["it", "test", "describe", "suite", "bench"]);
 
   /** A comment about the ceiling, within the five lines above it. */
+  /**
+   * What a stated reason has to contain.
+   *
+   * The word alone is not a measurement. "Keep this timeout because it prevents
+   * the test from hanging forever" says what every timeout is for and nothing
+   * about this one, and a check that accepts it lets an unmeasured number in
+   * behind a sentence.
+   *
+   * A duration is the checkable part: a number with a unit, which is what a
+   * measurement produces and an assertion about purpose does not. It does not
+   * prove the number was measured — nothing can — but it cannot be satisfied
+   * without writing one down, and a wrong one is visible to a reviewer where a
+   * missing one was not.
+   */
   const MENTIONS_TIMEOUT = /timeout/i;
+  const STATES_A_DURATION = /\b\d+(?:[.,]\d+)?\s*(?:ms|s|sec|secs|seconds?|m|min|mins|minutes?)\b/i;
   const REASON_MIN_CHARS = 40;
 
   const testFiles = (dir: string): string[] =>
@@ -530,13 +545,34 @@ describe("a ceiling below the declared testTimeout", () => {
    * an unresolved expression as sub-default would fail a ceiling nobody can
    * read from the source.
    */
+  /**
+   * The expression with its type-only wrappers removed.
+   *
+   * `30_000 as const`, `30_000 satisfies number` and `(30_000)` are the same
+   * number to the runner, and a reader that stops at the wrapper sees no ceiling
+   * where one is declared.
+   */
+  const unwrap = (node: ts.Expression): ts.Expression => {
+    let current = node;
+    while (
+      ts.isAsExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isParenthesizedExpression(current) ||
+      ts.isTypeAssertionExpression(current)
+    ) {
+      current = current.expression;
+    }
+    return current;
+  };
+
   const numericValue = (
     node: ts.Expression | undefined,
     constants: ReadonlyMap<string, number>,
   ): number | undefined => {
     if (node === undefined) return undefined;
-    if (ts.isNumericLiteral(node)) return Number(node.text.replace(/_/g, ""));
-    if (ts.isIdentifier(node)) return constants.get(node.text);
+    const inner = unwrap(node);
+    if (ts.isNumericLiteral(inner)) return Number(inner.text.replace(/_/g, ""));
+    if (ts.isIdentifier(inner)) return constants.get(inner.text);
     return undefined;
   };
 
@@ -544,13 +580,12 @@ describe("a ceiling below the declared testTimeout", () => {
   const numericConstants = (source: ts.SourceFile): Map<string, number> => {
     const found = new Map<string, number>();
     const visit = (node: ts.Node): void => {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.initializer !== undefined &&
-        ts.isNumericLiteral(node.initializer)
-      ) {
-        found.set(node.name.text, Number(node.initializer.text.replace(/_/g, "")));
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+        const initializer = node.initializer;
+        const inner = initializer === undefined ? undefined : unwrap(initializer);
+        if (inner !== undefined && ts.isNumericLiteral(inner)) {
+          found.set(node.name.text, Number(inner.text.replace(/_/g, "")));
+        }
       }
       ts.forEachChild(node, visit);
     };
@@ -590,6 +625,25 @@ describe("a ceiling below the declared testTimeout", () => {
   };
 
   /**
+   * Whether this call declares a test at all.
+   *
+   * Not every call rooted at `test` takes a ceiling. `test.extend({ timeout })`
+   * defines a fixture, and `describe.each(rows)` takes the table — an object
+   * there is data, and reading it as a ceiling would demand a measurement
+   * comment for a fixture named `timeout`.
+   *
+   * A test declaration is the call that takes the name and the body, so it is
+   * recognised by that shape: a string first and a function among the rest.
+   */
+  const declaresATest = (node: ts.CallExpression): boolean => {
+    const [first] = node.arguments;
+    if (first === undefined || !ts.isStringLiteralLike(first)) return false;
+    return node.arguments.some(
+      (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
+    );
+  };
+
+  /**
    * Every ceiling a runner call declares, in either form vitest accepts.
    *
    * The options object (`{ timeout: N }`) and the trailing number
@@ -602,7 +656,11 @@ describe("a ceiling below the declared testTimeout", () => {
   ): { value: number; position: number }[] => {
     const found: { value: number; position: number }[] = [];
     const visit = (node: ts.Node): void => {
-      if (ts.isCallExpression(node) && RUNNERS.has(runnerName(node.expression) ?? "")) {
+      if (
+        ts.isCallExpression(node) &&
+        RUNNERS.has(runnerName(node.expression) ?? "") &&
+        declaresATest(node)
+      ) {
         for (const argument of node.arguments) {
           if (ts.isObjectLiteralExpression(argument)) {
             for (const property of argument.properties) {
@@ -662,7 +720,10 @@ describe("a ceiling below the declared testTimeout", () => {
           .slice(Math.max(0, line - 5), line)
           .filter((candidate) => /^\s*(?:\/\/|\*)/.test(candidate))
           .join(" ");
-        const justified = MENTIONS_TIMEOUT.test(preceding) && preceding.length >= REASON_MIN_CHARS;
+        const justified =
+          MENTIONS_TIMEOUT.test(preceding) &&
+          STATES_A_DURATION.test(preceding) &&
+          preceding.length >= REASON_MIN_CHARS;
         if (!justified) {
           unjustified.push(`${path.relative(PACKAGE_ROOT, file)}:${line + 1} (${ceiling.value})`);
         }
@@ -671,10 +732,11 @@ describe("a ceiling below the declared testTimeout", () => {
 
     expect(
       unjustified,
-      "a test ceiling below the declared testTimeout needs a comment above it saying what " +
-        "was measured. Prefer deleting it: the default is already justified, and a ceiling " +
-        "above a file's cost only buys a faster failure on a hang while costing a red lane " +
-        "for a reason the change does not contain.",
+      "a test ceiling below the declared testTimeout needs a comment above it naming the " +
+        "duration that was measured — a number with a unit, not the purpose of timeouts in " +
+        "general. Prefer deleting it: the default is already justified, and a ceiling above a " +
+        "file's cost only buys a faster failure on a hang while costing a red lane for a " +
+        "reason the change does not contain.",
     ).toEqual([]);
   });
 });
