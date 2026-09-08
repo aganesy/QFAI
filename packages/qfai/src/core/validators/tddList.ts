@@ -773,6 +773,39 @@ export const EVIDENCE_RED_PROVENANCE_RULE_ID = "QFAI-TDDLIST-013";
 export const ROW_EXTRA_CELLS_RULE_ID = "QFAI-TDDLIST-014";
 
 /**
+ * A split TC whose sibling rows say nothing about which boundary each covers.
+ *
+ * The rows of a split repeat one TC identically and carry serial ids, so
+ * neither cell tells them apart. `Selector` cannot either: it is the runtime
+ * test name, and the executing stage is authorised to rewrite it when a
+ * review-fix handback replaces the test. `Boundary` is the one cell seeded for
+ * this and rewritten by nothing downstream.
+ *
+ * Without it a reseed pairs rows with re-derived boundaries by reading cells
+ * that move, so a row's status and evidence can come to describe a boundary
+ * they never observed — with the row count still right, every row still citing
+ * a real TC, and the coverage crosswalk still balancing.
+ */
+export const SPLIT_BOUNDARY_UNNAMED_RULE_ID = "QFAI-TDDLIST-017";
+
+/**
+ * Two sibling rows of one TC claiming the same boundary.
+ *
+ * The pairing key is (`TC-Refs`, `Boundary`), so a repeated slug leaves two
+ * rows indistinguishable again and one boundary of the split covered by
+ * nothing.
+ */
+export const SPLIT_BOUNDARY_DUPLICATED_RULE_ID = "QFAI-TDDLIST-018";
+
+/** A `Boundary` cell reduced to what identity is compared on. */
+function boundarySlug(value: string): string {
+  const trimmed = value.trim();
+  // `-` is how every optional cell in this ledger spells "none", and an empty
+  // cell reads the same, so neither is a slug.
+  return trimmed === "-" ? "" : trimmed.replace(/\s+/gu, " ").toLowerCase();
+}
+
+/**
  * The anchor this row owes, as an operator reads it.
  *
  * Naming the concrete file — `.qfai/evidence/atdd-spec-0007.md#<heading>`,
@@ -4584,6 +4617,82 @@ async function validateSpecTddList(
         `Set Layer to UNIT / COMPONENT / INTEGRATION for this row, or move the obligation to the column its Layer owns (US-Refs for E2E, CON-API-Refs for API) and put \`-\` in TC-Refs.`,
       ),
     );
+  }
+
+  // Check 5d: the sibling rows of a split TC each name the boundary they own.
+  //
+  // Re-deriving the boundary set from the spec answers how many boundaries a TC
+  // has now. It does not answer which row is which, and the cells a pairing
+  // could otherwise read — `Selector`, `Test file` — are the executing stage's
+  // to rewrite. `Boundary` is seeded for this and rewritten by nothing
+  // downstream, so it is what a reseed matches on, paired with `TC-Refs`.
+  //
+  // Grouped per `TC-*` token rather than per cell, and each row counted once
+  // for a token however many times its cell repeats it: a row naming the same
+  // TC twice is not two siblings.
+  const rowsByTc = new Map<string, { ref: LedgerRowRef; slug: string; tddId: string }[]>();
+  for (const ref of ledgerRows()) {
+    const seen = new Set<string>();
+    for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
+      const tcId = token.toUpperCase();
+      if (!TC_ID_TOKEN.test(tcId) || seen.has(tcId)) continue;
+      seen.add(tcId);
+      const entry = { ref, slug: boundarySlug(cell(ref, "Boundary")), tddId: cell(ref, "TDD-ID") };
+      const bucket = rowsByTc.get(tcId);
+      if (bucket) bucket.push(entry);
+      else rowsByTc.set(tcId, [entry]);
+    }
+  }
+
+  const splitBoundaryPromotion = RULE_PROMOTIONS.tddListSplitBoundary.promoteAt;
+  const splitBoundarySeverity = newRuleSeverity(resolvedToolVersion, splitBoundaryPromotion);
+  const splitBoundaryWindowNote =
+    splitBoundarySeverity === "warning"
+      ? ` Reported as a warning until the ${splitBoundaryPromotion} release, then an error.`
+      : "";
+
+  for (const [tcId, rows] of [...rowsByTc].sort(([left], [right]) => left.localeCompare(right))) {
+    // One row is not a split, so there is nothing to tell apart.
+    if (rows.length < 2) continue;
+
+    const unnamed = rows.filter((entry) => entry.slug.length === 0);
+    if (unnamed.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-TDDLIST-017",
+          `${tcId} holds ${rows.length} rows in tdd/test-list.md for spec-${specNumber}, and ${unnamed.length} of them name no Boundary (${unnamed.map((entry) => entry.tddId || entry.ref.label).join(", ")}). Sibling rows repeat their TC identically and carry serial ids, so a reseed that cannot read a boundary from the row falls back to Selector — a cell the executing stage rewrites — and can pair a row's Status and Evidence with a boundary they never described.${splitBoundaryWindowNote}`,
+          splitBoundarySeverity,
+          relPath,
+          SPLIT_BOUNDARY_UNNAMED_RULE_ID,
+          [tcId],
+          "change",
+          `Give each of ${tcId}'s rows a Boundary slug naming the one observable boundary it owns, taken from how 06_Test-Cases.md states that boundary. Add the column to the table's header first if it has none.`,
+        ),
+      );
+    }
+
+    const bySlug = new Map<string, string[]>();
+    for (const entry of rows) {
+      if (entry.slug.length === 0) continue;
+      const held = bySlug.get(entry.slug);
+      if (held) held.push(entry.tddId || entry.ref.label);
+      else bySlug.set(entry.slug, [entry.tddId || entry.ref.label]);
+    }
+    for (const [slug, owners] of [...bySlug].sort(([left], [right]) => left.localeCompare(right))) {
+      if (owners.length < 2) continue;
+      issues.push(
+        issue(
+          "QFAI-TDDLIST-018",
+          `${owners.length} rows of ${tcId} in tdd/test-list.md for spec-${specNumber} claim the boundary "${slug}" (${owners.join(", ")}). The pairing key is the (TC-Refs, Boundary) pair, so a repeated slug leaves those rows indistinguishable and one boundary of the split covered by nothing.${splitBoundaryWindowNote}`,
+          splitBoundarySeverity,
+          relPath,
+          SPLIT_BOUNDARY_DUPLICATED_RULE_ID,
+          [tcId, slug],
+          "change",
+          `Give each row its own Boundary slug. Where two rows really cover one boundary, one of them is a duplicate row and belongs in a Change Request, not in a second slug.`,
+        ),
+      );
+    }
   }
 
   // ── Phase 2 checks ──

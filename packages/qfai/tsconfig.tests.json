@@ -139,6 +139,7 @@
     "tests/core/specSplitScopeAttribution.test.ts",
     "tests/core/tddLevelUndeclaredMigration.test.ts",
     "tests/core/tddListSpecStatus.test.ts",
+    "tests/core/tddListSplitBoundary.test.ts",
     "tests/core/tddListTier.test.ts",
     "tests/core/toolProvenance.test.ts",
     "tests/core/uiuxConfigFieldUsage.test.ts",
