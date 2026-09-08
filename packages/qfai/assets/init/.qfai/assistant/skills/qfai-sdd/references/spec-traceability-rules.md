@@ -193,7 +193,8 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`, `Tier`, `BR-Ref`. `Blocked-By`
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`, `Tier`, `BR-Ref`,
+  `Boundary`. `Blocked-By`
   names what a `blocked` row is waiting on **and the status the row was blocked at**
   (`CR-20260421-0004 — blocked at green`), and is required on those rows;
   `TDDLIST_BLOCKED_MISSING_REF` errors on either half.
@@ -209,6 +210,19 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `Tier` at all predates the column, and each of that table's rows is derived per
   `qfai-implement/references/volume-policy.md#risk-tier-derive-per-row`. Do not drop the column as
   non-standard: it is the only place the tier can be read before the work it sizes.
+- Optional column detail: `Boundary` — a short slug naming the one observable boundary a row
+  owns, and the only thing that tells the sibling rows of a split `TC-*` apart. `TDD-ID` is a
+  serial, `TC-Refs` repeats identically across siblings, and `Selector` is the runtime test name
+  that `/qfai-implement` is authorised to rewrite — so a reseed that matched on it would read a
+  renamed test as one boundary dropped and another added, and move a row's `Status`, `Evidence`
+  and `TDD-ID` onto a boundary they never described. `Boundary` is **`/qfai-sdd`'s cell**, seeded
+  at Phase 2b while `Test file` is still `-` and never rewritten downstream, so a reseed matches
+  on the (`TC-Refs`, `Boundary`) pair. It is the pair and not the slug alone: a slug is unique
+  inside its own `TC-*` and nowhere wider, so a generic one (`not-found`) recurs across TCs. Write
+  `-`, or leave the cell empty, on a `TC-*` that holds one row — there is nothing to tell apart.
+  Once a `TC-*` holds more than one row the cell carries the weight of the row's identity, so
+  `npx qfai validate` reports siblings that name no boundary (`QFAI-TDDLIST-017`) and two siblings
+  claiming the same one (`QFAI-TDDLIST-018`).
 - `BR-Ref` is **conditionally required**: optional to `npx qfai validate` — the required set above is
   what it enforces, so ledgers seeded before the column keep passing — and required for
   `/qfai-implement`'s T1 review batching, which can close no group without it. `/qfai-sdd`
@@ -232,8 +246,10 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   that column so naming one never creates it — plus two cells only while a stated condition
   holds: `Test file` while the seeded value is empty or a dash placeholder, and `Selector`
   while the seeded value does not resolve against the row's named test file. It owns nothing
-  else — `TC-Refs`, `Layer`, `US-Refs` and `CON-API-Refs` carry the row's obligation identity
-  and stay upstream. This is the carve-out
+  else — `TC-Refs`, `Layer`, `US-Refs`, `CON-API-Refs` and `Boundary` carry the row's obligation
+  identity and stay upstream. `Boundary` is on that list for a reason the two conditional cells
+  make plain: it is what a reseed pairs a row by, and the cells it could otherwise pair by —
+  `Test file` and `Selector` — are exactly the two this skill is allowed to rewrite. This is the carve-out
   in `.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`,
   which states both conditions; adding, removing or re-scoping a row is an upstream change and
   takes the Change Request path — including the rows `/qfai-implement` used to open itself for
@@ -280,7 +296,17 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `US-*` on E2E, `CON-API-*` on API.
 - `Selector` may hold one entry, a JSON array of entries, or a glob pattern. It is not limited to a single test function. Write a multi-entry cell as the array: a bare cell is **one** entry however much punctuation it holds, because a comma is legal inside a single test name and nothing splits a bare cell on commas (`qfai-implement/references/selector-granularity.md#entry-form`). `npx qfai validate` reads the array the same way and requires **every** element to name a test in the row's `Test file`, so a surviving element cannot vouch for a deleted sibling; `TDDLIST_SELECTOR_UNRESOLVED` names the row when one does not. A cell written under the older comma-separated rule is migrated by the bounded reading in `selector-granularity.md#reading-a-cell-written-under-the-old-comma-rule`.
 - `TC-Refs` is many-to-many with `TDD-ID`: one `TC-*` may be decomposed across several TDD rows, and each of those rows carries that `TC-*`.
-- A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed. The split is seeded where the rows are owned — `/qfai-sdd` Phase 2b (`sdd-phase-checklists.md`) — and never by `/qfai-implement`, which owns cells and never rows (see the ownership split above): a matrix shape first visible at RED stops that row at selection and comes back here through a Change Request.
+- A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several
+  independent state transitions) MUST be split across multiple TDD rows before
+  RED begins — one falsifying oracle per row, one row per independently
+  observable boundary. Do not accumulate unrelated boundaries behind a single
+  selector; doing so invalidates the RED observation, because only the first
+  failing assert is ever observed. The split is seeded where the rows are
+  owned — `/qfai-sdd` Phase 2b (`sdd-phase-checklists.md`) — and never by
+  `/qfai-implement`, which owns cells and never rows (see the ownership split
+  above): a matrix shape first visible at RED stops that row at selection and
+  comes back here through a Change Request. Each row of the split names its
+  boundary in `Boundary`, which is what identifies it afterwards.
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md`
   appearing in TC-Refs. That measures which TCs need a `tdd/test-list.md` row;
   it says nothing about where the test file lives. A `TC-*` whose declared
