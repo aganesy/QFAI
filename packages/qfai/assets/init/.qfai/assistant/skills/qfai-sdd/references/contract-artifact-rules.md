@@ -195,6 +195,18 @@ satisfied by a file that cannot run.
   have caught the observed defects, so a cheap record of "this was actually
   driven" is what the omission needs.
 
+  One thing about a `db/` contract _is_ checked without a database.
+  `QFAI-CONTRACT-036` reads the DDL: a `REFERENCES` clause names a table, and
+  the contract that creates that table must appear in this file's
+  `-- Depends on:` line. A foreign key's target has to exist when the statement
+  runs, so an undeclared one means the stated apply order does not work — and
+  the three rules that read the dependency line do not read the SQL under it,
+  so nothing else says so.
+
+  The check is narrow on purpose. Only a `REFERENCES` clause counts, a table no
+  contract in the set creates is left alone, and a table two contracts both
+  create is not attributed to either.
+
 The cost of skipping this is not paid in Phase 0. It is paid inside a TDD
 micro-cycle, by an implementer who is forbidden from fixing the contract and has
 to stop the batch.
