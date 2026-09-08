@@ -31,6 +31,26 @@ all; a copy still on its `<...>` placeholders records nothing and is not accepte
 - output_path: <the path this file was actually written to — normally
   `.qfai/evidence/import-lite-<ts>.md`>
 
+## Surface
+
+What the imported work is built on. A discussion pack states this in its `01_Context.md`; an import
+has no pack, so it is stated here — this file is what a spec's `Source` pair names, so the skills
+that need the classification reach it by following a reference the spec already carries.
+
+`primary_surface` is one of `cli`, `web`, `mobile`, `desktop` or `mixed`. `secondary_surfaces` lists
+any others the work also targets, and is empty when there are none.
+
+A `cli` primary with no visual secondary is a cli-only target: `/qfai-sdd` Phase 0 skips the
+`DESIGN.md` freeze, `/qfai-prototyping` rejects it, and `/qfai-implement` reads no design contract
+or prototype evidence for it — none of which exist on that path.
+
+Leave the placeholders in place only while the answer is genuinely unknown. Neither skill guesses:
+both stop and ask for this line rather than assuming a surface, because assuming `web` demands
+artifacts a cli project cannot produce and assuming `cli` strips a visual one of its review.
+
+- primary_surface: <cli | web | mobile | desktop | mixed>
+- secondary_surfaces: <comma-separated, or none>
+
 ## Sources
 
 - URLs:

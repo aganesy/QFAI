@@ -41,6 +41,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An imported spec can state its surface, so a CLI-only project is no longer
+  read as visual** (#1295). A discussion pack states the classification in its
+  `01_Context.md`, and both `/qfai-sdd` Phase 0 and `/qfai-implement`'s visual
+  review read it there. A spec taken in through import-lite has no pack and had
+  nowhere to state it, so both fell to the same default and treated every such
+  spec as visual — which asks a CLI project for a root `DESIGN.md`, a design
+  contract and a prototype, none of which exist on that path.
+
+  The import-lite evidence template gains a `## Surface` section carrying
+  `primary_surface` and `secondary_surfaces`. That file is what a spec's
+  `Source` pair already names, so both skills reach the classification by
+  following a reference the spec carries.
+
+  Neither skill guesses when nothing states a surface: both stop and ask.
+  Assuming visual leaves a CLI project unable to proceed, and assuming `cli`
+  strips a visual one of its review.
+
 - **`qfai doctor` reads the path off an agent card's input bullet instead of
   the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
   file and then say what it is for. Read whole, that sentence became the
