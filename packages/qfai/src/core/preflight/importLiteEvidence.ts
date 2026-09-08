@@ -31,8 +31,14 @@ export const IMPORT_LITE_EVIDENCE_DIR_REL = ".qfai/evidence";
  * by `CANONICAL_TIMESTAMP_RE` in `classifyEvidenceName`, so this pattern must
  * stay permissive enough to hand every hyphenated candidate over for that
  * check rather than silently reading it as the untimestamped name.
+ *
+ * Case is not among what it is permissive about. The two names accepted here
+ * are the two the `.gitignore` re-includes, and a gitignore pattern is matched
+ * as written: `IMPORT-LITE-<stamp>.MD` would satisfy this check and stay
+ * excluded, so the record clears the gate locally and is absent from a fresh
+ * clone. What is not committed is not evidence.
  */
-const IMPORT_LITE_EVIDENCE_RE = /^import-lite(?:-(.*))?\.md$/i;
+const IMPORT_LITE_EVIDENCE_RE = /^import-lite(?:-(.*))?\.md$/;
 
 /**
  * `path.resolve`, not `path.join`: `runSddPreflight` is public and accepts a
@@ -96,24 +102,13 @@ export async function findImportLiteEvidence(root: string): Promise<string | nul
   const selected =
     timestamped.length > 0
       ? timestamped.sort(compareTimestampedCandidates).at(-1)
-      : untimestamped.sort((left, right) => left.key.localeCompare(right.key)).at(-1);
+      : untimestamped.sort((left, right) => left.name.localeCompare(right.name)).at(-1);
   return selected === undefined ? null : path.join(evidenceRoot, selected.name);
 }
 
-/**
- * A matching directory entry, keeping the real `name` alongside the `key` the
- * pattern was matched against.
- *
- * The two differ when the real filename carries surrounding whitespace
- * (` import-lite.md`). Matching wants the normalized key, but the returned
- * path has to be built from `name`: joining the trimmed form produces a
- * `selectedInputPath` that does not exist, so the validator and the
- * full/verify gate would pass the project as having an input source while
- * `runSddPreflight` and its summary pointed at an unreadable file.
- */
+/** A matching directory entry, and the stamp its name carries if any. */
 type EvidenceCandidate = {
   name: string;
-  key: string;
   stamp: string | null;
 };
 
@@ -132,16 +127,15 @@ type EvidenceCandidate = {
  * demoting it would let `import-lite-draft.md` keep standing in for a record.
  */
 function classifyEvidenceName(name: string): EvidenceCandidate | null {
-  const key = name.trim();
-  const matched = IMPORT_LITE_EVIDENCE_RE.exec(key);
+  const matched = IMPORT_LITE_EVIDENCE_RE.exec(name);
   if (matched === null) {
     return null;
   }
   const suffix = matched[1];
   if (suffix === undefined) {
-    return { name, key, stamp: null };
+    return { name, stamp: null };
   }
-  return CANONICAL_TIMESTAMP_RE.test(suffix) ? { name, key, stamp: suffix } : null;
+  return CANONICAL_TIMESTAMP_RE.test(suffix) ? { name, stamp: suffix } : null;
 }
 
 /**

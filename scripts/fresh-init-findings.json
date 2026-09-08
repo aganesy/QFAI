@@ -7,10 +7,6 @@
     "info QFAI-PROFILE-001 -",
     "info QFAI-SPACK-000 .qfai/specs",
     "info QFAI-TEST-002 qfai.config.yaml",
-    "info QFAI-TOOL-001 -",
-    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/manifest.md",
-    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/product.md",
-    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/structure.md",
-    "warning QFAI-ASSETS-005 .qfai/assistant/catalog/tech.md"
+    "info QFAI-TOOL-001 -"
   ]
 }
