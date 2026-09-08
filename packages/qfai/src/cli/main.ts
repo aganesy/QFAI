@@ -79,8 +79,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // Every command except `validate` sends a filesystem fault straight to
   // `cli/index.ts`, which writes `err.message` and exits 1 — a line naming the
   // errno and the path but not the command, and not saying that the run is
-  // undetermined rather than clean (#1104). `validate` answers with
-  // `QFAI-SCAN-002` instead because #1112 wrapped `validateProject`; the others
+  // undetermined rather than clean. `validate` answers with
+  // `QFAI-SCAN-002` instead because `validateProject` is wrapped; the others
   // have no verdict artifact, so the refusal itself has to carry it.
   //
   // Rethrown, never swallowed: the exit code and the `cause` chain are what a
@@ -268,7 +268,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         if (!discussionAction) {
           return;
         }
-        // `discussion ... --format json` writes its whole payload to
+        // `discussion... --format json` writes its whole payload to
         // stdout, so the defaultConfig notice has to go to stderr there —
         // otherwise stdout is JSON-plus-a-Japanese-warning and no
         // `JSON.parse` (or downstream jq) can read it.

@@ -478,8 +478,8 @@ const INLINE_STYLE_RE = /\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 // `<body>`) are collected separately and filtered against Tailwind
 // preflight signatures so the operator's own stylesheet authored in
 // `<head><style>` is still scanned for non-DESIGN.md color literals
-// (previously the entire `<head>` region was skipped, allowing color
-// drift in head stylesheets to bypass `designMdViolations`).
+// (skipping the entire `<head>` region would let color drift in head
+// stylesheets bypass `designMdViolations`).
 //
 // When no `<body>` element is present (e.g. a fragment under test),
 // fall back to scanning the full input so the legacy regression
@@ -516,9 +516,8 @@ function narrowToBody(html: string): string {
 // scan surface by `SHADOW_DECL_STRIP_RE` so legitimate
 // Tailwind runtime values still don't surface as DESIGN.md drift —
 // the loss of `--tw-` as a block-level classifier is therefore
-// recovered at the declaration-level strip pass. See PR #210
-// wave-14 architecture-reviewer thread for the false-negative
-// rationale (`--tw-` block-level alone is too broad).
+// recovered at the declaration-level strip pass. `--tw-` alone is too
+// broad as a block-level classifier and would produce false negatives.
 const TAILWIND_BANNER_RE = /\/\*!?\s*tailwindcss\s+v/i;
 const TAILWIND_UNIVERSAL_RESET_RE = /\*,\s*::before,\s*::after\s*\{[^}]*box-sizing/i;
 

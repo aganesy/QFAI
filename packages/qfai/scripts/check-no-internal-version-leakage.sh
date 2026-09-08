@@ -20,14 +20,15 @@ fi
 
 fail=0
 
-# SSOT-sync (PR #206 review Nv4N): the regex set below is mirrored in
+# The regex set below is mirrored in
 #   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
 #     (pre-build, JSDoc → dist/*.d.ts path)
 #   - packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts
 #     `PATTERNS` array (smoke against `qfai init` output)
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
 # QFAI-context pattern) requires updating both other sites in the same
-# PR. See `.agents/rules/distributed-surface.md` "Defenses (4 layers)".
+# change. The guard table in `.agents/rules/distributed-surface.md`
+# lists the layers.
 #
 # The same three regexes are applied twice per surface: once to file
 # CONTENT and once to file NAMES (see the loop at the bottom). The smoke
@@ -66,8 +67,7 @@ INTERNAL_SPEC_RE='[sS][pP][eE][cC]-0*[1-9][0-9]+'
 INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 
 # QFAI internal trace IDs that should not leak (CAP-0010+, DEC, DR,
-# OQ-NNNN-NNNN, QFAI-PROT2-NNN, CHG-NNN). OQ-NNNN-NNNN was added in PR #208
-# 11th late-review wave (codex r3265386185, LOW) to keep
+# OQ-NNNN-NNNN, QFAI-PROT2-NNN, CHG-NNN). OQ-NNNN-NNNN keeps
 # `08_Open-questions.md` internal references out of distributed surfaces.
 # CHG-NNN is the cross-spec change ID from `_policies/10_delta.md`; it
 # resolves to nothing outside this repository, so a consuming project that
@@ -100,11 +100,10 @@ INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|
 MIGRATION_MEMO_STAMP_SED='s#(^|/)\.qfai/assistant/process/migrations/v[0-9]+\.[0-9]+\.[0-9]+(-[^/]*)?\.md$#\1.qfai/assistant/process/migrations/MEMO\2.md#'
 
 # Schema version field (any literal "schemaVersion") in distributed
-# surfaces. Generated artifact schemas no longer carry this field.
-# PR #206 review NzWr: use POSIX `[[:space:]]` (= `\s` equivalent in
-# JS RegExp) so the whitespace class matches the layer 1 (lint) and
-# layer 3 (smoke) regexes character-for-character. Previous
-# `schemaVersion *:` (literal space) would let `schemaVersion\t:` /
+# surfaces. Generated artifact schemas do not carry this field.
+# POSIX `[[:space:]]` (the `\s` equivalent in JS RegExp) keeps the
+# whitespace class identical to the lint and smoke regexes; a literal
+# space (`schemaVersion *:`) would let `schemaVersion\t:` /
 # `schemaVersion\n:` slip through this final backstop.
 SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion[[:space:]]*:'
 
