@@ -1425,7 +1425,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // keeps the empty list the template ships. That is also the case the comment
   // calls a fact about the repository rather than about the default, so the pin
   // covers the shipped text and the empty-tree behaviour at once.
-  ["qfai.config.yaml", "e683cf23daa705ed6a5a627fd25ad3f05282becf83ad7a7a900b97828db41263"],
+  ["qfai.config.yaml", "b2e38829ba21be13029c5983a7b0dfdaa861c75bbdf8d5ba60e2ac85a2846d26"],
 ]);
 
 /**
