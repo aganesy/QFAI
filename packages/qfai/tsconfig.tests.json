@@ -204,6 +204,7 @@
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/scripts/deriveE2eCallsites.test.ts",
+    "tests/scripts/deriveCliMessageAllowlistCount.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/freshInitFindings.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
@@ -228,6 +229,7 @@
     "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
+    "tests/unit/promotionReleaseNotes.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts",
@@ -245,6 +247,7 @@
     "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
-    "tests/validators/validatorReachability.test.ts"
+    "tests/validators/validatorReachability.test.ts",
+    "tests/assets/gateItemBudget.test.ts"
   ]
 }

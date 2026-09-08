@@ -145,7 +145,10 @@ export async function validateProject(
   const profile: ValidationProfile = options.profile ?? "full";
 
   const specsRoot = resolvePath(root, config, "specsDir");
-  const scopeRoots = { root, specsRoot };
+  // `testsRoot` as well as `specsRoot`: a file under the canonical test layout
+  // is owned by the spec whose directory it sits in, so a scoped run drops a
+  // sibling's stub the way it already drops a sibling's broken reference.
+  const scopeRoots = { root, specsRoot, testsRoot: resolvePath(root, config, "testsDir") };
   const { scope: requestedScope, invalid: invalidSpecValues } = resolveSpecScope(options.specIds);
   const scopeIssues = await buildSpecScopeIssues(
     specsRoot,
