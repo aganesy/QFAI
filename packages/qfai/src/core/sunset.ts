@@ -453,6 +453,15 @@ export const RULE_PROMOTIONS = {
    * shape of latch P7 exists to stop.
    */
   skillDocumentUnreadable: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-036` — a `db/` contract whose foreign key points at a table
+   * another contract creates, without naming that contract in `-- Depends on:`.
+   * The condition is invisible today: three rules read that line and none of
+   * them reads the SQL under it, so a project carrying this has been reporting
+   * a clean run while the stated apply order does not work. It needs a minor to
+   * notice and fix before the gate starts failing on it.
+   */
+  dbContractApplyOrder: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
 } as const;
 
 type FullSemver = {

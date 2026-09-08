@@ -20,6 +20,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Every test suite is now accounted for as type-checked or knowingly not**
+  (#1288). `tsconfig.tests.json#include` is an enumeration rather than a
+  whole-tree glob, and a suite left off it is typed by nothing: it can carry a
+  type error while every required job stays green. An omission looked exactly
+  like a file that does not exist.
+
+  The other half of that boundary is now written down.
+  `tests/scripts/typeCheckEnumeration.allowlist.ts` records the 461 suites the
+  enumeration does not cover, and a suite in neither list fails the guard.
+
+  The list is a ratchet, not an inventory. It is read in both directions, so a
+  line whose suite has since been covered, renamed or deleted fails as loudly as
+  a missing one — which is what stops it from quietly ceasing to describe the
+  tree.
+
+### Added
+
 - **A rule stating that this repository is written in English**
   (`.agents/rules/repository-language.md`). The language of the tree was
   settled one surface at a time. Operator-facing strings in
@@ -39,6 +56,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Existing Japanese is a backlog rather than permission. The English wording of
   several rules already exists — the shipped copies under
   `packages/qfai/assets/init/root/.agents/rules/` carry none.
+
+- **`QFAI-CONTRACT-036` — a `db/` contract's foreign keys are checked against
+  its `-- Depends on:` line** (#1290). Three rules read that line: one requires
+  it to be present, one requires the ids in it to resolve, one compares it with
+  the contract index. None reads the SQL under it, so a contract set whose
+  stated apply order does not work satisfies every gate, and the failure arrives
+  as a missing relation in whatever run first applies it.
+
+  A `REFERENCES` clause names a table, a `CREATE TABLE` names the table it
+  makes, and both are in files the validator already reads. When the referenced
+  table belongs to another contract, that contract must appear in the
+  declaration. No database is involved.
+
+  Narrow on purpose:
+
+  | Case                                                  | Reported                         |
+  | ----------------------------------------------------- | -------------------------------- |
+  | Foreign key to another contract's table, not declared | yes                              |
+  | Foreign key to a table the same file creates          | no — nothing to apply first      |
+  | Foreign key to a table no contract in the set creates | no — no contract to name         |
+  | Table two contracts both create                       | no — the parent is not derivable |
+
+  A warning until the 1.13.0 release and an error from there. The condition is
+  invisible today, so a project carrying it has never been told.
 
 ### Fixed
 
