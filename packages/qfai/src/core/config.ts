@@ -448,28 +448,28 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
 
   return {
     ...(migrationsDir !== undefined ? { migrationsDir } : {}),
-    contractsDir: readString(
+    contractsDir: readDirString(
       raw.contractsDir,
       base.contractsDir,
       "paths.contractsDir",
       configPath,
       issues,
     ),
-    specsDir: readString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
-    discussionDir: readString(
+    specsDir: readDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
+    discussionDir: readDirString(
       raw.discussionDir,
       base.discussionDir,
       "paths.discussionDir",
       configPath,
       issues,
     ),
-    outDir: readString(raw.outDir, base.outDir, "paths.outDir", configPath, issues),
+    outDir: readDirString(raw.outDir, base.outDir, "paths.outDir", configPath, issues),
     skillsDir: usePromptsDirForSkills
       ? promptsDir
-      : readString(raw.skillsDir, base.skillsDir, "paths.skillsDir", configPath, issues),
+      : readDirString(raw.skillsDir, base.skillsDir, "paths.skillsDir", configPath, issues),
     promptsDir,
-    srcDir: readString(raw.srcDir, base.srcDir, "paths.srcDir", configPath, issues),
-    testsDir: readString(raw.testsDir, base.testsDir, "paths.testsDir", configPath, issues),
+    srcDir: readDirString(raw.srcDir, base.srcDir, "paths.srcDir", configPath, issues),
+    testsDir: readDirString(raw.testsDir, base.testsDir, "paths.testsDir", configPath, issues),
   };
 }
 
@@ -966,6 +966,31 @@ function readString(
     issues.push(configIssue(configPath, `${label} は文字列である必要があります。`));
   }
   return fallback;
+}
+
+/**
+ * A configured directory, with any trailing separators removed.
+ *
+ * Readers use these values two ways: joined with a child path, where a trailing
+ * separator is harmless, and tested as a prefix, where it is not. `".qfai/specs/"`
+ * builds the prefix `".qfai/specs//"`, which no repository path starts with, so a
+ * gate keyed on it selects nothing and reports a pass over an empty set. Settling
+ * the spelling here is what stops one reader from working on a value another
+ * silently drops.
+ *
+ * A value that is only separators keeps what was written: trimming it to the
+ * empty string would silently retarget the reader at the repository root.
+ */
+function readDirString(
+  value: unknown,
+  fallback: string,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): string {
+  const raw = readString(value, fallback, label, configPath, issues);
+  const trimmed = raw.replace(/[\\/]+$/, "");
+  return trimmed.length > 0 ? trimmed : raw;
 }
 
 function readOptionalString(
