@@ -688,6 +688,54 @@ describe("widestMeasurableLine", () => {
     expect(widestMeasurableLine(`1. ${wide(300)}`)).toBe(303);
     expect(widestMeasurableLine(wide(300))).toBe(300);
   });
+
+  it("measures list items that only look like a table once their markers are gone", () => {
+    // Three items, not a header, a delimiter and a row. Reading the marker off
+    // each line and then deciding makes them one table, and the third item —
+    // ordinary prose, and wrappable — escapes the ceiling.
+    const doc = ["- a | b", "- --- | ---", `- ${wide(500)} | x`].join("\n");
+
+    expect(widestMeasurableLine(doc)).toBe(506);
+  });
+
+  it("skips a table written inside one list item", () => {
+    // The marker appears once, on the first row. The rows under it continue
+    // that item rather than starting new ones, so they are the same table.
+    const doc = ["- | a | b |", "  | --- | --- |", `  | ${wide(500)} | x |`].join("\n");
+
+    expect(widestMeasurableLine(doc)).toBe(0);
+  });
+
+  it("ends a table where the container changes", () => {
+    // A blockquoted table does not continue into prose outside the blockquote,
+    // however many pipes that prose happens to carry.
+    const doc = ["> | a | b |", "> | --- | --- |", `${wide(500)} | still prose`].join("\n");
+
+    expect(widestMeasurableLine(doc)).toBe(514);
+  });
+
+  it("ends a fence when its blockquote ends without a closing marker", () => {
+    // The blockquote closes the block. Waiting for a closing marker that never
+    // comes reads the rest of the file as verbatim content and measures none
+    // of it.
+    const doc = ["> ```sh", "> a command", "", wide(500)].join("\n");
+
+    expect(widestMeasurableLine(doc)).toBe(500);
+  });
+
+  it("ends a fence opened in a list item at the next item", () => {
+    const doc = ["- ```sh", "  a command", `- ${wide(500)}`].join("\n");
+
+    expect(widestMeasurableLine(doc)).toBe(502);
+  });
+
+  it("keeps a fence open across a deeper item inside it", () => {
+    // Everything between the markers is verbatim, including a line that would
+    // read as a nested list item outside one.
+    const doc = ["- ```md", "  - not a list here", `  ${wide(500)}`, "  ```"].join("\n");
+
+    expect(widestMeasurableLine(doc)).toBe(0);
+  });
 });
 
 describe("assets.lineBudget width ceiling", () => {

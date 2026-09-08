@@ -1147,7 +1147,10 @@ function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string
   const entries = exempt
     .map((entry) => `${escapeForMessage(entry.path)} (${escapeForMessage(entry.reason)})`)
     .join(", ");
-  return ` (${exempt.length} exempt from the check: ${entries})`;
+  // "from the line ceiling", not "from the check": these files are measured for
+  // width like every other asset, and the same message says so one clause
+  // earlier. Naming the whole check reads as though they were skipped.
+  return ` (${exempt.length} exempt from the line ceiling: ${entries})`;
 }
 
 /** Appends the repair guidance so text readers get it, not only JSON readers. */

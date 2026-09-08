@@ -21,7 +21,7 @@ export {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
   LINE_BUDGET_EXEMPT,
   WIDTH_BUDGET_BACKLOG,
-  WIDTH_BACKLOG_SIZE,
+  WIDTH_BACKLOG_PATHS,
   countLines,
   widestMeasurableLine,
 } from "../../src/core/doctor/assetLineBudget.js";

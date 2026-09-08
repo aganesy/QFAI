@@ -106,6 +106,18 @@ one.
 
 ## ID and Parent Rules (continued)
 
+- **A business flow is cited upward, like every other edge.** `BF-NNNN` is
+  declared in `_policies/04_Business-Flow.md` and cited from a story block with
+  `- Flow: BF-0001`. The opposite direction — the flow document listing the
+  stories it realizes — is what the rule below forbids, so it is not an option
+  the author chooses between. Two consequences follow from that, and both are
+  properties of the layering rather than of the design:
+  - **The E2E obligation stays on `US-*`.** The flow document is not allowed to
+    know which stories exist, so it cannot carry an obligation about them. A
+    `QFAI:BF-0001` annotation under `<testsDir>/e2e/**` therefore _discharges_
+    the obligation of every story naming that flow; it never replaces it.
+  - **A story naming no flow is not in error.** It keeps the obligation it
+    already had. A setting or a report legitimately has no flow of its own.
 - `_policies/**` must not **define or own** lower-layer items. Concretely: no
   traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
   `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a

@@ -1778,6 +1778,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
+  "QFAI-BFLOW-005":
+    "A `- Flow:` citation names a business flow that `_policies/04_Business-Flow.md` declares, so the edge from a story to the flow that realizes it resolves.",
+  "QFAI-BFLOW-006":
+    "Each business flow is declared once, so a story citing one names a single flow.",
   "QFAI-TCLEVEL-001":
     "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
   "QFAI-TCLEVEL-002":

@@ -101,7 +101,7 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
  * licence, not a ratchet.
  *
  * A file absent from this map is held at the real number, so nothing joins the
- * backlog quietly: {@link WIDTH_BACKLOG_SIZE} pins how many entries there are.
+ * backlog quietly: {@link WIDTH_BACKLOG_PATHS} pins which files are in it.
  *
  * ## What it means in a project that installed the package
  *
@@ -146,10 +146,37 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
 ]);
 
 /**
- * How many files are in the backlog. Held by the asset guard so the map can
- * only shrink: adding a file to it moves this number, which a reviewer sees.
+ * Which files are in the backlog. Held by the asset guard against the map's own
+ * keys, so the two must agree exactly.
+ *
+ * The set and not a count, because a count cannot see a swap: narrowing one
+ * file and widening another in the same change leaves the total unmoved, and a
+ * newly wide file ships with nothing in the diff that says so. Admitting a file
+ * means writing its path here, which is the line a reviewer is being asked
+ * about.
  */
-export const WIDTH_BACKLOG_SIZE = 20;
+export const WIDTH_BACKLOG_PATHS: readonly string[] = [
+  "assistant/catalog/test-layers.md",
+  "assistant/constitution/references/audited-evidence-hash.md",
+  "assistant/constitution/shared-skill-delegation-baseline.md",
+  "assistant/constitution/shared-skill-operating-baseline.md",
+  "assistant/skills/qfai-atdd/SKILL.md",
+  "assistant/skills/qfai-atdd/references/red-provenance.md",
+  "assistant/skills/qfai-configure/SKILL.md",
+  "assistant/skills/qfai-discussion/SKILL.md",
+  "assistant/skills/qfai-discussion/references/design-md-brand-catalog.md",
+  "assistant/skills/qfai-discussion/templates/01_Context.md",
+  "assistant/skills/qfai-implement/SKILL.md",
+  "assistant/skills/qfai-implement/references/cross-spec-ownership.md",
+  "assistant/skills/qfai-prototyping/SKILL.md",
+  "assistant/skills/qfai-sdd/SKILL.md",
+  "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+  "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+  "assistant/skills/qfai-sdd/templates/report/preflight_summary.md",
+  "assistant/skills/qfai-verify/SKILL.md",
+  "assistant/skills/qfai-verify/references/articles.md",
+  "assistant/skills/qfai-verify/references/verify-output-contract.md",
+];
 
 /**
  * The container a line sits in: indentation, blockquote markers, and the list
@@ -193,9 +220,41 @@ const FENCE_OPEN_RE = /^(`{3,}|~{3,})/;
 const TABLE_DELIMITER_RE =
   /^(?:\|(?:\s*:?-{3,}:?\s*\|)+|\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?)\s*$/;
 
-/** The line with any blockquote or list container prefix removed. */
-function withoutContainer(text: string): string {
-  return text.replace(CONTAINER_PREFIX_RE, "");
+/**
+ * Where a line sits, rather than only what it says.
+ *
+ * Stripping the container is enough to recognise a fence or a table row inside
+ * one; it is not enough to know when either ends. Two lines that look alike
+ * once stripped can belong to different blockquotes or to different items of a
+ * list, and a reader that cannot tell them apart carries a fence past the
+ * blockquote that opened it, and reads three list items as one table.
+ */
+type Container = {
+  /** How many blockquote markers the line opens with. */
+  quoteDepth: number;
+  /** Width of the whole container prefix, so items can be compared by depth. */
+  indent: number;
+  /** Whether the line opens a list item rather than continuing one. */
+  opensItem: boolean;
+};
+
+/**
+ * The line's container, and the line with that container removed.
+ *
+ * The prefix holds only whitespace, blockquote markers and a list marker, so
+ * any other character in it is that list marker — which is what separates a
+ * line opening an item from one continuing the item above it.
+ */
+function readContainer(text: string): { container: Container; rest: string } {
+  const prefix = CONTAINER_PREFIX_RE.exec(text)?.[0] ?? "";
+  return {
+    container: {
+      quoteDepth: (prefix.match(/>/g) ?? []).length,
+      indent: prefix.length,
+      opensItem: /[^\s>]/.test(prefix),
+    },
+    rest: text.slice(prefix.length),
+  };
 }
 
 /**
@@ -213,6 +272,10 @@ type LineShape = {
   length: number;
   /** The line, truncated to {@link CLASSIFY_PREFIX}. */
   text: string;
+  /** Where the line sits — see {@link Container}. */
+  container: Container;
+  /** The line with its container prefix removed. */
+  content: string;
 };
 
 /**
@@ -254,9 +317,9 @@ function countCharacters(text: string): number {
  */
 class WidthScanner {
   private widest = 0;
-  private fence: { marker: string; length: number } | undefined;
+  private fence: { marker: string; length: number; container: Container } | undefined;
   private pending: LineShape | undefined;
-  private inTable = false;
+  private table: Container | undefined;
 
   /**
    * Offers one line.
@@ -266,9 +329,13 @@ class WidthScanner {
    * characters.
    */
   push(text: string, length?: number): void {
+    const clipped = text.length > CLASSIFY_PREFIX ? text.slice(0, CLASSIFY_PREFIX) : text;
+    const { container, rest } = readContainer(clipped);
     const shape: LineShape = {
       length: length ?? countCharacters(text),
-      text: text.length > CLASSIFY_PREFIX ? text.slice(0, CLASSIFY_PREFIX) : text,
+      text: clipped,
+      container,
+      content: rest,
     };
     if (this.pending !== undefined) {
       this.settle(this.pending, shape);
@@ -288,24 +355,34 @@ class WidthScanner {
   /** Decides one line, with the line after it when there is one. */
   private settle(line: LineShape, next: LineShape | undefined): void {
     if (this.fence !== undefined) {
-      if (this.closesFence(withoutContainer(line.text))) {
+      if (this.closesFence(line)) {
         this.fence = undefined;
+        return;
       }
-      return;
+      if (!this.leftFenceContainer(line.container)) {
+        return;
+      }
+      // The container ended without a closing marker, so the block ended with
+      // it. This line is outside the fence and is read like any other.
+      this.fence = undefined;
     }
-    const opening = FENCE_OPEN_RE.exec(withoutContainer(line.text))?.[1];
+    const opening = FENCE_OPEN_RE.exec(line.content)?.[1];
     if (opening !== undefined) {
-      this.fence = { marker: opening.slice(0, 1), length: opening.length };
+      this.fence = {
+        marker: opening.slice(0, 1),
+        length: opening.length,
+        container: line.container,
+      };
       return;
     }
     if (this.isTableRow(line, next)) {
       return;
     }
-    this.inTable = false;
+    this.table = undefined;
     this.widest = Math.max(this.widest, line.length);
   }
 
-  private closesFence(text: string): boolean {
+  private closesFence(line: LineShape): boolean {
     const fence = this.fence;
     if (fence === undefined) {
       return false;
@@ -313,22 +390,56 @@ class WidthScanner {
     // Same character, at least as long, and nothing after it: CommonMark
     // forbids an info string on a closing fence.
     const marker = fence.marker === "~" ? "~" : "`";
-    return new RegExp(`^${marker}{${String(fence.length)},}[ \\t]*$`).test(text);
+    return new RegExp(`^${marker}{${String(fence.length)},}[ \\t]*$`).test(line.content);
+  }
+
+  /**
+   * Whether this line sits outside the container the open fence started in.
+   *
+   * A fence ends with its container whether or not a closing marker was
+   * written: `> ```sh` inside a blockquote is closed by the end of the
+   * blockquote, and a fence opened in a list item is closed by the next item.
+   * Without this the block never ends, and every line to the end of the file is
+   * read as verbatim content and never measured.
+   */
+  private leftFenceContainer(container: Container): boolean {
+    const opened = this.fence?.container;
+    if (opened === undefined) {
+      return false;
+    }
+    if (container.quoteDepth < opened.quoteDepth) {
+      return true;
+    }
+    return opened.opensItem && container.opensItem && container.indent <= opened.indent;
   }
 
   /**
    * A row of the table a delimiter row anchors.
    *
-   * Either the run is open already and this line still carries a pipe, or this
-   * line is the header the next line delimits.
+   * Either the run is open already and this line continues it, or this line is
+   * the header the next line delimits.
+   *
+   * **A row continues the run only from the same container.** Stripping the
+   * container makes `- a | b`, `- --- | ---` and `- <a very long line> | x`
+   * read as a header, a delimiter and a row, when they are three list items —
+   * so the third would escape the ceiling. A table written inside a list item
+   * has one marker, on its first row; a marker on a later row starts a new
+   * item, which ends the table.
    */
   private isTableRow(line: LineShape, next: LineShape | undefined): boolean {
-    const hasPipe = withoutContainer(line.text).includes("|");
-    if (this.inTable && hasPipe) {
+    if (!line.content.includes("|")) {
+      return false;
+    }
+    const open = this.table;
+    if (
+      open !== undefined &&
+      !line.container.opensItem &&
+      line.container.quoteDepth === open.quoteDepth
+    ) {
       return true;
     }
-    if (hasPipe && next !== undefined && TABLE_DELIMITER_RE.test(withoutContainer(next.text))) {
-      this.inTable = true;
+    if (next !== undefined && TABLE_DELIMITER_RE.test(next.content)) {
+      this.table = line.container;
       return true;
     }
     return false;

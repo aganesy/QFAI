@@ -30,7 +30,7 @@ import {
   countLines,
   LINE_BUDGET_EXEMPT,
   SKILL_MD_MAX_LINES,
-  WIDTH_BACKLOG_SIZE,
+  WIDTH_BACKLOG_PATHS,
   WIDTH_BUDGET_BACKLOG,
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
@@ -2455,11 +2455,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // to 500, leave the 900, and it may grow back to 900 with nothing to say so.
     // So each entry must equal what the file measures — narrowing one is an edit
     // that lowers its number in the same change.
+    // The paths and not their count: narrowing one file while widening another
+    // leaves the total unmoved, so a count lets a newly wide file take the
+    // vacated slot with nothing in the diff naming it.
     expect(
-      WIDTH_BUDGET_BACKLOG.size,
-      "the width backlog may only shrink — lower this number with the entry you removed, " +
-        "and never raise it to admit a newly widened file",
-    ).toBe(WIDTH_BACKLOG_SIZE);
+      [...WIDTH_BUDGET_BACKLOG.keys()].sort(),
+      "the width backlog may only shrink — remove the path you fixed, and never add one to " +
+        "admit a newly widened file",
+    ).toEqual([...WIDTH_BACKLOG_PATHS].sort());
 
     const stale: string[] = [];
     const loose: string[] = [];

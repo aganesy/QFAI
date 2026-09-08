@@ -186,7 +186,13 @@ The derived `Level` records which oracle owns the obligation, and the [ATDD anno
 gate](#atdd-annotation-hard-gate) routes each obligation ID to exactly one directory. `US-*` is
 answered from `<testsDir>/e2e/**` (`QFAI-ATDD-111`) and `CON-API-*` from `<testsDir>/api/**`
 (`QFAI-ATDD-113`); those two are fixed by the ID type. A `TC-*` is answered from the directory **its
-own declared `Level`** names (`QFAI-ATDD-112`):
+own declared `Level`** names (`QFAI-ATDD-112`).
+
+`BF-*` is not a fourth row. It is a second way to write the first one: a
+`QFAI:BF-NNNN` annotation under `<testsDir>/e2e/**` answers `QFAI-ATDD-111` for
+every `US-*` whose block names that flow. The obligation, the directory and the
+finding code are unchanged — only the token the author writes is shorter. See
+[the E2E obligations](#atdd-annotation-hard-gate).
 
 | `Level`                       | Answered from                       |
 | ----------------------------- | ----------------------------------- |
@@ -286,9 +292,24 @@ The gate is satisfied by **one E2E test per business flow carrying every
 test("an operator schedules a call list and it dials", ...)
 ```
 
-That is the intended shape. The flows are already enumerated — Main Flow,
-Alternate and Exception Flows in `_policies/04_Business-Flow.md` — and their
-count is what should bound the E2E tree, not the story count. Input validation,
+That is the intended shape, and it can be written once instead of per story.
+The flows are enumerated in `_policies/04_Business-Flow.md`, each opening its
+entry with a `BF-NNNN`; a story names the flows that realize it with
+`- Flow: BF-0001` in its own block; and a test annotates the flow:
+
+```
+// QFAI:BF-0001
+test("an operator schedules a call list and it dials", ...)
+```
+
+That annotation answers `QFAI-ATDD-111` for every story naming `BF-0001`, so
+the flow count bounds the E2E tree rather than the story count. It discharges
+the obligation and never moves it: the obligation stays on `US-*`, because
+`_policies/**` may not name a lower-layer ID and the flow document therefore
+cannot know which stories exist. A story that names no flow keeps the
+story-grain obligation and the `QFAI:SPEC-XXXX:US-XXXX` form, which is
+unchanged. An annotation naming a flow the document does not declare answers
+for no story, so the obligation it was meant to cover is still reported. Input validation,
 boundary values and API vocabulary belong at L3/L4 whatever the story they trace
 to; putting them at E2E is the "convert all obligations into E2E" anti-pattern
 below, and no annotation obligation asks for it.
