@@ -756,14 +756,22 @@ function storageSlotIssue(
  * real summary had already filled in.
  */
 function extractYamlPayload(section: string): string {
+  const lines = section.split("\n");
   const blocks: string[] = [];
+  // Every line a fence owns — its markers and its body — blanked out of the
+  // fallback below. A section whose only fences are `markdown` or `mermaid`
+  // has no YAML payload at all, and reading an illustration's `sources:` as
+  // data is what the fallback used to do.
+  const fenced = new Array<boolean>(lines.length).fill(false);
   let open: { marker: string; length: number; collect: boolean } | null = null;
   let current: string[] = [];
 
-  for (const line of section.split("\n")) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
     const fence = parseFenceLine(line);
     if (!open) {
       if (fence) {
+        fenced[index] = true;
         open = {
           marker: fence.marker,
           length: fence.length,
@@ -772,6 +780,7 @@ function extractYamlPayload(section: string): string {
       }
       continue;
     }
+    fenced[index] = true;
     if (
       fence &&
       fence.marker === open.marker &&
@@ -798,7 +807,12 @@ function extractYamlPayload(section: string): string {
     blocks.push(current.join("\n"));
   }
 
-  return blocks.length > 0 ? blocks.join("\n") : section;
+  if (blocks.length > 0) {
+    return blocks.join("\n");
+  }
+  // Blanked rather than dropped, so a reported line number still names the
+  // line the author wrote.
+  return lines.map((line, index) => (fenced[index] === true ? "" : line)).join("\n");
 }
 
 /**
