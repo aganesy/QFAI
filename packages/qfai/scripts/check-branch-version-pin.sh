@@ -47,7 +47,7 @@ if [[ -z "$branch" ]]; then branch="$(git rev-parse --abbrev-ref HEAD)"; fi
 # through VERSION_PIN_SKIP=1. Without this explicit rejection, branches
 # like `release/v1.9.0-rc.1` would silently extract `1.9.0` and pass
 # when package.json#version is `1.9.0` — exactly the failure mode that
-# ships pre-release as stable (PR #206 review LW-L).
+# ships pre-release as stable.
 #
 # Match conservatively: the suffix must look like canonical SemVer
 # pre-release tokens (`rc`, `alpha`, `beta`, `pre`, `next`) with an

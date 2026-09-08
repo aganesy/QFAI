@@ -1,5 +1,5 @@
 /**
- * `qfai prototyping rescope` — retire a frozen surface without discarding the loop (#1099).
+ * `qfai prototyping rescope` — retire a frozen surface without discarding the loop.
  *
  * Cycle 0 freezes the screen set into `prototyping.json#frozenSurfaceUnion` and
  * every later edit to it is lock drift, exit 2. Correct as a drift rule. But it
@@ -149,7 +149,7 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
   // Neither is crash-safe without a journal; this one is recoverable.
   // `tests/cli/prototypingRescopeCrashWindow.test.ts` enters that window on
   // purpose, because every other row runs to completion and so passes with the
-  // lines swapped (#1137).
+  // lines swapped.
   const planTouched = await rescopeIteratePlans(options);
   const reviewsTouched = await annotateReviews(options, entries);
 

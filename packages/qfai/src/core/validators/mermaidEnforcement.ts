@@ -28,7 +28,7 @@ const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
  * and the contents of a non-mermaid fence.
  *
  * Two readings were wrong in opposite directions. A prefix match called
- * `Journey mapping was run ...` a diagram — and a `text` fence holds prose as
+ * `Journey mapping was run...` a diagram — and a `text` fence holds prose as
  * readily as a `.md` body does, so keeping the loose form there left the same
  * false positive on the evidence tree this validator newly scans. An exact
  * match then missed `graph TD;` and `flowchart LR; A --> B`, which are valid
