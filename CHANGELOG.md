@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
+  its leading comment block. A pack outlives what it specifies: a spec that was
+  deleted or superseded is kept as the record of why it went away, and that
+  record cannot carry a consumer view or an applicable NFR for something that
+  no longer exists.
+
+  The two alternatives were worse. Making the record conform means writing
+  fiction; admitting it into the schema weakens the contract for every live
+  pack.
+
+  The marker is per document, has to precede the content, and every ignored
+  file is counted in the run's own output — an exclusion nobody sees is one
+  nobody reviews.
+
 ### Fixed
 
 - **`QFAI-ASSETS-005` no longer reports the four Stage 0 catalog documents**
