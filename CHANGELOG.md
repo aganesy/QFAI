@@ -41,6 +41,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The governed-path report case of `assistantAssetProvenance.test.ts` no
+  longer depends on the platform's path separator** (#1315). `init` names a
+  written path with `/` on every platform and a skipped one in a `NOTE:` line
+  carrying the absolute destination with the platform's own separator. The case
+  built one needle for both surfaces with `path.join`, so on Windows the
+  written-path needle carried a backslash, matched nothing, and the case failed
+  on a tree nobody had changed. Both sides are now read with one separator.
+
 - **An imported spec can state its surface, so a CLI-only project is no longer
   read as visual** (#1295). A discussion pack states the classification in its
   `01_Context.md`, and both `/qfai-sdd` Phase 0 and `/qfai-implement`'s visual
