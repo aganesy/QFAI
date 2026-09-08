@@ -86,13 +86,51 @@ export function isSpecInScope(specNumber: string, scope: SpecScope | undefined):
   return scope === undefined || scope.has(specNumber);
 }
 
-/** Where paths are resolved from. Both roots are absolute. */
+/** Where paths are resolved from. Every root is absolute. */
 export type SpecScopeRoots = {
   /** Repository root, used to resolve repo-relative `finding.file` values. */
   root: string;
   /** Absolute `specsDir`. */
   specsRoot: string;
+  /**
+   * Absolute `testsDir`. Optional so a caller that only asks about spec-pack
+   * paths keeps its existing shape; without it the test layout owns nothing and
+   * the answer is what it was before.
+   */
+  testsRoot?: string;
 };
+
+/**
+ * The spec that owns a file under the canonical test layout,
+ * `<testsDir>/<layer>/spec-NNNN/**`.
+ *
+ * `cross-spec-obligations.md` already states the rule: a file in that layout is
+ * owned by that spec whatever its annotation says. It was applied to a broken
+ * reference and not to the file itself, so a scoped run dropped a sibling's
+ * dangling reference and kept a sibling's stub — one rule, answered two ways.
+ *
+ * The directory decides, not the annotation. That is what the rule says, and it
+ * is the half a path can answer: reading an annotation means reading the file,
+ * which the scope filter does not do. A file in neither shape has no owner and
+ * reaches every run, the way an unattributable finding always has.
+ */
+function owningSpecInTestLayout(absolute: string, roots: SpecScopeRoots): string | null {
+  if (roots.testsRoot === undefined) {
+    return null;
+  }
+  const relative = path.relative(roots.testsRoot, absolute);
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return null;
+  }
+  // `<layer>/spec-NNNN/...`: the layer directory, then the spec directory. A
+  // `spec-NNNN` segment deeper than that is a name inside somebody's fixture
+  // tree rather than the layout this rule is about.
+  const [, specDir] = relative.split(/[\\/]/);
+  if (specDir === undefined) {
+    return null;
+  }
+  return SPEC_DIR_PATTERN.exec(specDir)?.[1] ?? null;
+}
 
 /**
  * Returns the spec number that owns `filePath`, or `null` when the path is not
@@ -115,6 +153,10 @@ function isInsideSpecsRoot(filePath: string, roots: SpecScopeRoots): boolean {
 
 export function owningSpecNumber(filePath: string, roots: SpecScopeRoots): string | null {
   const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(roots.root, filePath);
+  const inTestLayout = owningSpecInTestLayout(absolute, roots);
+  if (inTestLayout !== null) {
+    return inTestLayout;
+  }
   const relative = path.relative(roots.specsRoot, absolute);
   if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
     return null;

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { isTerminalSpecStatus } from "../parse/spec.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
@@ -18,6 +19,14 @@ export async function validateDensityHints(root: string, config: QfaiConfig): Pr
   const issues: Issue[] = [];
 
   for (const entry of entries) {
+    // A retired spec has no business rules, no examples and no test cases —
+    // that is what retiring it means, and the execution playbook already skips
+    // these when it enumerates specs. Read anyway, each absence reports as a
+    // defect that no change can clear, and the only way to silence it is to
+    // delete the line explaining why the file is empty.
+    if (isTerminalSpecStatus(entry.status)) {
+      continue;
+    }
     const [brText, examplesText, testCasesText] = await Promise.all([
       readSafe(entry.businessRulesPath),
       readSafe(entry.examplesPath),

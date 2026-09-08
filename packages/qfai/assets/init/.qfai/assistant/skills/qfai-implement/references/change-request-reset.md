@@ -38,12 +38,15 @@ A run with no in-scope CR at all does nothing here and proceeds unchanged.
 
 **A row named in an open in-scope CR's blocked set is not selected**, whatever
 its status. A `todo` row carries that as `blocked` in the ledger, parked by the
-raiser at `.qfai/assistant/constitution/drift-protocol.md` step 2; a row past `todo`, and a `done` row, could
-not be parked at all, because `todo -> blocked` is the only inbound edge there
-is (`execution-ledger.md#allowed-transitions`). Reading the CR files here — the
-record the parking is derived from — gives those rows the same protection
-without an illegal transition, and without re-deriving the determination on
-every pass, which is the loop `blocked` exists to stop.
+raiser at `.qfai/assistant/constitution/drift-protocol.md` step 2; a row past
+`todo`, and a `done` row, are left where they are. The ledger would take the
+write — `any active status -> blocked` is a legal edge, and `Blocked-By` records
+the status the row is leaving (`execution-ledger.md#allowed-transitions`) — but
+that step parks only `todo` rows, because the CR file already carries the
+determination and parking a row mid-phase adds a trip out of it and back.
+Reading the CR files here gives those rows the same protection without
+re-deriving the determination on every pass, which is the loop `blocked` exists
+to stop.
 
 The rows this covers are ordinary: a post-RED scope gap is raised from a row at
 `red` or later, a checkpoint regression from one at `done`, and a `review-fix`
