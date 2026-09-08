@@ -65,6 +65,8 @@ PR / issue のタイトルと説明、変更差分に含まれるコードコメ
 `.agents/rules/documentation-clarity.md` (SSOT) の基準を満たしてから完了とする。
 
 - ソースと Markdown に issue/PR 番号、チケット ID、内輪の呼称を書かない。
+  PR / issue の本文、commit message、`CHANGELOG.md` は対象外で、番号とリンクは
+  そこに置く。
 - 検討や実装の経緯を書かない。現在の仕様とその理由だけを書く。
 - 自明・重複・冗長な記述を削る。箇条書きと表で整理する。
 - 一般的な用語のみを使い、一文を短くする。
