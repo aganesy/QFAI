@@ -1,5 +1,5 @@
 /**
- * `--upgrade-assistant-tree` copies; the contract must say so (#717).
+ * `--upgrade-assistant-tree` copies; the contract must say so.
  *
  * `.qfai/contracts/cli/qfai-init.md` described the per-file operation three
  * times and one of the three said "move". The exit-code table uses the copy

@@ -1,5 +1,5 @@
 /**
- * Every required spec file ships a template (#394).
+ * Every required spec file ships a template.
  *
  * `qfai-sdd/SKILL.md` lists `_policies/01..11` and the per-spec `01..10` as Mandatory
  * Outputs and says "the canonical file set is defined by skill templates", while
@@ -124,7 +124,7 @@ describe("qfai-sdd ships a template for every required spec file", () => {
       // would ship a guaranteed finding.
       //
       // Any digit count counts, not just the four the ban patterns match
-      // (#782): a short placeholder such as `EX-01` reads as a reserved-layer
+      // a short placeholder such as `EX-01` reads as a reserved-layer
       // ID to the author, and renumbering it to the pack's own four-digit
       // house convention turns the file into a hard `error`.
       for (const name of REQUIRED._policies) {

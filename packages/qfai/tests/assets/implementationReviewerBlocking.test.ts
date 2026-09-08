@@ -1,5 +1,5 @@
 /**
- * A mandatory reviewer's verdict has to block (#387).
+ * A mandatory reviewer's verdict has to block.
  *
  * `qfai-implement/SKILL.md` makes `implementation-reviewer` PASS item 8 of the
  * unconditional 12-point gate. But `agent-routing.yml` listed it under

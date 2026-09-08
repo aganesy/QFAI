@@ -207,7 +207,7 @@ describe("README content the guard now keeps in sync", () => {
 });
 
 /**
- * The second oracle (#1063).
+ * The second oracle.
  *
  * Line-identity cannot fail on a statement that is wrong in both files, and it
  * did not: both READMEs said "It does not generate GitHub Actions workflows"
@@ -281,7 +281,7 @@ describe("check-readme-alignment: the CI section's workflow claim", () => {
     expect(result.stderr).toContain("have diverged");
   });
 
-  // The real files, which is the assertion that would have caught #1063.
+  // The real files, which the wrong-in-both-files gap above needs checked against.
   it("passes over the repository's own READMEs", () => {
     const result = runGuard([]);
     expect(result.status, result.stderr).toBe(0);

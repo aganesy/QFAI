@@ -259,7 +259,7 @@ describe("TDD-0013: ledger absent", () => {
 // so the spec-0038 forward-compat TC (TC-0013-0017, auto-discovery) is
 // the WRONG anchor — that lives in specAutoDiscovery.test.ts:699. This
 // describe exercises the traceability validator's forward-compat
-// boundary against old evidence files. (PR #206 review N32O / N34p / N35m)
+// boundary against old evidence files.
 // QFAI:SPEC-0013:TC-0013-0021
 // ---------------------------------------------------------------------------
 describe("TDD-0014: evidence without Diff Context", () => {
@@ -325,7 +325,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
 // Pipeline Validator Registration Integrity) / BR-0013-0011 (Validator
 // Registry Wiring); AC-0013-0007 (Validate Gate error=0) remains the
 // behavioral post-condition whose forward-compat boundary is covered by
-// TC-0013-0021. (PR #206 review N32O / N34p / N35m / N65f / N9dn)
+// TC-0013-0021.
 // QFAI:SPEC-0013:TC-0013-0020
 // ---------------------------------------------------------------------------
 describe("TDD-0015: validate pipeline integration", () => {
@@ -345,11 +345,11 @@ describe("TDD-0015: validate pipeline integration", () => {
 });
 
 // ---------------------------------------------------------------------------
-// #536: ledger presence is a property of the working tree, not of the branch
-// diff. The whole validator used to return early when the diff was empty, so a
-// trunk-based repo (HEAD == origin/main), a shallow CI clone and a repo with no
-// remote never saw QFAI-TRACE-002 — the warning the shipped /qfai-sdd docs
-// promise as the only signal that the artifact is missing.
+// Ledger presence is a property of the working tree, not of the branch
+// diff. A validator that returns early when the diff is empty would never
+// surface QFAI-TRACE-002 for a trunk-based repo (HEAD == origin/main), a
+// shallow CI clone, or a repo with no remote — the warning the shipped
+// /qfai-sdd docs promise as the only signal that the artifact is missing.
 // ---------------------------------------------------------------------------
 describe("ledger presence is checked without a branch diff", () => {
   let tmpRoot: string;
@@ -453,8 +453,8 @@ describe("ledger presence is checked without a branch diff", () => {
 });
 
 // ---------------------------------------------------------------------------
-// #536: "git could not answer" used to be indistinguishable from "nothing
-// changed", so a missing base ref silently disabled the error-severity
+// Treating "git could not answer" as indistinguishable from "nothing
+// changed" would let a missing base ref silently disable the error-severity
 // QFAI-TRACE-001 gate without a word in the report.
 // ---------------------------------------------------------------------------
 describe("an unavailable diff is reported, not swallowed", () => {
@@ -497,7 +497,7 @@ describe("an unavailable diff is reported, not swallowed", () => {
 });
 
 // ---------------------------------------------------------------------------
-// PR #856 review: the unconditional scan must not reach past the layered
+// The unconditional scan must not reach past the layered
 // layout, must not open a non-regular file, and must not put the history-based
 // gate in front of `/qfai-sdd`.
 // ---------------------------------------------------------------------------

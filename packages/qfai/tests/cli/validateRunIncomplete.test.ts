@@ -1,5 +1,5 @@
 /**
- * `validate` produces a verdict even when a validator throws (#1104).
+ * `validate` produces a verdict even when a validator throws.
  *
  * `runValidate` awaited `validateProject` with no `try`, so an fs error from any
  * validator reached `cli/index.ts` as a single stderr line: no `counts:`, no

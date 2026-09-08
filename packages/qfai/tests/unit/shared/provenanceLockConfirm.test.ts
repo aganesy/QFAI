@@ -11,7 +11,7 @@
  * with six other vitest projects moves it. At a 1s budget a run that outlasted
  * it was told `the provenance lock was replaced between publishing it and
  * reading it back` and failed — about a lock that had been restored under it,
- * on a documentation-only pull request (#1190).
+ * on a documentation-only pull request.
  *
  * Both halves are pinned here, because widening the budget alone would also
  * slow down the case the budget exists to detect:

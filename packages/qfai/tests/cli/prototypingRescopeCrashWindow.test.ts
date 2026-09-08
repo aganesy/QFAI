@@ -1,5 +1,5 @@
 /**
- * `rescope`'s write order is what makes a crashed run recoverable (#1137).
+ * `rescope`'s write order is what makes a crashed run recoverable.
  *
  * The derived artifacts (`iterate-plan.json`, `review.json`) are written BEFORE
  * the authoritative `prototyping.json`, which is the opposite of the intuitive
