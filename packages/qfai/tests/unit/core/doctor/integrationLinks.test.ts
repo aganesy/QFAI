@@ -1,9 +1,12 @@
-// `validate` fails a tree whose integration wrappers do not resolve, because a
-// skill is loaded through that path and nothing else. `doctor` reported the same
-// tree as healthy: `skills.integrity` compares CONTENT, and the canonical tree
-// behind a broken wrapper is untouched. Both were right, and only one of them
-// was wired to a gate — so the command an operator reaches for said the
-// environment was fine, which reads as "the error must be real".
+// A skill is loaded through its integration wrapper and through nothing else,
+// so `validate` fails a tree whose wrappers do not resolve. `integration.links`
+// asks that same question in `doctor`, through the same code, and carries what
+// it answered: the severity, the waivers, and the fact that the remedy differs
+// by damage class and is the validator's to state.
+//
+// `skills.integrity` is the neighbouring check and answers a different
+// question — whether the content matches what was shipped — which a broken
+// wrapper leaves untouched. Both belong.
 
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -150,6 +153,7 @@ describe("integration.links", () => {
     // put `doctor` on the far side of `--fail-on error` from `validate` on the
     // most common case of all — the mismatch this check was added to end.
     await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       injectedFindings = [linkFinding("warning", ".claude/skills/qfai-atdd")];
 
@@ -161,6 +165,7 @@ describe("integration.links", () => {
 
   it("takes the worse severity when the tree holds both damage classes", async () => {
     await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       injectedFindings = [
         linkFinding("warning", ".claude/skills/qfai-atdd"),
@@ -179,6 +184,7 @@ describe("integration.links", () => {
     // under `--fail-on error` while the gate fails — the disagreement this
     // check exists to remove. A check that could not run has not passed.
     await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       inspectionThrows = true;
 
@@ -194,6 +200,7 @@ describe("integration.links", () => {
     // validator instead would fail `doctor` on a tree whose gate passes, which
     // is the same disagreement one layer along.
     await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       const suppressed = linkFinding("warning", ".claude/skills/qfai-atdd");
       injectedFindings = [{ ...suppressed, suppressed: true }];
@@ -204,17 +211,39 @@ describe("integration.links", () => {
     });
   });
 
+  it("keeps a waiver's downgrade to info rather than raising it back", async () => {
+    // A waiver can lower a finding without suppressing it, and the finding
+    // stays in the list. Reporting every non-error as a `warning` failed
+    // `doctor` under `validation.failOn: warning` on a tree whose `validate`
+    // passes on the downgrade — the same disagreement, one layer along again.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      injectedFindings = [linkFinding("info", ".claude/skills/qfai-atdd")];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.severity).toBe("info");
+    });
+  });
+
   it("keeps its next action in the language doctor's output is written in", async () => {
     // The validator's per-shape remedy is written for `validate`'s reader and
     // is not all English. Copying it into `doctor --format json` would break
     // that output's language contract on exactly the runs that hit the
     // shapes carrying the longest remedies.
+    //
+    // A marker stands in for that remedy. What decides the case is whether the
+    // field is copied at all, and a marker says so without putting a second
+    // language in this file.
+    const REMEDY = "MARKER-SUGGESTED-ACTION-MUST-NOT-BE-COPIED";
     await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       injectedFindings = [
         {
           ...linkFinding("warning", ".claude/skills/qfai-atdd"),
-          suggested_action: "再実行してください",
+          suggested_action: REMEDY,
         },
       ];
 
@@ -224,7 +253,7 @@ describe("integration.links", () => {
       expect(actions).toEqual([
         "Run qfai validate and follow the QFAI-LINK-001 finding for these paths",
       ]);
-      expect(JSON.stringify(actions)).not.toContain("再実行");
+      expect(JSON.stringify(check)).not.toContain(REMEDY);
     });
   });
 
@@ -234,6 +263,7 @@ describe("integration.links", () => {
     // ships. Describing every finding as "not being loaded" hid the one case
     // where something IS loaded and should not be.
     await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       injectedFindings = [linkFinding("warning", ".claude/skills/qfai-retired")];
 

@@ -22,9 +22,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   uses, and carries what that code answered rather than deciding again. Severity
   comes from the finding — `QFAI-LINK-001` is a `warning` where the canonical
   document still reads and an `error` where it does not — and the findings pass
-  through the same waivers `validate` applies, so the check and the gate stay on
-  the same side of `--fail-on error` for any one tree. An inspection that cannot
-  run at all is an `error`, because the gate does not survive it either.
+  through the same waivers `validate` applies, so a waiver that suppresses one
+  silences the check and a waiver that downgrades one to `info` is reported at
+  `info`. The two therefore stay on the same side of `--fail-on` for any one
+  tree, at every threshold rather than only at `error`. An inspection that
+  cannot run at all is an `error`, because the gate does not survive it either.
 
   The check names the wrappers and stops there. `QFAI-LINK-001` covers several
   kinds of damage and the repair differs by kind: a flattened link is relinked

@@ -1277,12 +1277,18 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   }
 
   const paths = broken.flatMap((issue) => issue.refs ?? []);
-  // The worse of the severities the findings carry. The validator reports the
-  // damage classes separately — a readable canonical document is a `warning`,
-  // an unreadable one an `error` — and a tree can hold both.
+  // The worst of the severities the findings carry, across all three a finding
+  // can arrive at. The validator reports the damage classes separately — a
+  // readable canonical document is a `warning`, an unreadable one an `error` —
+  // and a waiver can downgrade either to `info` without suppressing it.
+  // Collapsing everything short of `error` to `warning` put `doctor` on the far
+  // side of `validation.failOn: warning` from a `validate` that passes on that
+  // downgrade, which is the disagreement this check exists to remove.
   const severity: DoctorSeverity = broken.some((issue) => issue.severity === "error")
     ? "error"
-    : "warning";
+    : broken.some((issue) => issue.severity === "warning")
+      ? "warning"
+      : "info";
   return {
     id: "integration.links",
     severity,
