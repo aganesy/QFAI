@@ -15,6 +15,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The severity now follows the message. A spec that owes rows is unchanged, and
   the error it carries — `TDDLIST_TC_NOT_COVERED` — is unchanged as well.
 
+- **The density rules no longer report a spec that has stopped applying**
+  (#1304). `QFAI-DENSITY-001` through `-004` read every spec pack's section
+  files for the IDs they should carry. A spec declaring `Status: superseded`,
+  `deprecated` or `removed` carries none — that is what retiring it means — so
+  each absence was reported as a defect no change could clear.
+
+  The rules now skip a spec whose declared lifecycle is terminal, the same set
+  the execution playbook skips when it enumerates specs. A pack beside it is
+  unaffected, and a retirement the tree cannot act on — `superseded` with no
+  successor, or no `Status:` at all — is still read as current.
+
+  An empty section file was already silent. One holding the line that records
+  the retirement was not, so deleting that line was the only way to clear the
+  warning.
+
 - **`QFAI-ASSETS-005` no longer reports the four Stage 0 catalog documents**
   (`.qfai/assistant/catalog/manifest.md`, `product.md`, `structure.md`,
   `tech.md`). They ship telling the reader to replace their contents, and
