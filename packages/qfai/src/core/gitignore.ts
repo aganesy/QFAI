@@ -319,7 +319,40 @@ export function gitignorePatternMatches(pattern: string, samplePath: string): bo
   if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith("!")) {
     return false;
   }
+  return patternMatches(trimmed, samplePath, true);
+}
 
+/**
+ * The same match, for the body of a negation.
+ *
+ * A directory pattern covers everything beneath it when it **ignores**, because
+ * git never descends into an excluded directory. A negation cannot work the
+ * same way: gitignore(5) says it is not possible to re-include a file whose
+ * parent directory is excluded. `!.qfai/` re-includes the directory entry and
+ * nothing under it.
+ *
+ * Read as a subtree, one such line cancelled every ignore above it and sat last,
+ * so the verdict came back "not ignored" for paths git ignores — and the caller
+ * that warns about an ignored governance record stayed silent in the one
+ * configuration it exists for.
+ *
+ * Only the trailing-slash form narrows. `!a/**` says descendants in its own
+ * text, and a negation naming a file has none. Excluding an ancestor is not
+ * this function's job either: {@link isPathIgnoredByLayers} judges each ancestor
+ * prefix before the path itself, which is where "git never descends" belongs.
+ */
+function negationBodyMatches(body: string, samplePath: string): boolean {
+  return patternMatches(body, samplePath, !body.trim().endsWith("/"));
+}
+
+/**
+ * One gitignore pattern against one path.
+ *
+ * `coversDescendants` is the difference between the two callers above: an
+ * ignore line reaches into the directory it names, a negation does not.
+ */
+function patternMatches(pattern: string, samplePath: string, coversDescendants: boolean): boolean {
+  const trimmed = pattern.trim();
   const withoutTrailingSlash = trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
   // Per gitignore(5): a `/` anywhere but the end anchors the pattern.
   const anchored = withoutTrailingSlash.includes("/");
@@ -335,7 +368,8 @@ export function gitignorePatternMatches(pattern: string, samplePath: string): bo
 
   // The trailing group is what makes a directory pattern cover its contents.
   const prefix = anchored ? "^" : "^(?:.*/)?";
-  return new RegExp(`${prefix}${source}(?:/.*)?$`).test(samplePath.replace(/^\//, ""));
+  const suffix = coversDescendants ? "(?:/.*)?$" : "$";
+  return new RegExp(`${prefix}${source}${suffix}`).test(samplePath.replace(/^\//, ""));
 }
 
 /** One literal character, safe to drop into a regular expression. */
@@ -577,8 +611,14 @@ function lastMatchVerdict(lines: readonly string[], samplePath: string): boolean
     }
     const negated = trimmed.startsWith("!");
     // `gitignorePatternMatches` refuses a `!` line by design, so the negation is
-    // matched on its body and its verdict inverted.
-    if (!gitignorePatternMatches(negated ? trimmed.slice(1) : trimmed, samplePath)) {
+    // matched on its body and its verdict inverted. Through
+    // `negationBodyMatches`, which does not read a trailing slash as a subtree:
+    // a negation re-includes the directory entry, never what a parent's
+    // exclusion already put out of reach.
+    const matched = negated
+      ? negationBodyMatches(trimmed.slice(1), samplePath)
+      : gitignorePatternMatches(trimmed, samplePath);
+    if (!matched) {
       continue;
     }
     verdict = !negated;
