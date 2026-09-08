@@ -357,6 +357,18 @@ below, and no annotation obligation asks for it.
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
 
+- **A suite bound at run time is a carrier the scan cannot decide.**
+  `const deployed = LIVE ? describe : describe.skip`, then `deployed(...)`, is
+  the ordinary way to write a probe that needs a target the run may not have.
+  The file declares real tests, so it is a carrier; which of the two names it
+  ends up calling is decided while the run starts, and the coverage gate's only
+  evidence is the annotation string. So a skipped suite and a passing one look
+  the same here, and an obligation carried only by such a file stays covered
+  with the production code deleted. `QFAI-ATDD-124` (`info`) names those files.
+  It is not a violation — give any obligation whose sole carrier is one of them
+  a second owner that runs unconditionally. A written-out `describe.skip(` is a
+  different case and is not named: it is a token any scan can already read.
+
 - **An annotation carrier is not a test.** The scan reads `.feature` and `.md` too, and a file's kind is read from its body: a `.feature` with a `Scenario:` declares a test, a `.md` never does, and a `.test.ts` holding only the annotation is the same ledger renamed. An obligation no carrier declares a test for clears `QFAI-ATDD-111` / `-112` / `-113` / `-115` with nothing behind it, so `QFAI-ATDD-119` (`info`) names it — a legitimate placeholder that must not read as coverage. A repo-wide gate reads `missing.<kind>` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone; a `--spec` gate reads the narrowed `QFAI-ATDD-119` in `validate.spec-<id>.json`, because `summary.json` is repo-wide under every scope. A skipped test still counts as declared, and the partition is suppressed, not empty, when `scan.truncated` says the scan was cut short. - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `<testsDir>/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
