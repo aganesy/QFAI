@@ -256,9 +256,38 @@ whose output names no test is a FAIL. That output is what **The option that make
 buys: without the runner's verbose option a passing run prints no name either, so read this criterion
 against a command that carries it (or against the selected/run count that rule falls back to), never
 against a default-quiet one. A step
-outside the applicable set is not owed, and its absence is not a partial run. Any non-zero exit is a
-FAIL: for a per-item checkpoint the item stays at `refactor`, the failure is fixed, and the whole
-set is re-run. A partial run of the applicable set is not a pass.
+outside the applicable set is not owed, and its absence is not a partial run. A partial run of the
+applicable set is not a pass.
+
+Any non-zero exit is a FAIL, with one exception, stated below: step 4 alone may be judged on a
+measured delta instead (`#the-one-substitution-a-measured-delta-for-step-4`). Exit 0 is not a pass
+by itself — step 1 owes the output criterion above as well — but for every command other than step
+4, a non-zero exit settles it. **FAIL handling is defined here and nowhere else**, in one
+branch per boundary:
+
+- **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
+  does **not** go to `exception`: that status parks the row as an anomaly whose completion then
+  needs a user-approved accepted-risk waiver, and a regression this run can fix is not one.
+  **`refactor` is not terminal, and Phase Red does not select it**, so a run that ends before the
+  re-run passes would strand the row. The preflight resume step (`../SKILL.md`, Phase: Stage 0 +
+  Preflight) is what picks it up; when it resumes, and as what unit, is stated there.
+
+  **A repair that changed code owes its `Refactor verify` fields before it re-submits.** Re-run the
+  relevant suite on the repaired tree and record the command, result and revision (Phase: Refactor
+  step 2) first, then the routed blocking reviewers, then the whole checkpoint set. Gate item 10
+  requires those three revisions to agree, so reviewers given a fresh PASS over a stale
+  `Refactor verify` leave the row unable to reach `done` — with no route back, since Phase Red does
+  not re-select it.
+
+- **Per spec** — the boundary owns no row, so no status moves. Fix the failure and re-run the whole
+  set. **Do not add a row here.** When the repair needs its own Red/Green cycle it needs an
+  obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds
+  is the `Status` / `DR-ID` / `Evidence` cells only, and adding, removing or re-scoping a row takes
+  the drift path (`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). Raise it
+  per `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` — STOP, Change Request, owner rerun —
+  and resume on the approved reset (`change-request-reset.md`), then work the ledger back to
+  terminal. Spec-level completion is not declared until it passes, and the stale-PASS rule below
+  binds this repair too.
 
 ### The one substitution: a measured delta for step 4
 

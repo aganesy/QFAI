@@ -128,8 +128,11 @@ describe("governing decision", () => {
     const rules = flat(await readFile(path.join(repoRoot, BUSINESS_RULES), "utf-8"));
     for (const doc of [decisions, rules]) {
       expect(doc).toContain(
-        "**hard-required** (no default possible; must be supplied before proceeding): `companyName`, brand intent, `primarySpecId` when absent",
+        "**hard-required** (no default possible; must be supplied before proceeding): brand intent, `primarySpecId` when absent",
       );
+      // `companyName` was retired from the bucket: no shipped file read it, so
+      // the entry spent a prompt out of a 0-1 budget and read nothing back.
+      expect(doc).not.toContain("must be supplied before proceeding): `companyName`");
     }
   });
 });

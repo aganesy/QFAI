@@ -1387,7 +1387,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   //     !.qfai/evidence/skeleton.md
   //
-  [".gitignore", "ec683d143351584cf0873fcaa89f14c0ea5f92afa627bc5d9d0176e3427d4d52"],
+  // Re-pinned for the review tree as well. Nothing under `.qfai/review/` is
+  // tracked, so the two lines that carved an exception out of `.qfai/review/*`
+  // are gone:
+  //
+  //     !.qfai/review/
+  //     !.qfai/review/.legacy-packs
+  //
+  // and one ignore joined the block, for the archive location packs were moved
+  // to before the archive moved under `.qfai/review/` itself:
+  //
+  //     .qfai/review_archive/*
+  //
+  // Derived the way its predecessors were — `qfai init` into a temp root, then
+  // reading what it wrote.
+  [".gitignore", "bba1090962529e016912dc9a0a80a23e500805c384ea4d6328c6d4c91536a70e"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

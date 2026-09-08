@@ -52,6 +52,7 @@
  * a file this stage must not touch is a test that cannot be satisfied. It is named in the handover
  * instead.
  */
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -60,6 +61,31 @@ import { describe, expect, it } from "vitest";
 import { isQuotation, WORDS } from "../helpers/recordProse.js";
 
 const ROOT = path.resolve(__dirname, "../../../..");
+
+/** The first review pack the stage this record belongs to opened. */
+const FIRST_PACK = "review-20260820200000000";
+
+/**
+ * Whether this checkout carries any of those packs.
+ *
+ * Review artifacts sit outside version control, so a fresh clone has none while
+ * the record that counts them stays tracked. The counted claim below is skipped
+ * by name there rather than measured against an empty tree, which would report a
+ * correct record as wrong. Read synchronously because `it.skipIf` is decided when
+ * the file is collected, and by the same predicate the count uses — the directory
+ * is shared with earlier stages and with a lane's own output, so its existence
+ * answers nothing.
+ */
+const HAS_STAGE_PACKS = ((): boolean => {
+  try {
+    return readdirSync(path.join(ROOT, ".qfai/review"), { withFileTypes: true }).some(
+      (entry) => entry.isDirectory() && /^review-\d+$/.test(entry.name) && entry.name >= FIRST_PACK,
+    );
+  } catch {
+    // No such directory, or one that cannot be read. Nothing to count either way.
+    return false;
+  }
+})();
 
 /** Every governance file this stage owns. Each claim is searched in all of them. */
 /**
@@ -293,9 +319,7 @@ const COUNTED_CLAIMS: ReadonlyArray<{
       const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
       return entries.filter(
         (entry) =>
-          entry.isDirectory() &&
-          /^review-\d+$/.test(entry.name) &&
-          entry.name >= "review-20260820200000000",
+          entry.isDirectory() && /^review-\d+$/.test(entry.name) && entry.name >= FIRST_PACK,
       ).length;
     },
     why: "the pack count said Three, then Four, against four and then seven directories",
@@ -662,39 +686,44 @@ describe("retracted claims are quoted, never asserted", () => {
     expect(isExempt(document, at), "the assertion is not inside the blockquote").toBe(false);
   });
 
-  it("keeps a counted claim's number equal to what the tree holds", async () => {
-    // A fixed needle cannot catch `Three packs` becoming `Four packs`; round 7 found exactly that, and
-    // the record was two counts behind. The number is compared to the directories on disk.
-    const wrong: string[] = [];
-    for (const counted of COUNTED_CLAIMS) {
-      const actual = await counted.actual();
-      let matched = 0;
-      for (const file of GOVERNANCE) {
-        const raw = await readFile(path.join(ROOT, file), "utf8");
-        for (const match of raw.replace(/[*_`]/g, "").matchAll(counted.pattern)) {
-          matched += 1;
-          const stated = WORDS[(match[1] ?? "").toLowerCase()] ?? Number(match[1]);
-          if (Number.isNaN(stated)) {
-            wrong.push(`${file}: states ${match[1] ?? "?"}, which no numeral table here can read`);
-            continue;
-          }
-          if (stated !== actual) {
-            wrong.push(
-              `${file}: states ${match[1] ?? "?"} where the tree holds ${String(actual)} — ${counted.why}`,
-            );
+  it.skipIf(!HAS_STAGE_PACKS)(
+    "keeps a counted claim's number equal to what the tree holds",
+    async () => {
+      // A fixed needle cannot catch `Three packs` becoming `Four packs`; round 7 found exactly that, and
+      // the record was two counts behind. The number is compared to the directories on disk.
+      const wrong: string[] = [];
+      for (const counted of COUNTED_CLAIMS) {
+        const actual = await counted.actual();
+        let matched = 0;
+        for (const file of GOVERNANCE) {
+          const raw = await readFile(path.join(ROOT, file), "utf8");
+          for (const match of raw.replace(/[*_`]/g, "").matchAll(counted.pattern)) {
+            matched += 1;
+            const stated = WORDS[(match[1] ?? "").toLowerCase()] ?? Number(match[1]);
+            if (Number.isNaN(stated)) {
+              wrong.push(
+                `${file}: states ${match[1] ?? "?"}, which no numeral table here can read`,
+              );
+              continue;
+            }
+            if (stated !== actual) {
+              wrong.push(
+                `${file}: states ${match[1] ?? "?"} where the tree holds ${String(actual)} — ${counted.why}`,
+              );
+            }
           }
         }
+        // A FLOOR, because matching nothing was a pass. This pin held for eight rounds and then went
+        // inert the moment the pack count reached a numeral its alternation did not list — and the way it
+        // went inert was by matching zero times, which is indistinguishable from correctness without
+        // this line.
+        if (matched === 0) {
+          wrong.push(`no governance file states the claim this pin exists for — ${counted.why}`);
+        }
       }
-      // A FLOOR, because matching nothing was a pass. This pin held for eight rounds and then went
-      // inert the moment the pack count reached a numeral its alternation did not list — and the way it
-      // went inert was by matching zero times, which is indistinguishable from correctness without
-      // this line.
-      if (matched === 0) {
-        wrong.push(`no governance file states the claim this pin exists for — ${counted.why}`);
-      }
-    }
-    expect(wrong, "a counted claim whose number the tree does not hold").toEqual([]);
-  });
+      expect(wrong, "a counted claim whose number the tree does not hold").toEqual([]);
+    },
+  );
 
   it("reconstructs every recorded span from the source, in both flattenings", async () => {
     // The coordinate model, ASSERTED against the source rather than described in a docstring. Round 10

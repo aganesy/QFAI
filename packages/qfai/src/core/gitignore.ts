@@ -188,14 +188,6 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // regenerable — re-running the phase re-runs the smoke script; it does not
   // recover which shortcuts were taken or which CR was raised for them.
   "!.qfai/evidence/skeleton.md",
-  // The migration record naming the review packs that predate the strict
-  // `revision` form. Every other file under `.qfai/review/` is a regenerable
-  // record of one round, but this one is written once, from the history, and
-  // read by `QFAI-REVIEW-007` to decide whether a pack's own `legacy` claim is
-  // believed. Left untracked, the pack a claim excuses could add itself to it,
-  // which is the self-declaration the corroboration exists to replace.
-  "!.qfai/review/",
-  "!.qfai/review/.legacy-packs",
   // The install-provenance record. It is the only thing that tells a FRESH CLONE
   // which shipped files QFAI wrote and which the adopter deliberately deleted, so
   // it has to survive in version control — and it sits directly under `.qfai/`,
@@ -257,6 +249,22 @@ export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   ".qfai/discussion/discussion-*/",
   "!.qfai/review/review-*/",
   "!.qfai/review/review-*/**",
+  // Nothing under `.qfai/review/` is tracked, so the two lines that carved an
+  // exception out of `.qfai/review/*` are retired with the rest. The leaf was
+  // the record naming the packs that predate the strict `revision` form; the
+  // directory line above it existed only so that leaf could win, because git
+  // cannot re-include a path whose parent is excluded.
+  //
+  // `.qfai/review/` is a prefix of every other retired line here, and the
+  // freshness check asks `existing.includes(entry)` — so a block carrying any
+  // of them reports as stale, which is the answer wanted for all of them. It
+  // also fires on a negation a project wrote itself under that directory: the
+  // rebuild keeps that line, being no retired line of ours, and settles on
+  // identical bytes rather than removing it. Inert either way — a negation
+  // naming a directory re-includes no file, and `.qfai/review/*` above still
+  // decides every path inside.
+  "!.qfai/review/.legacy-packs",
+  "!.qfai/review/",
 ] as const;
 
 export const QFAI_GITIGNORE_BLOCK = [
@@ -265,6 +273,16 @@ export const QFAI_GITIGNORE_BLOCK = [
   ".qfai/evidence/*",
   ".qfai/discussion/*",
   ".qfai/review/*",
+  // The archive location review packs were moved to before the current layout
+  // put them under `.qfai/review/` itself, where the line above already covers
+  // them. Nothing writes this path now, so a fresh project never grows one; it
+  // is here for a project that still carries the directory, whose packs are
+  // review artifacts under any name.
+  //
+  // Deliberately absent from QFAI_GITIGNORE_RECOMMENDED_ENTRIES: a project
+  // whose `.gitignore` predates this line must not start failing validation
+  // over a directory QFAI no longer writes.
+  ".qfai/review_archive/*",
   ".qfai/state.json",
   QFAI_STATE_SCRATCH_IGNORE,
   // The advisory lock that serializes writes to the file above. It sits
