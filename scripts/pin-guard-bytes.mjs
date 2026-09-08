@@ -113,8 +113,8 @@ function main(root) {
   stdout.write(`pinned into ${DECLARATION_REL}\n`);
 
   // THEN the lifecycle allow-list, whose entries pin what each listed manifest runs at install
-  // time rather than merely naming it. Review finding [124]: being on the list permitted a
-  // manifest to run code at install time AND permitted that code to change unseen, so the root
+  // time rather than merely naming it. Being on the list alone would permit a
+  // manifest to run code at install time AND let that code change unseen, so the root
   // `preinstall` could become a step that neuters every later guard shell in the job.
   //
   // The digest is over the lifecycle PROJECTION, not the whole file, so a dependency bump or an

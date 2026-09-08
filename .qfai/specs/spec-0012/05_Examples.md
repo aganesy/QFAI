@@ -366,9 +366,9 @@
 ## EX-0012-0149: Legacy `prototyping.json` Hard-Fail (No `frozenSurfaceUnion`)
 
 - BR-Ref: BR-0012-0034
-- Given a pre-12th-wave `prototyping.json` record with `frozenSpecsCovered` but no `frozenSurfaceUnion` field.
+- Given a legacy `prototyping.json` record with `frozenSpecsCovered` but no `frozenSurfaceUnion` field.
 - When `qfai prototyping iterate --cycle 1` (or later) runs against that record.
-- Then the CLI exits 2 with a re-seed instruction (`--cycle 0 --target-url <url>`); the cycle ≥ 1 drift gate does NOT silently fall back to `frozenSpecsCovered` (which would re-enable the original MAJOR/P1 false-positive that the 11th-wave fix closed).
+- Then the CLI exits 2 with a re-seed instruction (`--cycle 0 --target-url <url>`); the cycle ≥ 1 drift gate does NOT silently fall back to `frozenSpecsCovered` (which would re-enable a false positive).
 
 ## EX-0012-0150: License Catalog Set-Equality Drift Detection
 
@@ -382,7 +382,7 @@
 - BR-Ref: BR-0012-0030
 - Given any seeded `prototyping.json` record.
 - When `qfai prototyping show-spec` emits its JSON payload.
-- Then the payload carries `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"` so operators can detect pre-Wave-3 legacy seed records, and `liveUiBearing` is a `string[]` of spec IDs from the same `resolveSurfaceUnion()` that iterate's cycle ≥ 1 drift gate consumes.
+- Then the payload carries `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"` so operators can detect legacy seed records, and `liveUiBearing` is a `string[]` of spec IDs from the same `resolveSurfaceUnion()` that iterate's cycle ≥ 1 drift gate consumes.
 
 ## EX-0012-0152: Per-Spec Subdirectory UI Contract Fallback
 
@@ -410,7 +410,7 @@
 - BR-Ref: BR-0012-0030
 - Given a `prototyping.json` where the `frozenSpecsCovered` key IS present on the record but the value fails the validation contract — e.g. a non-array (`{ "frozenSpecsCovered": "0001" }`), an empty array (`[]`), an array with a non-string entry (`[42]`), an array with an empty-string entry (`["0012", ""]`), or an explicit `null` / `undefined` on a present key (`{ "frozenSpecsCovered": null }`).
 - When `qfai prototyping certify` reads the record at either the per-(spec × screen) gate or the cert-sealing call site.
-- Then certify exits 2 with a "present but malformed" diagnostic that names the rejection reason (e.g. `not an array`, `empty`, `non-string`, `empty-string`, `value is null`, `value is undefined`), instead of silently falling back to the legacy single-spec `specsCovered` field. The absent-key case (record has no `frozenSpecsCovered` key at all) still legitimately falls back to `specsCovered` for pre-Wave-3 evidence compatibility — the contract distinguishes "operator omitted the field" from "operator partially-corrupted the field" so a partial / corrupt edit cannot downgrade certification scope and let missing secondary-spec review evidence ship a sealed certificate.
+- Then certify exits 2 with a "present but malformed" diagnostic that names the rejection reason (e.g. `not an array`, `empty`, `non-string`, `empty-string`, `value is null`, `value is undefined`), instead of silently falling back to the legacy single-spec `specsCovered` field. The absent-key case (record has no `frozenSpecsCovered` key at all) still legitimately falls back to `specsCovered` for legacy evidence compatibility — the contract distinguishes "operator omitted the field" from "operator partially-corrupted the field" so a partial / corrupt edit cannot downgrade certification scope and let missing secondary-spec review evidence ship a sealed certificate.
 
 ## EX-0012-0156: Shared-`screenId` Multi-File Subdir Requires Full Per-Spec Re-Parse
 
@@ -424,7 +424,7 @@
 - BR-Ref: BR-0012-0030
 - Given a `prototyping.json` carrying a valid legacy `specsCovered: ["0012"]` AND a corrupt multi-spec scope (`frozenSpecsCovered: null` from a hand-edit).
 - When `qfai prototyping show-spec` reads the record.
-- Then show-spec exits 2 with a "present but malformed" diagnostic naming the rejection reason (e.g. `value is null`) instead of silently downgrading the reported scope to the legacy `specsCovered` field. The semantic mirrors the certify-side wave-33 contract pinned by AC-0012-0045 class (h): a present-but-malformed `frozenSpecsCovered` is a hard error on the certify surface, and AC-0012-0052 carries the parallel sub-clause for the show-spec surface so the absent-vs-malformed discrimination holds across both. (iterate-side present-but-malformed `frozenSpecsCovered` is handled separately: iterate consumes the legacy `specsCovered` reader for the cycle ≥ 1 shallow-equal primary-spec check, and the multi-spec drift baseline is read from `frozenSurfaceUnion`, not `frozenSpecsCovered` — see the show-spec JSDoc scope note in `prototypingCertify.ts` for the surface split.) show-spec must not present a misleading legacy fallback to operators / automation making recovery decisions.
+- Then show-spec exits 2 with a "present but malformed" diagnostic naming the rejection reason (e.g. `value is null`) instead of silently downgrading the reported scope to the legacy `specsCovered` field. The semantic mirrors the certify-side contract pinned by AC-0012-0045 class (h): a present-but-malformed `frozenSpecsCovered` is a hard error on the certify surface, and AC-0012-0052 carries the parallel sub-clause for the show-spec surface so the absent-vs-malformed discrimination holds across both. (iterate-side present-but-malformed `frozenSpecsCovered` is handled separately: iterate consumes the legacy `specsCovered` reader for the cycle ≥ 1 shallow-equal primary-spec check, and the multi-spec drift baseline is read from `frozenSurfaceUnion`, not `frozenSpecsCovered` — see the show-spec JSDoc scope note in `prototypingCertify.ts` for the surface split.) show-spec must not present a misleading legacy fallback to operators / automation making recovery decisions.
 
 ## EX-0012-0158: Absolute `paths.specsDir` Override Resolves the primarySpecId Pin
 
@@ -438,21 +438,21 @@
 - BR-Ref: BR-0012-0030
 - Given a consumer project whose `qfai.config.yaml` carries `paths.contractsDir` as an ABSOLUTE path (POSIX `/abs/contracts`, Windows drive-letter `C:\abs\contracts`, or UNC `\\host\share\contracts`) pointing outside the repository root, AND a per-spec UI contract file at `<absoluteContractsDir>/ui/spec-NNNN.yaml`.
 - When `readPerSpecScreens(root, contractsDir, "spec-NNNN")` runs (called by certify's per-(spec × screen) review.json presence gate).
-- Then the helper discovers the per-spec contract file and returns its declared screens. Pre-fix `path.join(root, contractsDir, "ui")` concatenated root + absolute (rather than resetting), so the probe at `<root>/<absoluteContractsDir>/ui/...` missed every file and the helper returned `null`. Certify then silently fell back to the project-wide screen list and enforced wrong `(spec, screen)` coverage for explicit-contracts-dir workflows. Post-fix `path.resolve()` resets to the absolute segment, matching the wave-45 `specDirExists` fix.
+- Then the helper discovers the per-spec contract file and returns its declared screens. Pre-fix `path.join(root, contractsDir, "ui")` concatenated root + absolute (rather than resetting), so the probe at `<root>/<absoluteContractsDir>/ui/...` missed every file and the helper returned `null`. Certify then silently fell back to the project-wide screen list and enforced wrong `(spec, screen)` coverage for explicit-contracts-dir workflows. Post-fix `path.resolve()` resets to the absolute segment, matching the same `specDirExists` fix.
 
 ## EX-0012-0160: Partner-Helper Symmetry — Project-Wide UI Reader Resolves Absolute `contractsDir` Identically
 
 - BR-Ref: BR-0012-0030
 - Given a consumer project whose `qfai.config.yaml` carries `paths.contractsDir` as an ABSOLUTE path (POSIX / Windows drive-letter / UNC) pointing outside the repository root, AND a project-wide UI contract file at `<absoluteContractsDir>/ui/screens.yaml` declaring two or more screens.
 - When `readUiContractScreenContracts(root, contractsDir)` runs (the project-wide screen reader that partners with the per-spec `readPerSpecScreens` on the certify path).
-- Then the reader discovers the project-wide contract file and returns ALL declared screens. Pre-wave-48 the project-wide reader used the same `path.join(root, contractsDir, "ui")` pattern, so an absolute `contractsDir` would have produced different discovery results in the two helpers — the project-wide pass returning empty while the per-spec pass (already fixed in wave-47) returned its full set. The asymmetric output would have silently broken certify's per-(spec × screen) gate even after wave-47. Post-wave-48 both helpers use `path.resolve()`, so absolute-path handling is symmetric across the project-wide and per-spec discovery paths. The regression test pins the symmetry directly via the exported `readUiContractScreenContracts` API (see `06_Test-Cases.md` for the corresponding TC and its assertion).
+- Then the reader discovers the project-wide contract file and returns ALL declared screens. The project-wide reader using the same `path.join(root, contractsDir, "ui")` pattern as an unfixed per-spec reader would produce different discovery results between the two helpers on an absolute `contractsDir` — the project-wide pass returning empty while the per-spec pass returns its full set, silently breaking certify's per-(spec × screen) gate. Both helpers instead use `path.resolve()`, so absolute-path handling is symmetric across the project-wide and per-spec discovery paths. The regression test pins the symmetry directly via the exported `readUiContractScreenContracts` API (see `06_Test-Cases.md` for the corresponding TC and its assertion).
 
 ## EX-0012-0161: `hasMatchingUiContract` Rejects Directory Named Like a UI Contract File
 
 - BR-Ref: BR-0012-0030
 - Given a consumer project with a UI-only spec (no `surface_type: ui-bearing` marker, no legacy title marker, no `prototyping.primarySpecId` pin) AND a misauthored DIRECTORY at the canonical UI-contract path — e.g. `<contractsDir>/ui/0007.yaml/` is a directory rather than a file.
 - When `resolveAllUiBearingSpecs()` / `resolveSurfaceUnion()` evaluate the UI-contract signal via `hasMatchingUiContract()`.
-- Then the spec is NOT classified as UI-bearing — the resolver returns an empty union and iterate / drift gates take the documented no-op path. Pre-wave-50 the direct-match arm used `access()` which only checked existence (file OR directory), so a directory at that path would have falsely classified the spec as UI-bearing and driven the loop against a phantom surface. Post-wave-50 the direct-match arm uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates.
+- Then the spec is NOT classified as UI-bearing — the resolver returns an empty union and iterate / drift gates take the documented no-op path. A direct-match arm using `access()`, which only checks existence (file OR directory), would falsely classify the spec as UI-bearing for a directory at that path and drive the loop against a phantom surface. The direct-match arm instead uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates.
 
 ## v1.9.1 Defect Remediation Examples (CHG-005)
 

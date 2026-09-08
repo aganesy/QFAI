@@ -165,9 +165,10 @@ weaken the profile to clear it.
 
 The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
 under parallel slices the ledger order does not identify one either. So step 1 is dropped, and the
-two spec-wide commands are added: the spec-level set is step 2 above plus steps 3 and 4 below.
+three spec-wide commands are added: the spec-level set is step 2 above plus steps 3, 4 and 5 below.
 Everything step 1 would have proved is already covered by the full suite. Steps 3 and 4 run at this
-boundary and only at it — it is the boundary whose owner can act on what they report.
+boundary and only at it — it is the boundary whose owner can act on what they report. Step 5 also
+runs at a per-item boundary, under the condition it states.
 
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check. **These take no `--spec`**, and a repository's own gates are whole-tree by construction —
@@ -203,6 +204,27 @@ boundary and only at it — it is the boundary whose owner can act on what they 
    is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
    report the checkpoint as passed.
 
+5. **The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is
+   `applicable`** — resolved from the **current** `catalog/tech.md` and the committed script it
+   names, whose bytes must hash to the `Skeleton script` the record carries, then run and appended
+   to `.qfai/evidence/skeleton.md` with its own exit status
+   (`walking-skeleton.md#the-same-re-run-before-spec-completion`). The command is **not** taken
+   from the record: the record is an editable file, so a command rewritten there to something that
+   always succeeds would carry an old gatekeeper PASS through spec completion. The record is what
+   the run is compared against, never what the run is read from, and a hash that does not match
+   is a FAIL here rather than a re-run of whatever the script now says. Steps 2-4 are
+   all satisfiable by a tree that no longer starts: where the tests construct their subject
+   directly, the suite stays green after this invocation's own rows have broken the
+   composition root, the start-up configuration or the dependency wiring, and no other step
+   in this set runs the product. A non-zero exit is a FAIL like any other here — spec
+   completion is blocked and the entrypoint re-enters the Skeleton phase's 3-cycle budget.
+   A spec set with no runnable entrypoint records the `not applicable` verdict once and
+   contributes nothing to this step.
+
+Re-run step 5 at a **per-item** boundary too whenever the item touched an entrypoint, its wiring or
+its start-up configuration — one row's work then stands between the last passing run and the
+failure, which is what makes it attributable.
+
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and — for
@@ -234,9 +256,38 @@ whose output names no test is a FAIL. That output is what **The option that make
 buys: without the runner's verbose option a passing run prints no name either, so read this criterion
 against a command that carries it (or against the selected/run count that rule falls back to), never
 against a default-quiet one. A step
-outside the applicable set is not owed, and its absence is not a partial run. Any non-zero exit is a
-FAIL: for a per-item checkpoint the item stays at `refactor`, the failure is fixed, and the whole
-set is re-run. A partial run of the applicable set is not a pass.
+outside the applicable set is not owed, and its absence is not a partial run. A partial run of the
+applicable set is not a pass.
+
+Any non-zero exit is a FAIL, with one exception, stated below: step 4 alone may be judged on a
+measured delta instead (`#the-one-substitution-a-measured-delta-for-step-4`). Exit 0 is not a pass
+by itself — step 1 owes the output criterion above as well — but for every command other than step
+4, a non-zero exit settles it. **FAIL handling is defined here and nowhere else**, in one
+branch per boundary:
+
+- **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
+  does **not** go to `exception`: that status parks the row as an anomaly whose completion then
+  needs a user-approved accepted-risk waiver, and a regression this run can fix is not one.
+  **`refactor` is not terminal, and Phase Red does not select it**, so a run that ends before the
+  re-run passes would strand the row. The preflight resume step (`../SKILL.md`, Phase: Stage 0 +
+  Preflight) is what picks it up; when it resumes, and as what unit, is stated there.
+
+  **A repair that changed code owes its `Refactor verify` fields before it re-submits.** Re-run the
+  relevant suite on the repaired tree and record the command, result and revision (Phase: Refactor
+  step 2) first, then the routed blocking reviewers, then the whole checkpoint set. Gate item 10
+  requires those three revisions to agree, so reviewers given a fresh PASS over a stale
+  `Refactor verify` leave the row unable to reach `done` — with no route back, since Phase Red does
+  not re-select it.
+
+- **Per spec** — the boundary owns no row, so no status moves. Fix the failure and re-run the whole
+  set. **Do not add a row here.** When the repair needs its own Red/Green cycle it needs an
+  obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds
+  is the `Status` / `DR-ID` / `Evidence` cells only, and adding, removing or re-scoping a row takes
+  the drift path (`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). Raise it
+  per `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` — STOP, Change Request, owner rerun —
+  and resume on the approved reset (`change-request-reset.md`), then work the ledger back to
+  terminal. Spec-level completion is not declared until it passes, and the stale-PASS rule below
+  binds this repair too.
 
 ### The one substitution: a measured delta for step 4
 

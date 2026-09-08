@@ -14,6 +14,7 @@ import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
+import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
@@ -27,12 +28,36 @@ import { resolveToolVersion } from "../core/version.js";
  * reserves — 2, for an unknown flag or a malformed value — and the parser never
  * sets `invalid` for an unrecognized command, so borrowing it here would file a
  * mistyped command under a row the contract wrote for something else. 1 keeps
- * the two distinguishable while still refusing to report success, which is the
- * defect this branch closed: the `default:` arm used to print `Unknown command`
- * and exit 0. A `--flag`-shaped first token never reaches here — the parser
- * catches it, leaves `command` null, and the invalid-args branch above exits 2.
+ * the two distinguishable while still refusing to report success. A
+ * `--flag`-shaped first token never reaches here — the parser catches it,
+ * leaves `command` null, and the invalid-args branch above exits 2.
+ *
+ * Read from `EXIT_CODES.findings` rather than written as `1`. That entry's own
+ * documentation lists a mistyped command among what it carries, so the number
+ * has a single source and cannot drift from the table `--help` prints.
  */
-const UNKNOWN_COMMAND_EXIT_CODE = 1;
+const UNKNOWN_COMMAND_EXIT_CODE = EXIT_CODES.findings;
+
+/**
+ * The top-level commands the switch below dispatches. Kept as data so the
+ * unknown-command check can run *before* the `--help` branch: `qfai
+ * vlaidate --help` would otherwise print usage and exit 0, contradicting
+ * the `Exit codes:` note that a mistyped command name is a usage error.
+ */
+const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
+  "init",
+  "validate",
+  "report",
+  "doctor",
+  "db-drift",
+  "guardrails",
+  "audit",
+  "sdd",
+  "atdd",
+  "handoff",
+  "discussion",
+  "prototyping",
+]);
 
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, invalidReason, options } = parseArgs(argv, cwd);
@@ -41,6 +66,22 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // version is readable from anywhere, including outside a project.
   if (options.version) {
     info(await resolveToolVersion());
+    return;
+  }
+
+  // Before the help branch: `--help` must not turn a mistyped command
+  // name into a successful run.
+  //
+  // `UNKNOWN_COMMAND_EXIT_CODE`, not `options.invalidExitCode`: the two are
+  // different rows of the same table, and the `Exit codes:` block this command
+  // prints says a mistyped command name is a usage error at
+  // `EXIT_CODES.findings` even when `--help` follows it. Borrowing the
+  // CLI-arg-error code here would make the help text the CLI ships disagree
+  // with the code that ships it.
+  if (command !== null && !KNOWN_COMMANDS.has(command)) {
+    error(`Unknown command: ${command}`);
+    info(usage());
+    process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
     return;
   }
 
@@ -377,6 +418,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
 
     default:
+      // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
+      // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
+      // 残す — exit 0 で素通りさせるより、使用法エラーで落とす方が安全。
       error(`Unknown command: ${command}`);
       info(usage());
       process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
@@ -479,6 +523,8 @@ Options:
                                  report: also switches the default input/output to validate.spec-<ids>.json / report.spec-<ids>.md
   -h, --help      Show this help
   -V, --version   Show the version (prints the installed qfai's version to stdout)
+
+${formatExitCodesSection()}
 `;
 }
 

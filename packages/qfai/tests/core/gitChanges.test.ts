@@ -305,6 +305,10 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   // tested as a prefix in others. The prefix form built `.qfai/specs//`, which
   // no repository path starts with, so every changed file was skipped, the
   // spec set came back empty and the gate reported a pass over nothing.
+  //
+  // All three spellings name one directory and reach one finding: the loader
+  // settles the separators and the finding renders what it is given in POSIX
+  // form, so how the config was written does not reach the report.
   it.each([".qfai/specs/", ".qfai/specs//", ".qfai\\specs\\"])(
     "reads the same specs directory written as %s",
     async (specsDir) => {
@@ -322,9 +326,34 @@ describe("validateTraceabilityIntegrity across a rename", () => {
       const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
 
       expect(uninspectable).toHaveLength(1);
-      expect(uninspectable[0]?.file).toBe(path.join(written.paths.specsDir, "spec-0001"));
+      expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
     },
   );
+
+  // The case above reads the directory through the loader, which settles the
+  // spelling. A config assembled in code keeps whatever separator it was given,
+  // so this one reaches the rendering with a backslash still in the value and
+  // holds on a runner whose own separator is already `/`.
+  it("renders the spec directory as one POSIX path when the config carries a backslash", async () => {
+    const specsDir = ".qfai\\specs";
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+      "src/core/module.ts": MODULE_BODY,
+    });
+    git(root, "rm", "-r", ".qfai/specs/spec-0001");
+    git(root, "commit", "-m", "delete the spec");
+
+    const issues = await validateTraceabilityIntegrity(root, {
+      ...config,
+      paths: { ...config.paths, specsDir },
+    });
+    const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
+
+    expect(uninspectable).toHaveLength(1);
+    expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
+  });
 
   // The two other ways the detection can select nothing — a diff it cannot
   // take, and a spec the diff names that the tree no longer holds — each say

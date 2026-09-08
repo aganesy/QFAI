@@ -176,6 +176,18 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // inside the ignored stage-evidence file, that reasoning never reaches a
   // commit and "unjustified" becomes unfalsifiable for every later reader.
   "!.qfai/evidence/coverage-depth-*.md",
+  // `Phase: Skeleton` records here: the smoke run that proved the program
+  // starts, the `qa-gatekeeper` verdict on it, and the enumerated `Skeleton
+  // debt` whose rows a Change Request asks for, all defined in
+  // `.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md#evidence`.
+  // That phase requires the debt to be written back *in the skeleton's own
+  // commit*, and every later invocation decides whether an entrypoint is
+  // already proven by reading this file. Left ignored, both requirements hold
+  // only inside the working directory that happened to run the phase: no other
+  // clone, CI run or author can see the pass or the debt it owes. And it is not
+  // regenerable — re-running the phase re-runs the smoke script; it does not
+  // recover which shortcuts were taken or which CR was raised for them.
+  "!.qfai/evidence/skeleton.md",
   // The install-provenance record. It is the only thing that tells a FRESH CLONE
   // which shipped files QFAI wrote and which the adopter deliberately deleted, so
   // it has to survive in version control — and it sits directly under `.qfai/`,
@@ -319,7 +331,40 @@ export function gitignorePatternMatches(pattern: string, samplePath: string): bo
   if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith("!")) {
     return false;
   }
+  return patternMatches(trimmed, samplePath, true);
+}
 
+/**
+ * The same match, for the body of a negation.
+ *
+ * A directory pattern covers everything beneath it when it **ignores**, because
+ * git never descends into an excluded directory. A negation cannot work the
+ * same way: gitignore(5) says it is not possible to re-include a file whose
+ * parent directory is excluded. `!.qfai/` re-includes the directory entry and
+ * nothing under it.
+ *
+ * Read as a subtree, one such line cancelled every ignore above it and sat last,
+ * so the verdict came back "not ignored" for paths git ignores — and the caller
+ * that warns about an ignored governance record stayed silent in the one
+ * configuration it exists for.
+ *
+ * Only the trailing-slash form narrows. `!a/**` says descendants in its own
+ * text, and a negation naming a file has none. Excluding an ancestor is not
+ * this function's job either: {@link isPathIgnoredByLayers} judges each ancestor
+ * prefix before the path itself, which is where "git never descends" belongs.
+ */
+function negationBodyMatches(body: string, samplePath: string): boolean {
+  return patternMatches(body, samplePath, !body.trim().endsWith("/"));
+}
+
+/**
+ * One gitignore pattern against one path.
+ *
+ * `coversDescendants` is the difference between the two callers above: an
+ * ignore line reaches into the directory it names, a negation does not.
+ */
+function patternMatches(pattern: string, samplePath: string, coversDescendants: boolean): boolean {
+  const trimmed = pattern.trim();
   const withoutTrailingSlash = trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
   // Per gitignore(5): a `/` anywhere but the end anchors the pattern.
   const anchored = withoutTrailingSlash.includes("/");
@@ -335,7 +380,8 @@ export function gitignorePatternMatches(pattern: string, samplePath: string): bo
 
   // The trailing group is what makes a directory pattern cover its contents.
   const prefix = anchored ? "^" : "^(?:.*/)?";
-  return new RegExp(`${prefix}${source}(?:/.*)?$`).test(samplePath.replace(/^\//, ""));
+  const suffix = coversDescendants ? "(?:/.*)?$" : "$";
+  return new RegExp(`${prefix}${source}${suffix}`).test(samplePath.replace(/^\//, ""));
 }
 
 /** One literal character, safe to drop into a regular expression. */
@@ -577,8 +623,14 @@ function lastMatchVerdict(lines: readonly string[], samplePath: string): boolean
     }
     const negated = trimmed.startsWith("!");
     // `gitignorePatternMatches` refuses a `!` line by design, so the negation is
-    // matched on its body and its verdict inverted.
-    if (!gitignorePatternMatches(negated ? trimmed.slice(1) : trimmed, samplePath)) {
+    // matched on its body and its verdict inverted. Through
+    // `negationBodyMatches`, which does not read a trailing slash as a subtree:
+    // a negation re-includes the directory entry, never what a parent's
+    // exclusion already put out of reach.
+    const matched = negated
+      ? negationBodyMatches(trimmed.slice(1), samplePath)
+      : gitignorePatternMatches(trimmed, samplePath);
+    if (!matched) {
       continue;
     }
     verdict = !negated;

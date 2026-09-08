@@ -122,6 +122,23 @@ type LayeredSpec = { readonly specId: string; readonly ledgerPath: string };
  * A missing / unreadable specs directory is not a traceability finding — the
  * spec-pack validators own that — so it yields none.
  */
+/**
+ * A finding's spec-directory path, POSIX-separated.
+ *
+ * `path.join` produced the platform separator here. Nothing shipped wrong —
+ * `normalizeIssuePaths` converts `file` before any surface reads it — but a
+ * caller that invokes this validator directly sees the raw value, and that is
+ * the boundary twenty-eight assertions across the suite state as a POSIX
+ * literal. This finding disagreed with all of them, and only where the
+ * platform separator is not `/`.
+ *
+ * The configured directory is normalised too, and its trailing slashes
+ * dropped: it comes from `qfai.config.yaml` and may carry either.
+ */
+function specDirFinding(specsDir: string, specId: string): string {
+  return `${specsDir.replace(/\\/g, "/").replace(/\/+$/, "")}/${specId}`;
+}
+
 async function listLayeredSpecs(specsDir: string): Promise<LayeredSpec[]> {
   try {
     const entries = await collectSpecEntries(specsDir);
@@ -346,7 +363,7 @@ export async function validateTraceabilityIntegrity(
         "QFAI-TRACE-003",
         `Spec ${specId} has BR/AC changes in the diff against "${baseBranch}" but no layered spec directory in the working tree, so its ledger cannot be read and the BR/AC to implementation integrity check (QFAI-TRACE-001) could not run for it. If the spec was deleted on purpose this needs no action; if it was renamed or converted, re-check the implementation links the old ledger carried.`,
         "info",
-        path.join(config.paths.specsDir, specId),
+        specDirFinding(config.paths.specsDir, specId),
         "traceability.integrity.specNotInWorkingTree",
       ),
     );

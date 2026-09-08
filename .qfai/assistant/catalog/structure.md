@@ -11,8 +11,18 @@
 ## Key packages / entrypoints
 
 - Package(s) of interest: <list packages>
-- CLI / service entry: <entrypoint files>
+- CLI / service entry: one line per entrypoint, as
+  `<entrypoint> -> <the boot obligations it answers>` — the `US-*`, or the
+  `CON-API-*` on an API entrypoint, whose surface that entrypoint serves. A
+  project with an API service and a worker states which obligations go through
+  which, so "the entrypoints the in-scope specs reach" is read off this list
+  rather than guessed. Without it a worker can be left out of the phase, or one
+  service's obligation recorded against another's, with nothing to detect
+  either.
 - Core modules: <key module directories>
+- Project scripts: <directory holding committed operational scripts — the
+  smoke script `skills/qfai-implement/references/walking-skeleton.md` requires
+  lives here>
 - Production roots: <every shipped-source path, exhaustively, as Git
   pathspecs — a directory where the whole directory is source (`src/`, `app/`,
   `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not.
