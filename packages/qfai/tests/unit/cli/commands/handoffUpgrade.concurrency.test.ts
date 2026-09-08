@@ -383,7 +383,7 @@ describe("handoff upgrade places the canonical file exclusively", () => {
     expect(rivalErrs.join("\n")).toMatch(/another `qfai handoff upgrade` is writing/);
     await expect(readFile(destAbs, "utf-8")).resolves.toMatch(/companyName: "FreshCo"/);
     expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
-  }, 15000);
+  });
 
   // Over-correction pin: the lock is released on every exit path, so
   // back-to-back runs still work. A lock that outlived its run would

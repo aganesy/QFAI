@@ -187,7 +187,7 @@ function scanPathName(relativePath: string): Hit[] {
   return found;
 }
 
-describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
+describe("distributed surface leakage smoke", () => {
   it("qfai init output contains no internal IDs or version markers", async () => {
     const tmpDir = await newTempDir();
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));

@@ -124,156 +124,148 @@ function failingIdsOtherThanDrift(checks: { id: string; severity: string }[]): s
     .map((entry) => entry.id);
 }
 
-describe(
-  "TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on warning",
-  { timeout: 60000 },
-  () => {
-    it("exits 0 with summary.warning still 0 while the drift advisory is emitted", async () => {
-      const dir = await pool.seedAdopterTree();
-      await quietUnrelatedWarnings(dir);
-      await editShippedWorkflow(dir, STALE_NAME);
+describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on warning", () => {
+  it("exits 0 with summary.warning still 0 while the drift advisory is emitted", async () => {
+    const dir = await pool.seedAdopterTree();
+    await quietUnrelatedWarnings(dir);
+    await editShippedWorkflow(dir, STALE_NAME);
 
-      // GUARDS #1-#4 are PRECONDITIONS and stay hard: on a tree not in this state
-      // nothing below measures anything. The three claims after them are soft.
+    // GUARDS #1-#4 are PRECONDITIONS and stay hard: on a tree not in this state
+    // nothing below measures anything. The three claims after them are soft.
 
-      // Guard #1 — the tree really does drift, closing three vacuity modes in one
-      // `toContain` as the sibling suites do: the packaged copy resolved and was
-      // readable, the provenance record is non-empty (the reader only visits
-      // recorded names), and the hand edit landed.
-      const diff = await diffInstalledShippedWorkflows(dir);
-      expect(
-        diff.modified,
-        "drift must be observable in this tree, or an exit code of 0 says nothing about an advisory that was never emitted",
-      ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
+    // Guard #1 — the tree really does drift, closing three vacuity modes in one
+    // `toContain` as the sibling suites do: the packaged copy resolved and was
+    // readable, the provenance record is non-empty (the reader only visits
+    // recorded names), and the hand edit landed.
+    const diff = await diffInstalledShippedWorkflows(dir);
+    expect(
+      diff.modified,
+      "drift must be observable in this tree, or an exit code of 0 says nothing about an advisory that was never emitted",
+    ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
 
-      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
-      const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
+    const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+    const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
 
-      // Guard #2 — registered exactly once. The finding SET rather than the first
-      // match: `addCheck` is a bare push with no dedup, so a `find` would hand back
-      // one registration while a second carried a different severity.
-      expect(
-        findings,
-        "workflows.integrity must be registered exactly once per doctor run",
-      ).toHaveLength(1);
+    // Guard #2 — registered exactly once. The finding SET rather than the first
+    // match: `addCheck` is a bare push with no dedup, so a `find` would hand back
+    // one registration while a second carried a different severity.
+    expect(
+      findings,
+      "workflows.integrity must be registered exactly once per doctor run",
+    ).toHaveLength(1);
 
-      // Guard #3 — the fixture repair actually landed. Scoped to OTHER ids for the
-      // reason the header gives, and it also fails in the useful direction if
-      // `quietUnrelatedWarnings` ever silences less than it claims: the report names
-      // the ids, so a sixth default warning arrives as a readable diff rather than
-      // as an unexplained exit 1.
-      expect(
-        failingIdsOtherThanDrift(data.checks),
-        "no check other than workflows.integrity may be warning or error, or exit 0 under `--fail-on warning` is not attributable to this advisory's severity",
-      ).toEqual([]);
+    // Guard #3 — the fixture repair actually landed. Scoped to OTHER ids for the
+    // reason the header gives, and it also fails in the useful direction if
+    // `quietUnrelatedWarnings` ever silences less than it claims: the report names
+    // the ids, so a sixth default warning arrives as a readable diff rather than
+    // as an unexplained exit 1.
+    expect(
+      failingIdsOtherThanDrift(data.checks),
+      "no check other than workflows.integrity may be warning or error, or exit 0 under `--fail-on warning` is not attributable to this advisory's severity",
+    ).toEqual([]);
 
-      const run = await runDoctorText(dir, "warning");
+    const run = await runDoctorText(dir, "warning");
 
-      // Guard #4 — the invocation that produced the exit code is the run that
-      // registered the finding: it rules out `runDoctor`'s `--autoremediate` CI-off
-      // early return, which yields a literal 0 without consulting `shouldFailDoctor`
-      // and renders no check line at all. The bare id only — no severity tag, no
-      // group header, both TDD-0040's surface.
-      expect(
-        run.stdout,
-        "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
-      ).toContain("workflows.integrity");
+    // Guard #4 — the invocation that produced the exit code is the run that
+    // registered the finding: it rules out `runDoctor`'s `--autoremediate` CI-off
+    // early return, which yields a literal 0 without consulting `shouldFailDoctor`
+    // and renders no check line at all. The bare id only — no severity tag, no
+    // group header, both TDD-0040's surface.
+    expect(
+      run.stdout,
+      "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
+    ).toContain("workflows.integrity");
 
-      // CLAIM 1 — 「exit code が 0 であること」.
-      expect
-        .soft(
-          run.exitCode,
-          "an info advisory must not change the exit code under `--fail-on warning` — that flag counts warnings, and DR-0006-0004 chose info so it would not be one",
-        )
-        .toBe(0);
+    // CLAIM 1 — 「exit code が 0 であること」.
+    expect
+      .soft(
+        run.exitCode,
+        "an info advisory must not change the exit code under `--fail-on warning` — that flag counts warnings, and DR-0006-0004 chose info so it would not be one",
+      )
+      .toBe(0);
 
-      // CLAIM 2 — 「`summary.warning` が 0 のままであること」. This is the claim that
-      // discriminates `info` from `warning`; the equivalent mutant TC-0006-0029
-      // recorded dies here.
-      expect
-        .soft(
-          data.summary.warning,
-          "the drift advisory must not land in the warning bucket — `summarize` has no exclusions, so a warning here is a warning for every `--fail-on warning` adopter",
-        )
-        .toBe(0);
+    // CLAIM 2 — 「`summary.warning` が 0 のままであること」. This is the claim that
+    // discriminates `info` from `warning`; the equivalent mutant TC-0006-0029
+    // recorded dies here.
+    expect
+      .soft(
+        data.summary.warning,
+        "the drift advisory must not land in the warning bucket — `summarize` has no exclusions, so a warning here is a warning for every `--fail-on warning` adopter",
+      )
+      .toBe(0);
 
-      // CLAIM 3 — 「`summary.info` が 1 以上であること」. Asserted because the TC asks
-      // for it; recorded in the header as non-discriminating, because the bare
-      // install already contributes four.
-      expect
-        .soft(
-          data.summary.info,
-          "the advisory is counted, not dropped — it belongs to the info bucket",
-        )
-        .toBeGreaterThanOrEqual(1);
-    });
-  },
-);
+    // CLAIM 3 — 「`summary.info` が 1 以上であること」. Asserted because the TC asks
+    // for it; recorded in the header as non-discriminating, because the bare
+    // install already contributes four.
+    expect
+      .soft(
+        data.summary.info,
+        "the advisory is counted, not dropped — it belongs to the info bucket",
+      )
+      .toBeGreaterThanOrEqual(1);
+  });
+});
 
-describe(
-  "TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fail-on warning",
-  { timeout: 60000 },
-  () => {
-    it("exits 1 on the unrelated warning while the drift finding stays info", async () => {
-      const dir = await pool.seedAdopterTree();
-      await quietUnrelatedWarnings(dir, { leaveWarning: UNRELATED_WARNING_ID });
-      await editShippedWorkflow(dir, STALE_NAME);
+describe("TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fail-on warning", () => {
+  it("exits 1 on the unrelated warning while the drift finding stays info", async () => {
+    const dir = await pool.seedAdopterTree();
+    await quietUnrelatedWarnings(dir, { leaveWarning: UNRELATED_WARNING_ID });
+    await editShippedWorkflow(dir, STALE_NAME);
 
-      // Guard #1 — as above. Without drift this row would assert exit 1 on a tree
-      // whose advisory never existed, which the control is specifically there to
-      // rule out: TC-0006-0032 alone is satisfiable by a `--fail-on warning` that
-      // catches nothing, and this row is what shows the flag works.
-      const diff = await diffInstalledShippedWorkflows(dir);
-      expect(
-        diff.modified,
-        "drift must be observable in this tree, or this row is not the control TC-0006-0032 needs",
-      ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
+    // Guard #1 — as above. Without drift this row would assert exit 1 on a tree
+    // whose advisory never existed, which the control is specifically there to
+    // rule out: TC-0006-0032 alone is satisfiable by a `--fail-on warning` that
+    // catches nothing, and this row is what shows the flag works.
+    const diff = await diffInstalledShippedWorkflows(dir);
+    expect(
+      diff.modified,
+      "drift must be observable in this tree, or this row is not the control TC-0006-0032 needs",
+    ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
 
-      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
-      const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
+    const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+    const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
 
-      // Guard #2 — as above.
-      expect(
-        findings,
-        "workflows.integrity must be registered exactly once per doctor run",
-      ).toHaveLength(1);
+    // Guard #2 — as above.
+    expect(
+      findings,
+      "workflows.integrity must be registered exactly once per doctor run",
+    ).toHaveLength(1);
 
-      // Guard #3 — EXACTLY the one unrelated warning, and no other. `toEqual` on the
-      // id list rather than a count: a count of 1 is also satisfied by some OTHER
-      // check having gone warning while `paths.testsDir` was quietly created, and
-      // then exit 1 would be attributed to the wrong cause. Scoped to other ids so
-      // it stays invariant under the sibling row's oracle mutation.
-      expect(
-        failingIdsOtherThanDrift(data.checks),
-        `exit 1 must be attributable to ${UNRELATED_WARNING_ID} alone`,
-      ).toEqual([UNRELATED_WARNING_ID]);
+    // Guard #3 — EXACTLY the one unrelated warning, and no other. `toEqual` on the
+    // id list rather than a count: a count of 1 is also satisfied by some OTHER
+    // check having gone warning while `paths.testsDir` was quietly created, and
+    // then exit 1 would be attributed to the wrong cause. Scoped to other ids so
+    // it stays invariant under the sibling row's oracle mutation.
+    expect(
+      failingIdsOtherThanDrift(data.checks),
+      `exit 1 must be attributable to ${UNRELATED_WARNING_ID} alone`,
+    ).toEqual([UNRELATED_WARNING_ID]);
 
-      const run = await runDoctorText(dir, "warning");
+    const run = await runDoctorText(dir, "warning");
 
-      // Guard #4 — as above.
-      expect(
-        run.stdout,
-        "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
-      ).toContain("workflows.integrity");
+    // Guard #4 — as above.
+    expect(
+      run.stdout,
+      "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
+    ).toContain("workflows.integrity");
 
-      // CLAIM 1 — 「exit code が 1 であること」, i.e. the flag really does catch a
-      // warning. This is what makes TC-0006-0032's exit 0 non-vacuous.
-      expect
-        .soft(
-          run.exitCode,
-          "`--fail-on warning` must exit 1 on an unrelated warning, or TC-0006-0032's exit 0 is satisfied by a flag that catches nothing",
-        )
-        .toBe(1);
+    // CLAIM 1 — 「exit code が 1 であること」, i.e. the flag really does catch a
+    // warning. This is what makes TC-0006-0032's exit 0 non-vacuous.
+    expect
+      .soft(
+        run.exitCode,
+        "`--fail-on warning` must exit 1 on an unrelated warning, or TC-0006-0032's exit 0 is satisfied by a flag that catches nothing",
+      )
+      .toBe(1);
 
-      // CLAIM 2 — 「`workflows.integrity` finding は依然 `info` のままであること」. Read
-      // at the registration site rather than in the rendered text, matching every
-      // suite in this family: severity is decided at `addCheck`.
-      expect
-        .soft(
-          findings[0]?.severity,
-          "the advisory stays an info advisory in the presence of an unrelated warning — the exit code moved, its severity did not",
-        )
-        .toBe("info");
-    });
-  },
-);
+    // CLAIM 2 — 「`workflows.integrity` finding は依然 `info` のままであること」. Read
+    // at the registration site rather than in the rendered text, matching every
+    // suite in this family: severity is decided at `addCheck`.
+    expect
+      .soft(
+        findings[0]?.severity,
+        "the advisory stays an info advisory in the presence of an unrelated warning — the exit code moved, its severity did not",
+      )
+      .toBe("info");
+  });
+});

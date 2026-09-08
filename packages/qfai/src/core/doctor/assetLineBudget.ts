@@ -42,6 +42,29 @@ import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
  */
 export const ASSISTANT_ASSET_MAX_LINES = 800;
 
+/**
+ * Width ceiling for a single line, which is what makes the line ceiling honest.
+ *
+ * A count of lines bounds reading cost only while a line is a roughly constant
+ * unit of reading. It stopped being one: the widest line in the tree runs 9,104
+ * characters against a median of 118, and a line that long costs one unit of a
+ * budget whose whole purpose is to bound how much an agent must read before it
+ * can act. Bodies converging on the line ceiling stopped shedding topics and
+ * started packing them, which the count cannot see.
+ *
+ * 400 is read off the tree rather than chosen: the 90th percentile is 413, so
+ * nine files in ten already comply, and the ones that do not are the ones the
+ * packing produced. It is also the point below which the width cap would start
+ * deciding a different question — reflowed to 300, the largest skill body
+ * passes 800 lines and the line ceiling condemns it, which is a split decision
+ * and not this one.
+ *
+ * The two ceilings are read together on purpose. Width alone permits a thin
+ * file of a thousand short lines; the count alone permits a packed one. A file
+ * has to satisfy both.
+ */
+export const ASSISTANT_ASSET_MAX_LINE_CHARS = 400;
+
 /** File extensions that count as an authored assistant asset. */
 export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".yaml"];
 
@@ -63,6 +86,367 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * Per-file width ceilings for the tree as it stands, which may only shrink.
+ *
+ * Twenty files carry a line wider than {@link ASSISTANT_ASSET_MAX_LINE_CHARS}.
+ * Reflowing them is a separate pass — it rewrites prose across the highest-churn
+ * files in the tree — and holding the rule back until then would leave the
+ * evasion open in the meantime, which is the state this rule exists to end.
+ *
+ * So the backlog is recorded instead of waived. **Each entry is the width that
+ * file ships with, exactly**, and this package's own asset guard holds it to
+ * that: widening the file fails, and narrowing it fails too, naming the lower
+ * number to record. A ceiling merely above the real width would let a file
+ * improve from 900 to 500 and keep the 900, which leaves room to grow back — a
+ * licence, not a ratchet.
+ *
+ * A file absent from this map is held at the real number, so nothing joins the
+ * backlog quietly: {@link WIDTH_BACKLOG_PATHS} pins which files are in it.
+ *
+ * ## What it means in a project that installed the package
+ *
+ * These are the widths the shipped files arrive with, so `qfai doctor` reads
+ * them and does not report a fresh `qfai init` tree for content its author
+ * received rather than wrote.
+ *
+ * It is not that project's ratchet, and cannot be: the map is inside the
+ * installed package, so narrowing one of these files locally has nowhere to
+ * record the smaller number, and a later re-widening back to the shipped width
+ * is not reported. The ratchet is this repository's, and it runs here — which
+ * is also where those files get narrower. A project holding its OWN assets to
+ * a width has the default, which the map never loosens.
+ *
+ * The same shape the operator-message language rule uses, for the same reason:
+ * a backlog nobody can add to is a backlog that goes away.
+ */
+export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
+  ["assistant/catalog/test-layers.md", 921],
+  ["assistant/constitution/references/audited-evidence-hash.md", 1406],
+  ["assistant/constitution/shared-skill-delegation-baseline.md", 692],
+  ["assistant/constitution/shared-skill-operating-baseline.md", 581],
+  ["assistant/skills/qfai-atdd/SKILL.md", 2001],
+  ["assistant/skills/qfai-atdd/references/red-provenance.md", 460],
+  ["assistant/skills/qfai-configure/SKILL.md", 2284],
+  ["assistant/skills/qfai-discussion/SKILL.md", 802],
+  ["assistant/skills/qfai-discussion/references/design-md-brand-catalog.md", 533],
+  ["assistant/skills/qfai-discussion/templates/01_Context.md", 412],
+  ["assistant/skills/qfai-implement/SKILL.md", 9104],
+  ["assistant/skills/qfai-implement/references/cross-spec-ownership.md", 616],
+  // The rows below this file's cycle table are separated from its delimiter
+  // by a blank line, which ends the table — so they render as a paragraph
+  // and are measured as one.
+  ["assistant/skills/qfai-prototyping/SKILL.md", 899],
+  ["assistant/skills/qfai-sdd/SKILL.md", 2460],
+  ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
+  ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
+  ["assistant/skills/qfai-sdd/templates/report/preflight_summary.md", 425],
+  ["assistant/skills/qfai-verify/SKILL.md", 950],
+  ["assistant/skills/qfai-verify/references/articles.md", 413],
+  ["assistant/skills/qfai-verify/references/verify-output-contract.md", 840],
+]);
+
+/**
+ * Which files are in the backlog. Held by the asset guard against the map's own
+ * keys, so the two must agree exactly.
+ *
+ * The set and not a count, because a count cannot see a swap: narrowing one
+ * file and widening another in the same change leaves the total unmoved, and a
+ * newly wide file ships with nothing in the diff that says so. Admitting a file
+ * means writing its path here, which is the line a reviewer is being asked
+ * about.
+ */
+export const WIDTH_BACKLOG_PATHS: readonly string[] = [
+  "assistant/catalog/test-layers.md",
+  "assistant/constitution/references/audited-evidence-hash.md",
+  "assistant/constitution/shared-skill-delegation-baseline.md",
+  "assistant/constitution/shared-skill-operating-baseline.md",
+  "assistant/skills/qfai-atdd/SKILL.md",
+  "assistant/skills/qfai-atdd/references/red-provenance.md",
+  "assistant/skills/qfai-configure/SKILL.md",
+  "assistant/skills/qfai-discussion/SKILL.md",
+  "assistant/skills/qfai-discussion/references/design-md-brand-catalog.md",
+  "assistant/skills/qfai-discussion/templates/01_Context.md",
+  "assistant/skills/qfai-implement/SKILL.md",
+  "assistant/skills/qfai-implement/references/cross-spec-ownership.md",
+  "assistant/skills/qfai-prototyping/SKILL.md",
+  "assistant/skills/qfai-sdd/SKILL.md",
+  "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+  "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+  "assistant/skills/qfai-sdd/templates/report/preflight_summary.md",
+  "assistant/skills/qfai-verify/SKILL.md",
+  "assistant/skills/qfai-verify/references/articles.md",
+  "assistant/skills/qfai-verify/references/verify-output-contract.md",
+];
+
+/**
+ * The container a line sits in: indentation, blockquote markers, and the list
+ * marker of an item whose content starts on the same line.
+ *
+ * Stripped before anything else is read, because a fence or a table inside a
+ * blockquote or a list is still one. CommonMark measures a fence's indent from
+ * its container's content column, not from column zero, so a `> ` prefix, a
+ * list's indentation, or the `- ` of an item opening a fence on its own line
+ * would otherwise hide the fence and every verbatim line under it would read as
+ * prose.
+ */
+const CONTAINER_PREFIX_RE = /^(?:[\s>]|(?<=^|[\s>])(?:[-*+]|\d{1,9}[.)])(?=\s))*/;
+
+/**
+ * An opening fence: the marker run, captured so a closer can be checked
+ * against it.
+ *
+ * A fence closes only on the SAME marker character at AT LEAST the opening
+ * length. Toggling on any fence line ends a four-backtick block early at the
+ * first three-backtick sample quoted inside it, and everything after that reads
+ * as prose — the same property `core/ids.ts` states for its own mask, and for
+ * the same reason.
+ *
+ * The indent is not bounded at three spaces, because the container prefix is
+ * already gone and what remains may be a list's own indentation. The looser
+ * reading errs toward treating a marker line as a fence, which is the safer
+ * direction here: a missed measurement is milder than a warning on verbatim
+ * content nobody can wrap.
+ */
+const FENCE_OPEN_RE = /^(`{3,}|~{3,})/;
+
+/**
+ * A table's delimiter row.
+ *
+ * It must carry a pipe, or a bare `---` rule would match. One column is a valid
+ * table (`| head |` over `| --- |`), and its delimiter has a single cell with
+ * pipes on both sides rather than a pipe between cells — so requiring a
+ * separator between two cells rejects it and measures its rows as prose.
+ */
+const TABLE_DELIMITER_RE =
+  /^(?:\|(?:\s*:?-{3,}:?\s*\|)+|\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?)\s*$/;
+
+/**
+ * Where a line sits, rather than only what it says.
+ *
+ * Stripping the container is enough to recognise a fence or a table row inside
+ * one; it is not enough to know when either ends. Two lines that look alike
+ * once stripped can belong to different blockquotes or to different items of a
+ * list, and a reader that cannot tell them apart carries a fence past the
+ * blockquote that opened it, and reads three list items as one table.
+ */
+type Container = {
+  /** How many blockquote markers the line opens with. */
+  quoteDepth: number;
+  /** Width of the whole container prefix, so items can be compared by depth. */
+  indent: number;
+  /** Whether the line opens a list item rather than continuing one. */
+  opensItem: boolean;
+};
+
+/**
+ * The line's container, and the line with that container removed.
+ *
+ * The prefix holds only whitespace, blockquote markers and a list marker, so
+ * any other character in it is that list marker — which is what separates a
+ * line opening an item from one continuing the item above it.
+ */
+function readContainer(text: string): { container: Container; rest: string } {
+  const prefix = CONTAINER_PREFIX_RE.exec(text)?.[0] ?? "";
+  return {
+    container: {
+      quoteDepth: (prefix.match(/>/g) ?? []).length,
+      indent: prefix.length,
+      opensItem: /[^\s>]/.test(prefix),
+    },
+    rest: text.slice(prefix.length),
+  };
+}
+
+/**
+ * How much of a line is kept for classification.
+ *
+ * Bounded so a mis-generated asset of any size still costs a constant buffer.
+ * A line longer than this cannot be a delimiter row or a fence, which are the
+ * only shapes the classifier reads in full; its width is carried separately.
+ */
+const CLASSIFY_PREFIX = 4096;
+
+/** What the classifier needs to know about one line. */
+type LineShape = {
+  /** Width in code points — see {@link countCharacters}. */
+  length: number;
+  /** The line, truncated to {@link CLASSIFY_PREFIX}. */
+  text: string;
+  /** Where the line sits — see {@link Container}. */
+  container: Container;
+  /** The line with its container prefix removed. */
+  content: string;
+};
+
+/**
+ * Line width, counted in code points.
+ *
+ * `String.prototype.length` counts UTF-16 code units, so a line of 300 emoji
+ * measures 600 there and 300 under an iteration that yields code points. Both
+ * measuring paths route through this: a file that failed one ceiling and passed
+ * the other would make two guards disagree about one rule.
+ */
+function countCharacters(text: string): number {
+  let count = 0;
+  for (const _character of text) {
+    count += 1;
+  }
+  return count;
+}
+
+/**
+ * The widest line a width ceiling can speak about, over a stream of lines.
+ *
+ * Two shapes are skipped, and both for the same reason: they cannot be made
+ * narrower by the author, so measuring them would report a defect with no fix.
+ *
+ * | skipped        | why                                                       |
+ * | -------------- | --------------------------------------------------------- |
+ * | a table row    | markdown gives it no continuation, so it cannot wrap      |
+ * | a fenced block | its content is a command, a diagram or a sample, verbatim |
+ *
+ * A table row is also read differently — cells scanned against a header, not a
+ * sentence read left to right — so it is not the unit the ceiling is about.
+ *
+ * **A table is found by its delimiter row, not by a leading pipe.** That pipe
+ * is optional in markdown, so keying on it measures the rows of a table written
+ * without one and exempts any prose line that happens to start with a pipe —
+ * neither of which is what the contract above says. A run of pipe-carrying
+ * lines anchored by a delimiter row is the table, and deciding the first of
+ * them needs the line after it, so the scanner defers by one.
+ */
+class WidthScanner {
+  private widest = 0;
+  private fence: { marker: string; length: number; container: Container } | undefined;
+  private pending: LineShape | undefined;
+  private table: Container | undefined;
+
+  /**
+   * Offers one line.
+   *
+   * `length` is passed separately by the streaming feeder, which counts the
+   * whole line while retaining only its first {@link CLASSIFY_PREFIX}
+   * characters.
+   */
+  push(text: string, length?: number): void {
+    const clipped = text.length > CLASSIFY_PREFIX ? text.slice(0, CLASSIFY_PREFIX) : text;
+    const { container, rest } = readContainer(clipped);
+    const shape: LineShape = {
+      length: length ?? countCharacters(text),
+      text: clipped,
+      container,
+      content: rest,
+    };
+    if (this.pending !== undefined) {
+      this.settle(this.pending, shape);
+    }
+    this.pending = shape;
+  }
+
+  /** The widest measured line, after settling the one still held back. */
+  finish(): number {
+    if (this.pending !== undefined) {
+      this.settle(this.pending, undefined);
+      this.pending = undefined;
+    }
+    return this.widest;
+  }
+
+  /** Decides one line, with the line after it when there is one. */
+  private settle(line: LineShape, next: LineShape | undefined): void {
+    if (this.fence !== undefined) {
+      if (this.closesFence(line)) {
+        this.fence = undefined;
+        return;
+      }
+      if (!this.leftFenceContainer(line.container)) {
+        return;
+      }
+      // The container ended without a closing marker, so the block ended with
+      // it. This line is outside the fence and is read like any other.
+      this.fence = undefined;
+    }
+    const opening = FENCE_OPEN_RE.exec(line.content)?.[1];
+    if (opening !== undefined) {
+      this.fence = {
+        marker: opening.slice(0, 1),
+        length: opening.length,
+        container: line.container,
+      };
+      return;
+    }
+    if (this.isTableRow(line, next)) {
+      return;
+    }
+    this.table = undefined;
+    this.widest = Math.max(this.widest, line.length);
+  }
+
+  private closesFence(line: LineShape): boolean {
+    const fence = this.fence;
+    if (fence === undefined) {
+      return false;
+    }
+    // Same character, at least as long, and nothing after it: CommonMark
+    // forbids an info string on a closing fence.
+    const marker = fence.marker === "~" ? "~" : "`";
+    return new RegExp(`^${marker}{${String(fence.length)},}[ \\t]*$`).test(line.content);
+  }
+
+  /**
+   * Whether this line sits outside the container the open fence started in.
+   *
+   * A fence ends with its container whether or not a closing marker was
+   * written: `> ```sh` inside a blockquote is closed by the end of the
+   * blockquote, and a fence opened in a list item is closed by the next item.
+   * Without this the block never ends, and every line to the end of the file is
+   * read as verbatim content and never measured.
+   */
+  private leftFenceContainer(container: Container): boolean {
+    const opened = this.fence?.container;
+    if (opened === undefined) {
+      return false;
+    }
+    if (container.quoteDepth < opened.quoteDepth) {
+      return true;
+    }
+    return opened.opensItem && container.opensItem && container.indent <= opened.indent;
+  }
+
+  /**
+   * A row of the table a delimiter row anchors.
+   *
+   * Either the run is open already and this line continues it, or this line is
+   * the header the next line delimits.
+   *
+   * **A row continues the run only from the same container.** Stripping the
+   * container makes `- a | b`, `- --- | ---` and `- <a very long line> | x`
+   * read as a header, a delimiter and a row, when they are three list items —
+   * so the third would escape the ceiling. A table written inside a list item
+   * has one marker, on its first row; a marker on a later row starts a new
+   * item, which ends the table.
+   */
+  private isTableRow(line: LineShape, next: LineShape | undefined): boolean {
+    if (!line.content.includes("|")) {
+      return false;
+    }
+    const open = this.table;
+    if (
+      open !== undefined &&
+      !line.container.opensItem &&
+      line.container.quoteDepth === open.quoteDepth
+    ) {
+      return true;
+    }
+    if (next !== undefined && TABLE_DELIMITER_RE.test(next.content)) {
+      this.table = line.container;
+      return true;
+    }
+    return false;
+  }
+}
+
+/**
  * Counts lines the way every budget assertion does.
  *
  * `split(/\r?\n/)` — not a blank-line-skipping counter. A markdown file is
@@ -73,28 +457,66 @@ export function countLines(content: string): number {
   return content.split(/\r?\n/).length;
 }
 
-const NEWLINE_BYTE = 0x0a;
+/**
+ * The widest measurable line, from content already in hand.
+ *
+ * The in-memory feeder for {@link WidthScanner}, standing to the streamed one
+ * as {@link countLines} stands to its twin. Both feed the same scanner, so a
+ * caller with the text and a caller with a path cannot disagree about which
+ * lines are measured or how wide they are.
+ */
+export function widestMeasurableLine(content: string): number {
+  const scanner = new WidthScanner();
+  for (const line of content.split(/\r?\n/)) {
+    scanner.push(line);
+  }
+  return scanner.finish();
+}
+
+type AssetMeasurement = { lines: number; widest: number };
 
 /**
- * Counts the lines of a file without holding it in memory.
+ * Measures a file without holding it in memory.
  *
- * Same arithmetic as {@link countLines} — `split(/\r?\n/).length` is the number
- * of `\n` separators plus one — but streamed, so a mis-generated asset of any
- * size costs a constant-size buffer instead of the whole file plus a per-line
- * array. Doctor has to survive the malformed tree it is being asked to
- * diagnose; the exact count is kept because the finding reports it.
+ * Streamed, so a mis-generated asset of any size costs a bounded buffer rather
+ * than the whole file plus a per-line array — doctor has to survive the
+ * malformed tree it is being asked to diagnose. At most
+ * {@link CLASSIFY_PREFIX} characters of any one line are retained, its width is
+ * counted as it goes, and the scanner holds one line at a time.
+ *
+ * Decoded as text rather than scanned as bytes, because the width is a count of
+ * characters. These files carry em dashes and Japanese, and a byte count would
+ * report a compliant line as three times its width.
  */
-async function countFileLines(absolute: string): Promise<number> {
-  const stream = createReadStream(absolute);
-  let newlines = 0;
+async function measureFile(absolute: string): Promise<AssetMeasurement> {
+  const stream = createReadStream(absolute, { encoding: "utf-8" });
+  const scanner = new WidthScanner();
+  let lines = 1;
+  let head = "";
+  let width = 0;
+
   try {
     await new Promise<void>((resolve, reject) => {
       stream.on("data", (chunk: string | Buffer) => {
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-        let index = buffer.indexOf(NEWLINE_BYTE);
-        while (index !== -1) {
-          newlines += 1;
-          index = buffer.indexOf(NEWLINE_BYTE, index + 1);
+        const text = typeof chunk === "string" ? chunk : chunk.toString("utf-8");
+        for (const character of text) {
+          if (character === "\n") {
+            lines += 1;
+            scanner.push(head, width);
+            head = "";
+            width = 0;
+            continue;
+          }
+          // `\r` is a line terminator here, not content: `countLines` splits on
+          // `\r?\n`, so counting it would make every line of a CRLF file one
+          // character wider than the same file with LF endings.
+          if (character === "\r") {
+            continue;
+          }
+          width += 1;
+          if (head.length < CLASSIFY_PREFIX) {
+            head += character;
+          }
         }
       });
       stream.on("error", reject);
@@ -103,10 +525,20 @@ async function countFileLines(absolute: string): Promise<number> {
   } finally {
     stream.destroy();
   }
-  return newlines + 1;
+  scanner.push(head, width);
+  return { lines, widest: scanner.finish() };
 }
 
 export type OversizedAssistantAsset = { path: string; lines: number };
+
+/**
+ * An asset whose widest line exceeds what it is allowed.
+ *
+ * `allowed` travels with the finding because it is not one number: a file in
+ * {@link WIDTH_BUDGET_BACKLOG} is held at its own recorded ceiling, and a reader
+ * has to see which of the two it failed.
+ */
+export type WideLineAssistantAsset = { path: string; widest: number; allowed: number };
 
 /** An asset skipped by {@link LINE_BUDGET_EXEMPT}, carried with its reason. */
 export type ExemptAssistantAsset = { path: string; reason: string };
@@ -121,12 +553,17 @@ export type AssistantAssetBudgetReport = {
   status: AssistantAssetBudgetStatus;
   assistantDir: string;
   maxLines: number;
-  /** Number of asset files measured (exempt and unreadable files excluded). */
+  maxLineChars: number;
+  /** Number of asset files measured (unreadable files excluded). */
   scanned: number;
   oversized: OversizedAssistantAsset[];
+  /** Assets whose widest measurable line exceeds the ceiling that applies to them. */
+  wideLines: WideLineAssistantAsset[];
   /**
-   * Exempt paths that were present and therefore skipped, each with the reason
-   * from {@link LINE_BUDGET_EXEMPT}. The shipped baseline promises the reader
+   * Paths excused from the LINE ceiling, each with the reason from
+   * {@link LINE_BUDGET_EXEMPT}. They are still measured for width: the reason an
+   * exemption states is about a file's length, never about how wide one line
+   * may be. The shipped baseline promises the reader
    * sees *why* a file was not measured, so the reason travels with the path
    * instead of living only in this module's source.
    */
@@ -296,8 +733,10 @@ export async function checkAssistantAssetLineBudget(
   const empty = {
     assistantDir,
     maxLines: ASSISTANT_ASSET_MAX_LINES,
+    maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
     scanned: 0,
     oversized: [],
+    wideLines: [],
     exempt: [],
     unreadable: [],
   };
@@ -321,6 +760,7 @@ export async function checkAssistantAssetLineBudget(
   const scan = await scanAssistantAssets(assistantDir);
 
   const oversized: OversizedAssistantAsset[] = [];
+  const wideLines: WideLineAssistantAsset[] = [];
   const exempt: ExemptAssistantAsset[] = [];
   const unreadable: string[] = [];
   let scanned = 0;
@@ -330,11 +770,10 @@ export async function checkAssistantAssetLineBudget(
     const exemptReason = LINE_BUDGET_EXEMPT.get(relPath);
     if (exemptReason !== undefined) {
       exempt.push({ path: relPath, reason: exemptReason });
-      continue;
     }
-    let lines: number;
+    let measured: AssetMeasurement;
     try {
-      lines = await countFileLines(absolute);
+      measured = await measureFile(absolute);
     } catch {
       // An unreadable asset cannot be measured. Surfacing it beats counting it
       // as compliant, which would let a permission error hide an overrun.
@@ -342,21 +781,35 @@ export async function checkAssistantAssetLineBudget(
       continue;
     }
     scanned += 1;
-    if (lines > ASSISTANT_ASSET_MAX_LINES) {
-      oversized.push({ path: relPath, lines });
+    // The exemption is from the LINE ceiling only, and its reason says why: a
+    // roster's length tracks the number of agents, so there is no topic to move
+    // out. Nothing in that reason is about how wide a line may be, and a file
+    // excused from both would be the one place the width rule does not reach.
+    if (exemptReason === undefined && measured.lines > ASSISTANT_ASSET_MAX_LINES) {
+      oversized.push({ path: relPath, lines: measured.lines });
+    }
+    const allowed = WIDTH_BUDGET_BACKLOG.get(relPath) ?? ASSISTANT_ASSET_MAX_LINE_CHARS;
+    if (measured.widest > allowed) {
+      wideLines.push({ path: relPath, widest: measured.widest, allowed });
     }
   }
 
   const incomplete = unreadable.length > 0 || scan.unscannable.length > 0;
-  const status: AssistantAssetBudgetStatus =
-    oversized.length > 0 ? "over_budget" : incomplete ? "incomplete" : "ok";
+  const overBudget = oversized.length > 0 || wideLines.length > 0;
+  const status: AssistantAssetBudgetStatus = overBudget
+    ? "over_budget"
+    : incomplete
+      ? "incomplete"
+      : "ok";
 
   return {
     status,
     assistantDir,
     maxLines: ASSISTANT_ASSET_MAX_LINES,
+    maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
     scanned,
     oversized,
+    wideLines,
     exempt,
     unreadable,
     unscannable: scan.unscannable,

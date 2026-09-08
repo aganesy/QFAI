@@ -479,5 +479,5 @@ describe("TC-0010-0012: updateState lock ownership", () => {
     } finally {
       await rm(lockPath, { force: true });
     }
-  }, 20_000);
+  });
 });

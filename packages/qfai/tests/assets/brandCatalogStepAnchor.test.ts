@@ -4,7 +4,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
-describe("brand catalog step anchor", { timeout: 15000 }, () => {
+describe("brand catalog step anchor", () => {
   const repoRoot = path.resolve(process.cwd(), "..", "..");
   const assetsRoot = path.resolve(repoRoot, "packages", "qfai", "assets");
   const discussionSkillDir = path.join(

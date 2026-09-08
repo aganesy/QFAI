@@ -250,6 +250,11 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-124",
       // A spec that declares test cases and owes none of them an annotation.
       "QFAI-ATDD-125",
+
+      // A test case that declares where it is verified, and one that claims
+      // `external` while naming no verifier.
+      "QFAI-ATDD-126",
+      "QFAI-ATDD-127",
       "QFAI-ATDD-131",
       "QFAI-ATDD-132",
       "QFAI-ATDD-133",

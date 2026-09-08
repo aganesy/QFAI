@@ -55,7 +55,7 @@ async function recordOnlyRetiredEntry(dir: string, retiredName: string): Promise
   );
 }
 
-describe("a record holding only retired names compares nothing", { timeout: 60000 }, () => {
+describe("a record holding only retired names compares nothing", () => {
   it("reports a zero count rather than a successful comparison", async () => {
     const dir = await pool.seedAdopterTree();
     const retiredName = "qfai-retired-in-an-older-release.yml";

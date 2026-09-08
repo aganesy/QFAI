@@ -71,7 +71,7 @@ async function writeUnreadableSkillFixture(root: string): Promise<string> {
   return skillFile;
 }
 
-describe("skill document readability", { timeout: 30000 }, () => {
+describe("skill document readability", () => {
   it("reports the read failure instead of dropping the document", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-document-readability-"));
     try {
