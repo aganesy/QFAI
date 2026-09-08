@@ -109,15 +109,17 @@ describe.each(TREES)("%s", (tree) => {
 
   it("names the stub gate this profile runs, and that scope does not narrow it", async () => {
     // `runAtddValidators` runs `validateTestTodoStubs` too, so an acceptance
-    // test written as a silent stub fails this skill's own gate. The finding
-    // names a test file, which no spec owns, so it survives `--spec` like the
+    // test written as a silent stub fails this skill's own gate. A file under
+    // the canonical layout is owned by its spec and drops out of a sibling's
+    // scoped run; one outside it has no owner and survives `--spec` like the
     // contract rules do — a completion reviewer has to read both halves, or a
     // sibling's stub reads as an unexplained failure of this spec's gate. It is
     // stated beside the other unscopable rules in the topic file, which is
     // where the enumeration lives, under the skill's line ceiling.
     const obligations = flat(await read(tree, OBLIGATIONS));
     expect(obligations).toContain("`QFAI-TEST-001`");
-    expect(obligations).toContain("which no spec owns either");
+    expect(obligations).toContain("the directory decides, whatever the file's annotation says");
+    expect(obligations).toContain("A test file outside that layout has no owner");
     // And only what it runs. `QFAI-TEST-001` matches the `*.todo` forms, not
     // `it.skip` / `describe.skip`; promising those told a completion reviewer
     // a green gate proved a skipped acceptance test did not exist.
