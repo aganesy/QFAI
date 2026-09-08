@@ -180,6 +180,48 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    // An entry point may summarise the rule or point at it, and a summary that
+    // ENUMERATES the forbidden identifiers has to carry the exemption in the
+    // same breath. Without it the summary forbids what the master directs — the
+    // master puts numbers and links in the pull request, the issue, the commit
+    // message and the changelog — and a reader who stops at the summary reports
+    // every changelog entry as a violation.
+    //
+    // Read over the BULLET, not the file. Every one of these documents names
+    // the changelog somewhere else (the version-discipline section does), so a
+    // whole-file search matches whatever the clause says and the check passes
+    // on a summary that contradicts its own master.
+    it("no entry point enumerates the identifiers without naming the exemption", async () => {
+      const entryPoints = [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        ".codex/README.md",
+        "packages/qfai/assets/init/root/AGENTS.md",
+        "packages/qfai/assets/init/root/CLAUDE.md",
+      ];
+      const enumerates = /issue\/PR 番号|issue 番号 \/ PR 番号|issue or pull request numbers/;
+      const contradicting: string[] = [];
+      for (const rel of entryPoints) {
+        const text = await readFile(path.join(ROOT, rel), "utf-8");
+        // The bullet that enumerates, with its continuation lines: from its own
+        // `- ` to the next bullet or blank line.
+        const bullet = text
+          .split(/\r?\n/)
+          .reduce<string[]>((blocks, line) => {
+            if (/^\s*-\s/.test(line) || line.trim() === "") blocks.push(line);
+            else if (blocks.length > 0) blocks[blocks.length - 1] += `\n${line}`;
+            return blocks;
+          }, [])
+          .find((block) => enumerates.test(block));
+        if (bullet !== undefined && !/CHANGELOG/i.test(bullet)) contradicting.push(rel);
+      }
+      expect(
+        contradicting,
+        "an entry point whose identifier clause does not name the surfaces the master exempts",
+      ).toEqual([]);
+    });
+
     it.each(
       [
         ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md", ".codex/README.md"],

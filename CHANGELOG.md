@@ -88,6 +88,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`validate` reports a test case row filed at L4 or L5** (#1260).
+  `catalog/test-layers.md` has always said a `TC-*` row's `Level` stays within
+  L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so a row at either
+  level is an obligation filed under the wrong ID type rather than a test case
+  that happens to be high-layer.
+
+  The routing table already promised that such a row would be "reported once, by
+  the rule that names the real cause". No rule did. The row surfaced only through
+  the routing legend in `QFAI-ATDD-112`'s fix text, which named a directory the
+  same document tells a reader not to use — and a reader who followed it filed
+  the obligation deeper rather than re-filing it.
+
+  `QFAI-ATDD-128` reads the row's own `Level`, not where its annotation ended up:
+  covering the test case does not make the row less misfiled. It names the ID
+  type to re-file under, and says that re-filing is an upstream change — the row
+  goes together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX
+  concretizes, or the parent is left with no reference.
+
+  Ships at `warning` and becomes an `error` at 1.13.0. The window is doing real
+  work here: the remedy is not a cell edit, so a repository that has been writing
+  such rows needs time to plan the re-filing.
+
 - **`validate` reports a skills or agents tree behind the installed release**
   (#1381). `.qfai/assistant/skills/**` and `agents/**` are copied into a project
   once and refreshed only by an explicit `qfai init --force`, so a project that
@@ -422,6 +444,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **The rule summary in `AGENTS.md` no longer contradicts its own master**
+  (#1392). `.agents/rules/documentation-clarity.md` forbids issue and pull
+  request numbers in source and Markdown, and exempts four surfaces: the pull
+  request body, the issue body, the commit message and `CHANGELOG.md`. The
+  one-line summary listed the prohibition and dropped the exemption, so read on
+  its own it forbade what the master directs — and `CHANGELOG.md` is Markdown.
+
+  A reviewer following the summary reports every changelog entry as a
+  violation, which is the convention all 78 of them follow.
+
+  A guard now holds any entry point that enumerates the identifiers to naming
+  the exemption in the same bullet. It reads the bullet rather than the file,
+  because every one of these documents mentions the changelog somewhere else.
 
 - **The cycle table in the prototyping skill renders as a table again** (#1378).
   A blank line sat between its delimiter row and its body rows, and a blank line
