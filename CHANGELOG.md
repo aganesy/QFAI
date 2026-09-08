@@ -427,6 +427,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The rule summary in `AGENTS.md` no longer contradicts its own master**
+  (#1392). `.agents/rules/documentation-clarity.md` forbids issue and pull
+  request numbers in source and Markdown, and exempts four surfaces: the pull
+  request body, the issue body, the commit message and `CHANGELOG.md`. The
+  one-line summary listed the prohibition and dropped the exemption, so read on
+  its own it forbade what the master directs — and `CHANGELOG.md` is Markdown.
+
+  A reviewer following the summary reports every changelog entry as a
+  violation, which is the convention all 78 of them follow.
+
+  A guard now holds any entry point that enumerates the identifiers to naming
+  the exemption in the same bullet. It reads the bullet rather than the file,
+  because every one of these documents mentions the changelog somewhere else.
+
 - **The cycle table in the prototyping skill renders as a table again** (#1378).
   A blank line sat between its delimiter row and its body rows, and a blank line
   ends a table. The three rows rendered as one paragraph of literal text, pipes
