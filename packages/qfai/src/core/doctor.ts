@@ -37,7 +37,10 @@ import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
+import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateIntegrationSurface } from "./validators/integrationSurface.js";
+import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
@@ -336,6 +339,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     }
   }
 
+  addCheck(checks, await buildIntegrationLinksCheck(root));
   addCheck(checks, await buildAgentFrontmatterCheck(root));
   addCheck(checks, await buildAssetLineBudgetCheck(root));
 
@@ -1211,6 +1215,150 @@ async function inspectSkillsIntegrity(
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether the integration wrappers a skill is loaded through actually resolve.
+ *
+ * Asks the question `validate` asks, through the same code and at the severity
+ * that code chose, so the two cannot disagree about one tree. `skills.integrity`
+ * answers a different question — whether the CONTENT matches — and a tree whose
+ * wrappers are broken passes it, because the canonical documents behind them are
+ * untouched.
+ *
+ * Severity is carried, not decided here. `QFAI-LINK-001` is a `warning` when the
+ * canonical document is readable and an `error` when it is not, and choosing one
+ * of them for both would put this check and the gate on opposite sides of
+ * `--fail-on error` for the same tree.
+ *
+ * The remedy is carried for the same reason: it depends on which damage the
+ * validator found, and several shapes are not fixed by re-running `init` at all.
+ *
+ * A wrapper that was never created is not damage and is not reported here; the
+ * validator draws that line, and this check inherits it by not drawing its own.
+ */
+/**
+ * The worst severity in `issues`, or `null` when there are none.
+ *
+ * A finding reaches this check at `error`, `warning` or `info` — the last when
+ * a waiver lowered it without suppressing it — and the check has to sit on the
+ * same side of every `--fail-on` threshold as the gate, not only `error`.
+ */
+function worstSeverity(issues: readonly Issue[]): DoctorSeverity | null {
+  if (issues.some((issue) => issue.severity === "error")) return "error";
+  if (issues.some((issue) => issue.severity === "warning")) return "warning";
+  return issues.length > 0 ? "info" : null;
+}
+
+async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
+  const title = "Integration wrappers (.claude / .codex / .agents / .github)";
+  let issues: Issue[];
+  try {
+    issues = await validateIntegrationSurface(root);
+  } catch {
+    // The surface could not be walked at all — a permission or an I/O failure
+    // over a directory or a link. Reported rather than thrown, because a check
+    // that exists to describe a damaged tree must survive one; at `error`,
+    // because the validator propagates this and takes `validate` down with it.
+    // A check that could not run is not a check that passed.
+    return {
+      id: "integration.links",
+      severity: "error",
+      title,
+      message:
+        "Could not inspect the integration wrappers (reading a directory or a link failed). " +
+        "Check the permissions and the path.",
+      details: {},
+    };
+  }
+
+  // The same waiver pass `validate` runs. Without it a project that waived this
+  // finding passes the gate and fails the diagnostic, which is the disagreement
+  // this check exists to remove — reintroduced one layer along.
+  const waived = await applyWaivers(root, issues).catch(() => null);
+  const applied = waived?.issues ?? issues;
+
+  // The waiver pass reports on its own input as well as on the findings: a
+  // waiver file that does not parse, or one written at the unsupported
+  // extension, comes back as `QFAI-WAIVER-001`. Keeping only the link findings
+  // dropped those, so `validate` failed on the waiver file while `doctor`
+  // passed — the same disagreement this check exists to remove, over the file
+  // that decides what the check is allowed to stay quiet about.
+  //
+  // The suppressions themselves are still read. A file that fails to parse
+  // yields no waivers at all, so there is nothing there to distrust; the one
+  // fault that leaves working suppressions behind is a stray `.yaml` beside a
+  // valid `.yml`, and those suppressions are the project's, correctly parsed.
+  const waiverFaults = applied.filter(
+    (issue) => issue.code === "QFAI-WAIVER-001" && issue.suppressed !== true,
+  );
+  const broken = applied.filter(
+    (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed !== true,
+  );
+
+  if (broken.length === 0) {
+    const suppressed = applied.filter(
+      (issue) => issue.code === "QFAI-LINK-001" && issue.suppressed === true,
+    ).length;
+    if (waiverFaults.length > 0) {
+      return {
+        id: "integration.links",
+        // The gate fails on the waiver file whatever the wrappers look like, so
+        // a clean sweep of the wrappers is not a passing check here.
+        severity: worstSeverity(waiverFaults) ?? /* c8 ignore next */ "error",
+        title,
+        message:
+          "No unwaived integration wrapper findings, but the waiver file itself is rejected. " +
+          "`qfai validate` reports it as QFAI-WAIVER-001.",
+        details: {},
+      };
+    }
+    return {
+      id: "integration.links",
+      severity: "ok",
+      title,
+      // A waiver silences a finding; it does not repair the wrapper. Saying
+      // every wrapper resolves would report a tree as sound on the strength of
+      // a decision to stop being told about it.
+      message:
+        suppressed === 0
+          ? "Every integration wrapper resolves to the skill or agent it names"
+          : `No unwaived integration wrapper findings (${String(suppressed)} waived — still unrepaired)`,
+      details: suppressed === 0 ? {} : { waivedFindings: suppressed },
+    };
+  }
+
+  const paths = broken.flatMap((issue) => issue.refs ?? []);
+  // The worst severity anything in this run carries — the wrapper findings and
+  // the waiver pass's own. The validator reports the damage classes separately
+  // (a readable canonical document is a `warning`, an unreadable one an
+  // `error`) and a waiver can downgrade either to `info` without suppressing
+  // it, so collapsing everything short of `error` to `warning` put this check
+  // on the far side of `validation.failOn: warning` from a `validate` that
+  // passes on the downgrade.
+  const severity: DoctorSeverity =
+    worstSeverity([...broken, ...waiverFaults]) ?? /* c8 ignore next */ "warning";
+  return {
+    id: "integration.links",
+    severity,
+    title,
+    // Counts and paths, not a diagnosis. `QFAI-LINK-001` covers several shapes
+    // and they do not share one sentence: a flattened link is not loaded at
+    // all, while a wrapper left behind by a retired skill resolves perfectly
+    // and is loading instructions this release no longer ships. Asserting
+    // "not being loaded" over both hid the second, which is the worse one.
+    message:
+      `${String(paths.length || broken.length)} integration wrapper(s) need attention. ` +
+      "`qfai validate` reports the same paths as QFAI-LINK-001, and its finding says which " +
+      "damage each one is and how to repair it.",
+    details: {
+      wrappers: paths,
+      // English, because `doctor`'s output is. The per-shape remedy is the
+      // validator's and stays there: pointing at it beats copying text written
+      // to a different contract into this one's JSON.
+      nextActions: ["Run qfai validate and follow the QFAI-LINK-001 finding for these paths"],
+    },
+  };
 }
 
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {

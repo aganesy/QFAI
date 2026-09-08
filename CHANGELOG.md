@@ -24,6 +24,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai doctor` reports the broken integration wrappers `validate` reports**
+  (#1258). A wrapper under `.claude/`, `.codex/`, `.agents/` or `.github/` that
+  does not resolve is how a skill fails to load at all, and `validate` reports
+  it as `QFAI-LINK-001`. `doctor` is the command an operator reaches for to find
+  out whether the environment is sound, so it has to answer for the same thing.
+
+  `skills.integrity` is the neighbouring check and asks a different question —
+  whether the content matches what was shipped — which a broken wrapper leaves
+  untouched. Both belong.
+
+  `integration.links` asks whether the OS will follow the link, through the same
+  code the gate uses, and carries what that code answered rather than deciding
+  again. Severity comes from the finding — `QFAI-LINK-001` is a `warning` where
+  the canonical document still reads and an `error` where it does not — and the
+  findings pass through the same waivers `validate` applies, so a waiver that
+  suppresses one silences the check and a waiver that downgrades one to `info`
+  is reported at `info`. The two therefore stay on the same side of `--fail-on`
+  for any one tree, at every threshold rather than only at `error`.
+
+  Two states report as `error` because the gate does not survive either: an
+  inspection that cannot run, and a waiver file that cannot be read. On the
+  second the unwaived findings are used, since a suppression decided from a file
+  the gate rejected is not one to act on.
+
+  A waiver silences a finding without repairing the wrapper, so a tree whose
+  findings are all waived reports the waived count rather than claiming every
+  wrapper resolves.
+
+  The check names the wrappers and stops there. `QFAI-LINK-001` covers several
+  kinds of damage and the repair differs by kind: a flattened link is relinked
+  by `qfai init`, a wrapper occupied by a real directory is not repaired by
+  re-running `init`, and a wrapper left behind by a retired skill resolves
+  perfectly — which is the problem, because the assistant is loading
+  instructions this release no longer ships. Reporting the paths and pointing at
+  the finding keeps one description of each, in the language `doctor` writes in.
+
 - **An ATDD annotation counts when it is written into a test's name** (#1255).
   The scan read comments and not string literals, so
   `it("QFAI:SPEC-0018:TC-0018-0056 …")` did not count and `QFAI-ATDD-112`
