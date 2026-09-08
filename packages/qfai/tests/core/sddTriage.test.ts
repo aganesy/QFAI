@@ -351,7 +351,7 @@ describe("classifyTriage", () => {
   });
 
   it("keeps an oversized removal hint as UPDATE:REMOVE with a size signal (AC)", () => {
-    // PR #206 review #3: removalHint path should mirror the additive
+    // The removalHint path should mirror the additive
     // size-threshold escalation. Without this the additive and removal
     // branches diverge on size handling.
     const rows = classifyTriage({
@@ -524,7 +524,7 @@ describe("bestSubjectMatch", () => {
   });
 
   it("tokenises across CJK middle-dot separators (Unicode property escape)", () => {
-    // PR #206 review #12 / #23: middle dot `・` must split CJK compounds
+    // The middle dot `・` must split CJK compounds
     // so that subjects like `プロトタイプ・契約` token-overlap with a
     // spec whose scope mentions `契約`.
     const result = bestSubjectMatch("プロトタイプ・契約 の改修", [
@@ -538,9 +538,9 @@ describe("bestSubjectMatch", () => {
   });
 
   it("tokenises full-width alphanumerics", () => {
-    // PR #206 review #12 / #23: full-width `Ａｐｐ` must tokenise as
+    // Full-width `Ａｐｐ` must tokenise as
     // its own token rather than being lumped together with surrounding
-    // punctuation. The new `\p{L}\p{N}` splitter handles this without
+    // punctuation. The `\p{L}\p{N}` splitter handles this without
     // requiring callers to pre-normalise.
     const result = bestSubjectMatch("Ａｐｐ flow update", [
       makeSummary({
@@ -608,7 +608,7 @@ describe("renderTriageMarkdown", () => {
   });
 
   it("escapes literal pipes and newlines so the table round-trips through parseAllMarkdownTables", async () => {
-    // PR #206 review Lsbk: render must not let unescaped `|` or
+    // Render must not let unescaped `|` or
     // embedded `\n` from REQ subject / rationale break the table.
     const { parseAllMarkdownTables } = await import("../../src/core/specPackParsers.js");
     const rows: TriageRow[] = [
@@ -639,7 +639,7 @@ describe("renderTriageMarkdown", () => {
     expect(row[6]).toBe("see line break");
   });
 
-  // PR #206 review NkNm / NkzP / Nk-A / NlLz: escapeTableCell and
+  // escapeTableCell and
   // splitMarkdownRow must agree on what a cell can contain. The parser
   // only un-escapes `\|` → `|`, so literal `\` must be persisted as-is
   // (never doubled). Round-trip identity for these inputs is the
@@ -647,7 +647,7 @@ describe("renderTriageMarkdown", () => {
   // a matching parser rule, these assertions fire instead of silently
   // mutating REQ subjects (Windows paths, regex literals).
   //
-  // PR #206 review NxI0: trace markers for the spec entries.
+  // Trace markers for the spec entries.
   // QFAI:SPEC-0013:TC-0013-0018 (Type=edge — backslash-only / a\|b /
   //   CRLF / CR-only / path\\|file)
   // QFAI:SPEC-0013:TC-0013-0019 (Type=normal — plain ASCII happy path)

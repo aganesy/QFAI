@@ -1,5 +1,5 @@
 /**
- * Parallel dispatch is judged on declared seams (#391).
+ * Parallel dispatch is judged on declared seams.
  *
  * The allow conditions are facts about production modules; RED-first guarantees
  * those modules do not exist when `delivery-planner` — the sole authority — has

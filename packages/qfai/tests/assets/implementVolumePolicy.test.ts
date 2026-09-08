@@ -205,7 +205,7 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
 
       // The edge must exist in the lifecycle SSOT. That SSOT is now
       // `references/execution-ledger.md` — SKILL.md carries a summary and a
-      // pointer under the progressive-disclosure budget (#414).
+      // pointer under the progressive-disclosure budget.
       //
       // Assert both anchors first: an `indexOf` miss returns -1, and `slice`
       // then succeeds on a different range, so a moved heading would make every

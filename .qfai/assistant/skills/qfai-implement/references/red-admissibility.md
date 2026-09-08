@@ -3,9 +3,8 @@
 What makes a failure count as the RED observation for a ledger row.
 
 `Phase: Red` step 4 says "confirm the test actually fails for the expected
-reason". That phrase used to be the whole standard qfai shipped — it appeared
-three times across the assistant tree, always as an obligation and never as a
-definition, and no validator adjudicated it. This file is the definition.
+reason". That phrase is an obligation, not a definition. This file is the
+definition.
 
 ## The criterion
 

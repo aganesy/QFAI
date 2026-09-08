@@ -48,7 +48,7 @@ const RETIRED_SINCE_BASELINE: string[] = [
   // folded into `mermaidEnforcement.ts` — which raises `QFAI-MMD-001` over the
   // same input — and the file was deleted.
   "QFAI-MERMAID-001",
-  // Both retired by this change: the two performance findings are replaced by
+  // Both retired: the two performance findings are replaced by
   // the `timings` record `validate.json` now carries, so nothing emits either
   // code any more. Listed in sorted order because the assertion compares this
   // against a sorted `retired`.
@@ -97,7 +97,7 @@ const RETIRED_SINCE_BASELINE: string[] = [
  * "an `error` immediately, and that is not a regression" — and the guards are
  * right to reject the attempts: a registered entry must take its severity from
  * `newRuleSeverity`, and a pin at or before the introducing release is the
- * regression P7 was written after (#1111).
+ * regression P7 was written after.
  *
  * **The criterion is one thing, and it is checkable at review time: the
  * condition the code reports ALREADY fails the run today.** Then the window has
@@ -140,7 +140,7 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // to a monorepo root, both of which are correct operation, so the finding
   // reports a fact rather than a defect and there is nothing for a promotion to
   // close. Telling an intended resolution from an ambient one needs the
-  // project's dependency declaration, not a path comparison — see #1108.
+  // project's dependency declaration, not a path comparison.
   "QFAI-TOOL-001",
   // An obligation referenced only from carriers that declare no test. The
   // finding reports which partition the obligation landed in so a downstream

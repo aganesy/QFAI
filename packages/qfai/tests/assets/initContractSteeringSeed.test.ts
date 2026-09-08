@@ -1,5 +1,5 @@
 /**
- * The `qfai init` contract locates the steering seed where it really lives (#700).
+ * The `qfai init` contract locates the steering seed where it really lives.
  *
  * `.qfai/contracts/cli/qfai-init.md` stated a MUST-level leakage-guard
  * obligation for the seeded `.qfai/steering/README.md` and

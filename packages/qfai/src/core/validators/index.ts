@@ -11,6 +11,7 @@ export { validateLayeredTraceability } from "./layeredTraceability.js";
 export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
 export { validateContractReferences } from "./contractReferences.js";
 export { validateContractSsotModules } from "./contractSsotModules.js";
+export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateAtddCoverageDepth } from "./atddCoverageDepth.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";

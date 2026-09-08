@@ -1,5 +1,5 @@
 /**
- * The three required-file registries agree (#393, #665).
+ * The three required-file registries agree.
  *
  * "Which files must a layered spec contain" is stated three times — in
  * `catalog/spec_required_files.json`, which `qfai init` copies into every
