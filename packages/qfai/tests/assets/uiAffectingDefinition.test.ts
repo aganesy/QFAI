@@ -1,5 +1,5 @@
 /**
- * The `UI-affecting` gate trigger has to be defined once (#701).
+ * The `UI-affecting` gate trigger has to be defined once.
  *
  * Item 9 of `qfai-implement`'s completion gate blocks `done` on "UI-affecting
  * items have prototype parity PASS", but the shipped tree never defined the
@@ -27,6 +27,7 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const IMPLEMENT = "assistant/skills/qfai-implement";
 const SKILL = `${IMPLEMENT}/SKILL.md`;
 const DEFINITION = `${IMPLEMENT}/references/ui-affecting.md`;
+const RECORD_CONTRACT = `${IMPLEMENT}/references/record-contract.md`;
 const POLICY = `${IMPLEMENT}/references/parallelization-policy.md`;
 const VOLUME = `${IMPLEMENT}/references/volume-policy.md`;
 const STRUCTURE = "assistant/catalog/structure.md";
@@ -355,14 +356,18 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       expect(evidenceLine).toContain("Audited evidence hash");
       expect(evidenceLine).toContain("#staleness-reviewed-revision-and-audited-evidence-hash");
 
-      // Gate item 10's revision-agreement rule excluded item 9, which is what
-      // let a stale PASS through it.
-      const item10 = skill.split(/\r?\n/).find((line) => line.startsWith("10. `test-list.md`"));
-      expect(item10).toBeDefined();
-      expect(item10).toContain("item 9's `Prototype parity reviewed revision` shares it too");
-      expect(item10).toContain(
+      // The revision-agreement rule gate item 10 enforces excluded item 9,
+      // which is what let a stale PASS through it. The rule itself is stated
+      // in the record contract the item cites, so it is read there — item 10
+      // carries the obligation and the citation, not the clauses.
+      const record = await read(tree, RECORD_CONTRACT);
+      expect(record).toContain("item 9's `Prototype parity reviewed revision` shares");
+      expect(record).toContain(
         "Each reviewer verdict's `Audited evidence hash` is **recomputed** here",
       );
+      const item10 = skill.split(/\r?\n/).find((line) => line.startsWith("10. `test-list.md`"));
+      expect(item10).toBeDefined();
+      expect(item10).toContain("references/record-contract.md");
     });
 
     it(`${tree}: the design contracts resolve from contractsDir too`, async () => {

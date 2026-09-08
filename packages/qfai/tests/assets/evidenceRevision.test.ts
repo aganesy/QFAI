@@ -35,6 +35,7 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/evidence-revision.md";
+const RECORD = "assistant/skills/qfai-implement/references/record-contract.md";
 const VOLUME = "assistant/skills/qfai-implement/references/volume-policy.md";
 const PARALLEL = "assistant/skills/qfai-implement/references/parallelization-policy.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
@@ -99,9 +100,14 @@ describe("evidence and verdicts carry a revision", () => {
 
     it(`${tree}: gate item 10 requires the final-tree observations to agree`, async () => {
       const skill = flat(await read(tree, SKILL));
+      const record = flat(await read(tree, RECORD));
 
-      expect(skill).toContain(
-        // Article-free: the clause now opens a sentence of its own, after the
+      // The gate line points at the record contract; the rule itself lives
+      // there, where it is read by whoever audits a record rather than by
+      // every agent building a row.
+      expect(skill).toContain("`references/record-contract.md`");
+      expect(record).toContain(
+        // Article-free: the clause opens a sentence of its own, after the
         // `Audited evidence hash` rule that addresses what the revision leaves out.
         "Of the item's four sub-agent observations (items 3, 5, 7, 8), **only items 7 and 8 judge the final tree**",
       );
@@ -113,13 +119,17 @@ describe("evidence and verdicts carry a revision", () => {
       // demanded a refactor between them. On an uncommitted tree the refactor
       // moves the content address by construction, so the two were jointly
       // satisfiable only by refactoring nothing.
-      const skill = flat(await read(tree, SKILL));
       const reference = flat(await read(tree, REFERENCE));
+      // Gate item 10 states the obligation and cites the rule; the exemption
+      // itself is written in the contract it cites.
+      const record = flat(
+        await read(tree, "assistant/skills/qfai-implement/references/record-contract.md"),
+      );
 
-      expect(skill).toContain(
+      expect(record).toContain(
         "the GREEN is observed before Phase: Refactor, and step 4 there requests the reviews from `refactor` and never from `green`",
       );
-      expect(skill).toContain(
+      expect(record).toContain(
         "made this gate and item 6 jointly satisfiable only by a refactor that changed nothing",
       );
       expect(reference).toContain(

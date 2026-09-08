@@ -283,7 +283,7 @@ other contract field, and the orchestrator writes it — but it does **not** tak
 on trust. The worker is the implementer, and the implementer's self-report is the thing this
 definition exists to remove: the orchestrator re-derives the clauses itself on the merged trunk and
 rejects a mismatch before routing or writing
-(`parallelization-policy.md#coordinated-parallel-mode-ledger-ownership`).
+(`parallelization-policy.md#coordinated-parallel-mode`).
 
 ## A project whose manifest predates this definition
 

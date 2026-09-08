@@ -24,8 +24,12 @@ does not name is the state an agent invents, out of the four forbidden moves.
 
 - `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`) are attributed to
   `.qfai/contracts/**`, which has no spec owner in the model.
-- `QFAI-TEST-001` is attributed to the test file, which no spec owns either, so
-  a sibling spec's stub exits 1 in a scoped run too. This profile runs the stub
+- `QFAI-TEST-001` is attributed to the test file. A file under the canonical
+  `tests/<layer>/spec-NNNN/**` layout is owned by that spec, so a scoped run
+  drops a sibling's stub the way it drops a sibling's broken reference — the
+  directory decides, whatever the file's annotation says. A test file outside
+  that layout has no owner, so a sibling's stub there still exits 1 in a scoped
+  run. This profile runs the stub
   gate over `tests/e2e/**`, `tests/api/**` and `tests/integration/**`, so an
   acceptance test written as a silent stub — `it.todo` in vitest and jest,
   `pytest.skip` in pytest, the equivalent in each supported stack — fails it
