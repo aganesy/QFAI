@@ -161,6 +161,23 @@ export const RULE_PROMOTIONS = {
    */
   derivedNotStoredDeclaration: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
   /**
+   * `QFAI-BFLOW-005` / `QFAI-BFLOW-006` — a story citing a business flow the
+   * flow document does not declare, and a flow declared twice.
+   *
+   * The window is not absorbing a backlog: business-flow IDs ship with these
+   * rules, so no project has one to be wrong about yet. It is there because the
+   * FORMAT is new, and the first authors to write a `- Flow:` line are doing it
+   * voluntarily, to make their E2E tree flow-grained. Failing their run over a
+   * mistyped id on a line they added to engage with the tool is the worst first
+   * experience of it, and the message already says what the error would.
+   *
+   * One entry for both codes: they are two readings of the same edge — a
+   * citation that resolves to no flow, and one that resolves to two — so a
+   * window that closed on one and not the other would leave the edge half
+   * enforced.
+   */
+  businessFlowReferenceUnknown: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
    * Contract sets written before the declaration was required state none, so
    * the rule lands on every one of them at once.

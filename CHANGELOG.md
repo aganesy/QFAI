@@ -20,6 +20,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A business flow has an ID, and an E2E test can answer for one** (#1208).
+  `_policies/04_Business-Flow.md` ships as the SSOT for how the system is used
+  end to end, and no gate read it. Nothing could cite a flow, so the E2E
+  obligation was keyed on `US-*` alone — and story count is not flow count. One
+  reporting project carried 56 stories, 130 E2E tests and about 12 flows.
+
+  Flows now carry `BF-NNNN`, opening the list item or heading that describes
+  them. A story names the flows that realize it with `- Flow: BF-0001` in its
+  own block. A test under `<testsDir>/e2e/**` annotated `QFAI:BF-0001` answers
+  `QFAI-ATDD-111` for every story naming that flow, so one test covers a flow
+  rather than a story.
+
+  The edge runs from the story upward, and only that way: `_policies/**` must
+  not name a lower-layer ID, so the flow document cannot list its stories. Two
+  things follow, and both are properties of the layering rather than choices.
+  The obligation stays on `US-*`, where acceptance lives — a flow annotation
+  discharges it and never replaces it. And a story naming no flow is not in
+  error; it keeps the obligation and the annotation form it already had, so an
+  existing tree is unchanged.
+
+  `QFAI-BFLOW-005` reports a citation the flow document does not declare and
+  `QFAI-BFLOW-006` a flow declared twice. Both are behind a promotion window:
+  the IDs ship with the rules, so nothing carries the defect yet, and the first
+  author to write one of these lines is doing it voluntarily.
+
 - **A `Boundary` column on the TDD ledger, so the sibling rows of a split test
   case have a recorded identity** (#1316). A matrix-shaped `TC-*` is seeded one
   row per independently observable boundary. Every one of those rows repeats
@@ -245,6 +270,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `test` and `node-floor` jobs check out two commits rather than one. At the
   default depth the merge commit is grafted to no parents at all, so the base is
   unreachable and the question cannot be asked.
+
+- **Two lint lanes ran on Windows, instead of exiting 0 without looking**
+  (#1367). A script that is both a module and a command asks whether it was
+  spawned by comparing `import.meta.url` with the path in `process.argv[1]`.
+  Building that URL as `` `file://${process.argv[1]}` `` gives a URL only where
+  the path is POSIX: on Windows it yields `file://C:\dir\script.mjs` against an
+  `import.meta.url` of `file:///C:/dir/script.mjs`. The comparison was never
+  true, so the conflict-marker and release-notes lanes exited 0 having scanned
+  nothing — indistinguishable, in the output, from a tree that is clean.
+
+  Both now use `pathToFileURL(process.argv[1]).href`, as the scripts beside them
+  already did. A check holds every `.mjs` under the three script directories to
+  that form, because the failure is only reachable on a platform no runner has:
+  the lanes work correctly on every POSIX runner, so no CI job can tell the two
+  spellings apart.
 
 - **A trailing slash on a configured directory no longer makes a gate evaluate
   nothing and report a pass** (#1368). Readers use these values two ways: joined
