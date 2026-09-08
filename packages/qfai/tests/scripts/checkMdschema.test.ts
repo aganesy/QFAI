@@ -29,7 +29,12 @@ import { afterEach, describe, expect, it } from "vitest";
 // test run during collection. The spawn cases below still address the delegator,
 // because that is the path `pnpm lint:mdschema` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
-import { findMdschemaCommand, patternToRegExp } from "../../assets/scripts/check-mdschema.mjs";
+import {
+  IGNORE_MARKER,
+  findMdschemaCommand,
+  optsOutOfSchema,
+  patternToRegExp,
+} from "../../assets/scripts/check-mdschema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts -> tests -> packages/qfai -> packages -> repo root
@@ -235,6 +240,100 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("at least one path");
+  });
+});
+
+describe("a document that opts out of its schema", () => {
+  it("is left unchecked, and the run says how many were", async () => {
+    // A pack outlives what it specifies. A deleted spec is kept as the record
+    // of why it went away, and that record cannot carry a consumer view for
+    // something that no longer exists — so the choice is between writing
+    // fiction and weakening the schema for every live pack.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", `${IGNORE_MARKER}\n\n${NON_CONFORMING_SPEC}`);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("1 ignored");
+  });
+
+  it("is counted rather than made invisible", async () => {
+    // An exclusion nobody can see is one nobody reviews. The per-type summary
+    // names it too, so a whole document type opting out cannot read as a type
+    // with no documents.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", `${IGNORE_MARKER}\n\n${CONFORMING_SPEC}`);
+
+    const result = runDriver(["--root", root, "--scope", "all", "--summary"]);
+
+    expect(result.stdout).toContain("1 ignored");
+    expect(result.stdout).toMatch(/spec-overview \(0 file\(s\), 1 ignored\)/);
+  });
+
+  it("leaves the documents beside it checked", async () => {
+    // The marker is per document. One pack opting out must not excuse the
+    // next, which is the whole difference from turning the lane off.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", `${IGNORE_MARKER}\n\n${NON_CONFORMING_SPEC}`);
+    await writeSpec(root, "spec-0002", NON_CONFORMING_SPEC);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("spec-overview");
+  });
+
+  it("does not read a marker written below the content", async () => {
+    // A marker further down would cover a document that reads as checked to
+    // anyone who does not scroll.
+    const root = await newTempDir();
+    await writeSpec(root, "spec-0001", `${NON_CONFORMING_SPEC}\n${IGNORE_MARKER}\n`);
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+  });
+});
+
+describe("reading the opt-out marker", () => {
+  it.each([
+    ["the first line", `${IGNORE_MARKER}\n# Title\n`, true],
+    ["after a blank line", `\n${IGNORE_MARKER}\n# Title\n`, true],
+    ["after another comment", `<!-- a note -->\n${IGNORE_MARKER}\n# Title\n`, true],
+    [
+      "after a comment spanning lines",
+      `<!-- a note\n  over two lines -->\n${IGNORE_MARKER}\n`,
+      true,
+    ],
+    ["indented up to three spaces", `   ${IGNORE_MARKER}\n# Title\n`, true],
+    ["below a heading", `# Title\n${IGNORE_MARKER}\n`, false],
+    ["absent", "# Title\n", false],
+    ["in an empty document", "", false],
+    // Four spaces or a tab opens an indented code block, so the line renders
+    // as text rather than as a comment. A marker written there exempts
+    // nothing, which is what keeps the "put it in the leading comment block"
+    // rule from having a way around it.
+    ["indented four spaces", `    ${IGNORE_MARKER}\n# Title\n`, false],
+    ["indented with a tab", `\t${IGNORE_MARKER}\n# Title\n`, false],
+    // The comment ends mid-line, so what follows is content and the block is
+    // over before the marker is reached.
+    [
+      "after content on a comment's closing line",
+      `<!-- a note --> and text\n${IGNORE_MARKER}\n`,
+      false,
+    ],
+    // A marker inside a comment is comment text, not a marker.
+    ["inside a comment", `<!-- a note\n${IGNORE_MARKER}\n# Title\n`, false],
+  ])("reads a marker %s as %s", (_where, text, expected) => {
+    expect(optsOutOfSchema(text)).toBe(expected);
+  });
+
+  it("reads only the marker itself, not a line that carries it", () => {
+    // A line mentioning the marker — a document explaining the convention — is
+    // not a document using it.
+    expect(optsOutOfSchema(`${IGNORE_MARKER} for a deleted pack\n`)).toBe(false);
+    expect(optsOutOfSchema(`Write ${IGNORE_MARKER} at the top.\n`)).toBe(false);
   });
 });
 

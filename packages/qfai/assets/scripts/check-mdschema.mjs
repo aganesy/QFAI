@@ -32,6 +32,20 @@
  * `all`, because the alternative — silently checking nothing and reporting
  * green — claims a result the run never established.
  *
+ * One document can also opt out of its schema, with
+ *
+ *     <!-- mdschema:ignore -->
+ *
+ * in its leading comment block. A pack outlives the thing it specifies: a spec
+ * that was deleted or superseded is kept as a record of why it went away, and
+ * that record cannot carry a consumer view or an applicable NFR for something
+ * that no longer exists. Making it conform would mean writing fiction, and
+ * bending the schema to admit it would weaken the contract for every live pack.
+ *
+ * The marker has to be at the top, before any content, and every ignored file
+ * is counted in the run's own output — an exclusion nobody can see is one
+ * nobody reviews.
+ *
  * Usage:
  *   node scripts/check-mdschema.mjs                      # ratchet against origin/main
  *   node scripts/check-mdschema.mjs --scope all          # whole tree
@@ -225,6 +239,59 @@ function readManifest() {
  * @param {string} pattern Repository-root-relative, forward-slashed.
  * @returns {RegExp}
  */
+/** The opt-out a document carries to be left out of its schema. */
+export const IGNORE_MARKER = "<!-- mdschema:ignore -->";
+
+/**
+ * Up to three leading spaces, which is the indent Markdown still reads as
+ * HTML. A fourth space, or a tab, opens an indented code block: the line then
+ * renders as text and is not a comment at all, so a marker written there must
+ * not exempt anything.
+ */
+const HTML_BLOCK_INDENT = /^ {0,3}(?![ \t])/;
+
+const COMMENT_CLOSE = "-->";
+
+/**
+ * Whether a document opts out, read from its leading comment block.
+ *
+ * Leading, because a marker further down would cover a document a reader
+ * scrolling past the first screen assumes is checked. Blank lines and other
+ * HTML comments may precede it — a file may open with a note about itself,
+ * over as many lines as it needs — but the first line of content ends the
+ * block.
+ *
+ * @param {string} text the document's contents
+ */
+export function optsOutOfSchema(text) {
+  let inComment = false;
+  for (const line of text.split(/\r?\n/)) {
+    if (inComment) {
+      const close = line.indexOf(COMMENT_CLOSE);
+      if (close === -1) continue;
+      inComment = false;
+      // Anything after the close on the same line is content, and content ends
+      // the block.
+      if (line.slice(close + COMMENT_CLOSE.length).trim().length > 0) return false;
+      continue;
+    }
+    if (line.trim().length === 0) continue;
+    if (!HTML_BLOCK_INDENT.test(line)) return false;
+
+    const trimmed = line.trim();
+    if (trimmed === IGNORE_MARKER) return true;
+    if (!trimmed.startsWith("<!--")) return false;
+
+    const close = line.indexOf(COMMENT_CLOSE);
+    if (close === -1) {
+      inComment = true;
+      continue;
+    }
+    if (line.slice(close + COMMENT_CLOSE.length).trim().length > 0) return false;
+  }
+  return false;
+}
+
 export function patternToRegExp(pattern) {
   let out = "";
   for (let i = 0; i < pattern.length; i++) {
@@ -457,6 +524,7 @@ export function main() {
 
   let violations = 0;
   let checked = 0;
+  let ignored = 0;
   const perEntry = [];
 
   for (const entry of entries) {
@@ -466,12 +534,20 @@ export function main() {
       return 2;
     }
     const re = patternToRegExp(entry.pattern.replace("{specsDir}", specsDir));
-    const matched = universe
+    const inScope = universe
       .filter((file) => re.test(file))
       .filter((file) => restrictSet === null || restrictSet.has(file))
       .sort();
+    // Read once per file that this entry would otherwise check, rather than
+    // over the whole tree: a document only opts out of the schema it is
+    // matched against, and most of the tree is matched against none.
+    const optedOut = inScope.filter((file) =>
+      optsOutOfSchema(readFileSync(path.join(root, file), "utf-8")),
+    );
+    ignored += optedOut.length;
+    const matched = inScope.filter((file) => !optedOut.includes(file));
     if (matched.length === 0) {
-      perEntry.push({ id: entry.id, files: 0, ok: true });
+      perEntry.push({ id: entry.id, files: 0, ignored: optedOut.length, ok: true });
       continue;
     }
     checked += matched.length;
@@ -480,7 +556,7 @@ export function main() {
       console.error(`check-mdschema: could not run mdschema: ${result.output}`);
       return 2;
     }
-    perEntry.push({ id: entry.id, files: matched.length, ok: result.ok });
+    perEntry.push({ id: entry.id, files: matched.length, ignored: optedOut.length, ok: result.ok });
     if (!result.ok) {
       violations++;
       console.error(`\n── ${entry.id} (${entry.schema}) ──`);
@@ -492,7 +568,8 @@ export function main() {
     console.log("\nPer-document-type result:");
     for (const row of perEntry) {
       const state = row.files === 0 ? "  -  " : row.ok ? " PASS" : " FAIL";
-      console.log(`  ${state}  ${row.id} (${row.files} file(s))`);
+      const opted = row.ignored > 0 ? `, ${row.ignored} ignored` : "";
+      console.log(`  ${state}  ${row.id} (${row.files} file(s)${opted})`);
     }
   }
 
@@ -503,14 +580,16 @@ export function main() {
         ? "the named documents"
         : `documents changed against ${base}`;
 
+  const opted = ignored > 0 ? `, ${ignored} ignored by \`${IGNORE_MARKER}\`` : "";
+
   if (violations > 0) {
     console.error(
-      `\ncheck-mdschema: ${violations} document type(s) failed over ${checked} file(s) in scope (${where}).`,
+      `\ncheck-mdschema: ${violations} document type(s) failed over ${checked} file(s) in scope (${where})${opted}.`,
     );
     return 1;
   }
 
-  console.log(`check-mdschema: ${checked} file(s) conform (${where}).`);
+  console.log(`check-mdschema: ${checked} file(s) conform (${where})${opted}.`);
   return 0;
 }
 
