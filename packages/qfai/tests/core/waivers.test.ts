@@ -282,9 +282,9 @@ describe("applyWaivers", () => {
   it("says a post-waiver rule cannot be suppressed rather than calling it unknown", async () => {
     // `applyWaivers` runs inside `core/validate.ts`, and `src/cli/` appends
     // findings afterwards — so a waiver naming one can never match, whatever it
-    // is called. The old message said `未知の rule`, which sent the operator
+    // is called. A message saying `未知の rule` would send the operator
     // looking for a typo that is not there, and the remedy differs: a typo is
-    // corrected, this waiver is removed (#1110).
+    // corrected, this waiver is removed.
     const root = await createRoot();
     try {
       await writeWaivers(
@@ -476,9 +476,9 @@ describe("applyWaivers", () => {
     }
   });
 
-  // Regression: issue #398. `RULE_ID_RE` accepted none of the identifiers
-  // `qfai validate` prints, so copying a code out of `validate.json` — the only
-  // spelling an operator ever sees — was a hard `QFAI-WAIVER-001`.
+  // `RULE_ID_RE` must accept the identifiers `qfai validate` prints: rejecting
+  // them would make copying a code out of `validate.json` — the only
+  // spelling an operator ever sees — a hard `QFAI-WAIVER-001`.
   it("accepts the finding's own code as the waiver rule", async () => {
     const root = await createRoot();
     try {

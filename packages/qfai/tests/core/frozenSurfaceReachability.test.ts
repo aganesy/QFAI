@@ -1,5 +1,5 @@
 /**
- * A surface retired mid-loop is now reported (#1099).
+ * A surface retired mid-loop must be reported.
  *
  * Cycle 0 freezes the screen set into `prototyping.json#frozenSurfaceUnion`, and
  * `iterate` hard-stops on drift — but only when EVERY UI-bearing spec has

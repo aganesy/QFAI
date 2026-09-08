@@ -787,9 +787,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
     });
 
     it(`${tree}: the ATDD and implement primary procedures follow the new producer`, async () => {
-      // Both stated the pre-#490 contract in their own body — the surface an
-      // agent actually follows — so `/qfai-atdd` enumerated no rows and
-      // `/qfai-implement` required none.
+      // Each skill states the contract directly in its own body — the
+      // surface an agent actually follows — rather than by reference, so
+      // both `/qfai-atdd` and `/qfai-implement` need their own assertion
+      // here.
       const atdd = await read(tree, "assistant/skills/qfai-atdd/SKILL.md");
       expect(atdd).not.toContain("A fresh spec has none of these rows yet");
       expect(atdd).toContain("Phase 2b seeds one `Layer = E2E` row per active `US-*`");
@@ -1791,7 +1792,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(skill).toContain("zero selectable items");
       // The fixed order block and project_memory are what an agent follows.
       expect(skill).toContain("-> Phase 2b Seed tdd/test-list.md (per spec)");
-      // #383 inserted Phase 2c between the seeding phase and Plan finalize; this
+      // Phase 2c sits between the seeding phase and Plan finalize; this
       // assertion is about Phase 2b keeping its slot after Phase 2 Slice.
       expect(skill).toContain("Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c");
 

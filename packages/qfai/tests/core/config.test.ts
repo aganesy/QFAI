@@ -289,8 +289,8 @@ describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
 });
 
 describe("testStrategy key surface", () => {
-  // Issue #408: `requireLayerTags` / `requireSizeTags` were declared, defaulted
-  // and parsed here but read by nothing, so flipping either one changed no
+  // `requireLayerTags` / `requireSizeTags` are declared, defaulted
+  // and parsed here but read by nothing, so flipping either one changes no
   // outcome. They are off the shipped `qfai.config.yaml` and `evaluateStrategyTags`
   // is gone, but the keys survive on the public `QfaiValidationConfig` type as a
   // deprecated compat shim (same treatment as `paths.promptsDir`): a project

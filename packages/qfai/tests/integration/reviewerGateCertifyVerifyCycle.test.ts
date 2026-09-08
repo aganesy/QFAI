@@ -62,7 +62,7 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     // No legacy `phase` field — current iterate output (writeSeedMetadata
     // explicitly deletes it). The reviewer-gate identifies the prototyping
     // context structurally: `stopReason === null` AND
-    // `acceptedIterationIndex === null` (in-flight loop, wave-18 signal).
+    // `acceptedIterationIndex === null` (the in-flight loop signal).
     await seedPrototypingJson(root, {
       runId: "run-1",
       iterations: [],

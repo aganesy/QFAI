@@ -239,7 +239,7 @@ describe("report", { timeout: 15000 }, () => {
         // findings: a bare `qfai init` tree has no discussion pack, so this
         // run also carries an unrelated QFAI-DPACK-001 error. Under `never`
         // the only way to come back non-zero is a hard-coded narrow-profile
-        // failure — exactly the #397 regression.
+        // failure.
         failOn: "never",
       });
 

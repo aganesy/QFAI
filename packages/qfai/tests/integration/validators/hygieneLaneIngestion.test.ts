@@ -110,9 +110,9 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
     expect(ingested, "the hygiene drift finding was not surfaced at all").toHaveLength(1);
     // Surfaced at the severity the LANE emits it with, which is error class.
     //
-    // This row said `info`, with a comment reading "it must not be reported at a severity
-    // that fails a run" — a reading `BR-0015-0017` does not support, and review finding [25]
-    // measured the cost: `qfai validate --fail-on error` succeeded while holding an ingested
+    // Reporting this row as `info`, with a comment reading "it must not be reported at a severity
+    // that fails a run" — a reading `BR-0015-0017` does not support — would measure the cost:
+    // `qfai validate --fail-on error` would succeed while holding an ingested
     // lint failure. The BR says the gate "does not re-derive, re-word or re-classify" the
     // payload, that both codes are "declared lint-failure codes in `CLI-WFSET`, i.e. error
     // class", and that what is deferred is rejecting them for an empty `justification:`.

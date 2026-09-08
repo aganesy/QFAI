@@ -267,9 +267,9 @@ describe("--force regenerates the standard asset trees", () => {
 });
 
 describe("a retired line inside the block does not truncate it", () => {
-  // #1168. Both block walks used to stop at the first line they did not recognise, and a line
-  // an older release wrote — registered neither in the current block nor as legacy — sits
-  // exactly there. This repository had one: `.qfai/output/*`, the legacy validate output dir,
+  // Both block walks must not stop at the first line they do not recognise: a line
+  // an older release wrote — registered neither in the current block nor as legacy — would sit
+  // exactly there. This repository has one: `.qfai/output/*`, the legacy validate output dir,
   // three lines into the block.
   //
   // What follows is not a cosmetic duplicate. The freshness check reads the block it extracted,

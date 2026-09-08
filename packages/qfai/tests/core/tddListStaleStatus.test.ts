@@ -1,5 +1,5 @@
 /**
- * The ledger is compared to the repository in both directions (#385).
+ * The ledger must be compared to the repository in both directions.
  *
  * `TEST_FILE_CHECK_STATUSES` gated the validator's only filesystem probe, so
  * "row claims `done` but the test file is missing" was an error while "the test
