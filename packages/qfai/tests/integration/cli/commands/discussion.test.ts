@@ -209,11 +209,11 @@ describe("resolveDiscussionRoot honors absolute discussionDir verbatim", () => {
   });
 });
 
-// Bare `qfai discussion list` used to be a hard error ("only --active
-// is supported."), so the pack ids were reachable only as a side
+// A hard error on bare `qfai discussion list` ("only --active
+// is supported.") would make the pack ids reachable only as a side
 // effect of the `list --active` ambiguity error — i.e. only while the
-// operator was already stuck. Enumeration is now the unflagged
-// behaviour of the verb, with the active pointer marked by `*`.
+// operator is already stuck. Enumeration is the unflagged
+// behaviour of the verb instead, with the active pointer marked by `*`.
 describe("bare `discussion list` enumerates packs", () => {
   it("prints every pack, marking the active pointer target", async () => {
     await makePack("discussion-20260101000000000");

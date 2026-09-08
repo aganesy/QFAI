@@ -210,8 +210,7 @@ describe(
       // Severity, verbatim from leg (c) 「severity `info` で skip し」. `toBe`
       // rather than `not.toBe("ok")`: the exact value is what the leg states, and
       // it COLLIDES with the drift finding's — the collision this row's steering
-      // entry recorded against TDD-0032's guard #2, whose scope comment this commit
-      // corrects.
+      // entry recorded against TDD-0032's guard #2.
       //
       // The EXIT-CODE consequence of `info` is deliberately not asserted here:
       // `shouldFailDoctor` counts `warning + error` and a fresh `runInit` tree

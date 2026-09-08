@@ -1,5 +1,5 @@
 /**
- * The prototyping scope floor has exactly one home (#785).
+ * The prototyping scope floor has exactly one home.
  *
  * Article VII grants a documented Change Request the right to shrink
  * `/qfai-prototyping` below ALL specs. `workflow.md` used to restate the same

@@ -199,14 +199,12 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
     expect(parsed.stopReason).toBe(null);
   });
 
-  // PR #210 wave-12 (Codex P1, ThreadId PRRT_kwDOQuL-786E7kQ_):
-  // round-trip `iterate --cycle 0` → `validatePrototypingArtifactRefIntegrity`.
-  // Pre-fix, `buildSeedIterations` emitted `evidenceRefs` as an array of
-  // `{kind, path}` entries, but the ref-integrity validator reads
-  // `iter.evidenceRefs.screenshot` / `.html` as object fields, so a
-  // fresh cycle-0 seed immediately tripped `QFAI-PROT-009`. After the
-  // fix `buildSeedIterations` emits the canonical `{screenshot, html}`
-  // object shape (SSOT: {@link Iteration} type + `buildEvaluatorReview`).
+  // Round-trip `iterate --cycle 0` → `validatePrototypingArtifactRefIntegrity`.
+  // The ref-integrity validator reads `iter.evidenceRefs.screenshot` / `.html`
+  // as object fields, so `buildSeedIterations` emits the canonical
+  // `{screenshot, html}` object shape (SSOT: {@link Iteration} type +
+  // `buildEvaluatorReview`) rather than an array of `{kind, path}` entries,
+  // which would trip `QFAI-PROT-009` on every fresh cycle-0 seed.
   it("ref-integrity validator returns zero error-severity issues post-cycle-0 (no declared screens)", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -217,16 +215,16 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
     });
     expect(exit).toBe(0);
     const { config } = await loadConfig(root);
-    // NOTHING is written here, and that is the whole assertion. This case
-    // used to create `iter-00/index.png` and `iter-00/index.html` itself,
-    // under a comment claiming "the seed does this implicitly via
-    // `--capture`; without `--capture` the operator's workflow writes them".
-    // Both halves were false: capture writes `iter-NN/<screen>.{png,html}`
-    // per the plan's own `screenshotTemplate` and never `index.*`, and no
-    // shipped document asks the operator to author `index.*`. The test
-    // manufactured the postcondition it asserted, which is how #1073 shipped
-    // green while `validate` reported two QFAI-PROT-009 errors on every real
-    // run between `iterate` and the reviewer.
+    // NOTHING is written here, and that is the whole assertion. A test that
+    // creates `iter-00/index.png` and `iter-00/index.html` itself, under a
+    // comment claiming "the seed does this implicitly via `--capture`;
+    // without `--capture` the operator's workflow writes them", would
+    // manufacture the postcondition it asserts: capture writes
+    // `iter-NN/<screen>.{png,html}` per the plan's own `screenshotTemplate`
+    // and never `index.*`, and no shipped document asks the operator to
+    // author `index.*`. Such a test can pass green while `validate` reports
+    // two QFAI-PROT-009 errors on every real run between `iterate` and the
+    // reviewer.
     const protoJsonRaw = await readFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
       "utf-8",
