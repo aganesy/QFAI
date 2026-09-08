@@ -6,6 +6,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The Drift Protocol no longer justifies its parking rule with a claim the
+  ledger contradicts** (#1312). Two shipped documents said only a `todo` row can
+  be parked, and cited the transition table — which admits
+  `any active status -> blocked` and defines `Blocked-By` to record the status
+  the row is leaving. A reader following the citation found a rule whose stated
+  reason was not in the file it pointed at, and could not tell whether the
+  transition was unavailable or the rule had another reason.
+
+  The rule is unchanged. Both documents now say the restriction is the
+  protocol's own: for a row past `todo` the transition adds nothing the change
+  request already records, and costs a trip out of the phase the row is in and
+  back into it.
+
 - **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
   The rule already wrote two messages: one naming the coverage-target TC the
   spec declares, and one calling `tdd/test-list.md` optional because it
