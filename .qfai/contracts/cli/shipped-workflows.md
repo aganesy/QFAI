@@ -205,8 +205,10 @@ call:
    path under create-only install).
 
 Dimension 5 has a subject in exactly one shipped file: `qfai-validate.yml`,
-where it resolves to subcommand `validate`, profile `full`, threshold `error`.
-Those three values are asserted today as ad-hoc strings in
+where its lane runs the validate subcommand twice — the wide scan, and the
+drift gate the wide scan does not evaluate. A lane's runs are pinned together,
+in order, so a run that is added or removed is drift whichever one it is.
+Those values are asserted today as ad-hoc strings in
 `packages/qfai/tests/assets/assets.test.ts` (`DTC-26`); the gate **subsumes and
 replaces** those assertions rather than running alongside them, and the moved
 assertions keep their test-case annotation.
