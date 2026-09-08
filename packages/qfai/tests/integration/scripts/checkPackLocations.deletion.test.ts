@@ -56,6 +56,22 @@ async function git(cwd: string, ...args: string[]): Promise<void> {
   );
 }
 
+/**
+ * What a non-zero exit carries, read by property rather than by assertion.
+ *
+ * `execFile`'s rejection is typed `unknown` and attaches the child's `code`,
+ * `stdout` and `stderr` as own enumerable properties. Spreading it gives those
+ * three without claiming a shape the type system cannot check, so a change in
+ * what the rejection carries shows up as an empty string here rather than as a
+ * cast that kept compiling.
+ */
+function failureOf(err: unknown): { code: number; output: string } {
+  const bag: Record<string, unknown> = typeof err === "object" && err !== null ? { ...err } : {};
+  const stdout = typeof bag.stdout === "string" ? bag.stdout : "";
+  const stderr = typeof bag.stderr === "string" ? bag.stderr : "";
+  return { code: typeof bag.code === "number" ? bag.code : 1, output: stdout + stderr };
+}
+
 async function runLane(
   cwd: string,
   args: string[] = [],
@@ -64,11 +80,7 @@ async function runLane(
     const result = await execFileP(process.execPath, [CHECK_SCRIPT, ...args], { cwd });
     return { code: 0, output: result.stdout + result.stderr };
   } catch (err: unknown) {
-    const e: { code?: number; stdout?: string; stderr?: string } = err instanceof Error ? err : {};
-    return {
-      code: typeof e.code === "number" ? e.code : 1,
-      output: (e.stdout ?? "") + (e.stderr ?? ""),
-    };
+    return failureOf(err);
   }
 }
 
