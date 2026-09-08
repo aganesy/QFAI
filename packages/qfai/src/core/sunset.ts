@@ -227,6 +227,20 @@ export const RULE_PROMOTIONS = {
    */
   researchSummarySchemaFields: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-RESEARCH-022` (a `primary` / `secondary` source with no `retrieved`
+   * date) and `QFAI-RESEARCH-023` (a source whose `type` is not one the Source
+   * Registry defines).
+   *
+   * A window because the field they ask for is new. Before them a source owed
+   * `published` whatever kind it was, so a pack citing unpublished evidence —
+   * a screenshot, a supplied file, a conversation log — had to write the
+   * observation date into `published` to pass. Declaring the type is how such a
+   * pack stops doing that, and the two rules are what the declaration then
+   * owes; asking for both in the same release as the field would fail a pack
+   * for correcting itself.
+   */
+  researchSummarySourceType: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-TRIAGE-008` — a Triage heading that is not the canonical `## Triage`,
    * so no triage validator reads the rows under it. Existing delta files carry
    * whatever heading they were written with.

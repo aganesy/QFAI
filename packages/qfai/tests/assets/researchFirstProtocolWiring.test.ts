@@ -148,9 +148,16 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Only the `published` date replaced — the state a fake "run" would leave. */
+/**
+ * Only the dates replaced — the state a fake "run" would leave.
+ *
+ * Every `YYYY-MM-DD` slot, whichever key carries it: the template dates an
+ * external source by `published` and an unpublished one by `retrieved`, and
+ * naming one of them here would leave the other unfilled and report it as the
+ * run's own defect.
+ */
 function fillDateOnly(template: string): string {
-  return template.replaceAll("published: YYYY-MM-DD", `published: ${today()}`);
+  return template.replaceAll(/YYYY-MM-DD/gu, today());
 }
 
 /** Every shipped placeholder replaced with real data, as an actual run would. */
@@ -558,8 +565,11 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
     const missingId = issues.find((item) => item.code === "QFAI-RESEARCH-017");
+    // Counted, not written down: the entry is appended after the ones the
+    // template ships, so a template that grows a source moves its index.
+    const appendedAt = [...filled.matchAll(/^\s*- id: SRC-/gmu)].length;
 
-    expect(missingId?.message).toContain("sources[1]");
+    expect(missingId?.message).toContain(`sources[${appendedAt}]`);
   });
 
   it("requires every field of each best_practices / anti_patterns entry", async () => {

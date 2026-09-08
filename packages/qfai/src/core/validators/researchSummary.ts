@@ -22,16 +22,45 @@ import { issue } from "./utils.js";
 const SECTION_MISSING_PROMOTION = RULE_PROMOTIONS.researchSummarySectionMissing.promoteAt;
 /** The release the per-entry schema rules stop being warnings at. */
 const SCHEMA_FIELDS_PROMOTION = RULE_PROMOTIONS.researchSummarySchemaFields.promoteAt;
+/** The release the source-kind rules stop being warnings at. */
+const SOURCE_TYPE_PROMOTION = RULE_PROMOTIONS.researchSummarySourceType.promoteAt;
 
 /** The window note every rule under {@link SCHEMA_FIELDS_PROMOTION} carries. */
 function schemaWindowNote(severity: "warning" | "error"): string {
+  return windowNote(severity, SCHEMA_FIELDS_PROMOTION);
+}
+
+/** The same note, for a rule riding a different window. */
+function windowNote(severity: "warning" | "error", promoteAt: string): string {
   return severity === "warning"
-    ? ` Reported as a warning until the ${SCHEMA_FIELDS_PROMOTION} release, then an error`
+    ? ` Reported as a warning until the ${promoteAt} release, then an error`
     : "";
 }
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** The same date shape on the field an unpublished source dates itself by. */
+const RETRIEVED_DATE_RE = /^[ \t]*(?:-[ \t]*)?retrieved:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/**
+ * The source kinds the Source Registry defines, and what each one owes.
+ *
+ * A screenshot of the customer's system, a file they supplied, a conversation
+ * log: real sources, cited in the registry, and never published. Asking them
+ * for a publication date gets the observation date written into `published`,
+ * which is a false claim about the source and, because freshness is computed
+ * from that field, a false figure as well.
+ *
+ * So the date field follows the kind. `external` — a third-party reference —
+ * owes `published`, because that is a fact about it. `primary` and `secondary`
+ * owe `retrieved`, the date the registry table already dates them by.
+ *
+ * `url` is asked of all three. The registry column is `URL / Path`, so a
+ * repository path or an application route answers it, and every source stays
+ * locatable.
+ */
+const SOURCE_TYPES_OWING_RETRIEVED = new Set(["primary", "secondary"]);
+/** Every value the registry's `Type` column admits. */
+const SOURCE_TYPES = new Set(["primary", "secondary", "external"]);
 /**
  * Fence info strings whose block carries the summary itself.
  *
@@ -58,7 +87,9 @@ const SCALAR_SCHEMA_FIELDS = new Set([
   "id",
   "title",
   "url",
+  "type",
   "published",
+  "retrieved",
   "category",
   "description",
   "source_id",
@@ -91,6 +122,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   // A literal `"error"` beside any of these calls would be a registered pin
   // that never governs anything — the state `sunsetLedger.test.ts` rejects.
   const schemaSeverity = newRuleSeverity(toolVersion, SCHEMA_FIELDS_PROMOTION);
+  // The source-kind rules ride their own window: the field they read is newer
+  // than the schema-field family, so a pack meets them later.
+  const sourceTypeSeverity = newRuleSeverity(toolVersion, SOURCE_TYPE_PROMOTION);
   const target = await resolveResearchSummaryScanTarget(root, config);
   issues.push(...describeBrokenPointer(root, target, schemaSeverity));
   // `uiux.requireResearchSummary: false` is a project stating the section is
@@ -187,23 +221,23 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
           ),
         );
       }
-      if (!FULL_DATE_RE.test(entry)) {
-        issues.push(
-          issue(
-            "QFAI-RESEARCH-006",
-            `Source entry missing or invalid "published" date (YYYY-MM-DD): ${label}`,
-            "error",
-            rel,
-            "researchSummary.sourcePublished",
-          ),
-        );
-      }
+      issues.push(...checkSourceDate(entry, label, rel, sourceTypeSeverity));
     }
 
     // Check freshness (≥80% within 2 years)
+    //
+    // Read over published sources only. Freshness asks how current the
+    // literature a pack cites is, and unpublished evidence has no answer: a
+    // screenshot taken today is neither recent nor stale in that sense, and
+    // counting its observation date as a publication date moves the figure
+    // without measuring anything.
     const referenceNow = resolveFreshnessReferenceNow();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
     const publishedDates = sourceEntries
+      .filter(
+        (entry) =>
+          !SOURCE_TYPES_OWING_RETRIEVED.has(readScalarField(entry, "type")?.toLowerCase() ?? ""),
+      )
       .map((entry) => FULL_DATE_RE.exec(entry)?.[1] ?? "")
       .map((dateText) => Date.parse(dateText))
       .filter((ts) => Number.isFinite(ts));
@@ -1130,6 +1164,64 @@ function hasNonEmptyField(entry: string, field: string): boolean {
 function readReflectionAction(entry: string): string | null {
   const value = readScalarField(entry, "action")?.toLowerCase() ?? "";
   return REFLECTION_ACTIONS.has(value) ? value : null;
+}
+
+/**
+ * The date obligation a source entry owes, decided by its declared `type`.
+ *
+ * An entry that declares no type is read as `external`, which is what every
+ * entry was held to before the column was read here — so a summary written
+ * without a type is judged exactly as it was.
+ *
+ * An unrecognised type is reported rather than folded into either branch. It
+ * would otherwise fall to the external side and ask for `published` on what the
+ * author meant as primary evidence, under a finding that names the wrong field.
+ */
+function checkSourceDate(
+  entry: string,
+  label: string,
+  rel: string,
+  sourceTypeSeverity: "warning" | "error",
+): Issue[] {
+  const note = windowNote(sourceTypeSeverity, SOURCE_TYPE_PROMOTION);
+  const declared = readScalarField(entry, "type")?.toLowerCase() ?? "";
+  if (declared.length > 0 && !SOURCE_TYPES.has(declared)) {
+    return [
+      issue(
+        "QFAI-RESEARCH-023",
+        `Source entry declares an unknown "type" (${declared}); the Source Registry defines ${[...SOURCE_TYPES].join(", ")}: ${label}${note}`,
+        sourceTypeSeverity,
+        rel,
+        "researchSummary.sourceType",
+      ),
+    ];
+  }
+
+  if (SOURCE_TYPES_OWING_RETRIEVED.has(declared)) {
+    return RETRIEVED_DATE_RE.test(entry)
+      ? []
+      : [
+          issue(
+            "QFAI-RESEARCH-022",
+            `Source entry of type "${declared}" missing or invalid "retrieved" date (YYYY-MM-DD): ${label}${note}`,
+            sourceTypeSeverity,
+            rel,
+            "researchSummary.sourceRetrieved",
+          ),
+        ];
+  }
+
+  return FULL_DATE_RE.test(entry)
+    ? []
+    : [
+        issue(
+          "QFAI-RESEARCH-006",
+          `Source entry missing or invalid "published" date (YYYY-MM-DD): ${label}`,
+          "error",
+          rel,
+          "researchSummary.sourcePublished",
+        ),
+      ];
 }
 
 /** Names an entry in a finding message by its `id` / `source_id`, else index. */

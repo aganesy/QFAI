@@ -22,9 +22,13 @@ carry it, and its absence is reported as `QFAI-RESEARCH-016`.
 
 Research-First Protocol output. Schema: `.qfai/assistant/constitution/research-first-protocol.md`.
 Replace every `[...]` placeholder with real research: validation rejects
-bracketed `title` / `url` / `reason` values and requires `published` to be a
-real `YYYY-MM-DD` date, so an unfilled block below reports errors rather than
-passing.
+bracketed `title` / `url` / `reason` values and requires a real `YYYY-MM-DD`
+date, so an unfilled block below reports errors rather than passing.
+
+Which date depends on the source kind. An `external` source records
+`published`; a `primary` or `secondary` one records `retrieved`, the date it was
+observed. An entry with no `type` is read as `external`. Both entries below show
+one of the two shapes.
 
 ```yaml
 research_summary:
@@ -32,7 +36,13 @@ research_summary:
     - id: SRC-0001
       title: [Reference title]
       url: [https://example.com/reference]
+      type: external
       published: YYYY-MM-DD
+    - id: SRC-0002
+      title: [What the first-hand evidence is]
+      url: [path/to/the/evidence]
+      type: primary
+      retrieved: YYYY-MM-DD
   best_practices:
     - id: BP-0001
       category: [Category this practice belongs to]

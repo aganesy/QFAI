@@ -2010,6 +2010,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`.qfai/state.json#discussion.currentId` resolves to a discussion pack on disk, so the Research Summary is read from the pack the operator selected.",
   "QFAI-RESEARCH-021":
     "No required Research Summary value is still the shipped `[...]` template placeholder.",
+  "QFAI-RESEARCH-022":
+    "Every `primary` / `secondary` source entry dates itself with `retrieved` (YYYY-MM-DD), the date it was observed. Those sources were never published, so `published` has no true value for them and the freshness figure is read over published sources only.",
+  "QFAI-RESEARCH-023":
+    "Every `sources[].type` is one the Source Registry defines: `primary`, `secondary` or `external`. An entry that declares none is read as `external`.",
 };
 
 /**
@@ -2126,6 +2130,10 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Run `qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
   "QFAI-RESEARCH-021":
     "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
+  "QFAI-RESEARCH-022":
+    "Add `retrieved: YYYY-MM-DD` to the entry, recording when the evidence was observed. If the source was in fact published, declare `type: external` and give it `published` instead.",
+  "QFAI-RESEARCH-023":
+    "Set the entry's `type` to `primary`, `secondary` or `external`, or drop the field to have it read as `external`.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

@@ -6,6 +6,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A research source can say what kind it is, and is dated accordingly**
+  (#1329). Every `research_summary.sources[]` entry owed `published`, whatever
+  it was. A pack built on first-hand evidence — a screenshot of the system being
+  replaced, a file the customer supplied, a conversation log — has sources that
+  are real, cited, and were never published, so the only way to pass was to
+  write the observation date into `published`. That states something untrue
+  about the source, and freshness reads the same field, so the figure beside it
+  was invented too.
+
+  An entry may now declare `type`, the column the Source Registry already
+  carries. The date field follows it.
+
+  | `type`      | Date field  |
+  | ----------- | ----------- |
+  | `external`  | `published` |
+  | `primary`   | `retrieved` |
+  | `secondary` | `retrieved` |
+
+  An entry with no `type` is read as `external`, so a summary written before the
+  field existed is judged exactly as it was. Freshness is measured over
+  published sources only.
+
+  `QFAI-RESEARCH-022` reports a `primary` or `secondary` entry with no
+  `retrieved` date; `QFAI-RESEARCH-023` reports a `type` the registry does not
+  define. Both are warnings until 1.13.0.
+
+  `url` is still required for every entry. The registry column is `URL / Path`,
+  so a repository path or an application route answers it and every source stays
+  findable.
+
 - **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
   its leading comment block. A pack outlives what it specifies: a spec that was
   deleted or superseded is kept as the record of why it went away, and that
