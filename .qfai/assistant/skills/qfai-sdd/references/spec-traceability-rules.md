@@ -202,7 +202,8 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   tie-break) and compared.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
-  Phase Red.
+  Phase Red. There is no `retired` value: retiring a row is **deleting it from the
+  table** under the ownership split below, not parking it at a status.
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
   covers. `/qfai-implement` owns the `Status`, `DR-ID`, `Evidence` and `Blocked-By` cells
   unconditionally — `Blocked-By` because `todo -> blocked` is an edge that skill owns and
@@ -216,7 +217,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   which states both conditions; adding, removing or re-scoping a row is an upstream change and
   takes the Change Request path — including the rows `/qfai-implement` used to open itself for
   a post-RED scope gap or a checkpoint regression, which now come back here as a Change
-  Request.
+  Request — except when `/qfai-sdd` is reseeding under a Triage row that carries the
+  operator's approval for the removal in its `Approved By` cell, which is then the same
+  approval a Change Request would have collected and is itself the record. Two rows qualify:
+  the approved `UPDATE:REMOVE` row, whose approval `sdd-triage.md` takes by operation; and the
+  `UPDATE:MODIFY` row that drops a TC out of the coverage-target set, whose operation is
+  approval-free but whose row deletion is not, so `sdd-triage.md` takes an approval for
+  that deletion specifically. An `UPDATE:MODIFY` row with no approver recorded authorises
+  no deletion and leaves the row on the Change Request path.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
@@ -330,7 +338,28 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
-- `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
+- `TDD-ID` must match `TDD-NNNN` and be unique within the spec. Because that
+  uniqueness is per spec, the record that authorised a retirement — the approved
+  `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal
+  `/qfai-sdd` reseed, that spec's `UPDATE:MODIFY` row when the TC survives but its
+  `Level` leaves coverage, no `UPDATE:REMOVE` row was raised, the driving `CR-*`
+  on a Drift Protocol owner rerun — names
+  the row as `<spec-id>/TDD-NNNN`: a bare `TDD-0001` cannot be told from another
+  spec's once both rows are deleted. That record carries the deleted row's
+  `Evidence` cell verbatim. The cell is a pointer, and the managed `.gitignore`
+  block re-includes `.qfai/evidence/implement-*.md` and `atdd-*.md` by name, so
+  it still resolves in a clean checkout and the body stays where it was written.
+  A row whose `Evidence` cell is empty or `-` anchors nothing: record
+  `no evidence — retired at Status = <status>, never executed` rather than
+  composing a section for it to name. Read the cell, not the status — a row
+  blocked out of `green` or `refactor` keeps the rounds it already took, and its
+  `Blocked-By` names the status it left from. The same record says what happens
+  to the deleted row's test, which no skill removes on its own.
+  A retired `TDD-ID` is **never reused**: allocate the next one above the highest
+  the spec has ever issued, counting the ones those records retired, so a new
+  row's `Evidence` anchor cannot land on a retired cycle's `### TDD-NNNN` section
+  in the same evidence file. The validator only sees the live ledger, so this one
+  is on the seeding skill.
 - **`TDD-ID` allocation is by reserved block, decided before the workers
   split.** Uniqueness alone does not say who takes the next value.
   `TDD-NNNN` is spec-scoped and monotonic, so that value is `max + 1`
