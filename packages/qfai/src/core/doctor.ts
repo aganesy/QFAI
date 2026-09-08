@@ -51,6 +51,7 @@ import {
   checkAssistantAssetLineBudget,
   type ExemptAssistantAsset,
   type OversizedAssistantAsset,
+  type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
@@ -964,8 +965,10 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
   const details = {
     assistantDir: toRelativePath(root, report.assistantDir),
     maxLines: report.maxLines,
+    maxLineChars: report.maxLineChars,
     scanned: report.scanned,
     oversized: report.oversized,
+    wideLines: report.wideLines,
     // The baseline promises the exemption is visible to the reader, not just to
     // the implementation: each exempt path is listed with the reason it was not
     // measured, and the same pair is rendered into the message for text readers.
@@ -990,7 +993,9 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
-      message: `all ${report.scanned} assistant assets are within ${report.maxLines} lines${exemptNote}`,
+      message:
+        `all ${report.scanned} assistant assets are within ${report.maxLines} lines ` +
+        `and ${report.maxLineChars} characters per line${exemptNote}`,
       details,
     };
   }
@@ -1020,14 +1025,26 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     unmeasured > 0
       ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
-  const nextActions = assetLineBudgetNextActions(report.oversized);
+  const nextActions = assetLineBudgetNextActions([...report.oversized, ...report.wideLines]);
+  // Both halves in one message. A file can fail either ceiling, and reporting
+  // only the count would leave the width failure with no line of its own.
+  const overruns = [
+    ...(report.oversized.length > 0
+      ? [
+          `${report.oversized.length} exceed ${report.maxLines} lines: ` +
+            formatOversizedAssets(report.oversized),
+        ]
+      : []),
+    ...(report.wideLines.length > 0
+      ? [`${report.wideLines.length} carry a line too wide: ` + formatWideAssets(report.wideLines)]
+      : []),
+  ].join("; ");
   return {
     id: "assets.lineBudget",
     severity: "warning",
     title,
     message:
-      `${report.oversized.length} assistant assets exceed ${report.maxLines} lines: ` +
-      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
+      `assistant assets over budget — ${overruns}${unmeasuredNote}${exemptNote}` +
       formatNextActionHint(nextActions),
     details: {
       ...details,
@@ -1093,6 +1110,19 @@ function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>
 }
 
 /**
+ * Names the width each file was held to, not only the width it has.
+ *
+ * A file carrying a recorded width is measured against that number rather than
+ * the shipped ceiling, so `(1500 chars)` alone would leave a reader unable to
+ * tell a regression from a file that was always wide.
+ */
+function formatWideAssets(wide: ReadonlyArray<WideLineAssistantAsset>): string {
+  return wide
+    .map((entry) => `${escapeForMessage(entry.path)} (${entry.widest} > ${entry.allowed} chars)`)
+    .join(", ");
+}
+
+/**
  * States what was skipped and why, in the default output as well as in JSON.
  *
  * An asset that is never measured is invisible otherwise: the counts speak only
@@ -1125,8 +1155,9 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
  */
 function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>): string[] {
   const actions: string[] = [];
-  const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
-  const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
+  const paths = [...new Set(oversized.map((entry) => entry.path))];
+  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skills/"));
+  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skills/"));
   if (hasSkillAsset) {
     actions.push("move one topic out of the oversized skill into that skill's own references/");
   }

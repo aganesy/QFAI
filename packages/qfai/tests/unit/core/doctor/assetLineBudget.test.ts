@@ -122,9 +122,11 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import {
   ASSISTANT_ASSET_MAX_LINES,
+  ASSISTANT_ASSET_MAX_LINE_CHARS,
   LINE_BUDGET_EXEMPT,
   checkAssistantAssetLineBudget,
   countLines,
+  widestMeasurableLine,
 } from "../../../../src/core/doctor/assetLineBudget.js";
 
 async function withTempRoot(fn: (root: string) => Promise<void>): Promise<void> {
@@ -153,6 +155,16 @@ async function withUnprobeableRoot(fn: (root: string) => Promise<void>): Promise
     await rm(root, { recursive: true, force: true });
   }
 }
+
+/** Writes a file verbatim, for cases where the line SHAPE is the subject. */
+async function writeRawAsset(root: string, relPath: string, lines: string[]): Promise<void> {
+  const abs = path.join(root, ".qfai", "assistant", relPath);
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, lines.join("\n"), "utf-8");
+}
+
+/** A prose line of exactly `width` characters. */
+const wide = (width: number): string => "w".repeat(width);
 
 async function writeAsset(root: string, relPath: string, lines: number): Promise<void> {
   const abs = path.join(root, ".qfai", "assistant", relPath);
@@ -556,6 +568,117 @@ describe("doctor assets.lineBudget check", () => {
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
 
       expect(check?.severity).toBe("ok");
+    });
+  });
+});
+describe("widestMeasurableLine", () => {
+  it("measures characters, not bytes", () => {
+    // These assets carry em dashes and Japanese. A byte count would report a
+    // compliant line as three times its width and fail it for its alphabet.
+    expect(widestMeasurableLine("日本語のテキスト")).toBe(8);
+    expect(widestMeasurableLine("a — b")).toBe(5);
+  });
+
+  it("does not count a carriage return as content", () => {
+    // `countLines` splits on `/\r?\n/`, so a CRLF file has the same lines as
+    // its LF twin. Counting the `\r` would make each one a character wider.
+    expect(widestMeasurableLine("abcd\r\nef")).toBe(4);
+  });
+
+  it("skips a table row, which markdown gives no continuation", () => {
+    const row = `| ${wide(500)} | b |`;
+    expect(widestMeasurableLine(["| a | b |", "| - | - |", row].join("\n"))).toBe(0);
+  });
+
+  it("skips a fenced block, whose content is verbatim", () => {
+    expect(widestMeasurableLine(["```sh", wide(500), "```"].join("\n"))).toBe(0);
+  });
+
+  it("resumes measuring after the fence closes", () => {
+    // A fence that never re-opened the measurement would hide every line below
+    // the first code sample in the file.
+    expect(widestMeasurableLine(["```sh", wide(500), "```", wide(120)].join("\n"))).toBe(120);
+  });
+
+  it("measures a list item, an ordered item and a paragraph", () => {
+    // The three shapes the packing produces, and the ones that can be wrapped.
+    expect(widestMeasurableLine(`- ${wide(300)}`)).toBe(302);
+    expect(widestMeasurableLine(`1. ${wide(300)}`)).toBe(303);
+    expect(widestMeasurableLine(wide(300))).toBe(300);
+  });
+});
+
+describe("assets.lineBudget width ceiling", () => {
+  it("reports a file whose prose line is wider than the ceiling", async () => {
+    await withTempRoot(async (root) => {
+      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
+        "# Demo",
+        `- ${wide(ASSISTANT_ASSET_MAX_LINE_CHARS)}`,
+      ]);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.status).toBe("over_budget");
+      expect(report.wideLines).toEqual([
+        {
+          path: "assistant/skills/qfai-demo/SKILL.md",
+          widest: ASSISTANT_ASSET_MAX_LINE_CHARS + 2,
+          allowed: ASSISTANT_ASSET_MAX_LINE_CHARS,
+        },
+      ]);
+      // The count is untouched: a two-line file is not over the line ceiling,
+      // and reporting it as such would make the two budgets indistinguishable.
+      expect(report.oversized).toEqual([]);
+    });
+  });
+
+  it("passes a file exactly at the ceiling", async () => {
+    await withTempRoot(async (root) => {
+      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
+        wide(ASSISTANT_ASSET_MAX_LINE_CHARS),
+      ]);
+
+      const report = await checkAssistantAssetLineBudget(root);
+      expect(report.wideLines).toEqual([]);
+      expect(report.status).toBe("ok");
+    });
+  });
+
+  it("does not fail a wide table row or a wide fenced block", async () => {
+    await withTempRoot(async (root) => {
+      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [
+        `| ${wide(1200)} |`,
+        "```sh",
+        wide(1200),
+        "```",
+      ]);
+
+      const report = await checkAssistantAssetLineBudget(root);
+      expect(report.wideLines).toEqual([]);
+    });
+  });
+
+  it("names the width a file was held to, in the doctor message", async () => {
+    await withTempRoot(async (root) => {
+      await writeRawAsset(root, "skills/qfai-demo/SKILL.md", [wide(900)]);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+      expect(check?.severity).toBe("warning");
+      expect(check?.message).toContain(`900 > ${ASSISTANT_ASSET_MAX_LINE_CHARS} chars`);
+    });
+  });
+
+  it("says both ceilings when the tree is clean", async () => {
+    await withTempRoot(async (root) => {
+      await writeAsset(root, "skills/qfai-demo/SKILL.md", 10);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+      expect(check?.severity).toBe("ok");
+      expect(check?.message).toContain(`${ASSISTANT_ASSET_MAX_LINE_CHARS} characters per line`);
     });
   });
 });

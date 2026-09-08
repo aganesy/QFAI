@@ -43,6 +43,25 @@ a body at the ceiling stops shedding topics and starts packing them into longer
 lines, and a line count cannot see that. Raise it again only against evidence of
 that kind.
 
+**A width ceiling makes the count honest: 400 characters per line.** A count of
+lines bounds reading cost only while a line is a roughly constant unit of
+reading, and packing broke that — one line in the shipped tree ran 9,104
+characters against a median of 118, and cost the budget one unit. The two are
+read together, because each permits what the other refuses: width alone allows a
+thin file of a thousand short lines, and the count alone allows a packed one.
+
+Two shapes are not measured, and for the same reason — the author cannot make
+them narrower:
+
+| not measured   | why                                                       |
+| -------------- | --------------------------------------------------------- |
+| a table row    | markdown gives it no continuation, so it cannot wrap      |
+| a fenced block | its content is a command, a diagram or a sample, verbatim |
+
+Files that predate the ceiling carry a recorded width of their own, which may
+only shrink: such a file may be edited freely below the width it already had,
+and never past it. Every other file is held at 400.
+
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
 `assistant/agents/<id>.md`, so its length tracks the number of agents — whether

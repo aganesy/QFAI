@@ -42,6 +42,29 @@ import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
  */
 export const ASSISTANT_ASSET_MAX_LINES = 800;
 
+/**
+ * Width ceiling for a single line, which is what makes the line ceiling honest.
+ *
+ * A count of lines bounds reading cost only while a line is a roughly constant
+ * unit of reading. It stopped being one: the widest line in the tree runs 9,104
+ * characters against a median of 118, and a line that long costs one unit of a
+ * budget whose whole purpose is to bound how much an agent must read before it
+ * can act. Bodies converging on the line ceiling stopped shedding topics and
+ * started packing them, which the count cannot see.
+ *
+ * 400 is read off the tree rather than chosen: the 90th percentile is 413, so
+ * nine files in ten already comply, and the ones that do not are the ones the
+ * packing produced. It is also the point below which the width cap would start
+ * deciding a different question — reflowed to 300, the largest skill body
+ * passes 800 lines and the line ceiling condemns it, which is a split decision
+ * and not this one.
+ *
+ * The two ceilings are read together on purpose. Width alone permits a thin
+ * file of a thousand short lines; the count alone permits a packed one. A file
+ * has to satisfy both.
+ */
+export const ASSISTANT_ASSET_MAX_LINE_CHARS = 400;
+
 /** File extensions that count as an authored assistant asset. */
 export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".yaml"];
 
@@ -63,6 +86,63 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * Per-file width ceilings for the tree as it stands, which may only shrink.
+ *
+ * Twenty files carry a line wider than {@link ASSISTANT_ASSET_MAX_LINE_CHARS}.
+ * Reflowing them is a separate pass — it rewrites prose across the highest-churn
+ * files in the tree — and holding the rule back until then would leave the
+ * evasion open in the meantime, which is the state this rule exists to end.
+ *
+ * So the backlog is recorded instead of waived. Each entry is that file's widest
+ * line today, and it is a ceiling: an edit that stays under it passes freely, an
+ * edit that widens the file fails. A file absent from this map is held at the
+ * real number, so nothing new can join the backlog quietly —
+ * {@link WIDTH_BACKLOG_SIZE} pins how many entries there are, and lowering an
+ * entry or removing one is the reviewed edit that shrinks it.
+ *
+ * The same shape the operator-message language rule uses, for the same reason:
+ * a backlog nobody can add to is a backlog that goes away.
+ */
+export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
+  ["assistant/catalog/test-layers.md", 921],
+  ["assistant/constitution/references/audited-evidence-hash.md", 1406],
+  ["assistant/constitution/shared-skill-delegation-baseline.md", 692],
+  ["assistant/constitution/shared-skill-operating-baseline.md", 581],
+  ["assistant/skills/qfai-atdd/SKILL.md", 2001],
+  ["assistant/skills/qfai-atdd/references/red-provenance.md", 460],
+  ["assistant/skills/qfai-configure/SKILL.md", 2284],
+  ["assistant/skills/qfai-discussion/SKILL.md", 802],
+  ["assistant/skills/qfai-discussion/references/design-md-brand-catalog.md", 533],
+  ["assistant/skills/qfai-discussion/templates/01_Context.md", 412],
+  ["assistant/skills/qfai-implement/SKILL.md", 9104],
+  ["assistant/skills/qfai-implement/references/cross-spec-ownership.md", 616],
+  ["assistant/skills/qfai-prototyping/SKILL.md", 541],
+  ["assistant/skills/qfai-sdd/SKILL.md", 2460],
+  ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
+  ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
+  ["assistant/skills/qfai-sdd/templates/report/preflight_summary.md", 425],
+  ["assistant/skills/qfai-verify/SKILL.md", 950],
+  ["assistant/skills/qfai-verify/references/articles.md", 413],
+  ["assistant/skills/qfai-verify/references/verify-output-contract.md", 840],
+]);
+
+/**
+ * How many files are in the backlog. Held by the asset guard so the map can
+ * only shrink: adding a file to it moves this number, which a reviewer sees.
+ */
+export const WIDTH_BACKLOG_SIZE = 20;
+
+/** Opening or closing fence, with CommonMark's three-space indent allowance. */
+const FENCE_RE = /^ {0,3}(?:```|~~~)/;
+
+/** Enough of a line to classify it without holding the line. */
+const CLASSIFY_PREFIX = 8;
+
+function isSkippedShape(prefix: string, inFence: boolean): boolean {
+  return inFence || prefix.trimStart().startsWith("|");
+}
+
+/**
  * Counts lines the way every budget assertion does.
  *
  * `split(/\r?\n/)` — not a blank-line-skipping counter. A markdown file is
@@ -73,28 +153,97 @@ export function countLines(content: string): number {
   return content.split(/\r?\n/).length;
 }
 
-const NEWLINE_BYTE = 0x0a;
+/**
+ * The widest line a width ceiling can speak about, from content already in hand.
+ *
+ * The in-memory counterpart of the streaming {@link measureFile}, standing to it
+ * as {@link countLines} stands to its streamed twin. Both read the same two
+ * predicates, so a caller with the text and a caller with a path cannot disagree
+ * about which lines are measured.
+ */
+export function widestMeasurableLine(content: string): number {
+  let widest = 0;
+  let inFence = false;
+  for (const line of content.split(/\r?\n/)) {
+    if (FENCE_RE.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (!isSkippedShape(line, inFence)) {
+      widest = Math.max(widest, line.length);
+    }
+  }
+  return widest;
+}
 
 /**
- * Counts the lines of a file without holding it in memory.
+ * The widest line of a file, over the lines a width ceiling can speak about.
  *
- * Same arithmetic as {@link countLines} — `split(/\r?\n/).length` is the number
- * of `\n` separators plus one — but streamed, so a mis-generated asset of any
- * size costs a constant-size buffer instead of the whole file plus a per-line
- * array. Doctor has to survive the malformed tree it is being asked to
- * diagnose; the exact count is kept because the finding reports it.
+ * Two shapes are skipped, and both for the same reason: they cannot be made
+ * narrower by the author, so measuring them would report a defect with no fix.
+ *
+ * | skipped        | why                                                     |
+ * | -------------- | ------------------------------------------------------- |
+ * | a table row    | markdown gives it no continuation, so it cannot wrap     |
+ * | a fenced block | its content is a command, a diagram or a sample, verbatim |
+ *
+ * A table row is also read differently — cells scanned against a header, not a
+ * sentence read left to right — so it is not the unit the ceiling is about. The
+ * packing this rule exists to catch is prose in a list item or a paragraph, and
+ * that is where every line over the ceiling but one is found.
  */
-async function countFileLines(absolute: string): Promise<number> {
-  const stream = createReadStream(absolute);
-  let newlines = 0;
+type AssetMeasurement = { lines: number; widest: number };
+
+/**
+ * Measures a file without holding it in memory.
+ *
+ * Streamed, so a mis-generated asset of any size costs a constant-size buffer
+ * rather than the whole file plus a per-line array — doctor has to survive the
+ * malformed tree it is being asked to diagnose. Only a running length and an
+ * 8-character prefix are kept per line, which is all the classification needs.
+ *
+ * Decoded as text rather than scanned as bytes, because the width is a count of
+ * characters. These files carry em dashes and Japanese, and a byte count would
+ * report a compliant line as three times its width.
+ */
+async function measureFile(absolute: string): Promise<AssetMeasurement> {
+  const stream = createReadStream(absolute, { encoding: "utf-8" });
+  let lines = 1;
+  let widest = 0;
+  let length = 0;
+  let prefix = "";
+  let inFence = false;
+
+  const endLine = (): void => {
+    if (FENCE_RE.test(prefix)) {
+      inFence = !inFence;
+    } else if (!isSkippedShape(prefix, inFence)) {
+      widest = Math.max(widest, length);
+    }
+    length = 0;
+    prefix = "";
+  };
+
   try {
     await new Promise<void>((resolve, reject) => {
       stream.on("data", (chunk: string | Buffer) => {
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-        let index = buffer.indexOf(NEWLINE_BYTE);
-        while (index !== -1) {
-          newlines += 1;
-          index = buffer.indexOf(NEWLINE_BYTE, index + 1);
+        const text = typeof chunk === "string" ? chunk : chunk.toString("utf-8");
+        for (const character of text) {
+          if (character === "\n") {
+            lines += 1;
+            endLine();
+            continue;
+          }
+          // `\r` is a line terminator here, not content: `countLines` splits on
+          // `\r?\n`, so counting it would make every line of a CRLF file one
+          // character wider than the same file with LF endings.
+          if (character === "\r") {
+            continue;
+          }
+          length += 1;
+          if (prefix.length < CLASSIFY_PREFIX) {
+            prefix += character;
+          }
         }
       });
       stream.on("error", reject);
@@ -103,10 +252,20 @@ async function countFileLines(absolute: string): Promise<number> {
   } finally {
     stream.destroy();
   }
-  return newlines + 1;
+  endLine();
+  return { lines, widest };
 }
 
 export type OversizedAssistantAsset = { path: string; lines: number };
+
+/**
+ * An asset whose widest line exceeds what it is allowed.
+ *
+ * `allowed` travels with the finding because it is not one number: a file in
+ * {@link WIDTH_BUDGET_BACKLOG} is held at its own recorded ceiling, and a reader
+ * has to see which of the two it failed.
+ */
+export type WideLineAssistantAsset = { path: string; widest: number; allowed: number };
 
 /** An asset skipped by {@link LINE_BUDGET_EXEMPT}, carried with its reason. */
 export type ExemptAssistantAsset = { path: string; reason: string };
@@ -121,9 +280,12 @@ export type AssistantAssetBudgetReport = {
   status: AssistantAssetBudgetStatus;
   assistantDir: string;
   maxLines: number;
+  maxLineChars: number;
   /** Number of asset files measured (exempt and unreadable files excluded). */
   scanned: number;
   oversized: OversizedAssistantAsset[];
+  /** Assets whose widest measurable line exceeds the ceiling that applies to them. */
+  wideLines: WideLineAssistantAsset[];
   /**
    * Exempt paths that were present and therefore skipped, each with the reason
    * from {@link LINE_BUDGET_EXEMPT}. The shipped baseline promises the reader
@@ -296,8 +458,10 @@ export async function checkAssistantAssetLineBudget(
   const empty = {
     assistantDir,
     maxLines: ASSISTANT_ASSET_MAX_LINES,
+    maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
     scanned: 0,
     oversized: [],
+    wideLines: [],
     exempt: [],
     unreadable: [],
   };
@@ -321,6 +485,7 @@ export async function checkAssistantAssetLineBudget(
   const scan = await scanAssistantAssets(assistantDir);
 
   const oversized: OversizedAssistantAsset[] = [];
+  const wideLines: WideLineAssistantAsset[] = [];
   const exempt: ExemptAssistantAsset[] = [];
   const unreadable: string[] = [];
   let scanned = 0;
@@ -332,9 +497,9 @@ export async function checkAssistantAssetLineBudget(
       exempt.push({ path: relPath, reason: exemptReason });
       continue;
     }
-    let lines: number;
+    let measured: AssetMeasurement;
     try {
-      lines = await countFileLines(absolute);
+      measured = await measureFile(absolute);
     } catch {
       // An unreadable asset cannot be measured. Surfacing it beats counting it
       // as compliant, which would let a permission error hide an overrun.
@@ -342,21 +507,31 @@ export async function checkAssistantAssetLineBudget(
       continue;
     }
     scanned += 1;
-    if (lines > ASSISTANT_ASSET_MAX_LINES) {
-      oversized.push({ path: relPath, lines });
+    if (measured.lines > ASSISTANT_ASSET_MAX_LINES) {
+      oversized.push({ path: relPath, lines: measured.lines });
+    }
+    const allowed = WIDTH_BUDGET_BACKLOG.get(relPath) ?? ASSISTANT_ASSET_MAX_LINE_CHARS;
+    if (measured.widest > allowed) {
+      wideLines.push({ path: relPath, widest: measured.widest, allowed });
     }
   }
 
   const incomplete = unreadable.length > 0 || scan.unscannable.length > 0;
-  const status: AssistantAssetBudgetStatus =
-    oversized.length > 0 ? "over_budget" : incomplete ? "incomplete" : "ok";
+  const overBudget = oversized.length > 0 || wideLines.length > 0;
+  const status: AssistantAssetBudgetStatus = overBudget
+    ? "over_budget"
+    : incomplete
+      ? "incomplete"
+      : "ok";
 
   return {
     status,
     assistantDir,
     maxLines: ASSISTANT_ASSET_MAX_LINES,
+    maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
     scanned,
     oversized,
+    wideLines,
     exempt,
     unreadable,
     unscannable: scan.unscannable,

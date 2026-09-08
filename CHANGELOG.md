@@ -20,6 +20,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A width ceiling beside the line ceiling for shipped assistant assets**
+  (#1181). A count of lines bounds reading cost only while a line is a roughly
+  constant unit of reading, and that stopped being true: the widest line in the
+  tree ran 9,104 characters against a median of 118, and cost the 800-line
+  budget one unit. A body at the ceiling stops shedding topics and starts
+  packing them, which the count cannot see.
+
+  Every `.qfai/assistant/**` asset is now held to **400 characters per line** as
+  well. The number is read off the tree — the 90th percentile is 413, so nine
+  files in ten already comply — and the two ceilings are read together, because
+  each permits what the other refuses.
+
+  Two shapes are not measured, both because the author cannot make them
+  narrower: a table row, which markdown gives no continuation, and a fenced
+  block, whose content is verbatim.
+
+  Twenty files predate the ceiling and carry a recorded width of their own,
+  which may only shrink: such a file may be edited freely below the width it
+  already had, and never past it. Nothing can join that list quietly — its size
+  is pinned.
+
+  `qfai doctor` reports both ceilings under `assets.lineBudget`, naming the
+  width each file was held to.
+
 - **`validate` reports a test case the ledger does not own, cited from a
   coverage row** (#1250). The `Level` a test case declares and the `Layer` of
   the ledger rows citing it were compared in one direction only: a `L1` / `L2`

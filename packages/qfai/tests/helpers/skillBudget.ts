@@ -18,6 +18,10 @@
  */
 export {
   ASSISTANT_ASSET_MAX_LINES as SKILL_MD_MAX_LINES,
+  ASSISTANT_ASSET_MAX_LINE_CHARS,
   LINE_BUDGET_EXEMPT,
+  WIDTH_BUDGET_BACKLOG,
+  WIDTH_BACKLOG_SIZE,
   countLines,
+  widestMeasurableLine,
 } from "../../src/core/doctor/assetLineBudget.js";
