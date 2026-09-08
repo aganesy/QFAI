@@ -26,6 +26,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   several rules already exists — the shipped copies under
   `packages/qfai/assets/init/root/.agents/rules/` carry none.
 
+### Fixed
+
+- **The document-schema lane now runs on Windows** (#1294). It launched the
+  `node_modules/.bin` shim, and the runnable shim there is `mdschema.cmd`. Node
+  has refused to spawn a `.cmd` or `.bat` without a shell since 18.20.2, so
+  `pnpm lint:mdschema` ended in `spawnSync ... EINVAL` before mdschema was
+  reached — taking `pnpm ci:lint` and `pnpm ci:gate` with it, and leaving an
+  adopter unable to reproduce the shipped workflow's lane locally.
+
+  The lane reads the entry point from the mdschema package's own `bin` field
+  and runs it with the Node already running. That is one file on every
+  platform, so the shim is out of the path rather than chosen more carefully.
+  `shell: true` was the other way to spawn a `.cmd`, and it would hand the
+  argument list — document paths — to the command interpreter.
+
 ## [1.11.0] - 2026-09-07
 
 ### Added
