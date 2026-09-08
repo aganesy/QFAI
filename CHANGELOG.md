@@ -41,6 +41,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An imported spec can state its surface, so a CLI-only project is no longer
+  read as visual** (#1295). A discussion pack states the classification in its
+  `01_Context.md`, and both `/qfai-sdd` Phase 0 and `/qfai-implement`'s visual
+  review read it there. A spec taken in through import-lite has no pack and had
+  nowhere to state it, so both fell to the same default and treated every such
+  spec as visual — which asks a CLI project for a root `DESIGN.md`, a design
+  contract and a prototype, none of which exist on that path.
+
+  The import-lite evidence template gains a `## Surface` section carrying
+  `primary_surface` and `secondary_surfaces`. That file is what a spec's
+  `Source` pair already names, so both skills reach the classification by
+  following a reference the spec carries.
+
+  Neither skill guesses when nothing states a surface: both stop and ask.
+  Assuming visual leaves a CLI project unable to proceed, and assuming `cli`
+  strips a visual one of its review.
+
+- **`qfai doctor` reads the path off an agent card's input bullet instead of
+  the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
+  file and then say what it is for. Read whole, that sentence became the
+  required input, and a card whose file is on disk was reported as missing one.
+
+  The path now ends at the first space, `(`, backtick or em dash; the rest is
+  prose. A bullet naming a glob or a `<placeholder>` is still skipped, because
+  neither is a file to find — and both are now judged on the path rather than on
+  the explanation beside it.
+
 - **`--spec` drops a sibling's stub the way it drops a sibling's broken
   reference** (#1264). `cross-spec-obligations.md` already said a file under the
   canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec whatever
@@ -107,6 +134,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qfai wrote is stale as before, and a deleted one is still an absence.
 
 ### Added
+
+- **`QFAI-CONTRACT-037` reports a UI contract marker nothing on the screen
+  carries** (#1263). The traceability between a UI contract and the code ran one
+  way: a test could only name a `data-qfai` marker the contract declares. That
+  catches a typo in a test and cannot catch a missing element, because an
+  element nobody built is also an element no test names. A contract could
+  declare an element, mark it `required: true`, and have it rendered by nothing,
+  with every profile green.
+
+  The rule reads the markers a UI contract writes literally and looks for each
+  one under the configured source directory. A contract that names no marker is
+  asked for nothing, so projects that never adopted the convention see no
+  change.
+
+  A marker counts as rendered when its text appears anywhere in the source, not
+  only where the attribute is written out. A framework that renders it through a
+  variable still writes the marker somewhere, and requiring the literal
+  attribute would report every marker in such a project at once.
+
+  It is a warning until 1.13.0, then an error.
 
 - **Every test suite is now accounted for as type-checked or knowingly not**
   (#1288). `tsconfig.tests.json#include` is an enumeration rather than a

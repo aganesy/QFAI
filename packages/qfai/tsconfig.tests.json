@@ -33,6 +33,7 @@
     "vitest.knobs.ts",
     "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
+    "tests/assets/agentCardRequiredInputs.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/assetOverflowHome.test.ts",
@@ -248,6 +249,7 @@
     "tests/validators/reOpenDecisionRecord.test.ts",
     "tests/validators/inertGateFirstContact.test.ts",
     "tests/validators/skillRolesRouting.test.ts",
+    "tests/validators/uiMarkerPresence.test.ts",
     "tests/validators/uix/competitiveRefs.test.ts",
     "tests/validators/validatorReachability.test.ts",
     "tests/assets/gateItemBudget.test.ts"
