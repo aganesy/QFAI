@@ -471,9 +471,9 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
 
   // A directory entry that is neither a regular file nor a symlink
   // cannot be reproduced by a byte copy, so replacing it would be an
-  // unbacked destruction. It used to be classified as a plain file and
-  // handed to `copyFile`, which surfaced as a raw `EISDIR` from the
-  // backup step rather than as a refusal naming what is in the way.
+  // unbacked destruction. Classifying it as a plain file and handing it to
+  // `copyFile` would surface a raw `EISDIR` from the backup step instead of a
+  // refusal naming what is in the way.
   it("with --force, refuses a directory destination instead of replacing it", async () => {
     const destAbs = path.join(root, ".qfai", "handoff.yaml");
     await mkdir(destAbs, { recursive: true });

@@ -1,5 +1,5 @@
 /**
- * The shared source reduction's own spec (#1089).
+ * The shared source reduction's own spec.
  *
  * Four guards used to hold four reductions of one rule, and all four were wrong
  * in different ways. These rows are the contract they now share, written as the

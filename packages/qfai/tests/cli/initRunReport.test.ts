@@ -142,7 +142,7 @@ describe("qfai init run report", { timeout: 60000 }, () => {
 
       const listed = pathsUnder(output, "  would write paths:");
       // POSIX-joined, because that is what the report writes. `path.join` here would
-      // build `\`-separated on Windows and never match a `/`-separated entry (#1176).
+      // build `\`-separated on Windows and never match a `/`-separated entry.
       const migrated = ".qfai/assistant/constitution/quality.md";
       expect(listed.filter((entry) => entry === migrated)).toHaveLength(1);
       expect(new Set(listed).size).toBe(listed.length);

@@ -82,7 +82,7 @@ function collectOrderedList(section: string): string {
 // `FORBIDDEN_LEGACY_PATTERNS` is a regex list, so it cannot be searched for in
 // prose; these are the concrete filenames that stand in for it. The coverage
 // case below fails if the validator grows a pattern with no representative
-// here, which is what previously let the sweep fall behind the SSOT.
+// here, which is what would let the sweep fall behind the SSOT.
 const FORBIDDEN_SIDECAR_NAMES = [
   "10_implementation_strategy.md",
   "11_design_taste_interview.md",
@@ -120,7 +120,7 @@ describe("discussion skill template integration", () => {
     expect(files).toContain("40_screen_contracts.md");
     expect(files).toContain("50_review_input_bundle.md");
     // Brand-level inputs moved to root DESIGN.md; rubric/calibration
-    // sidecars previously removed.
+    // sidecars are removed.
     expect(files).not.toContain("33_exploration_rubric.md");
     expect(files).not.toContain("34_evaluator_calibration.md");
   });

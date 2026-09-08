@@ -140,10 +140,9 @@ async function seedPrototypingJson(
 ): Promise<void> {
   const dir = path.join(root, ".qfai/evidence/prototyping");
   await mkdir(dir, { recursive: true });
-  // Seed the cycle-0 freeze fields so the cycle ≥ 1 drift gate + the
-  // license-catalog drift gate (13th-wave Fix, codex r3265953324 /
-  // r3265947252) treat the fixture as a valid post-cycle-0 record.
-  // Tests that exercise legacy / missing-field paths override with
+  // Seed the cycle-0 freeze fields so the cycle ≥ 1 drift gate and the
+  // license-catalog drift gate treat the fixture as a valid post-cycle-0
+  // record. Tests that exercise legacy / missing-field paths override with
   // `seedRawPrototypingJson`.
   const body: Record<string, unknown> = {
     specsCovered: ["0001"],
@@ -475,11 +474,11 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   // on a non-converged loop whose `iterations.length === 10` must surface
   // exit 65 (max-iterations) directly without routing through the
   // expectedNextCycle === 10 cycle-mismatch path. AC anchor: AC-0012-0038
-  // (10-cycle iteration budget — terminator index === 9; 19th-wave
-  // clarification per codex r3270052195 MINOR moved this clause here from
-  // AC-0012-0044). Pre-fix flow risk: the expectedNextCycle gate computed
+  // (10-cycle iteration budget — terminator index === 9).
+  //
+  // Flow risk: the expectedNextCycle gate computes
   // `expectedNextCycle = recordedIterations.length = 10`, `input.cycle = 9`
-  // → mismatch → exit 2. Implementation correctness relies on `shouldStop`
+  // → mismatch → exit 2. Correctness relies on `shouldStop`
   // (which inspects last.index >= MAX_ITERATION_INDEX) running BEFORE the
   // expectedNextCycle gate; this regression test pins that ordering plus
   // the stderr discriminator so any future refactor that flips the gate
@@ -550,15 +549,13 @@ describe("runPrototypingIterate input validation", () => {
     expect(exit).toBe(2);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0355 (was: "returns 2 when no UI-bearing spec is found")
+  // QFAI:SPEC-0012:TC-0012-0355
   it("TC-0012-0355 (TDD-0379): zero UI-bearing specs → exit 0 deterministic no-op", async () => {
-    // Per spec-0012 TDD-0379 / TC-0012-0355: the new contract makes
-    // zero-UI-bearing a deterministic no-op (exit 0) rather than the
-    // legacy `exit 2 — no primary spec found`. The skill never invokes
-    // iterate on a non-UI project, but if it does the command must
-    // emit a stderr explainer and return 0 without creating any
-    // iter-NN/ directory. This test supersedes the pre-Wave-3
-    // "returns 2 when no UI-bearing spec is found" assertion.
+    // Per spec-0012 TDD-0379 / TC-0012-0355: zero-UI-bearing is a
+    // deterministic no-op (exit 0), not `exit 2 — no primary spec found`.
+    // The skill never invokes iterate on a non-UI project, but if it does
+    // the command must emit a stderr explainer and return 0 without
+    // creating any iter-NN/ directory.
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
 
@@ -1675,7 +1672,7 @@ describe("runPrototypingIterate autonomous run (TC-0012-0375)", () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 // TC-0012-0388 / TC-0012-0389 — cycle 0 writes frozen SSOT fields
-// (Wave 3 TDD-0381 / TDD-0382)
+// (TDD-0381 / TDD-0382)
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
@@ -1700,7 +1697,7 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
     const body = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as { frozenSpecsCovered: string[] };
-    // 8th-wave Fix 2: single-spec freeze. The legacy `specsCovered`
+    // Single-spec freeze. The legacy `specsCovered`
     // and the cycle-0 `frozenSpecsCovered` both record the single
     // primary spec (smallest-id UI-bearing match — here spec-0001)
     // until the per-spec iter-NN/spec-NNNN/<screen>.review.json layout
@@ -1738,7 +1735,7 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 // TC-0012-0371 — license hard-stop exit 66
-// (Wave 3 TDD-0383)
+// (TDD-0383)
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => {
@@ -1748,9 +1745,8 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedMinimalProject(root);
     // Cycle 0 establishes the frozen catalog. Cycle 1 is where the
     // license-verify gate runs against `imageSources[]` recorded on
-    // prototyping.json (the Wave 3 wiring reads from the proto json
-    // directly; future waves replace this with the prototype-handoff
-    // extraction path).
+    // prototyping.json (the current wiring reads from the proto json
+    // directly, rather than through the prototype-handoff extraction path).
     await seedPrototypingJson(root, [
       {
         index: 0,
@@ -1910,13 +1906,13 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
 
 // ─────────────────────────────────────────────────────────────────────────
 // TC-0012-0385 — mid-run spec-set drift detection
-// (Wave 3 TDD-0385)
+// (TDD-0385)
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () => {
   // QFAI:SPEC-0012:TC-0012-0385
   //
-  // 8th-wave Fix 2: with single-spec freeze, the cycle-≥1 drift check
+  // With single-spec freeze, the cycle-≥1 drift check
   // compares the frozen primary against the LIVE primary (smallest-id
   // UI-bearing spec the resolver picks today). A newly-planted
   // secondary spec with a LARGER id does NOT shift the primary, so
@@ -2007,8 +2003,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift (TC-0012-0385)", () =>
 });
 
 describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySpecId", () => {
-  // Regression for the Wave-3 section-0 pre-check: the new
-  // `resolveAllUiBearingSpecs`-driven no-op gate must not short-circuit
+  // The `resolveAllUiBearingSpecs`-driven no-op gate must not short-circuit
   // a run when the operator has explicitly pinned a primary spec via
   // `qfai.config.yaml#prototyping.primarySpecId` and that spec exists
   // on disk — even when the spec's 01_Spec.md lacks the
@@ -2088,8 +2083,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySp
     }
   });
 
-  // Regression for codex review r3264507311 (MAJOR): pre-fix the
-  // cycle-0 primarySpecId-bypass left `earlyUiBearing = []`, which
+  // A cycle-0 primarySpecId-bypass would leave `earlyUiBearing = []`, which
   // then wrote `frozenSpecsCovered: []` at cycle 0 and reliably
   // tripped the cycle ≥1 spec-set drift check (`removed: [primary]`,
   // exit 2). The fix expands `earlyUiBearing` to the resolved primary
@@ -2250,8 +2244,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
     }
   });
 
-  // Regression for 4th-late-review-wave r3264653396 (MAJOR): symmetric
-  // cycle-1 drift gap for the title-marker bypass. TC-0012-0397
+  // Symmetric cycle-1 drift gap for the title-marker bypass. TC-0012-0397
   // (primarySpecId) pins the cycle-1 path for the primarySpecId
   // bypass — TC-0012-0398 above only covers cycle 0 for the
   // title-marker bypass, leaving a symmetric gap. Without this guard,
@@ -2338,18 +2331,16 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
   });
 });
 
-// Regression for codex review r3264765749 (P2) + 8th-wave Fix 2:
-// pre-fix the title-marker + primarySpecId bypass branch in
-// `evaluateZeroUiBearingPrecheck` was reached ONLY when the strict scan
-// returned `[]`. The 6th wave widened it to always compose the union
-// so the cycle-0 frozen set captured every UI-bearing surface. The
-// 8th wave then narrowed the FROZEN write back to single-spec because
-// the certify per-(spec × screen) gate now hard-fails any multi-spec
-// frozen set on the flat-iter layout (the per-spec layout migration
-// is still deferred), so freezing a multi-spec union rendered every
-// normal multi-spec run uncertifiable. The union is still computed for
-// the bypass / drift-check signals; we just persist the single primary
-// spec into `frozenSpecsCovered`.
+// With single-spec freeze: the title-marker + primarySpecId bypass branch in
+// `evaluateZeroUiBearingPrecheck` would be reached ONLY when the strict scan
+// returned `[]`. Composing the union always instead means the cycle-0 frozen
+// set captures every UI-bearing surface. The FROZEN write is narrowed back to
+// single-spec, though, because the certify per-(spec × screen) gate
+// hard-fails any multi-spec frozen set on the flat-iter layout (the per-spec
+// layout migration is still deferred); freezing a multi-spec union would
+// render every normal multi-spec run uncertifiable. The union is still
+// computed for the bypass / drift-check signals — only the single primary
+// spec is persisted into `frozenSpecsCovered`.
 describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolver)", () => {
   // QFAI:SPEC-0012:TC-0012-0404
   it("freezes the single primary spec into frozenSpecsCovered (single-spec freeze; multi-spec union is bypass-only)", async () => {
@@ -2414,14 +2405,14 @@ describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolve
     const proto = JSON.parse(await readFile(protoJsonPath, "utf-8")) as {
       frozenSpecsCovered?: unknown;
     };
-    // 8th-wave Fix 2: single-spec freeze. The primary resolver honours
+    // Single-spec freeze. The primary resolver honours
     // the `prototyping.primarySpecId` config pin, so frozen is
     // ["0002"] (not the multi-spec union ["0002","0003"]).
     expect(proto.frozenSpecsCovered).toEqual(["0002"]);
   });
 });
 
-// Regression for codex review r3265060281 (P2): a project that declares
+// Regression for a project that declares
 // its UI surface ONLY via `.qfai/contracts/ui/<spec-id>.yaml` (no
 // `surface_type: ui-bearing` frontmatter, no `# … Prototyping …` title
 // marker, no `prototyping.primarySpecId` config pin) clears the cycle-0
@@ -2497,7 +2488,7 @@ describe("runPrototypingIterate cycle-0 — contract-only project resolves prima
   });
 });
 
-// 8th-wave Fix 7: direct unit test for `resolveSurfaceUnion` — the
+// Direct unit test for `resolveSurfaceUnion` — the
 // helper extracted from `evaluateZeroUiBearingPrecheck` that composes
 // the deterministic UNION of every UI-bearing surface signal (strict
 // frontmatter / contract fallback / legacy title marker /
@@ -2644,23 +2635,21 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
     expect(await resolveSurfaceUnion(root, config)).toEqual(["0007"]);
   });
 
-  // codex r3271656121 (P1, chatgpt-codex-connector): pin the
-  // `specDirExists` absolute-path fix — when `qfai.config.yaml` carries
-  // an absolute `paths.specsDir` override, the primarySpecId-on-disk
-  // probe must resolve to that absolute path (not concatenate root +
-  // absolute, which `path.join` does). Pre-fix the probe missed the
-  // real spec dir for explicit-primary workflows using absolute
-  // overrides — `resolveSurfaceUnion` then failed to include the pin,
-  // and `prototyping iterate --cycle 0` hit the zero-UI short-circuit.
+  // When `qfai.config.yaml` carries an absolute `paths.specsDir` override,
+  // the primarySpecId-on-disk probe must resolve to that absolute path (not
+  // concatenate root + absolute, which `path.join` does) — otherwise the
+  // probe misses the real spec dir for explicit-primary workflows using
+  // absolute overrides, `resolveSurfaceUnion` fails to include the pin, and
+  // `prototyping iterate --cycle 0` hits the zero-UI short-circuit.
   // Fixture seeds `specsDir` outside `root` and asserts the union
   // includes the pinned spec.
-  it("resolves primarySpecId via absolute `paths.specsDir` override (codex r3271656121)", async () => {
+  it("resolves primarySpecId via absolute `paths.specsDir` override", async () => {
     const root = await newTempDir();
-    // Stage an absolute specsDir OUTSIDE root so any pre-fix join
-    // (root + absolute) would visibly miss the on-disk spec.
+    // Stage an absolute specsDir OUTSIDE root so a `root + absolute` join
+    // would visibly miss the on-disk spec.
     const externalSpecsDir = await newTempDir();
     await seedSimpleConfig(root, ["prototyping:", '  primarySpecId: "0042"']);
-    // codex r3271708081 (MINOR, requirements-reviewer, 46th-wave): the
+    // The
     // `specsDir` override is performed via the string-replace below —
     // the canonical key is `paths.specsDir`, and there is no
     // `specsDirOverride` field in the qfai.config schema. The earlier
@@ -2694,13 +2683,12 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
   });
 });
 
-// 10th-wave Fix B (architecture-reviewer r3265257258 + r3265260466,
-// MAJOR): mid-loop drift detection scope. The 8th-wave single-spec
-// freeze narrowed `frozenSpecsCovered` to the resolved primary, but
-// it ALSO dead-branched the cycle ≥1 drift detector by feeding it the
-// same single-spec live snapshot. This restores the multi-spec drift
-// gate by resolving the live UI-bearing UNION (via `resolveSurfaceUnion`)
-// at cycle ≥1 and comparing against the cycle-0 frozen primary set.
+// Mid-loop drift detection scope. Single-spec freeze narrows
+// `frozenSpecsCovered` to the resolved primary, but that alone would
+// dead-branch the cycle ≥1 drift detector by feeding it the same
+// single-spec live snapshot. The multi-spec drift gate instead resolves the
+// live UI-bearing UNION (via `resolveSurfaceUnion`) at cycle ≥1 and compares
+// it against the cycle-0 frozen primary set.
 // When a new UI-bearing spec is planted mid-loop with a LARGER id than
 // the frozen primary (so the primary resolver still returns the frozen
 // id and the primary-mismatch arm at L1196 stays silent), the drift
@@ -2765,7 +2753,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
   });
 });
 
-// 11th-wave Fix (codex r3265480688, MAJOR/P1): the cycle ≥ 1 drift gate
+// The cycle ≥ 1 drift gate
 // must compare the live UNION against the cycle-0 UNION (apples-to-apples),
 // not against the single-spec `frozenSpecsCovered`. Without this fix, any
 // project whose baseline already carries ≥ 2 UI-bearing specs would
@@ -2835,24 +2823,21 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — multi-UI-bearing b
   });
 });
 
-// 18th late-review wave (codex r3270058882, MAJOR — qa-gatekeeper).
-// Regression coverage for the 13th-wave legacy-record hard-fail
-// (codex r3265953324, MAJOR/P1): when `prototyping.json` lacks the
-// `frozenSurfaceUnion` field (pre-12th-wave records), the cycle ≥ 1
-// drift gate now hard-fails with exit 2 + a re-seed instruction
-// rather than silently falling back to `frozenSpecsCovered` (which
-// would re-enable the pre-11th-wave MAJOR/P1 false-positive).
+// Regression coverage: when `prototyping.json` lacks the
+// `frozenSurfaceUnion` field (a legacy record), the cycle ≥ 1
+// drift gate must hard-fail with exit 2 and a re-seed instruction
+// rather than silently fall back to `frozenSpecsCovered`, which
+// would re-open a false positive.
 // QFAI:SPEC-0012:TC-0012-0420 — AC-Ref: AC-0012-0045.
 describe("runPrototypingIterate cycle >= 1 — legacy record without frozenSurfaceUnion hard-fails (TC-0012-0420)", () => {
   it("exits 2 with re-seed instruction and does NOT silent-fall-back to frozenSpecsCovered", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    // Plant a legacy pre-12th-wave prototyping.json: it has
+    // Plant a legacy prototyping.json: it has
     // `frozenSpecsCovered` (single-spec primary) but NO
-    // `frozenSurfaceUnion` field. The pre-13th-wave drift gate would
-    // have fallen back to `frozenSpecsCovered` here, comparing it
-    // against the live multi-spec UNION and false-positive firing —
-    // exactly the MAJOR/P1 bug TC-0012-0415 closes.
+    // `frozenSurfaceUnion` field. Falling back to `frozenSpecsCovered`
+    // here would compare it against the live multi-spec UNION and
+    // false-positive fire — the bug TC-0012-0415 closes.
     await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
@@ -2886,19 +2871,16 @@ describe("runPrototypingIterate cycle >= 1 — legacy record without frozenSurfa
       expect(exit).toBe(2);
       const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
       expect(stderr).toMatch(/frozenSurfaceUnion is missing or malformed/);
-      // 20th-wave (codex r3270142020 MAJOR): assertion previously pinned
-      // the internal wave label `legacy pre-12th-wave record` directly.
-      // The operator-facing diagnostic was scrubbed of internal labels
-      // and now reads "the gate does not fall back to the single-spec
-      // `frozenSpecsCovered`". The contract this TC actually pins is
-      // the bug-mode prevention (no silent fallback), so we now assert
-      // on the observable behavioural statement instead of the wave
-      // label.
+      // The assertion targets the operator-facing diagnostic text — "the
+      // gate does not fall back to the single-spec `frozenSpecsCovered`" —
+      // rather than an internal label, because what this TC pins is the
+      // bug-mode prevention (no silent fallback), an observable
+      // behavioural statement rather than an implementation detail.
       expect(stderr).toMatch(/does not fall back to the single-spec/);
       expect(stderr).toMatch(/`--cycle 0/);
       // CRITICAL: the diagnostic MUST NOT mention falling back to
-      // `frozenSpecsCovered` or actually doing so silently — the
-      // legacy-fallback was the very bug closed by 13th-wave Fix.
+      // `frozenSpecsCovered` or actually doing so silently — a silent
+      // legacy fallback is exactly the bug this test prevents.
       expect(stderr).not.toMatch(/spec-set drift detected/);
     } finally {
       errorSpy.mockRestore();
@@ -2906,9 +2888,8 @@ describe("runPrototypingIterate cycle >= 1 — legacy record without frozenSurfa
   });
 });
 
-// 18th late-review wave (codex r3270057892, MAJOR — qa-gatekeeper).
-// Regression coverage for the 13th-wave license-catalog drift gate
-// (codex r3265947252, P2): when `prototyping.json#frozenLicenseCatalog`
+// Regression coverage for the license-catalog drift gate:
+// when `prototyping.json#frozenLicenseCatalog`
 // drifts from the in-memory SSOT `DEFAULT_LICENSE_CATALOG` at cycle ≥ 1,
 // iterate exits 2 with a re-seed instruction rather than silently
 // using the edited catalog as the verifier authority.
@@ -2998,11 +2979,11 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
       const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
-      // 20th-wave (codex r3270136775 MINOR): the contract this case
+      // The contract this case
       // pins is that `licenseCatalogsEqual` treats byte-permutation as
       // set-equality and the gate does NOT fire. Asserting on the
-      // negative diagnostic + the non-2 exit code scopes us to the
-      // catalog drift gate without false-positive-failing when an
+      // negative diagnostic + the non-2 exit code scopes the assertion to
+      // the catalog drift gate without false-positive-failing when an
       // unrelated future gate happens to short-circuit this fixture.
       expect(stderr).not.toMatch(/drifted from the cycle-0 frozen license catalog/);
       expect(exit).not.toBe(2);
@@ -3012,11 +2993,10 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
   });
 });
 
-// 10th-wave Fix H (codex r3265260665, P2): malformed `imageSources[]`
-// entries are no longer silently dropped. Pre-fix a typo such as
-// `licence:` (British spelling) reduced the array to `[]`, skipping
-// the exit-66 license gate entirely. Post-fix the iterate command
-// returns exit 2 with stderr naming the offending index + field.
+// Malformed `imageSources[]` entries must not be silently dropped. A typo
+// such as `licence:` (British spelling) would otherwise reduce the array to
+// `[]`, skipping the exit-66 license gate entirely. Instead the iterate
+// command returns exit 2 with stderr naming the offending index + field.
 // QFAI:SPEC-0012:TC-0012-0413
 describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop (TC-0012-0413)", () => {
   it("exits 2 and names the offending index/field when an imageSources entry is missing 'license'", async () => {
@@ -3118,10 +3098,8 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
   });
 });
 
-// 17th late-review wave (codex r3270050284, MAJOR — regression coverage for
-// the 15th-wave + 17th-wave hard-stop class) + (codex r3270050451, MINOR —
-// fresh-project diagnostic discrimination). The cycle-0 zero-UI-bearing
-// precheck short-circuit is no longer reachable at cycle ≥ 1; the wrapper
+// Regression coverage for the hard-stop class: the cycle-0 zero-UI-bearing
+// precheck short-circuit must not be reachable at cycle ≥ 1; the wrapper
 // distinguishes (a) genuine "UI markers removed mid-loop" against a
 // non-empty cycle-0 frozen union → exit 2 with `frozen scope is no longer
 // reachable`, vs (b) fresh project / missing frozenSurfaceUnion → exit 2
@@ -3214,7 +3192,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
   it("cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
-    // Legacy pre-12th-wave record without `frozenSurfaceUnion`.
+    // Legacy record without `frozenSurfaceUnion`.
     await mkdir(path.join(root, ".qfai/evidence/prototyping"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
@@ -3242,8 +3220,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
   });
 });
 
-// 29th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector).
-// Regression: a converged / max-budget loop must NOT bypass the
+// A converged / max-budget loop must NOT bypass the
 // cycle ≥ 1 lock-drift gates. Pre-fix `shouldStop()` ran first and a
 // converged loop with mid-loop UI marker removal silently returned
 // exit 64 instead of the documented exit-2 lock-drift. The drift
@@ -3332,8 +3309,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
   });
 
   it("returns exit 2 (frozenSurfaceUnion missing) on a converged loop with the union field absent — drift-class (e) also wins over shouldStop", async () => {
-    // codex r3270897052 (MINOR, qa-gatekeeper, 34th-wave companion):
-    // the wave-30 reorder moved TWO drift classes before `shouldStop`:
+    // TWO drift classes run before `shouldStop`:
     // (1) `frozenUnion === null` (frozenSurfaceUnion missing/malformed)
     //     and (2) `drift.drifted` (live UNION ≠ frozen UNION). The
     // first `it` block above pins (2). Without this second `it` a
@@ -3406,7 +3382,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
 });
 
 // ---------------------------------------------------------------------------
-// Sealed-loop guard (#246). Only the converged state seals a loop. The
+// Sealed-loop guard. Only the converged state seals a loop. The
 // retryable terminal stop reasons — `license-verify-fail` and `input-error` —
 // name a condition the operator is told to fix and re-run on the same cycle,
 // and refusing those made the retry impossible: `acceptedIterationIndex` keeps
