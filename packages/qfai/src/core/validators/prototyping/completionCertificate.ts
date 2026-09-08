@@ -32,12 +32,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function isCompletionClaimed(root: string, _config: QfaiConfig): Promise<boolean> {
-  // Use the canonical prototyping.json path SSOT. Previously this
-  // derived an evidence directory from `config.paths.specsDir`'s parent
-  // and read `.qfai/evidence/prototyping.json` (legacy), which silently
-  // diverged from the iterate / certify path
-  // `.qfai/evidence/prototyping/prototyping.json` and made
-  // QFAI-PROT-335 / 336 dead code in the new UX-loop pipeline.
+  // Use the canonical prototyping.json path SSOT. Deriving an evidence
+  // directory from `config.paths.specsDir`'s parent and reading the legacy
+  // `.qfai/evidence/prototyping.json` would silently diverge from the
+  // iterate / certify path `.qfai/evidence/prototyping/prototyping.json`
+  // and make QFAI-PROT-335 / 336 dead code in the UX-loop pipeline.
   let raw: string;
   try {
     raw = await readFile(path.join(root, PROTOTYPING_JSON_REL), "utf-8");
@@ -90,9 +89,6 @@ export async function validateCompletionCertificateIssues(
   // the certificate may legitimately be older than the latest evidence
   // (e.g. they ran `certify` once, then continued iterating). We only flag
   // a digest mismatch when the user explicitly claims completion.
-  //
-  // Reviewer comment from PR #201 (Copilot, MAJOR): align JSDoc with
-  // behaviour — "QFAI-PROT-336 fires only when completion is claimed".
   if (!claimed) return [];
   const result = await checkCompletionCertificate(root);
   if (result.ok) return [];

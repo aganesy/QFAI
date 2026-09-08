@@ -1,10 +1,9 @@
 /**
  * Reading a file out of a tree QFAI did not create.
  *
- * Three call sites needed the same posture and each had its own partial version of it, which is how
- * PR #794's review found the same defect three times — `[02]` and `[33]` in the doctor's drift
- * reader, `[05]` in the retired-workflow prune. Each did `lstat`-then-`readFile`, or no check and an
- * unbounded `readFile`, against a path the adopter controls. A FIFO, a device, a multi-gigabyte file,
+ * Three call sites need the same posture, and a partial version at each of them is the same defect
+ * three times over: `lstat`-then-`readFile`, or no check and an unbounded `readFile`, against a
+ * path the adopter controls. A FIFO, a device, a multi-gigabyte file,
  * or a symlink to any of them hangs the process or exhausts its memory, and `lstat(path)` followed by
  * `readFile(path)` resolves the name TWICE, so what was inspected is not necessarily what is read.
  *

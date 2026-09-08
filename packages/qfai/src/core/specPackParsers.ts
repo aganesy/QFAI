@@ -538,7 +538,7 @@ export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
 
 /**
  * Parse every markdown table in the input. Returned in document order.
- * Used by Triage validators (PR #206 review LWri) so a multi-table
+ * Used by Triage validators so a multi-table
  * Triage section does not let later tables silently bypass
  * QFAI-TRIAGE-002..006.
  */
@@ -575,12 +575,11 @@ export function parseAllMarkdownTables(text: string): MarkdownTable[] {
  * {@link splitMarkdownRow}, and the only correct way to put author-supplied
  * text into a table.
  *
- * It lives here, beside its decoder, and is exported. It used to be a private
- * function in `sddTriage.ts` whose sole caller was the Triage renderer, so a
- * skill that instructs an author to write command output into a ledger cell had
- * no encoder to point at — and a grep of the entire shipped
- * `.qfai/assistant/` tree for `escape`, `backslash` or `vertical bar` returned
- * nothing. Two ways to break a table, no published rule for either.
+ * It lives here, beside its decoder, and is exported: a skill that instructs
+ * an author to write command output into a ledger cell needs an encoder to
+ * point at, and a grep of the entire shipped `.qfai/assistant/` tree for
+ * `escape`, `backslash` or `vertical bar` finds no other one. Two ways to
+ * break a table, no published rule for either.
  *
  * Exactly two rules, matching the decoder below:
  *

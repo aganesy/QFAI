@@ -33,11 +33,11 @@ import { maskJsNonCode } from "./validators/jsSourceMask.js";
 // the optional half cannot consume `-\d`, the short form succeeds, and `\b` is
 // satisfied because `-` is not a word character. The scanner then reported a TC
 // id four digits short, unregistered BY CONSTRUCTION because the truncation
-// invented it (#1123).
+// invented it.
 //
 // This paragraph deliberately spells no complete short-form id. Naming one
-// would make the comment itself an annotation — the other half of what #1123
-// reports, an explanation of the hazard re-triggering it. The illustration
+// would make the comment itself an annotation: an explanation of the hazard
+// that re-triggers it. The illustration
 // above is safe for the reason the fix turns on: it continues with `-`.
 //
 // Both lengths stay legal: `TC-0001` and `TC-0001-0002` are accepted by
@@ -75,7 +75,7 @@ const JS_TEST_EXTENSIONS: ReadonlySet<string> = new Set([
  * scanner could not tell a reference from an id a fixture holds as DATA — a
  * generator suite, or a self-validating deferral ledger quoting the id it is
  * about — and reported `QFAI-ATDD-101` / `-102` (`error`) against a file that
- * never claimed the reference (#1141).
+ * never claimed the reference.
  *
  * `maskJsNonCode` replaces one character for one, so a match offset and the
  * line a finding names are unchanged.
@@ -1056,9 +1056,9 @@ export function isOutsideAtddObligation(level: string | undefined): boolean {
  * Where a TC's annotation legally lives, or `null` when the declared `Level`
  * owes no ATDD annotation at all.
  *
- * A TC that declares an API-level obligation routes to `tests/api/**`, which
- * was previously both uncounted and reported as forbidden: two errors from one
- * correct placement.
+ * A TC that declares an API-level obligation routes to `tests/api/**`. Leaving
+ * that directory uncounted while reporting it as forbidden would be two errors
+ * from one correct placement.
  */
 function resolveTcHomeKind(
   tcLevels: Map<string, Map<string, string>>,
@@ -1788,12 +1788,11 @@ const LOCALISED_GHERKIN_RE = /^\s*#\s*language\s*:\s*(?!en\s*$)[A-Za-z]/im;
  *
  * ## One tokenizer, and what the options are for
  *
- * This used to be a second lexer, local to this file, and #1154 is what that
- * cost: the two disagreed about whether a `/` after a control statement's
- * header opens a regex, and only this one knew that it does. Composing two
- * green branches produced a real miss — a file holding a live `it(` reported as
- * an annotation-only carrier — because the other reader had the older rule.
- * The rule now lives in {@link maskJsNonCode} and there is one of it.
+ * Two lexers for the same job drift: one knows that a `/` after a control
+ * statement's header opens a regex and the other does not, and composing two
+ * green branches then produces a real miss — a file holding a live `it(`
+ * reported as an annotation-only carrier. The rule lives in
+ * {@link maskJsNonCode} and there is one of it.
  *
  * The options are not a compromise between the two: they are the language
  * dimension the merge had to keep. This scan walks whatever a project puts

@@ -83,7 +83,7 @@ export async function validateSddDesignContractReadiness(
  * visuals, research summaries and review artifacts — none of them DESIGN.md.
  * `QFAI-DCON-033` reached a run only through the sdd or prototyping readiness
  * gates, so a malformed file surfaced a review round later, under a different
- * skill, with the earlier gate having passed (#1098).
+ * skill, with the earlier gate having passed.
  *
  * The parse half only. The readiness validator also compares DESIGN.md against
  * its lock, requires UI contracts and rejects premature ones — all of which
