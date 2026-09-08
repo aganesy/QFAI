@@ -410,7 +410,7 @@ function collectAllowedColors(dm: DesignMd): Set<string> {
   return lowercaseValues(Object.values(dm.visual.colors));
 }
 
-// Strip `box-shadow:...;` declarations from a CSS region before
+// Strip `box-shadow: ...;` declarations from a CSS region before
 // literal color scanning. Without this, color literals inside a
 // registered shadow value would either (a) be flagged spuriously
 // when scanColors recognized the rgba/hex inside the shadow value
@@ -504,7 +504,7 @@ function narrowToBody(html: string): string {
 // Primary signatures (either alone is sufficient):
 //   - `/* tailwindcss v` or `/*! tailwindcss v` — Tailwind banner
 //     comment (CDN + standalone CLI both emit this).
-//   - `*,::before,::after` followed by `box-sizing` — the
+//   - `*, ::before, ::after` followed by `box-sizing` — the
 //     preflight universal-reset selector (signature unique to the
 //     preflight block).
 //
@@ -512,7 +512,7 @@ function narrowToBody(html: string): string {
 // NOT a primary signature anymore. An operator who copy-pastes a
 // single `--tw-ring-offset-width: 0px;` declaration into a head
 // stylesheet would otherwise mask color literals in the same block.
-// The `--tw-*:...` declaration family is still stripped from the
+// The `--tw-*: ...` declaration family is still stripped from the
 // scan surface by `SHADOW_DECL_STRIP_RE` so legitimate
 // Tailwind runtime values still don't surface as DESIGN.md drift —
 // the loss of `--tw-` as a block-level classifier is therefore
