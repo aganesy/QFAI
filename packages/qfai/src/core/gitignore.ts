@@ -176,6 +176,18 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // inside the ignored stage-evidence file, that reasoning never reaches a
   // commit and "unjustified" becomes unfalsifiable for every later reader.
   "!.qfai/evidence/coverage-depth-*.md",
+  // `Phase: Skeleton` records here: the smoke run that proved the program
+  // starts, the `qa-gatekeeper` verdict on it, and the enumerated `Skeleton
+  // debt` whose rows a Change Request asks for, all defined in
+  // `.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md#evidence`.
+  // That phase requires the debt to be written back *in the skeleton's own
+  // commit*, and every later invocation decides whether an entrypoint is
+  // already proven by reading this file. Left ignored, both requirements hold
+  // only inside the working directory that happened to run the phase: no other
+  // clone, CI run or author can see the pass or the debt it owes. And it is not
+  // regenerable — re-running the phase re-runs the smoke script; it does not
+  // recover which shortcuts were taken or which CR was raised for them.
+  "!.qfai/evidence/skeleton.md",
   // The install-provenance record. It is the only thing that tells a FRESH CLONE
   // which shipped files QFAI wrote and which the adopter deliberately deleted, so
   // it has to survive in version control — and it sits directly under `.qfai/`,

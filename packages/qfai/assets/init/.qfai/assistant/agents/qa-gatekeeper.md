@@ -396,18 +396,67 @@ unavailable**, PASS or REVISE on that. A missing `DR-*`, or one that names no
 unavailability, is still REVISE — this is a third form of evidence, not an
 exemption from having any.
 
+**`assistant/agents/qa-gatekeeper.md` is the contract;
+`assistant/manifest/agent-catalog.yml` carries a copy.** `npx qfai init --force`
+refreshes `assistant/agents/**` and deliberately leaves `assistant/manifest/**`
+alone, so an upgraded project can hold a catalog block that predates a phase the
+shipped skills already route to. Where the two disagree, or where the catalog
+describes no gate for a phase this role is routed to, read the agent file. A
+catalog block older than the routing table is a stale copy, never a narrower
+contract — reading it as one puts a mandatory blocking role into the Stop
+condition on a phase it is required to pass.
+
+Both paths are written out because this passage is itself copied into the
+catalog and into the per-tool agent profiles. "This file" resolves to whichever
+copy the reader has open, which is the one question the passage exists to
+settle.
+
+**The Skeleton observation gate reads a different set.**
+`/qfai-implement`'s `Phase: Skeleton` runs **before the first ledger row is
+selected** (`.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md`),
+so there is no row under review and no per-item RED/GREEN evidence to open.
+Requiring them would put this role straight into the Stop condition below on
+every run of a phase where it is mandatory and blocking, leaving a `PASS` that
+cannot legally be given. At that gate the inputs are:
+
+- `.qfai/evidence/skeleton.md`, the section of the entrypoint under judgement —
+  `Skeleton verdict`, `Skeleton entrypoint`, `Skeleton US`, `Skeleton command`,
+  `Skeleton script` (a path and a SHA-256 **per committed file the run
+  executes**, the entry script first), `Skeleton result` (its output **and exit
+  status**), `Skeleton debt`, `Skeleton cycles`;
+- every committed file that manifest names, not only the entry script
+  `catalog/tech.md` points at, and `catalog/structure.md` for the declared
+  entrypoints.
+
+Judge exactly the phase's exit criterion, and nothing the rows own: the recorded
+run started the entrypoint, reached the named boot obligation's surface over the
+transport that entrypoint declares, and exited 0; the command recorded is the
+committed script rather than an independent copy of it; every hash in the
+manifest matches the file on disk, so a delegate edited to a no-op is a REVISE
+rather than a PASS on the entry script alone; the two bounds hold —
+no predicate was written that a row owns, and every shortcut is enumerated in
+`Skeleton debt` with the row that carries it or the `CR-*` that requests it.
+PASS or REVISE on that. Correctness of the boot obligation is **not** in scope:
+it belongs to the row that owns it and is taken there as an ordinary RED, so a
+sentinel answer is not a finding here. A verdict of `not applicable` routes
+nobody and needs no judgement.
+
 ## Deliverables
 
 - Gate decision (PASS / REVISE) with rationale
 - Hard gate status and required fixes
 - Evidence summary and unresolved quality gaps
+- At the Skeleton gate: the verdict recorded in that entrypoint's
+  `Skeleton gatekeeper` field
 
 ## Stop conditions
 
 - Required evidence, governing specs, or target artifacts are missing — judged
   against what the invoking phase requires, per the note above the last three
   inputs. At a RED/GREEN observation that is the row's own evidence; at a
-  completion gate it is all of them.
+  completion gate it is all of them; at the Skeleton gate it is
+  `.qfai/evidence/skeleton.md` and the committed smoke script, and **no ledger
+  row or per-item evidence is required or expected**.
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
 
