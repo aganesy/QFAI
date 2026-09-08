@@ -182,6 +182,10 @@ Authored forms caught:
   `DESIGN.md` tokens — but the gate verifies that in the iter's html
   rather than assuming it, so an iter with a missing, incomplete, or
   overwritten `boxShadow` map still has its aliases flagged.
+- Tailwind's own runtime custom properties (`--tw-ring-offset-width`,
+  `--tw-shadow`, …) never count as drift on their own — the gate
+  strips them before scanning. A literal `box-shadow:` value or an
+  `rgba(...)` slot next to one of them is still caught.
 
 ### Safelisted CSS-wide keywords
 
