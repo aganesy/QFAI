@@ -67,24 +67,22 @@ const MANIFEST = path.join(SCHEMA_ROOT, "manifest.yml");
 /** The default base for the ratchet, overridable with `--base`. */
 const DEFAULT_BASE = "origin/main";
 
-/**
- * The file names a `node_modules/.bin` entry can have, most runnable first.
- *
- * On Windows a package manager writes three shims for one binary: `mdschema`
- * (a shell script for Git Bash), `mdschema.cmd` and `mdschema.ps1`. Only the
- * `.cmd` is executable by `spawnSync` without a shell — the extensionless one
- * exists, so a bare `existsSync` finds it and then the spawn fails with EFTYPE
- * or a console window. Hence the extensionless name is tried LAST there, and
- * first everywhere else.
- */
-const BIN_CANDIDATES =
-  process.platform === "win32"
-    ? ["mdschema.cmd", "mdschema.exe", "mdschema.bat", "mdschema"]
-    : ["mdschema", "mdschema.cmd", "mdschema.exe", "mdschema.bat"];
+/** The npm package that provides the `mdschema` command. */
+const MDSCHEMA_PACKAGE = "@jackchuka/mdschema";
 
 /**
- * The `mdschema` binary, found by walking up from the tree being checked and
- * then from this file.
+ * The mdschema command line, as the program to run and its leading arguments.
+ *
+ * The package's own JS entry point is launched with the running Node, not the
+ * `node_modules/.bin` shim. A shim is a different file per platform, and on
+ * Windows the runnable one is `mdschema.cmd`: since 18.20.2 Node refuses to
+ * spawn a `.cmd` or `.bat` without a shell and returns `EINVAL`, so every
+ * Windows run of this lane failed before mdschema was reached. Passing
+ * `shell: true` instead would hand the argument list to the command
+ * interpreter, and these arguments are document paths.
+ *
+ * The entry point is read from the package's `bin` field rather than assumed,
+ * so a release that moves the file is followed rather than guessed at.
  *
  * Two starting points because there are two installations: this repository has
  * it as a root devDependency, and an adopter has it under whichever
@@ -93,18 +91,17 @@ const BIN_CANDIDATES =
  * caller turns into a usage error rather than a silent pass.
  *
  * @param {string} from Directory to start the first walk from.
- * @returns {string | null}
+ * @returns {{ command: string, args: string[] } | null}
  */
-export function findMdschemaBin(from) {
+export function findMdschemaCommand(from) {
   for (const start of [from, SCRIPT_DIR]) {
     let dir = path.resolve(start);
     for (;;) {
-      const binDir = path.join(dir, "node_modules", ".bin");
-      for (const name of BIN_CANDIDATES) {
-        const candidate = path.join(binDir, name);
-        if (existsSync(candidate)) {
-          return candidate;
-        }
+      const entry = mdschemaEntryPoint(
+        path.join(dir, "node_modules", ...MDSCHEMA_PACKAGE.split("/")),
+      );
+      if (entry !== null) {
+        return { command: process.execPath, args: [entry] };
       }
       const parent = path.dirname(dir);
       if (parent === dir) {
@@ -114,6 +111,36 @@ export function findMdschemaBin(from) {
     }
   }
   return null;
+}
+
+/**
+ * The JS file `packageDir` declares for the `mdschema` command, or `null`.
+ *
+ * `bin` is a string when the package ships one command and an object keyed by
+ * command name when it ships several; both spellings are read. A declared file
+ * that is not on disk returns `null` so the walk continues to the next
+ * installation rather than stopping at a broken one.
+ *
+ * @param {string} packageDir
+ * @returns {string | null}
+ */
+function mdschemaEntryPoint(packageDir) {
+  const manifest = path.join(packageDir, "package.json");
+  if (!existsSync(manifest)) {
+    return null;
+  }
+  let bin;
+  try {
+    bin = JSON.parse(readFileSync(manifest, "utf-8")).bin;
+  } catch {
+    return null;
+  }
+  const relative = typeof bin === "string" ? bin : bin?.mdschema;
+  if (typeof relative !== "string" || relative.length === 0) {
+    return null;
+  }
+  const entry = path.resolve(packageDir, relative);
+  return existsSync(entry) ? entry : null;
 }
 
 /**
@@ -300,17 +327,21 @@ function changedFiles(base, root) {
 /**
  * Runs `mdschema check` for one manifest entry.
  *
- * @param {string} bin Absolute path to the mdschema binary.
+ * @param {{ command: string, args: string[] }} mdschema The command line to run.
  * @param {string} schemaPath Absolute path to the schema.
  * @param {string[]} files Tree-relative document paths.
  * @param {string} root The tree they are relative to.
  * @returns {{ ok: boolean, output: string, spawnFailed: boolean }}
  */
-function runMdschema(bin, schemaPath, files, root) {
-  const result = spawnSync(bin, ["check", "--schema", schemaPath, ...files], {
-    cwd: root,
-    encoding: "utf-8",
-  });
+function runMdschema(mdschema, schemaPath, files, root) {
+  const result = spawnSync(
+    mdschema.command,
+    [...mdschema.args, "check", "--schema", schemaPath, ...files],
+    {
+      cwd: root,
+      encoding: "utf-8",
+    },
+  );
   if (result.error !== undefined || result.status === null) {
     return {
       ok: false,
@@ -379,10 +410,10 @@ export function main() {
     console.error(`check-mdschema: manifest not found at ${MANIFEST}`);
     return 2;
   }
-  const mdschemaBin = findMdschemaBin(root);
-  if (mdschemaBin === null) {
+  const mdschema = findMdschemaCommand(root);
+  if (mdschema === null) {
     console.error(
-      "check-mdschema: the mdschema binary was not found. Install @jackchuka/mdschema (this repository carries it as a devDependency; an adopter's CI installs it in the lane).",
+      "check-mdschema: no mdschema entry point was found. Install @jackchuka/mdschema (this repository carries it as a devDependency; an adopter's CI installs it in the lane).",
     );
     return 2;
   }
@@ -444,7 +475,7 @@ export function main() {
       continue;
     }
     checked += matched.length;
-    const result = runMdschema(mdschemaBin, schemaPath, matched, root);
+    const result = runMdschema(mdschema, schemaPath, matched, root);
     if (result.spawnFailed) {
       console.error(`check-mdschema: could not run mdschema: ${result.output}`);
       return 2;
