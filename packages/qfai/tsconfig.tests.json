@@ -243,6 +243,7 @@
     "tests/unit/core/doctor/assetLineBudget.test.ts",
     "tests/unit/core/doctor/cleanRunLogs.test.ts",
     "tests/unit/core/doctor/cleanRunLogsPartialFailure.test.ts",
+    "tests/unit/core/doctor/integrationLinks.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/promotionReleaseNotes.test.ts",

@@ -6,6 +6,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai doctor` reports the broken integration wrappers `validate` fails on**
+  (#1258). A wrapper under `.claude/`, `.codex/`, `.agents/` or `.github/` that
+  does not resolve is how a skill fails to load at all, and `validate` reports
+  it as an error. `doctor` reported the same tree healthy, so the gate said the
+  skills were not applied, the diagnostic said the environment was fine, and the
+  operator was left to conclude the error must be real.
+
+  Both were answering honestly. `skills.integrity` compares content, and the
+  canonical tree behind a broken wrapper is untouched; `QFAI-LINK-001` asks
+  whether the OS will follow the link, which is the question that decides
+  whether the skill loads. Only one of them was wired to anything.
+
+  `integration.links` asks the second question, through the same code the gate
+  uses, so the two cannot drift apart. It reports at `error` for the reason the
+  gate does, and names `qfai init --force`, which rewrites the wrappers.
+
+  The finding also names the cause it is most often seen from: on Windows,
+  `git worktree add` writes these as file symlinks where the main checkout has
+  directory symlinks, and nothing else about the tree is wrong — which is why a
+  content check finds it healthy.
+
 - **Test files inherit the declared `testTimeout` instead of overriding it**
   (#1246). Ninety-three ceilings across 50 files sat below the project's 120 s
   default, and nothing distinguished one somebody measured from one nobody had

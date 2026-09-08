@@ -37,7 +37,9 @@ import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
+import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
@@ -335,6 +337,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     }
   }
 
+  addCheck(checks, await buildIntegrationLinksCheck(root));
   addCheck(checks, await buildAgentFrontmatterCheck(root));
   addCheck(checks, await buildAssetLineBudgetCheck(root));
 
@@ -1155,6 +1158,69 @@ async function inspectSkillsIntegrity(
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether the integration wrappers a skill is loaded through actually resolve.
+ *
+ * This asks the same question `validate` asks, through the same code, because
+ * the two answering differently is the defect. `skills.integrity` compares
+ * CONTENT and passes on a tree whose wrappers are broken: the targets resolve
+ * for git and for a content hash, while the OS will not follow the link. Both
+ * were right, and only one of them was wired to anything, so `doctor` reported
+ * a healthy tree while `validate` failed it — and `doctor` is where an operator
+ * looks. Reading it as "the environment is fine, so the error must be real" is
+ * the reading that costs the most time.
+ *
+ * A wrapper that was never created is not damage and is not reported here; the
+ * validator draws that line, and this check inherits it by not drawing its own.
+ */
+async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
+  const title = "Integration wrappers (.claude / .codex / .agents / .github)";
+  let issues: Issue[];
+  try {
+    issues = await validateIntegrationSurface(root);
+  } catch {
+    // The surface could not be walked at all. Reported rather than thrown: a
+    // check that exists to describe a damaged tree must survive one.
+    return {
+      id: "integration.links",
+      severity: "warning",
+      title,
+      message:
+        "Could not inspect the integration wrappers (reading a directory or a link failed). " +
+        "Check the permissions and the path.",
+      details: {},
+    };
+  }
+
+  const broken = issues.filter((issue) => issue.code === "QFAI-LINK-001");
+  if (broken.length === 0) {
+    return {
+      id: "integration.links",
+      severity: "ok",
+      title,
+      message: "Every integration wrapper resolves to the skill or agent it names",
+      details: {},
+    };
+  }
+
+  const paths = broken.flatMap((issue) => issue.refs ?? []);
+  return {
+    id: "integration.links",
+    // `error`, matching the validator: a skill is loaded through this path and
+    // nothing else, so a broken wrapper is not advisory — those skills are not
+    // running at all.
+    severity: "error",
+    title,
+    message:
+      `${String(paths.length || broken.length)} integration wrapper(s) do not resolve, so the ` +
+      "skills and agents behind them are not being loaded. Run qfai init --force to rewrite them.",
+    details: {
+      wrappers: paths,
+      nextActions: ["Run qfai init --force to rewrite the integration wrappers"],
+    },
+  };
 }
 
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
