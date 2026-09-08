@@ -14,7 +14,7 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
-// #232 moved the full allow/deny conditions into
+// The full allow/deny conditions live in
 // `references/parallelization-policy.md` (progressive disclosure: SKILL.md has
 // a 400-line budget). The policy is still shipped, so these obligations read
 // the skill and its reference together.
@@ -43,8 +43,8 @@ describe("independent slices dispatched in parallel with integration verify", ()
   it("defines allow conditions for parallel dispatch", async () => {
     const c = await loadContent();
     expect(c).toMatch(/allow.*condition|allow.*parallel/i);
-    // Restated as a concurrent write conflict rather than the existence of a
-    // shared thing (#232): a DI container every item constructs afresh must
+    // Stated as a concurrent write conflict rather than the existence of a
+    // shared thing: a DI container every item constructs afresh must
     // not veto the policy.
     expect(c).toMatch(/write.*same source module|concurrent write conflict/i);
     expect(c).toMatch(/write.*same test module|independent.*test.*file|no shared.*test/i);

@@ -7,7 +7,7 @@
  * that declares a `review_profile` has `mandatory_agents` and `blocking_agents`
  * that are a superset of the profile's `always_required` set declared in
  * `.qfai/assistant/manifest/review-profiles.yml`. Prevents silent drift
- * between the two SSOT files flagged during PR #196 review.
+ * between the two SSOT files.
  *
  * Exit codes:
  *   0 — all profiles consistent

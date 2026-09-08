@@ -8,9 +8,9 @@
  * cases hold the pair to a round trip, and hold the reader to refusing a line
  * it cannot fully parse.
  *
- * Refusing matters because the split used to be prose beside the line, derived
- * by nothing. It went stale at every re-pin and a reader found it each time. A
- * reader that accepted half a line would put the same gap back: the total would
+ * Refusing matters because prose beside the line, derived by nothing, goes
+ * stale at every re-pin and a reader has to find it each time. A reader that
+ * accepted half a line would put the same gap back: the total would
  * be checked and the split would not.
  */
 import path from "node:path";

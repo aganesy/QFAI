@@ -332,8 +332,7 @@ describe("the prototyping-skill group is measured against what each profile emit
   // The reason is one call site. `validatePrototypingSkill` is reached from
   // `runFullValidators` alone — `runPrototypingValidators` does not call it,
   // despite the group's name — so `--profile prototyping` naming
-  // `UIX-VAL-SKILL-*` as unevaluated is correct, and review read it as the
-  // opposite (#1230). Move that call into the prototyping composition and the
+  // `UIX-VAL-SKILL-*` as unevaluated is correct. Move that call into the prototyping composition and the
   // notice starts denying a gate the run just evaluated, with nothing to catch
   // it: the family table would still be right, and the group's absence from
   // `PROTOTYPING_GATE_GROUPS` would be the only thing wrong.

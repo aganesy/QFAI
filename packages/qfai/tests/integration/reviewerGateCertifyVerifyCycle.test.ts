@@ -76,8 +76,8 @@ describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     const f = findings[0];
     // `info`, not `error`. `qfai prototyping certify` is what refuses a
     // wrong-phase verdict (exit 2); at error severity a repo-wide `validate`
-    // made `/qfai-verify`'s Completion Contract unsatisfiable outside Work
-    // Order H, because a full-profile run has no honest scope to write (#1097).
+    // would make `/qfai-verify`'s Completion Contract unsatisfiable outside Work
+    // Order H, because a full-profile run has no honest scope to write.
     expect(f?.severity).toBe("info");
     // 3-part justification: (1) certify path, (2) offending validator-output
     // profile, (3) option-B contract clause violated.

@@ -784,12 +784,12 @@ describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the require
   });
 });
 
-// Review finding [28] on PR #794 moved the required status context from `build` to the aggregate
-// verdict, because `build` declares no `needs` at all and requiring it let every test lane fail with
-// the merge condition satisfied. Property 2 rejected any condition on a declared job, so the verdict
+// The required status context is the aggregate verdict, not `build`: `build` declares no `needs`
+// at all, so requiring it directly would let every test lane fail with the merge condition
+// satisfied. Property 2 rejects any condition on a declared job, so the verdict
 // — which must carry `if: always()` to render a result when its dependencies are skipped — could
 // never hold it. The exception is narrow, and these two rows are what keeps it narrow.
-// Review finding [N1] on PR #794. A `paths` filter stops the workflow starting on some pull
+// A `paths` filter stops the workflow starting on some pull
 // requests; a `types` filter stops it starting on some EVENTS of a pull request that did start it.
 // `types: [opened]` is the shape that bites: the context is created on the first push and never
 // again, so every later push leaves branch protection pending against a SHA with no required check.

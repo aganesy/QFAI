@@ -26,15 +26,15 @@ export const shippedWorkflowsDir = (): string => path.join(shippedGithubDir(), "
  * so a fixture cannot be missed when it grows — three staged that tree independently and two of
  * them reddened the first time it did.
  *
- * The manifests, because `run: pnpm ci:build-verify` is a REFERENCE and review finding [36]
- * measured that pinning the reference pins the pointer rather than the work: the digest resolves
- * the script out of the manifest. The root one holds the `ci:` family; the package one is where a
+ * The manifests, because `run: pnpm ci:build-verify` is a REFERENCE: pinning the reference only
+ * pins the pointer, not the work, so the digest has to resolve the script out of the manifest
+ * too. The root one holds the `ci:` family; the package one is where a
  * `pnpm -C packages/qfai <script>` invocation lands.
  *
- * The script directories, because review finding [42] measured the same thing one hop further
- * out: replacing `check-no-internal-version-leakage.sh`'s body with `exit 0` left the step's
- * name, its `run` and its digest unchanged. The digest hashes the contents of the files a
- * verification reaches inside those two roots, so a staged tree without them is one where every
+ * The script directories, because the same gap exists one hop further out: replacing
+ * `check-no-internal-version-leakage.sh`'s body with `exit 0` would leave the step's name, its
+ * `run` and its digest unchanged unless the digest also hashes the contents of the files a
+ * verification reaches inside those two roots. A staged tree without them is one where every
  * declared body reads as running an absent guard.
  */
 export const DIGESTED_LANE_INPUTS_REL: readonly string[] = [
