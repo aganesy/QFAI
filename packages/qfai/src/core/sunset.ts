@@ -71,6 +71,12 @@ export const SUNSETS = {
  * 4. where the code can fire on rows that are already terminal, document how a
  *    terminal row is meant to satisfy it — otherwise the only remedy is an
  *    out-of-lifecycle edit.
+ *
+ * The code an entry governs is named in the prose above it, and nowhere else:
+ * a second spelling as a string field would read, to every guard that scans a
+ * module for code literals, as this file emitting every one of them. The doc is
+ * what `scripts/promotion-preflight.mjs` follows to ask, of a finding a run is
+ * holding, whether the window that keeps it a warning is about to close.
  */
 export const RULE_PROMOTIONS = {
   /**

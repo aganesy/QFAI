@@ -82,8 +82,10 @@ async function seedSpec(root: string): Promise<void> {
     ["# 06 Test cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
     "utf-8",
   );
-  // `validateSddDesignContractReadiness` only speaks when a root DESIGN.md
-  // exists, and the unreplaced `qfai init` seed is what QFAI-DCON-034 names.
+  // This fixture wants `QFAI-DCON-034`, which reads an unreplaced sample, so
+  // it writes one. (The same validator also reports a DESIGN.md that is
+  // missing, under a different code and only where the project has UI
+  // contracts.)
   await writeFile(
     path.join(root, "DESIGN.md"),
     ["# DESIGN", "", "Brand: qfai", "", "## Tone", "", "qfai sample brand.", ""].join("\n"),
