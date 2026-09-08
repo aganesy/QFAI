@@ -525,9 +525,15 @@ Phase 2b: record it in this stage's report and carry on; it does not become
 writable here. Writing them
 here is not the alternative either: that would make this stage a second writer
 of a single-writer artifact. What the completion gate actually requires is
-`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean, which the
-annotations discharge and which this stage does own
-(`../../qfai-implement/SKILL.md`, spec completion conditions).
+`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean **of this spec's own
+findings**, which the annotations discharge and which this stage does own
+(`../../qfai-implement/SKILL.md`, spec completion conditions). `QFAI-ATDD-115`
+is attributed to `.qfai/contracts/**` and survives `--spec`, so a sibling
+spec's uncovered contract keeps a scoped run at exit 1 while owing this stage
+nothing. That run is complete once its own findings are clean and the residue
+is recorded and attributed — `PASS with cross-spec obligations`. Do not read a
+non-zero exit here as work to do: editing a sibling's contract or its tests is
+the one thing this stage must not do.
 
 ## A project without the `red` phase
 

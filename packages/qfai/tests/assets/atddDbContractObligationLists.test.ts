@@ -290,6 +290,12 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
       "`CON-DB-*` is row-producing nowhere, so a spec with no ATDD-owned rows can still owe every one of its active DB contracts an `Integration` test",
     );
     expect(provenance).toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean");
+    // Clean of THIS spec's findings. The rule is repo-attributed and survives
+    // `--spec`, so a sibling's uncovered contract holds a scoped run at exit 1
+    // while owing this stage nothing — and an implementer reading a non-zero
+    // exit as work to do edits the one thing this stage must not touch.
+    expect(provenance).toContain("clean **of this spec's own findings**");
+    expect(provenance).toContain("PASS with cross-spec obligations");
     expect(provenance).not.toContain("The US and CON-API coverage obligations");
     expect(provenance).not.toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` clean");
   });
@@ -301,7 +307,7 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     // and a gate that still fires.
     const atdd = flat(await read(tree));
     expect(atdd).toContain(
-      "defer an out-of-slice contract with `-- x-qfai-status: planned` on a line of its own, never appended after a statement",
+      "defer an out-of-slice contract **this spec owns** with `-- x-qfai-status: planned` on a line of its own, never appended after a statement",
     );
   });
 
