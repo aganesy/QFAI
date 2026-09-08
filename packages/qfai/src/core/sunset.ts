@@ -376,6 +376,14 @@ export const RULE_PROMOTIONS = {
    */
   assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-AUTOPILOT-001` — a `qfai-*` SKILL.md whose hard-required bucket
+   * names the retired `companyName`, or an entry the skill does not declare.
+   * Installed skills are only refreshed by an explicit `qfai init --force`, so
+   * every project that installed before the entry was retired still lists it
+   * and would meet this at once.
+   */
+  autopilotHardRequiredDrift: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the
    * evidence file its `Layer` owns. Nothing read the cell before, so every

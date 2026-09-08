@@ -880,3 +880,19 @@ No `UPDATE:REMOVE` row exists in this change. Verified: the vitest `compatibilit
 - `spec-0017` is repository-internal by construction: `.github/workflows/**`, root `scripts/**` and `packages/qfai/scripts/**` are **not** in `package.json#files`, so nothing it owns is distributed.
 - The shipped rows (REQ-0014..0021, spec-0003) do touch the distributed surface. Two guards bind them: a conventional pin-version comment trailer is forbidden in shipped files by the comment-blind internal-version regex in `check-no-internal-version-leakage.sh`, and `verify-pack.mjs` permits only `workflows` under the shipped `.github/`, so composite-action templates cannot ship.
 - REQ-0023's mapping document is a sibling of `.qfai/assistant/catalog/test-layers.md`, which is SSOT-synced. It MUST be authored under `packages/qfai/assets/init/.qfai/assistant/catalog/` — editing the root `.qfai/` copy directly would be reverted by `pnpm sync:ssot` and fail `git diff --exit-code .qfai/` in `ci:gate`.
+
+## 2026-08-22 — UPDATE:MODIFY — drop `companyName` from the hard-required autopilot bucket
+
+- Operation: UPDATE:MODIFY (policy-only; no CAP / REQ / spec ID added or renumbered)
+- Subject:
+  - `_policies/08_Decisions.md` DR-0269 Statement — hard-required bucket enumeration
+  - `_policies/06_Glossary.md` "autopilot policy" row — same enumeration
+- Change: hard-required narrows from three entries — `companyName` / brand intent / `primarySpecId` — to two: brand intent / `primarySpecId`.
+- Rationale: hard-required is the bucket for inputs that cannot be defaulted and must be asked for before work starts, so each entry is one guaranteed prompt. Nothing in the distributed tree reads `companyName` — no template slot, no artifact section, no `references/*.md` — so it spent the section's own 0-1 prompt budget unconditionally and returned nothing.
+- Cascade:
+  - `spec-0015/01_Spec.md` / `03_Acceptance-Criteria.md` / `04_Business-Rules.md` — the same enumeration. The spec-local IDs of the affected AC and BR are recorded in `spec-0015/09_delta.md`, because `_policies` does not reference spec-local IDs
+  - The bullet is removed from `## Default Autopilot Policy` in seven `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md` files, and mirrored to the root `.qfai/` tree
+  - The JSDoc enumeration in `packages/qfai/src/core/validators/autopilotPolicy.ts` follows
+- Approval: not approval-gated. `_policies/11_Slice-Policy.md` §Triage puts only CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE behind AskUserQuestion, so an UPDATE:MODIFY does not raise the template.
+- ID stability: DR-0269 keeps its number and only its statement is revised. The AC and BR on the spec-0015 side keep their IDs as well; `spec-0015/09_delta.md` has the detail.
+- Distributed surface: prose only, in `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md`. No internal ID or version marker is added or removed.
