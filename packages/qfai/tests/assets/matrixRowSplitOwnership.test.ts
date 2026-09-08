@@ -517,19 +517,37 @@ describe.each(TREES)(
   (tree) => {
     const RESET = "assistant/skills/qfai-implement/references/change-request-reset.md";
 
-    it("parks only the rows the ledger lets it park", async () => {
+    it("parks only the rows this step parks, and says whose restriction that is", async () => {
       // A blocked set routinely names rows past `todo` — a post-RED scope gap is
-      // raised from `red` or later, a checkpoint regression from `done` — and
-      // `todo -> blocked` is the only inbound edge, so "write it on each row"
-      // asked for an illegal move on exactly the rows this PR routes here.
+      // raised from `red` or later, a checkpoint regression from `done` — so
+      // "write it on each row" reached rows the step does not park.
       const drift = await read(tree, DRIFT);
       expect(drift).toContain("on **each row of the blocked set that is at `todo`**");
-      expect(drift).toContain("**Only a `todo` row is parked, because only a `todo` row can be.**");
-      // The two shapes it cannot park have answers rather than silence.
+      expect(drift).toContain("**Only a `todo` row is parked**");
+      // The restriction belongs to this step, not to the transition set. The
+      // ledger admits `any active status -> blocked` and defines `Blocked-By`
+      // to record the departure status, so a reader who follows the citation
+      // must not find a rule whose stated reason the citation contradicts.
+      expect(drift).toContain("the restriction is this step's rather than the ledger's");
+      expect(drift).toContain("`any active status -> blocked` is a legal edge");
+      // The two shapes it does not park have answers rather than silence.
       expect(drift).toContain("**A row another open `CR-*` already parked**");
       expect(drift).toContain("takes this CR's ID **appended** to `Blocked-By`");
       expect(drift).toContain("**A row past `todo`, and a `done` row**");
       expect(drift).toContain("**left exactly as they are**");
+    });
+
+    it("gives the same account of the restriction in both documents", async () => {
+      // Two documents state the rule and one citation backs both. Stating it
+      // twice is what let one of them keep a reason the other had dropped.
+      const reset = await read(tree, RESET);
+      expect(reset).toContain("`any active status -> blocked` is a legal edge");
+      expect(reset).toContain("that step parks only `todo` rows");
+      // The claim that made the pair contradict its own citation.
+      for (const document of [await read(tree, DRIFT), reset]) {
+        expect(document).not.toContain("only inbound edge");
+        expect(document).not.toContain("only a `todo` row can be");
+      }
     });
 
     it("keeps an unparkable row out of selection while its CR is open", async () => {
