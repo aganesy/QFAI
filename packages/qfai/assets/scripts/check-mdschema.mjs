@@ -22,15 +22,47 @@
  * contract is enforced over is a policy decision, taken here rather than by
  * weakening the schemas until the current tree happens to pass:
  *
- *   --scope changed  (default) documents this branch touched, against the merge
- *                    base. A ratchet: new and edited documents must conform,
- *                    untouched legacy documents are left for their own change.
+ *   --scope changed  (default) documents this branch touched, judged against
+ *                    their own state at the merge base. A ratchet: a new
+ *                    document must conform and an edited one must not get
+ *                    worse, while untouched legacy documents are left for their
+ *                    own change.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
  * A degraded base (no merge base, a shallow clone, a failed diff) FAILS OPEN to
  * `all`, because the alternative — silently checking nothing and reporting
  * green — claims a result the run never established.
+ *
+ * ── What `--scope changed` holds a branch to ──────────────────────────────
+ *
+ * Selecting the touched documents is not enough on its own. A document that
+ * predates the schema fails whole, so editing one line of it would report every
+ * violation it already had as this branch's — and the migration the flag exists
+ * to allow could never land incrementally, because the first edit to a legacy
+ * document would have to carry all of it.
+ *
+ * So each touched document is judged against its own state at the merge base:
+ *
+ *   | at the merge base    | at the head | verdict                          |
+ *   | -------------------- | ----------- | -------------------------------- |
+ *   | not there            | fails       | this branch's — fail             |
+ *   | conforms             | fails       | this branch's — fail             |
+ *   | fails                | fails       | pre-existing — report, not fail  |
+ *
+ * A document checked against a different contract at the base — one the
+ * `when:` predicates routed elsewhere, or one that opted out — counts as not
+ * there. It has never been held to this schema, so this is the first run that
+ * could ask.
+ *
+ * **The unit is the document, not the violation.** A branch that adds an
+ * eleventh violation to a document that already had ten still passes: the
+ * document failed before and fails now. Deciding that would mean reading which
+ * violations `mdschema` printed, and `mdschema` has no machine-readable output
+ * — `--format json` and `--format sarif` both render the same text — so a
+ * violation-level ratchet would couple this file to one release's wording, and
+ * a reflowed message would silently report every violation as new. The file
+ * ratchet uses only the exit status, which the tool does promise.
  *
  * A pack outlives the thing it specifies: a spec that was deleted or superseded
  * is kept as a record of why it went away, and that record cannot carry a
@@ -64,12 +96,28 @@
  * beside this file, so `--root` moves the documents and never the contract.
  *
  * Exit codes:
- *   0  every checked document conforms (or none was in scope)
- *   1  at least one document violates its schema
+ *   0  no document in scope carries a violation this run is responsible for
+ *   1  at least one document does
  *   2  usage error, missing schema/manifest, or an mdschema binary that will not run
+ *
+ * Under `--scope all` and `--scope files` those two say what they always have:
+ * every checked document conforms, or one does not. Under `--scope changed`
+ * responsibility is what the table above decides, so a `0` can carry documents
+ * that still fail — the ones that failed at the merge base too. The run says so
+ * on stdout, names them, and counts them in its closing line, which is why the
+ * exit code alone is not the whole answer there.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -434,6 +482,152 @@ function runMdschema(mdschema, schemaPath, files, root) {
   };
 }
 
+/**
+ * The merge base of `base` and `HEAD`, or `null` when git cannot answer.
+ *
+ * The ratchet asks what a document looked like on the tree this branch left,
+ * which is the merge base — not the base ref's tip. Those differ as soon as the
+ * base moves, and comparing against the tip would call a document this branch
+ * never touched its own the moment somebody else edited it.
+ *
+ * @param {string} base
+ * @param {string} root
+ * @returns {string | null}
+ */
+function mergeBaseRev(base, root) {
+  const found = spawnSync("git", ["merge-base", base, "HEAD"], { cwd: root, encoding: "utf-8" });
+  if (found.status !== 0) {
+    return null;
+  }
+  const rev = found.stdout.trim();
+  return rev === "" ? null : rev;
+}
+
+/**
+ * One document's text at `rev`, or `null` when that revision does not hold it.
+ *
+ * @param {string} rev
+ * @param {string} file Tree-relative, forward-slashed.
+ * @param {string} root
+ * @returns {string | null}
+ */
+function fileAtRev(rev, file, root) {
+  const shown = spawnSync("git", ["show", `${rev}:${file}`], { cwd: root, encoding: "utf-8" });
+  return shown.status === 0 ? shown.stdout : null;
+}
+
+/**
+ * The manifest entry that would claim this content, or `null` for none.
+ *
+ * The same partition the run itself applies: a predicated entry claims the
+ * documents its `when:` matches, and an unpredicated entry on the same pattern
+ * takes what is left. Asked of the BASE text, because content is what routes a
+ * document — a spec that was live at the base and is retired at the head is two
+ * shapes at one path, and holding the base text to the head's contract would
+ * excuse a genuinely broken document as pre-existing.
+ *
+ * @param {{ id: string, pattern: string, when?: string }[]} entries
+ * @param {string} file
+ * @param {string} text
+ * @param {string} specsDir
+ * @returns {string | null}
+ */
+function routeOf(entries, file, text, specsDir) {
+  const matches = (entry) =>
+    patternToRegExp(entry.pattern.replace("{specsDir}", specsDir)).test(file);
+  for (const entry of entries) {
+    if (entry.when !== undefined && matches(entry) && new RegExp(entry.when, "mu").test(text)) {
+      return entry.id;
+    }
+  }
+  for (const entry of entries) {
+    if (entry.when === undefined && matches(entry)) {
+      return entry.id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Runs the schema over one document's text, held in a scratch directory.
+ *
+ * `null` when mdschema could not be run at all, which the caller treats as an
+ * unanswered question rather than as a pass.
+ *
+ * The scratch directory is outside the checked tree on purpose: this script
+ * runs in an adopter's repository, and a lane that writes into the tree it is
+ * checking is one that can change its own answer.
+ *
+ * @returns {{ ok: boolean, output: string } | null}
+ */
+function checkText(mdschema, schemaPath, file, text) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-base-"));
+  try {
+    const target = path.join(dir, path.basename(file));
+    writeFileSync(target, text, "utf-8");
+    const result = runMdschema(mdschema, schemaPath, [target], dir);
+    return result.spawnFailed ? null : { ok: result.ok, output: result.output };
+  } catch {
+    return null;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Whether this branch owes the violations in `file`, rather than inheriting
+ * them from the merge base.
+ *
+ * Fails closed at every step it cannot answer: a base text that will not run
+ * is this branch's obligation, because the alternative is excusing a document
+ * on the strength of a question nobody managed to ask.
+ *
+ * @returns {boolean}
+ */
+function ownsViolations(context, entryId, file) {
+  const before = fileAtRev(context.baseRev, file, context.root);
+  if (before === null || optsOutOfSchema(before)) {
+    // Added by this branch, or not held to any schema until now. Either way
+    // this is the first run that could have reported it.
+    return true;
+  }
+  if (routeOf(context.entries, file, before, context.specsDir) !== entryId) {
+    return true;
+  }
+  const verdict = checkText(context.mdschema, context.schemaPath, file, before);
+  return verdict === null ? true : verdict.ok;
+}
+
+/**
+ * Splits an entry's failing documents into the ones this branch owes and the
+ * ones it inherited. `null` when mdschema stopped running part-way.
+ *
+ * Per-file runs are what make a per-file verdict possible, and they are paid
+ * for only after the batch has already failed.
+ *
+ * @returns {{ owned: {file: string, output: string}[], inherited: {file: string, output: string}[] } | null}
+ */
+function splitByOwnership(context, entryId, files) {
+  const owned = [];
+  const inherited = [];
+  for (const file of files) {
+    const single = runMdschema(context.mdschema, context.schemaPath, [file], context.root);
+    if (single.spawnFailed) {
+      return null;
+    }
+    if (single.ok) {
+      continue;
+    }
+    const row = { file, output: single.output };
+    if (ownsViolations(context, entryId, file)) {
+      owned.push(row);
+    } else {
+      inherited.push(row);
+    }
+  }
+  return { owned, inherited };
+}
+
 export function main() {
   const argv = process.argv.slice(2);
   let scope = "changed";
@@ -533,9 +727,16 @@ export function main() {
 
   const restrictSet = restrictTo === null ? null : new Set(restrictTo);
 
+  // The ratchet runs only where the scope is what a branch touched. Under
+  // `all` and `files` every violation is the run's subject by definition —
+  // `all` IS the migration view — and a base to measure against would only
+  // hide the thing being asked for.
+  const baseRev = scope === "changed" && restrictSet !== null ? mergeBaseRev(base, root) : null;
+
   let violations = 0;
   let checked = 0;
   let ignored = 0;
+  let inheritedFiles = 0;
   const perEntry = [];
 
   // A file is read at most once per run, however many entries consider it: the
@@ -589,11 +790,44 @@ export function main() {
       console.error(`check-mdschema: could not run mdschema: ${result.output}`);
       return 2;
     }
-    perEntry.push({ id: entry.id, files: matched.length, ignored: optedOut.length, ok: result.ok });
-    if (!result.ok) {
+    const row = { id: entry.id, files: matched.length, ignored: optedOut.length, inherited: 0 };
+    if (result.ok || baseRev === null) {
+      perEntry.push({ ...row, ok: result.ok });
+      if (!result.ok) {
+        violations++;
+        console.error(`\n── ${entry.id} (${entry.schema}) ──`);
+        console.error(result.output);
+      }
+      continue;
+    }
+
+    const split = splitByOwnership(
+      { mdschema, schemaPath, root, entries, specsDir, baseRev },
+      entry.id,
+      matched,
+    );
+    if (split === null) {
+      console.error("check-mdschema: could not run mdschema over a single document");
+      return 2;
+    }
+    inheritedFiles += split.inherited.length;
+    perEntry.push({ ...row, ok: split.owned.length === 0, inherited: split.inherited.length });
+    if (split.inherited.length > 0) {
+      // On stdout, and not counted: these documents failed at the merge base
+      // too, so they are the migration's backlog rather than this branch's
+      // work. Printed rather than dropped — a document nobody is told about is
+      // one nobody migrates.
+      console.log(`\n── ${entry.id} (${entry.schema}) — pre-existing, not this branch's ──`);
+      for (const held of split.inherited) {
+        console.log(held.output);
+      }
+    }
+    if (split.owned.length > 0) {
       violations++;
       console.error(`\n── ${entry.id} (${entry.schema}) ──`);
-      console.error(result.output);
+      for (const owed of split.owned) {
+        console.error(owed.output);
+      }
     }
   }
 
@@ -602,7 +836,8 @@ export function main() {
     for (const row of perEntry) {
       const state = row.files === 0 ? "  -  " : row.ok ? " PASS" : " FAIL";
       const opted = row.ignored > 0 ? `, ${row.ignored} ignored` : "";
-      console.log(`  ${state}  ${row.id} (${row.files} file(s)${opted})`);
+      const held = row.inherited > 0 ? `, ${row.inherited} pre-existing` : "";
+      console.log(`  ${state}  ${row.id} (${row.files} file(s)${opted}${held})`);
     }
   }
 
@@ -614,15 +849,27 @@ export function main() {
         : `documents changed against ${base}`;
 
   const opted = ignored > 0 ? `, ${ignored} ignored by \`${IGNORE_MARKER}\`` : "";
+  const held =
+    inheritedFiles > 0
+      ? `, ${inheritedFiles} file(s) already failing at the merge base and left to their own change`
+      : "";
 
   if (violations > 0) {
     console.error(
-      `\ncheck-mdschema: ${violations} document type(s) failed over ${checked} file(s) in scope (${where})${opted}.`,
+      `\ncheck-mdschema: ${violations} document type(s) failed over ${checked} file(s) in scope (${where})${opted}${held}.`,
     );
     return 1;
   }
 
-  console.log(`check-mdschema: ${checked} file(s) conform (${where})${opted}.`);
+  // "conform" is only said where every checked document does. A run that held
+  // pre-existing failures back reports what it actually established — that this
+  // branch introduced none — because the other wording would put the migration's
+  // backlog on record as clean.
+  const verdict =
+    inheritedFiles > 0
+      ? `${checked} file(s) checked, no new violations`
+      : `${checked} file(s) conform`;
+  console.log(`check-mdschema: ${verdict} (${where})${opted}${held}.`);
   return 0;
 }
 
