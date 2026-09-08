@@ -393,15 +393,20 @@ the ledger are two steps, so an interruption between them leaves the code in
 the trunk and the row still at `todo`. That row reads exactly like one whose
 slice never merged, and re-dispatching it applies the same change twice —
 a conflict, or a duplicate that lands quietly and disagrees with the evidence.
-So the status is not the test: ask the trunk whether the slice head is an
-ancestor of it.
+So the status is not the test: compare the slice head with the base it was
+dispatched from, and then ask the trunk whether that head is an ancestor of it.
 
-- **Not merged** — re-dispatch the slice, as above.
-- **Already merged** — do not re-dispatch. Reconcile the ledger alone, from
-  the returned report, which is what the interrupted step was going to do.
-  A slice with no returned report is the one case with neither answer
-  available: stop and report it rather than guessing, since the row's evidence
-  is what a re-run would have to overwrite.
+- **Head is the dispatch base** — the worker made no commit, so nothing merged
+  whatever the trunk says about ancestry. Re-dispatch the slice. This case has
+  to be read first: the base is an ancestor of the trunk by construction, so
+  the ancestry test alone calls an untouched slice merged and sends a row that
+  was never attempted to the stop below, where it stays for good.
+- **Not an ancestor** — not merged. Re-dispatch the slice, as above.
+- **An ancestor, and the head moved** — merged. Do not re-dispatch. Reconcile
+  the ledger alone, from the returned report, which is what the interrupted
+  step was going to do. A slice with no returned report is the one case with
+  neither answer available: stop and report it rather than guessing, since the
+  row's evidence is what a re-run would have to overwrite.
 
 In serial mode the same rule holds with no merge step: the implementation agent
 returns `Status`, `DR-ID` and `Evidence`, the orchestrator writes them.

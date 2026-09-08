@@ -296,5 +296,17 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       // read as "write the file".
       expect(card).toContain("which owns the `test-list.md` write; do not edit that file directly");
     });
+
+    it(`${agent} owes \`Blocked-By\` when it returns \`blocked\``, async () => {
+      // The orchestrator writes only what it receives, and the ledger gate
+      // rejects a `blocked` row with no `Blocked-By`. A three-cell payload
+      // therefore has no way to record a blocker the worker found, and a
+      // worker following the card to the letter produces a row the gate
+      // refuses.
+      const card = await read(tree, `assistant/agents/${agent}.md`);
+
+      expect(card).toContain("Return `Blocked-By` as well whenever the status");
+      expect(card).toContain("`blocked`");
+    });
   }
 });

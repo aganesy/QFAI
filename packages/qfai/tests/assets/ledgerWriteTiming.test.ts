@@ -195,9 +195,15 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "assistant/skills/qfai-implement/references/parallelization-policy.md",
     );
     expect(policy).toContain("**Check the slice head before re-dispatching it.**");
-    expect(policy).toContain("ask the trunk whether the slice head is an ancestor of it");
+    expect(policy).toContain("ask the trunk whether that head is an ancestor of it");
+    // The zero-commit case comes first. A worker interrupted before its first
+    // commit leaves the head at the dispatch base, which is an ancestor of the
+    // trunk by construction — so ancestry alone calls an untouched slice
+    // merged, and a row nobody attempted goes to the stop below for good.
+    expect(policy).toContain("**Head is the dispatch base**");
+    expect(policy).toContain("the worker made no commit");
     // Both answers, and the case that has neither.
-    expect(policy).toContain("**Already merged** — do not re-dispatch");
+    expect(policy).toContain("**An ancestor, and the head moved** — merged. Do not re-dispatch");
     expect(policy).toContain("Reconcile the ledger alone, from the returned report");
     expect(policy).toContain("A slice with no returned report");
   });
