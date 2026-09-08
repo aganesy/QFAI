@@ -22,7 +22,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--profile full` is unscoped and unchanged. Attribution decides which run
   reports a stub, never whether the repository is clean.
 
-
 - **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
   The rule already wrote two messages: one naming the coverage-target TC the
   spec declares, and one calling `tdd/test-list.md` optional because it
