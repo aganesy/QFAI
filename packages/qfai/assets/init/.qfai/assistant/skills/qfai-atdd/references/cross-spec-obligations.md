@@ -48,6 +48,29 @@ does not name is the state an agent invents, out of the four forbidden moves.
   run cannot see.
 - Anything else reported against a repo-level path.
 
+## The validation the Definition of Done asks for
+
+The gate command is one, and it is stated in the skill's Completion Gate. What
+the Definition of Done adds is how its result is read: in **two parts**, not as
+one exit code.
+
+| Part | What it asks                                      | How it is met                                                                                                                        |
+| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | No finding this spec owns remains                 | Every rule `--spec` narrows reports clean for `<spec-id>`                                                                            |
+| 2    | Every residual finding is attributed and recorded | Each one names its owning sibling spec under `## Cross-spec obligations` in this stage's evidence, and the completion report says so |
+
+Part 2 exists because of what part 1 cannot reach. `QFAI-ATDD-113` and `-115`
+are filed against `.qfai/contracts/**`, which no spec owns, so a sibling's
+uncovered contract holds the command at exit 1 however complete this spec is.
+
+Requiring exit 0 outright therefore left the compliant run not-done with no
+other state to be in — and a run in no state the skill names is one an agent
+resolves by inventing one, out of the four moves CRITICAL CONSTRAINTS forbids.
+
+Both parts met is the terminal state below. A residual finding attributable to
+no named sibling spec is not residue at all: it is this spec's own, and it
+still FAILs.
+
 ## The terminal state
 
 A run that has discharged everything its spec owns, and has attributed every
