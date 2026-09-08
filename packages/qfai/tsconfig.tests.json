@@ -65,6 +65,7 @@
     "tests/assets/implementPlanPhase.test.ts",
     "tests/assets/implementRedSubstepHeadings.test.ts",
     "tests/assets/implementRowSelectionPrecedence.test.ts",
+    "tests/assets/implementWorklogObligation.test.ts",
     "tests/assets/initUpgradeCopySemantics.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
     "tests/assets/openQuestionRouting.test.ts",
