@@ -6,6 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`validate` reports a test case the ledger does not own, cited from a
+  coverage row** (#1250). The `Level` a test case declares and the `Layer` of
+  the ledger rows citing it were compared in one direction only: a `L1` / `L2`
+  test case referenced from another layer raised
+  `TDDLIST_COVERAGE_LAYER_MISMATCH`. The reverse was reported by nothing.
+
+  It is the worse of the two. A `L3` / `L4` / `L5` test case cited from a
+  `Layer = Unit` or `Layer = Component` row is claimed by that row for the
+  ledger and by `QFAI-ATDD-112` for the directory its `Level` names. Both gates
+  pass — one because the row is there, the other because the annotation is —
+  and each credits the other with covering the test case. The row count a
+  delivery plan is sized from then counts work nobody owes, and nothing in
+  either direction says so.
+
+  `QFAI-TCLEVEL-002` names the test case, its declared level and the layers of
+  the rows claiming it. An `Integration` / `API` / `E2E` row for the same test
+  case is the shape Phase 2b seeds and is not reported, and a row whose `Layer`
+  is outside the vocabulary is left to `TDDLIST_UNKNOWN_LAYER` rather than
+  given a second finding.
+
+  Behind a promotion window on the same reasoning its sibling states: a ledger
+  written before the crosswalk existed can carry the mismatch, so escalating on
+  the introducing release would hand a consumer a zero-length window.
+
 - **A retired spec pack has a template and a schema of its own** (#1324). A spec
   that was deleted or superseded is kept as the record of why it went away. That
   record cannot carry a consumer view or an applicable NFR for something that no

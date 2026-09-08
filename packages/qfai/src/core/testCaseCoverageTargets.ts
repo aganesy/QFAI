@@ -63,6 +63,22 @@ export type TestCaseIds = {
    * the layer its Level names".
    */
   coverageTargetLevels: Map<string, string>;
+  /**
+   * The other half of the same map: a TC whose declared `Level` is **not** a
+   * coverage target -> that lower-cased `Level`.
+   *
+   * The crosswalk needs both directions. A coverage-target TC referenced only
+   * from a non-coverage row is a contradiction the ledger can report because
+   * the level is here; the reverse — an `L3` TC cited from a `Layer = Unit`
+   * row — was invisible for want of the same fact, and it is the worse of the
+   * two: the row claims the TC for the ledger while `QFAI-ATDD-112` claims it
+   * for `tests/integration/**`, so both gates pass and each believes the other
+   * covered it.
+   *
+   * Only an explicitly declared level appears. A TC that declares none is in
+   * {@link undeclaredLevelTcIds} and is a different finding.
+   */
+  nonCoverageLevels: Map<string, string>;
   /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
   unrecognizedLevels: Set<string>;
   /**
@@ -104,6 +120,7 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   const integrationTcIds = new Set<string>();
   const unrecognizedLevels = new Set<string>();
   const coverageTargetLevels = new Map<string, string>();
+  const nonCoverageLevels = new Map<string, string>();
   const undeclaredLevelTcIds = new Set<string>();
   const collected: TestCaseIds = {
     knownTcIds,
@@ -111,6 +128,7 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
     integrationTcIds,
     unrecognizedLevels,
     coverageTargetLevels,
+    nonCoverageLevels,
     undeclaredLevelTcIds,
   };
   // Every TC for which some heading or row carried a non-empty `Level`,
@@ -191,6 +209,8 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       unitComponentTcIds.add(tcId);
       // Heading form wins over the table form, matching `collectTcLevels`.
       coverageTargetLevels.set(tcId, level.trim().toLowerCase());
+    } else {
+      nonCoverageLevels.set(tcId, level.trim().toLowerCase());
     }
   }
 
@@ -276,7 +296,12 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       // in whichever direction it points.
       tableLeveledTcIds.add(tcId);
       levelDeclaredTcIds.add(tcId);
-      if (!isCoverageTargetLevel(level)) continue;
+      if (!isCoverageTargetLevel(level)) {
+        // Heading form wins here too: a heading that already settled this TC
+        // set the map, and the table row must not overwrite it.
+        if (!nonCoverageLevels.has(tcId)) nonCoverageLevels.set(tcId, level);
+        continue;
+      }
       unitComponentTcIds.add(tcId);
       if (!coverageTargetLevels.has(tcId)) {
         coverageTargetLevels.set(tcId, level);
