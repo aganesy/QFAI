@@ -74,7 +74,9 @@ const MARKDOWN_EXTENSIONS = new Set([".md"]);
  *     HTML entity or a hex-adjacent token.
  *   - "GH-" or "PR #" or "pull request #" followed by digits.
  *   - the review tool's own comment id, "codex r" followed by digits.
- *   - an ordinal "wave" label from a retired review process, e.g. twelfth.
+ *   - a "wave" label from a retired review process, numbered either way
+ *     round, e.g. an ordinal followed by the word or the word followed by a
+ *     bare number.
  *   - a short-code review reference list, "review " followed by two codes
  *     joined by a slash or comma.
  *   - a bracketed finding number after the words "review finding".
@@ -84,7 +86,10 @@ const PATTERNS = [
   { name: "gh-issue-number", re: /\bGH-\d+\b/g },
   { name: "pr-or-issue-word", re: /\b(?:PR|pull request|issue|Issue)\s+#?\d{2,6}\b/g },
   { name: "codex-review-id", re: /\bcodex\s+r\d{6,}\b/gi },
-  { name: "review-wave-label", re: /\b\d+(?:st|nd|rd|th)-wave\b/gi },
+  {
+    name: "review-wave-label",
+    re: /\bwave[\s-]\d+\b|\b\d+(?:st|nd|rd|th)[\s-](?:late-review[\s-])?wave\b/gi,
+  },
   { name: "review-shortcode-list", re: /\breview\s+[A-Za-z0-9]{4}(?:\s*[/,]\s*[A-Za-z0-9-]{4})+/g },
   { name: "review-finding-bracket", re: /\bReview finding \[\d+\]/gi },
 ];
