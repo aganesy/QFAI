@@ -701,7 +701,7 @@ agents:
 
       - Implement E2E coverage for required user stories.
       - Implement API coverage for declared `CON-API-*` contracts.
-      - Implement integration coverage for required `TC-*` behavior and for declared `CON-DB-*` contracts.
+      - Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).
       - Keep test-layer responsibilities separated while coordinating shared fixtures and evidence.
 
       ## Inputs you must read
@@ -720,7 +720,7 @@ agents:
       - .qfai/specs/spec-\*/02_User-stories.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\*
-      - .qfai/contracts/db/\*\*
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
 
       ## Deliverables
 
@@ -832,12 +832,20 @@ agents:
         `.qfai/assistant/constitution/constitution.md` Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
+      - .qfai/specs/spec-\*/01_Spec.md
       - .qfai/specs/spec-\*/02_User-stories.md
       - .qfai/specs/spec-\*/03_Acceptance-Criteria.md
       - .qfai/specs/spec-\*/04_Business-Rules.md
       - .qfai/specs/spec-\*/05_Examples.md
       - .qfai/specs/spec-\*/06_Test-Cases.md
       - .qfai/contracts/api/\*\* (CON-API) — **conditional**, see below: only where the spec under review references `CON-API-*`
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
+
+      A spec references a contract from either of two places: `Contract-Refs` in
+      `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`. Read
+      both before deciding a conditional input does not apply. A spec that names a
+      `CON-DB-*` only in `01_Spec.md` reads as having none if the second place is
+      skipped, and the estimate then omits the Integration work that contract carries.
 
       Read `06_Test-Cases.md` and `02_User-stories.md` as the obligation set in full — `TC-*` and `US-*` — independently of whichever
       rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped is invisible to a check that starts from
@@ -930,6 +938,7 @@ agents:
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
+      - .qfai/contracts/db/\*\* (under the configured `paths.contractsDir`, not always this default) — **conditional**: only where the spec references `CON-DB-*`; where it does not, absence is not a gap
       - QA evidence, coverage tooling outputs, and test plans
 
       ## Deliverables
@@ -1865,7 +1874,7 @@ agents:
 
       ## Test Case Quality Depth Check (MUST)
 
-      In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
+      In addition to traceability-based coverage (US/TC/CON-API/CON-DB existence), verify the **depth** of test cases:
 
       - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
         Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.

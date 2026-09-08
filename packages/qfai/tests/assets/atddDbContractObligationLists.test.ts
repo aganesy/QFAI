@@ -1,0 +1,362 @@
+/**
+ * `CON-DB` coverage is a blocking obligation (`QFAI-ATDD-115`, `error`) that no
+ * spec scope can waive, so every enumeration of the obligation set names it —
+ * the reviewer gate, the mandatory-obligation bullets, Mandatory Output 3, the
+ * Volume Signals line, the not-done test, Completion Criteria step 1, the rerun
+ * action, `project_memory`, and the role cards of the agents this stage routes.
+ *
+ * A list that stops at `CON-API` is a list its reader treats as complete. The
+ * three checklists consulted in order to *avoid* an uncovered DB contract are
+ * the ones that decide whether `completion-reviewer` returns `PASS` on a spec
+ * the very next command — `qfai validate --profile atdd --fail-on error --spec
+ * <id>` — exits 1 on.
+ */
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
+
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+
+const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
+const ATE = "assistant/agents/acceptance-test-engineer.md";
+const CATALOG = "assistant/manifest/agent-catalog.yml";
+const LAYERS = "assistant/catalog/test-layers.md";
+const RED_PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
+
+const readAt = (tree: string, rel: string): Promise<string> =>
+  readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+const read = (tree: string): Promise<string> => readAt(tree, ATDD);
+
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s+/g, " ");
+
+/**
+ * The `developer_instructions` of one `agent-catalog.yml` entry, by tree and id.
+ * Two suites below read this block, and the YAML shape they walk is one shape —
+ * duplicating the walk meant a catalog restructure could be followed in one
+ * copy and missed in the other.
+ */
+const catalogInstructions = async (tree: string, id: string): Promise<string> => {
+  const parsed: unknown = parseYaml(await readAt(tree, CATALOG));
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${tree}/${CATALOG}: must parse to an object`);
+  }
+  const agents = (parsed as Record<string, unknown>)["agents"];
+  if (!Array.isArray(agents)) {
+    throw new Error(`${tree}/${CATALOG}: agents must be an array`);
+  }
+  for (const entry of agents) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const agent: Record<string, unknown> = entry as Record<string, unknown>;
+    if (agent["id"] !== id) continue;
+    const instructions = agent["developer_instructions"];
+    if (typeof instructions !== "string") {
+      throw new Error(`${tree}/${CATALOG}: ${id}.developer_instructions must be a string`);
+    }
+    return instructions;
+  }
+  throw new Error(`${tree}/${CATALOG}: no agent with id ${id}`);
+};
+
+describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates CON-API", (tree) => {
+  it("the frontmatter description — the discovery surface — names CON-DB", async () => {
+    // A skill candidate is selected from `description` before anything reads
+    // the body, so a DB-contract-only request must be able to match here.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      'description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts."',
+    );
+    expect(atdd).not.toContain("aligned with US/TC/CON-API obligations");
+  });
+
+  it("the reviewer gate asks about Integration/CON-DB coverage", async () => {
+    // A `completion-reviewer` works from this bullet and nothing else.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`)",
+    );
+  });
+
+  it("the mandatory-obligation bullets name the directory CON-DB is discharged from", async () => {
+    // This is the only list that states a directory per obligation, and the
+    // annotation obligations already assign `QFAI:CON-DB-XXXX` to
+    // `tests/integration/**`. It shares the `CON-API` bullet because the two
+    // obligations are discharged the same way and a bullet each would say the
+    // same sentence twice.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "`tests/integration/**` must cover all required `CON-DB-*` (`QFAI-ATDD-115`)",
+    );
+    // The deferral form travels with the obligation: a reader who only meets
+    // the rule here must still learn it has an out-of-slice escape.
+    // "on its own file" said nothing about placement. The parser accepts the
+    // marker only as a standalone comment line, so a reader who appended it to
+    // a statement in that file left the contract active and the gate firing.
+    expect(atdd).toContain(
+      "`-- x-qfai-status: planned` **on a line of its own** — leading whitespace is allowed, trailing SQL is not",
+    );
+    expect(atdd).not.toContain("`-- x-qfai-status: planned` on its own file");
+  });
+
+  it("Mandatory Output 3, the not-done test and Completion Criteria step 1 all list it", async () => {
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain("Coverage obligations checklist (`US` / `TC` / `CON-API` / `CON-DB`)");
+    expect(atdd).toContain(
+      "Any required `US` / `TC` remains uncovered, or any required `CON-API` / `CON-DB` **this spec owns** does.",
+    );
+    expect(atdd).toContain(
+      "Confirm required `US` / `TC` / `CON-API` / `CON-DB` coverage is complete for the obligations this spec owns",
+    );
+    expect(atdd).toContain(
+      "close uncovered `US` / `TC` / `CON-API` / `CON-DB` obligations and rerun validation",
+    );
+  });
+
+  it("an undeclared CON-DB reference is named as an error, like the other three", async () => {
+    // `QFAI-ATDD-104` errors on an undefined `QFAI:CON-DB-*` annotation
+    // (`src/core/validators/atddCodeTraceability.ts:704`), so a rule that
+    // enumerates only `US/TC/CON-API` tells the reader to ignore what the very
+    // next validate run fails on.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "Unknown references (`US/TC/CON-API/CON-DB` not declared) must be treated as errors.",
+    );
+  });
+
+  it("the volume estimate sizes Integration with its DB contracts", async () => {
+    // The Integration numerator once meant `TC-*` alone, so the layer that owes
+    // the `CON-DB` work was estimated without counting any of it. The contracts
+    // are in the numerator's own definition now — which is why the table's Raw
+    // count names it alone rather than adding them beside it.
+    const atdd = flat(await read(tree));
+    // Which CON-DB are counted is pinned separately, below.
+    expect(atdd).toContain(
+      "plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its own**",
+    );
+    expect(atdd).toContain("| Integration | #TC |");
+    expect(atdd).toContain("`L3`/no-`Level` TCs + active `CON-DB-*`");
+  });
+
+  it("project_memory restates it for an agent that never opens the body", async () => {
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain("Coverage obligations stay layer-pinned for US, CON-API and CON-DB");
+    expect(atdd).toContain("all required CON-DB (QFAI-ATDD-115");
+  });
+
+  it("the blocking reviewer's own coverage list names CON-DB", async () => {
+    // `agent-routing.yml` makes `qa-gatekeeper` mandatory and blocking in the
+    // ATDD review, and its card is what that turn is taken against. Listing
+    // the traceability coverage it verifies as `US/TC/CON-API` left the one
+    // reviewer who can stop the stage not looking for the obligation the gate
+    // fails on.
+    const card = await readAt(tree, "assistant/agents/qa-gatekeeper.md");
+    expect(card).toContain("traceability-based coverage (US/TC/CON-API/CON-DB existence)");
+    expect(card).not.toContain("traceability-based coverage (US/TC/CON-API existence)");
+    expect(await catalogInstructions(tree, "qa-gatekeeper")).toContain("US/TC/CON-API/CON-DB");
+  });
+
+  it("no obligation enumeration stops at CON-API any more", async () => {
+    // The regression this file exists to stop: a list that ends at `CON-API`
+    // is a list a reader treats as complete.
+    const atdd = flat(await read(tree));
+    for (const stale of [
+      "API covers `CON-API`, and every `TC`",
+      "checklist (`US` / `TC` / `CON-API`),",
+      "Any required `US` / `TC` / `CON-API` remains uncovered.",
+      "Confirm required `US` / `TC` / `CON-API` coverage is complete.",
+      "close uncovered `US` / `TC` / `CON-API` obligations",
+      "Integration = required `TC-*`. When a signal",
+      "`tests/api/**` must cover all required `CON-API-*`. -",
+      "layer-pinned for US and CON-API",
+      "Unknown references (`US/TC/CON-API` not declared)",
+      "this spec's `US` / `TC` / `CON-API` annotations",
+    ]) {
+      expect(atdd).not.toContain(stale);
+    }
+  });
+});
+
+/**
+ * `catalog/test-layers.md` is the annotation reference `/qfai-atdd` sends the
+ * reader to, and it stated the same unknown-reference rule with the same gap.
+ * Leaving it at `CON-API` there re-teaches the omission one hop away from the
+ * skill that was just corrected.
+ */
+describe.each(TREES)("%s — the layer catalog errors on an undeclared CON-DB too", (tree) => {
+  it("the unknown-reference rule enumerates all four obligation kinds", async () => {
+    const layers = flat(await readAt(tree, LAYERS));
+    expect(layers).toContain(
+      "Unknown references (`US/TC/CON-API/CON-DB` not declared) are errors.",
+    );
+    expect(layers).not.toContain("Unknown references (`US/TC/CON-API` not declared)");
+  });
+});
+
+/**
+ * The work order at `SKILL.md` assigns the `CON-DB` obligation to the
+ * Integration layer, but the layer is implemented by the mandatory delegate
+ * `acceptance-test-engineer`. Its role contract stopped at `CON-API` in
+ * responsibilities, required inputs and deliverables, so a delegate that obeys
+ * its own contract literally never opens `.qfai/contracts/db/**` and the very
+ * next `QFAI-ATDD-115` run stops the stage.
+ *
+ * The codex TOML mirror is not re-checked here: `tests/codex/agents.test.ts`
+ * (TC-0003-0003) already pins `developer_instructions` to the canonical MD
+ * body byte for byte, so these assertions propagate to it.
+ */
+describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (tree) => {
+  const assertContract = (doc: string): void => {
+    expect(doc).toContain(
+      "- Implement integration coverage for required `TC-*` behavior and active `CON-DB-*` contracts (those not deferred by `-- x-qfai-status: planned`).",
+    );
+    // The read set names the configured root, not only its default spelling.
+    expect(doc).toContain(
+      "- .qfai/contracts/db/\\*\\* (under the configured `paths.contractsDir`, not always this default)",
+    );
+    expect(doc).toContain("- Mapping from US / TC / CON-API / CON-DB to test assets");
+    // The regression: a contract that ends at `CON-API` reads as complete.
+    expect(doc).not.toContain("- Implement integration coverage for required `TC-*` behavior.");
+    expect(doc).not.toContain("- Mapping from US / TC / CON-API to test assets");
+    // And the over-scope: `QFAI-ATDD-115` never asks for a deferred contract.
+    expect(doc).not.toContain("behavior and declared `CON-DB-*` contracts");
+  };
+
+  it("the canonical role assigns DB contracts, their directory and their mapping", async () => {
+    assertContract(flat(await readAt(tree, ATE)));
+  });
+
+  it("agent-catalog.yml carries the same contract for that agent", async () => {
+    assertContract(flat(await catalogInstructions(tree, "acceptance-test-engineer")));
+  });
+});
+
+/**
+ * The Volume Signal added `CON-DB` to the Integration row as *declared*, but a
+ * contract carrying `-- x-qfai-status: planned` is deferred: it is excluded
+ * from `activeDbContractIds` (`src/core/atddTraceability.ts:227`) and so from
+ * `QFAI-ATDD-115`, which fires on `result.missing.conDb`
+ * (`src/core/validators/atddCodeTraceability.ts:474`). Counting the deferred
+ * ones sized the mandatory estimate for tests this slice must not write, and
+ * an over-sized signal recommends work the gate does not ask for.
+ *
+ * And the estimate has to be computable by whoever owns it: `agent-routing.yml`
+ * makes `test-design-analyst` and `qa-strategist` the mandatory pair of the
+ * `coverage` phase, and the former owns "Estimate test volume" outright —
+ * neither read set opened `.qfai/contracts/db/**`, so a delegate following its
+ * contract literally had to guess `#CON-DB` or omit it.
+ */
+describe.each(TREES)("%s — the CON-DB volume signal is countable and not inflated", (tree) => {
+  it("counts the active CON-DB, not every declared one", async () => {
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "plus the **active** `CON-DB-*` this spec references — active meaning the contract declares no `-- x-qfai-status: planned` **on a line of its own**",
+    );
+    expect(atdd).toContain(
+      "A contract that does declare it is deferred: it owes no `QFAI-ATDD-115` coverage in this slice",
+    );
+    // The regression: an unqualified count sweeps the deferred contracts back
+    // in, and the deferral sentence beside it has to name this row too.
+    expect(atdd).not.toContain("plus the `CON-DB-*` this spec references.");
+    expect(atdd).toContain(
+      "the contract rows drop every deferred contract: `x-qfai-status: planned` in an OpenAPI document for a `CON-API-*`, the SQL comment `-- x-qfai-status: planned` for a `CON-DB-*`",
+    );
+  });
+
+  it("says the same thing in the estimator table the stage must output", async () => {
+    // The prose and the required table are two statements of one count; a
+    // reader filling the table works from the table alone. `#TC` carries the
+    // contracts, and the Evidence column is where the table says so.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "| Integration | #TC | INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |",
+    );
+    // The regression: naming the contracts in the Raw count beside a numerator
+    // that already holds them counts each one twice.
+    expect(atdd).not.toContain("| Integration | #TC + #CON-DB active |");
+  });
+
+  it("completes the zero-row enumeration in the reference an implementer reads", async () => {
+    // `references/red-provenance.md`'s "A spec with no ATDD-owned rows" section
+    // is the page an implementer opens when the ledger yields zero rows, and it
+    // listed the non-row obligations as US/CON-API and the completion gate as
+    // `QFAI-ATDD-111`/`-113`. `CON-DB-*` produces no ledger row anywhere, so
+    // that is exactly the spec where a DB contract is most likely to be
+    // dropped — and the drop only surfaces at the next validate.
+    const provenance = flat(await readAt(tree, RED_PROVENANCE));
+    expect(provenance).toContain("The US, CON-API and CON-DB coverage obligations");
+    expect(provenance).toContain(
+      "`CON-DB-*` is row-producing nowhere, so a spec with no ATDD-owned rows can still owe every one of its active DB contracts an `Integration` test",
+    );
+    expect(provenance).toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` / `QFAI-ATDD-115` clean");
+    // Clean of THIS spec's findings. The rule is repo-attributed and survives
+    // `--spec`, so a sibling's uncovered contract holds a scoped run at exit 1
+    // while owing this stage nothing — and an implementer reading a non-zero
+    // exit as work to do edits the one thing this stage must not touch.
+    expect(provenance).toContain("clean **of this spec's own findings**");
+    expect(provenance).toContain("PASS with cross-spec obligations");
+    expect(provenance).not.toContain("The US and CON-API coverage obligations");
+    expect(provenance).not.toContain("`QFAI-ATDD-111` / `QFAI-ATDD-113` clean");
+  });
+
+  it("carries the marker's standalone-line condition into project_memory", async () => {
+    // The summary is what an agent resumes from without reopening the body. A
+    // marker appended after a statement is not read, so a summary that names
+    // the token and not its position hands back a contract that stays active
+    // and a gate that still fires.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "defer an out-of-slice contract **this spec owns** with `-- x-qfai-status: planned` on a line of its own, never appended after a statement",
+    );
+  });
+
+  it("says why the deferred ones are out, beside the count itself", async () => {
+    // A reader who meets the count and not the reason fills it in from "every
+    // declared", which is the overcount this row exists to prevent.
+    const atdd = flat(await read(tree));
+    // The deferred contract is the subject, stated as its own sentence. Hung
+    // off the definition of `active` as a relative clause, the exemption read
+    // as belonging to the active contract — which is the one that does owe the
+    // coverage, so the sentence said the opposite of the rule it explains.
+    expect(atdd).toContain(
+      "A contract that does declare it is deferred: it owes no `QFAI-ATDD-115` coverage in this slice",
+    );
+    expect(atdd).not.toContain("which carries no `QFAI-ATDD-115` obligation in this slice");
+  });
+
+  it("test-design-analyst reads both places a spec references a contract from", async () => {
+    // Its DB-contract input is conditional on the spec referencing a
+    // `CON-DB-*`, and a spec may reference one from `04_Business-Rules.md` or
+    // from `01_Spec.md`. A read set that starts at `02_User-stories.md` cannot
+    // answer the condition, so a contract named only in `01_Spec.md` reads as
+    // absent and the Integration work it carries drops out of the estimate.
+    const inputLine = "- .qfai/specs/spec-\\*/01_Spec.md";
+    const bothPlaces =
+      "`Contract-Refs` in `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`";
+
+    const card = flat(await readAt(tree, "assistant/agents/test-design-analyst.md"));
+    expect(card).toContain(inputLine);
+    expect(card).toContain(bothPlaces);
+    expect(flat(await catalogInstructions(tree, "test-design-analyst"))).toContain(inputLine);
+  });
+
+  it.each(["test-design-analyst", "qa-strategist"])(
+    "%s can open the DB contracts its estimate counts",
+    async (id) => {
+      // `agent-routing.yml` coverage phase: mandatory_agents are exactly these
+      // two, and the volume estimate is `test-design-analyst`'s deliverable.
+      const qualified =
+        "- .qfai/contracts/db/\\*\\* (under the configured `paths.contractsDir`, not always this default)";
+      const canonical = flat(await readAt(tree, `assistant/agents/${id}.md`));
+      expect(canonical).toContain(qualified);
+      expect(flat(await catalogInstructions(tree, id))).toContain(qualified);
+    },
+  );
+});
