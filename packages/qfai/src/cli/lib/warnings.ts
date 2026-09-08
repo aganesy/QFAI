@@ -101,13 +101,13 @@ function libuvDetail(error: unknown): { code: string; syscall: string; path?: st
  * The same attribution {@link buildIncompleteRunIssue} gives `validate`, for a
  * command that has no verdict artifact to degrade into.
  *
- * `validate` can answer a filesystem fault with a finding because #1112 wrapped
- * `validateProject`; `init`, `certify`, `iterate` and the rest have no
+ * `validate` can answer a filesystem fault with a finding because `validateProject`
+ * is wrapped; `init`, `certify`, `iterate` and the rest have no
  * `validate.json` to write, so their answer has to be the refusal itself. What
  * they were producing was the raw libuv message — `EPERM: operation not
  * permitted, stat '...'` — which names the errno and the path but not the
  * command, and does not say that the run is UNDETERMINED rather than clean.
- * That single unattributed line is the complaint #1104 opens with.
+ * That single unattributed line is what this function replaces.
  *
  * Returns `null` for anything that is not an unwrapped libuv error, so the
  * caller rethrows a deliberate refusal untouched.
@@ -151,10 +151,9 @@ export const INCOMPLETE_RUN_CODE = "QFAI-SCAN-002";
  * today and no project is passing in this state. Same shape as
  * {@link TRUNCATED_SCAN_CODE} above, which likewise fixes its own severity.
  * That P7 cannot express "an error from day one" is a gap in the policy rather
- * than a property of this finding: filed as #1111. The reason nothing currently
- * asks the question is that the registry's extractor cannot see either scan
- * code — #1110 — so this severity should become a decision rather than an
- * omission when that is fixed.
+ * than a property of this finding. Nothing currently asks the question because
+ * the registry's extractor cannot see either scan code; once it can, this
+ * severity should become a decision rather than an omission.
  *
  * The errno and the path go in the message because that is what makes the cause
  * actionable — a Windows `git worktree` writes `.claude/skills/*` as FILE

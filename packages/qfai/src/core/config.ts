@@ -225,8 +225,8 @@ export type QfaiConfig = {
  * no validator reads either — so the default is a fixed `false` rather than a
  * behavioural choice. It lives here, once, so `defaultConfig` and the loader
  * cannot drift apart, and so the loader can state the fallback instead of
- * reading it back off a deprecated property (which is what previously forced a
- * lint suppression at each of the two call sites).
+ * reading it back off a deprecated property (which would force a lint
+ * suppression at each of the two call sites).
  */
 const DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT = false;
 

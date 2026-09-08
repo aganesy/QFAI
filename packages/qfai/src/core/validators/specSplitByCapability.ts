@@ -476,9 +476,8 @@ async function capReferenceIssues(
   layeredEntries: SpecEntry[],
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  // Indexed once. The lookup used to be a `find` per CAP row, which is O(n*m)
-  // in a repository with many specs and many capabilities; first entry wins, as
-  // the linear scan did.
+  // Indexed once: a `find` per CAP row is O(n*m) in a repository with many
+  // specs and many capabilities. First entry wins.
   const byDirName = new Map<string, SpecEntry>();
   for (const entry of layeredEntries) {
     const key = path.basename(entry.dir).toLowerCase();

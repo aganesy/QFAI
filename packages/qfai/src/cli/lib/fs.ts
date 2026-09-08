@@ -177,7 +177,7 @@ async function collectTemplateFiles(root: string): Promise<string[]> {
   // the OS will not follow — a Windows `git worktree` writes every
   // `.claude/skills/*` that way — so the entry is present and the next line
   // demanded that `stat` resolve it, unguarded, with `EPERM` escaping as a bare
-  // Node message naming neither the template tree nor the reason (#1104).
+  // Node message naming neither the template tree nor the reason.
   //
   // Not swallowed. This module's history is the argument: its comments record
   // `catch(() => false)` and `catch(() => [])` each being REMOVED for turning a

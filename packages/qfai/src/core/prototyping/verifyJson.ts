@@ -4,11 +4,9 @@ import path from "node:path";
 /**
  * Canonical project-root relative path to the `/qfai-verify` gate artifact.
  *
- * `.qfai/report/` is the canonical report location (post-PR-#207); `validate.json`
- * already lives there. `verify.json` was the only certify gate file still pinned
- * to `.qfai/output/`, with no config key and no fallback — so migrating off
- * `.qfai/output/` broke certification while staying there carried a
- * `D-DEPRECATED-PATH` warning on every run.
+ * `.qfai/report/` is the canonical report location and `validate.json` already
+ * lives there. Keeping `verify.json` beside it, with the legacy fallback below,
+ * lets a project migrate off `.qfai/output/` without breaking certification.
  */
 export const VERIFY_JSON_REL = ".qfai/report/verify.json" as const;
 

@@ -241,9 +241,8 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       // Heading wins on duplicates, which is what `collectTcLevels` and the
       // scaffold parser already do. Without this, a TC declared `L3` by its
       // heading and `L1` by a table row picked up a `TDDLIST_TC_NOT_COVERED`
-      // obligation on top of the `QFAI-ATDD-112` one its heading gives it —
-      // the two gates disagreeing about the same TC, which is the class of
-      // defect this PR exists to close.
+      // obligation on top of the `QFAI-ATDD-112` one its heading gives it,
+      // which is exactly the two gates disagreeing about the same TC.
       if (headingLeveledTcIds.has(tcId)) continue;
       // First declaration wins across tables too, not only across shapes.
       // `collectTcLevels` keeps the earlier `L3`, and the two gates have to
