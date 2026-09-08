@@ -1009,11 +1009,11 @@ export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   // point of asking.
   "yarn cache",
   // The VERSION and the REGISTRY are both part of the exact string, and that is the enumeration
-  // working as intended: review finding [55] pinned the version because an unpinned install
-  // fetches whatever the registry calls latest at the moment the job runs, and review finding
-  // [83] pinned the source because a version names WHAT to fetch and not WHERE from — `npm`
-  // takes its registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to
-  // be a change a reviewer reads here too.
+  // working as intended: the version has to be pinned, because an unpinned install fetches
+  // whatever the registry calls latest at the moment the job runs, and the source has to be
+  // pinned too, because a version names WHAT to fetch and not WHERE from — `npm` takes its
+  // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to be a change
+  // a reviewer reads here too.
   //
   // `--ignore-scripts` is in the string rather than in `ALLOWED_FLAGS` for the reason the whole
   // tier exists: `npm install` is denied a bare package argument, so widening its flag set would
@@ -1326,7 +1326,27 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the file init writes today reproduces the previous digest
   // `f35a2624…` byte for byte, which is what makes this a review of three lines
   // rather than a re-blessing of the block.
-  [".gitignore", "4e72a478777a5b7b57550b9258c9095093f2c11bfdf9fc663e7eefdec2d49abf"],
+  //
+  // Re-pinned again for the two `import-lite` negations. The evidence
+  // directory is ignored wholesale, so the file recording where an imported
+  // spec set's requirements came from never reached a commit — and the warning
+  // that asks for it reads the committed tree. Two lines, for the two names
+  // the check accepts:
+  //
+  //     !.qfai/evidence/import-lite.md
+  //     !.qfai/evidence/import-lite-<17 digits>.md
+  //
+  // the copy an operator kept under the shipped template's own name, and the
+  // run-stamped one. The second line is written as `[0-9]` once per digit,
+  // which is what fixes the width: a shorthand for the repeat is not gitignore
+  // syntax, and anything wider commits a name the check rejects outright —
+  // a file in the repository that nothing reads.
+  //
+  // Derived the same way as its predecessors — `qfai init` into a temp root,
+  // then reading what it wrote — not copied off a failure message. Those two
+  // lines are the whole delta: dropping them from the file init writes today
+  // reproduces `4e72a478…` byte for byte.
+  [".gitignore", "9e975f78ddbcae6d5b56516f2eb60ec37edac2438786187504934dedd3df9ad7"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -2033,8 +2053,8 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
-  // three-dot one on a pull request — review finding [32]. Its value comes from `github.event_name`,
-  // a closed set GitHub controls, and the body compares it to one literal. It reaches no program.
+  // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
+  // GitHub controls, and the body compares it to one literal. It reaches no program.
   ["QFAI_EVENT_NAME", "${{ github.event_name }}"],
   ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
 ]);

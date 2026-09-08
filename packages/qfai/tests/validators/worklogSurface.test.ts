@@ -331,7 +331,7 @@ describe("worklogSurface validator", () => {
           "---",
           "id: entry-002",
           "kind: decision",
-          // Per the promote-gate hardening (PR #209), satisfaction
+          // Promote-gate hardening: satisfaction
           // requires ALL of: `status: archived` + a row in the
           // declared target file (spec-0099/07_Decisions.md here,
           // not bare 07_Decisions.md) + a `promoted-to:` back-ref

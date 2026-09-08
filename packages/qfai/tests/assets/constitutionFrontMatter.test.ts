@@ -1,5 +1,5 @@
 /**
- * Constitution front matter convention (#770).
+ * Constitution front matter convention.
  *
  * `constitution/agent-selection.md` shipped an un-ported copy of the internal
  * authoring format: a hyphenated `update-frequency` key, a `version` marker and
