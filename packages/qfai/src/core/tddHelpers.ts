@@ -120,6 +120,17 @@ export const TDD_DONE_STATUSES = new Set(["done"]);
 export const TDD_IN_REVIEW_STATUSES = new Set(["green", "refactor", "review-fix"]);
 
 /**
+ * The statuses that end a row's cycle: `done`, or parked at `exception`.
+ *
+ * The same condition the spec completion conditions call a **terminal** ledger,
+ * derived from {@link TDD_DONE_STATUSES} rather than re-spelled, so a change to
+ * what counts as finished cannot leave two answers behind. Every other status —
+ * `todo` and the {@link TDD_IN_REVIEW_STATUSES} alike — is unfinished work that
+ * prohibits completion, which is what a progress figure has to show.
+ */
+export const TDD_TERMINAL_STATUSES = new Set([...TDD_DONE_STATUSES, "exception"]);
+
+/**
  * The columns a table must carry to be a `tdd/test-list.md` ledger table.
  *
  * Lives here rather than in the validator because "is this a ledger table" is
@@ -376,6 +387,28 @@ export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]):
   // every placement rule while still clearing the coverage obligation.
   if (layer.length === 0 || layer === "-") return false;
   return !TC_FORBIDDEN_LAYERS.has(layer);
+}
+
+/**
+ * Whether a ledger row is an ATDD-owned `Layer = Integration` row.
+ *
+ * Its own predicate rather than a `Layer` comparison at each call site, for the
+ * same reason {@link isCoverageBearingRow} is one: the cell is free text, the
+ * vocabulary is lower-cased ({@link TDD_LEDGER_LAYERS}), and a second copy of
+ * the normalisation is a second answer waiting to happen.
+ *
+ * Reported apart from the coverage arithmetic, never folded into it. An `L3`
+ * TC is not a coverage target, so `unitComponentTcIds` excludes it and every
+ * count derived from that set — `coverage-target TCs`, `done`, `open` — is
+ * silent about these rows. A spec whose obligations are all integration-level
+ * therefore printed `coverage-target TCs: 0 / open: 0` while holding `todo`
+ * rows that prohibit completion, and the same ownership under a blank or
+ * misspelled `Level` was counted, so the ledger's progress figure moved with
+ * the spelling of a cell rather than with the work.
+ */
+export function isAtddIntegrationRow(scan: LedgerTable, row: readonly string[]): boolean {
+  if (!isLedgerRow(scan, row)) return false;
+  return (row[scan.layerIndex] ?? "").trim().toLowerCase() === "integration";
 }
 
 /**

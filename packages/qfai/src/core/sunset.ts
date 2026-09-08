@@ -71,6 +71,12 @@ export const SUNSETS = {
  * 4. where the code can fire on rows that are already terminal, document how a
  *    terminal row is meant to satisfy it — otherwise the only remedy is an
  *    out-of-lifecycle edit.
+ *
+ * The code an entry governs is named in the prose above it, and nowhere else:
+ * a second spelling as a string field would read, to every guard that scans a
+ * module for code literals, as this file emitting every one of them. The doc is
+ * what `scripts/promotion-preflight.mjs` follows to ask, of a finding a run is
+ * holding, whether the window that keeps it a warning is about to close.
  */
 export const RULE_PROMOTIONS = {
   /**
@@ -137,6 +143,23 @@ export const RULE_PROMOTIONS = {
    * the divergence already.
    */
   agentDeveloperInstructionsDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-CONTRACT-041` — a `Derived (not stored):` declaration that does no
+   * work: one that does not parse, or one naming a value the API never asks
+   * for or the DB domain stores anyway.
+   *
+   * The window is not about a backlog — nobody has written this marker before,
+   * because the format ships with the rule. It is about the FORMAT being new.
+   * The first authors to use it are answering another finding voluntarily, and
+   * they will get the grammar wrong in exactly the ways the message exists to
+   * teach: a missing `from` clause, a half-written value list. Failing their
+   * run on a line they added to engage with the tool is the worst possible
+   * first experience of it, and the message says everything the error would.
+   *
+   * A minor is enough: by 1.12.0 the format has shipped and been read, and a
+   * declaration still wrong by then is one nobody checked.
+   */
+  derivedNotStoredDeclaration: { introducedIn: "1.10.2", promoteAt: "1.12.0" },
   /**
    * `QFAI-CONTRACT-015` — a contract file that states no apply order at all.
    * Contract sets written before the declaration was required state none, so
@@ -210,6 +233,41 @@ export const RULE_PROMOTIONS = {
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TDDLIST-012` — an `Evidence` cell past the character
+   * cap. The cap arrives with the rule that made the cell a pointer, so it
+   * lands on every cell written while the column was documented as holding the
+   * commands and their output — which is most of them, and on rows already at
+   * `done`. A terminal row satisfies it by moving the payload into the evidence
+   * file and leaving the anchor in the cell; that is an edit to the cell, not a
+   * status transition, so the row needs none.
+   */
+  tddListEvidenceCellOversize: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-014` — a ledger row carrying cells its table's header
+   * does not declare. Nothing read past the last column before, so a surplus
+   * cell was never reported and ledgers accumulated them silently. A terminal
+   * row satisfies it by deleting the surplus, again without a transition.
+   */
+  tddListRowExtraCells: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-011` — an `Evidence` cell that does not match the grammar.
+   * The grammar arrives with the rule that made the cell a pointer, so it lands
+   * on every cell written while the column was documented as holding the
+   * commands and their output — which is most of them, and on rows already at
+   * `done`. A terminal row satisfies it by rewriting the cell into the mandated
+   * shape; that is an edit to the cell, not a status transition, so the row
+   * needs none.
+   */
+  tddListEvidenceCellMalformed: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TDDLIST-013` — `RED:n-a` on an ATDD-owned row. The provenance token
+   * is new, so a row seeded before it carries whatever the cell held, and an
+   * ATDD-owned row that reached `done` under the old contract has no legal
+   * transition left that could re-observe a RED. The remedy is the same cell
+   * edit, recording the provenance the run actually had.
+   */
+  tddListEvidenceRedProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TRIAGE-009` — an `Existing Spec` cell that does not match the
    * declared grammar, or names a spec that is not on disk. The grammar is new,
    * so every delta file written before it carries whatever spelling its author
@@ -261,12 +319,33 @@ export const RULE_PROMOTIONS = {
    */
   specPackReOpenDecisionRecord: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-BRREF-001`, `QFAI-BRREF-002` and
+   * `QFAI-BRREF-003` — a ledger's declared review-group key is
+   * malformed, names a rule no Business Rules file declares, or is not the key
+   * the row's own `TC-Refs` derive. Every one of them reads a cell written
+   * against an older `04_Business-Rules.md`, or under the superseded
+   * AC-first derivation, so the rule necessarily lands on ledgers that were
+   * correct under the procedure of their day — including rows already at
+   * `done`, whose remedy is an edit to the cell rather than a transition.
+   */
+  tddListBrRefKey: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
    * construct is silent in the runner, so a repository accumulates them
    * without ever being told; every one written before the check existed
    * arrives in the first run after the upgrade.
    */
   testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * The assistant-tree provenance family — `QFAI-ASSETS-004` (a vendored copy
+   * still as qfai wrote it but behind the installed release), `QFAI-ASSETS-005`
+   * (a local fork), `QFAI-ASSETS-006` (a non-overlay addition),
+   * `QFAI-ASSETS-007` (a shipped normative file that is absent) and
+   * `QFAI-ASSETS-008` (the comparison could not be made at all). Nothing
+   * compared the governed layers before, so every project that ever edited one
+   * meets the whole family in the run that first records provenance.
+   */
+  assistantAssetProvenance: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
    * `QFAI-TDDLIST-007` — a ledger row at `done` whose `Evidence`
    * cell states an outcome in prose and carries no canonical pointer into the

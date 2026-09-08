@@ -393,7 +393,7 @@ describe("doctor assets.lineBudget check", () => {
 
       const integrity = data.checks.find((entry) => entry.id === "skills.integrity");
       expect(integrity?.severity).toBe("warning");
-      expect(integrity?.message).toContain("検査できませんでした");
+      expect(integrity?.message).toContain("Could not inspect skills");
 
       const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
       expect(budget?.severity).toBe("warning");
@@ -413,7 +413,7 @@ describe("doctor assets.lineBudget check", () => {
 
       const frontmatter = data.checks.find((entry) => entry.id === "agents.frontmatter");
       expect(frontmatter?.severity).toBe("warning");
-      expect(frontmatter?.message).toContain("列挙できませんでした");
+      expect(frontmatter?.message).toContain("Could not enumerate the agent directory");
 
       const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
       expect(budget?.severity).toBe("warning");
@@ -454,13 +454,13 @@ describe("doctor assets.lineBudget check", () => {
       // `message`; `details` is JSON-only. Both files, their measured counts and
       // the repair guidance must therefore survive into the message.
       expect(message).toContain(
-        `assistant/skills/qfai-demo/SKILL.md (${ASSISTANT_ASSET_MAX_LINES + 1} 行)`,
+        `assistant/skills/qfai-demo/SKILL.md (${ASSISTANT_ASSET_MAX_LINES + 1} lines)`,
       );
       expect(message).toContain(
-        `assistant/constitution/long-rule.md (${ASSISTANT_ASSET_MAX_LINES + 7} 行)`,
+        `assistant/constitution/long-rule.md (${ASSISTANT_ASSET_MAX_LINES + 7} lines)`,
       );
       expect(message).toContain("references/");
-      expect(message).toContain("同じレイヤー内");
+      expect(message).toContain("within its own layer");
       // One finding must stay one line so severity-grep readers are unaffected.
       expect(message).not.toContain("\n");
     });
@@ -479,7 +479,7 @@ describe("doctor assets.lineBudget check", () => {
       // A constitution document must not be told to move under a skill's
       // references/ — that would break the loader contract that reads it.
       expect(JSON.stringify(nextActions)).not.toContain("references/");
-      expect(JSON.stringify(nextActions)).toContain("同じレイヤー内");
+      expect(JSON.stringify(nextActions)).toContain("within its own layer");
     });
   });
 

@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /**
@@ -29,16 +31,46 @@ export async function validateContractConsistency(
     return [];
   }
 
-  const dbDomains = await collectDbStateDomains(dbFiles);
-  if (dbDomains.size === 0) {
-    return [];
+  const collected = await collectDbStateDomains(dbFiles);
+  const issues: Issue[] = [];
+
+  // `QFAI-CONTRACT-041` ships behind a promotion window (P7). The declaration
+  // FORMAT is new, so the first authors to use it are answering another finding
+  // voluntarily and will get the grammar wrong in the ways the message exists
+  // to teach; failing their run on a line they added to engage with the tool is
+  // the worst first experience of it. Resolved once here rather than per
+  // finding: it is one fact about the running version, and reading it inside a
+  // loop would say otherwise.
+  const declarationSeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
+  );
+
+  // Reported before anything else, and whether or not a domain was collected: a
+  // declaration nobody could read is a defect in the declaration, and it is
+  // exactly the state in which the author believes they have answered a finding
+  // that is still standing.
+  for (const { file, line } of collected.malformed) {
+    issues.push(unreadableDerivedDeclaration(file, line, declarationSeverity));
   }
 
-  const issues: Issue[] = [];
-  for (const file of apiFiles) {
-    issues.push(...(await validateApiFileAgainstDb(file, dbDomains)));
+  if (collected.domains.size === 0) {
+    return issues;
   }
+
+  // Which declared values actually did work, gathered across every API contract
+  // so the staleness verdict is taken once and not once per file.
+  const honoured = new Set<string>();
+  for (const file of apiFiles) {
+    issues.push(...(await validateApiFileAgainstDb(file, collected, honoured)));
+  }
+  issues.push(...staleDerivedDeclarations(collected, honoured, declarationSeverity));
   return issues;
+}
+
+/** `<file>::<normalized field>::<value>`, the key a declaration is credited by. */
+function derivedKey(declaration: DerivedDeclaration, value: string): string {
+  return `${declaration.file}::${normalizeFieldName(declaration.fieldName)}::${value}`;
 }
 
 /** One contract's bound on a field name, kept separate from every other's. */
@@ -170,26 +202,29 @@ function describeDbDomain(domain: DbDomain): string {
   const sorted = [...domain.bindings].sort((a, b) => a.file.localeCompare(b.file));
   const first = sorted[0];
   if (sorted.length === 1 && first) {
-    return `DB 側の許容値: ${Array.from(first.values).sort().join(", ")}`;
+    return `DB domain: ${Array.from(first.values).sort().join(", ")}`;
   }
   const perFile = sorted
     .map((binding) => `${binding.file}: ${Array.from(binding.values).sort().join(", ")}`)
     .join("; ");
-  return `DB 側の許容値 (契約ごと): ${perFile}`;
+  return `DB domain, per contract: ${perFile}`;
 }
 
 /** Which form bounds the field, and — when the candidates disagree — whose. */
 function describeDbConstraint(domain: DbDomain): string {
   if (isEnumOnly(domain)) {
-    return "ENUM (insert 時に拒絶される物理制約)";
+    return "ENUM (a physical constraint: the insert is rejected)";
   }
   const fromEnum = enumFiles(domain);
   if (fromEnum.length === 0) {
-    return "CHECK (現在の制約。drop / NOT VALID で外せる)";
+    return (
+      "CHECK (a constraint the DB asserts today, not the shape of the column: " +
+      "it can be dropped or declared NOT VALID)"
+    );
   }
   return (
-    `CHECK と ENUM の混在 — ENUM を宣言するのは ${fromEnum.join(", ")} です。` +
-    "同名列の ENUM は他テーブルの列を束縛するだけで、この API フィールドの insert を拒絶するとは限りません"
+    `CHECK and ENUM mixed - the ENUM is declared by ${fromEnum.join(", ")}. ` +
+    "An ENUM on a same-named column bounds that table's column, and need not reject an insert of this API field"
   );
 }
 
@@ -208,16 +243,17 @@ function describeDbConstraint(domain: DbDomain): string {
 function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): string {
   if (enumOnly) {
     return (
-      `DB 契約 (${dbFiles.join(", ")}) の ENUM が正です — ` +
-      "insert 時に拒絶される物理制約なので、この組み合わせを満たす実装は存在しません。" +
-      "ENUM に値を追加するか (マイグレーションを伴います)、API 側の terminal semantics を訂正してください。"
+      `The ENUM in the DB contracts (${dbFiles.join(", ")}) is canonical - it is a physical ` +
+      "constraint that rejects the value at insert time, so no implementation satisfies both " +
+      "contracts. Add the value to the ENUM (this needs a migration), or correct the API " +
+      "contract's terminal semantics."
     );
   }
   if (fromEnum.length === 0) {
     return (
-      `DB 契約 (${dbFiles.join(", ")}) の CHECK 制約との不一致です — ` +
-      "制約側を広げる (drop / 再定義) と API 側を訂正するのどちらも取れます。" +
-      "どちらを canonical とするかは、その entity を所有する spec の Contracts 表で判断してください。"
+      `A disagreement with the CHECK constraint in the DB contracts (${dbFiles.join(", ")}) - ` +
+      "widening the constraint (drop or redefine it) and correcting the API are both open. " +
+      "Which one is canonical is decided in the Contracts table of the spec that owns the entity."
     );
   }
   const fromCheck = dbFiles.filter((name) => !fromEnum.includes(name));
@@ -228,32 +264,127 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
   // from "neither is settled", and only the first may say "the same contract".
   if (fromCheck.length === 0 && dbFiles.length === 1) {
     return (
-      `ENUM と CHECK が同じ契約 (${dbFiles.join(", ")}) の中に現れています — ` +
-      "同名の列が複数のテーブルにある場合、その ENUM が束縛するのは API フィールドの列とは限りません。" +
-      "対象のテーブルと列を 1 つに特定してから、ENUM 側なら値を追加、CHECK 側なら制約を広げるか API を訂正してください。"
+      `ENUM and CHECK both appear in the same contract (${dbFiles.join(", ")}) - ` +
+      "where several tables carry a same-named column, that ENUM need not be the one bounding " +
+      "the API field. Identify the one table and column first, then add the value to the ENUM, " +
+      "or widen the CHECK, or correct the API."
     );
   }
   if (fromCheck.length === 0) {
     return (
-      `候補の契約 (${dbFiles.join(", ")}) はいずれも ENUM を宣言していますが、` +
-      "少なくとも 1 つは同じ契約の中で CHECK と混在しており、その ENUM が束縛するのは " +
-      "API フィールドの列とは限りません。" +
-      "まず、その entity を所有する spec の Contracts 表で対応する DB 契約を 1 つに絞り、" +
-      "その上で対象のテーブルと列を特定してください。"
+      `Every candidate contract (${dbFiles.join(", ")}) declares an ENUM, but at least one of ` +
+      "them mixes CHECK and ENUM within itself, so that ENUM need not be the one bounding the " +
+      "API field. Narrow the pairing to one DB contract in the Contracts table of the spec that " +
+      "owns the entity, then identify the table and column."
     );
   }
   return (
-    `ENUM を宣言しているのは ${fromEnum.join(", ")} で、CHECK で束縛する契約 ` +
-    `(${fromCheck.join(", ")}) も候補に含まれます — ` +
-    "照合はフィールド名のみなので、この API フィールドを束縛する契約がその ENUM とは限りません。" +
-    "まず、その entity を所有する spec の Contracts 表で、対応する DB 契約を 1 つに絞ってください。"
+    `The ENUM is declared by ${fromEnum.join(", ")}, and the contracts bounding it with a ` +
+    `CHECK (${fromCheck.join(", ")}) are candidates too - ` +
+    "the pairing is by field name alone, so the contract bounding this API field need not be " +
+    "the one with the ENUM. Narrow it to one DB contract in the Contracts table of the spec " +
+    "that owns the entity."
   );
+}
+
+/**
+ * A line carrying the key that does not parse as a declaration.
+ *
+ * The severity comes from the promotion window, not from a literal: what this
+ * adds today is the one thing the author cannot see otherwise — that the marker
+ * they wrote was not read, so the finding they were answering is still standing
+ * for the reason it always was — and the run still reports whatever
+ * `QFAI-CONTRACT-040` was going to report either way.
+ */
+function unreadableDerivedDeclaration(
+  file: string,
+  line: string,
+  // Named as the binding is, because the ledger guard follows the NAME: an
+  // emission whose severity expression is not the one bound to this entry's pin
+  // reads as a hard-coded severity, which is a window that never opens.
+  declarationSeverity: "warning" | "error",
+): Issue {
+  return issue(
+    "QFAI-CONTRACT-041",
+    `A \`Derived (not stored):\` declaration does not parse: ${line}`,
+    declarationSeverity,
+    file,
+    "contracts.crossContract.derivedNotStored",
+    [line],
+    "canonical",
+    "The form is `-- Derived (not stored): <column> = <value>, <value> from <inputs>`. " +
+      "The `from` clause - what the values are computed from - is required; without it the " +
+      "line is not read as a declaration at all, because a marker that needs only the values " +
+      "would be a way to silence this rule rather than a way to answer it. One empty element " +
+      "in the value list invalidates the whole declaration, so that a half-written one is " +
+      "never read as finished.",
+  );
+}
+
+/**
+ * A declaration that did no work, which is a claim nobody is checking.
+ *
+ * Two ways to get here, and the message says which. The value is not one the
+ * API requires — so nothing was ever going to ask about it — or the DB domain
+ * stores it after all, which contradicts the declaration outright. Both are
+ * stale rather than harmless: the next reader takes the line as a statement
+ * about the schema, and it is not one.
+ */
+function staleDerivedDeclarations(
+  collected: DbStateDomains,
+  honoured: Set<string>,
+  declarationSeverity: "warning" | "error",
+): Issue[] {
+  const issues: Issue[] = [];
+  for (const [normalized, declarations] of collected.derived.entries()) {
+    const domain = collected.domains.get(normalized);
+    for (const declaration of declarations) {
+      const unused = [...declaration.values]
+        .filter((value) => !honoured.has(derivedKey(declaration, value)))
+        .sort((a, b) => a.localeCompare(b));
+      if (unused.length === 0) {
+        continue;
+      }
+      const stored = unused.filter((value) => domain?.values.has(value) === true);
+      const unasked = unused.filter((value) => domain?.values.has(value) !== true);
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-041",
+          `A \`Derived (not stored): ${declaration.fieldName}\` declaration covers values that ` +
+            "do nothing: " +
+            unused.join(", ") +
+            (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
+            (unasked.length > 0
+              ? ` (the API contract does not require: ${unasked.join(", ")})`
+              : ""),
+          declarationSeverity,
+          declaration.file,
+          "contracts.crossContract.derivedNotStored",
+          [declaration.fieldName, ...unused],
+          "canonical",
+          (stored.length > 0
+            ? "The DB domain can store that value, which contradicts the claim that it is " +
+              "not stored - drop the declaration, or, if it really is not stored, remove the " +
+              "value from the DB domain."
+            : "") +
+            (unasked.length > 0
+              ? "The API contract does not require that value, so the declaration exempts " +
+                "nothing. Keep it if the value is about to be added to the API; otherwise " +
+                "drop it."
+              : ""),
+        ),
+      );
+    }
+  }
+  return issues;
 }
 
 async function validateApiFileAgainstDb(
   file: string,
-  dbDomains: Map<string, DbDomain>,
+  collected: DbStateDomains,
+  honoured: Set<string>,
 ): Promise<Issue[]> {
+  const dbDomains = collected.domains;
   let doc: Record<string, unknown>;
   try {
     const text = await readFile(file, "utf-8");
@@ -269,8 +400,22 @@ async function validateApiFileAgainstDb(
     if (!db) {
       continue;
     }
+    const declarations = collected.derived.get(normalized) ?? [];
+    // Subtracted, not exempted wholesale. A value nobody declared still fires,
+    // or the marker would be a way to silence the rule rather than a way to
+    // answer it — and the declaration is credited only for a value the DB
+    // genuinely cannot store, so a declaration covering a stored value earns
+    // nothing and is reported below.
     const unrepresentable = Array.from(api.values)
       .filter((value) => !db.values.has(value.toLowerCase()))
+      .filter((value) => {
+        const lower = value.toLowerCase();
+        const covering = declarations.filter((entry) => entry.values.has(lower));
+        for (const entry of covering) {
+          honoured.add(derivedKey(entry, lower));
+        }
+        return covering.length === 0;
+      })
       .sort((a, b) => a.localeCompare(b));
     if (unrepresentable.length === 0) {
       continue;
@@ -299,16 +444,17 @@ async function validateApiFileAgainstDb(
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
-        `API 契約が要求する ${api.fieldName} の値が、同名フィールドを宣言する DB 契約で表現できません: ` +
-          `${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
-          `DB 契約: ${dbFileList.join(", ")}; DB 側の制約: ${describeDbConstraint(db)})`,
+        `The API contract requires ${api.fieldName} values the DB contracts declaring the same ` +
+          `field name cannot represent: ${unrepresentable.join(", ")} (${describeDbDomain(db)}; ` +
+          `DB contracts: ${dbFileList.join(", ")}; DB constraint: ${describeDbConstraint(db)})`,
         severity,
         file,
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
         mixedRemedy(enumOnly, dbFileList, enumContributors) +
-          "照合は明示的なペア宣言でなく、正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
+          " Pairing is by normalized field name across the DB contracts, not by an explicit " +
+          "pair declaration.",
       ),
     );
   }
@@ -504,14 +650,137 @@ function countCreateTables(rawText: string): number {
   return (stripSqlComments(rawText).match(CREATE_TABLE_PATTERN) ?? []).length;
 }
 
-async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbDomain>> {
+/**
+ * A `Derived (not stored)` declaration: values computed at read time.
+ *
+ * `QFAI-CONTRACT-040` asks that every state value an API contract mandates be
+ * representable in the paired DB domain, and for a value that is never STORED
+ * both of the remedies it offers are wrong. Widening the domain would make it
+ * possible to store a value the DB contract says must not be stored — and a
+ * value derived from the wall clock goes stale the moment the clock moves,
+ * which is why it is not stored. Deleting it from the API would remove a value
+ * the UI contract requires the screen to display. There was no way to say so,
+ * so the finding had no valid remedy and stayed in the bucket forever (#1203).
+ *
+ * The declaration lives in the DB contract, not on the API property, because
+ * storage is the DB contract's subject. An API contract asserting "this is not
+ * stored" would let the side making the DEMAND silence the side that answers
+ * it — and the projects that hit this already state the derivation in their DB
+ * contract's prose, so this makes an existing claim machine-readable rather
+ * than inventing a place for it.
+ */
+type DerivedDeclaration = {
+  file: string;
+  /** The column name as written, for the message. */
+  fieldName: string;
+  /** Values the contract says are computed rather than stored. */
+  values: Set<string>;
+  /** What they are computed FROM, as written. */
+  inputs: string;
+};
+
+/**
+ * `-- Derived (not stored): status = standby, powered_off from enabled, clock`
+ *
+ * Both anchors are the ones {@link DEPENDS_ON_COMMENT_RE}'s docblock argues
+ * for, and for the same reason: the comment marker is required and the key
+ * starts the line, so prose ABOUT a derivation — the natural thing to write in
+ * a DDL comment above the column — is not itself a declaration.
+ *
+ * The `from` clause is required. Without it the marker would be a one-word
+ * silencer for any value an author found inconvenient; naming the inputs is
+ * what makes the claim reviewable, and it is the half a reader needs in order
+ * to check that nothing in the list is a column the derivation would have to
+ * store.
+ */
+const DERIVED_NOT_STORED_RE =
+  /^[ \t]*(?:--|#|\/\/|\*)[ \t]*Derived \(not stored\):[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.+?)[ \t]+from[ \t]+(.+?)[ \t]*$/gim;
+
+/** The key with anything after it, for telling a typo from an absence. */
+const DERIVED_KEY_RE = /^[ \t]*(?:--|#|\/\/|\*)[ \t]*Derived \(not stored\):[ \t]*(.*)$/gim;
+
+/**
+ * Every readable declaration in one contract, and every line that tried to be
+ * one and failed.
+ *
+ * A malformed declaration is REPORTED rather than ignored. Ignoring it is the
+ * silent-failure shape `dependencyIdsFromElements` was written to avoid: an
+ * author writes the marker, mistypes the `from` clause, sees the finding they
+ * were trying to answer still standing, and has nothing telling them the
+ * declaration was never read.
+ */
+function collectDerivedDeclarations(
+  file: string,
+  text: string,
+): { declared: DerivedDeclaration[]; malformed: string[] } {
+  // The raw text, NOT comment-stripped: the declaration lives in a comment.
+  const body = text;
+  const declared: DerivedDeclaration[] = [];
+  const readable = new Set<string>();
+  for (const match of body.matchAll(DERIVED_NOT_STORED_RE)) {
+    // Narrowed rather than asserted. Every group of `DERIVED_NOT_STORED_RE` is
+    // required today, so a match always carries all three — but saying so with
+    // an `as` would let a later edit making one optional pass with nothing to
+    // notice it, and the repository's TypeScript rule is to narrow instead.
+    const line = match[0];
+    const fieldName = match[1];
+    const valueList = match[2];
+    const inputs = match[3];
+    if (fieldName === undefined || valueList === undefined || inputs === undefined) {
+      continue;
+    }
+    const elements = valueList.split(",");
+    const values = elements.map((value) => value.trim().toLowerCase());
+    // The whole list or none of it, as the apply-order lanes do: a trailing
+    // comma or an empty element means the author was mid-edit, and harvesting
+    // the readable half would let a half-written declaration silence a value.
+    if (values.some((value) => value.length === 0) || inputs.trim() === "") {
+      continue;
+    }
+    readable.add(line);
+    declared.push({ file, fieldName, values: new Set(values), inputs: inputs.trim() });
+  }
+  const malformed: string[] = [];
+  for (const match of body.matchAll(DERIVED_KEY_RE)) {
+    const line = match[0];
+    if (!readable.has(line)) {
+      malformed.push(line.trim());
+    }
+  }
+  return { declared, malformed };
+}
+
+type DbStateDomains = {
+  domains: Map<string, DbDomain>;
+  /** Readable declarations, keyed by normalized field name. */
+  derived: Map<string, DerivedDeclaration[]>;
+  /** Lines that carry the key but do not parse, per contract file. */
+  malformed: { file: string; line: string }[];
+};
+
+async function collectDbStateDomains(dbFiles: string[]): Promise<DbStateDomains> {
   const domains = new Map<string, DbDomain>();
+  const derived = new Map<string, DerivedDeclaration[]>();
+  const malformed: { file: string; line: string }[] = [];
   for (const file of dbFiles) {
     let text: string;
     try {
       text = await readFile(file, "utf-8");
     } catch {
       continue;
+    }
+    const declarations = collectDerivedDeclarations(file, text);
+    for (const line of declarations.malformed) {
+      malformed.push({ file, line });
+    }
+    for (const declaration of declarations.declared) {
+      const key = normalizeFieldName(declaration.fieldName);
+      const existing = derived.get(key);
+      if (existing) {
+        existing.push(declaration);
+      } else {
+        derived.set(key, [declaration]);
+      }
     }
     // One table means one column of any given name, so a name carrying both
     // forms carries them on the SAME column and #1100's "enum wins" applies.
@@ -550,7 +819,7 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
       }
     }
   }
-  return domains;
+  return { domains, derived, malformed };
 }
 
 /**

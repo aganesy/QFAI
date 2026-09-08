@@ -1,6 +1,6 @@
 # 10 Plan
 
-## Implementation Strategy
+## Implementation approach
 
 1. Discussion-pack preflight: validate latest pack readiness
 2. Contract-first phase: create/update `.qfai/contracts/(api|db|ui)/**`
@@ -11,7 +11,7 @@
 7. Validate gate: run `qfai validate --fail-on error` until error=0
 8. Density review: triage `QFAI-COV-207` warnings
 
-## Test Strategy
+## Test approach
 
 - Unit tests: reference direction enforcement, required edge detection, contract index alignment
 - Integration tests: phase order enforcement, slice gate validation, validate gate
@@ -22,7 +22,7 @@
 - Requires: discussion pack from `/qfai-discussion`
 - Consumed by: `/qfai-prototyping` or `/qfai-atdd` as next steps
 
-## Risk
+## Risk mitigation
 
 - Large batch mode may exceed context limits for multi-spec projects
 - Mitigation: parallel delegation per spec with shared gate at batch tail

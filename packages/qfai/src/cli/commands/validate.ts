@@ -113,6 +113,90 @@ export function configTargetsLegacyValidateJsonPath(configuredPath: string): boo
   return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
 }
 
+/**
+ * Outcome of the legacy `validate.json` migration gate: the
+ * `D-DEPRECATED-PATH` finding a run must carry (if any) plus the writer
+ * decisions derived from the same signals.
+ */
+export type LegacyValidateJsonGate = {
+  /** Finding to append to the run's result, or `null` when none is due. */
+  issue: Issue | null;
+  /** True while the deprecation window is open (legacy path still written). */
+  legacyWriteEnabled: boolean;
+  /** True when `output.validateJsonPath` still names the legacy SSOT. */
+  configTargetsLegacyPath: boolean;
+  /** True when the writer must refuse the configured (legacy) target. */
+  refuseConfiguredLegacyWrite: boolean;
+};
+
+/**
+ * Evaluate the legacy `.qfai/output/validate.json` migration gate.
+ *
+ * Shared by `qfai validate` and `qfai report --run-validate`: both run
+ * `validateProject` and then write `output.validateJsonPath`, so both owe the
+ * operator the same finding and the same post-sunset write refusal. When only
+ * `validate` applied it, `report --run-validate` — the documented single-step
+ * CI usage — re-created the legacy path and exited 0 on a project `validate`
+ * rejects with exit 1.
+ */
+export async function evaluateLegacyValidateJsonGate(args: {
+  root: string;
+  configuredValidateJsonPath: string;
+  /** Override the observed tool version; production reads package.json. */
+  toolVersionOverride?: string;
+  /** Spec ids of a `--spec`-scoped run; empty for an unscoped run. */
+  scopedSpecIds?: readonly string[];
+}): Promise<LegacyValidateJsonGate> {
+  const effectiveToolVersion = args.toolVersionOverride ?? (await resolveToolVersion());
+  const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
+  const legacyWriteEnabled = legacySeverity === "warning";
+  // Detect whether the operator's project config still aims the writer
+  // at the legacy SSOT. This is a stronger signal than "the legacy file
+  // exists on disk" — even a clean filesystem will trigger the gate if
+  // the config points there, because the writer is about to recreate
+  // the stale path on this very run.
+  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(
+    args.configuredValidateJsonPath,
+  );
+  const scopedSpecIds = args.scopedSpecIds ?? [];
+  // Post-sunset, only emit the deprecation finding when there is
+  // observable evidence (config or on-disk file) that a consumer still
+  // depends on the legacy path. Otherwise every clean validate run on
+  // tool >= sunset would carry an unactionable error finding for a path
+  // the user never used. Pre-sunset the finding is always emitted as a
+  // warning because the tool itself is still writing the path.
+  const legacyOnDisk = !legacyWriteEnabled
+    ? await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL))
+    : false;
+  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
+  // notice would describe a deprecated write that never happens — and fail an
+  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
+  // the only part a scope may suppress. Post-sunset the finding is evidence of
+  // a legacy path this project still depends on (config or stale file), and
+  // suppressing it would let `--spec` alone walk past the migration gate with
+  // exit 0.
+  const emitDeprecationIssue = legacyWriteEnabled
+    ? scopedSpecIds.length === 0
+    : legacyOnDisk || configTargetsLegacyPath;
+  // Post-sunset, refuse to write to the configured legacy path. This is
+  // the migration gate: the legacy SSOT is dead, the config must be
+  // updated. Pre-sunset writes proceed normally (writer-side warning).
+  const refuseConfiguredLegacyWrite = configTargetsLegacyPath && !legacyWriteEnabled;
+  return {
+    issue: emitDeprecationIssue
+      ? buildDeprecationIssue({
+          severity: legacySeverity,
+          legacyWriteEnabled,
+          configTargetsLegacyPath,
+          refuseConfiguredLegacyWrite,
+        })
+      : null,
+    legacyWriteEnabled,
+    configTargetsLegacyPath,
+    refuseConfiguredLegacyWrite,
+  };
+}
+
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
@@ -152,58 +236,22 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
         counts: { ...validated.counts, warning: validated.counts.warning + 1 },
       }
     : validated;
-  // Resolve effective tool version for the legacy-path sunset gate.
-  // Test callers override; production reads the same package.json#version
-  // the rest of the toolchain uses (so the source-of-truth is single).
+  // Test callers override; production reads the same package.json#version the
+  // rest of the toolchain uses (so the source-of-truth is single). Resolved
+  // once here and handed to the gate, which would otherwise read it again.
   const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   await emitProvenance(effectiveToolVersion);
-  const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
-  const legacyWriteEnabled = legacySeverity === "warning";
-  // Detect whether the operator's project config still aims the writer
-  // at the legacy SSOT. This is a stronger signal than "the legacy file
-  // exists on disk" — even a clean filesystem will trigger the gate if
-  // the config points there, because the writer is about to recreate
-  // the stale path on this very run.
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
-  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
   const scopedSpecIds = options.specIds ?? [];
-  // Post-sunset, only emit the deprecation finding when there is
-  // observable evidence (config or on-disk file) that a consumer still
-  // depends on the legacy path. Otherwise every clean validate run on
-  // tool >= sunset would carry an unactionable error finding for a path
-  // the user never used. Pre-sunset the finding is always emitted as a
-  // warning because the tool itself is still writing the path.
-  const legacyOnDisk = !legacyWriteEnabled
-    ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
-    : false;
-  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
-  // notice would describe a deprecated write that never happens — and fail an
-  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
-  // the only part a scope may suppress. Post-sunset the finding is evidence of
-  // a legacy path this project still depends on (config or stale file), and
-  // suppressing it would let `--spec` alone walk past the migration gate with
-  // exit 0.
-  const emitDeprecationIssue = legacyWriteEnabled
-    ? scopedSpecIds.length === 0
-    : legacyOnDisk || configTargetsLegacyPath;
-  // Post-sunset, refuse to write to the configured legacy path. This is
-  // the migration gate: the legacy SSOT is dead, the config must be
-  // updated. Pre-sunset writes proceed normally (writer-side warning).
-  const refuseConfiguredLegacyWrite = configTargetsLegacyPath && !legacyWriteEnabled;
-  const deprecationIssue: Issue | null = emitDeprecationIssue
-    ? buildDeprecationIssue({
-        severity: legacySeverity,
-        legacyWriteEnabled,
-        configTargetsLegacyPath,
-        refuseConfiguredLegacyWrite,
-      })
-    : null;
-  const result: ValidationResult = deprecationIssue
-    ? {
-        ...rawResult,
-        issues: [...rawResult.issues, deprecationIssue],
-        counts: recountIssues(rawResult.counts, deprecationIssue),
-      }
+  const legacyGate = await evaluateLegacyValidateJsonGate({
+    root,
+    configuredValidateJsonPath,
+    toolVersionOverride: effectiveToolVersion,
+    scopedSpecIds,
+  });
+  const { legacyWriteEnabled, configTargetsLegacyPath, refuseConfiguredLegacyWrite } = legacyGate;
+  const result: ValidationResult = legacyGate.issue
+    ? appendIssue(rawResult, legacyGate.issue)
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
   // `!== false` rather than a truth test: a result that carries no claim (one
@@ -549,7 +597,47 @@ export const GATE_GROUP_FAMILIES = {
   // inside `discussion`: a prototyping run listed as unevaluated a family it
   // had just emitted.
   "research-summary": ["QFAI-RESEARCH-*"],
-  "canonical-uix": ["UIX-VAL-*"],
+  // Enumerated. This entry WAS `["UIX-VAL-*"]`, and that glob is a PREFIX of
+  // every `UIX-VAL-SKILL-*` code, which `prototyping-skill` owns — so all
+  // twelve belonged to two groups at once until this list replaced it (#1215).
+  //
+  // **No profile misreports them today**, and that was worth establishing
+  // before changing anything. `unevaluatedGates` walks the groups a profile
+  // does NOT run and reports their family PATTERNS, so a code in two groups is
+  // still reported exactly once, by whichever group is missing. An output error
+  // needs a profile that runs the narrow group WITHOUT the wildcard one, and
+  // `prototyping-skill` is reachable only from `runFullValidators`, which runs
+  // `canonical-uix` too.
+  //
+  // So this is a trap rather than a live bug — and the table's own comments are
+  // a record of that trap firing. `contracts` is enumerated because
+  // `QFAI-CONTRACT-*` "would swallow the sdd-only reference codes, letting a
+  // `tdd` run claim a hard gate it never reached"; `traceability-layered`
+  // because `QFAI-TRACE-*` "would count every trace code in two groups at
+  // once". Each was a divergence in the profile map away from the misreport
+  // this is shaped like, and each was repaired the same way. One group per
+  // code is the invariant all three preserve, and `gateGroupCoverage.test.ts`
+  // now states it, so the next divergence fails a lane instead of the notice.
+  //
+  // The family grammar has no negation, so the disjoint set is spelled out.
+  // Safe to maintain by hand only because the coverage case in that same file
+  // fails on a `UIX-VAL-` code no pattern here covers — the drift this list
+  // could otherwise accumulate is what that guard is for. No count is given
+  // here on purpose: the guard is what keeps the list complete, and a number
+  // in a comment would go stale without anything noticing.
+  "canonical-uix": [
+    "UIX-VAL-3LAYER-*",
+    "UIX-VAL-CLASSIFICATION-*",
+    "UIX-VAL-DIRECTION-*",
+    // Covers `UIX-VAL-DS-READ-ERROR`, `UIX-VAL-DS01` and `UIX-VAL-DS02`: the
+    // two numbered ones carry no separator, so a `-*` form would miss them.
+    "UIX-VAL-DS*",
+    "UIX-VAL-OQ-*",
+    "UIX-VAL-SCREEN-*",
+    "UIX-VAL-SIDECAR-*",
+    "UIX-VAL-T05",
+    "UIX-VAL-TREND-*",
+  ],
   sdd: [
     // `runSddValidators` dispatches the preflight input-source rule, so a
     // partial profile that skips the `sdd` group has not evaluated it either.
@@ -594,6 +682,15 @@ export const GATE_GROUP_FAMILIES = {
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
     "D-SURFACE-TYPE-MISSING",
+    // `validateLayeredTraceability`, dispatched from `runSddValidators` and
+    // nowhere else. Its other codes are filed under `traceability-layered`,
+    // which is a different module (`validators/traceability.ts`) despite the
+    // shared subject — so the underscore pair had no group and no profile
+    // reported them. `runLog.ts` counts them into `downstream_violations`,
+    // which is what made them look like run-log bookkeeping rather than a
+    // gate.
+    "TRACE_DOWNSTREAM_REF",
+    "TRACE_SHARED_SCOPE_VIOLATION",
   ],
   // Reviewer-gate detectors wired into `runSddValidators`. The `R-*` wildcard
   // this replaces made `--profile sdd` claim coverage of `detectMockHrefDrift`
@@ -642,6 +739,11 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-021",
     "QFAI-CONTRACT-031",
     "QFAI-CONTRACT-040",
+    // `-041` shipped after this list did, and the explicit enumeration that
+    // keeps the wildcard from over-claiming is also what stops a new code
+    // joining on its own. It comes from the same `validateContractConsistency`
+    // as `-040`, so it has the same two profiles.
+    "QFAI-CONTRACT-041",
     "QFAI-DB-*",
   ],
   // `validateContractReferences` — `runSddValidators` only. Five codes, not
@@ -751,7 +853,12 @@ export const GATE_GROUP_FAMILIES = {
   // `QFAI-TRACE-*` is deliberately NOT here for the same reason: the four
   // `traceability-*` groups below split that prefix, and leaving the glob would
   // count every trace code in two groups at once.
-  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*", "QFAI-TEST-*"],
+  // Its own group rather than part of `tdd`: `runAtddValidators` runs the stub
+  // gate too, so a group that bundled it with the ledger families would report
+  // `QFAI-TEST-*` as unevaluated on a profile that does evaluate it. One
+  // validator emits all three codes, so the whole family moves together.
+  "test-stubs": ["QFAI-TEST-*"],
+  tdd: [...TDD_LIST_EXECUTION_STATE_CODES, "QFAI-TDDLIST-*"],
   // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
   // and both profiles check that it is present and well-shaped, but `sdd` does
   // not run the TDD-list gates.
@@ -910,7 +1017,9 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "traceability-layered",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["atdd-traceability", "atdd-scaffold"],
+  // `runAtddValidators` runs the stub gate over the acceptance-test
+  // directories it owns, so this profile evaluates `QFAI-TEST-*`.
+  atdd: ["atdd-traceability", "atdd-scaffold", "test-stubs"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group. It also calls
   // `validateContracts` and `validateTraceability`, which sdd shares, plus the
@@ -924,6 +1033,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // validator, so it evaluates the seed shape the `sdd` profile also checks.
   tdd: [
     "tdd",
+    "test-stubs",
     "tdd-ledger-seed",
     "atdd-traceability",
     "drift",
@@ -1123,7 +1233,7 @@ function buildPartialProfileNotice(
         preconditionSentence
       : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
         `${fullCovered.join(", ")}. A PASS here is not full-scan coverage — run ` +
-        "`npx qfai validate --fail-on error` (full profile) before declaring completion." +
+        "`qfai validate --fail-on error` (full profile) before declaring completion." +
         stageOnlySentence +
         preconditionSentence;
   return profileNotice(message);
@@ -1137,6 +1247,22 @@ function profileNotice(message: string): Issue {
     category: "canonical",
     message,
     rule: "validate.partialProfileCoverage",
+  };
+}
+
+/**
+ * Append one finding to a result and keep `counts` in step.
+ *
+ * Exported so `report --run-validate` folds the shared migration-gate finding
+ * into its result exactly the way `validate` does — a hand-rolled copy there
+ * would be free to forget the recount and hand the gate a stale severity
+ * tally.
+ */
+export function appendIssue(result: ValidationResult, added: Issue): ValidationResult {
+  return {
+    ...result,
+    issues: [...result.issues, added],
+    counts: recountIssues(result.counts, added),
   };
 }
 
@@ -1433,12 +1559,12 @@ function emitGitHubSummary(
   if (options.dropped > 0 || truncated.length > 0) {
     const details = [
       "qfai validate note:",
-      options.dropped > 0 ? `重複除外=${options.dropped}` : null,
+      options.dropped > 0 ? `deduped=${options.dropped}` : null,
       // PER LEVEL, because one number cannot express a per-level cap: a run with 5 errors and
       // 200 notices is complete on one level and truncated on the other, and a single
-      // `上限省略=195` reads as though something was lost everywhere.
+      // `omittedOverLimit=195` reads as though something was lost everywhere.
       truncated.length > 0
-        ? `上限省略=${truncated
+        ? `omittedOverLimit=${truncated
             .map((tally) => `${tally.level} ${tally.emitted}/${tally.total}`)
             .join(", ")}`
         : null,
@@ -1447,20 +1573,17 @@ function emitGitHubSummary(
       .join(" ");
     process.stdout.write(`${details}\n`);
     process.stdout.write(
-      `qfai validate note: GitHub は annotation を level ごと 10 件/step までしか表示しません。省略分は JSON に全件あります。\n`,
+      "qfai validate note: GitHub shows at most 10 annotations per level per step. " +
+        "Everything omitted is in the JSON in full.\n",
     );
   }
 
   const relative = toRelativePath(options.root, options.jsonPath);
-  process.stdout.write(
-    `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
-  );
-  process.stdout.write(
-    `qfai validate note: run-log は ${options.runLogPath} を参照してください。\n`,
-  );
+  process.stdout.write(`qfai validate note: see ${relative} or --format text for the details.\n`);
+  process.stdout.write(`qfai validate note: see ${options.runLogPath} for the run-log.\n`);
 
   process.stdout.write(
-    "qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。\n",
+    "qfai validate note: next, qfai report generates report.md (e.g. qfai report).\n",
   );
 }
 
@@ -1577,6 +1700,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
+  // "or `-`" alone read as "an empty cell is malformed", which is the opposite
+  // of the rule: the validator, the ledger template and `volume-policy.md` all
+  // treat empty and `-` as the one "not resolved" state.
+  "QFAI-BRREF-001":
+    "A declared `BR-Ref` cell holds one `BR-NNNN` or `BR-NNNN-NNNN`, or `-` — equivalently an empty cell — when no BR reaches the row.",
+  "QFAI-BRREF-002":
+    "Every declared `BR-Ref` names a rule the spec's `04_Business-Rules.md` declares, so the T1 review group is keyed on a rule that exists.",
+  "QFAI-BRREF-003":
+    "A declared `BR-Ref` is the key the row's own `TC-Refs` derive: `TC` -> `EX-Ref` -> `05_Examples.md`'s `BR-Ref` (`AC-Refs` only for a TC with no `EX-Ref`), lowest of the union.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
@@ -1741,7 +1873,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-035":
     "Every contract index row's `File` cell names a file that declares that row's contract ID.",
   "QFAI-CONTRACT-040":
-    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
+    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
+  "QFAI-CONTRACT-041":
+    "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
   // the expected state names the contracts root by role. Pinning the default
   // path sent a project that moved its contracts to repair a directory it does
@@ -1804,6 +1938,29 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-TDDLIST-011":
+    "Every ledger `Evidence` cell is written in the one shape the grammar admits, so the row's provenance, oracle, revision and anchor can each be read from the cell rather than inferred from prose.",
+  "QFAI-TDDLIST-012":
+    "Every ledger `Evidence` cell stays inside the 240-character cap: the cell is a pointer to the proof, and the commands and their output live in the evidence file its anchor names.",
+  "QFAI-TDDLIST-013":
+    "No ATDD-owned row records `RED:n-a`: its test is authored by `/qfai-atdd`, so it owes either an observed RED or the falsifiability argument that stands in for one.",
+  "QFAI-TDDLIST-014":
+    "Every ledger row carries exactly the cells its table's header declares, so no content sits past the last column where the per-column rules cannot read it.",
+  // The assistant-tree provenance family. Every governed file under
+  // `constitution/` and `catalog/` is either byte-identical to the installed
+  // release or an explicitly recorded local overlay; the four classifications
+  // below are the ways that can fail, and the fifth is the comparison itself
+  // being impossible.
+  "QFAI-ASSETS-004":
+    "Every governed assistant file qfai wrote is still the content the installed release ships (`qfai init --force` refreshes an unedited stale copy).",
+  "QFAI-ASSETS-005":
+    "No governed assistant file is a local fork: a project-specific rule lives in a `*.local.md` overlay of the same layer, not in the qfai-owned file.",
+  "QFAI-ASSETS-006":
+    "Every file under the governed assistant layers is either shipped by the installed release or a `*.local.md` overlay.",
+  "QFAI-ASSETS-007":
+    "Every normative file the installed release ships exists in the project as a regular file.",
+  "QFAI-ASSETS-008":
+    "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
   "QFAI-TDDLIST-007":
     "A ledger row at `done` states its evidence as a pointer into the evidence file its `Layer` owns, anchored at its own TDD item.",
   "QFAI-TDDLIST-009":
@@ -1950,7 +2107,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Fill the entry's missing `id` / `category` / `title` / `description` / `source_id` fields.",
   "QFAI-RESEARCH-019": "Fill the reflection entry's missing `source_id` / `finding` fields.",
   "QFAI-RESEARCH-020":
-    "Run `npx qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
+    "Run `qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
   "QFAI-RESEARCH-021":
     "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
 };

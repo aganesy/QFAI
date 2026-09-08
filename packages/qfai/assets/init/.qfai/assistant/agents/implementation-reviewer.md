@@ -24,7 +24,14 @@ tools: [Read, Glob, Grep, Bash]
 
 - .qfai/assistant/constitution/\*\*
 - .qfai/assistant/constitution/drift-protocol.md
-- .qfai/assistant/{manifest,catalog}/\*\*
+- .qfai/assistant/manifest/agent-routing.yml
+- .qfai/assistant/manifest/review-profiles.yml
+- .qfai/assistant/catalog/\*\* and `.qfai/assistant/manifest/agent-catalog.yml`
+  (this role's own entry — `owned_artifacts`,
+  `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+  Skip a `developer_instructions` body only when it matches the agent card already in
+  context; when the two differ the card is the role contract and wins. See
+  `.qfai/assistant/constitution/constitution.md` Article III.)
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - .github/instructions/code-review.instructions.md
@@ -34,6 +41,18 @@ tools: [Read, Glob, Grep, Bash]
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
   or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
+
+**Two kinds of row do not go by `Layer`; read them first.** A row carrying
+`Pre-split-evidence: implement` in its `Evidence` cell keeps
+`.qfai/evidence/implement-<spec-id>.md`, and so does an `Integration` row whose
+`TC-Refs` name only TCs that declare `Level` `L1` / `L2`. The first is a legacy
+row whose implement anchor gate item 10 goes on accepting; the second is carved
+out of the ATDD-owned set because `/qfai-atdd` authors no test for it, so
+`/qfai-implement` writes its evidence in its own Phase Red. Both are defined in
+`.qfai/assistant/skills/qfai-implement/SKILL.md`. Selecting by `Layer` alone
+sends this role to an ATDD file that was never written for the row: it stops on
+missing evidence, or audits the wrong subject, while the evidence it was asked
+to judge sits in the implement file.
 
 **The last two are what the `Audited evidence hash` is computed over.** This
 role records that hash itself, over the row's phase-authored fields — and those

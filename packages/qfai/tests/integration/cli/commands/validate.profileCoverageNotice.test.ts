@@ -82,8 +82,10 @@ async function seedSpec(root: string): Promise<void> {
     ["# 06 Test cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
     "utf-8",
   );
-  // `validateSddDesignContractReadiness` only speaks when a root DESIGN.md
-  // exists, and the unreplaced `qfai init` seed is what QFAI-DCON-034 names.
+  // This fixture wants `QFAI-DCON-034`, which reads an unreplaced sample, so
+  // it writes one. (The same validator also reports a DESIGN.md that is
+  // missing, under a different code and only where the project has UI
+  // contracts.)
   await writeFile(
     path.join(root, "DESIGN.md"),
     ["# DESIGN", "", "Brand: qfai", "", "## Tone", "", "qfai sample brand.", ""].join("\n"),
@@ -124,6 +126,33 @@ async function withBrokenReviewPack(task: (root: string) => Promise<void>): Prom
     await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
     await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# R01\n", "utf-8");
     await writeFile(path.join(packDir, "summary.json"), "{ not json", "utf-8");
+    await task(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The same project plus a `qfai-prototyping/SKILL.md` that fails its own gate.
+ *
+ * `core/validators/skill/prototypingSkill.ts` is the sole emitter of
+ * `UIX-VAL-SKILL-*`, reached only through `validatePrototypingSkill`, which
+ * short-circuits on an absent or empty file. So a stub that is non-empty and
+ * missing every mandatory section turns "does this profile run that validator?"
+ * into an observation, the same way `withBrokenReviewPack` does for
+ * `QFAI-REVIEW-*`.
+ *
+ * The plain `withProject` tree has no prototyping skill at all, which is why
+ * the contradiction suite above cannot reach this family: with nothing emitted,
+ * listing it as unevaluated contradicts nothing.
+ */
+async function withBrokenPrototypingSkill(task: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-coverage-skill-"));
+  try {
+    await seedSpec(root);
+    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(path.join(skillDir, "SKILL.md"), "# qfai-prototyping\n", "utf-8");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -287,6 +316,50 @@ describe("QFAI-PROFILE-001 never names a family the same run emitted", () => {
                 .map((family) => `${entry.code} matched "${family}"`),
             );
           expect(contradictions).toEqual([]);
+        });
+      });
+    });
+  }
+});
+
+describe("the prototyping-skill group is measured against what each profile emits", () => {
+  // `prototyping-skill` is claimed by `full` and `verify` and by no other
+  // profile, and unlike every other group that is not written down anywhere:
+  // `FULL_GATE_GROUPS` derives itself by excluding the stage-only groups, so
+  // the group reaches `full` without an entry, and `PROTOTYPING_GATE_GROUPS`
+  // omits it without saying why.
+  //
+  // The reason is one call site. `validatePrototypingSkill` is reached from
+  // `runFullValidators` alone — `runPrototypingValidators` does not call it,
+  // despite the group's name — so `--profile prototyping` naming
+  // `UIX-VAL-SKILL-*` as unevaluated is correct, and review read it as the
+  // opposite (#1230). Move that call into the prototyping composition and the
+  // notice starts denying a gate the run just evaluated, with nothing to catch
+  // it: the family table would still be right, and the group's absence from
+  // `PROTOTYPING_GATE_GROUPS` would be the only thing wrong.
+  //
+  // So measure it rather than restate it, in both directions.
+  for (const profile of ALL_PROFILES) {
+    it(`--profile ${profile}: the notice agrees with whether the run reports UIX-VAL-SKILL-*`, async () => {
+      await withoutCiEnv(async () => {
+        await withBrokenPrototypingSkill(async (root) => {
+          await runValidate({ root, strict: false, profile });
+          const all = await findings(root);
+          const reported = all
+            .map((entry) => entry.code)
+            .filter((code) => code.startsWith("UIX-VAL-SKILL-"));
+          const notice = all.find((entry) => entry.code === "QFAI-PROFILE-001");
+          expect(notice, "every profile writes a coverage notice").toBeDefined();
+          const namedAsUnevaluated = (notice?.message ?? "").includes("UIX-VAL-SKILL-*");
+
+          expect(
+            namedAsUnevaluated,
+            reported.length > 0
+              ? `this run reported ${reported.join(", ")}, so the notice must not call ` +
+                  "UIX-VAL-SKILL-* unevaluated"
+              : "this run reported no UIX-VAL-SKILL-* finding on a skill file that fails its " +
+                  "own gate, so the notice must name the family as unevaluated",
+          ).toBe(reported.length === 0);
         });
       });
     });

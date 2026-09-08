@@ -72,7 +72,7 @@ export { validateTraceability } from "./traceability.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
 export { validateUpstreamSsotGuard } from "./upstreamSsotGuard.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
-export { validateTestTodoStubs } from "./testTodoStubs.js";
+export { STUB_SOURCE_FILE_PATTERN, validateTestTodoStubs } from "./testTodoStubs.js";
 export { validateWorklogSurface } from "./worklogSurface.js";
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";

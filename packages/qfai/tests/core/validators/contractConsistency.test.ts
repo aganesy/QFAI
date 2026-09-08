@@ -13,6 +13,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../../src/core/sunset.js";
+import { resolveToolVersion } from "../../../src/core/version.js";
 import {
   collectApiStateEnums,
   collectSqlEnumDomains,
@@ -274,7 +276,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.message).toContain("ENUM");
     // And the remedy names the canonical side rather than offering both
     // directions symmetrically, which was the whole judgement call.
-    expect(issues[0]?.suggested_action).toContain("ENUM が正です");
+    expect(issues[0]?.suggested_action).toContain("is canonical");
   });
 
   it("keeps a CHECK-constraint contradiction a warning", async () => {
@@ -287,7 +289,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.severity).toBe("warning");
     expect(issues[0]?.message).toContain("CHECK");
     // Both directions stay open here, and the remedy says how to choose.
-    expect(issues[0]?.suggested_action).toContain("Contracts 表");
+    expect(issues[0]?.suggested_action).toContain("Contracts table");
   });
 
   it("takes the enum severity when both forms bound one field", async () => {
@@ -389,14 +391,14 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
       const issues = await validateContractConsistency([api], dbs);
 
-      expect(issues[0]?.message).not.toContain("insert 時に拒絶される物理制約");
+      expect(issues[0]?.message).not.toContain("a physical constraint");
       // Names the contract the ENUM came from, so the reader can see it is not
       // the one bounding their field. Read off the constraint clause alone:
       // every contract's path appears earlier in the message, so a whole-
       // message assertion would pass on either name.
       const message = issues[0]?.message ?? "";
-      const constraintClause = message.slice(message.indexOf("DB 側の制約: "));
-      expect(constraintClause).toContain("CHECK と ENUM の混在");
+      const constraintClause = message.slice(message.indexOf("DB constraint: "));
+      expect(constraintClause).toContain("CHECK and ENUM mixed");
       expect(constraintClause).toContain("db-0002-call-lists.sql");
       expect(constraintClause).not.toContain("db-0003-sim-lines.sql");
       expect(issues[0]?.suggested_action).toContain("db-0002-call-lists.sql");
@@ -414,7 +416,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // A flat union reported `completed`, `pending`, `running` as allowed
       // values for `SimLine.status`, which accepts four. The breakdown is what
       // lets a reader see which side each value came from.
-      expect(issues[0]?.message).toContain("DB 側の許容値 (契約ごと)");
+      expect(issues[0]?.message).toContain("DB domain, per contract");
       expect(issues[0]?.message).toContain("db-0002-call-lists.sql: completed, pending, running");
       expect(issues[0]?.message).toContain(
         "db-0003-sim-lines.sql: active, error, in_call, inactive",
@@ -441,7 +443,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("ENUM (insert 時に拒絶される物理制約)");
+      expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
     /**
@@ -475,15 +477,15 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // The ENUM is still named: it is what the reader has to look at to settle
       // which table the API field pairs with.
       const message = issues[0]?.message ?? "";
-      expect(message.slice(message.indexOf("DB 側の制約: "))).toContain("CHECK と ENUM の混在");
+      expect(message.slice(message.indexOf("DB constraint: "))).toContain("CHECK and ENUM mixed");
 
       // The remedy points at the TABLE, because the contract is already
       // settled — there is only one. The cross-contract wording would have
       // named "the contracts that bound it with a CHECK" and had none to list,
       // so it printed empty brackets at a reader looking for a file name.
       const remedy = issues[0]?.suggested_action ?? "";
-      expect(remedy).toContain("ENUM と CHECK が同じ契約");
-      expect(remedy).toContain("対象のテーブルと列を 1 つに特定");
+      expect(remedy).toContain("ENUM and CHECK both appear in the same contract");
+      expect(remedy).toContain("Identify the one table and column first");
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
@@ -525,15 +527,15 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
       expect(issues[0]?.severity).toBe("warning");
       const remedy = issues[0]?.suggested_action ?? "";
-      // The single-contract sentence, not the words in it: the multi-contract
-      // wording says "one of them mixes the forms inside 同じ契約", which is
-      // true and must not be what this rejects.
-      expect(remedy).not.toContain("ENUM と CHECK が同じ契約");
+      // The single-contract SENTENCE, not the words in it: the multi-contract
+      // wording says "at least one of them mixes CHECK and ENUM within itself",
+      // which is true and must not be what this rejects.
+      expect(remedy).not.toContain("ENUM and CHECK both appear in the same contract");
       // Both files named, and the reader sent to the Contracts 表 first —
       // the contract has to be narrowed before the column can be.
       expect(remedy).toContain("db-0009-both.sql");
       expect(remedy).toContain("db-0011-notifications.sql");
-      expect(remedy).toContain("Contracts 表");
+      expect(remedy).toContain("Contracts table");
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
@@ -558,7 +560,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("error");
-      expect(issues[0]?.message).toContain("ENUM (insert 時に拒絶される物理制約)");
+      expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
     it("does not let a commented-out CREATE TABLE make one table look like two", async () => {
@@ -581,6 +583,140 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(issues[0]?.severity).toBe("error");
     });
 
+    /**
+     * A value computed at read time is not a contradiction, and until it could
+     * be declared the finding had no valid remedy: widening the domain makes it
+     * possible to STORE a value the contract forbids storing, and deleting it
+     * from the API removes a value the UI requires (#1203).
+     */
+    describe("a value the DB contract declares derived", () => {
+      const DERIVED_DB = [
+        "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
+        "CREATE TABLE sim_lines (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL",
+        "    CHECK (status IN ('active', 'inactive', 'in_call', 'error'))",
+        ");",
+        "",
+      ].join("\n");
+
+      it("is not reported, because nothing stores it", async () => {
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": DERIVED_DB });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues).toEqual([]);
+      });
+
+      it("still reports a value nobody declared", async () => {
+        // The marker answers the rule; it must not be able to silence it.
+        const partial = DERIVED_DB.replace(", powered_off from", " from");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": partial });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
+        expect(domain).toHaveLength(1);
+        expect(domain[0]?.message).toContain("powered_off");
+        expect(domain[0]?.message).not.toContain("standby");
+      });
+
+      it("reports a declaration with no `from` clause rather than reading it", async () => {
+        // Without the clause the marker is a one-word silencer. Reporting it is
+        // what tells the author their declaration was never read — otherwise
+        // the finding they were answering just stays, for no visible reason.
+        const noFrom = DERIVED_DB.replace(" from enabled, connection_status, JST clock", "");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": noFrom });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("does not parse");
+        expect(declaration[0]?.suggested_action).toContain("The `from` clause");
+        // And the values it tried to cover are still reported.
+        expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-040")).toHaveLength(1);
+      });
+
+      it("ignores a half-written value list rather than reading half of it", async () => {
+        const trailingComma = DERIVED_DB.replace("standby, powered_off from", "standby, , from");
+        const { api, dbs } = await seedMany(SIM_LINE_API, {
+          "db-0003-sim-lines.sql": trailingComma,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toHaveLength(1);
+        const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
+        expect(domain[0]?.message).toContain("powered_off, standby");
+      });
+
+      it("takes the declaration severity from its promotion window", async () => {
+        // Read from the pin rather than asserted as a literal: the window opens
+        // at 1.12.0, and a hard-coded `warning` here would start failing then
+        // for a rule that is working exactly as declared.
+        const noFrom = DERIVED_DB.replace(" from enabled, connection_status, JST clock", "");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": noFrom });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const expected = newRuleSeverity(
+          await resolveToolVersion(),
+          RULE_PROMOTIONS.derivedNotStoredDeclaration.promoteAt,
+        );
+        expect(issues.find((entry) => entry.code === "QFAI-CONTRACT-041")?.severity).toBe(expected);
+      });
+
+      it("reports a declaration covering a value the DB stores anyway", async () => {
+        // A contradiction, not a redundancy: the line says the value is not
+        // stored and the domain says it is.
+        const stored = DERIVED_DB.replace(
+          "status = standby, powered_off from",
+          "status = active from",
+        );
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": stored });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("the DB can store: active");
+        expect(declaration[0]?.suggested_action).toContain(
+          "contradicts the claim that it is not stored",
+        );
+      });
+
+      it("reports a declaration covering a value the API never asks for", async () => {
+        const unasked = DERIVED_DB.replace("powered_off from", "retired from");
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": unasked });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("the API contract does not require: retired");
+        // `standby` did work, so it is not named as stale.
+        expect(declaration[0]?.message).not.toContain("standby");
+      });
+
+      it("does not read prose about a derivation as a declaration", async () => {
+        // The key has to start the line, as `-- Depends on:` does: a comment
+        // explaining the derivation is the natural thing to write above a
+        // column, and it must not silence anything.
+        const prose = DERIVED_DB.replace(
+          "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
+          "-- See CON-DB-0017. Derived (not stored): status = standby from enabled",
+        );
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": prose });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toEqual([]);
+        const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
+        expect(domain[0]?.message).toContain("powered_off, standby");
+      });
+    });
+
     it("keeps the single-contract message flat", async () => {
       const { api, dbs } = await seedMany(SIM_LINE_API, {
         "db-0003-sim-lines.sql": SIM_LINES_DB,
@@ -589,8 +725,8 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       const issues = await validateContractConsistency([api], dbs);
 
       expect(issues[0]?.severity).toBe("warning");
-      expect(issues[0]?.message).toContain("DB 側の許容値: active, error, in_call, inactive");
-      expect(issues[0]?.message).not.toContain("契約ごと");
+      expect(issues[0]?.message).toContain("DB domain: active, error, in_call, inactive");
+      expect(issues[0]?.message).not.toContain("per contract");
     });
   });
 
