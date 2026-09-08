@@ -227,7 +227,7 @@ describe("report", { timeout: 15000 }, () => {
       const reportPath = path.join(root, ".qfai", "report", "report.md");
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
       // `discussion` is a representative narrow profile rejected in CI.
-      // (`sdd` joined the CI allow-list with PR #206 review LW-G; see
+      // (`sdd` is on the CI allow-list; see
       // packages/qfai/src/core/phasePolicy.ts for the rationale.)
       const exitCode = await runReport({
         root,

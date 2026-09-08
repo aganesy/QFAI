@@ -1,6 +1,6 @@
 /**
  * `qfai init` repairs a wrapper whose target string is right but which the OS
- * will not follow (#1095).
+ * will not follow.
  *
  * On Windows a `git worktree add` writes every `.claude/skills/*` link as a
  * FILE symlink pointing at a directory — at the moment git writes one, its

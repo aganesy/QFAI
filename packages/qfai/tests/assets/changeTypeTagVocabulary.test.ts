@@ -1,5 +1,5 @@
 /**
- * The Change Type tag vocabulary has exactly one definition (#771, #792).
+ * The Change Type tag vocabulary has exactly one definition.
  *
  * `workflow.md` restated the tag list and offered a sixth value, `@ui`, that
  * the classification SSOT never defined and `CHANGE_TYPE_TAG_VALUES` never

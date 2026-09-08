@@ -715,7 +715,7 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // callsite edit" is advice a reader cannot follow when their branch has no
     // callsite edit — which is the case this fires in most often, because a
     // MERGE moves the total while both parent tips are individually correct
-    // (#1187). A reader told to do something impossible reasonably concludes
+    // A reader told to do something impossible reasonably concludes
     // the guard is broken, and the record's own prose has that happening twice.
     const branchOwesIt =
       "If this branch changed an `it` / `test` callsite under the `e2e` project, run " +
