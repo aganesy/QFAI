@@ -125,7 +125,7 @@ function findBudgetRestatements(content: string): string[] {
   );
 }
 
-describe("assets guardrails", { timeout: 30000 }, () => {
+describe("assets guardrails", () => {
   it("checks relative path references in markdown", async () => {
     const markdownFiles = await fg(
       ["README.md", "docs/**/*.md", "packages/qfai/assets/init/**/*.md"],

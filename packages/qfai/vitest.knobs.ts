@@ -128,9 +128,19 @@ export const rootKnobs = {
  * This is not the retry setting the section above refuses. A retry re-runs a test that
  * failed; this lets a test that is working finish at the concurrency the project declares.
  */
+/**
+ * The ceiling every test inherits, named so a guard can read it.
+ *
+ * A file that declares a lower one is overriding this measurement with an
+ * unmeasured number, and the override reads as an ordinary option. The guard in
+ * `tests/scripts/vitestWorkspaceKnobs.test.ts` requires such a declaration to
+ * say what was measured, and compares against this constant rather than a copy.
+ */
+export const DECLARED_TEST_TIMEOUT = 120_000;
+
 export const projectKnobs = {
-  testTimeout: 120_000,
-  hookTimeout: 120_000,
+  testTimeout: DECLARED_TEST_TIMEOUT,
+  hookTimeout: DECLARED_TEST_TIMEOUT,
   pool: "forks",
   poolOptions: { forks: { singleFork: false, isolate: true } },
   maxConcurrency: tunable(CONCURRENCY_ENV),

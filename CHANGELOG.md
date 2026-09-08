@@ -6,6 +6,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Test files inherit the declared `testTimeout` instead of overriding it**
+  (#1246). Sixty-five ceilings across 38 files sat below the project's 120 s
+  default, and nothing distinguished one somebody measured from one nobody had
+  looked at since it was typed.
+
+  Measured, the overrides were not doing the job they were there for. Two files
+  had ceilings _below their own cost_: under a full-suite run they timed out
+  nine cases between them, though both pass alone in under four seconds. At the
+  other end, 33 files used under 6% of their ceiling — most under 1%.
+
+  A ceiling above a file's cost buys one thing, a faster failure on a hang. It
+  costs a red lane for a reason the change does not contain, which is the worst
+  shape of flake: it teaches readers to ignore red. Two minutes on a hang, once,
+  is the better trade.
+
+  All 65 are removed. A subprocess kill timeout is a different thing and is
+  untouched — it bounds a spawned process, not a test.
+
+  A guard now requires any future sub-default ceiling to carry a comment saying
+  what was measured. Cost is not visible in the source; whether the declaration
+  claims a measurement is.
+
 - **The validation contract moved out of the acceptance-test Definition of Done
   and into a reference** (#1243). One bullet in that section was 1,047
   characters, twice the length of any other, and a bullet nobody skims is a

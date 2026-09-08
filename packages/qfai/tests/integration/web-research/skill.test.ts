@@ -20,7 +20,7 @@ async function readSkill(): Promise<string> {
   return readFile(skillPath, "utf-8");
 }
 
-describe("web-research SKILL.md template structure", { timeout: 15_000 }, () => {
+describe("web-research SKILL.md template structure", () => {
   // QFAI:SPEC-0027:TC-0027-0007 (TDD-0021)
   it("progressive disclosure - metadata-only on load, full body on task start", async () => {
     const content = await readSkill();

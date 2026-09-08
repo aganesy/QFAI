@@ -89,13 +89,13 @@ async function writeValidationFixture(
  * durations; `--silent` is what keeps them readable, since this file streams
  * `qfai validate` output to stdout and would otherwise bury them.
  *
- * 4.1 s against 15 s is 3.6x headroom under the heaviest load in the suite —
- * twice the margin `main.test.ts` has at the same ceiling. So 15 s is a budget
- * here, not a value below this file's cost, and a tight ceiling is worth
- * keeping: it fails on a regression that makes a report run minutes long
- * instead of waiting for the project-level timeout to notice.
+ * Those isolated numbers are what a ceiling below the project value cannot be
+ * read from. Under a full-suite run this file's seven slowest cases each exceed
+ * 15 s — a factor of more than 4.7 against the same cases measured alone — so a
+ * 15 s ceiling here was below the file's cost, not a budget above it. It now
+ * inherits `testTimeout`, whose own measurement is about the cost this file has.
  */
-describe("report", { timeout: 15000 }, () => {
+describe("report", () => {
   it("runs init -> validate(json) -> report(md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -994,7 +994,7 @@ describe("report", { timeout: 15000 }, () => {
   });
 });
 
-describe("report exit code", { timeout: 15000 }, () => {
+describe("report exit code", () => {
   type SeedCounts = { info: number; warning: number; error: number };
 
   /** Build the `issues[]` a given `counts` claims, so the two never disagree. */
@@ -1164,7 +1164,7 @@ describe("report exit code", { timeout: 15000 }, () => {
   });
 });
 
-describe("report --run-validate shares the validate migration gate", { timeout: 30000 }, () => {
+describe("report --run-validate shares the validate migration gate", () => {
   /**
    * `report --run-validate` is the documented single-step CI usage, so it owes
    * the operator the same legacy-path migration gate `qfai validate` applies.

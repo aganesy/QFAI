@@ -9,7 +9,7 @@ import { run } from "../../src/cli/main.js";
 import { resolveToolVersion } from "../../src/core/version.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-describe("cli root discovery", { timeout: 15000 }, () => {
+describe("cli root discovery", () => {
   it("finds config in parent when --root is omitted", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-root-"));
     const cwd = path.join(root, "packages", "app");

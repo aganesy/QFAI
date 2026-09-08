@@ -75,6 +75,8 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 
+import { DECLARED_TEST_TIMEOUT } from "../../vitest.knobs.js";
+
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 
@@ -478,5 +480,80 @@ describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry setti
     expect
       .soft(hits, "a search of the runner configuration for a retry must return zero results")
       .toEqual([]);
+  });
+});
+
+describe("a ceiling below the declared testTimeout", () => {
+  /**
+   * A `timeout:` on a `describe` or an `it`, written as its own option object.
+   *
+   * Both shapes the runner accepts are matched: the option as a whole argument
+   * on its own line, and inline between two others. A bare `timeout:` property
+   * is deliberately NOT matched — that is a subprocess kill timeout, which
+   * bounds a spawned process rather than a test, and removing one would let a
+   * hung child run forever.
+   */
+  const TEST_CEILING = /\{\s*timeout:\s*([0-9_]+)\s*\}/;
+
+  /** A comment about the ceiling, within the five lines above it. */
+  const MENTIONS_TIMEOUT = /timeout/i;
+  const REASON_MIN_CHARS = 40;
+
+  const testFiles = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return testFiles(full);
+      return entry.isFile() && entry.name.endsWith(".ts") ? [full] : [];
+    });
+
+  it("is declared nowhere without a stated reason", () => {
+    // `vitest.knobs.ts` sets `testTimeout` to 120 s and carries the measurement
+    // for it. A file that takes a lower ceiling is overriding a justified number
+    // with an unjustified one, and the override is invisible: it reads as an
+    // ordinary option, and nothing distinguishes a ceiling somebody measured
+    // from one nobody has looked at since it was typed.
+    //
+    // That is not hypothetical here. Of the 65 such ceilings this rule replaced,
+    // two files' ceilings sat BELOW their own cost under a full-suite run and
+    // timed out nine cases between them, while 33 files used under 6% of theirs.
+    // The two comments that existed both said "higher timeout" about a value
+    // lower than the default they were written before.
+    //
+    // So the rule is not a number. It is that the declaration says why, which is
+    // a property of the source and therefore checkable — cost is not.
+    const root = path.join(PACKAGE_ROOT, "tests");
+    const files = testFiles(root);
+    expect(files.length, "no test files found — the walk is wrong").toBeGreaterThan(100);
+
+    const unjustified: string[] = [];
+    for (const file of files) {
+      const lines = readFileSync(file, "utf-8").split(/\r?\n/);
+      lines.forEach((line, index) => {
+        const trimmed = line.trimStart();
+        // Prose that quotes the shape is not a declaration of it, and the file
+        // explaining why it inherits the default quotes it verbatim.
+        if (trimmed.startsWith("*") || trimmed.startsWith("//") || trimmed.startsWith("/*")) return;
+        const declared = TEST_CEILING.exec(line)?.[1];
+        if (declared === undefined || Number(declared.replace(/_/g, "")) >= DECLARED_TEST_TIMEOUT) {
+          return;
+        }
+        const preceding = lines
+          .slice(Math.max(0, index - 5), index)
+          .filter((candidate) => /^\s*(?:\/\/|\*)/.test(candidate))
+          .join(" ");
+        const justified = MENTIONS_TIMEOUT.test(preceding) && preceding.length >= REASON_MIN_CHARS;
+        if (!justified) {
+          unjustified.push(`${path.relative(PACKAGE_ROOT, file)}:${index + 1}`);
+        }
+      });
+    }
+
+    expect(
+      unjustified,
+      "a test ceiling below the declared testTimeout needs a comment above it saying what " +
+        "was measured. Prefer deleting it: the default is already justified, and a ceiling " +
+        "above a file's cost only buys a faster failure on a hang while costing a red lane " +
+        "for a reason the change does not contain.",
+    ).toEqual([]);
   });
 });
