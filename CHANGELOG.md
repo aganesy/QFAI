@@ -41,6 +41,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai doctor` reads the path off an agent card's input bullet instead of
+  the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
+  file and then say what it is for. Read whole, that sentence became the
+  required input, and a card whose file is on disk was reported as missing one.
+
+  The path now ends at the first space, `(`, backtick or em dash; the rest is
+  prose. A bullet naming a glob or a `<placeholder>` is still skipped, because
+  neither is a file to find — and both are now judged on the path rather than on
+  the explanation beside it.
+
 - **`--spec` drops a sibling's stub the way it drops a sibling's broken
   reference** (#1264). `cross-spec-obligations.md` already said a file under the
   canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec whatever
