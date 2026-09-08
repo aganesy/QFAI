@@ -4,6 +4,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A test's git sandbox no longer races git's own background maintenance**
+  (#1394). `git commit` starts `git maintenance run --auto`, and `gc.autoDetach`
+  defaults to true, so that process is detached and outlives the commit the test
+  waited on. It keeps writing into `.git/objects/pack`, and a test removing its
+  sandbox afterwards failed with `ENOTEMPTY` on that directory — with its
+  assertions already passed, on a branch touching none of the code involved.
+
+  `maintenance.auto=false` is now declared through the environment in a per-file
+  test setup, so every git a test spawns inherits it. Twenty test files build a
+  real repository and eleven of them removed it without retrying; this reaches
+  all of them, and every fixture added later, rather than asking each test to
+  remember.
+
+  `gc.auto=0` is not an alternative. It decides what maintenance does once it has
+  started, not whether `git commit` starts it.
+
 ### Changed
 
 - **An ATDD annotation counts when it is written into a test's name** (#1255).
