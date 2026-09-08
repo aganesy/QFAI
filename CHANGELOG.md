@@ -6,6 +6,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A retired spec pack has a template and a schema of its own** (#1324). A spec
+  that was deleted or superseded is kept as the record of why it went away. That
+  record cannot carry a consumer view or an applicable NFR for something that no
+  longer exists, so it had no schema and was tolerated rather than checked —
+  including the `Superseded-by` bullet a reader following a stale reference
+  depends on.
+
+  Three pieces, in the order each needs the one before it.
+  1. `templates/specs/spec/01_Spec-retired.md` seeds the record: the status
+     bullets, and a `## Retirement` section saying why the spec stopped applying
+     and where its obligations went.
+  2. `spec/01_Spec-retired.mdschema.yml` states that contract, and is registered
+     in the manifest.
+  3. A manifest entry may carry `when:`, a regular expression read against the
+     document's own text. It is what lets one path carry two document shapes.
+
+  A `01_Spec.md` whose front matter declares `superseded`, `deprecated` or
+  `removed` is checked against the retired schema and dropped from the live one,
+  so the two partition the documents rather than running one document against
+  two contracts. A pack that is still live is unaffected.
+
+  Two invariants replace the old "every pattern is unique" rule, which was a
+  proxy for them: at most one entry per pattern may omit `when:`, and a
+  predicated entry shares its pattern with another entry — a `when:` on a pattern
+  nothing else claims is a filter, and the documents it misses would then be
+  checked by nothing.
+
 - **A `drift` validation profile, and the CI workflow `qfai init` writes now
   runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
   and nothing else. `full` evaluates every gate group except drift, so the one

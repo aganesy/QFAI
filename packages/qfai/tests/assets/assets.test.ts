@@ -2365,6 +2365,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "_policies/10_delta.md",
       "_policies/11_Slice-Policy.md",
       "spec/01_Spec.md",
+      // The same document once its spec has retired: the record of why the
+      // obligation went away, which the live schema cannot describe.
+      "spec/01_Spec-retired.md",
       "spec/02_User-stories.md",
       "spec/03_Acceptance-Criteria.md",
       "spec/04_Business-Rules.md",
