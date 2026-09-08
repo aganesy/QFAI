@@ -29,7 +29,7 @@ import { afterEach, describe, expect, it } from "vitest";
 // test run during collection. The spawn cases below still address the delegator,
 // because that is the path `pnpm lint:mdschema` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
-import { findMdschemaBin, patternToRegExp } from "../../assets/scripts/check-mdschema.mjs";
+import { findMdschemaCommand, patternToRegExp } from "../../assets/scripts/check-mdschema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts -> tests -> packages/qfai -> packages -> repo root
@@ -289,56 +289,105 @@ describe("check-mdschema pattern compilation", () => {
 });
 
 /**
- * Finding the `mdschema` shim.
+ * Finding the mdschema command line.
  *
- * A package manager writes one binary under several names, and which of them is
- * spawnable depends on the platform: on Windows the extensionless `mdschema` is
- * a shell script for Git Bash that `spawnSync` cannot run, while `mdschema.cmd`
- * beside it is the one that works. A resolver that only ever looked for the
- * extensionless name found a file on Windows and then failed to run it — and
- * because the lane reports a spawn failure the same way whichever document it
- * was checking, an adopter on a Windows runner would read it as "the schemas
- * are broken" rather than "the wrong shim was chosen".
- *
- * These cases run on every platform, because the candidate list is ordered per
- * platform but non-empty on all of them: a `.bin` holding only `mdschema.cmd`
- * is still found from POSIX, just later in the list.
+ * The lane runs the package's own JS entry point with the Node that is already
+ * running, and never the `node_modules/.bin` shim. The shim is a different file
+ * per platform, and on Windows the runnable one is `mdschema.cmd`: Node refuses
+ * to spawn a `.cmd` without a shell and returns `EINVAL`, so a resolver that
+ * picked a shim failed there every time. The entry point is one file on every
+ * platform, so these cases hold on all of them.
  */
-describe("check-mdschema binary resolution", () => {
-  it("walks up from the given directory to the nearest node_modules/.bin", async () => {
+describe("check-mdschema command resolution", () => {
+  const seedPackage = async (root: string, bin: unknown, entry = "bin/cli.js"): Promise<string> => {
+    const packageDir = path.join(root, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(path.join(packageDir, path.dirname(entry)), { recursive: true });
+    await writeFile(path.join(packageDir, entry), "", "utf-8");
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin }),
+      "utf-8",
+    );
+    return path.join(packageDir, entry);
+  };
+
+  it("runs the declared entry point with the running Node", async () => {
     const root = await newTempDir();
-    const bin = path.join(root, "node_modules", ".bin");
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root)).toEqual({ command: process.execPath, args: [entry] });
+  });
+
+  it("walks up from the given directory to the nearest installation", async () => {
+    const root = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
     await mkdir(path.join(root, "nested", "deeper"), { recursive: true });
-    await mkdir(bin, { recursive: true });
-    await writeFile(path.join(bin, "mdschema"), "", "utf-8");
 
-    expect(findMdschemaBin(path.join(root, "nested", "deeper"))).toBe(path.join(bin, "mdschema"));
+    expect(findMdschemaCommand(path.join(root, "nested", "deeper"))?.args).toEqual([entry]);
   });
 
-  it("finds a .bin that holds only the .cmd shim", async () => {
-    // The Windows shape, asserted from any platform. Before the candidate list
-    // this returned null here and the lane reported the binary as missing.
+  it("reads a bin field written as a bare string", async () => {
+    // The spelling a package with one command may use.
     const root = await newTempDir();
-    const bin = path.join(root, "node_modules", ".bin");
-    await mkdir(bin, { recursive: true });
-    await writeFile(path.join(bin, "mdschema.cmd"), "", "utf-8");
+    const entry = await seedPackage(root, "bin/cli.js");
 
-    expect(findMdschemaBin(root)).toBe(path.join(bin, "mdschema.cmd"));
+    expect(findMdschemaCommand(root)?.args).toEqual([entry]);
   });
 
-  it("prefers the platform's spawnable name when several shims sit together", async () => {
-    // The real Windows install: three names for one binary. The extensionless
-    // one is the trap there and the right answer everywhere else, so the
-    // expectation is written from the platform rather than pinned to one name.
+  it("never names a .bin shim", async () => {
+    // The shim is what fails on Windows, and it sits beside a real installation
+    // in every tree — so finding one is not a reason to run it.
     const root = await newTempDir();
-    const bin = path.join(root, "node_modules", ".bin");
-    await mkdir(bin, { recursive: true });
+    const shims = path.join(root, "node_modules", ".bin");
+    await mkdir(shims, { recursive: true });
     for (const name of ["mdschema", "mdschema.cmd", "mdschema.ps1"]) {
-      await writeFile(path.join(bin, name), "", "utf-8");
+      await writeFile(path.join(shims, name), "", "utf-8");
     }
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
 
-    const expected = process.platform === "win32" ? "mdschema.cmd" : "mdschema";
+    const resolved = findMdschemaCommand(root);
 
-    expect(findMdschemaBin(root)).toBe(path.join(bin, expected));
+    expect(resolved).toEqual({ command: process.execPath, args: [entry] });
+    expect(resolved?.args?.[0]).not.toContain(`${path.sep}.bin${path.sep}`);
+  });
+
+  it("keeps walking past an installation whose declared file is not there", async () => {
+    // A partial or interrupted install. Stopping here would report the command
+    // as found and then fail to run it, which is the failure this resolution
+    // exists to remove.
+    const root = await newTempDir();
+    const outer = path.join(root, "outer");
+    const inner = path.join(outer, "inner");
+    await mkdir(inner, { recursive: true });
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+    const brokenDir = path.join(inner, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(brokenDir, { recursive: true });
+    await writeFile(
+      path.join(brokenDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
+      "utf-8",
+    );
+
+    expect(findMdschemaCommand(inner)?.args).toEqual([entry]);
+  });
+
+  it.each([
+    ["a manifest that is not JSON", "{"],
+    ["a manifest declaring no bin", JSON.stringify({ name: "@jackchuka/mdschema" })],
+    [
+      "a bin naming another command only",
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { other: "bin/cli.js" } }),
+    ],
+  ])("reports nothing found for %s", async (_name, manifest) => {
+    const root = await newTempDir();
+    const packageDir = path.join(root, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(path.join(packageDir, "bin"), { recursive: true });
+    await writeFile(path.join(packageDir, "bin", "cli.js"), "", "utf-8");
+    await writeFile(path.join(packageDir, "package.json"), manifest, "utf-8");
+
+    // What the seeded installation declares is unreadable, so it is not an
+    // answer. Whether the walk then finds another one further up is not this
+    // case's subject: either way, this directory must not be what answered.
+    expect(findMdschemaCommand(root)?.args?.[0]).not.toBe(path.join(packageDir, "bin", "cli.js"));
   });
 });
