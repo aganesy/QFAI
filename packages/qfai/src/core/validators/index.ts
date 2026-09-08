@@ -37,6 +37,7 @@ export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
 export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
+export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateSkillRoles } from "./skillRoles.js";

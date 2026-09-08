@@ -29,6 +29,7 @@
  */
 
 import { createHash } from "node:crypto";
+import path from "node:path";
 
 /**
  * `local` is deliberately not special-cased anywhere: `local x=1` is an assignment, and the
@@ -1231,7 +1232,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "e3d534f0e816fdc42db85265b56e4a77343d3679bb8944d3b441bffe5c874345"],
-  ["qfai-validate.yml", "8c552639887060e0413ab576991ab5022508662ef973d8a2c1f67ef87c652494"],
+  // Re-pinned when the lane gained the drift gate and the conditional checkout
+  // depth that gate needs.
+  ["qfai-validate.yml", "d4968abdb0951ff7210fc400aaecb3bea8cb52e3a46f4bbb23941b55f6a6df37"],
   ["qfai-docs.yml", "43c5d722c44a9d5fc24cd65477782a66ca143293c2074ed698718494d1262d5d"],
 ]);
 
@@ -1268,6 +1271,7 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
+  ".gitattributes",
   ".gitignore",
   "AGENTS.md",
   "CLAUDE.md",
@@ -1293,6 +1297,10 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
  * so their bytes are the reviewed surface.
+ *
+ * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
+ * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
+ * silent edit to it changes how every other pinned file is checked out.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
@@ -1311,6 +1319,23 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "2a264d5ee6cfc2d05df27d8bb30a878414b7ea48b07f2315138160b2044181c6",
   ],
+  // `qfai init` copies this file verbatim, so it is pinned like every other
+  // adopter-facing file here — and for one reason none of the others has: it
+  // decides how git rewrites the bytes of everything beside it on checkout. An
+  // unreviewed edit to it moves what an adopter's working tree holds for files
+  // whose own digests never change, which is the one way a content pin can be
+  // satisfied and still be wrong.
+  //
+  // Its comments are English and name the launcher as `npx qfai init`, like
+  // every other adopter-facing template this command writes. The rules a reader
+  // has to weigh are the ones this file scopes and the one-off renormalise it
+  // asks for, and a project reads them in the language and the spelling its
+  // neighbours in the same seeded tree use.
+  //
+  // Derived by running the command into a temp root and hashing what it wrote.
+  // The comment block is the whole delta: the rule lines are byte-identical to
+  // the ones `c428b147…` covered.
+  [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
   // Re-pinned when the managed block gained the three vendored-assistant
   // negations — `!.qfai/assistant/`, `!.qfai/assistant/**` and
   // `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
@@ -1500,6 +1525,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
   "root/.agents/rules/version-discipline.md",
+  "root/.gitattributes",
   "root/.github/workflows/qfai-docs.yml",
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
@@ -1524,11 +1550,14 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * offset". It reached an adopter with every pin green.
  *
  * The property that separates it from everything legitimately here is not its name and not its
- * content: **it is that the init source ships DATA, and data has a data extension.** All 185 entries
- * are `.md`, `.yml`, `.yaml`, `.json`, `.toml`, `.sql` or `.sample`, 159 of them markdown, and none
- * has ever been extensionless. So the rule is an enumeration of what may ship rather than a list of
- * what may not — the same inversion the rest of this file is built on, arrived at three rounds late
- * because the earlier attempts kept enumerating the dangerous side, which cannot be finished.
+ * content: **it is that the init source ships DATA, and data has a data extension.** All but one of
+ * the 208 entries are `.md`, `.yml`, `.yaml`, `.json`, `.toml`, `.sql` or `.sample`, 179 of them
+ * markdown. The exception is the `.gitattributes` init now seeds: `path.extname` reads a leading dot
+ * with nothing after it as no extension at all, so that one is admitted by whole name in
+ * `ALLOWED_INIT_SOURCE_BASENAMES` below rather than by extension. So the rule is an enumeration of
+ * what may ship rather than a list of what may not — the same inversion the rest of this file is
+ * built on. The dangerous side cannot be enumerated: every extension left off such a list ships
+ * unreviewed, and nothing says when the list is finished.
  *
  * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
  * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
@@ -1546,6 +1575,36 @@ export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
   ".sql",
   ".sample",
 ]);
+
+/**
+ * The dotfiles the rule above cannot see, enumerated by WHOLE NAME.
+ *
+ * `path.extname(".gitattributes")` is `""` — a leading dot with nothing after it is not an extension
+ * to node — so the extension set alone reads a seeded `.gitattributes` as an extensionless file, which
+ * is the kind this guard refuses. Widening the extension set with `""` would answer that by admitting
+ * every extensionless file, which is the guard, deleted.
+ *
+ * A dotfile's whole basename IS its kind: `.gitattributes` names a git data format as exactly as `.md`
+ * names markdown, and it is a closed name rather than an open class. `bootstrap` still has no token and
+ * is still refused; so is any dotfile nobody put here. `distributedSurfaceLeakage.test.ts` reached the
+ * same shape independently for the same `path.extname` reason (`TEXT_BASENAMES` beside
+ * `TEXT_EXTENSIONS`), which is the convention this follows rather than invents.
+ */
+export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".gitattributes"]);
+
+/**
+ * Whether an init-source file ships as data — the two sets above asked as one question.
+ *
+ * It lives here rather than at the call site so the enumerations and the token that is looked up in
+ * them cannot drift: adding a name to one of the sets while the caller derives a different token is
+ * a guard that reads green over a file nobody enumerated, which is this file's recurring class.
+ */
+export function initSourceShipsAsData(relativePath: string): boolean {
+  return (
+    ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
+    ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
+  );
+}
 
 /**
  * The one file inside an instruction tree that is pinned anyway, by SHAPE.
@@ -1782,8 +1841,12 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
     '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
   ],
   [
+    // Re-pinned when the drift gate below was added. The checkout asks for full
+    // history on a pull request, because the gate compares this branch against
+    // its base and a shallow clone has no merge base to compare from. A push
+    // keeps the shallow fetch, where the gate does not run.
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1812,6 +1875,14 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-validate.yml#validate",
     '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+  ],
+  [
+    // The `full` profile above evaluates every gate group except drift, so on
+    // its own the lane cannot fail on a downstream edit to upstream SSOT. Pull
+    // requests only: the gate compares against a base branch and says nothing
+    // when it cannot resolve one.
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate (drift protocol)","if":"github.event_name == \'pull_request\'","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
   ],
 ];
 

@@ -4,7 +4,122 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A `drift` validation profile, and the CI workflow `qfai init` writes now
+  runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
+  and nothing else. `full` evaluates every gate group except drift, so the one
+  gate an adopter's CI installs was structurally incapable of failing on a
+  downstream edit to upstream SSOT — the thing the drift protocol calls
+  non-negotiable and says is detected.
+
+  `--profile drift` runs that guard and nothing else. The `tdd` profile still
+  carries it and is unchanged; what it cannot be is the CI answer, because it is
+  also the completion gate and asks a branch for everything a finished one owes.
+
+  The generated workflow gains a second run on pull requests, and its checkout
+  asks for full history there. The guard compares the branch against its base
+  and says nothing when it cannot resolve one, so a shallow clone would have
+  passed without checking.
+
+  `QFAI-PROFILE-001` now names `--profile drift` as the run that evaluates
+  `QFAI-DRIFT-*`, in place of `--profile tdd`.
+
+- **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
+  its leading comment block. A pack outlives what it specifies: a spec that was
+  deleted or superseded is kept as the record of why it went away, and that
+  record cannot carry a consumer view or an applicable NFR for something that
+  no longer exists.
+
+  The two alternatives were worse. Making the record conform means writing
+  fiction; admitting it into the schema weakens the contract for every live
+  pack.
+
+  The marker is per document, has to precede the content, and every ignored
+  file is counted in the run's own output — an exclusion nobody sees is one
+  nobody reviews.
+
 ### Fixed
+
+- **An imported spec can state its surface, so a CLI-only project is no longer
+  read as visual** (#1295). A discussion pack states the classification in its
+  `01_Context.md`, and both `/qfai-sdd` Phase 0 and `/qfai-implement`'s visual
+  review read it there. A spec taken in through import-lite has no pack and had
+  nowhere to state it, so both fell to the same default and treated every such
+  spec as visual — which asks a CLI project for a root `DESIGN.md`, a design
+  contract and a prototype, none of which exist on that path.
+
+  The import-lite evidence template gains a `## Surface` section carrying
+  `primary_surface` and `secondary_surfaces`. That file is what a spec's
+  `Source` pair already names, so both skills reach the classification by
+  following a reference the spec carries.
+
+  Neither skill guesses when nothing states a surface: both stop and ask.
+  Assuming visual leaves a CLI project unable to proceed, and assuming `cli`
+  strips a visual one of its review.
+
+- **`qfai doctor` reads the path off an agent card's input bullet instead of
+  the whole sentence** (#1287). A bullet in `## Inputs you must read` may name a
+  file and then say what it is for. Read whole, that sentence became the
+  required input, and a card whose file is on disk was reported as missing one.
+
+  The path now ends at the first space, `(`, backtick or em dash; the rest is
+  prose. A bullet naming a glob or a `<placeholder>` is still skipped, because
+  neither is a file to find — and both are now judged on the path rather than on
+  the explanation beside it.
+
+- **`--spec` drops a sibling's stub the way it drops a sibling's broken
+  reference** (#1264). `cross-spec-obligations.md` already said a file under the
+  canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec whatever
+  its annotation says. The rule was applied to a broken reference and not to the
+  file itself, so one layout answered two ways: a scoped run dropped a sibling's
+  dangling reference and kept a sibling's stub, and every spec in a repository
+  recorded the same sibling's stub until its owner cleared it.
+
+  A path in that layout now resolves to its spec wherever a scoped run reads
+  one. The directory decides, not the annotation — that is what the rule says,
+  and it is the half a path can answer.
+
+  A test file outside the layout still has no owner and reaches every run, and
+  `--profile full` is unscoped and unchanged. Attribution decides which run
+  reports a stub, never whether the repository is clean.
+
+- **The Drift Protocol no longer justifies its parking rule with a claim the
+  ledger contradicts** (#1312). Two shipped documents said only a `todo` row can
+  be parked, and cited the transition table — which admits
+  `any active status -> blocked` and defines `Blocked-By` to record the status
+  the row is leaving. A reader following the citation found a rule whose stated
+  reason was not in the file it pointed at, and could not tell whether the
+  transition was unavailable or the rule had another reason.
+
+  The rule is unchanged. Both documents now say the restriction is the
+  protocol's own: for a row past `todo` the transition adds nothing the change
+  request already records, and costs a trip out of the phase the row is in and
+  back into it.
+
+- **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
+  The rule already wrote two messages: one naming the coverage-target TC the
+  spec declares, and one calling `tdd/test-list.md` optional because it
+  declares none. Both were reported at `warning`, so the second was a warning
+  its own text said nothing could be done about, one per such spec.
+
+  The severity now follows the message. A spec that owes rows is unchanged, and
+  the error it carries — `TDDLIST_TC_NOT_COVERED` — is unchanged as well.
+
+- **The density rules no longer report a spec that has stopped applying**
+  (#1304). `QFAI-DENSITY-001` through `-004` read every spec pack's section
+  files for the IDs they should carry. A spec declaring `Status: superseded`,
+  `deprecated` or `removed` carries none — that is what retiring it means — so
+  each absence was reported as a defect no change could clear.
+
+  The rules now skip a spec whose declared lifecycle is terminal, the same set
+  the execution playbook skips when it enumerates specs. A pack beside it is
+  unaffected, and a retirement the tree cannot act on — `superseded` with no
+  successor, or no `Status:` at all — is still read as current.
+
+  An empty section file was already silent. One holding the line that records
+  the retirement was not, so deleting that line was the only way to clear the
+  warning.
 
 - **`QFAI-ASSETS-005` no longer reports the four Stage 0 catalog documents**
   (`.qfai/assistant/catalog/manifest.md`, `product.md`, `structure.md`,
@@ -19,6 +134,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   qfai wrote is stale as before, and a deleted one is still an absence.
 
 ### Added
+
+- **`QFAI-CONTRACT-037` reports a UI contract marker nothing on the screen
+  carries** (#1263). The traceability between a UI contract and the code ran one
+  way: a test could only name a `data-qfai` marker the contract declares. That
+  catches a typo in a test and cannot catch a missing element, because an
+  element nobody built is also an element no test names. A contract could
+  declare an element, mark it `required: true`, and have it rendered by nothing,
+  with every profile green.
+
+  The rule reads the markers a UI contract writes literally and looks for each
+  one under the configured source directory. A contract that names no marker is
+  asked for nothing, so projects that never adopted the convention see no
+  change.
+
+  A marker counts as rendered when its text appears anywhere in the source, not
+  only where the attribute is written out. A framework that renders it through a
+  variable still writes the marker somewhere, and requiring the literal
+  attribute would report every marker in such a project at once.
+
+  It is a warning until 1.13.0, then an error.
 
 - **Every test suite is now accounted for as type-checked or knowingly not**
   (#1288). `tsconfig.tests.json#include` is an enumeration rather than a
@@ -134,6 +269,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   provenance / init-path 各列挙に登録済み。
 
 ### Changed
+
+- **`QFAI-CFG-001` is an error from this release.** Three
+  `validation.traceability` keys were declared, defaulted and parsed while no
+  validator read them: `brMustHaveSc`, `scNoTestSeverity` and
+  `orphanContractsPolicy`. The 1.10.1 line began reporting them at `warning`,
+  and the window closes here.
+
+  A project whose `qfai.config.yaml` still carries any of the three moves from
+  a passing `validate --fail-on error` to a failing one on upgrade, with
+  nothing else changed. The keys were already inert, so the finding is about
+  the file's shape rather than its behaviour, and deleting the key clears it.
 
 - **Reworded the shipped `.agents/rules/*.md` templates for clarity.** Shortened
   sentences, and corrected `temporary-files.md`'s claim that `qfai init` does not
