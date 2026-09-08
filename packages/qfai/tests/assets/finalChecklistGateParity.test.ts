@@ -247,6 +247,16 @@ const GATE_ITEM_PARITY: readonly {
     box: "on a cli-only target a surface review of the captured command output in its place",
   },
   {
+    item: 9,
+    condition: "it is decided by `references/ui-affecting.md`",
+    box: "decided by `ui-affecting.md`",
+  },
+  {
+    item: 9,
+    condition: "a row no clause selects records `n/a (not UI-affecting)`",
+    box: "`n/a (not UI-affecting)` where no clause does",
+  },
+  {
     item: 10,
     condition: "`test-list.md` Status is current",
     box: "`test-list.md` statuses are accurate",
@@ -341,7 +351,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   6: "aaaff54532bbe37f4bea22f5caa5e661d0c11474558e3ccdc91ba9ff309f7fba",
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
-  9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
+  9: "a69c2dd38ac1ff6c06904dfbfe06a20177130fee88200a9e841d540cfa67d435",
   // The item states the obligation, cites the rule in
   // `references/record-contract.md`, and says which pass writes the
   // compatibility marker. The clauses it used to carry inline are in
@@ -353,7 +363,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   // without it the row reads as the object of "run", and the item reads the
   // marker rather than running anything.
   10: "3daeaebbea15108b917b3dbadc3b70a4c37df424f85018075237535af78056d3",
-  11: "a7470dc8a8e922a0ea06fd70b7703a2ea35e31eb79c27436f84c329d11dc9493",
+  11: "75e9ab3c44343c25af4c2e473178f180a33a79af58924d5b3b8c50e2122c9cb2",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
 
