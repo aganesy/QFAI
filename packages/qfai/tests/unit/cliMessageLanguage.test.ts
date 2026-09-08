@@ -135,6 +135,37 @@ describe("operator-facing CLI message language", () => {
     expect(reportJapaneseLines(relativeToPosix(PACKAGE_ROOT, DOCTOR_TS), source)).toEqual([]);
   });
 
+  /**
+   * What the allowlist is allowed to weigh. Translating a message lowers it;
+   * only a merge taking the base's own entries raises it.
+   *
+   * Every other assertion here compares the list against the sources, so the
+   * list is exact — but only in one direction. Adding an entry for a message
+   * that is really in the tree satisfies all of them, and the lane goes green:
+   * the guard then reads "no Japanese nobody bothered to list" rather than "no
+   * new Japanese", which is a much weaker claim and the one the list exists to
+   * avoid making.
+   *
+   * A merge absorbing the base's new messages is the case that legitimately
+   * adds entries, and it still moves this number — which is the point. The
+   * addition stops being an invisible edit inside a 700-line data file and
+   * becomes a line a reviewer is asked about.
+   */
+  const ALLOWLISTED_MESSAGE_COUNT = 772;
+
+  it("holds the allowlist to a count that only a reviewed change moves", () => {
+    const counted = Object.values(SRC_JAPANESE_ALLOWLIST).reduce(
+      (total, entries) => total + entries.length,
+      0,
+    );
+    expect(
+      counted,
+      counted > ALLOWLISTED_MESSAGE_COUNT
+        ? "the allowlist grew. A new operator-facing message must be English (cli-ux-guidelines.md, Message Language); if a merge brought these in from the base, raise this number in the same change so the addition is reviewed"
+        : "the allowlist shrank — lower this number in the same change, so the migration's progress cannot be spent on a later addition",
+    ).toBe(ALLOWLISTED_MESSAGE_COUNT);
+  });
+
   it(
     "admits no Japanese message under src that the allowlist does not name",
     async () => {
