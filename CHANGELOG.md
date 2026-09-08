@@ -4,6 +4,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The validation contract moved out of the acceptance-test Definition of Done
+  and into a reference** (#1243). One bullet in that section was 1,047
+  characters, twice the length of any other, and a bullet nobody skims is a
+  contract nobody reads. `cross-spec-obligations.md` now carries it under
+  `## The validation the Definition of Done asks for` — the two parts the
+  result is read in, why the second exists, and what an unattributable finding
+  still means — and the bullet names the obligation and cites that anchor.
+
+  The paragraph cap in the Definition-of-Done guard comes back down to 700, just
+  above the longest bullet the section now carries. It had been raised to 1,200
+  to admit this one, which left the margin the cap was chosen for gone.
+
 ### Added
 
 - **A scheduled lane that holds each published release body against the
