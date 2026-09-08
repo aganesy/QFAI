@@ -461,8 +461,8 @@ describe("validateUpstreamSsotGuard", () => {
     // THIS BRANCH", and for such a file that sentence is false — so the error
     // count grew as `origin/main` advanced, on a branch whose review cycle the
     // gate itself makes slow. Gate item 12's step 4 is
-    // `qfai validate --fail-on error`, which made the gate a function of
-    // wall-clock time rather than of the tree (#1149).
+    // `qfai validate --fail-on error`, which makes the gate a function of
+    // wall-clock time rather than of the tree.
     const root = await newRepo({
       ".qfai/contracts/db/branch-owned.sql": "SELECT 1;\n",
       ".qfai/contracts/api/main-owned.yaml": "openapi: 3.0.0\n",
