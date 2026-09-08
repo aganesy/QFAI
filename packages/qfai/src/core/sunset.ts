@@ -191,6 +191,16 @@ export const RULE_PROMOTIONS = {
    */
   contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-CONTRACT-037` — a `data-qfai` marker a UI contract declares that no
+   * source file mentions. The condition is invisible today: the traceability
+   * between contract and code runs one way, from a test to the contract, so an
+   * element nobody built is named by no test and appears on neither side of
+   * any check. A project that has been passing may hold several at once, and
+   * the fix is to build the element or drop the declaration — neither of which
+   * is a same-day edit.
+   */
+  uiMarkerNotRendered: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-PLATFORM-003` — a `--platform` the requested profile never reads.
    * The flag has parsed on every profile for as long as it has existed, so
    * every CI matrix that passes it uniformly across profiles meets the finding
