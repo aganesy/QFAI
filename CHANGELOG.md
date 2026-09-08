@@ -348,6 +348,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `shell: true` was the other way to spawn a `.cmd`, and it would hand the
   argument list — document paths — to the command interpreter.
 
+### Changed
+
+- **Review artifacts are outside version control** (#1358). The `.gitignore`
+  block `qfai init` writes ignored `.qfai/review/*` and then re-included two
+  paths: the directory itself, and the record naming the packs that predate the
+  strict `revision` form. Both are retired, so nothing under a review directory
+  is committable.
+
+  An existing project picks this up on the next `qfai init`, which strips the
+  two lines from its managed block the way it strips every earlier retired
+  line. Packs a project already committed stay committed — `.gitignore` does
+  not untrack a path that is in the index — and the guard that stops
+  `doctor --clean` from archiving a tracked pack into an ignored directory is
+  unchanged, so that choice is still respected where it was made.
+
+  The block also ignores `.qfai/review_archive/*`, the location packs were
+  moved to before the current layout put the archive under `.qfai/review/`
+  itself.
+
 ### Fixed
 
 - **`QFAI-TRACE-003` names the spec directory with one separator** (#1365).
