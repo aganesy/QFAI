@@ -1931,7 +1931,28 @@ async function probeHttpUrl(
   }
 }
 
-function extractLiteralRequiredInputs(content: string): string[] {
+/**
+ * The path a required-input bullet names, taken off the front of it.
+ *
+ * A bullet is free to say what the input is for, and the explanation is not
+ * part of the path. Read whole, `.qfai/assistant/catalog/test-layers.md (SSOT
+ * for hard coverage obligations)` is a required input no tree can satisfy —
+ * while the file it names is on disk.
+ *
+ * The path ends at the first space, `(`, backtick or em dash; everything after
+ * that is prose.
+ */
+function leadingPath(bullet: string): string {
+  return (/^[^\s(`—]+/u.exec(bullet)?.[0] ?? "").replace(/[.,]$/u, "");
+}
+
+/**
+ * The paths an agent card's `## Inputs you must read` section requires on disk.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's public
+ * surface.
+ */
+export function extractLiteralRequiredInputs(content: string): string[] {
   const lines = content.split(/\r?\n/u);
   const items: string[] = [];
   let inInputsSection = false;
@@ -1972,13 +1993,16 @@ function extractLiteralRequiredInputs(content: string): string[] {
   return Array.from(
     new Set(
       items
-        .map((item) => item.replace(/`/gu, "").replace(/[.,]$/u, "").trim())
-        .filter(
-          (item) =>
-            item.startsWith(".") &&
-            !/[*?]/u.test(item) &&
-            !/\boptional\b|\bwhen available\b/iu.test(item),
-        ),
+        // Read against the whole bullet: a card says an input is optional in
+        // the prose beside the path, which the path itself cannot carry.
+        .filter((item) => !/\boptional\b|\bwhen available\b/iu.test(item))
+        .map((item) => leadingPath(item.replace(/`/gu, "").trim()))
+        // A glob names a set and a `<placeholder>` names a shape, so neither is
+        // a file to find: `.qfai/specs/<spec-id>/tdd/test-list.md` is one path
+        // per spec and none of them is at that name. Tested on the path so
+        // that a glob or a placeholder written in a bullet's explanation does
+        // not drop the file the bullet actually requires.
+        .filter((item) => item.startsWith(".") && !/[*?<>]/u.test(item)),
     ),
   );
 }

@@ -18,6 +18,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -385,14 +386,39 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
   // of these would otherwise stand in for a record of a run that never
   // happened — the `-<n>` collision suffix included, which is why the shipped
   // procedure recovers from a name clash by re-stamping instead.
-  for (const name of [
+  const NON_CANONICAL_NAMES = [
     "import-lite-.md",
     "import-lite-<ts>.md",
     "import-lite-notatimestamp.md",
     "import-lite-20260822.md",
     "import-lite-20260822090000000-2.md",
-  ]) {
-    it(`still fires for the non-canonical name ${name}`, async () => {
+  ];
+
+  /**
+   * Characters Windows refuses in a filename.
+   *
+   * `import-lite-<ts>.md` is the placeholder the shipped documents print, so an
+   * operator who copies the name literally is the case it stands for. On
+   * Windows that operator cannot exist: the name cannot be created, so the
+   * fixture's own `writeFile` fails before the detector is called and the case
+   * reports a spawn failure as a detector failure.
+   *
+   * Read off the name rather than listed per case, so a later example carrying
+   * a reserved character needs nothing remembered here.
+   */
+  const RESERVED_ON_WINDOWS = /[<>:"|?*]/;
+  const unreachableHere = (name: string): boolean =>
+    process.platform === "win32" && RESERVED_ON_WINDOWS.test(name);
+
+  it("keeps a non-canonical name every platform can create", () => {
+    // Without this the skip above could take the whole group on Windows and
+    // leave the property untested there, which is the failure a skip is
+    // supposed to avoid rather than cause.
+    expect(NON_CANONICAL_NAMES.filter((name) => !unreachableHere(name)).length).toBeGreaterThan(0);
+  });
+
+  for (const name of NON_CANONICAL_NAMES) {
+    it.skipIf(unreachableHere(name))(`still fires for the non-canonical name ${name}`, async () => {
       expect(await importLiteCodes(name)).toContain("QFAI-IMPLITE-001");
     });
   }
