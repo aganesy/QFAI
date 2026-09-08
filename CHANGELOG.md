@@ -143,6 +143,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A failing clean leg of the workflow-hygiene fixtures now names the rule and
+  the paths** (#1314). Both legs asserted the lane's exit code before its
+  findings, so a failure read `expected 1 to be 0` and the lane's own output —
+  which names the rule, the file and the job for every finding — was never
+  printed. The legs fail when the staged tree is incomplete as well as when the
+  workflow trees are, and an exit code alone cannot tell those apart.
+
 - **The governed-path report case of `assistantAssetProvenance.test.ts` no
   longer depends on the platform's path separator** (#1315). `init` names a
   written path with `/` on every platform and a skipped one in a `NOTE:` line
