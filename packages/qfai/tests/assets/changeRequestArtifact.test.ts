@@ -27,6 +27,45 @@ const cells = (s: string): string => s.replace(/\s+/g, " ");
 
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/change-request.md";
 
+const RESET = "assistant/skills/qfai-implement/references/change-request-reset.md";
+
+describe("a withdrawn Change Request releases the rows it parked", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the preflight enumerates every in-scope CR, not only the live ones`, async () => {
+      // A `rejected` / `superseded` CR authorises no reset, so a preflight that
+      // enumerates only the approved and open ones never sees that its blocked
+      // set has gone — and the rows it parked have no other exit.
+      const reset = flat(await read(tree, RESET));
+
+      expect(reset).toContain("**Every one of them, whatever its `Status`.**");
+      expect(reset).toContain("the `rejected` and `superseded` ones are what step 3 reads");
+    });
+
+    it(`${tree}: the released row resumes rather than taking the reset`, async () => {
+      // The reset's `DR-ID` records an approved change that invalidated the
+      // row's obligation. A withdrawn change invalidated nothing, so writing it
+      // there would send the next reader looking for an obligation that was
+      // never replaced.
+      const reset = flat(await read(tree, RESET));
+
+      expect(reset).toContain("A row no longer in the union takes `blocked -> todo`");
+      expect(reset).toContain("`Blocked-By` cleared, **no `DR-ID`**");
+      expect(reset).toContain("the round's `Resumed-from-blocked` recorded");
+    });
+
+    it(`${tree}: a row still blocked by another CR is not released`, async () => {
+      // The union, not this CR's own list: a row can sit in several blocked
+      // sets, and one of them resolving says nothing about the others.
+      const reset = flat(await read(tree, RESET));
+
+      expect(reset).toContain(
+        "A CR that resolved without authorising a reset leaves that union by the same rule an approved one does.",
+      );
+      expect(reset).toContain("Remove only the resolved CR's ID from `Blocked-By`");
+    });
+  }
+});
+
 describe("a Change Request is a defined artifact", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the template carries the approval-record fields`, async () => {

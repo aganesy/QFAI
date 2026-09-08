@@ -52,7 +52,7 @@ type PatternRule = {
    */
   appliesTo: ReadonlyArray<Target>;
   /**
-   * Run this rule on comment lines of shipped files too — YAML `# ...`
+   * Run this rule on comment lines of shipped files too — YAML `#...`
    * and TypeScript `//` / JSDoc alike. Comment lines are skipped for
    * every other rule (a YAML parser and the TS compiler both discard
    * them, so an ID inside a comment is a citation, not an install-site
@@ -116,14 +116,14 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // Applies to documentation AND runtime data: both are copied verbatim
     // into the consuming repo, where the cited path resolves to nothing.
     appliesTo: ["init-runtime", "init-doc"],
-    // A YAML `# ...` line — or a `//` / JSDoc line in a shipped `.ts`
+    // A YAML `#...` line — or a `//` / JSDoc line in a shipped `.ts`
     // template — ships verbatim and is read by humans, so a framework
     // path inside one reaches the user as an unopenable citation just
     // like a markdown line does.
     scanShippedComments: true,
   },
-  // Catch internal-ID and
-  // internal-version leakage in src JSDoc BEFORE it ships via
+  // Catch internal-ID and internal-version leakage in src JSDoc BEFORE it
+  // ships via
   // `dist/*.d.ts`. tsup strips comments from `.js` outputs but RETAINS
   // them in `.d.ts` declarations, so JSDoc is part of the distributed
   // surface even though it looks like an internal comment.
@@ -205,8 +205,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
-    // Catch
-    // internal open-question IDs (OQ-NNNN-NNNN) at the same pre-build
+    // Catch internal open-question IDs (OQ-NNNN-NNNN) at the same pre-build
     // layer that already catches DEC / DR / CAP / spec internal IDs.
     // OQ entries live in `.qfai/specs/spec-NNNN/08_Open-questions.md`
     // and are part of the authoring traceability surface — they must
@@ -265,7 +264,7 @@ const EXCLUDED_PATH_PATTERNS: ReadonlyArray<RegExp> = [
 const TS_COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*\*?|\*\/|\*)/;
 
 /**
- * Lines whose trimmed start indicates a YAML comment (`# ...`). YAML
+ * Lines whose trimmed start indicates a YAML comment (`#...`). YAML
  * comments are NOT runtime data — they're authority citation /
  * documentation embedded in a config file. The user's YAML parser
  * discards them.
@@ -400,7 +399,7 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
       continue;
     }
     // YAML files: comment lines are not runtime data; the parser ignores
-    // them. References inside `# ...` are authority citation, not
+    // them. References inside `#...` are authority citation, not
     // install-site assumptions — EXCEPT for rules flagged
     // `scanShippedComments`, which are about what a human reader can open.
     // Those comments ship verbatim via `qfai init`, so they keep running

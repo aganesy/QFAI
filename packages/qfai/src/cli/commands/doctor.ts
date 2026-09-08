@@ -109,8 +109,8 @@ function formatDoctorJson(data: unknown): string {
  * Both cleaners still populate their result arrays under dry-run (they
  * list what the live command WOULD do), so reusing the past-tense
  * wording from the live path would falsely read as "it happened".
- * Mirror the `autoremediate` dry-run vocabulary (`would run ...` /
- * `would fill ...`).
+ * Mirror the `autoremediate` dry-run vocabulary (`would run...` /
+ * `would fill...`).
  *
  * Review-pack archival always runs (it moves, and is therefore
  * recoverable). The run-log prune deletes, so it runs only after
