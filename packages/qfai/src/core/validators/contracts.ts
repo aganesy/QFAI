@@ -25,6 +25,7 @@ import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { validateContractConsistency } from "./contractConsistency.js";
+import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { issue } from "./utils.js";
 
@@ -109,6 +110,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
 
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
   issues.push(...(await validateDbContractExecutability(root, dbFiles)));
+  issues.push(...(await validateDbContractApplyOrder(root, dbFiles)));
 
   return issues;
 }
