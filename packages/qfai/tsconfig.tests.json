@@ -33,6 +33,7 @@
     "vitest.knobs.ts",
     "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
+    "tests/assets/agentCardRequiredInputs.test.ts",
     "tests/assets/agentSelectionReferenceTargets.test.ts",
     "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/assetOverflowHome.test.ts",
