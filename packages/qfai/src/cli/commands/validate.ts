@@ -1770,6 +1770,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
   "QFAI-ATDD-124":
     "A carrier whose suite is bound through a variable decides at run time whether its tests execute, so the coverage gate reads the annotation and cannot tell a skipped suite from a passing one.",
+  "QFAI-ATDD-125":
+    "A spec that declares test cases and owes none of them an ATDD annotation is named, so a green QFAI-ATDD-112 over a population of zero is not read as coverage.",
   "QFAI-ATDD-131":
     "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
   "QFAI-ATDD-132":
