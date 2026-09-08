@@ -289,6 +289,35 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
   });
 
+  // The case above states the POSIX form and holds on a runner whose separator
+  // is already `/` however the finding was built, so it cannot see this fix at
+  // all. This one can, on any platform: the configured directory carries a
+  // backslash, and the finding must not.
+  //
+  // A trailing-slash directory was tried here too and is not this test's
+  // subject: it produces no finding, because the spec-change detection misses
+  // the directory before any path is rendered. Filed separately.
+  it("renders the spec directory as one POSIX path when the config carries a backslash", async () => {
+    const specsDir = ".qfai\\specs";
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+      "src/core/module.ts": MODULE_BODY,
+    });
+    git(root, "rm", "-r", ".qfai/specs/spec-0001");
+    git(root, "commit", "-m", "delete the spec");
+
+    const issues = await validateTraceabilityIntegrity(root, {
+      ...config,
+      paths: { ...config.paths, specsDir },
+    });
+    const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
+
+    expect(uninspectable).toHaveLength(1);
+    expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
+  });
+
   it("passes a ledger row updated to the rename's destination", async () => {
     const root = await newRepo({
       ...layeredSpecBase,

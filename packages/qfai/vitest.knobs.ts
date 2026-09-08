@@ -156,7 +156,7 @@ export const projectKnobs = {
  *
  * The leak it stops is not one project's: a test anywhere that validates a `mkdtemp` fixture with
  * `--format github` emits `::error file=<relative path>::…` to the runner's stdout, and GitHub
- * resolves that path against THIS repository (#1160).
+ * resolves that path against THIS repository.
  *
  * `pool: "forks"` with `isolate: true` gives every test file its own process, so a setup that
  * patches `process.stdout` has to run per file — which is what `setupFiles` does and what a

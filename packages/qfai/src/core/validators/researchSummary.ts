@@ -32,6 +32,45 @@ function schemaWindowNote(severity: "warning" | "error"): string {
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** The same shape for the date a source that was never published was seen on. */
+const OBSERVED_DATE_RE = /^[ \t]*(?:-[ \t]*)?observed:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** `type:` of a source entry, read as written. */
+const SOURCE_TYPE_RE = /^[ \t]*(?:-[ \t]*)?type:[ \t]*["']?([A-Za-z-]+)["']?/m;
+
+/**
+ * What a source entry must carry, by what kind of source it is.
+ *
+ * `url` and `published` describe published material. A brownfield discussion
+ * pack is mostly primary evidence — a screenshot of the customer's system, a
+ * file they supplied, a conversation log — which is real, citable and recorded,
+ * and has neither. Demanding those two fields there bought a locator field
+ * holding an admin path and a `published` date that is really the day someone
+ * looked, which also fed the freshness ratio and made it meaningless.
+ *
+ * So the pair is named for what it is. Both kinds owe the same two facts:
+ * where the source is, and when it is from.
+ */
+const SOURCE_FIELDS_BY_TYPE = {
+  external: { locator: "url", date: "published", dateRe: FULL_DATE_RE },
+  primary: { locator: "locator", date: "observed", dateRe: OBSERVED_DATE_RE },
+  secondary: { locator: "locator", date: "observed", dateRe: OBSERVED_DATE_RE },
+} as const;
+
+type SourceType = keyof typeof SOURCE_FIELDS_BY_TYPE;
+
+/**
+ * The kind of source an entry declares, defaulting to `external`.
+ *
+ * Absent means `external` because that is what the schema required before the
+ * distinction existed, so a pack written against the old schema keeps passing
+ * unchanged. A value outside the vocabulary defaults there too, which is the
+ * conservative direction: an unreadable `type` keeps the strictest obligation
+ * rather than letting a typo drop the entry's requirements.
+ */
+function sourceType(entry: string): SourceType {
+  const declared = SOURCE_TYPE_RE.exec(entry)?.[1]?.toLowerCase() ?? "";
+  return declared === "primary" || declared === "secondary" ? declared : "external";
+}
 /**
  * Fence info strings whose block carries the summary itself.
  *
@@ -57,8 +96,11 @@ const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
 const SCALAR_SCHEMA_FIELDS = new Set([
   "id",
   "title",
+  "type",
   "url",
   "published",
+  "locator",
+  "observed",
   "category",
   "description",
   "source_id",
@@ -176,22 +218,23 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
           ),
         );
       }
-      if (!hasNonEmptyField(entry, "url")) {
+      const fields = SOURCE_FIELDS_BY_TYPE[sourceType(entry)];
+      if (!hasNonEmptyField(entry, fields.locator)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-005",
-            `Source entry missing required field "url": ${label}`,
+            `Source entry missing required field "${fields.locator}": ${label}`,
             "error",
             rel,
             "researchSummary.sourceUrl",
           ),
         );
       }
-      if (!FULL_DATE_RE.test(entry)) {
+      if (!fields.dateRe.test(entry)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-006",
-            `Source entry missing or invalid "published" date (YYYY-MM-DD): ${label}`,
+            `Source entry missing or invalid "${fields.date}" date (YYYY-MM-DD): ${label}`,
             "error",
             rel,
             "researchSummary.sourcePublished",
@@ -203,7 +246,12 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // Check freshness (≥80% within 2 years)
     const referenceNow = resolveFreshnessReferenceNow();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
+    // External entries only. The ratio asks how much of the research rests on
+    // recent publications, and primary evidence has no publication date to be
+    // recent or stale against — counting the day someone looked at it would
+    // score every such entry as fresh and say nothing.
     const publishedDates = sourceEntries
+      .filter((entry) => sourceType(entry) === "external")
       .map((entry) => FULL_DATE_RE.exec(entry)?.[1] ?? "")
       .map((dateText) => Date.parse(dateText))
       .filter((ts) => Number.isFinite(ts));

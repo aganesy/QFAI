@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   gitignorePatternMatches,
+  isPathIgnoredByLayers,
   negationSamplePath,
   negationsOutrankLaterIgnores,
 } from "../../src/core/gitignore.js";
@@ -278,5 +279,72 @@ describe("glob overlap is decided from both patterns, not from one instance of o
 
   it("reports a missing negation rather than calling it effective", () => {
     expect(negationsOutrankLaterIgnores([".qfai/evidence/*"], [MANAGED])).toBe(false);
+  });
+});
+
+/**
+ * A negation naming a directory re-includes the directory entry, not the
+ * subtree under it.
+ *
+ * gitignore(5) is explicit that a file whose parent directory is excluded
+ * cannot be re-included, so `!.qfai/` cancels the exclusion of `.qfai` itself
+ * and nothing more. Read as a subtree it sat last in the shipped block and
+ * outranked every ignore above it, and the verdict came back "not ignored" for
+ * paths `git check-ignore` reports as ignored.
+ *
+ * The shipped block hid it: a narrower negation for each governance record sits
+ * below the directory ones and also wins, so the answer was right for the wrong
+ * reason. Removing one of those narrower lines — which `qfai init` respects and
+ * never re-adds — is what makes the two disagree.
+ */
+describe("a directory negation re-includes the directory, not everything under it", () => {
+  /** The shipped block, ignores first and negations last, as `qfai init` writes it. */
+  const BLOCK = [
+    ".qfai/report/*",
+    ".qfai/evidence/*",
+    ".qfai/review/*",
+    "!.qfai/",
+    "!.qfai/evidence/",
+    "!.qfai/evidence/decisions/",
+    "!.qfai/evidence/decisions/**",
+    "!.qfai/evidence/coverage-depth-*.md",
+  ];
+
+  const verdict = (lines: readonly string[], samplePath: string): boolean =>
+    isPathIgnoredByLayers([{ dir: "", lines: [...lines] }], samplePath);
+
+  it("leaves a generated file ignored, the way git does", () => {
+    // `git check-ignore -v` names `.qfai/review/*` as the winner here. Read as
+    // a subtree, `!.qfai/` sat last and answered "not ignored".
+    expect(verdict(BLOCK, ".qfai/review/review-20260101/summary.json")).toBe(true);
+    expect(verdict(BLOCK, ".qfai/report/validate.json")).toBe(true);
+  });
+
+  it("keeps a record ignored once the project drops its own negation", () => {
+    // The configuration the caller exists for: a project keeps the block but
+    // removes the matrix negation, so git ignores the matrix. Reported visible,
+    // the validator that warns about an invisible governance record says
+    // nothing.
+    const withoutMatrix = BLOCK.filter((line) => !line.includes("coverage-depth"));
+
+    expect(verdict(withoutMatrix, ".qfai/evidence/coverage-depth-0001.md")).toBe(true);
+  });
+
+  it("still re-includes what the block re-includes", () => {
+    // The over-correction pin. Narrowing the directory negations must not take
+    // the records with them: each has its own negation below, and a `**`
+    // negation says descendants in its own text.
+    expect(verdict(BLOCK, ".qfai/evidence/coverage-depth-0001.md")).toBe(false);
+    expect(verdict(BLOCK, ".qfai/evidence/decisions/20260101.json")).toBe(false);
+    expect(verdict(BLOCK, ".qfai/evidence")).toBe(false);
+    expect(verdict(BLOCK, ".qfai")).toBe(false);
+  });
+
+  it("reads a negation naming a file as covering that file", () => {
+    // Only the trailing-slash form narrows. A negation naming a file has no
+    // descendants, so nothing about it changes.
+    expect(verdict([".qfai/evidence/*", "!.qfai/evidence/keep.md"], ".qfai/evidence/keep.md")).toBe(
+      false,
+    );
   });
 });

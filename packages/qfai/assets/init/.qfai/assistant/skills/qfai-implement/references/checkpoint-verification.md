@@ -165,9 +165,10 @@ weaken the profile to clear it.
 
 The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
 under parallel slices the ledger order does not identify one either. So step 1 is dropped, and the
-two spec-wide commands are added: the spec-level set is step 2 above plus steps 3 and 4 below.
+three spec-wide commands are added: the spec-level set is step 2 above plus steps 3, 4 and 5 below.
 Everything step 1 would have proved is already covered by the full suite. Steps 3 and 4 run at this
-boundary and only at it — it is the boundary whose owner can act on what they report.
+boundary and only at it — it is the boundary whose owner can act on what they report. Step 5 also
+runs at a per-item boundary, under the condition it states.
 
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check. **These take no `--spec`**, and a repository's own gates are whole-tree by construction —
@@ -202,6 +203,27 @@ boundary and only at it — it is the boundary whose owner can act on what they 
    treating them as still-blocking reports a failure this run cannot see. Record the finding, its owning spec and why it
    is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
    report the checkpoint as passed.
+
+5. **The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is
+   `applicable`** — resolved from the **current** `catalog/tech.md` and the committed script it
+   names, whose bytes must hash to the `Skeleton script` the record carries, then run and appended
+   to `.qfai/evidence/skeleton.md` with its own exit status
+   (`walking-skeleton.md#the-same-re-run-before-spec-completion`). The command is **not** taken
+   from the record: the record is an editable file, so a command rewritten there to something that
+   always succeeds would carry an old gatekeeper PASS through spec completion. The record is what
+   the run is compared against, never what the run is read from, and a hash that does not match
+   is a FAIL here rather than a re-run of whatever the script now says. Steps 2-4 are
+   all satisfiable by a tree that no longer starts: where the tests construct their subject
+   directly, the suite stays green after this invocation's own rows have broken the
+   composition root, the start-up configuration or the dependency wiring, and no other step
+   in this set runs the product. A non-zero exit is a FAIL like any other here — spec
+   completion is blocked and the entrypoint re-enters the Skeleton phase's 3-cycle budget.
+   A spec set with no runnable entrypoint records the `not applicable` verdict once and
+   contributes nothing to this step.
+
+Re-run step 5 at a **per-item** boundary too whenever the item touched an entrypoint, its wiring or
+its start-up configuration — one row's work then stands between the last passing run and the
+failure, which is what makes it attributable.
 
 ## Pass criteria
 
