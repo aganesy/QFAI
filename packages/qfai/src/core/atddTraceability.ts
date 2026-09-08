@@ -285,6 +285,22 @@ export type AtddCodeTraceabilityResult = {
    * (`TDDLIST_TC_NOT_COVERED`) is what covers them.
    */
   unitComponentTcIds: string[];
+  /**
+   * `TC-*` refs a status marker in their own block suspends, each with the
+   * status and — for `external` — where the obligation is really verified.
+   *
+   * Reported at `info` for the same reason `QFAI-ATDD-118` reports a deferred
+   * story: an exit nobody can see is one nobody reviews.
+   */
+  deferredTcIds: DeferredTc[];
+  /**
+   * `TC-*` refs that claim `external` and name no verifier.
+   *
+   * They keep their obligation. The marker is not a way to say "not here": it
+   * is a way to say where the obligation is met instead, and without that it
+   * says nothing a reader can act on.
+   */
+  unsupportedTcStatusIds: string[];
   /** Test files outside the scanned roots; surfaced instead of dropped. */
   skippedTestFiles: string[];
   scan: AtddTraceabilityScan;
@@ -546,7 +562,16 @@ export async function evaluateAtddCodeTraceability(
     missing.tc,
     tcLevels,
   );
-  missing.tc = owedTc;
+  // A test case whose own block declares where it is verified drops out of the
+  // obligation, and one that claims `external` without naming the verifier does
+  // not: the pointer is the entire cost of the exit, so a marker written
+  // without it suspends nothing and is reported instead.
+  const {
+    owed: stillOwedTc,
+    deferred: deferredTc,
+    unsupported: unsupportedTc,
+  } = partitionMissingTcByStatus(owedTc, specRefs.tcStatuses);
+  missing.tc = stillOwedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
   // A truncated scan cannot support the negative claim this partition makes.
   // `collectFilesByGlobs` stops at the limit, so the executable test that
@@ -571,6 +596,8 @@ export async function evaluateAtddCodeTraceability(
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
     unitComponentTcIds: unitComponentTc,
+    deferredTcIds: deferredTc,
+    unsupportedTcStatusIds: unsupportedTc,
     specsRoot,
     testsRoot,
     contractsApiRoot,
@@ -699,6 +726,8 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
+  /** `spec -> TC-ID -> the status its own block declares. */
+  tcStatuses: Map<string, Map<string, TcStatusDeclaration>>;
   /** Spec number -> the directory enumerated for it. */
   declaredSpecDirs: Map<string, string>;
 }> {
@@ -707,6 +736,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   const usPlanned = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
+  const tcStatuses = new Map<string, Map<string, TcStatusDeclaration>>();
   const declaredSpecDirs = new Map(entries.map((entry) => [entry.specNumber, entry.dir]));
 
   for (const entry of entries) {
@@ -747,9 +777,17 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (levels.size > 0) {
       tcLevels.set(entry.specNumber, levels);
     }
+
+    // Intersected with the declared set, on the same terms as the story
+    // deferral: a marker under a heading no collector reads as a test case
+    // would otherwise report a deferral for an id that owes nothing.
+    const statuses = new Map([...collectTcStatuses(tcText)].filter(([id]) => tcIds.has(id)));
+    if (statuses.size > 0) {
+      tcStatuses.set(entry.specNumber, statuses);
+    }
   }
 
-  return { us, usPlanned, tc, tcLevels, declaredSpecDirs };
+  return { us, usPlanned, tc, tcLevels, tcStatuses, declaredSpecDirs };
 }
 
 /**
@@ -1138,6 +1176,58 @@ function partitionMissingTcByObligation(
  * E2E annotation there, the annotation-only E2E that the surface-scope rule
  * exists to prevent.
  */
+/** A suspended test case, carried with what suspended it. */
+export type DeferredTc = {
+  /** `SPEC-NNNN:TC-NNNN`, the form every ref list here uses. */
+  ref: string;
+  status: TcVerificationStatus;
+  /** Where the obligation is verified. Present whenever `status` is `external`. */
+  verifiedBy?: string;
+};
+
+/** `SPEC-0007:TC-0007-0001` -> the two halves. */
+const TC_REF_RE = /^SPEC-(\d{4}):(TC-\d{4}(?:-\d{4})?)$/;
+
+/**
+ * Splits the owed test cases by what their own block declares.
+ *
+ * Three outcomes, and the middle one is the point: a marker that names its
+ * verifier suspends the obligation, a marker that does not keeps it, and
+ * everything unmarked is owed as before.
+ */
+function partitionMissingTcByStatus(
+  owed: string[],
+  statusesBySpec: ReadonlyMap<string, ReadonlyMap<string, TcStatusDeclaration>>,
+): { owed: string[]; deferred: DeferredTc[]; unsupported: string[] } {
+  const stillOwed: string[] = [];
+  const deferred: DeferredTc[] = [];
+  const unsupported: string[] = [];
+
+  for (const ref of owed) {
+    const match = TC_REF_RE.exec(ref);
+    const spec = match?.[1];
+    const id = match?.[2];
+    const declared =
+      spec === undefined || id === undefined ? undefined : statusesBySpec.get(spec)?.get(id);
+    if (declared === undefined) {
+      stillOwed.push(ref);
+      continue;
+    }
+    if (!suspendsObligation(declared)) {
+      unsupported.push(ref);
+      stillOwed.push(ref);
+      continue;
+    }
+    deferred.push({
+      ref,
+      status: declared.status,
+      ...(declared.verifiedBy === undefined ? {} : { verifiedBy: declared.verifiedBy }),
+    });
+  }
+
+  return { owed: stillOwed, deferred, unsupported };
+}
+
 function partitionDeclaredUs(
   specUsIds: Map<string, Set<string>>,
   plannedBySpec: Map<string, Set<string>>,
@@ -1307,6 +1397,128 @@ const ANY_HEADING_RE = /^#{1,6}\s+/;
 
 /** Markdown's bullet list markers, as a regex character class. */
 const BULLET_MARKER = "[-*+]";
+
+/**
+ * What a test case says about where it is verified.
+ *
+ * `planned` is the `US-*` deferral, one layer down: the test is not written
+ * yet, the obligation is suspended, and the marker keeps it visible rather than
+ * silent.
+ *
+ * `external` is the state the story marker has no counterpart for. Some
+ * acceptance criteria are true of the deployment rather than of the code — a
+ * TLS floor, an HTTPS redirect terminated by the platform — and no layer the
+ * annotation gate routes to can observe them. Before this, every exit was
+ * closed: annotating anyway makes the gate green over a test that checks
+ * something else, a waiver may not cover an error, and retiring the row walks
+ * up the coverage rules until the requirement itself is deleted.
+ */
+export type TcVerificationStatus = "planned" | "external";
+
+/** A test case's declared status, with the pointer `external` requires. */
+export type TcStatusDeclaration = {
+  status: TcVerificationStatus;
+  /** Where the obligation is verified. Required for `external`. */
+  verifiedBy?: string;
+};
+
+/** `- x-qfai-status: planned` / `- x-qfai-status: external`, in a TC block. */
+const TC_STATUS_META_LINE_RE = (() => {
+  const key = escapeRegExp(PLANNED_CONTRACT_KEY);
+  const quoted = (token: string): string => `(?:"${token}"|'${token}'|${token})`;
+  // One capture around the whole quoted alternation, not one per branch: with
+  // the group inside `quoted` the bare form lands in the third group and the
+  // first reads as undefined, so every unquoted marker — the shape every
+  // template writes — parsed as no marker at all.
+  const value = `(?:"|')?(planned|external)(?:"|')?`;
+  return new RegExp(
+    `^[ \\t]*${BULLET_MARKER}[ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${value}[ \\t]*$`,
+    "i",
+  );
+})();
+
+/** The key an `external` test case names its real verifier with. */
+export const TC_VERIFIED_BY_KEY = "x-qfai-verified-by";
+
+/** `- x-qfai-verified-by: <where it is actually checked>`. */
+const TC_VERIFIED_BY_META_LINE_RE = new RegExp(
+  `^[ \\t]*${BULLET_MARKER}[ \\t]+${escapeRegExp(TC_VERIFIED_BY_KEY)}[ \\t]*:[ \\t]*(.+?)[ \\t]*$`,
+  "i",
+);
+
+/**
+ * Status markers declared in `06_Test-Cases.md`, by test case id.
+ *
+ * **Read from a `##`-or-deeper `TC-NNNN` block only, never from the table.**
+ * That is the design, not a limitation. The field evidence behind this marker
+ * is that two test cases looked identical from the spec's side — same level,
+ * same note calling them deployment-bound — and only one of them actually was;
+ * a marker cheap enough to write in a table cell would have been applied to
+ * both, and the one that was observable in-process would have lost its only
+ * real test.
+ *
+ * So deferring a test case costs a block of its own. The author has to lift the
+ * row out of the table, write the status, and — for `external` — name where the
+ * obligation is really checked. That is the price of the exit, and it is meant
+ * to be paid deliberately.
+ *
+ * Fenced samples and HTML comments are masked first, on the same terms as
+ * {@link collectTcLevels}: a block in a format example must not defer a real
+ * test case.
+ */
+export function collectTcStatuses(rawTcText: string): Map<string, TcStatusDeclaration> {
+  const declarations = new Map<string, TcStatusDeclaration>();
+  let currentId: string | null = null;
+
+  for (const rawLine of maskNonSpecRegions(rawTcText).replace(/\r\n/g, "\n").split("\n")) {
+    const line = rawLine.trim();
+    const heading = TC_HEADING_RE.exec(line);
+    if (heading?.[1] !== undefined) {
+      currentId = heading[1].toUpperCase();
+      continue;
+    }
+    // Any other heading closes the block: the marker belongs to the test case
+    // it is written under, not to whichever one came before it in the file.
+    if (line.startsWith("#")) {
+      currentId = null;
+      continue;
+    }
+    if (currentId === null) {
+      continue;
+    }
+
+    const status = TC_STATUS_META_LINE_RE.exec(line)?.[1]?.toLowerCase();
+    if (status === "planned" || status === "external") {
+      // First marker of the block wins, like the `- Level:` line beside it.
+      if (!declarations.has(currentId)) {
+        declarations.set(currentId, { status });
+      }
+      continue;
+    }
+
+    const verifiedBy = TC_VERIFIED_BY_META_LINE_RE.exec(line)?.[1]?.trim();
+    if (verifiedBy !== undefined && verifiedBy.length > 0) {
+      const declared = declarations.get(currentId);
+      if (declared !== undefined && declared.verifiedBy === undefined) {
+        declarations.set(currentId, { ...declared, verifiedBy });
+      }
+    }
+  }
+
+  return declarations;
+}
+
+/**
+ * Whether a declaration actually suspends the annotation obligation.
+ *
+ * `external` without a pointer does not. The pointer is the whole cost of the
+ * marker: without it the line says only "not here", which is the blanket
+ * silencer this exit exists to avoid being. Such a test case keeps its
+ * obligation and is reported, so the marker cannot be written and forgotten.
+ */
+export function suspendsObligation(declaration: TcStatusDeclaration): boolean {
+  return declaration.status === "planned" || declaration.verifiedBy !== undefined;
+}
 
 /** Markdown's ordered list marker — `1.` or `1)`, at its nine-digit ceiling. */
 const ORDERED_MARKER = "\\d{1,9}[.)]";

@@ -245,6 +245,10 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",
+      // A test case that declares where it is verified, and one that claims
+      // `external` while naming no verifier.
+      "QFAI-ATDD-126",
+      "QFAI-ATDD-127",
       "QFAI-ATDD-131",
       "QFAI-ATDD-132",
       "QFAI-ATDD-133",

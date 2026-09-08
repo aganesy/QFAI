@@ -7,13 +7,19 @@ import {
   atddTestKindDirs,
   evaluateAtddCodeTraceability,
   PLANNED_CONTRACT_KEY,
+  TC_VERIFIED_BY_KEY,
   type AtddCodeTraceabilityResult,
   type AtddTestKind,
   type AtddUnknownRef,
 } from "../atddTraceability.js";
 import type { SpecScope } from "../specScope.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
+
+/** The window `QFAI-ATDD-127` ships behind; see `sunset.ts` for why. */
+const TC_STATUS_PROMOTION = RULE_PROMOTIONS.tcExternalWithoutVerifier.promoteAt;
 
 /** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
 // The optional `QFAI:` prefix is not cosmetic: `missing.*` and `forbidden.ids`
@@ -450,6 +456,56 @@ export async function validateAtddCodeTraceability(
         "canonical",
         "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
         { relatedFiles: unitComponentHome.relatedFiles },
+      ),
+    );
+  }
+
+  // A test case its own block says is verified somewhere else. `info`, like the
+  // story deferral it parallels: the exit is legitimate, and what matters is
+  // that it stays visible instead of looking like coverage.
+  if (result.deferredTcIds.length > 0) {
+    const refs = result.deferredTcIds.map((entry) => entry.ref);
+    const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
+    const described = result.deferredTcIds
+      .map((entry) =>
+        entry.verifiedBy === undefined
+          ? `${entry.ref} (${entry.status})`
+          : `${entry.ref} (${entry.status}: ${entry.verifiedBy})`,
+      )
+      .join(", ");
+    issues.push(
+      issue(
+        "QFAI-ATDD-126",
+        `${String(refs.length)} test case(s) declare where they are verified, so they owe no annotation here: ${described}`,
+        "info",
+        home.file,
+        "atddCodeTraceability.coverage.tcStatusDeferred",
+        refs,
+        "canonical",
+        "`planned` suspends the obligation until the test is written; remove it then. `external` says the obligation is met outside this repository and names what meets it, so the next reader can find the thing that actually checks it. Neither is a way to leave an obligation unmet — a test case nothing verifies anywhere belongs in neither state.",
+        { relatedFiles: home.relatedFiles },
+      ),
+    );
+  }
+
+  // `external` with no verifier named. The obligation is kept, because the
+  // marker without its pointer says only "not here" — which is the blanket
+  // silencer this exit was designed not to be.
+  if (result.unsupportedTcStatusIds.length > 0) {
+    const refs = result.unsupportedTcStatusIds;
+    const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
+    const severity = newRuleSeverity(await resolveToolVersion(), TC_STATUS_PROMOTION);
+    issues.push(
+      issue(
+        "QFAI-ATDD-127",
+        `${String(refs.length)} test case(s) declare \`${PLANNED_CONTRACT_KEY}: external\` and name no verifier, so the obligation stands: ${refs.join(", ")}`,
+        severity,
+        home.file,
+        "atddCodeTraceability.coverage.tcExternalWithoutVerifier",
+        refs,
+        "change",
+        `Add \`- ${TC_VERIFIED_BY_KEY}: <what checks it>\` to the test case's own block — a scheduled probe, a platform setting, a monitor — or drop the status and cover the test case here. The pointer is what makes this an exit rather than a silencer: without it the spec records that nothing in the repository verifies the obligation and nothing else is named either.`,
+        { relatedFiles: home.relatedFiles },
       ),
     );
   }

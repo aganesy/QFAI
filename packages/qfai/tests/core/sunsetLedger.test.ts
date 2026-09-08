@@ -160,6 +160,12 @@ const INFO_ONLY_SINCE_BASELINE: readonly string[] = [
   // error. Promoting it would fail every shallow CI clone on the pin date for
   // the shape of its checkout rather than for anything in the repository.
   "QFAI-TRACE-003",
+  // A test case whose own block says where it is verified. `planned` defers it
+  // and `external` records that the obligation is met outside the repository;
+  // both are declared intent, so there is no release at which either should
+  // fail a build. Promoting it would make the exit unusable for the case it
+  // exists for.
+  "QFAI-ATDD-126",
 ];
 
 // tests/core/<this file> -> packages/qfai
