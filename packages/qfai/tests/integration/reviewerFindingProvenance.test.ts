@@ -28,6 +28,16 @@ const DELEGATION_BASELINE = path.join(
   "shared-skill-delegation-baseline.md",
 );
 const IMPLEMENT_SKILL = path.join(assistantDir, "skills", "qfai-implement", "SKILL.md");
+// Gate item 10's rule lives in the reference the gate line cites, not inline in
+// the gate (`tests/assets/gateItemBudget.test.ts` holds the gate to that shape).
+// The obligations below are item 10's, so this is the document that states them.
+const RECORD_CONTRACT = path.join(
+  assistantDir,
+  "skills",
+  "qfai-implement",
+  "references",
+  "record-contract.md",
+);
 const FINDING_CLASSIFICATION = path.join(
   assistantDir,
   "skills",
@@ -294,10 +304,10 @@ describe("reviewer finding provenance", () => {
     // reviewer response carrying a hash nothing agrees with. Either way the
     // repair is unverifiable, so the re-attestation needs a pack and a seal of
     // its own that the gate can recompute.
-    const [drift, classification, skill, layout, revision] = await Promise.all([
+    const [drift, classification, recordContract, layout, revision] = await Promise.all([
       readFile(DRIFT_PROTOCOL, "utf-8"),
       readFile(FINDING_CLASSIFICATION, "utf-8"),
-      readFile(IMPLEMENT_SKILL, "utf-8"),
+      readFile(RECORD_CONTRACT, "utf-8"),
       readFile(REVIEW_ARTIFACT_LAYOUT, "utf-8"),
       readFile(EVIDENCE_REVISION, "utf-8"),
     ]);
@@ -312,21 +322,25 @@ describe("reviewer finding provenance", () => {
     }
     // The artifact and its seal exist as named fields, so a validator has
     // something to recompute rather than an untraceable edit.
-    for (const doc of [drift, classification, skill, revision]) {
+    for (const doc of [drift, classification, recordContract, revision]) {
       expect(doc).toContain("Record re-attestation pack seal");
     }
     // The gate recomputes the superseding hash and both seals.
-    expect(skill).toMatch(/compared against \*\*that\*\* hash and not the superseded original/);
+    // The rule moved out of the gate line into the reference, so the assertions
+    // read the reference. Wrap-tolerant: it wraps its prose, the gate line did not.
+    const flatRecord = recordContract.replace(/\s+/g, " ");
+    expect(flatRecord).toMatch(
+      /compared against \*\*that\*\* hash and not the superseded original/,
+    );
     // The review pack and its seal are per review ATTEMPT, not per round: a
     // `REVISE` and the `PASS` answering it sit inside one round and seal two
-    // packs (`references/round-evidence.md`), so gate item 10 names the
-    // attempt's seal. The property pinned here is the one that matters and is
-    // unchanged — the re-attestation seal is recomputed BESIDE the review pack
-    // seal rather than instead of it — and the second assertion keeps the gate
-    // reaching every seal the entry carries rather than only the latest.
-    const flatSkill = skill.replace(/\s+/g, " ");
-    expect(flatSkill).toContain("beside the attempt's `Review pack seal`");
-    expect(flatSkill).toContain(
+    // packs (`references/round-evidence.md`), so the contract names the
+    // attempt's seal. The property pinned here is unchanged — the
+    // re-attestation seal is recomputed BESIDE the review pack seal rather than
+    // instead of it — and the second assertion keeps the gate reaching every
+    // seal the entry carries rather than only the latest.
+    expect(flatRecord).toContain("beside the attempt's `Review pack seal`");
+    expect(flatRecord).toContain(
       "Every `Review pack seal` the entry carries — one per review attempt",
     );
     // The pack layout recognizes the shape, so it is not an ad-hoc directory.
