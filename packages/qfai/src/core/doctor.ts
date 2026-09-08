@@ -53,6 +53,7 @@ import {
   checkAssistantAssetLineBudget,
   type ExemptAssistantAsset,
   type OversizedAssistantAsset,
+  type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
@@ -967,8 +968,10 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
   const details = {
     assistantDir: toRelativePath(root, report.assistantDir),
     maxLines: report.maxLines,
+    maxLineChars: report.maxLineChars,
     scanned: report.scanned,
     oversized: report.oversized,
+    wideLines: report.wideLines,
     // The baseline promises the exemption is visible to the reader, not just to
     // the implementation: each exempt path is listed with the reason it was not
     // measured, and the same pair is rendered into the message for text readers.
@@ -993,7 +996,19 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
-      message: `all ${report.scanned} assistant assets are within ${report.maxLines} lines${exemptNote}`,
+      // "within the ceiling that applies to each" rather than "within 400": the
+      // shipped files carrying a recorded width are inside their own number and
+      // over the default one, so naming the default here would tell a reader the
+      // opposite of what was checked.
+      // Two counts, because the two ceilings measure different populations.
+      // Every scanned asset is held to a width; the exempt ones are not held to
+      // a line count, so saying "all N are within 800 lines" would claim a check
+      // that did not run on them — and contradict the exemption note beside it.
+      message:
+        `all ${String(report.scanned - report.exempt.length)} assistant assets held to the ` +
+        `line ceiling are within ${report.maxLines} lines, and all ${report.scanned} are ` +
+        `within the line width each is held to (${report.maxLineChars} unless the shipped ` +
+        `file carries a recorded width)${exemptNote}`,
       details,
     };
   }
@@ -1023,14 +1038,26 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     unmeasured > 0
       ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
-  const nextActions = assetLineBudgetNextActions(report.oversized);
+  const nextActions = assetLineBudgetNextActions(report.oversized, report.wideLines);
+  // Both halves in one message. A file can fail either ceiling, and reporting
+  // only the count would leave the width failure with no line of its own.
+  const overruns = [
+    ...(report.oversized.length > 0
+      ? [
+          `${report.oversized.length} exceed ${report.maxLines} lines: ` +
+            formatOversizedAssets(report.oversized),
+        ]
+      : []),
+    ...(report.wideLines.length > 0
+      ? [`${report.wideLines.length} carry a line too wide: ` + formatWideAssets(report.wideLines)]
+      : []),
+  ].join("; ");
   return {
     id: "assets.lineBudget",
     severity: "warning",
     title,
     message:
-      `${report.oversized.length} assistant assets exceed ${report.maxLines} lines: ` +
-      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
+      `assistant assets over budget — ${overruns}${unmeasuredNote}${exemptNote}` +
       formatNextActionHint(nextActions),
     details: {
       ...details,
@@ -1096,6 +1123,19 @@ function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>
 }
 
 /**
+ * Names the width each file was held to, not only the width it has.
+ *
+ * A file carrying a recorded width is measured against that number rather than
+ * the shipped ceiling, so `(1500 chars)` alone would leave a reader unable to
+ * tell a regression from a file that was always wide.
+ */
+function formatWideAssets(wide: ReadonlyArray<WideLineAssistantAsset>): string {
+  return wide
+    .map((entry) => `${escapeForMessage(entry.path)} (${entry.widest} > ${entry.allowed} chars)`)
+    .join(", ");
+}
+
+/**
  * States what was skipped and why, in the default output as well as in JSON.
  *
  * An asset that is never measured is invisible otherwise: the counts speak only
@@ -1110,7 +1150,10 @@ function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string
   const entries = exempt
     .map((entry) => `${escapeForMessage(entry.path)} (${escapeForMessage(entry.reason)})`)
     .join(", ");
-  return ` (${exempt.length} exempt from the check: ${entries})`;
+  // "from the line ceiling", not "from the check": these files are measured for
+  // width like every other asset, and the same message says so one clause
+  // earlier. Naming the whole check reads as though they were skipped.
+  return ` (${exempt.length} exempt from the line ceiling: ${entries})`;
 }
 
 /** Appends the repair guidance so text readers get it, not only JSON readers. */
@@ -1126,16 +1169,29 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
  * relocate a constitution document or a manifest YAML into an unrelated skill
  * and break the loader contract that reads it from its own layer.
  */
-function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>): string[] {
+function assetLineBudgetNextActions(
+  oversized: ReadonlyArray<{ path: string }>,
+  wide: ReadonlyArray<{ path: string }>,
+): string[] {
   const actions: string[] = [];
-  const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
-  const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
+  const paths = [...new Set(oversized.map((entry) => entry.path))];
+  const hasSkillAsset = paths.some((entry) => entry.startsWith("assistant/skills/"));
+  const hasOtherAsset = paths.some((entry) => !entry.startsWith("assistant/skills/"));
   if (hasSkillAsset) {
     actions.push("move one topic out of the oversized skill into that skill's own references/");
   }
   if (hasOtherAsset) {
     actions.push(
       "split a non-skill asset (constitution/, catalog/, manifest/, ...) by topic within its own layer, and update the paths that reference it",
+    );
+  }
+  // A separate action, because the two ceilings ask for different edits. A file
+  // of two lines can fail the width one, and telling its author to move a topic
+  // into `references/` asks for a structural change that would not fix it: what
+  // the width ceiling wants is the line wrapped.
+  if (wide.length > 0) {
+    actions.push(
+      "wrap the over-wide prose — a list item, an ordered item or a paragraph — at the width ceiling; a table row and a fenced block are not measured",
     );
   }
   return actions;
