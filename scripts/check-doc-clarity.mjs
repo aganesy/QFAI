@@ -59,6 +59,13 @@ const EXCLUDE_PREFIX = [
   ".codex/agents/",
 ];
 const EXCLUDE_EXACT = new Set(["CHANGELOG.md"]);
+/**
+ * A spec pack's own delta log (`_policies/10_delta.md`, `spec-NNNN/09_delta.md`
+ * or another file ending `_delta.md`) is the same case as `CHANGELOG.md` by
+ * function: a record of what changed and why, where a real issue or PR
+ * reference is the citation the record exists to keep.
+ */
+const EXCLUDE_BASENAME_RE = /_delta\.md$/;
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".mts", ".mjs", ".cjs", ".js"]);
 const SHELL_EXTENSIONS = new Set([".sh", ".ps1"]);
@@ -106,6 +113,7 @@ function trackedFiles() {
 function inScope(rel) {
   if (EXCLUDE_EXACT.has(rel)) return false;
   if (EXCLUDE_PREFIX.some((p) => rel.startsWith(p))) return false;
+  if (EXCLUDE_BASENAME_RE.test(path.basename(rel))) return false;
   const ext = path.extname(rel);
   return SOURCE_EXTENSIONS.has(ext) || SHELL_EXTENSIONS.has(ext) || MARKDOWN_EXTENSIONS.has(ext);
 }
@@ -118,9 +126,23 @@ function isCheckedLine(rel, line) {
   return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
 }
 
+/**
+ * A "wave" naming a delivery batch of one tracked change — a
+ * change-record id followed by a batch number, in an execution ledger —
+ * is a different word than the retired review process's wave label: it
+ * names a batch of the CHANGE, not a round of REVIEW. The line carrying a
+ * real change-record id is where that distinction is decidable — a
+ * review-round citation has no reason to sit on the same line as the id
+ * of the change it batches. A row whose batch has not landed yet carries
+ * no such id and says so directly instead, in the same column: a
+ * parenthesized "deferred" note naming the same batch number.
+ */
+const CHANGE_ID_RE = /\bCHG-\d{3}\b|\bDR-\d{4}-\d{4}\b|\(wave\s+\d+\s+deferred\)/i;
+
 function findLineHits(rel, line) {
   const hits = [];
   for (const { name, re } of PATTERNS) {
+    if (name === "review-wave-label" && CHANGE_ID_RE.test(line)) continue;
     re.lastIndex = 0;
     const m = line.match(re);
     if (m) hits.push({ name, sample: m[0] });
