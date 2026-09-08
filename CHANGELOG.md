@@ -80,10 +80,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **配布する `.agents/rules/*.md` テンプレートの文面を整理した。** 文を短くし、
-  `temporary-files.md` の「`qfai init` は `.gitignore` に `/tmp/` を追加しない」という
-  記述を、managed block に `/tmp/` を書く現行の挙動に合わせて直した。規則の内容は
-  変えていない。
+- **Reworded the shipped `.agents/rules/*.md` templates for clarity.** Shortened
+  sentences, and corrected `temporary-files.md`'s claim that `qfai init` does not
+  add `/tmp/` to `.gitignore` — it does, in the managed block. No rule content
+  changed.
 
 - **spec / `_policies` の表記揺れを正典へ収束。** `10_Plan.md` は
   実装戦略・`1. Implementation Strategy`・`Implementation Strategy`・
