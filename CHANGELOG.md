@@ -188,6 +188,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   printed. The legs fail when the staged tree is incomplete as well as when the
   workflow trees are, and an exit code alone cannot tell those apart.
 
+- **A failing checkpoint has one remedy, and one document states it** (#724).
+  `checkpoint-verification.md#pass-criteria` says a FAIL leaves the row at
+  `refactor` and re-runs the repair. Three other documents each described the
+  failure in their own words, and one of them — the `qa-gatekeeper` card — sent
+  the row to `exception` instead, which is the one thing a FAIL does not do. A
+  row parked there is read as an anomaly and can be carried past the oracle
+  proof it still owes.
+
+  Each of the other documents now names the criteria rather than restating it,
+  and a check reads every Markdown and YAML file on the assistant surface,
+  generated catalogs included, so a second remedy cannot come back in a file
+  nobody thought to look at.
+
 - **The governed-path report case of `assistantAssetProvenance.test.ts` no
   longer depends on the platform's path separator** (#1315). `init` names a
   written path with `/` on every platform and a skipped one in a `NOTE:` line
