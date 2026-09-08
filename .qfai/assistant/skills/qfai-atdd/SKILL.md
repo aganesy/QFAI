@@ -397,9 +397,9 @@ Review pack seal: <sha256>
 
 ## Stage Gates (Do not skip)
 
-- P0: Plan and obligations checklist prepared. A project whose routing has no
-  `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
+- P0: Plan and obligations checklist prepared. A project whose routing has no `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+- P1a: **`Phase: Skeleton` is discharged before any RED is taken.** Invoke `/qfai-implement` for that phase alone, for **every in-scope entrypoint**, and record each run in `.qfai/evidence/skeleton.md`. **Enumerating zero entrypoints is an answer, not a skip**: a library or an Integration-only spec set still invokes the phase once, so the phase itself writes the `not applicable` verdict its `## (no entrypoint)` record requires. Left to an empty loop, that record is never written and this item passes with nothing behind it. Not only when the program fails to start: the phase itself decides between a first run, a re-run of a recorded pass, and `not applicable`, and an entrypoint the evidence file has no section for is unproven for this invocation whatever the program does today (`../qfai-implement/references/walking-skeleton.md#evidence`). Here, not "before P5": P1c takes the first RED before P2-P4 build anything, and against a system that cannot start that RED is a collection error, which is a missing seam and not a RED (`references/red-provenance.md#a-project-whose-program-does-not-start-yet`).
 - P1b: **A branch is chosen for every row this stage owns**, provisional until its handoff. The ATDD-owned set is the one `## Execution Ledger: the rows this skill feeds` defines, so an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs gets no branch and no handoff here: this stage may not write its test, and requiring either of a row `/qfai-implement` owns left this gate unpassable.
 - P1c: **A branch 1 row is discharged in that loop** — write the test, take the
   RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —

@@ -286,6 +286,15 @@ export type AtddCodeTraceabilityResult = {
    * (`TDDLIST_TC_NOT_COVERED`) is what covers them.
    */
   unitComponentTcIds: string[];
+  /**
+   * Carrier files whose suite is bound through a variable, so nothing static —
+   * including this scan — can say whether their tests run.
+   *
+   * Reported rather than counted, for the same reason `unitComponentTcIds` is:
+   * the coverage gate's evidence here is a string in a file, and "nothing owed"
+   * must not look like "nothing checked".
+   */
+  computedSuiteCarriers: string[];
   /** Test files outside the scanned roots; surfaced instead of dropped. */
   skippedTestFiles: string[];
   scan: AtddTraceabilityScan;
@@ -374,6 +383,7 @@ export async function evaluateAtddCodeTraceability(
   const apiRefs = new Map<string, Set<string>>();
   const dbRefs = new Map<string, Set<string>>();
 
+  const computedSuiteCarriers: string[] = [];
   const skippedTestFiles: string[] = [];
   const unknown: AtddUnknownRef[] = [];
   const unknownDedup = new Set<string>();
@@ -438,6 +448,9 @@ export async function evaluateAtddCodeTraceability(
       // `recordContractRef` store — fast-glob yields POSIX separators even on
       // Windows, so the raw path would never match the recorded one there.
       executableCarriers.add(path.normalize(file));
+      if (hasComputedSuiteBinding(raw)) {
+        computedSuiteCarriers.push(toPosixPath(path.relative(root, file)));
+      }
     }
 
     for (const ref of usAnnotations) {
@@ -619,6 +632,7 @@ export async function evaluateAtddCodeTraceability(
     missing,
     coveredByCarrierOnly,
     missingTcHomes,
+    computedSuiteCarriers: computedSuiteCarriers.sort(),
     skippedTestFiles: skippedTestFiles.sort(),
     scan: {
       globs: scanGlobs,
@@ -1627,6 +1641,52 @@ const TEST_MODIFIER_SEGMENT =
 const CALL_FORM_PATTERN = new RegExp(
   `(?:^|[^\\w$.])(?:it|test|describe|context|specify|suite|scenario)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\\(`,
 );
+
+/**
+ * A suite or test bound through a variable, so what runs is decided at runtime.
+ *
+ * `const deployed = LIVE ? describe : describe.skip` then `deployed(...)` is
+ * the idiomatic way to write a probe that needs a target the run may not have.
+ * It is a real file with real assertions, and nothing static can say whether it
+ * executes — including this scan, which reads the annotation string and stops.
+ *
+ * That matters because the coverage gate has no other evidence. A TC whose only
+ * annotation sits in such a file is reported as covered while the runner skips
+ * it, so removing the production code leaves every gate green. Naming the file
+ * is not an accusation that it is skipped; it is the statement that the gate
+ * cannot tell, which is the part that was invisible.
+ *
+ * The binding is what makes it undecidable, so the binding is what is matched:
+ * an initializer that mentions a runner entry point, and a call of the name it
+ * binds. `describe.skip(` written literally is a different case and is already
+ * a token any scan can see.
+ */
+const COMPUTED_SUITE_BINDING_RE = new RegExp(
+  `(?:^|[^\\w$.])(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*[^;\\n]*` +
+    `[^\\w$.\\n](?:it|test|describe|context|specify|suite|scenario)` +
+    `(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*`,
+  "gm",
+);
+
+/**
+ * True when the file binds a runner entry point to a name and then calls it.
+ *
+ * Both halves are required. An initializer alone may be a helper that is never
+ * used as a suite, and a bare call of some local name is ordinary code. Every
+ * binding in the file is considered: a file that computes a name it never uses
+ * before computing one it does would otherwise read as ordinary.
+ */
+function hasComputedSuiteBinding(text: string): boolean {
+  const code = stripCommentsAndLiterals(text);
+  COMPUTED_SUITE_BINDING_RE.lastIndex = 0;
+  for (const match of code.matchAll(COMPUTED_SUITE_BINDING_RE)) {
+    const bound = match[1];
+    if (bound !== undefined && new RegExp(`(?:^|[^\\w$.])${bound}\\s*\\(`).test(code)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Runners whose entry point is a property, so {@link CALL_FORM_PATTERN} rejects

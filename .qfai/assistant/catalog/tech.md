@@ -45,4 +45,11 @@ cover; a capability with no entry here is UNRUN.
 - Build: `<build command>`
 - Pack / distribution: `<pack command>` (when publishing or distribution
   matters)
+- Smoke: one line per entrypoint named under `structure.md#key-packages--entrypoints`,
+  as `<entrypoint> -> <command that starts it and proves it answers>` (the
+  `Skeleton command` of `skills/qfai-implement/references/walking-skeleton.md`).
+  The phase runs once per declared entrypoint, so a single value cannot serve a
+  project with more than one: an aggregate command proves nothing about which
+  entrypoint answered, and one failing entrypoint would take the record of every
+  other with it. A project with one entrypoint writes one line.
 - Validate: `npx qfai validate --fail-on error --format github`

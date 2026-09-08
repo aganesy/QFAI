@@ -277,6 +277,21 @@ export const RULE_PROMOTIONS = {
    */
   tddListRowExtraCells: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-TDDLIST-017` — the sibling rows of a split test case name no
+   * boundary, and `QFAI-TDDLIST-018` — two of them name the same one.
+   *
+   * One window for both because they are one obligation seen from its two
+   * sides: the rows of a split are identified by the (test case, boundary)
+   * pair, and a pair is unusable when either half is missing or repeated.
+   *
+   * A window rather than an error from the start, because the cell the rows
+   * are identified by is new. Every ledger seeded before it holds a split
+   * whose rows name nothing, so an error on the introducing release would fail
+   * every project carrying one — including on rows already at `done`, which
+   * satisfy the rule by gaining a slug rather than by a status transition.
+   */
+  tddListSplitBoundary: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-TCLEVEL-002` — a test case whose declared level routes its test to
    * `/qfai-atdd`, cited from a ledger row on a unit or component layer.
    *

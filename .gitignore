@@ -77,5 +77,6 @@ coverage/
 !.qfai/evidence/implement-*.md
 !.qfai/evidence/atdd-*.md
 !.qfai/evidence/coverage-depth-*.md
+!.qfai/evidence/skeleton.md
 !.qfai/install-provenance.json
 

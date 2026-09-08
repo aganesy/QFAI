@@ -40,9 +40,9 @@ export const LIFECYCLE_MANIFESTS_REL = ".github/lifecycle-manifests.txt";
  * Every lifecycle key that runs code during the commands this repository executes.
  *
  * `pnpm install --frozen-lockfile` runs `preinstall` / `install` / `postinstall`, and then
- * `preprepare` / `prepare` / `postprepare`. The second trio is review finding [125], measured by
- * the reviewer against pnpm 10.28.1 and absent from the first version of this list — so a package
- * declaring only `preprepare` was read as hookless and passed. `prepublish` is npm's legacy
+ * `preprepare` / `prepare` / `postprepare`. The second trio, measured against pnpm 10.28.1, must be
+ * included too — a package declaring only `preprepare` would otherwise read as hookless and pass.
+ * `prepublish` is npm's legacy
  * install-time hook, kept because an adopter's pnpm is not the only thing that ever reads these.
  *
  * The pack and publish family is here because this repository packs in the build job and publishes
@@ -248,7 +248,7 @@ export function lifecycleFindings(root) {
 
   // A pnpmfile is executable configuration, and `--ignore-scripts` does not stop it.
   //
-  // Review finding [140]: pnpm evaluates `.pnpmfile.cjs` — its top level and its hooks —
+  // pnpm evaluates `.pnpmfile.cjs` — its top level and its hooks —
   // during the install, and the flag that stops that is `--ignore-pnpmfile`, a separate
   // capability. Both installs now pass it, and this is the other half: a file whose whole
   // purpose is to run during installation should not be able to appear unremarked. The refusal

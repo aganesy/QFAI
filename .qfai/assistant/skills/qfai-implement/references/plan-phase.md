@@ -1,9 +1,14 @@
 # Phase: Plan
 
-`plan` is the first phase `agent-routing.yml` routes for this skill and the only one carrying
-`iteration: per-invocation`. It runs **once**, after Stage 0 + Preflight and before Phase Red selects
-anything: `delivery-planner` must read the ledger the approved `CR-*` resets have already been
-applied to, or it plans over rows that a reset has just returned to `todo`.
+`plan` is the first phase `agent-routing.yml` routes for this skill. It runs **once**, after
+Stage 0 + Preflight and before Phase Red selects anything: `delivery-planner` must read the ledger
+the approved `CR-*` resets have already been applied to, or it plans over rows that a reset has just
+returned to `todo`.
+
+Two phases carry `iteration: per-invocation` — this one and `skeleton`, in that order. `plan` frames
+the invocation, `skeleton` then proves each declared entrypoint starts (`walking-skeleton.md`), and
+only then does Phase Red take a row. A queue transition re-enters neither by itself; what does
+re-enter this one is below.
 
 **Per invocation means per queue, not per spec.** When auto-discovery confirms several specs
 (`volume-policy.md#multi-spec-queue`), Stage 0 step 2 applies the approved resets to **every** queued
