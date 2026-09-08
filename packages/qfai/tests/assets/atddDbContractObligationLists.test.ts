@@ -331,6 +331,22 @@ describe.each(TREES)("%s — the CON-DB volume signal is countable and not infla
     expect(atdd).not.toContain("which carries no `QFAI-ATDD-115` obligation in this slice");
   });
 
+  it("test-design-analyst reads both places a spec references a contract from", async () => {
+    // Its DB-contract input is conditional on the spec referencing a
+    // `CON-DB-*`, and a spec may reference one from `04_Business-Rules.md` or
+    // from `01_Spec.md`. A read set that starts at `02_User-stories.md` cannot
+    // answer the condition, so a contract named only in `01_Spec.md` reads as
+    // absent and the Integration work it carries drops out of the estimate.
+    const inputLine = "- .qfai/specs/spec-\\*/01_Spec.md";
+    const bothPlaces =
+      "`Contract-Refs` in `04_Business-Rules.md`, and a `QFAI-CONTRACT-REF` line in `01_Spec.md`";
+
+    const card = flat(await readAt(tree, "assistant/agents/test-design-analyst.md"));
+    expect(card).toContain(inputLine);
+    expect(card).toContain(bothPlaces);
+    expect(flat(await catalogInstructions(tree, "test-design-analyst"))).toContain(inputLine);
+  });
+
   it.each(["test-design-analyst", "qa-strategist"])(
     "%s can open the DB contracts its estimate counts",
     async (id) => {
