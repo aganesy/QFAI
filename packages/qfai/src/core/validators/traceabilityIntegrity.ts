@@ -93,6 +93,15 @@ function findChangedSpecDirs(changedFiles: Set<string>, specsRelDir: string): Se
   return specDirs;
 }
 
+/** Whether `dir` is a directory. A missing path and an unreadable one are both `false`. */
+async function directoryExists(dir: string): Promise<boolean> {
+  try {
+    return (await stat(dir)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 type LayeredSpec = { readonly specId: string; readonly ledgerPath: string };
 
 /**
@@ -309,6 +318,27 @@ export async function validateTraceabilityIntegrity(
 
   const layeredSpecs = await listLayeredSpecs(specsDir);
   const presentSpecIds = new Set(layeredSpecs.map((spec) => spec.specId));
+
+  // A configured directory that is not there selects nothing, and every gate
+  // keyed on it then evaluates an empty set. That reads in the output exactly
+  // like a project whose specs are all clean, which is the one reading a
+  // configuration error must not be able to produce.
+  //
+  // Only where the detection also selected nothing. A branch that deletes its
+  // last spec takes the directory with it, and the finding below already says
+  // which spec became unreadable — reporting the directory too would name the
+  // same gap twice and call a deliberate deletion a misconfiguration.
+  if (changedSpecIds.size === 0 && !(await directoryExists(specsDir))) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-003",
+        `paths.specsDir is "${config.paths.specsDir}", which is not a directory in this repository, so no spec was read and the BR/AC to implementation integrity check (QFAI-TRACE-001) ran over nothing. Point paths.specsDir at the directory holding the spec directories.`,
+        "info",
+        config.paths.specsDir,
+        "traceability.integrity.specsDirMissing",
+      ),
+    );
+  }
 
   for (const specId of reportUninspectableSpecIds(changedSpecIds, presentSpecIds)) {
     issues.push(

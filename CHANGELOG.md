@@ -181,6 +181,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A trailing slash on a configured directory no longer makes a gate evaluate
+  nothing and report a pass** (#1368). Readers use these values two ways: joined
+  with a child path, where a trailing separator is harmless, and tested as a
+  prefix, where it is not. `paths.specsDir: ".qfai/specs/"` built the prefix
+  `.qfai/specs//`, which no repository path starts with, so the traceability
+  gate skipped every changed file, derived no spec and passed over an empty set.
+
+  Every `paths.*` value now has its trailing separators removed when the config
+  is read, so a reader cannot be written that works for one spelling and not the
+  other. A value that is nothing but separators keeps what was written, since
+  trimming it away would retarget the reader at the repository root.
+
+  The silence is closed separately, because the next spelling that fails to
+  match would otherwise be silent the same way. A specs directory that is not in
+  the repository — while the detection also selected nothing — is reported as
+  `QFAI-TRACE-003` at `info`, the code that already exists to say this check
+  could not run. A branch that deletes its last spec is not that case: the
+  finding naming the deleted spec already says which gap opened.
+
 - **A failing clean leg of the workflow-hygiene fixtures now names the rule and
   the paths** (#1314). Both legs asserted the lane's exit code before its
   findings, so a failure read `expected 1 to be 0` and the lane's own output —
