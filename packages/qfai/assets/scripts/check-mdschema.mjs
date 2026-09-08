@@ -22,9 +22,11 @@
  * contract is enforced over is a policy decision, taken here rather than by
  * weakening the schemas until the current tree happens to pass:
  *
- *   --scope changed  (default) documents this branch touched, against the merge
- *                    base. A ratchet: new and edited documents must conform,
- *                    untouched legacy documents are left for their own change.
+ *   --scope changed  (default) documents this branch touched, judged against
+ *                    their own state at the merge base. A ratchet: a new
+ *                    document must conform and an edited one must not get
+ *                    worse, while untouched legacy documents are left for their
+ *                    own change.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
@@ -94,9 +96,16 @@
  * beside this file, so `--root` moves the documents and never the contract.
  *
  * Exit codes:
- *   0  every checked document conforms (or none was in scope)
- *   1  at least one document violates its schema
+ *   0  no document in scope carries a violation this run is responsible for
+ *   1  at least one document does
  *   2  usage error, missing schema/manifest, or an mdschema binary that will not run
+ *
+ * Under `--scope all` and `--scope files` those two say what they always have:
+ * every checked document conforms, or one does not. Under `--scope changed`
+ * responsibility is what the table above decides, so a `0` can carry documents
+ * that still fail — the ones that failed at the merge base too. The run says so
+ * on stdout, names them, and counts them in its closing line, which is why the
+ * exit code alone is not the whole answer there.
  */
 import { spawnSync } from "node:child_process";
 import {
