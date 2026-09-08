@@ -555,7 +555,8 @@ describe.each(TREES)(
       // sessions — and a `review-fix` row is re-selected ahead of every `todo`
       // row, so it would be picked up on every run until the CR resolves.
       const reset = await read(tree, RESET);
-      expect(reset).toContain("**Both the approved and the still-open ones**");
+      expect(reset).toContain("**Every one of them, whatever its `Status`.**");
+      expect(reset).toContain("the open ones are the blockers the two rules below honour");
       expect(reset).toContain(
         "**A row named in an open in-scope CR's blocked set is not selected**, whatever its status",
       );

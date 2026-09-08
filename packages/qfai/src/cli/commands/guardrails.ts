@@ -124,7 +124,7 @@ export function formatGuardrailsErrorJson(
 
 /**
  * Node's fs errors splice the absolute path into their own message
- * (`Error: ENOENT: ... open '<abs>/18_delta.md'`), so relativizing the
+ * (`Error: ENOENT:... open '<abs>/18_delta.md'`), so relativizing the
  * structured `path` alone still leaks the local checkout onto stdout and makes
  * the payload differ between checkouts. Rewrite the target path — and any
  * other project-root prefix left in the text — to the portable relative form.
