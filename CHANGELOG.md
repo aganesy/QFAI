@@ -20,6 +20,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`validate` names a carrier whose suite is bound at run time** (#1256). A
+  test file can choose its runner entry point while the run starts —
+  `const deployed = LIVE ? describe : describe.skip`, then `deployed(...)` — so
+  whether its tests execute is not decidable from the source. The ATDD coverage
+  gate reads the annotation string and stops, so such a file discharges
+  `QFAI-ATDD-112` whether the runner collects it or skips it, and deleting the
+  production code behind that test case leaves every gate green.
+
+  `QFAI-ATDD-124` (`info`) names those files. It is not a violation: binding
+  the suite is the ordinary way to write a probe that needs a target the run may
+  not have, and there is no release at which that should fail a build. What the
+  finding says is that the gate cannot tell, so an obligation whose sole carrier
+  is one of them needs a second owner that runs unconditionally. A written-out
+  `describe.skip(` is not reported — it is a token any scan can already read.
+
 - **`validate` reports a test case the ledger does not own, cited from a
   coverage row** (#1250). The `Level` a test case declares and the `Layer` of
   the ledger rows citing it were compared in one direction only: a `L1` / `L2`

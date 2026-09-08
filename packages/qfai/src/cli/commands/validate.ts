@@ -1764,6 +1764,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
   "QFAI-ATDD-119":
     "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
+  "QFAI-ATDD-124":
+    "A carrier whose suite is bound through a variable decides at run time whether its tests execute, so the coverage gate reads the annotation and cannot tell a skipped suite from a passing one.",
   "QFAI-ATDD-131":
     "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
   "QFAI-ATDD-132":
