@@ -27,6 +27,7 @@ import { resolveToolVersion } from "../version.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateDbContractExecutability } from "./dbContractExecutability.js";
+import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { issue } from "./utils.js";
 
 /** The release `QFAI-CONTRACT-015` stops being a warning at. */
@@ -111,6 +112,10 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
   issues.push(...(await validateDbContractExecutability(root, dbFiles)));
   issues.push(...(await validateDbContractApplyOrder(root, dbFiles)));
+  // The reverse of the marker traceability: declared and rendered by nothing.
+  // The forward direction cannot see it — an element nobody built is an element
+  // no test names, so the absence appears on neither side of that check.
+  issues.push(...(await validateUiMarkerPresence(root, config)));
 
   return issues;
 }
