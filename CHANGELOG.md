@@ -9,24 +9,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`qfai doctor` reports the broken integration wrappers `validate` reports**
   (#1258). A wrapper under `.claude/`, `.codex/`, `.agents/` or `.github/` that
   does not resolve is how a skill fails to load at all, and `validate` reports
-  it as `QFAI-LINK-001`. `doctor` reported the same tree healthy, so the gate
-  said the skills were not applied, the diagnostic said the environment was
-  fine, and the operator was left to conclude the error must be real.
+  it as `QFAI-LINK-001`. `doctor` is the command an operator reaches for to find
+  out whether the environment is sound, so it has to answer for the same thing.
 
-  Both were answering honestly. `skills.integrity` compares content, and the
-  canonical tree behind a broken wrapper is untouched; `QFAI-LINK-001` asks
-  whether the OS will follow the link, which is the question that decides
-  whether the skill loads. Only one of them was wired to anything.
+  `skills.integrity` is the neighbouring check and asks a different question —
+  whether the content matches what was shipped — which a broken wrapper leaves
+  untouched. Both belong.
 
-  `integration.links` asks the second question through the same code the gate
-  uses, and carries what that code answered rather than deciding again. Severity
-  comes from the finding — `QFAI-LINK-001` is a `warning` where the canonical
-  document still reads and an `error` where it does not — and the findings pass
-  through the same waivers `validate` applies, so a waiver that suppresses one
-  silences the check and a waiver that downgrades one to `info` is reported at
-  `info`. The two therefore stay on the same side of `--fail-on` for any one
-  tree, at every threshold rather than only at `error`. An inspection that
-  cannot run at all is an `error`, because the gate does not survive it either.
+  `integration.links` asks whether the OS will follow the link, through the same
+  code the gate uses, and carries what that code answered rather than deciding
+  again. Severity comes from the finding — `QFAI-LINK-001` is a `warning` where
+  the canonical document still reads and an `error` where it does not — and the
+  findings pass through the same waivers `validate` applies, so a waiver that
+  suppresses one silences the check and a waiver that downgrades one to `info`
+  is reported at `info`. The two therefore stay on the same side of `--fail-on`
+  for any one tree, at every threshold rather than only at `error`.
+
+  Two states report as `error` because the gate does not survive either: an
+  inspection that cannot run, and a waiver file that cannot be read. On the
+  second the unwaived findings are used, since a suppression decided from a file
+  the gate rejected is not one to act on.
+
+  A waiver silences a finding without repairing the wrapper, so a tree whose
+  findings are all waived reports the waived count rather than claiming every
+  wrapper resolves.
 
   The check names the wrappers and stops there. `QFAI-LINK-001` covers several
   kinds of damage and the repair differs by kind: a flattened link is relinked

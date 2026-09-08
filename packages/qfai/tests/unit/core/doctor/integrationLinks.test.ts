@@ -211,6 +211,60 @@ describe("integration.links", () => {
     });
   });
 
+  it("carries the waiver file's own rejection into the severity", async () => {
+    // `applyWaivers` reports on its own input too, and a file it cannot parse
+    // comes back as `QFAI-WAIVER-001`, which `validate` fails on. Keeping only
+    // the link findings dropped that, so the gate failed on the waiver file
+    // while this check reported a `warning` and passed `--fail-on error`.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: [\n", "utf-8");
+      injectedFindings = [linkFinding("warning", ".claude/skills/qfai-atdd")];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.severity).toBe("error");
+      expect(check?.details?.["wrappers"]).toEqual([".claude/skills/qfai-atdd"]);
+    });
+  });
+
+  it("does not pass on a rejected waiver file when the wrappers are clean", async () => {
+    // The gate fails on the file whatever the wrappers look like, so a clean
+    // sweep of the wrappers is not a passing check.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: [\n", "utf-8");
+      injectedFindings = [];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.severity).toBe("error");
+      expect(check?.message).toContain("QFAI-WAIVER-001");
+      expect(check?.message).not.toContain("Every integration wrapper resolves");
+    });
+  });
+
+  it("does not call a waived wrapper resolved", async () => {
+    // A waiver silences a finding. It does not repair the wrapper, which is
+    // still unfollowable — so reporting the tree as sound would put a decision
+    // to stop being told about the damage on record as the damage being gone.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      const finding = linkFinding("warning", ".claude/skills/qfai-atdd");
+      injectedFindings = [{ ...finding, suppressed: true }];
+
+      const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
+
+      expect(check?.severity).toBe("ok");
+      expect(check?.message).not.toContain("Every integration wrapper resolves");
+      expect(check?.message).toContain("waived");
+      expect(check?.details?.["waivedFindings"]).toBe(1);
+    });
+  });
+
   it("keeps a waiver's downgrade to info rather than raising it back", async () => {
     // A waiver can lower a finding without suppressing it, and the finding
     // stays in the list. Reporting every non-error as a `warning` failed

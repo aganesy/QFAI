@@ -126,7 +126,7 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/constitution/shared-skill-operating-baseline.md", 581],
   ["assistant/skills/qfai-atdd/SKILL.md", 2001],
   ["assistant/skills/qfai-atdd/references/red-provenance.md", 460],
-  ["assistant/skills/qfai-configure/SKILL.md", 2284],
+  ["assistant/skills/qfai-configure/SKILL.md", 2267],
   ["assistant/skills/qfai-discussion/SKILL.md", 802],
   ["assistant/skills/qfai-discussion/references/design-md-brand-catalog.md", 533],
   ["assistant/skills/qfai-discussion/templates/01_Context.md", 412],
