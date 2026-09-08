@@ -287,6 +287,26 @@ export type AtddCodeTraceabilityResult = {
    */
   unitComponentTcIds: string[];
   /**
+   * `TC-*` refs declaring a `Level` of L4/API or L5/E2E.
+   *
+   * `catalog/test-layers.md` states that a `TC-*` row's `Level` stays within
+   * L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so an oracle that
+   * derives to either means the obligation is filed under the wrong ID type —
+   * not that the test case is an L4/L5 test.
+   *
+   * The routing table already routes such a row to `tests/api/**` or
+   * `tests/e2e/**` rather than rejecting it, and says why: so a misfiled row is
+   * reported once, by the rule that names the real cause, instead of twice as
+   * "uncovered in integration" and "forbidden in api". This is that rule. Until
+   * it existed the constraint was stated and checked by nothing, and the row
+   * was visible only through a fix instruction pointing at a directory the same
+   * document tells a reader not to use.
+   *
+   * Every declared row, not only the ones missing an annotation: the defect is
+   * the row's own `Level`, and covering it changes nothing about that.
+   */
+  misfiledLevelTcIds: string[];
+  /**
    * Carrier files whose suite is bound through a variable, so nothing static —
    * including this scan — can say whether their tests run.
    *
@@ -629,6 +649,7 @@ export async function evaluateAtddCodeTraceability(
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
     unitComponentTcIds: unitComponentTc,
+    misfiledLevelTcIds: collectMisfiledLevelTcIds(specTcIds, tcLevels),
     deferredTcIds: deferredTc,
     unsupportedTcStatusIds: unsupportedTc,
     specsRoot,
@@ -1172,6 +1193,38 @@ function buildMissingTcHomes(
  * than dropped: a silent exclusion is indistinguishable from a scan that found
  * nothing, which is how the previous glob defect went unnoticed for a release.
  */
+/**
+ * Declared `TC-*` rows whose `Level` routes to the API or E2E layer.
+ *
+ * Only a `Level` the crosswalk reads as L4/L5 reaches those two kinds — an
+ * absent, unreadable or multi-valued cell falls to the integration default —
+ * so this asks {@link resolveAtddHomeKind} rather than matching level spellings
+ * a second time. One question, one answer: a private level list here is how the
+ * routing rule and this rule would come to disagree about the same cell.
+ *
+ * Intersected with the declared ids, so a level cell parsed out of a heading
+ * that no collector reads as a test case cannot report a row that does not
+ * exist.
+ */
+function collectMisfiledLevelTcIds(
+  specTcIds: Map<string, Set<string>>,
+  tcLevels: Map<string, Map<string, string>>,
+): string[] {
+  const misfiled: string[] = [];
+  for (const [spec, levels] of tcLevels.entries()) {
+    for (const [tcId, level] of levels.entries()) {
+      if (!hasSpecId(specTcIds, spec, tcId)) {
+        continue;
+      }
+      const kind = resolveAtddHomeKind(level);
+      if (kind === "api" || kind === "e2e") {
+        misfiled.push(formatTcRef(spec, tcId.replace(/^TC-/i, "")));
+      }
+    }
+  }
+  return misfiled.sort((left, right) => left.localeCompare(right));
+}
+
 function partitionMissingTcByObligation(
   missingTc: readonly string[],
   tcLevels: Map<string, Map<string, string>>,

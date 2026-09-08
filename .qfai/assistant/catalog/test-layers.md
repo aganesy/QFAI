@@ -207,7 +207,9 @@ finding code are unchanged — only the token the author writes is shorter. See
 **(note)** A `TC-*` **should not be** at L4 or L5 — the first bullet below says
 why and what to do instead. The gate routes it there rather than rejecting it so
 a misfiled row is reported once, by the rule that names the real cause, instead
-of twice as "uncovered in integration" and "forbidden in api".
+of twice as "uncovered in integration" and "forbidden in api". That rule is
+`QFAI-ATDD-128`, and it reads the row's own `Level` rather than where its
+annotation ended up: covering the test case does not make the row less misfiled.
 
 **(note2)** A `Level` the crosswalk does not list — a typo, a project's own
 word, or the illegal multi-valued cell — falls to the same default as an
@@ -224,7 +226,8 @@ same way an early one in `<testsDir>/api/**` is. Two consequences bind every `TC
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
   derives to L4 or L5 means the obligation is misfiled, not that the TC is an
-  L4/L5 test. Re-file it as `CON-API-*` or `US-*`.
+  L4/L5 test. Re-file it as `CON-API-*` or `US-*`. `QFAI-ATDD-128` reports a row
+  that does not.
   **Re-filing is an upstream change, never a bare row deletion.** By step 2 the
   derivation reaches L4/L5 only when the parent `BR-*` itself owns the
   service-boundary contract or the journey, so the `TC-*` row is removed only

@@ -178,6 +178,19 @@ export const RULE_PROMOTIONS = {
    */
   businessFlowReferenceUnknown: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
   /**
+   * `QFAI-ATDD-128` — a `TC-*` row declaring a `Level` of L4/API or L5/E2E,
+   * which files a service-boundary contract or a journey as a test case.
+   *
+   * The constraint has been stated in `catalog/test-layers.md` and checked by
+   * nothing, so a repository that has been writing such rows has no way to know
+   * it. Worse, the remedy is not a cell edit: re-filing takes the `EX-*` the row
+   * verifies and the `BR-*`/`AC-*` that EX concretizes with it, and the layer
+   * coverage gates then have their own say about the requirement left behind.
+   * That is a change to plan, not one to make against a red gate on the day of
+   * an upgrade.
+   */
+  atddTcLevelMisfiled: { introducedIn: "1.11.0", promoteAt: "1.13.0" },
+  /**
    * `QFAI-ATDD-127` — a test case claiming `x-qfai-status: external` and naming
    * no verifier.
    *
