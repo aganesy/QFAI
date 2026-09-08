@@ -1774,6 +1774,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-TCLEVEL-001":
     "Every tdd/test-list.md coverage row cites a TC that declares a Level the ledger owns (L1/L2). A TC declaring no Level is owned by /qfai-atdd under tests/integration/** (QFAI-ATDD-112), so a ledger row still claiming it makes two stages own the same TC.",
+  "QFAI-TCLEVEL-002":
+    "No tdd/test-list.md unit or component row cites a TC whose declared Level (L3/L4/L5) sends its test to /qfai-atdd. Such a row claims the TC for the ledger while QFAI-ATDD-112 claims it for the directory the Level names, so both gates pass on the other's account.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
