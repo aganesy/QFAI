@@ -610,11 +610,11 @@ describe(
       expect(violations).toEqual([]);
     });
     it("accepts only an integrity algorithm this runner can actually hash with", async () => {
-      // Review finding [116]. The algorithm half of `+<algorithm>.<digest>` was checked as a run
-      // of alphanumerics and hyphens and nothing more, so `pnpm@9.12.3+garbage.deadbeef` was
-      // pronounced resolvable — and corepack, which hands that name to `crypto.createHash`, then
-      // failed with the opaque resolution error this precondition exists to replace. The
-      // precondition reached the failure it was written to prevent.
+      // Checking the algorithm half of `+<algorithm>.<digest>` as a run
+      // of alphanumerics and hyphens and nothing more would pronounce `pnpm@9.12.3+garbage.deadbeef`
+      // resolvable — and corepack, which hands that name to `crypto.createHash`, would then
+      // fail with the opaque resolution error this precondition exists to replace. The
+      // precondition would reach the failure it was written to prevent.
       //
       // Asked of `crypto.getHashes()` rather than of a fixed list, so `sha3-256` still passes:
       // that case is why the original comment refused a closed list, and it is a case this row
