@@ -562,6 +562,58 @@ describe("uiux validators", () => {
     expect(codes).toContain("QFAI-RESEARCH-012");
   });
 
+  it("does not read a non-YAML fence in the section as its payload", async () => {
+    // The section carries no `yaml` fence, so the reader falls back to the
+    // section text. Reading an illustration's body there made a `sources:`
+    // line written inside ```markdown into the section's own data, and the
+    // pack then passed on a schema it never declared.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Source Registry",
+        "",
+        "- SRC-0001",
+        "",
+        "## Research Summary",
+        "",
+        "Fill this in. The shape is:",
+        "",
+        "```markdown",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    url: https://example.com",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "```",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    // The section exists, so the absence rule stays quiet; it declares nothing,
+    // so the schema rules fire. Read as data, the illustration satisfies all
+    // four of them and the run reports on its example source instead.
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).toContain("QFAI-RESEARCH-001");
+    expect(codes).toContain("QFAI-RESEARCH-007");
+    expect(codes).toContain("QFAI-RESEARCH-008");
+    expect(codes).toContain("QFAI-RESEARCH-011");
+  });
+
   it("validates the real Research Summary that follows a fenced example heading", async () => {
     // Over-correction pin: skipping fenced headings must not skip the file —
     // the section written after the example is still the pack's own.

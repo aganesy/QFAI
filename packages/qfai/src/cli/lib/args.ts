@@ -610,9 +610,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--strict":
-        // usage(): validate 専用。report / doctor では runReport /
-        // runDoctor が strict を読まないため、黙って捨てずに拒否する。
-        if (command === "validate") {
+        // usage(): validate と report が読む。runReport は findings を
+        // gate するようになったので strict を尊重する。doctor では
+        // runDoctor が読まないため、黙って捨てずに拒否する。
+        if (command === "validate" || command === "report") {
           options.strict = true;
         } else {
           markInvalid(notValidHere("--strict"));
@@ -668,14 +669,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--fail-on"));
           break;
         }
-        // usage(): validate / doctor / prototyping preflight / sdd preflight のみが
-        // failOn を読む。report 等に付けても runReport は無視するため拒否。
+        // usage(): validate / report / doctor / prototyping preflight / sdd
+        // preflight のみが failOn を読む。report は findings を gate する
+        // ようになったため所有側に含める。それ以外に付けても読まれないので拒否。
         // `sdd` は preflight しか subcommand を持たず、subcommand なしの
         // `qfai sdd` は末尾の guard が既に markInvalid() するため、ここは
         // command 名だけで足りる (runSddPreflightCommand が `never` を exit 0
         // として読む)。
         if (
           command !== "validate" &&
+          command !== "report" &&
           command !== "doctor" &&
           command !== "sdd" &&
           !ownedByPrototyping("preflight")
@@ -690,7 +693,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           // An unknown threshold must not fall through to the config
           // default: the gate would then silently differ from the flag
-          // the caller wrote, in either direction.
+          // the caller wrote, in either direction. A typo (`--fail-on warn`)
+          // dropped silently would let a CI step that meant to gate on warnings
+          // exit 0 on a warning-only run.
           markInvalid(badValue("--fail-on", next, "never|warning|error"));
         }
         break;
