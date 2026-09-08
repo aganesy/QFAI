@@ -32,19 +32,25 @@
  * `all`, because the alternative — silently checking nothing and reporting
  * green — claims a result the run never established.
  *
- * One document can also opt out of its schema, with
+ * A pack outlives the thing it specifies: a spec that was deleted or superseded
+ * is kept as a record of why it went away, and that record cannot carry a
+ * consumer view or an applicable NFR for something that no longer exists.
+ * Two things follow from that.
+ *
+ * A manifest entry may carry a `when:` predicate — a regular expression read
+ * against the document's own text. A file whose content matches is checked
+ * against that entry and is dropped from every entry on the same path that has
+ * no predicate, so one path can carry two document shapes without either
+ * document being run against the other's contract.
+ *
+ * A document can also opt out of its schema entirely, with
  *
  *     <!-- mdschema:ignore -->
  *
- * in its leading comment block. A pack outlives the thing it specifies: a spec
- * that was deleted or superseded is kept as a record of why it went away, and
- * that record cannot carry a consumer view or an applicable NFR for something
- * that no longer exists. Making it conform would mean writing fiction, and
- * bending the schema to admit it would weaken the contract for every live pack.
- *
- * The marker has to be at the top, before any content, and every ignored file
- * is counted in the run's own output — an exclusion nobody can see is one
- * nobody reviews.
+ * in its leading comment block. This is the answer for a shape no schema
+ * describes; where a shape has one, `when:` routes to it instead. The marker
+ * has to be at the top, before any content, and every ignored file is counted
+ * in the run's own output — an exclusion nobody can see is one nobody reviews.
  *
  * Usage:
  *   node scripts/check-mdschema.mjs                      # ratchet against origin/main
@@ -204,11 +210,16 @@ function readSpecsDir(root) {
 function readManifest() {
   const text = readFileSync(MANIFEST, "utf-8");
   const entries = [];
-  /** @type {{ id?: string, schema?: string, pattern?: string }} */
+  /** @type {{ id?: string, schema?: string, pattern?: string, when?: string }} */
   let current = {};
   const flush = () => {
     if (current.id !== undefined && current.schema !== undefined && current.pattern !== undefined) {
-      entries.push({ id: current.id, schema: current.schema, pattern: current.pattern });
+      entries.push({
+        id: current.id,
+        schema: current.schema,
+        pattern: current.pattern,
+        ...(current.when !== undefined ? { when: current.when } : {}),
+      });
     }
     current = {};
   };
@@ -220,7 +231,7 @@ function readManifest() {
       current = { id: start[1] };
       continue;
     }
-    const field = /^\s+(schema|pattern):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
+    const field = /^\s+(schema|pattern|when):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
     if (field !== null && current.id !== undefined) {
       current[field[1]] = field[2];
     }
@@ -527,6 +538,31 @@ export function main() {
   let ignored = 0;
   const perEntry = [];
 
+  // A file is read at most once per run, however many entries consider it: the
+  // opt-out marker and every `when:` predicate ask about the same text.
+  /** @type {Map<string, string>} */
+  const contents = new Map();
+  const contentOf = (file) => {
+    const cached = contents.get(file);
+    if (cached !== undefined) return cached;
+    const text = readFileSync(path.join(root, file), "utf-8");
+    contents.set(file, text);
+    return text;
+  };
+
+  // Files a predicated entry has claimed. A default entry on the same path
+  // drops them, which is what makes the two entries a partition rather than
+  // two contracts over one document.
+  const claimed = new Set();
+  for (const entry of entries) {
+    if (entry.when === undefined) continue;
+    const re = patternToRegExp(entry.pattern.replace("{specsDir}", specsDir));
+    const predicate = new RegExp(entry.when, "mu");
+    for (const file of universe) {
+      if (re.test(file) && predicate.test(contentOf(file))) claimed.add(file);
+    }
+  }
+
   for (const entry of entries) {
     const schemaPath = path.join(SCHEMA_ROOT, entry.schema);
     if (!existsSync(schemaPath)) {
@@ -534,16 +570,13 @@ export function main() {
       return 2;
     }
     const re = patternToRegExp(entry.pattern.replace("{specsDir}", specsDir));
+    const predicate = entry.when === undefined ? null : new RegExp(entry.when, "mu");
     const inScope = universe
       .filter((file) => re.test(file))
       .filter((file) => restrictSet === null || restrictSet.has(file))
+      .filter((file) => (predicate === null ? !claimed.has(file) : predicate.test(contentOf(file))))
       .sort();
-    // Read once per file that this entry would otherwise check, rather than
-    // over the whole tree: a document only opts out of the schema it is
-    // matched against, and most of the tree is matched against none.
-    const optedOut = inScope.filter((file) =>
-      optsOutOfSchema(readFileSync(path.join(root, file), "utf-8")),
-    );
+    const optedOut = inScope.filter((file) => optsOutOfSchema(contentOf(file)));
     ignored += optedOut.length;
     const matched = inScope.filter((file) => !optedOut.includes(file));
     if (matched.length === 0) {

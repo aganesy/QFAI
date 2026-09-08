@@ -1,0 +1,39 @@
+# Document schema: `<specsDir>/spec-NNNN/01_Spec.md`, once the spec has retired.
+#
+# The manifest routes a `01_Spec.md` here when its front matter declares a
+# terminal `Status`, so a pack that has stopped specifying anything is checked
+# against what it does owe rather than against what a live pack owes.
+#
+# What it owes is short. A retired pack is read by two people: someone
+# following a stale reference forward, and someone asking why the obligation
+# went away. The first is answered by the front-matter bullets the status rules
+# already require (`Superseded-by`, `Deprecated-at`); the second is answered
+# here, and by nothing else in the tree.
+#
+# What it does not owe is the live contract. A consumer view, an applicable NFR
+# and a set of entry points all describe something a reader can still use, and
+# writing them for a spec that no longer exists is fiction. Admitting that
+# fiction into the live schema would weaken the contract for every pack that
+# still specifies something.
+#
+# `allow_additional: true` throughout: a pack that kept its old sections is
+# recording more, not less. The schema asks for the record and does not ask for
+# the deletion.
+
+structure:
+  - heading:
+      pattern: "^# 01 Spec.*"
+      regex: true
+    description: Spec pack entry document, for a spec that has stopped applying.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Retirement$"
+          regex: true
+        description: >-
+          Why the spec stopped applying, and where its obligations went. A list,
+          so the reasons are countable and each one can be followed; prose here
+          invites a reader to skim the one thing they came for.
+        allow_additional: true
+        lists:
+          - min: 1

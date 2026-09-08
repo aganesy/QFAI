@@ -89,6 +89,7 @@ const CLI_SUBCOMMANDS = [
   "validate",
   "report",
   "doctor",
+  "db-drift",
   "guardrails",
   "audit",
   "sdd",

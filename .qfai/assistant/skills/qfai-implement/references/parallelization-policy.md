@@ -309,7 +309,7 @@ worker's returned `done` at `refactor` until these steps pass
    are listed edges (`execution-ledger.md#allowed-transitions`) **because the
    row was never written `done`** — the same remedy applied to a row already at
    `done` would need `done -> refactor` or `done -> review-fix`, neither of
-   which that list carries. It does not by itself invalidate the other slices.
+   which that list carries. It does not by itself invalidate the other slices. (`ui-affecting.md`)
 
 This is the same re-take a T1 group close performs, for the same reason
 (`volume-policy.md#group-formation-states-and-transitions`): the address was
@@ -347,6 +347,32 @@ So:
   block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
   `../SKILL.md#post-parallel-integration-verify`, before the verify runs.
+- **`Prototype parity` is the one field the orchestrator recomputes rather than
+  copies.** Completeness is not enough for it: `n/a` is a complete value and the
+  cheapest one, and the worker returning it is the implementer — the actor whose
+  self-report gate item 9 exists to check. A worker that missed a clause, or
+  answered before its own production change existed, would skip
+  `product-surface-reviewer` on the strength of its own say-so, which is what a
+  single mechanical definition (`ui-affecting.md`) was written to prevent. So
+  before it routes reviewers or writes the row, the orchestrator evaluates the
+  three clauses **itself**, on the merged trunk, from the ledger row, the
+  declared UI paths, the slice's actual diff and the declared UI contracts
+  (`ui-affecting.md#the-test`). Its own result decides; a worker value that
+  disagrees is a **reported discrepancy**, not a tie to break — record it with
+  the row and treat a worker `n/a` on a row a clause selects the way any other
+  false gate claim is treated (`#seam-reconciliation-after-a-parallel-run`).
+
+**This is a rule of the ledger writer, not of parallel mode.** Serial execution
+has the same shape and the same actor: the implementation agent returns Status
+and Evidence, the orchestrator writes the row. Placed under coordinated parallel
+mode alone, the recomputation was skipped by default — the ordinary run copied
+the implementer's `Prototype parity` straight into the ledger, and the
+self-report the gate exists to check went unchecked in the mode most rows take.
+So: **whoever writes the row recomputes `Prototype parity` before writing it**,
+in every execution mode. It is the one evidence field the writer does not copy.
+In serial mode the inputs are the same, minus the merge: the ledger row, the
+declared UI paths, the row's own diff and the declared UI contracts.
+
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 
@@ -494,7 +520,8 @@ merged row can never reach `done`:
 - The orchestrator writes `refactor -> done` only once the integration verify,
   that item's re-verify and **every re-review it owes** have returned PASS on
   the merged tree — `completion-reviewer` and `implementation-reviewer` on every
-  item, and `product-surface-reviewer` as well on a UI-affecting one. That is
+  item, and `product-surface-reviewer` as well on a UI-affecting one
+  (`ui-affecting.md`). That is
   the ledger write gate item 10 reads, and it is now the first time the row's
   status asserts anything about the integrated tree.
 - A merged item whose row is still `todo` fails that verify. Silence there is

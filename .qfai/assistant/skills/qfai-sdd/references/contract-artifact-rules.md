@@ -17,6 +17,15 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 
 - Keep contract files minimal: only what specs and tests actually reference.
 - UI contracts must be mockable for prototypes: define stable `elements`, `actions`, `markers`, and `mockPaths` with enough inspection-target text for Playwright evidence.
+- **A declared marker is looked for in the code.** `QFAI-CONTRACT-037` reports a
+  `data-qfai` value a UI contract writes literally that no file under the
+  configured source directory mentions. Without it a declared element can be
+  rendered by nothing and no gate notice: an element nobody built is also an
+  element no test names, so the one-way check from test to contract cannot see
+  it. Only the markers the contract writes count, so a contract that names none
+  is asked for nothing. A marker counts as rendered wherever its text appears,
+  not only where the attribute is written out — a framework that builds the
+  attribute from a variable still writes the marker somewhere.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract .qfai/contracts/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
@@ -206,6 +215,19 @@ satisfied by a file that cannot run.
   The check is narrow on purpose. Only a `REFERENCES` clause counts, a table no
   contract in the set creates is left alone, and a table two contracts both
   create is not attributed to either.
+
+- **Compare the contracts with the migrations.** `npx qfai db-drift` applies
+  both to separate in-process databases and reports the columns they disagree
+  about: present on one side only, or declared with a different type,
+  nullability or default. Set `paths.migrationsDir` to the project's migration
+  directory; a project with no value there is out of scope and the command says
+  so.
+
+  This is the one question the rules above cannot answer. Contracts are frozen
+  early and implementation moves, so the two schemas drift by default, and a
+  suite that passes against the migration schema proves nothing about the
+  contracts. It is a separate command because it needs a database, and
+  `npx qfai validate` starts no processes.
 
 The cost of skipping this is not paid in Phase 0. It is paid inside a TDD
 micro-cycle, by an implementer who is forbidden from fixing the contract and has

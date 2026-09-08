@@ -505,7 +505,13 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
     const run = runLane(await stageTree());
     // A count-of-zero implementation reddens here. That is the whole point of
     // the leg: it falsifies the reading the allow-list exists to replace.
-    expect(run.exitCode, "the untouched shipped set must pass the lane").toBe(0);
-    expect(findingsOf(run.output)).toBe("");
+    //
+    // The findings first, and the whole output beside the exit code. This leg
+    // fails whenever the staged tree is incomplete as well as when the shipped
+    // set is, and an exit code alone cannot tell those apart — it sends a
+    // reader looking for a broken workflow when what broke is the fixture, or
+    // the reverse.
+    expect(findingsOf(run.output), "the untouched shipped set produced a finding").toBe("");
+    expect(run.exitCode, `the untouched shipped set must pass the lane:\n${run.output}`).toBe(0);
   });
 });
