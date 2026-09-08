@@ -63,12 +63,14 @@ optional, so a table written without one is still a table, and a paragraph
 that opens with one is still a paragraph. Rows a blank line has cut off from
 their delimiter are prose, because that is how they render.
 
-Files that predate the ceiling carry a recorded width of their own. It is the
-width the file actually has, and it may only shrink: edit freely below it,
-never past it, and lower the record in the same change that narrows the file.
-Every other file is held at 400. The exemption from the line ceiling does not
-carry here — its reason is about a file's length, not about how wide one line
-may be.
+Some shipped files predate the ceiling and carry a recorded width of their own.
+It is the width each arrives with, so `npx qfai doctor` does not report a fresh tree
+for content you received rather than wrote. That record belongs to the package
+and shrinks there; it is not a per-project allowance, and it never loosens the
+ceiling on an asset you write. **Everything you author is held at 400.**
+
+The exemption from the line ceiling does not carry here. Its reason is about a
+file's length, not about how wide one line may be.
 
 One shipped file is exempt, and only because it is a roster rather than prose:
 `assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring

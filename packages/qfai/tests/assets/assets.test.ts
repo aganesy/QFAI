@@ -2423,9 +2423,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     const tooWide: string[] = [];
     for (const relativePath of assetFiles.sort()) {
-      if (LINE_BUDGET_EXEMPT.has(relativePath)) {
-        continue;
-      }
+      // No exemption skip here, unlike the line ceiling above. `LINE_BUDGET_EXEMPT`
+      // excuses a roster from having its LENGTH counted; nothing in that reason
+      // is about how wide one line may be, and skipping it here would leave the
+      // one shipped file this rule cannot reach.
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const widest = widestMeasurableLine(content);
       const allowed = WIDTH_BUDGET_BACKLOG.get(relativePath) ?? ASSISTANT_ASSET_MAX_LINE_CHARS;

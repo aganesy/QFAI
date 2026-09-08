@@ -93,14 +93,28 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
  * files in the tree — and holding the rule back until then would leave the
  * evasion open in the meantime, which is the state this rule exists to end.
  *
- * So the backlog is recorded instead of waived. **Each entry is that file's
- * widest line today, exactly**, and the asset guard holds it to that: widening
- * the file fails, and narrowing it fails too, naming the lower number to record.
- * A ceiling merely above the real width would let a file improve from 900 to 500
- * and keep the 900, which leaves room to grow back — a licence, not a ratchet.
+ * So the backlog is recorded instead of waived. **Each entry is the width that
+ * file ships with, exactly**, and this package's own asset guard holds it to
+ * that: widening the file fails, and narrowing it fails too, naming the lower
+ * number to record. A ceiling merely above the real width would let a file
+ * improve from 900 to 500 and keep the 900, which leaves room to grow back — a
+ * licence, not a ratchet.
  *
  * A file absent from this map is held at the real number, so nothing joins the
  * backlog quietly: {@link WIDTH_BACKLOG_SIZE} pins how many entries there are.
+ *
+ * ## What it means in a project that installed the package
+ *
+ * These are the widths the shipped files arrive with, so `qfai doctor` reads
+ * them and does not report a fresh `qfai init` tree for content its author
+ * received rather than wrote.
+ *
+ * It is not that project's ratchet, and cannot be: the map is inside the
+ * installed package, so narrowing one of these files locally has nowhere to
+ * record the smaller number, and a later re-widening back to the shipped width
+ * is not reported. The ratchet is this repository's, and it runs here — which
+ * is also where those files get narrower. A project holding its OWN assets to
+ * a width has the default, which the map never loosens.
  *
  * The same shape the operator-message language rule uses, for the same reason:
  * a backlog nobody can add to is a backlog that goes away.
@@ -138,19 +152,41 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
 export const WIDTH_BACKLOG_SIZE = 20;
 
 /**
+ * A blockquote marker run, and the indentation before it.
+ *
+ * Stripped before anything else is read, because a fence or a table inside a
+ * blockquote or a list is still one. CommonMark measures a fence's indent from
+ * its container's content column, not from column zero, so a `> ` prefix or a
+ * list's indentation would otherwise hide the fence and every verbatim line
+ * under it would read as prose.
+ */
+const CONTAINER_PREFIX_RE = /^[\s>]*/;
+
+/**
  * An opening fence: the marker run, captured so a closer can be checked
  * against it.
  *
- * CommonMark allows up to three leading spaces, and a fence closes only on the
- * SAME marker character at AT LEAST the opening length. Toggling on any fence
- * line ends a four-backtick block early at the first three-backtick sample
- * quoted inside it, and everything after that reads as prose — the same
- * property `core/ids.ts` states for its own mask, and for the same reason.
+ * A fence closes only on the SAME marker character at AT LEAST the opening
+ * length. Toggling on any fence line ends a four-backtick block early at the
+ * first three-backtick sample quoted inside it, and everything after that reads
+ * as prose — the same property `core/ids.ts` states for its own mask, and for
+ * the same reason.
+ *
+ * The indent is not bounded at three spaces, because the container prefix is
+ * already gone and what remains may be a list's own indentation. The looser
+ * reading errs toward treating a marker line as a fence, which is the safer
+ * direction here: a missed measurement is milder than a warning on verbatim
+ * content nobody can wrap.
  */
-const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})/;
+const FENCE_OPEN_RE = /^(`{3,}|~{3,})/;
 
 /** A table's delimiter row. It must carry a pipe, or a bare rule would match. */
-const TABLE_DELIMITER_RE = /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/;
+const TABLE_DELIMITER_RE = /^\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/;
+
+/** The line with any blockquote or list container prefix removed. */
+function withoutContainer(text: string): string {
+  return text.replace(CONTAINER_PREFIX_RE, "");
+}
 
 /**
  * How much of a line is kept for classification.
@@ -242,12 +278,12 @@ class WidthScanner {
   /** Decides one line, with the line after it when there is one. */
   private settle(line: LineShape, next: LineShape | undefined): void {
     if (this.fence !== undefined) {
-      if (this.closesFence(line.text)) {
+      if (this.closesFence(withoutContainer(line.text))) {
         this.fence = undefined;
       }
       return;
     }
-    const opening = FENCE_OPEN_RE.exec(line.text)?.[1];
+    const opening = FENCE_OPEN_RE.exec(withoutContainer(line.text))?.[1];
     if (opening !== undefined) {
       this.fence = { marker: opening.slice(0, 1), length: opening.length };
       return;
@@ -267,7 +303,7 @@ class WidthScanner {
     // Same character, at least as long, and nothing after it: CommonMark
     // forbids an info string on a closing fence.
     const marker = fence.marker === "~" ? "~" : "`";
-    return new RegExp(`^ {0,3}${marker}{${String(fence.length)},}[ \\t]*$`).test(text);
+    return new RegExp(`^${marker}{${String(fence.length)},}[ \\t]*$`).test(text);
   }
 
   /**
@@ -277,11 +313,11 @@ class WidthScanner {
    * line is the header the next line delimits.
    */
   private isTableRow(line: LineShape, next: LineShape | undefined): boolean {
-    const hasPipe = line.text.includes("|");
+    const hasPipe = withoutContainer(line.text).includes("|");
     if (this.inTable && hasPipe) {
       return true;
     }
-    if (hasPipe && next !== undefined && TABLE_DELIMITER_RE.test(next.text)) {
+    if (hasPipe && next !== undefined && TABLE_DELIMITER_RE.test(withoutContainer(next.text))) {
       this.inTable = true;
       return true;
     }

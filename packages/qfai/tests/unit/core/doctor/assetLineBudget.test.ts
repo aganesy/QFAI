@@ -634,6 +634,23 @@ describe("widestMeasurableLine", () => {
     expect(widestMeasurableLine(["```sh", "~~~", wide(500), "```", wide(90)].join("\n"))).toBe(90);
   });
 
+  it("skips a fenced block inside a blockquote", () => {
+    // CommonMark measures a fence's indent from its container's content column.
+    // A `> ` prefix would otherwise hide the fence, and every verbatim line
+    // under it would read as prose.
+    expect(widestMeasurableLine(["> ```sh", `> ${wide(500)}`, "> ```"].join("\n"))).toBe(0);
+  });
+
+  it("skips a fenced block indented under a list item", () => {
+    const doc = ["- step", "", "    ```sh", `    ${wide(500)}`, "    ```"].join("\n");
+    expect(widestMeasurableLine(doc)).toBe(6);
+  });
+
+  it("skips a table inside a blockquote", () => {
+    const doc = ["> | a | b |", "> | --- | --- |", `> | ${wide(500)} | x |`].join("\n");
+    expect(widestMeasurableLine(doc)).toBe(0);
+  });
+
   it("counts a code point once, however many code units it takes", () => {
     // `String.prototype.length` counts UTF-16 units, so an emoji reads as two.
     // Both measuring paths route through one counter; a file that failed one
@@ -771,7 +788,11 @@ describe("assets.lineBudget width ceiling", () => {
       const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
 
       expect(check?.severity).toBe("ok");
-      expect(check?.message).toContain(`${ASSISTANT_ASSET_MAX_LINE_CHARS} characters per line`);
+      // Not "within 400": a shipped file carrying a recorded width is inside
+      // its own number and over the default, so naming the default alone would
+      // tell a reader the opposite of what was checked.
+      expect(check?.message).toContain("within the line width each is held to");
+      expect(check?.message).toContain(String(ASSISTANT_ASSET_MAX_LINE_CHARS));
     });
   });
 });

@@ -993,9 +993,14 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
+      // "within the ceiling that applies to each" rather than "within 400": the
+      // shipped files carrying a recorded width are inside their own number and
+      // over the default one, so naming the default here would tell a reader the
+      // opposite of what was checked.
       message:
         `all ${report.scanned} assistant assets are within ${report.maxLines} lines ` +
-        `and ${report.maxLineChars} characters per line${exemptNote}`,
+        `and within the line width each is held to (${report.maxLineChars} unless the ` +
+        `shipped file carries a recorded width)${exemptNote}`,
       details,
     };
   }
