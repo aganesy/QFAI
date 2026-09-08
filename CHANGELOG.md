@@ -6,6 +6,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`--spec` drops a sibling's stub the way it drops a sibling's broken
+  reference** (#1264). `cross-spec-obligations.md` already said a file under the
+  canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec whatever
+  its annotation says. The rule was applied to a broken reference and not to the
+  file itself, so one layout answered two ways: a scoped run dropped a sibling's
+  dangling reference and kept a sibling's stub, and every spec in a repository
+  recorded the same sibling's stub until its owner cleared it.
+
+  A path in that layout now resolves to its spec wherever a scoped run reads
+  one. The directory decides, not the annotation — that is what the rule says,
+  and it is the half a path can answer.
+
+  A test file outside the layout still has no owner and reaches every run, and
+  `--profile full` is unscoped and unchanged. Attribution decides which run
+  reports a stub, never whether the repository is clean.
+
+
 - **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
   The rule already wrote two messages: one naming the coverage-target TC the
   spec declares, and one calling `tdd/test-list.md` optional because it
