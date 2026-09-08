@@ -34,7 +34,11 @@ optional nor deferrable.
 ## Applicability
 
 The phase applies whenever the spec set declares a **runnable entrypoint** — a
-service, CLI, worker or app through which a `US-*` is answered.
+service, CLI, worker or app through which a **boot obligation** is answered. The
+boot obligation is a `US-*`, or on an API entrypoint a `CON-API-*`. Both spellings
+are named here because a contract-only API declares no `US-*`, and reading the
+condition as `US-*` alone would make the phase not applicable for an entrypoint
+the exit criterion and the `Layer = API` rule below both cover.
 
 It does not apply to a library or another artifact that is only ever imported.
 Record `Skeleton: not applicable` with the reason in the skeleton evidence file
@@ -169,8 +173,10 @@ satisfies it, though, never the stored record: see `#evidence`.
    which property it read: a status the unregistered path does not return, a
    header or body the handler sets, or the router's own listing. "It answered"
    is not that property.
-   **Any answer that process gives counts** — the sentinel of a seam authored
-   here, or the real response of a surface that already worked.
+   **The response does not have to be the real behaviour** — the sentinel of a
+   seam authored here counts as much as the response of a surface that already
+   worked. What it may not be is a response the process would give without the
+   seam.
 
 4. **Exits non-zero on any failure**, including a start-up timeout. A script
    that reports a failure on stdout and exits 0 proves nothing.
@@ -443,10 +449,22 @@ smoke script that delegates — to a `package.json` script, to another committed
 helper, to a module it imports — puts the behaviour being proved outside its own
 bytes, and a dependency edited to a no-op leaves the recorded hash matching
 while the product stops starting. So `Skeleton script` records a path and a
-SHA-256 **per committed file the run executes**, the entry script first. Where
-the delegation leaves the repository — a globally installed tool, a container
-image — no hash can reach it: name that dependency in `Skeleton debt`, because
-an unbounded one is a shortcut this phase enumerates rather than one it hides.
+SHA-256 **per committed file the run executes**, the entry script first.
+
+Where the delegation leaves the repository no hash can reach it, and two
+different things are outside. They are recorded differently, because Bound 2
+has a home for one and none for the other.
+
+| What is outside                                                                                                 | Recorded as                                                                                      |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| The runtime the project runs **on** — the language runtime, a container engine, a queue broker                  | An environment precondition in `Skeleton result`: the version, or the image digest, the run used |
+| A dependency standing **in for behaviour a row owns** — a stub service, a fake started in place of the real one | `Skeleton debt`, like any other shortcut                                                         |
+
+The first is not a shortcut. Nothing about it defers a product obligation, so no
+row carries it and no `CR-*` could request it, and filing it under Bound 2 would
+either block the gate or raise a Change Request `/qfai-sdd` cannot act on.
+Recording the version is what makes the run reproducible, which is the whole
+claim a hash makes about a committed file.
 
 **On every later invocation, read this file first.** An entrypoint with no
 section runs the phase. An entrypoint whose latest recorded `Skeleton result` is

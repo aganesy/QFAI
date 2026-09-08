@@ -161,10 +161,13 @@ routing:
         # it records `Skeleton: not applicable` in `.qfai/evidence/skeleton.md`
         # and the phase does not run at all, so there is no run to judge.
         mandatory_agents: [qa-gatekeeper]
-        # The production owners author the entrypoint and the smoke script, and
-        # `devops-ci-engineer` owns the start command and the script's place in
-        # `catalog/tech.md#standard-commands-copy-paste`. Conditional because
-        # which of them applies depends on where the entrypoint lives.
+        # The production owner authors the entrypoint, the smoke script and its
+        # line under `catalog/tech.md#standard-commands-copy-paste`: those three
+        # are one change, and `smoke-script` is in that role's `owned_artifacts`
+        # with an `authoring` permission profile to make it. `devops-ci-engineer`
+        # runs the script and owns the run evidence, which is what its
+        # `execution` profile and `runtime-evidence` cover. Conditional because
+        # which production owner applies depends on where the entrypoint lives.
         conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer]
         parallel_groups: []
         # Its PASS on the recorded run is required before `Phase: Red` starts,

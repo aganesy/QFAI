@@ -490,7 +490,11 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain(
         "its real `200` / `201` and its real payload exit the phase as they stand",
       );
-      expect(doc).toContain("**Any answer that process gives counts**");
+      expect(doc).toContain("**The response does not have to be the real behaviour**");
+      // A sentinel counts as much as a real handler. What does not count is a
+      // response the process gives without the seam at all — a framework's
+      // default 404 on an unregistered route is the state this phase detects.
+      expect(doc).toContain("What it may not be is a response the process would give without the");
       // And Bound 1 does not reach backwards into finished work.
       expect(doc).toContain("This bound governs what the phase **writes**, not what it finds");
       expect(skill).toContain("never regressed to a sentinel to look skeletal");
@@ -628,7 +632,11 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(card).toContain("**The Skeleton observation gate reads a different set.**");
       expect(card).toContain("before the first ledger row is selected");
       expect(card).toContain("`.qfai/evidence/skeleton.md`, the section of the entrypoint");
-      expect(card).toContain("the committed smoke script `catalog/tech.md` names");
+      // The manifest, not the entry script alone: a delegate edited to a no-op
+      // leaves the entry script's hash matching and the product not starting.
+      expect(card).toContain("**per committed file the run");
+      expect(card).toContain("every committed file that manifest names");
+      expect(card).toContain("a delegate edited to a no-op is a REVISE");
       // It judges the exit criterion, and nothing the rows own.
       expect(card).toContain("Correctness of the boot obligation is **not** in scope");
       expect(card).toContain("**no ledger row or per-item evidence is required or expected**");

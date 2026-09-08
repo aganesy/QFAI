@@ -418,16 +418,19 @@ cannot legally be given. At that gate the inputs are:
 
 - `.qfai/evidence/skeleton.md`, the section of the entrypoint under judgement —
   `Skeleton verdict`, `Skeleton entrypoint`, `Skeleton US`, `Skeleton command`,
-  `Skeleton script` (path and the SHA-256 of the committed script's bytes),
-  `Skeleton result` (its output **and exit status**), `Skeleton debt`,
-  `Skeleton cycles`;
-- the committed smoke script `catalog/tech.md` names, and `catalog/structure.md`
-  for the declared entrypoints.
+  `Skeleton script` (a path and a SHA-256 **per committed file the run
+  executes**, the entry script first), `Skeleton result` (its output **and exit
+  status**), `Skeleton debt`, `Skeleton cycles`;
+- every committed file that manifest names, not only the entry script
+  `catalog/tech.md` points at, and `catalog/structure.md` for the declared
+  entrypoints.
 
 Judge exactly the phase's exit criterion, and nothing the rows own: the recorded
 run started the entrypoint, reached the named boot obligation's surface over the
 transport that entrypoint declares, and exited 0; the command recorded is the
-committed script rather than an independent copy of it; the two bounds hold —
+committed script rather than an independent copy of it; every hash in the
+manifest matches the file on disk, so a delegate edited to a no-op is a REVISE
+rather than a PASS on the entry script alone; the two bounds hold —
 no predicate was written that a row owns, and every shortcut is enumerated in
 `Skeleton debt` with the row that carries it or the `CR-*` that requests it.
 PASS or REVISE on that. Correctness of the boot obligation is **not** in scope:
