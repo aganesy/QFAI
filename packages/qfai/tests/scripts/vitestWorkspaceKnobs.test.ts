@@ -73,6 +73,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import ts from "typescript";
 import { parse as parseYaml } from "yaml";
 
 import { DECLARED_TEST_TIMEOUT } from "../../vitest.knobs.js";
@@ -484,16 +485,8 @@ describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry setti
 });
 
 describe("a ceiling below the declared testTimeout", () => {
-  /**
-   * A `timeout:` on a `describe` or an `it`, written as its own option object.
-   *
-   * Both shapes the runner accepts are matched: the option as a whole argument
-   * on its own line, and inline between two others. A bare `timeout:` property
-   * is deliberately NOT matched — that is a subprocess kill timeout, which
-   * bounds a spawned process rather than a test, and removing one would let a
-   * hung child run forever.
-   */
-  const TEST_CEILING = /\{\s*timeout:\s*([0-9_]+)\s*\}/;
+  /** The runner entry points that take a per-test ceiling. */
+  const RUNNERS = new Set(["it", "test", "describe", "suite", "bench"]);
 
   /** A comment about the ceiling, within the five lines above it. */
   const MENTIONS_TIMEOUT = /timeout/i;
@@ -506,46 +499,149 @@ describe("a ceiling below the declared testTimeout", () => {
       return entry.isFile() && entry.name.endsWith(".ts") ? [full] : [];
     });
 
+  /**
+   * The runner name a call expression reaches, through any modifier chain.
+   *
+   * `it`, `it.skipIf(…)(…)`, `describe.each(rows)(…)` — the ceiling is an
+   * argument of the outermost call in each, and the name that decides whether
+   * this is a test at all sits at the bottom of the chain.
+   */
+  const runnerName = (node: ts.Expression): string | undefined => {
+    let current: ts.Node = node;
+    for (;;) {
+      if (ts.isCallExpression(current)) {
+        current = current.expression;
+        continue;
+      }
+      if (ts.isPropertyAccessExpression(current)) {
+        current = current.expression;
+        continue;
+      }
+      return ts.isIdentifier(current) ? current.text : undefined;
+    }
+  };
+
+  /**
+   * A ceiling written as a number, however it is spelled.
+   *
+   * A file-local `const` is resolved, because `{ timeout: TIMEOUT }` and
+   * `{ timeout: 90_000 }` are the same declaration with the number named. A
+   * value this cannot resolve is left alone rather than guessed at: reporting
+   * an unresolved expression as sub-default would fail a ceiling nobody can
+   * read from the source.
+   */
+  const numericValue = (
+    node: ts.Expression | undefined,
+    constants: ReadonlyMap<string, number>,
+  ): number | undefined => {
+    if (node === undefined) return undefined;
+    if (ts.isNumericLiteral(node)) return Number(node.text.replace(/_/g, ""));
+    if (ts.isIdentifier(node)) return constants.get(node.text);
+    return undefined;
+  };
+
+  /** `const NAME = 90_000` declarations, so a named ceiling resolves. */
+  const numericConstants = (source: ts.SourceFile): Map<string, number> => {
+    const found = new Map<string, number>();
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer !== undefined &&
+        ts.isNumericLiteral(node.initializer)
+      ) {
+        found.set(node.name.text, Number(node.initializer.text.replace(/_/g, "")));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    return found;
+  };
+
+  /**
+   * Every ceiling a runner call declares, in either form vitest accepts.
+   *
+   * The options object (`{ timeout: N }`) and the trailing number
+   * (`it(name, fn, N)`) are the same declaration written two ways, and a check
+   * that reads one of them covers only the files that happened to use it.
+   */
+  const declaredCeilings = (
+    source: ts.SourceFile,
+    constants: ReadonlyMap<string, number>,
+  ): { value: number; position: number }[] => {
+    const found: { value: number; position: number }[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && RUNNERS.has(runnerName(node.expression) ?? "")) {
+        for (const argument of node.arguments) {
+          if (ts.isObjectLiteralExpression(argument)) {
+            for (const property of argument.properties) {
+              if (
+                ts.isPropertyAssignment(property) &&
+                ts.isIdentifier(property.name) &&
+                property.name.text === "timeout"
+              ) {
+                const value = numericValue(property.initializer, constants);
+                if (value !== undefined) {
+                  found.push({ value, position: property.getStart(source) });
+                }
+              }
+            }
+            continue;
+          }
+          // The trailing form: a bare number after the body. Only in that
+          // position is a number a ceiling — elsewhere it is data the test uses.
+          if (argument === node.arguments[node.arguments.length - 1]) {
+            const value = numericValue(argument, constants);
+            if (value !== undefined && node.arguments.length >= 3) {
+              found.push({ value, position: argument.getStart(source) });
+            }
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    return found;
+  };
+
   it("is declared nowhere without a stated reason", () => {
-    // `vitest.knobs.ts` sets `testTimeout` to 120 s and carries the measurement
-    // for it. A file that takes a lower ceiling is overriding a justified number
-    // with an unjustified one, and the override is invisible: it reads as an
-    // ordinary option, and nothing distinguishes a ceiling somebody measured
-    // from one nobody has looked at since it was typed.
+    // `vitest.knobs.ts` sets `testTimeout` and carries the measurement for it. A
+    // file taking a lower ceiling overrides a justified number with one nothing
+    // justifies, and the override is invisible: it reads as an ordinary option,
+    // so a ceiling somebody measured and one nobody has looked at are the same
+    // text.
     //
-    // That is not hypothetical here. Of the 65 such ceilings this rule replaced,
-    // two files' ceilings sat BELOW their own cost under a full-suite run and
-    // timed out nine cases between them, while 33 files used under 6% of theirs.
-    // The two comments that existed both said "higher timeout" about a value
-    // lower than the default they were written before.
+    // Cost is not visible in the source, so the rule is not a number. It is that
+    // the declaration says what was measured, which is a property of the source
+    // and therefore checkable.
     //
-    // So the rule is not a number. It is that the declaration says why, which is
-    // a property of the source and therefore checkable — cost is not.
+    // Read from the syntax tree rather than by pattern: the options object and
+    // the trailing number are the same declaration written two ways, and a
+    // named ceiling is the same again. A check that reads one spelling covers
+    // only the files that happen to use it.
     const root = path.join(PACKAGE_ROOT, "tests");
     const files = testFiles(root);
     expect(files.length, "no test files found — the walk is wrong").toBeGreaterThan(100);
 
     const unjustified: string[] = [];
     for (const file of files) {
-      const lines = readFileSync(file, "utf-8").split(/\r?\n/);
-      lines.forEach((line, index) => {
-        const trimmed = line.trimStart();
-        // Prose that quotes the shape is not a declaration of it, and the file
-        // explaining why it inherits the default quotes it verbatim.
-        if (trimmed.startsWith("*") || trimmed.startsWith("//") || trimmed.startsWith("/*")) return;
-        const declared = TEST_CEILING.exec(line)?.[1];
-        if (declared === undefined || Number(declared.replace(/_/g, "")) >= DECLARED_TEST_TIMEOUT) {
-          return;
-        }
+      const text = readFileSync(file, "utf-8");
+      const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+      const constants = numericConstants(source);
+      const lines = text.split(/\r?\n/);
+
+      for (const ceiling of declaredCeilings(source, constants)) {
+        if (ceiling.value >= DECLARED_TEST_TIMEOUT) continue;
+        const line = source.getLineAndCharacterOfPosition(ceiling.position).line;
         const preceding = lines
-          .slice(Math.max(0, index - 5), index)
+          .slice(Math.max(0, line - 5), line)
           .filter((candidate) => /^\s*(?:\/\/|\*)/.test(candidate))
           .join(" ");
         const justified = MENTIONS_TIMEOUT.test(preceding) && preceding.length >= REASON_MIN_CHARS;
         if (!justified) {
-          unjustified.push(`${path.relative(PACKAGE_ROOT, file)}:${index + 1}`);
+          unjustified.push(`${path.relative(PACKAGE_ROOT, file)}:${line + 1} (${ceiling.value})`);
         }
-      });
+      }
     }
 
     expect(

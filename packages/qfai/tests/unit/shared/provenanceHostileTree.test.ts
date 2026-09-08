@@ -511,7 +511,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       Object.keys((await readInstallProvenance(root)).workflows).sort(),
       "a denial that passes must not lose the write",
     ).toEqual(["qfai-first.yml", "qfai-second.yml"]);
-  }, 60_000);
+  });
 
   it("keeps every entry under heavy concurrency", async () => {
     // The six-writer row above passed on an idle machine and FAILED inside the whole-suite run,
@@ -548,7 +548,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
 
     // And no lock is left behind for the next run to wait out.
     expect(await lockHolders(root)).toBeUndefined();
-  }, 60_000);
+  });
 
   it("does not release a lock it no longer owns", async () => {
     const root = await tempRoot();
@@ -670,7 +670,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     } finally {
       clearInterval(stillGoing);
     }
-  }, 60_000);
+  });
 
   it("renews its marker while it holds the lock, on an interval under the ceiling", async () => {
     // The marker was stamped once, at acquisition, so a writer whose

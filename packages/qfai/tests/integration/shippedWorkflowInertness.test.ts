@@ -391,7 +391,7 @@ describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret re
       // mapping line (a workflow_call declaration, a job-level passing
       // block, or `secrets: inherit`), named per line.
       //
-      // Not the dotted form alone — review finding [11]. `${{ toJSON(secrets) }}`
+      // Not the dotted form alone. `${{ toJSON(secrets) }}`
       // names no property, hands the adopter's whole secret set to a step, and
       // left this row green while the shape dimension beside it and the hygiene
       // lane both looked elsewhere.

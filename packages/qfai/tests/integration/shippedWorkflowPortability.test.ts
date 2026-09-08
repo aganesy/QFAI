@@ -601,7 +601,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
     expect(violations).toEqual([]);
   });
   it("accepts only an integrity algorithm this runner can actually hash with", async () => {
-    // Review finding [116]. The algorithm half of `+<algorithm>.<digest>` was checked as a run
+    // The algorithm half of `+<algorithm>.<digest>` was checked as a run
     // of alphanumerics and hyphens and nothing more, so `pnpm@9.12.3+garbage.deadbeef` was
     // pronounced resolvable — and corepack, which hands that name to `crypto.createHash`, then
     // failed with the opaque resolution error this precondition exists to replace. The

@@ -114,11 +114,11 @@ function extractPruneCallSites(source: string): string[] {
 }
 
 // ── [35] ─────────────────────────────────────────
-describe("a workflows directory reached through a link is not this tree's to write", // Two guards stand behind these rows and only one of them is falsifiable here: the copy
+// Two guards stand behind these rows and only one of them is falsifiable here: the copy
 // exclusion, and the recorder's own re-ask. With the copy already excluded there is nothing
 // left for the recorder to refuse, so reverting IT alone leaves these green — which is what a
 // second guard looks like from a test, not a gap. The falsification plants revert the pair.
-() => {
+describe("a workflows directory reached through a link is not this tree's to write", () => {
   /**
    * The link, as a JUNCTION on Windows and an ordinary symlink elsewhere.
    *

@@ -77,9 +77,6 @@ const GUIDELINES_MD = path.join(
   "cli-ux-guidelines.md",
 );
 
-/** Scanning every file under `src/` costs seconds; 15s is not enough headroom. */
-const SCAN_TIMEOUT_MS = 60_000;
-
 function reportJapaneseLines(relPath: string, source: string): string[] {
   return findJapaneseLines(source).map((found) => formatJapaneseLine(relPath, found));
 }
@@ -115,20 +112,16 @@ function srcSources(): Promise<[string, string][]> {
 }
 
 describe("operator-facing CLI message language", () => {
-  it(
-    "keeps every string emitted from src/cli in English",
-    async () => {
-      const files = await listSourceFiles(CLI_DIR);
-      expect(files.length).toBeGreaterThan(0);
+  it("keeps every string emitted from src/cli in English", async () => {
+    const files = await listSourceFiles(CLI_DIR);
+    expect(files.length).toBeGreaterThan(0);
 
-      const offenders = (await readSources(files, PACKAGE_ROOT)).flatMap(([rel, source]) =>
-        reportJapaneseLines(rel, source),
-      );
+    const offenders = (await readSources(files, PACKAGE_ROOT)).flatMap(([rel, source]) =>
+      reportJapaneseLines(rel, source),
+    );
 
-      expect(offenders).toEqual([]);
-    },
-    SCAN_TIMEOUT_MS,
-  );
+    expect(offenders).toEqual([]);
+  });
 
   it("keeps every qfai doctor check message in English", async () => {
     const source = await readFile(DOCTOR_TS, "utf-8");
@@ -182,82 +175,74 @@ describe("operator-facing CLI message language", () => {
     ).toBe(ALLOWLISTED_MESSAGE_COUNT);
   });
 
-  it(
-    "admits no Japanese message under src that the allowlist does not name",
-    async () => {
-      const added: string[] = [];
-      const migrated: string[] = [];
-      const seen = new Set<string>();
-      for (const [rel, source] of await srcSources()) {
-        seen.add(rel);
-        const diff = diffAgainstAllowlist(
-          rel,
-          findJapaneseLines(source),
-          SRC_JAPANESE_ALLOWLIST[rel] ?? [],
-        );
-        added.push(...diff.added);
-        migrated.push(...diff.migrated);
+  it("admits no Japanese message under src that the allowlist does not name", async () => {
+    const added: string[] = [];
+    const migrated: string[] = [];
+    const seen = new Set<string>();
+    for (const [rel, source] of await srcSources()) {
+      seen.add(rel);
+      const diff = diffAgainstAllowlist(
+        rel,
+        findJapaneseLines(source),
+        SRC_JAPANESE_ALLOWLIST[rel] ?? [],
+      );
+      added.push(...diff.added);
+      migrated.push(...diff.migrated);
+    }
+
+    const stale = Object.keys(SRC_JAPANESE_ALLOWLIST).filter((rel) => !seen.has(rel));
+    expect(stale, "allowlist entries whose file no longer exists — drop them").toEqual([]);
+    expect(
+      added,
+      "Japanese message the allowlist does not name. A new operator-facing message must be " +
+        "English (cli-ux-guidelines.md, Message Language)",
+    ).toEqual([]);
+    expect(
+      migrated,
+      "allowlist entries whose message is gone — delete them, do not leave a reusable slot",
+    ).toEqual([]);
+  });
+
+  it("keeps the launcher out of a runtime message, and in the guidelines", async () => {
+    // A running qfai does not know which entry point started it — an `npx`
+    // prefix, a package script, or a global bin — so a message naming one
+    // launcher is wrong for the other two. Shipped docs take the opposite
+    // rule and `canonicalQfaiLauncher.test.ts` enforces it there.
+    const guidelines = await readFile(GUIDELINES_MD, "utf-8");
+    expect(guidelines).toContain("## Command Invocation");
+    expect(guidelines).toContain("`npx qfai <subcommand>`");
+    expect(guidelines).toContain("`qfai <subcommand>`");
+
+    // Comments explain the implementation and are not read by an operator,
+    // so they are removed first — with the same TypeScript scanner the
+    // Japanese scan uses, for the reason this file's header gives. A
+    // line-start test cannot do it: `emit(msg); // npx qfai validate` is a
+    // comment on a code line, and would be reported as a runtime message.
+    // Stripping replaces a comment with spaces, so the line numbers below
+    // still point at the source.
+    const offenders: string[] = [];
+    for (const [rel, source] of await srcSources()) {
+      // The scan is what costs; the strip is what costs most. A file whose
+      // raw text has no `npx qfai ` anywhere cannot produce an offender
+      // after the strip either, since stripping only removes text.
+      if (!source.includes("npx qfai ")) {
+        continue;
       }
+      stripComments(source)
+        .split(/\r?\n/)
+        .forEach((line, index) => {
+          // The generated-file header is documentation in the reader's tree,
+          // so it takes the documentation rule. It survives the strip: it is
+          // a `#` comment inside a TypeScript string, not a TypeScript one.
+          if (!line.includes("npx qfai ") || line.includes("# Generated by")) {
+            return;
+          }
+          offenders.push(`${rel}:${index + 1}`);
+        });
+    }
 
-      const stale = Object.keys(SRC_JAPANESE_ALLOWLIST).filter((rel) => !seen.has(rel));
-      expect(stale, "allowlist entries whose file no longer exists — drop them").toEqual([]);
-      expect(
-        added,
-        "Japanese message the allowlist does not name. A new operator-facing message must be " +
-          "English (cli-ux-guidelines.md, Message Language)",
-      ).toEqual([]);
-      expect(
-        migrated,
-        "allowlist entries whose message is gone — delete them, do not leave a reusable slot",
-      ).toEqual([]);
-    },
-    SCAN_TIMEOUT_MS,
-  );
-
-  it(
-    "keeps the launcher out of a runtime message, and in the guidelines",
-    async () => {
-      // A running qfai does not know which entry point started it — an `npx`
-      // prefix, a package script, or a global bin — so a message naming one
-      // launcher is wrong for the other two. Shipped docs take the opposite
-      // rule and `canonicalQfaiLauncher.test.ts` enforces it there.
-      const guidelines = await readFile(GUIDELINES_MD, "utf-8");
-      expect(guidelines).toContain("## Command Invocation");
-      expect(guidelines).toContain("`npx qfai <subcommand>`");
-      expect(guidelines).toContain("`qfai <subcommand>`");
-
-      // Comments explain the implementation and are not read by an operator,
-      // so they are removed first — with the same TypeScript scanner the
-      // Japanese scan uses, for the reason this file's header gives. A
-      // line-start test cannot do it: `emit(msg); // npx qfai validate` is a
-      // comment on a code line, and would be reported as a runtime message.
-      // Stripping replaces a comment with spaces, so the line numbers below
-      // still point at the source.
-      const offenders: string[] = [];
-      for (const [rel, source] of await srcSources()) {
-        // The scan is what costs; the strip is what costs most. A file whose
-        // raw text has no `npx qfai ` anywhere cannot produce an offender
-        // after the strip either, since stripping only removes text.
-        if (!source.includes("npx qfai ")) {
-          continue;
-        }
-        stripComments(source)
-          .split(/\r?\n/)
-          .forEach((line, index) => {
-            // The generated-file header is documentation in the reader's tree,
-            // so it takes the documentation rule. It survives the strip: it is
-            // a `#` comment inside a TypeScript string, not a TypeScript one.
-            if (!line.includes("npx qfai ") || line.includes("# Generated by")) {
-              return;
-            }
-            offenders.push(`${rel}:${index + 1}`);
-          });
-      }
-
-      expect(offenders, "runtime message naming a launcher").toEqual([]);
-    },
-    SCAN_TIMEOUT_MS,
-  );
+    expect(offenders, "runtime message naming a launcher").toEqual([]);
+  });
 
   it("reports a new Japanese message that replaces a translated one", () => {
     const found = findJapaneseLines('error("新しい日本語メッセージ");');
