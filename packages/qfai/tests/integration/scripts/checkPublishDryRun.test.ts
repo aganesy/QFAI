@@ -36,7 +36,7 @@ const ALREADY_PUBLISHED_STDERR = [
   "npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-08-20T09_21_44_546Z-debug-0.log",
 ].join("\n");
 
-// Review finding [06]. `classifyDryRun` is pure and takes the proof as an argument, so the rows
+// `classifyDryRun` is pure and takes the proof as an argument, so the rows
 // above can assert the DECISION without a registry. These two assert the proof itself, which needs
 // a real `npm pack` — the whole point being that no text a lifecycle script prints can stand in for
 // one.
@@ -187,10 +187,10 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
     // tarball in existence — and the required `build` context would then go green over a pack
     // that never happened.
     //
-    // Review finding [06]: the first repair for this read npm's `=== Tarball Details ===` banner
-    // out of the SAME child's output, which the same lifecycle script can print. The stdout here
-    // carries that banner deliberately — a row that omitted it would pass against the old
-    // implementation too, and prove nothing about what changed.
+    // Reading npm's `=== Tarball Details ===` banner
+    // out of the SAME child's output is not enough either, since the same lifecycle script can
+    // print it. The stdout here carries that banner deliberately — a row that omitted it would
+    // pass a check that ignores this case too, and prove nothing about what this test targets.
     const verdict = classifyDryRun({
       status: 1,
       stdout: "npm notice === Tarball Details ===\nnpm notice total files: 205\n",
@@ -227,11 +227,11 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
 });
 
 describe("the npm it proves anything with is the toolchain's, not the one on PATH", () => {
-  // Review finding [98]. This guard runs through a `pnpm` script, so its PATH begins with
+  // This guard runs through a `pnpm` script, so its PATH begins with
   // `node_modules/.bin` — a directory a pull request fills by adding a dependency. A workspace
-  // package declaring an `npm` bin replaced every call here with a program that exits 0, and the
-  // independent tarball and registry proofs never ran. The reviewer measured it: a fake `npm`
-  // first on PATH made the whole script exit 0 with no output.
+  // package declaring an `npm` bin would replace every call here with a program that exits 0, and
+  // the independent tarball and registry proofs would never run: a fake `npm`
+  // first on PATH makes the whole script exit 0 with no output.
 
   it("resolves npm beside the running Node and never through PATH", () => {
     const source = readFileSync(

@@ -401,10 +401,10 @@ describe(
         // mapping line (a workflow_call declaration, a job-level passing
         // block, or `secrets: inherit`), named per line.
         //
-        // Not the dotted form alone — review finding [11]. `${{ toJSON(secrets) }}`
-        // names no property, hands the adopter's whole secret set to a step, and
-        // left this row green while the shape dimension beside it and the hygiene
-        // lane both looked elsewhere.
+        // Not the dotted form alone: `${{ toJSON(secrets) }}`
+        // names no property, and would hand the adopter's whole secret set to a step while
+        // leaving this row green — the shape dimension beside it and the hygiene
+        // lane both look elsewhere.
         body.split(/\r?\n/).forEach((line, index) => {
           if (/\bsecrets\b/.test(line) && !/\bsecrets\s*:/.test(line)) {
             violations.push(`${name}:${index + 1}: secret context reference`);
