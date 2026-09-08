@@ -118,9 +118,9 @@ export async function writeValidateRunLog(input: {
   await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
 
   // Validate Hard Gate evidence. Written on every run so it can never go stale:
-  // it always points at the newest run-log directory. Previously this file only
-  // existed as a side effect of `| tee`, which the Hard Gate command line itself
-  // omits (and which is not portable to PowerShell).
+  // it always points at the newest run-log directory. Relying on `| tee` for it
+  // would not do: the Hard Gate command line omits it, and it is not portable to
+  // PowerShell.
   await writeLatestValidateLog(outDir, runId, () =>
     buildValidateLog({
       runId,

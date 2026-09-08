@@ -317,10 +317,10 @@ const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"])
 /**
  * The review tiers a `Tier` cell may name, lower-cased.
  *
- * The tier used to be free prose inside `Evidence`, written last by the agent
- * whose ceremony it decides, and an unrecorded one meant the most expensive
- * tier — so the cheap tier was the one nobody could reach. It is now a column
- * the ledger author seeds, and a blank or `-` cell reads as `T1`.
+ * The tier is a column the ledger author seeds, and a blank or `-` cell reads
+ * as `T1`. Free prose inside `Evidence`, written last by the agent whose
+ * ceremony it decides, would make an unrecorded tier the most expensive one,
+ * so the cheap tier would be the one nobody could reach.
  */
 const VALID_TIERS = new Set(["t1", "t2", "t3"]);
 
@@ -2806,9 +2806,9 @@ function evidenceAnchorFor(tddId: string): string {
 /**
  * The legal way a row at `status` can re-run a cycle it never actually ran.
  *
- * The advice used to be "move it back to `todo` / `red`" for every status this
- * check fires on, and `references/execution-ledger.md` forbids that on three
- * of the four: `green -> red` is the transition table's named example of a
+ * A blanket "move it back to `todo` / `red`" is wrong for three of the four
+ * statuses this check fires on: `references/execution-ledger.md` forbids it,
+ * since `green -> red` is the transition table's named example of a
  * prohibited backward edge, `refactor -> red` is admissible only as QA
  * rejection recovery behind a routed `qa-gatekeeper` REVISE, and
  * **any status** -> `todo` is the upstream reset, which needs an approved
@@ -3094,7 +3094,7 @@ function deriveExpectedBrRef(
  * or trimmed to `DR-<id>-.md` with the separator and nothing behind it, is a
  * name shaped by a template rather than by a decision — and indexing it
  * silenced the very warning that would have said the record is still missing.
- * Only the id prefix used to be checked, so every such file declared its id.
+ * Checking only the id prefix would accept every such file as having declared its id.
  *
  * Words are Unicode letters and digits rather than `[a-z0-9]`: a slug written
  * in the project's own language is a record, not a placeholder. `<`, `>` and a
@@ -3337,8 +3337,7 @@ export const EVIDENCE_ANCHOR_UNRESOLVED_CODE = "QFAI-TDDLIST-008";
  * mechanically — "a commit that changes any file the observation covered
  * invalidates it" — and nothing computed it. The field was hand-written,
  * required in three places, and compared against nothing: `QFAI-REVIEW-009`
- * checks that `summary.json`'s field is PRESENT, never that it is CURRENT
- * (#1146).
+ * checks that `summary.json`'s field is PRESENT, never that it is CURRENT.
  *
  * That failure is silent and self-consistent: a stale `Revision` looks exactly
  * like a fresh one, every command in the record is real, and nothing in the
@@ -3823,9 +3822,9 @@ export async function validateTddList(
  *
  * Completed evidence records the field per round (`- Round 1: Revision: <sha>`),
  * and `rowEvidenceFieldValue` filters `round === null` — it reads only a BARE
- * `- Revision:`. Reading it that way made the staleness check a SILENT NO-OP on
- * every real evidence file, which is the failure class #1146 is about
- * reproduced inside the check written to end it (a silent no-op and a clean run
+ * `- Revision:`. Reading it that way would make the staleness check a SILENT
+ * NO-OP on every real evidence file: the failure class this check exists to
+ * catch, reproduced inside the check itself (a silent no-op and a clean run
  * look the same).
  *
  * The last round is the right one: a re-verify round re-takes the observation,
@@ -4141,7 +4140,12 @@ async function validateSpecTddList(
         owed > 0
           ? `tdd/test-list.md not found for spec-${specNumber}. It is optional only for a spec that declares no coverage-target TC, and this one declares ${String(owed)}`
           : `tdd/test-list.md not found for spec-${specNumber} (optional: the spec declares no coverage-target TC)`,
-        "warning",
+        // The severity follows the two messages above. A spec that owes rows is
+        // a `warning`, escalated by `TDDLIST_TC_NOT_COVERED` below. A spec that
+        // owes none is `info`: the message calls the file optional, so there is
+        // no action the operator can take, and a warning nobody can clear is
+        // what makes a warning count unreadable.
+        owed > 0 ? "warning" : "info",
         relPath,
         "tddList.fileExists",
         undefined,

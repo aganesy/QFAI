@@ -81,10 +81,10 @@ import {
   resolveCertifyAcceptedIterationIndex,
   type CertifyIterationView,
 } from "../../core/validators/prototyping/explorationCertify.js";
-// 15th-wave Fix (codex r3269453293, P2): show-spec's `liveUiBearing`
+// show-spec's `liveUiBearing`
 // uses the same resolver as iterate's drift gate (`resolveSurfaceUnion`)
 // so the live scope reported here is apples-to-apples with what iterate
-// enforces. 19th-wave Fix (codex r3270055214, MAJOR): the resolver was
+// enforces. the resolver was
 // moved to `core/prototyping/specResolution.ts` so this import lands
 // in the core layer instead of taking the sideways CLI → CLI hop on
 // `prototypingIterate.ts` that wave-15 left behind.
@@ -355,7 +355,7 @@ export async function runPrototypingCertify(
   // recorded while a flat `review.json` was present let certify seal a
   // per-spec-only layout the current `validate` rejects, and the certificate
   // recorded `validateRun.ranAt` as the CERTIFY instant — a timestamp
-  // manufactured at the moment the question became unanswerable (#1107).
+  // manufactured at the moment the question became unanswerable.
   //
   // Known limitations, carried forward from the sibling mtime check below
   // rather than dropped: filesystem granularity can make a write in the same
@@ -461,7 +461,7 @@ export async function runPrototypingCertify(
     // finding is `info` because a `scope: "full"` verdict on disk is not damage
     // — a full-profile run records it truthfully, and making it an `error`
     // repo-wide left `/qfai-verify` with no honest value to write outside Work
-    // Order H (#1097). Consuming such a verdict here is the actual defect, and
+    // Order H. Consuming such a verdict here is the actual defect, and
     // this refuses it.
     error(
       `qfai prototyping certify: ${verifyRead.rel} scope is "${verifyScope}" but the ` +
@@ -664,7 +664,7 @@ export async function runPrototypingCertify(
   // with completely-missing review.json files. Fall back to the
   // legacy field for pre-Wave-3 evidence that predates the
   // `frozenSpecsCovered` write.
-  // codex r3270861808 (P1, chatgpt-codex-connector): classify the
+  // classify the
   // multi-spec field so a PRESENT-but-malformed `frozenSpecsCovered`
   // (key on the record but value is a non-array / empty / non-string
   // / empty-string entry) fails closed with exit 2 instead of silently
@@ -691,7 +691,7 @@ export async function runPrototypingCertify(
   const frozenSpecsPreview =
     frozenMultiSpec.kind === "ok" ? frozenMultiSpec.value : readFrozenSpecsCovered(protoJson);
   if (frozenSpecsPreview !== null && screenContracts.length > 0) {
-    // codex r3270776268 (P2): validate canonical spec-id shape BEFORE any
+    // validate canonical spec-id shape BEFORE any
     // path construction. `normalizeSpecDirName` only strips/re-adds the
     // `spec-` prefix, so a hand-edited `prototyping.json` carrying `/`,
     // `..`, or other non-canonical characters in `frozenSpecsCovered[]`
@@ -715,24 +715,21 @@ export async function runPrototypingCertify(
     // The per-(spec × screen) gate runs for EVERY frozen set whose
     // project declares UI screens — single-spec included.
     //
-    // It used to be opt-in on the accepted iter actually holding
-    // per-spec subdirs (`iter-NN/spec-*/`), on the grounds that the
-    // shipped iterate driver + SKILL.md still told the loop to emit
-    // only the flat `iter-NN/review.json` summary. That justification
-    // is gone: the shipped skill now instructs the reviewer to write
+    // Making this opt-in on the accepted iter actually holding per-spec
+    // subdirs (`iter-NN/spec-*/`) would let any single-spec run opt out of
+    // the whole payload gate — schema, identity AND convergence — simply by
+    // never writing a payload, which is precisely the evidence gap this gate
+    // exists to close. The shipped skill instructs the reviewer to write
     // `iter-NN/<spec-id>/<screen>.review.json` at cycle 0 and at every
     // later cycle (`assistant/skills/qfai-prototyping/SKILL.md`
     // Step 2-C, `references/reviewer-prompt.md`,
-    // `references/iteration-loop.md`). Keeping the skip meant any
-    // single-spec run could opt out of the whole payload gate — schema,
-    // identity AND convergence — simply by never writing a payload,
-    // which is precisely the evidence gap this gate exists to close.
+    // `references/iteration-loop.md`).
     // A run that has no payloads now gets the missing-pair diagnostic
     // below (exit 64), which names every expected path.
     const acceptedIterAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL, acceptedIterDir);
     const hasPerSpecLayout = await hasPerSpecSubdir(acceptedIterAbs);
     if (!hasPerSpecLayout && frozenSpecsPreview.length > 1) {
-      // codex review r3264798065 (P1): a multi-spec frozen set on a
+      // a multi-spec frozen set on a
       // flat iter is reported as a STRUCTURAL incompatibility rather
       // than as N missing pairs — there is no place at all to host the
       // per-spec `<screen>.review.json` files for the secondary
@@ -779,7 +776,7 @@ export async function runPrototypingCertify(
         mismatched: mismatchedPayloads,
         unconverged: unconvergedPayloads,
       };
-      // codex r3270911400 (P1, chatgpt-codex-connector): the previous
+      // the previous
       // optimisation pre-built a per-spec map from `screenContracts.sourceRef`
       // and used it whenever the indexed entry was non-empty, only
       // falling back to `readPerSpecScreens` when the entry was
@@ -797,7 +794,7 @@ export async function runPrototypingCertify(
       // cost is negligible compared to the safety gain.
       for (const rawSpec of frozenSpecsPreview) {
         const specDirName = normalizeSpecDirName(rawSpec);
-        // codex r3265157640 (P1): when a per-spec UI contract exists at
+        // when a per-spec UI contract exists at
         // `.qfai/contracts/ui/<spec-id>.yaml`, it scopes which screens
         // are declared for THIS spec — not the project-wide screen set.
         // Pre-fix the gate required the cross-product (every spec × every
@@ -922,7 +919,7 @@ export async function runPrototypingCertify(
         for (const m of missingPairs.slice(0, 20)) {
           error(`  - ${m.spec} / ${m.screen} (expected ${m.expectedPath})`);
         }
-        // 12th-wave Fix (codex r3265482136, P2): missing review.json
+        // missing review.json
         // coverage at the per-spec layout is the same rejection class
         // as the flat-iter multi-spec coverage gap above (exit 64),
         // not an input error. The CLI contract's exit-code table
@@ -1053,7 +1050,7 @@ export async function runPrototypingCertify(
   // and certify silently re-baseline the certificate to a spec the
   // loop never exercised. The loop seed is the SSOT for what was
   // actually reviewed.
-  // codex r3270861808 (P1, chatgpt-codex-connector): mirror the per-
+  // mirror the per-
   // (spec × screen) gate's fail-closed classification at the cert-
   // sealing call site too. A PRESENT-but-malformed `frozenSpecsCovered`
   // here would downgrade the sealed certificate's `specsCovered` body
@@ -1193,7 +1190,7 @@ export async function runPrototypingCertify(
     // The run's own instant when the result carries one. `new Date()` here
     // recorded when the CERTIFICATE was built and called it when validation
     // ran, so a certificate could not be audited for the very relation it was
-    // standing for (#1107). The fallback is that old behaviour and applies only
+    // standing for. The fallback is that old behaviour and applies only
     // to a `validate.json` written before `generatedAt` existed.
     validateRun: { errorCount: 0, ranAt: validateRanAt ?? new Date().toISOString() },
     verifyRun: { status: "PASS", ranAt: new Date().toISOString() },
@@ -1242,7 +1239,7 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
  * operator can see which specs the current `/qfai-prototyping` run
  * iterates over.
  *
- * 12th-wave Fix (codex r3265482150, P2): pre-fix this command resolved
+ * pre-fix this command resolved
  * the LIVE primary spec from the config / spec markers and never read
  * `prototyping.json`. After cycle 0 the frozen scope can diverge from
  * the live config (a primary spec id renamed, markers moved between
@@ -1258,11 +1255,10 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
  *   - `frozenSpecsCoveredSource`: discriminant indicating which
  *      `prototyping.json` field the spec list was read from
  *      (`"frozenSpecsCovered"` on current records, `"specsCovered"`
- *      on pre-Wave-3 legacy records). Added in the 14th-wave fix
- *      (codex r3269198684) so operators can detect legacy seed
+ *      on older legacy records), so operators can detect legacy seed
  *      records without re-reading the file.
  *   - `frozenSurfaceUnion`: multi-spec UI-bearing UNION snapshot at
- *      cycle 0 (drift baseline). May be absent on pre-11th-wave
+ *      cycle 0 (drift baseline). May be absent on older
  *      records — surfaced as `null` so the consumer can distinguish
  *      "field absent" from "field present but empty".
  *   - `liveUiBearing`: current `resolveSurfaceUnion()` result (the
@@ -1270,9 +1266,8 @@ async function loadLockGate(root: string, contractsDir: string): Promise<LockGat
  *      frontmatter + title-marker + `primarySpecId` config pin + UI
  *      contract signals) so the live scope reported here is
  *      apples-to-apples with what iterate enforces. Emitted as
- *      `string[]` of bare spec IDs (15th + 16th-wave alignment;
- *      pre-fix the field was `SpecRef[]` from
- *      `resolveAllUiBearingSpecs`).
+ *      `string[]` of bare spec IDs; the field was previously `SpecRef[]`
+ *      from `resolveAllUiBearingSpecs`.
  *   - `primary?`: present iff a primary spec resolves; carries
  *      `{specId, specMdPath, source}`.
  */
@@ -1298,10 +1293,9 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
     return 2;
   }
   const protoRecord = protoRaw as Record<string, unknown>;
-  // codex r3271018000 (P2, chatgpt-codex-connector): show-spec previously
-  // read `frozenSpecsCovered` via `readStringArrayField`, which collapses
+  // Reading `frozenSpecsCovered` via `readStringArrayField` would collapse
   // "field absent" and "field present-but-invalid" into a single `null`
-  // return value. That let `?? readStringArrayField(protoRecord.specsCovered)`
+  // return value, letting `?? readStringArrayField(protoRecord.specsCovered)`
   // silently downgrade to legacy single-spec scope even when the operator
   // intended a multi-spec frozen scope but corrupted the JSON. certify
   // already treats a present-but-malformed `frozenSpecsCovered` as a hard
@@ -1314,14 +1308,11 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // `frozenSurfaceUnion`, not `frozenSpecsCovered`.) Use the same SSOT
   // classifier the certify call sites already consume so the three
   // surfaces — certify per-(spec × screen) gate, certify cert-sealing,
-  // and show-spec — share one absent-vs-malformed decision rule (codex
-  // r3271093206 FYI scope-narrowing note).
+  // and show-spec — share one absent-vs-malformed decision rule.
   const showSpecFrozenMultiSpec = classifyFrozenSpecsCoveredMultiSpec(protoRecord);
   if (showSpecFrozenMultiSpec.kind === "malformed") {
-    // codex r3271639132 (NIT, product-surface-reviewer, 44th-wave):
     // 2-block CTA + `Reason:` layout matches the iterate-side
-    // `frozenSurfaceUnion missing` diagnostic (introduced 24th-wave per
-    // codex r3270459355). The recovery action stays the headline; the
+    // `frozenSurfaceUnion missing` diagnostic. The recovery action stays the headline; the
     // rationale (cross-surface symmetry, iterate-side handled
     // separately) follows on an indented line after a blank separator
     // so narrow-terminal wrap cannot visually fuse the CTA with the
@@ -1353,7 +1344,7 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
     );
     return 2;
   }
-  // 14th-wave Fix (codex r3269198684, MINOR): surface which prototyping.json
+  // surface which prototyping.json
   // field the spec list was actually read from so operators doing drift
   // analysis can tell post-Wave-3 records (frozen field present) apart from
   // legacy Wave-2 records (only `specsCovered` on disk). Pre-fix the payload
@@ -1367,7 +1358,7 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // The legacy primary-resolver path is preserved as a fallback `specMdPath`
   // so existing operator tooling that reads the per-spec path keeps working.
   //
-  // 15th-wave Fix (codex r3269453293, P2): use `resolveSurfaceUnion` here
+  // use `resolveSurfaceUnion` here
   // — the SAME resolver the cycle ≥ 1 drift gate uses — so show-spec's
   // `liveUiBearing` covers the full union (strict `surface_type:
   // ui-bearing` + legacy `# … prototyping …` title-marker +
@@ -1376,12 +1367,11 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // only the strict signals; on projects relying on non-strict markers
   // operators saw a narrower live set than iterate actually enforces,
   // producing false "drift" diagnostics that did not match the iterate
-  // gate. 19th-wave Fix (codex r3270055214, MAJOR): `resolveSurfaceUnion`
+  // gate. `resolveSurfaceUnion`
   // now lives at `core/prototyping/specResolution.ts` (the canonical
   // core-layer location); `prototypingIterate.ts` only re-exports it
-  // for back-compat with the wave-8/10/13 unit tests. Both CLI
-  // commands import from the core module directly (codex r3270215029
-  // / r3270209821 21st-wave comment refresh).
+  // for back-compat with existing unit tests. Both CLI
+  // commands import from the core module directly.
   const liveUiBearing = await resolveSurfaceUnion(options.root, config);
   const primary = await resolvePrimaryPrototypingSpec(options.root, config);
   const payload: Record<string, unknown> = {
@@ -1482,8 +1472,8 @@ async function runUpgradeScopeFull(
     // saas-package=INADMISSIBLE; the canonical-admissible path
     // (operator wrote a non-saas-package profile to the canonical
     // location, or a synthetic gates map) is not reachable from the
-    // recovery message and lives outside the codex r3338253318
-    // threat model. Should the canonical-admissible path become a
+    // recovery message and lives outside this gate's threat model.
+    // Should the canonical-admissible path become a
     // recovery target in a future release, mirror this gate onto
     // canonical with the same mtime invariant. The `legacy` source
     // is also exempt — `.qfai/output/...` is the superseded layout
@@ -1629,7 +1619,7 @@ async function runUpgradeScopeFull(
     // `runSaasPackageProfile` unconditionally emits one skip-finding
     // per gate; re-running it on a fixed surface will still flag every
     // gate as skipped and the operator would loop. For any other
-    // profile name (full / verify / tdd / atdd / ...) the existing
+    // profile name (full / verify / tdd / atdd /...) the existing
     // "re-run after gates PASS" hint is correct — surface the actual
     // profile name from the signal.
     const signalProfile = isRecord(signal) ? extractString(signal, "profile") : undefined;
@@ -2679,7 +2669,7 @@ async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {
  * Returns an empty array on read / parse failure or on a missing
  * `screens:` array.
  *
- * 13th-wave Fix (codex r3265813656, MINOR): pre-fix the read / parse
+ * pre-fix the read / parse
  * failure path silently swallowed the error and returned `[]`, which
  * the aggregate-warn at the call site only surfaced when the entire
  * matched set produced zero screens. In a half-failure (e.g. three
@@ -2731,7 +2721,7 @@ async function parseUiScreenFile(
  * one exists under `<contractsDir>/ui/`. Returns the screens declared by
  * that contract, or `null` when no per-spec contract file matches.
  *
- * codex r3265157640 (P1): UI contracts can be authored either project-wide
+ * UI contracts can be authored either project-wide
  * (one `screens:` list under `.qfai/contracts/ui/`, applies to every
  * spec in the frozen set) or per-spec (one contract file per spec, scopes
  * screen declarations to THAT spec). The per-(spec × screen) certify gate
@@ -2783,7 +2773,7 @@ export async function readPerSpecScreens(
   contractsDirRelative: string,
   specDirName: string,
 ): Promise<CanonicalScreenContract[] | null> {
-  // codex r3271715563 (P1, chatgpt-codex-connector, 47th-wave): use
+  // use
   // `path.resolve` instead of `path.join` so an absolute `paths.contractsDir`
   // override in `qfai.config.yaml` (e.g. `/tmp/contracts`) resolves to
   // the absolute path directly. Pre-fix `path.join(root, "/tmp/contracts",
@@ -2834,9 +2824,8 @@ export async function readPerSpecScreens(
   if (screens.length === 0) {
     // Surface the authoring issue: per-spec UI contract files exist
     // for this spec but produced zero valid screens. Without this warn
-    // the caller silently falls back to the project-wide list (the
-    // 9th-wave cross-product behaviour). Operator gets a named path
-    // instead of a confusing "missing pair" error at the gate below.
+    // the caller silently falls back to the project-wide list. The
+    // operator gets a named path instead of a confusing "missing pair" error at the gate below.
     const relPaths = matched.map((m) => path.relative(root, m).replace(/\\/g, "/")).join(", ");
     warn(
       `qfai prototyping certify: per-spec UI contract file(s) for ${specDirName} ` +
@@ -2912,7 +2901,7 @@ function countIterations(protoJson: unknown): number {
  *     relaxes ⇒ certify rejects. Per-iteration certify is the
  *     stricter superset (it can also fire on
  *     `[exploration, convergence]` shapes that relax does NOT relax,
- *     which is the safe direction — codex r3338446583).
+ *     which is the safe direction).
  *
  * The matching `CertifyIterationView` type from explorationCertify.ts
  * is structurally compatible with `PrototypingIterationView` from

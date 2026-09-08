@@ -311,7 +311,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         });
       } else {
         // skills.integrity defaults to `warning`: direct edits to
-        // .qfai/assistant/skills/** are advisory, not active-profile-blocking.
+        //.qfai/assistant/skills/** are advisory, not active-profile-blocking.
         // The doctor 2-group renderer always routes this finding into the
         // advisory group regardless of message wording.
         addCheck(checks, {
@@ -341,10 +341,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // advisory below, the content-identical `ok` state as the `ok` check after it,
   // and the unresolved-packaged-copy skip as the `info` skip after that.
   //
-  // The chain is now TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
-  // whose three members each have an arm — where it previously stated the general
-  // rule "every status without a branch registers nothing" because the skip had no
-  // arm yet. Scoped to the STATUS TESTS on purpose, because DISPATCH is not total:
+  // The chain is TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
+  // whose three members each have an arm. Scoped to the STATUS TESTS on
+  // purpose, because DISPATCH is not total:
   // the `modified.length > 0` paragraph below says why, a `modified` status whose
   // `modified` list is empty matching this arm's status test and still registering
   // nothing. (Named rather than counted in lines — "the conjunct 16 lines below" was
@@ -926,9 +925,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 /**
  * Reports assistant assets that exceed the shipped line ceiling.
  *
- * The ceiling used to be asserted only by the framework's own asset test, which
- * is not published, so a project created by init had no way to check the rule
- * its operating baseline states. Severity is `warning`: an oversized asset is
+ * The framework's own asset test asserts the ceiling too, but it is not
+ * published, so without this check a project created by init has no way to
+ * check the rule its operating baseline states. Severity is `warning`: an oversized asset is
  * authoring drift, not something that stops the active profile.
  */
 async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
@@ -1932,7 +1931,28 @@ async function probeHttpUrl(
   }
 }
 
-function extractLiteralRequiredInputs(content: string): string[] {
+/**
+ * The path a required-input bullet names, taken off the front of it.
+ *
+ * A bullet is free to say what the input is for, and the explanation is not
+ * part of the path. Read whole, `.qfai/assistant/catalog/test-layers.md (SSOT
+ * for hard coverage obligations)` is a required input no tree can satisfy —
+ * while the file it names is on disk.
+ *
+ * The path ends at the first space, `(`, backtick or em dash; everything after
+ * that is prose.
+ */
+function leadingPath(bullet: string): string {
+  return (/^[^\s(`—]+/u.exec(bullet)?.[0] ?? "").replace(/[.,]$/u, "");
+}
+
+/**
+ * The paths an agent card's `## Inputs you must read` section requires on disk.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's public
+ * surface.
+ */
+export function extractLiteralRequiredInputs(content: string): string[] {
   const lines = content.split(/\r?\n/u);
   const items: string[] = [];
   let inInputsSection = false;
@@ -1973,13 +1993,16 @@ function extractLiteralRequiredInputs(content: string): string[] {
   return Array.from(
     new Set(
       items
-        .map((item) => item.replace(/`/gu, "").replace(/[.,]$/u, "").trim())
-        .filter(
-          (item) =>
-            item.startsWith(".") &&
-            !/[*?]/u.test(item) &&
-            !/\boptional\b|\bwhen available\b/iu.test(item),
-        ),
+        // Read against the whole bullet: a card says an input is optional in
+        // the prose beside the path, which the path itself cannot carry.
+        .filter((item) => !/\boptional\b|\bwhen available\b/iu.test(item))
+        .map((item) => leadingPath(item.replace(/`/gu, "").trim()))
+        // A glob names a set and a `<placeholder>` names a shape, so neither is
+        // a file to find: `.qfai/specs/<spec-id>/tdd/test-list.md` is one path
+        // per spec and none of them is at that name. Tested on the path so
+        // that a glob or a placeholder written in a bullet's explanation does
+        // not drop the file the bullet actually requires.
+        .filter((item) => item.startsWith(".") && !/[*?<>]/u.test(item)),
     ),
   );
 }

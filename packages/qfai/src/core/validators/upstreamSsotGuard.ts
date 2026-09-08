@@ -112,16 +112,14 @@ const NEXT_H2_RE = /^[ \t]*##[ \t]+/m;
  * what an exemption has to rest on. Reading the whole body instead let a
  * PROHIBITION grant permission — "DO NOT edit `<path>`" authorised that path —
  * and made the `## Reproduction` block that a defect-class CR is REQUIRED to
- * carry authorise the very edit it reports (#1121).
+ * carry authorise the very edit it reports.
  */
 function extractImpactScope(content: string): string {
   // Masked FIRST. A CR that documents the format inside a fenced sample —
   // which the template's instructional comments invite — would otherwise have
   // its EXAMPLE read as the authorisation, granting whatever path the example
-  // names. `collectTriageSections` masks for the same reason and records the
-  // Triage version of the bug; there an unmasked fence produced a false
-  // positive, here it produces a false EXEMPTION, which is #1121's headline
-  // re-opened by another route (#1139).
+  // names. `collectTriageSections` masks for the same reason; there an unmasked
+  // fence produces a false positive, here a false EXEMPTION.
   const masked = maskNonSpecRegions(content);
   // EVERY section, not the first. Repeating an H2 on each re-run is an
   // established shape here — `QFAI-TRIAGE-008`'s own remedy tells authors that
@@ -155,8 +153,8 @@ function extractImpactScope(content: string): string {
  * `Schema: <paths>`, so "name it by file" is what the section invites. A
  * contract ID is NOT accepted: it names a declaration inside a file, not the
  * file, and resolving one would make the exemption depend on parsing every
- * contract. The remediation says which spellings work, because the previous
- * wording was satisfied by four and only one of them was (#1121).
+ * contract. The remediation names the one spelling that works, since a vaguer
+ * wording is satisfied by four.
  */
 function scopeDeclares(scope: string, file: string): boolean {
   const base = file.slice(file.lastIndexOf("/") + 1);
@@ -194,7 +192,7 @@ function escapeForRegExp(value: string): string {
  * name this path", an array and a join answer alike. What closes the
  * repository-wide leak is the SECTION restriction above — an approved CR about
  * one spec can now exempt only what ITS OWN scope declares, so a path it quotes
- * in passing is no longer an authorisation (#1121).
+ * in passing is no longer an authorisation.
  *
  * An `open` CR authorises nothing, matching
  * `references/change-request-reset.md`.
