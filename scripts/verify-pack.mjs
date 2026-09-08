@@ -26,6 +26,12 @@ import {
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
+import {
+  findingsAwaitingPromotion,
+  formatAwaitingPromotion,
+  LEDGER_REL,
+  readRulePromotions,
+} from "./promotion-preflight.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -673,6 +679,39 @@ if (existsSync(skillsLocalDir)) {
   throw new Error("init --force generated deprecated .qfai/assistant/skills.local directory.");
 }
 
+// Stand in for the `/qfai-configure` run a project makes before it gates. The
+// four Stage 0 catalogs ship as placeholders, and `qfai init` copies them
+// verbatim: a sandbox that never fills them is a project that never ran Stage
+// 0, and gating one of those at `--fail-on error` measures the fixture rather
+// than the package. Every angle-bracket slot becomes a value, and every bare
+// TODO / TBD goes, which is what the rule reads.
+for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
+  const catalogPath = path.join(outputDir, ".qfai", "assistant", "catalog", catalogFile);
+  if (!existsSync(catalogPath)) {
+    // An `ENOENT` here names the path and nothing else, and the reader's next
+    // question is whether the file was renamed or whether init stopped writing
+    // it — which is what decides whether the fill or the package is wrong.
+    throw new Error(
+      `init --force wrote no ${catalogPath}. The four Stage 0 catalogs are what a project fills ` +
+        `before it gates, so this fill has nothing to stand in for.`,
+    );
+  }
+  const before = readFileSync(catalogPath, "utf-8");
+  // One value for both placeholder forms: they stand for the same thing, and a
+  // reader should not have to compare two strings to see that.
+  const fixtureValue = "verify-pack fixture value";
+  const after = before
+    .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
+    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
+  if (after === before) {
+    throw new Error(
+      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this stands ` +
+        `in for, so a copy with none means the fixture is measuring nothing.`,
+    );
+  }
+  writeFileSync(catalogPath, after);
+}
+
 execFileSync(
   "node",
   [cliPath, "validate", "--root", outputDir, "--fail-on", "error", "--format", "github"],
@@ -681,10 +720,20 @@ execFileSync(
   },
 );
 
-// Two questions of the same report. The run above only has to exit zero, which
-// says nothing about what it reported, and `--fail-on error` lets a warning
-// past — so the seeded review pack can be the subject of one while the run
-// stays green, and the finding set can move in either direction unnoticed.
+// Three questions of the same report, asked of the file rather than the
+// console: `--fail-on error` lets a warning past, so the run stays green while
+// the list a reader scans before shipping moves underneath it.
+//
+// The seeded review pack must not be the reason for a finding about itself.
+//
+// A rule inside a promotion window is a warning today and an error from the
+// release its pin names, and the severity follows the version of the tool that
+// is running. So a pin is otherwise only observed on the release it blocks:
+// this same gate, run against this same sandbox.
+//
+// And the finding set as a whole is compared against what was recorded, in
+// both directions — a new warning on a tree the tool wrote is a decision, and
+// a finding that is gone should stay gone.
 const validateJsonPath = path.join(outputDir, ".qfai", "report", "validate.json");
 if (!existsSync(validateJsonPath)) {
   throw new Error(
@@ -697,13 +746,13 @@ const validateReport = parseValidateReport(
   validateJsonPath,
 );
 // Stated rather than defaulted to an empty list. A report whose `issues` is
-// not a list is one this check cannot read, and reading it as "no findings"
-// gives the answer the check exists to withhold — the pass would then mean
-// the file was unreadable, and nothing would say so.
+// not a list is one these checks cannot read, and reading it as "no findings"
+// gives the answer they exist to withhold — the pass would then mean the file
+// was unreadable, and nothing would say so.
 if (!Array.isArray(validateReport.issues)) {
   throw new Error(
-    `${validateJsonPath} has no \`issues\` array. The self-finding check reads that list, so a ` +
-      `report without one is unreadable rather than clean.`,
+    `${validateJsonPath} has no \`issues\` array. These checks read that list, so a report ` +
+      `without one is unreadable rather than clean.`,
   );
 }
 const selfInflicted = validateReport.issues.filter(
@@ -716,6 +765,13 @@ if (selfInflicted.length > 0) {
         .map((issue) => `  ${issue.severity} ${issue.code} ${issue.file}: ${issue.message}`)
         .join("\n"),
   );
+}
+const awaitingPromotion = findingsAwaitingPromotion(
+  validateReport.issues,
+  await readRulePromotions(path.join(root, LEDGER_REL)),
+);
+if (awaitingPromotion.length > 0) {
+  throw new Error(formatAwaitingPromotion(awaitingPromotion));
 }
 
 const freshFindings = fingerprintReport(validateReport, validateJsonPath);

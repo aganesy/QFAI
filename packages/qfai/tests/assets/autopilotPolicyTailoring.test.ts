@@ -125,13 +125,14 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
     expect(askUser).not.toMatch(/UPDATE:REMOVE/);
     // Branding inputs belong to init / prototyping, not to an implement run.
     expect(hardRequired.length).toBe(1);
-    // `hard-required` means "cannot proceed until supplied", so the condition
-    // has to be the one that actually blocks: Spec Auto-Discovery resolving
-    // nothing. Conditioning it on "absent from inputs" instead made every
-    // ordinary single-spec run wait for an input the protocol at
-    // `## Spec Auto-Discovery Protocol` announces and proceeds on.
+    // `hard-required` means "no default is possible; supplied before
+    // proceeding", so the condition is absence from inputs. Spec Auto-Discovery
+    // narrows the candidates and does not supply the value, so the entry must
+    // not be conditioned on it resolving nothing — that would let an ordinary
+    // single-spec run proceed on a spec the user never named.
     expect(hardRequired[0]).toMatch(/`primarySpecId`/);
-    expect(hardRequired[0]).toMatch(/Auto-Discovery/i);
-    expect(hardRequired[0]).not.toMatch(/when absent from inputs/);
+    expect(hardRequired[0]).toMatch(/when absent from inputs/);
+    expect(hardRequired[0]).toMatch(/narrows the candidates but does not settle the value/);
+    expect(hardRequired[0]).not.toMatch(/so it is not a required input/);
   });
 });
