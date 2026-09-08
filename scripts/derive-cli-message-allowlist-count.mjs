@@ -95,7 +95,21 @@ export async function deriveAllowlistCount(root) {
           "counted as none.",
       );
     }
-    total += property.initializer.elements.length;
+    for (const element of property.initializer.elements) {
+      if (ts.isSpreadElement(element)) {
+        // A spread stands for however many lines its source holds, and that
+        // count is not in this file. Reading it as one element writes a pin
+        // below what the guard will measure at run time, so the command the
+        // guard names would leave the suite failing. Refusing is the only
+        // answer that cannot write a wrong number.
+        throw new Error(
+          `${ALLOWLIST_REL}: \`${property.name.getText(source)}\` spreads ` +
+            `\`${element.expression.getText(source)}\`, and the count is read off the list ` +
+            "itself. Write the lines it stands for, or count them somewhere this can read.",
+        );
+      }
+      total += 1;
+    }
   }
   return total;
 }
@@ -111,4 +125,30 @@ export async function recordedAllowlistCount(root) {
     );
   }
   return Number(match[2]);
+}
+
+/**
+ * Why a re-pin must not be written, or `null` when it may be.
+ *
+ * Translating a message lowers the number, and so does a merge whose parents
+ * each counted a smaller list than the two hold together. Raising it is the one
+ * thing the guard exists to make visible: a branch that adds a Japanese message
+ * and its allowlist entry satisfies every other assertion beside it, and a
+ * re-pin that writes any measurement would carry it past this one too.
+ *
+ * A merge taking entries the base added does legitimately raise it, so this is
+ * a refusal the caller can lift rather than a prohibition. What the lifting
+ * buys is that the raise is a deliberate step and a reviewed line.
+ */
+export function rePinRefusal({ measured, recorded, allowIncrease }) {
+  if (measured <= recorded || allowIncrease) {
+    return null;
+  }
+  return (
+    `${ALLOWLIST_REL} holds ${String(measured - recorded)} more entries than ${GUARD_REL} pins, so ` +
+    "this writes nothing. The list records what is left to translate and is expected to shrink; " +
+    "raising the pin is what lets a new Japanese message pass with its own allowlist entry. " +
+    "Translate the messages the added entries name and delete them. Pass `--allow-increase` only " +
+    "when the entries came from merging the base, and say so where the raised line is reviewed."
+  );
 }

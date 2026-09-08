@@ -29,6 +29,11 @@ type Derivation = {
   COUNT_PIN: RegExp;
   deriveAllowlistCount: (root: string) => Promise<number>;
   recordedAllowlistCount: (root: string) => Promise<number>;
+  rePinRefusal: (input: {
+    measured: number;
+    recorded: number;
+    allowIncrease: boolean;
+  }) => string | null;
 };
 
 /**
@@ -44,7 +49,8 @@ async function load(): Promise<Derivation> {
     typeof mod !== "object" ||
     mod === null ||
     !("deriveAllowlistCount" in mod) ||
-    !("recordedAllowlistCount" in mod)
+    !("recordedAllowlistCount" in mod) ||
+    !("rePinRefusal" in mod)
   ) {
     throw new Error("derive-cli-message-allowlist-count.mjs did not export its derivation");
   }
@@ -88,7 +94,7 @@ describe("deriving the allowlist count", () => {
   it("counts every entry, across files", async () => {
     const { deriveAllowlistCount } = await load();
     const root = await sandbox(
-      listOf(`  "core/a.ts": ["あ", "い"],\n  "core/b.ts": ["う"],`),
+      listOf(`  "core/a.ts": ["line one", "line two"],\n  "core/b.ts": ["line three"],`),
       guardPinning(3),
     );
 
@@ -100,7 +106,7 @@ describe("deriving the allowlist count", () => {
     // before its key is removed, and it contributes nothing.
     const { deriveAllowlistCount } = await load();
     const root = await sandbox(
-      listOf(`  "core/a.ts": [],\n  "core/b.ts": ["う"],`),
+      listOf(`  "core/a.ts": [],\n  "core/b.ts": ["line three"],`),
       guardPinning(1),
     );
 
@@ -111,9 +117,23 @@ describe("deriving the allowlist count", () => {
     // Counted as none, a shape this cannot read reports a lower number than the
     // tree holds — which reads as progress and lets the pin fall with it.
     const { deriveAllowlistCount } = await load();
-    const root = await sandbox(listOf(`  "core/a.ts": "あ",`), guardPinning(1));
+    const root = await sandbox(listOf(`  "core/a.ts": "line one",`), guardPinning(1));
 
     await expect(deriveAllowlistCount(root)).rejects.toThrow(/not an array of lines/);
+  });
+
+  it("refuses a list that spreads its entries from elsewhere", async () => {
+    // A spread stands for however many lines its source holds, and that count
+    // is not in this file. Read as one element it writes a pin below what the
+    // guard measures at run time, so the command the guard names would leave
+    // the suite failing on a number this tool had just written.
+    const { deriveAllowlistCount } = await load();
+    const root = await sandbox(
+      listOf(`  "core/a.ts": [...sharedEntries],\n  "core/b.ts": ["line three"],`),
+      guardPinning(2),
+    );
+
+    await expect(deriveAllowlistCount(root)).rejects.toThrow(/spreads `sharedEntries`/);
   });
 
   it("refuses a module that binds no allowlist", async () => {
@@ -127,7 +147,7 @@ describe("deriving the allowlist count", () => {
 
   it("reads the number the guard pins", async () => {
     const { recordedAllowlistCount } = await load();
-    const root = await sandbox(listOf(`  "core/a.ts": ["あ"],`), guardPinning(42));
+    const root = await sandbox(listOf(`  "core/a.ts": ["line one"],`), guardPinning(42));
 
     expect(await recordedAllowlistCount(root)).toBe(42);
   });
@@ -136,7 +156,10 @@ describe("deriving the allowlist count", () => {
     // Read as zero, a guard with no literal holds the list to nothing while
     // still reporting a comparison.
     const { recordedAllowlistCount } = await load();
-    const root = await sandbox(listOf(`  "core/a.ts": ["あ"],`), "const SOMETHING_ELSE = 1;\n");
+    const root = await sandbox(
+      listOf(`  "core/a.ts": ["line one"],`),
+      "const SOMETHING_ELSE = 1;\n",
+    );
 
     await expect(recordedAllowlistCount(root)).rejects.toThrow(/no `ALLOWLISTED_MESSAGE_COUNT`/);
   });
@@ -160,6 +183,39 @@ describe("deriving the allowlist count", () => {
         "",
       ].join("\n"),
     );
+  });
+});
+
+describe("which direction a re-pin may write", () => {
+  it("writes a measurement below the pin", async () => {
+    // Translating a message deletes its entry, and so the number falls. So does
+    // a merge whose parents each counted a smaller list than the two hold
+    // together. Neither is a correction anyone owes.
+    const { rePinRefusal } = await load();
+
+    expect(rePinRefusal({ measured: 770, recorded: 772, allowIncrease: false })).toBeNull();
+    expect(rePinRefusal({ measured: 772, recorded: 772, allowIncrease: false })).toBeNull();
+  });
+
+  it("refuses a measurement above the pin", async () => {
+    // The direction the number exists to make visible. A branch that adds a
+    // Japanese message and its allowlist entry satisfies every other assertion
+    // beside the count, so a re-pin that wrote any measurement would carry it
+    // past the last one too.
+    const { rePinRefusal } = await load();
+    const refusal = rePinRefusal({ measured: 774, recorded: 772, allowIncrease: false });
+
+    expect(refusal).toContain("2 more entries");
+    expect(refusal).toContain("--allow-increase");
+  });
+
+  it("writes a measurement above the pin when the caller asks for it", async () => {
+    // A merge taking entries the base added does raise the count legitimately.
+    // The flag is what makes that a deliberate step rather than the same
+    // command everyone runs without reading.
+    const { rePinRefusal } = await load();
+
+    expect(rePinRefusal({ measured: 774, recorded: 772, allowIncrease: true })).toBeNull();
   });
 });
 
