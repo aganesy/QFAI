@@ -490,3 +490,146 @@ describe("check-mdschema command resolution", () => {
     expect(findMdschemaCommand(root)?.args?.[0]).not.toBe(path.join(packageDir, "bin", "cli.js"));
   });
 });
+
+/**
+ * `--scope changed` judges each touched document against its own state at the
+ * merge base.
+ *
+ * Without that, a document predating the schema fails whole, so editing one
+ * line of it reports every violation it already had as this branch's — and the
+ * migration the flag exists to allow can never land incrementally, because the
+ * first edit to a legacy document has to carry all of it.
+ *
+ * These cases need a real repository with two commits, which the tree builders
+ * above do not make: outside a repository the scope degrades and fails open to
+ * `all`, where no ratchet applies.
+ */
+describe("the ratchet in --scope changed", () => {
+  function git(root: string, ...args: string[]): void {
+    const done = spawnSync("git", args, { cwd: root, encoding: "utf-8" });
+    if (done.status !== 0) {
+      throw new Error(`git ${args.join(" ")} failed: ${done.stderr ?? ""}`);
+    }
+  }
+
+  /**
+   * A repository holding `base` on `main`, with `head` committed on a branch.
+   *
+   * Every document is written at both revisions, so a case says what changed by
+   * giving the two states rather than by mutating a tree between commands.
+   */
+  async function twoCommits(
+    base: Record<string, string>,
+    head: Record<string, string>,
+  ): Promise<string> {
+    const root = await newTempDir();
+    git(root, "init", "-q", "-b", "main", ".");
+    git(root, "config", "user.email", "lane@example.com");
+    git(root, "config", "user.name", "lane");
+    for (const [pack, body] of Object.entries(base)) {
+      await writeSpec(root, pack, body);
+    }
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "base");
+    git(root, "checkout", "-q", "-b", "work");
+    for (const [pack, body] of Object.entries(head)) {
+      await writeSpec(root, pack, body);
+    }
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "head");
+    return root;
+  }
+
+  /** The same legacy document at both revisions, one line longer at the head. */
+  const LEGACY = "# spec: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
+  const LEGACY_EDITED = `${LEGACY}- one more line\n`;
+
+  it("leaves a pre-existing failure to its own change when a branch edits the document", async () => {
+    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no new violations");
+    expect(result.stdout).toContain("already failing at the merge base");
+  });
+
+  it("reports the inherited failure rather than dropping it", async () => {
+    // Held back is not the same as hidden. A document nobody is told about is
+    // one nobody migrates, which is the backlog this flag exists to let shrink.
+    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
+
+    expect(result.stdout).toContain("pre-existing, not this branch's");
+    expect(result.stdout).toContain("01_Spec.md");
+    expect(result.stdout).toContain("PASS  spec-overview (1 file(s), 1 pre-existing)");
+  });
+
+  it("fails when a branch breaks a document that conformed at the merge base", async () => {
+    const root = await twoCommits(
+      { "spec-0001": CONFORMING_SPEC },
+      { "spec-0001": NON_CONFORMING_SPEC },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("spec-overview");
+  });
+
+  it("fails when a branch adds a document that does not conform", async () => {
+    // Absent at the base is not "was already failing". This is the first run
+    // that could have reported it.
+    const root = await twoCommits({ "spec-0001": CONFORMING_SPEC }, { "spec-0003": LEGACY });
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+  });
+
+  it("still fails for what the branch owes when it also edits a legacy document", async () => {
+    const root = await twoCommits(
+      { "spec-0001": CONFORMING_SPEC, "spec-0002": LEGACY },
+      { "spec-0001": NON_CONFORMING_SPEC, "spec-0002": LEGACY_EDITED },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    // The two are separated by where they are printed: what this branch owes
+    // goes to stderr with the failure, the inherited one to stdout without it.
+    expect(result.stderr).toContain("spec-0001");
+    expect(result.stderr).not.toContain("spec-0002");
+    expect(result.stdout).toContain("spec-0002");
+  });
+
+  it("does not excuse a document the merge base checked against another contract", async () => {
+    // Live at the base and retired at the head is two document shapes at one
+    // path. Running the base text against the head's contract would fail it for
+    // lacking a section only the retired shape owes, and the real omission
+    // would read as pre-existing.
+    const retiredWithoutItsRecord = CONFORMING_SPEC.replace(
+      "# 01 Spec\n",
+      "# 01 Spec\n\n- Status: superseded\n",
+    );
+    const root = await twoCommits(
+      { "spec-0001": CONFORMING_SPEC },
+      { "spec-0001": retiredWithoutItsRecord },
+    );
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("spec-overview-retired");
+  });
+
+  it("holds every violation against --scope all, which is the migration view", async () => {
+    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain("pre-existing");
+  });
+});

@@ -427,6 +427,37 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`check-mdschema --scope changed` no longer reports a document's old
+  violations as this branch's** (#1360). The flag selects the documents a branch
+  touched and validated each one whole, so a document predating the schema
+  failed in full. Editing one line of a legacy document reported every violation
+  it already had — in one measured run, 55 of them for a four-line change, none
+  about the changed lines.
+
+  That made the migration the flag exists to allow impossible to land
+  incrementally: the first edit to a legacy document had to carry all of it.
+
+  Each touched document is now judged against its own state at the merge base.
+
+  | at the merge base | at the head | verdict                                |
+  | ----------------- | ----------- | -------------------------------------- |
+  | not there         | fails       | this branch's — fail                   |
+  | conforms          | fails       | this branch's — fail                   |
+  | fails             | fails       | pre-existing — reported, does not fail |
+
+  A document the base checked against a different contract — routed elsewhere by
+  a `when:` predicate, or opted out — counts as not there, since this is the
+  first run that could hold it to this schema.
+
+  The unit is the document, not the violation: a branch adding an eleventh
+  violation to a document that already had ten still passes. `mdschema` renders
+  the same text for every `--format`, so a violation-level ratchet would couple
+  the lane to one release's wording, and a reflowed message would report
+  everything as new.
+
+  `--scope all` is unchanged. It is the migration view, and every violation is
+  its subject.
+
 - **The rule summary in `AGENTS.md` no longer contradicts its own master**
   (#1392). `.agents/rules/documentation-clarity.md` forbids issue and pull
   request numbers in source and Markdown, and exempts four surfaces: the pull
