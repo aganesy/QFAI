@@ -6,6 +6,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **An ATDD annotation counts when it is written into a test's name** (#1255).
+  The scan read comments and not string literals, so
+  `it("QFAI:SPEC-0018:TC-0018-0056 …")` did not count and `QFAI-ATDD-112`
+  reported the obligation as unreferenced — while naming a directory that held a
+  passing test whose title was that exact id.
+
+  It is the placement people reach for first, because it is the one place where
+  the id is also in the runner's output, so it is what anyone copies when adding
+  a test. The failure ran in the worst direction: the file read as coverage to
+  every person who opened it, and the gate stayed red.
+
+  Reading only comments was right for the reason it was chosen. A fixture
+  holding these ids as data — a digest table, a generator, a ledger quoting the
+  id it is about — would otherwise read as covering every id it names. A test's
+  name is the one literal that cannot be data: it is the first argument of a
+  declaration, and a table of ids never appears in one. A declaration written
+  inside a string is data again and still does not count, so a generator that
+  emits test files cannot cover an obligation by quoting it.
+
+  `catalog/test-layers.md` now says where an annotation may sit. It described
+  what a carrier is and never said the annotation had to be in a comment.
+
 - **Test files inherit the declared `testTimeout` instead of overriding it**
   (#1246). Ninety-three ceilings across 50 files sat below the project's 120 s
   default, and nothing distinguished one somebody measured from one nobody had

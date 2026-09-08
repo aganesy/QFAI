@@ -85,7 +85,55 @@ function maskTestSource(file: string, text: string): string {
   if (!JS_TEST_EXTENSIONS.has(path.extname(file).toLowerCase())) {
     return text;
   }
-  return maskJsNonCode(text, { comments: false });
+  return restoreTestNames(maskJsNonCode(text, { comments: false }), text);
+}
+
+/**
+ * A test's own name, in three parts: the runner, the call up to the name, and
+ * the name itself.
+ *
+ * The runner may carry modifiers before the call that takes the name
+ * (`it.each(rows)`, `describe.skipIf(x)`), and the name may be written in any
+ * of the three quote forms.
+ */
+const TEST_NAME_RE =
+  /\b(it|test|describe|suite|bench|scenario)((?:\s*\.\s*[A-Za-z_$][\w$]*(?:\s*\([^()]*\))?)*\s*\(\s*)("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
+
+/**
+ * Puts each test's name back into the masked text.
+ *
+ * Masking every literal is what keeps an id a fixture holds as DATA from
+ * reading as a reference, and that has to stay. But it also blanked the
+ * placement a person reaches for first — the annotation written into the test's
+ * own name, where it is *also* visible in the runner's output, so it is what
+ * anyone copies when adding a test. The gate then reported the obligation as
+ * unreferenced while pointing at a directory holding a passing test that named
+ * that exact id, which reads as the gate being broken.
+ *
+ * A name is safe to read where an arbitrary literal is not: it is the first
+ * argument of a test declaration, so a table of ids held as data never appears
+ * in one, whatever else the file does.
+ *
+ * **The declaration must survive masking to count.** A fixture that writes a
+ * test file as a template literal contains the same characters, and reading
+ * those would restore the data hazard by the back door. Masking blanks the
+ * contents of literals and leaves code alone, so a runner name still standing
+ * at its own offset is code — and one that is not is quoted, whatever it spells.
+ *
+ * The mask replaces one character for one, so a restored name goes back at the
+ * offset it came from and every later offset is unmoved.
+ */
+function restoreTestNames(masked: string, original: string): string {
+  let restored = masked;
+  for (const match of original.matchAll(TEST_NAME_RE)) {
+    const [, runner = "", call = "", name = ""] = match;
+    if (!restored.startsWith(runner, match.index)) {
+      continue;
+    }
+    const start = match.index + runner.length + call.length;
+    restored = restored.slice(0, start) + name + restored.slice(start + name.length);
+  }
+  return restored;
 }
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
