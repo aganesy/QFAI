@@ -39,6 +39,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Assuming visual leaves a CLI project unable to proceed, and assuming `cli`
   strips a visual one of its review.
 
+- **`--spec` drops a sibling's stub the way it drops a sibling's broken
+  reference** (#1264). `cross-spec-obligations.md` already said a file under the
+  canonical `tests/<layer>/spec-NNNN/**` layout is owned by that spec whatever
+  its annotation says. The rule was applied to a broken reference and not to the
+  file itself, so one layout answered two ways: a scoped run dropped a sibling's
+  dangling reference and kept a sibling's stub, and every spec in a repository
+  recorded the same sibling's stub until its owner cleared it.
+
+  A path in that layout now resolves to its spec wherever a scoped run reads
+  one. The directory decides, not the annotation — that is what the rule says,
+  and it is the half a path can answer.
+
+  A test file outside the layout still has no owner and reaches every run, and
+  `--profile full` is unscoped and unchanged. Attribution decides which run
+  reports a stub, never whether the repository is clean.
+
 - **The Drift Protocol no longer justifies its parking rule with a claim the
   ledger contradicts** (#1312). Two shipped documents said only a `todo` row can
   be parked, and cited the transition table — which admits
