@@ -1,5 +1,5 @@
 /**
- * A gate that fails nondeterministically has a route (#392).
+ * A gate that fails nondeterministically has a route.
  *
  * The Autorepair Protocol offered `environment/tooling` as a class and attached
  * no action to it: the autonomous-fix line covers two of the five classes, the

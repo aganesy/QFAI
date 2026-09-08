@@ -2088,8 +2088,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours prototyping.primarySp
     }
   });
 
-  // Regression for codex review r3264507311 (MAJOR): pre-fix the
-  // cycle-0 primarySpecId-bypass left `earlyUiBearing = []`, which
+  // A cycle-0 primarySpecId-bypass would leave `earlyUiBearing = []`, which
   // then wrote `frozenSpecsCovered: []` at cycle 0 and reliably
   // tripped the cycle ≥1 spec-set drift check (`removed: [primary]`,
   // exit 2). The fix expands `earlyUiBearing` to the resolved primary
@@ -2250,7 +2249,7 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
     }
   });
 
-  // Regression for 4th-late-review-wave r3264653396 (MAJOR): symmetric
+  // Regression for 4th-late-review-wave r3264653396: symmetric
   // cycle-1 drift gap for the title-marker bypass. TC-0012-0397
   // (primarySpecId) pins the cycle-1 path for the primarySpecId
   // bypass — TC-0012-0398 above only covers cycle 0 for the
@@ -2338,11 +2337,10 @@ describe("runPrototypingIterate cycle-0 no-op gate honours legacy title marker",
   });
 });
 
-// Regression for codex review r3264765749 (P2) + 8th-wave Fix 2:
-// pre-fix the title-marker + primarySpecId bypass branch in
-// `evaluateZeroUiBearingPrecheck` was reached ONLY when the strict scan
-// returned `[]`. The 6th wave widened it to always compose the union
-// so the cycle-0 frozen set captured every UI-bearing surface. The
+// With single-spec freeze: the title-marker + primarySpecId bypass branch in
+// `evaluateZeroUiBearingPrecheck` would be reached ONLY when the strict scan
+// returned `[]`. Composing the union always instead means the cycle-0 frozen
+// set captures every UI-bearing surface. The
 // 8th wave then narrowed the FROZEN write back to single-spec because
 // the certify per-(spec × screen) gate now hard-fails any multi-spec
 // frozen set on the flat-iter layout (the per-spec layout migration
@@ -2421,7 +2419,7 @@ describe("runPrototypingIterate cycle-0 frozen set (single-spec, primary resolve
   });
 });
 
-// Regression for codex review r3265060281 (P2): a project that declares
+// Regression for a project that declares
 // its UI surface ONLY via `.qfai/contracts/ui/<spec-id>.yaml` (no
 // `surface_type: ui-bearing` frontmatter, no `# … Prototyping …` title
 // marker, no `prototyping.primarySpecId` config pin) clears the cycle-0
@@ -2644,7 +2642,7 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
     expect(await resolveSurfaceUnion(root, config)).toEqual(["0007"]);
   });
 
-  // codex r3271656121 (P1, chatgpt-codex-connector): pin the
+  // pin the
   // `specDirExists` absolute-path fix — when `qfai.config.yaml` carries
   // an absolute `paths.specsDir` override, the primarySpecId-on-disk
   // probe must resolve to that absolute path (not concatenate root +
@@ -2660,7 +2658,7 @@ describe("resolveSurfaceUnion (direct unit test for the union composition rule)"
     // (root + absolute) would visibly miss the on-disk spec.
     const externalSpecsDir = await newTempDir();
     await seedSimpleConfig(root, ["prototyping:", '  primarySpecId: "0042"']);
-    // codex r3271708081 (MINOR, requirements-reviewer, 46th-wave): the
+    // The
     // `specsDir` override is performed via the string-replace below —
     // the canonical key is `paths.specsDir`, and there is no
     // `specsDirOverride` field in the qfai.config schema. The earlier
@@ -2765,7 +2763,7 @@ describe("runPrototypingIterate cycle >= 1 spec-set drift — new larger-id seco
   });
 });
 
-// 11th-wave Fix (codex r3265480688, MAJOR/P1): the cycle ≥ 1 drift gate
+// The cycle ≥ 1 drift gate
 // must compare the live UNION against the cycle-0 UNION (apples-to-apples),
 // not against the single-spec `frozenSpecsCovered`. Without this fix, any
 // project whose baseline already carries ≥ 2 UI-bearing specs would
@@ -2908,7 +2906,7 @@ describe("runPrototypingIterate cycle >= 1 — legacy record without frozenSurfa
 
 // 18th late-review wave (codex r3270057892, MAJOR — qa-gatekeeper).
 // Regression coverage for the 13th-wave license-catalog drift gate
-// (codex r3265947252, P2): when `prototyping.json#frozenLicenseCatalog`
+// when `prototyping.json#frozenLicenseCatalog`
 // drifts from the in-memory SSOT `DEFAULT_LICENSE_CATALOG` at cycle ≥ 1,
 // iterate exits 2 with a re-seed instruction rather than silently
 // using the edited catalog as the verifier authority.
@@ -3012,7 +3010,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
   });
 });
 
-// 10th-wave Fix H (codex r3265260665, P2): malformed `imageSources[]`
+// 10th-wave Fix H: malformed `imageSources[]`
 // entries are no longer silently dropped. Pre-fix a typo such as
 // `licence:` (British spelling) reduced the array to `[]`, skipping
 // the exit-66 license gate entirely. Post-fix the iterate command
@@ -3242,8 +3240,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
   });
 });
 
-// 29th-wave Fix (codex r3270687650, P1 — chatgpt-codex-connector).
-// Regression: a converged / max-budget loop must NOT bypass the
+// A converged / max-budget loop must NOT bypass the
 // cycle ≥ 1 lock-drift gates. Pre-fix `shouldStop()` ran first and a
 // converged loop with mid-loop UI marker removal silently returned
 // exit 64 instead of the documented exit-2 lock-drift. The drift
@@ -3332,8 +3329,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
   });
 
   it("returns exit 2 (frozenSurfaceUnion missing) on a converged loop with the union field absent — drift-class (e) also wins over shouldStop", async () => {
-    // codex r3270897052 (MINOR, qa-gatekeeper, 34th-wave companion):
-    // the wave-30 reorder moved TWO drift classes before `shouldStop`:
+    // TWO drift classes run before `shouldStop`:
     // (1) `frozenUnion === null` (frozenSurfaceUnion missing/malformed)
     //     and (2) `drift.drifted` (live UNION ≠ frozen UNION). The
     // first `it` block above pins (2). Without this second `it` a
@@ -3406,7 +3402,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
 });
 
 // ---------------------------------------------------------------------------
-// Sealed-loop guard (#246). Only the converged state seals a loop. The
+// Sealed-loop guard. Only the converged state seals a loop. The
 // retryable terminal stop reasons — `license-verify-fail` and `input-error` —
 // name a condition the operator is told to fix and re-run on the same cycle,
 // and refusing those made the retry impossible: `acceptedIterationIndex` keeps

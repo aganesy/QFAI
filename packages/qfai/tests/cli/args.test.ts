@@ -35,7 +35,7 @@ describe("parseArgs", () => {
       // through to the current directory, so `validate --dir <path>` answered
       // about the CURRENT tree and `report --dir <path>` overwrote its
       // `report.md`. A confident verdict about a tree the operator did not name
-      // is worse than an error, because it looks like an answer (#1143).
+      // is worse than an error, because it looks like an answer.
       const parsed = parseArgs([command, "--dir", "/tmp/elsewhere"], process.cwd());
       expect(parsed.invalid).toBe(true);
     });
@@ -54,7 +54,7 @@ describe("parseArgs", () => {
     it(`rejects --upgrade-assistant-tree on ${command}`, () => {
       // The same shape as --dir and worse in one way: accepted here it exited 0
       // having upgraded nothing, so the operator went on reading an assistant
-      // tree they believed had been refreshed (#1143).
+      // tree they believed had been refreshed.
       const parsed = parseArgs([command, "--upgrade-assistant-tree"], process.cwd());
       expect(parsed.invalid).toBe(true);
     });
@@ -64,7 +64,7 @@ describe("parseArgs", () => {
     // The owner lists are derived from where `main.ts` reads each field. A flag
     // accepted where nothing reads it reaches nothing and the run proceeds as if
     // it had not been given — `--dry-run` most sharply, since an operator who
-    // believes a run is a rehearsal gets a real one (#1144).
+    // believes a run is a rehearsal gets a real one.
     //
     // `handoff` and `prototyping` take a subcommand, so their rows name one: a
     // bare `handoff` is invalid for its own reasons and would pass a rejection
@@ -621,7 +621,7 @@ describe("parseArgs", () => {
   describe("unknown flags", () => {
     // The usage-error code is one number for every command. It used to be 1 by
     // default with `guardrails` alone raised to 2 by name, which contradicted
-    // `prototyping iterate`'s canonical matrix (#755). The default is 2 now, so
+    // `prototyping iterate`'s canonical matrix. The default is 2 now, so
     // the by-name branch assigned the value it already had - dead, and still
     // reading as "guardrails is special". Asserted over a spread of commands
     // rather than one, because a single case cannot tell a default from a

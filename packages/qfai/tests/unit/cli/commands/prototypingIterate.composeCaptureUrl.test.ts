@@ -1,10 +1,10 @@
 /**
  * Direct unit tests for `composeCaptureUrl`.
  *
- * PR #210 wave-10 reviewer feedback (MINOR): the helper is exported
- * from `prototypingIterate.ts` for testability but the wave-8 / wave-9
- * landings only exercised it indirectly through the integration test
- * harness (`prototypingIterate.cliCapture.test.ts`). The export then
+ * The helper is exported from `prototypingIterate.ts` for testability,
+ * but earlier landings only exercised it indirectly through the
+ * integration test harness (`prototypingIterate.cliCapture.test.ts`).
+ * The export then
  * surfaces in `dist/*.d.ts` as a public API. Two ways to reconcile the
  * surface: (a) add direct unit tests so the export is justified by
  * direct contract coverage; (b) drop the export. Path (a) is taken
@@ -23,8 +23,7 @@
  *   6. unparseable URL composition (`new URL(...)` throws inside the
  *      try/catch) → `{ ok: false, reason }` with the operator-facing
  *      `--target-url=` flag named (NOT the internal `targetUrl=`
- *      field name). Added in PR #210 wave-12 to pin the operator
- *      surface of the catch branch.
+ *      field name), pinning the operator surface of the catch branch.
  */
 import { describe, expect, it } from "vitest";
 

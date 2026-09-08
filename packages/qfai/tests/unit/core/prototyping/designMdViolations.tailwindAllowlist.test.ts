@@ -7,15 +7,14 @@
  *   - Custom properties whose name matches `/^--tw-/` (the Tailwind
  *     internal property family) are stripped from the scan surface
  *     at the declaration-level pass (`SHADOW_DECL_STRIP_RE`).
- *   - Head `<style>` blocks ARE scanned (PR #210 wave-12 Codex P2 fix);
- *     a Tailwind preflight `<style>` block placed in `<head>` is
- *     excluded only by the two primary signatures: banner comment
- *     (`/* tailwindcss v* /`) OR universal-reset selector
- *     (`*, ::before, ::after { box-sizing... }`). The `--tw-` prefix
- *     alone is intentionally NOT a block-level classifier (PR #210
- *     wave-14 false-negative fix) — operator-authored stylesheets in
- *     `<head>` that happen to carry a single `--tw-*` declaration
- *     stay in scope so color literals surface as DESIGN.md drift.
+ *   - Head `<style>` blocks ARE scanned: a Tailwind preflight `<style>`
+ *     block placed in `<head>` is excluded only by the two primary
+ *     signatures: banner comment (`/* tailwindcss v* /`) OR
+ *     universal-reset selector (`*, ::before, ::after { box-sizing... }`).
+ *     The `--tw-` prefix alone is intentionally NOT a block-level
+ *     classifier — operator-authored stylesheets in `<head>` that
+ *     happen to carry a single `--tw-*` declaration stay in scope so
+ *     color literals surface as DESIGN.md drift.
  */
 
 import { describe, expect, it } from "vitest";

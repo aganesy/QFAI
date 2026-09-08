@@ -258,7 +258,7 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
-      // 11th-wave Fix (codex r3265482136, P2): the per-spec layout
+      // the per-spec layout
       // coverage gap returns exit 64 — same class as the flat-iter
       // multi-spec coverage rejection — not exit 2 (input error).
       // Lock the exit code so a future regression to exit 2 fails
@@ -919,7 +919,7 @@ describe("qfai prototyping certify (single-spec flat-iter no longer skips the pe
   });
 
   // QFAI:SPEC-0012:TC-0012-0403
-  // codex review r3264798065 (P1): tighten the flat-iter skip. Pre-fix
+  // tighten the flat-iter skip. Pre-fix
   // the skip was unconditional, so a multi-spec frozen set on a flat
   // iter (no per-spec subdir) silently passed certify — re-opening
   // TDD-0387's vulnerability (a frozen secondary spec ships a sealed
@@ -979,7 +979,7 @@ describe("qfai prototyping certify (single-spec flat-iter no longer skips the pe
 describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives sealed cert.specsCovered when both fields are populated)", () => {
   // QFAI:SPEC-0012:TC-0012-0405
   it("seals the completion certificate with the multi-spec frozen set (frozen wins over legacy specsCovered) when both fields are populated and every (spec, screen) pair has its review.json", async () => {
-    // 7th late-review wave (codex r3264968439, LOW): TC-0012-0399 (the
+    // 7th late-review wave: TC-0012-0399 (the
     // existing precedence test) is a NEGATIVE assertion — it confirms
     // the multi-spec read by observing certify reject when the
     // secondary spec's review.json is missing. This complementary
@@ -1024,7 +1024,7 @@ describe("qfai prototyping certify (TC-0012-0405: frozenSpecsCovered drives seal
 describe("qfai prototyping certify (TC-0012-0406: legacy-only specsCovered fallback seals cleanly when frozenSpecsCovered absent)", () => {
   // QFAI:SPEC-0012:TC-0012-0406
   it("seals the completion certificate with the legacy specsCovered single-spec scope when frozenSpecsCovered is entirely absent (pre-Wave-3 evidence)", async () => {
-    // 7th late-review wave (codex r3264968439, LOW): companion to
+    // 7th late-review wave: companion to
     // TC-0012-0405. TC-0012-0400 (the existing fallback test) is a
     // NEGATIVE assertion (certify rejects when a fallback-scoped spec
     // is missing review.json). This POSITIVE assertion confirms the
@@ -1101,7 +1101,7 @@ describe("qfai prototyping certify (TC-0012-0400: legacy specsCovered fallback w
 
 describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope the (spec × screen) gate)", () => {
   // QFAI:SPEC-0012:TC-0012-0407
-  // 9th late-review wave (codex r3265157640, P1): when per-spec UI
+  // 9th late-review wave: when per-spec UI
   // contracts declare a non-uniform screen set (spec-0001 → home only;
   // spec-0002 → settings only), the per-(spec × screen) gate must use
   // each spec's OWN contract — not the cross-product of every spec
@@ -1158,7 +1158,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
     expect(exit).toBe(0);
   });
 
-  // 11th late-review wave (codex r3265376163, P2): the per-spec
+  // 11th late-review wave: the per-spec
   // UI contract resolver `readPerSpecScreens` supports 5 file-naming
   // candidates but only candidate #1 (`spec-NNNN.yaml`) was exercised
   // by tests. Add explicit coverage for #2 (`<bare>.yaml`) and #3
@@ -1166,8 +1166,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
   // present-path assertions matching the README documentation.
   // QFAI:SPEC-0012:TC-0012-0418 — wave-11 traceability stitch for the
   // four canonical-layout `it` blocks below (#2 bare-numeric / #3
-  // ui-prefixed / #5 recursive subdir / #1 first-hit-wins). Closes
-  // the missing TC annotation flagged by codex r3265811711 (MAJOR).
+  // ui-prefixed / #5 recursive subdir / #1 first-hit-wins).
   it("respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1307,7 +1306,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
   // Negative companion: per-spec scope still enforces presence WITHIN
   // each spec's declared set. spec-0001 declares two screens; missing
   // one of them must still fail.
-  // 11th-wave Fix (codex r3265482136, P2): per-spec layout missing-
+  // per-spec layout missing-
   // review returns exit 64 (coverage class), not exit 2 (input error).
   it("returns exit 64 (coverage rejection) when per-spec layout is missing a declared review.json", async () => {
     const root = await newTempDir();
@@ -1386,7 +1385,7 @@ describe("qfai prototyping certify (TC-0012-0407: per-spec UI contracts scope th
 });
 
 describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical id validation)", () => {
-  // codex r3270776268 (P2, chatgpt-codex-connector): when a hand-edited
+  // when a hand-edited
   // `prototyping.json` carries non-canonical spec ids in
   // `frozenSpecsCovered[]` (`/`, `..`, whitespace, etc.), certify must
   // reject the record up-front rather than feed the string to
@@ -1456,7 +1455,7 @@ describe("qfai prototyping certify (TC-0012-0425: frozenSpecsCovered canonical i
 });
 
 describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but-malformed fails closed)", () => {
-  // codex r3270861808 (P1, chatgpt-codex-connector): when
+  // when
   // `prototyping.json` carries a present-but-malformed
   // `frozenSpecsCovered` (key on the record but value fails the
   // string-array contract), certify must exit 2 instead of silently
@@ -1509,7 +1508,7 @@ describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but
     ["empty array", [], "empty"],
     ["array with non-string entry (number)", [42], "non-string"],
     ["array with empty-string entry", ["0012", ""], "empty-string"],
-    // codex r3270923641 (P1): explicit `null` on a present key must
+    // explicit `null` on a present key must
     // fail closed (NOT silently fall back to legacy specsCovered).
     ["explicit null", null, "null"],
   ])(
@@ -1559,10 +1558,7 @@ describe("qfai prototyping certify (TC-0012-0426: frozenSpecsCovered present-but
 });
 
 describe("qfai prototyping certify (TC-0012-0427: shared-screenId multi-file subdir requires full per-spec re-parse)", () => {
-  // codex r3270911400 (P1, chatgpt-codex-connector) + codex r3271008259
-  // / r3271011545 (qa-gatekeeper + requirements-reviewer 37th-wave
-  // traceability stitch): pin the wave-35 partial-set bug fix at the
-  // requirement / test layer. Pre-fix the `indexPerSpecScreens()`
+  // Pre-fix the `indexPerSpecScreens()`
   // optimisation pre-built a per-spec map from project-wide
   // `screenContracts.sourceRef`. For multi-file subdir layouts where
   // two specs declared the SAME `screenId` (e.g. both spec-0001 and
@@ -1649,7 +1645,7 @@ describe("qfai prototyping certify (TC-0012-0427: shared-screenId multi-file sub
 });
 
 describe("readPerSpecScreens (TC-0012-0430: absolute paths.contractsDir override)", () => {
-  // codex r3271715563 (P1, chatgpt-codex-connector, 47th-wave): pin the
+  // pin the
   // `path.resolve` switch in `readPerSpecScreens`. Pre-fix the helper
   // built `uiDir = path.join(root, contractsDirRelative, "ui")`. When
   // `qfai.config.yaml` carries an absolute `paths.contractsDir`

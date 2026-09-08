@@ -629,7 +629,7 @@ describe("qfai prototyping certify --check", () => {
 });
 
 describe("qfai prototyping show-spec", () => {
-  // 11th-wave Fix (codex r3265482150, P2): show-spec reads the cycle-0
+  // show-spec reads the cycle-0
   // frozen `specsCovered[]` from prototyping.json. Tests must seed the
   // file or expect exit 2.
   it("returns 0 with the frozen specsCovered when prototyping.json is seeded", async () => {
@@ -778,7 +778,6 @@ describe("qfai prototyping show-spec", () => {
     }
   });
 
-  // codex r3271018000 (P2, chatgpt-codex-connector, 38th-wave):
   // show-spec previously read `frozenSpecsCovered` via the same
   // `readStringArrayField(...) ?? readStringArrayField(specsCovered)`
   // pattern that wave-33 fixed on the certify side. That let a

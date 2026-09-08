@@ -1,5 +1,5 @@
 /**
- * Contracts are reconciled against the obligations written after them (#383).
+ * Contracts are reconciled against the obligations written after them.
  *
  * `/qfai-sdd` authors contracts in Phase 0, before the `BR`/`AC`/`TC` that
  * reference them are written in Phase 2 — and no later phase, checklist or

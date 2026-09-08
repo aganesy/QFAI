@@ -6,7 +6,7 @@
  * `annotations=40/40`, which reads as "every finding was emitted", while the runner displayed ten
  * and dropped thirty in silence. The summary is the only thing an operator sees, and it said the
  * opposite of what happened. Measured on the `test (cli)` lane, all three levels sat at exactly
- * ten — the truncation was the steady state, not an edge case (#1164).
+ * ten — the truncation was the steady state, not an edge case.
  *
  * ## What the rows below are about, and why the partition one is the important one
  *
