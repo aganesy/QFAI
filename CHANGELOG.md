@@ -27,6 +27,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
+  The rule already wrote two messages: one naming the coverage-target TC the
+  spec declares, and one calling `tdd/test-list.md` optional because it
+  declares none. Both were reported at `warning`, so the second was a warning
+  its own text said nothing could be done about, one per such spec.
+
+  The severity now follows the message. A spec that owes rows is unchanged, and
+  the error it carries — `TDDLIST_TC_NOT_COVERED` — is unchanged as well.
+
 - **The density rules no longer report a spec that has stopped applying**
   (#1304). `QFAI-DENSITY-001` through `-004` read every spec pack's section
   files for the IDs they should carry. A spec declaring `Status: superseded`,
