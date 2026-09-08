@@ -318,19 +318,23 @@ function validateDependencyDeclaration(
   );
   const windowNote =
     dependencyDeclarationSeverity === "warning"
-      ? `（${DEPENDENCY_DECLARATION_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+      ? ` Reported as a warning until the ${DEPENDENCY_DECLARATION_PROMOTION} release, then an error.`
       : "";
   const id = ids[0] ?? "";
   return [
     issue(
       "QFAI-CONTRACT-015",
-      `契約ファイルが適用順の依存関係を宣言していません: ${id}${windowNote}`,
+      `Contract file declares no apply-order dependency: ${id}.${windowNote}` +
+        " Until it does, an index row reading `-` for this contract agrees with it by default:" +
+        " QFAI-CONTRACT-033 compares the two, so such a row is unmeasured rather than agreed," +
+        " and reports as soon as this declaration names anything.",
       dependencyDeclarationSeverity,
       file,
       "contracts.dependencyDeclaration",
       [id],
       "change",
-      "`.sql` には `-- Depends on: CON-DB-0002`、`.yaml` / `.json` には `x-qfai-depends-on: [CON-API-0002]` を追加してください。先に適用すべき契約が無い場合は `-` と明記します。",
+      "Add `-- Depends on: CON-DB-0002` to a `.sql` file, or `x-qfai-depends-on: [CON-API-0002]` " +
+        "to a `.yaml` / `.json` one. Write `-` when no contract has to be applied first.",
     ),
   ];
 }
