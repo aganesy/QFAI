@@ -267,11 +267,11 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
 
   it("border-color 4-side shorthand with all named colors flags every token", () => {
     // `border-color: red blue green red` is valid CSS shorthand for
-    // top/right/bottom/left. Pre-fix, `^[a-z]+$` skipped multi-token
-    // values entirely; named-color drift was silent on the longhand
-    // shorthand. Post-fix, each whitespace-separated token is
+    // top/right/bottom/left. `^[a-z]+$` alone would skip multi-token
+    // values entirely, leaving named-color drift silent on the longhand
+    // shorthand — instead each whitespace-separated token is
     // checked against CSS_NAMED_COLORS independently.
-    // #242 also made the return value one entry per distinct {kind, found}
+    // The return value is also one entry per distinct {kind, found}
     // pair, so the repeated `red` collapses; each distinct token is still
     // reported, which is what this obligation is about.
     const html = '<div style="border-color: red blue green red"></div>';
@@ -392,11 +392,11 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
   });
 
   it("rgb() carrying a nested var() is reported through its final paren", () => {
-    // Issue #242: Tailwind's rendered DOM writes the opacity-variable form.
-    // A `[^)]*` body stops at the inner `)`, so the reported `found` lost the
+    // Tailwind's rendered DOM writes the opacity-variable form.
+    // A `[^)]*` body would stop at the inner `)`, so the reported `found` would lose the
     // outer one — an unbalanced string that is invalid CSS and appears nowhere
-    // in the source, which sends the operator looking for a value that does
-    // not exist. The body admits one level of nesting, so the match now runs
+    // in the source, which would send the operator looking for a value that does
+    // not exist. The body admits one level of nesting, so the match runs
     // to the closing paren of the `rgb(` invocation itself.
     const html = '<div style="background: rgb(23 56 77 / var(--tw-bg-opacity, 1))"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
@@ -525,9 +525,9 @@ describe("findDesignMdViolations — radius (TC-3.2.16..20)", () => {
   });
 
   it("a browser-reserialized leading-zero-less radius matches its DESIGN.md token", () => {
-    // Issue #242: DESIGN.md registers `0.375rem`, but a value that has been
+    // DESIGN.md registers `0.375rem`, but a value that has been
     // through the browser's CSS serializer comes back as `.375rem`. Comparing
-    // the raw strings reported that as drift against the operator's own token.
+    // the raw strings would report that as drift against the operator's own token.
     const designMd = sampleDesignMd({
       radius: { sm: "0.375rem", md: "0.5rem", lg: "0.75rem", full: "9999px" },
     });
@@ -610,7 +610,7 @@ describe("findDesignMdViolations — aggregation (TC-3.2.25..28)", () => {
     const out = findDesignMdViolations(html, sampleDesignMd());
     const colorHits = out.filter((v) => v.kind === "color" && v.found === "#abcdef");
     // Both regions are scanned; the shared value is reported once because
-    // #242 de-duplicates on {kind, found}. Scanning coverage is asserted by
+    // results de-duplicate on {kind, found}. Scanning coverage is asserted by
     // the region-specific cases above.
     expect(colorHits.length).toBe(1);
   });
@@ -973,7 +973,7 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-inner")).toBe(true);
   });
 
-  // ── #243: radius / shadow alias allowance is envelope-conditional ──
+  // ── Radius / shadow alias allowance is envelope-conditional ──
   //
   // A DESIGN.md key of the same name is necessary but NOT sufficient.
   // `prototypingCertify` hands each html straight to

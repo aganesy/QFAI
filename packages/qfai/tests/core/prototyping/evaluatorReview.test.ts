@@ -770,10 +770,10 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0387 — replaced in 11th late-review wave to align with
+// QFAI:SPEC-0012:TC-0012-0387 — aligns with
 // the CLI contract §Review payload SSOT (`.qfai/contracts/cli/qfai-prototyping.md`
-// L161-200). The legacy flat `timeBudgetSoftWarning?: string` field has been
-// removed in favor of the SSOT-compliant required `softWarnings.timeBudget: boolean`
+// L161-200). The legacy flat `timeBudgetSoftWarning?: string` field is
+// replaced by the SSOT-compliant required `softWarnings.timeBudget: boolean`
 // nested form.
 describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () => {
   it("accepts softWarnings.timeBudget = true and surfaces it on the parsed payload", () => {
@@ -878,13 +878,12 @@ describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () =
   });
 });
 
-// 11th late-review wave: the CLI contract §Review payload SSOT requires
+// The CLI contract §Review payload SSOT requires
 // 11 top-level fields. Verify the new required fields are validated.
 // QFAI:SPEC-0012:TC-0012-0417 — closed-schema validation of the new
-// required fields surfaced by CHG-002 (cycle / retryCount / wallTimeSec
-// / softWarnings). Wave-13 added the upper-bound regression
-// (`cycle > MAX_ITERATION_INDEX`) to close the closed-schema gap noted
-// by codex r3265809796 / r3265811203 / r3265814987.
+// required fields from CHG-002 (cycle / retryCount / wallTimeSec
+// / softWarnings), including the upper-bound regression
+// (`cycle > MAX_ITERATION_INDEX`) that closes the closed-schema gap.
 describe("parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)", () => {
   it("rejects when cycle is missing", () => {
     const payload = baseReviewerPayload();
@@ -909,7 +908,7 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
     expect(stringy.ok).toBe(false);
   });
 
-  // 13th late-review wave: codex r3265814987 / r3265811203 — the CLI contract
+  // The CLI contract
   // pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9); the parser must
   // reject `cycle > 9` so reviewer-emitted payloads cannot bypass the
   // closed-schema contract via the upper-bound gap.

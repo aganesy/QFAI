@@ -70,8 +70,8 @@ describe("classifyFrozenSpecsCoveredMultiSpec (codex r3270861808 P1 — absent v
   });
 
   it("returns `malformed` when the key is present but value is explicitly null", () => {
-    // codex r3270923641 (P1, chatgpt-codex-connector): a hand-edited
-    // `"frozenSpecsCovered": null` is corrupt edit, NOT a "field
+    // A hand-edited
+    // `"frozenSpecsCovered": null` is a corrupt edit, NOT a "field
     // omitted" record — falling back to legacy `specsCovered` here
     // would silently downgrade multi-spec certification scope. The
     // classifier must distinguish "key absent on record" from "key

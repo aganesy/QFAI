@@ -87,7 +87,7 @@ import {
 // enforces. the resolver was
 // moved to `core/prototyping/specResolution.ts` so this import lands
 // in the core layer instead of taking the sideways CLI → CLI hop on
-// `prototypingIterate.ts` that wave-15 left behind.
+// `prototypingIterate.ts`.
 import {
   classifyFrozenSpecsCoveredMultiSpec,
   readFrozenSpecsCovered,
@@ -651,7 +651,7 @@ export async function runPrototypingCertify(
   //     valid and the per-pair gate skips, preserving the long-standing
   //     single-page test fixtures.
   //
-  // Per-spec screen contracts are deferred to reviewerDispatch (Wave 1).
+  // Per-spec screen contracts are deferred to reviewerDispatch.
   // Today, UI contracts under `.qfai/contracts/ui/` are project-wide,
   // so the same screen list applies to every spec in the frozen set.
   //
@@ -661,7 +661,7 @@ export async function runPrototypingCertify(
   // single-spec field would silently iterate ONLY the primary spec
   // and let a frozen-set secondary spec ship a sealed certificate
   // with completely-missing review.json files. Fall back to the
-  // legacy field for pre-Wave-3 evidence that predates the
+  // legacy field for legacy evidence that predates the
   // `frozenSpecsCovered` write.
   // classify the
   // multi-spec field so a PRESENT-but-malformed `frozenSpecsCovered`
@@ -1040,7 +1040,7 @@ export async function runPrototypingCertify(
   // review.json files exist for the secondary specs — corrupting the
   // audited scope of a completed multi-spec run. Mirror the per-(spec
   // x screen) review.json gate above: prefer the multi-spec field;
-  // fall back to the legacy single-spec field for pre-Wave-3 evidence
+  // fall back to the legacy single-spec field for legacy evidence
   // that predates the `frozenSpecsCovered` write so older runs still
   // certify cleanly.
   //
@@ -1345,10 +1345,10 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   }
   // surface which prototyping.json
   // field the spec list was actually read from so operators doing drift
-  // analysis can tell post-Wave-3 records (frozen field present) apart from
-  // legacy Wave-2 records (only `specsCovered` on disk). Pre-fix the payload
-  // emitted the value under the key `frozenSpecsCovered` regardless of
-  // source, which masked the signal that cycle 0 was seeded with the
+  // analysis can tell current records (frozen field present) apart from
+  // legacy records (only `specsCovered` on disk). Emitting the payload's
+  // value under the key `frozenSpecsCovered` regardless of
+  // source would mask the signal that cycle 0 was seeded with the
   // pre-multi-spec schema.
   const frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered" =
     frozenSpecsCovered !== null ? "frozenSpecsCovered" : "specsCovered";
@@ -2780,7 +2780,7 @@ export async function readPerSpecScreens(
   // absolute-segment reset), so per-spec contract discovery missed every
   // file under the absolute contractsDir. Certify then fell back to the
   // project-wide screen list and enforced wrong (spec, screen) coverage
-  // for explicit-contracts-dir workflows. Mirrors the wave-45 fix for
+  // for explicit-contracts-dir workflows. Mirrors the same fix for
   // `specDirExists` against `paths.specsDir`.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const bareNumeric = specDirName.replace(/^spec-/iu, "");

@@ -132,7 +132,7 @@ describe("iterate --license-patch add-only diff", () => {
     const row = proto.licensePatchAudit[0];
     expect(isLicensePatchAuditRow(row)).toBe(true);
     expect(row.addedSources).toEqual(["wikimedia-commons"]);
-    // Option A (Codex P1 wave-4): `frozenLicenseCatalog` stays equal to
+    // Option A: `frozenLicenseCatalog` stays equal to
     // the cycle-0 baseline (DEFAULT) so the drift gate on cycle >= 1
     // does NOT false-fire after a successful patch. The patched source
     // lives in the audit ledger and is replayed at verify-time via
@@ -171,8 +171,8 @@ describe("iterate --license-patch add-only diff", () => {
     expect(exit).toBe(2);
   });
 
-  // Codex P1 wave-4 (Option A): cycle-0 `--license-patch` no longer
-  // self-incompatibly overwrites `frozenLicenseCatalog`. The patched
+  // Option A: cycle-0 `--license-patch` must not
+  // self-incompatibly overwrite `frozenLicenseCatalog`. The patched
   // source lives in the audit ledger; cycle-1 verify replays the audit
   // rows via `effectiveLicenseCatalog(frozen, auditRows)` so a
   // post-patch source is allowlisted on subsequent cycles.
@@ -255,14 +255,14 @@ describe("iterate --license-patch add-only diff", () => {
     expect(errorCodes).not.toContain("license-not-allowlisted");
   });
 
-  // Codex P1 wave-11: tier replay regression. Before the fix, an audit
-  // row produced by a `--license-patch` that added both a new source
-  // and its tier mapping persisted only the source addition. The
-  // cycle >= 1 replay (`effectiveLicenseCatalog`) then rebuilt
-  // `allowedSources` correctly but left `licenseTiers[source]`
-  // undefined, so `licenseVerify` raised `license-tier-unknown` for
-  // any image claiming the patched source. The fix extends the audit
-  // row with an optional `addedLicenseTiers` field that the replay
+  // Tier replay: an audit
+  // row produced by a `--license-patch` that adds both a new source
+  // and its tier mapping must persist both. Persisting only the source
+  // addition would leave `licenseTiers[source]`
+  // undefined after the cycle >= 1 replay (`effectiveLicenseCatalog`)
+  // rebuilds `allowedSources`, so `licenseVerify` would raise `license-tier-unknown` for
+  // any image claiming the patched source. The audit
+  // row carries an optional `addedLicenseTiers` field that the replay
   // path unions into the rebuilt `licenseTiers`.
   it("cycle 0 --license-patch with addedLicenseTiers is replayed on cycle 1 via the audit ledger", async () => {
     const root = await newTempDir();

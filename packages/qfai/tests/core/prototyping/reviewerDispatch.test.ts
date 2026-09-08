@@ -15,7 +15,7 @@
  * Deferred (NOT implemented here — see batch report):
  *   - TC-0012-0374 — Reviewer Playwright-session failure hard-stop
  *     (requires live Reviewer sub-agent + Playwright wiring + run-exit
- *     plumbing; out of scope for the Wave 1 stub landing).
+ *     plumbing; out of scope for this stub landing).
  *   - TC-0012-0383 — Reviewer navigates every primary menu entry
  *     (requires real Playwright session + prototype harness fixture).
  *
@@ -55,17 +55,17 @@ const PROTOTYPING_ITERATE_SRC = path.join(
  * call-site token; we are NOT trying to parse TypeScript.
  */
 /**
- * Comments blanked, literals kept — the shared reduction (#1089).
+ * Comments blanked, literals kept — the shared reduction.
  *
- * This replaced two independent `replace` passes, which is the original defect:
- * each delimiter occurs inside the other's body, so whichever regex ran first
- * read the other's content as its own opener. On this file's ONE subject,
- * `cli/commands/prototypingIterate.ts`, that removed **11,381 characters of
- * non-comment text** and lost 91 identifiers — among them
+ * Two independent `replace` passes would each risk the same defect:
+ * each delimiter occurs inside the other's body, so whichever regex runs first
+ * would read the other's content as its own opener. On this file's ONE subject,
+ * `cli/commands/prototypingIterate.ts`, that would remove **11,381 characters of
+ * non-comment text** and lose 91 identifiers — among them
  * `resolvedCaptureScreens`, adjacent to the very token asserted against below.
  *
- * The assertion here is a NEGATIVE, so over-deletion made it easier to pass:
- * this guard could have gone quiet without ever reddening.
+ * The assertion here is a NEGATIVE, so over-deletion would make it easier to pass:
+ * this guard could go quiet without ever reddening.
  */
 function stripComments(source: string): string {
   return withoutComments(source);

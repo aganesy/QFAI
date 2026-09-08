@@ -940,7 +940,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
   // the skipped gates regressed, then promote via an OLDER
   // validate-full.json (counts.error=0) that was written before the
   // regression — silently re-asserting a passing full scope on stale
-  // evidence. Codex r3338201990.
+  // evidence.
   it("refuses upgrade when validate-full.json mtime is older than the scope-limited certificate", async () => {
     const { utimes } = await import("node:fs/promises");
     const root = await newTempDir();
@@ -1003,7 +1003,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     expect(cert.scope).toBe("saas-package");
   });
 
-  // Pin the canonical-freshness invariant (codex r3338309038):
+  // Pin the canonical-freshness invariant:
   // even when validate-full.json is NEWER than the scope-limited
   // certificate (so the cert-vs-full freshness gate above passes), it
   // MUST also be newer than any present canonical saas-package signal.

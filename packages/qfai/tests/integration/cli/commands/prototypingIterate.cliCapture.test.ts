@@ -172,11 +172,10 @@ describe("iterate --capture: (2) threading via injected captureScreen", () => {
 });
 
 describe("iterate --capture: (3) default Playwright runner fallback when captureScreen omitted", () => {
-  // Determinism note (PR #210 wave-Batch-C):
+  // Determinism note:
   //
-  // The Phase 2 follow-up landing carried a non-deterministic assertion
-  // (`expect(typeof exit).toBe("number")`) that passed regardless of
-  // whether Playwright was installed in the test environment — masking
+  // A bare `expect(typeof exit).toBe("number")` assertion would pass regardless of
+  // whether Playwright is installed in the test environment — masking
   // the missing-dep path CI is supposed to cover. Deterministic
   // interception of `await import("playwright")` inside
   // `defaultCaptureScreen` is not reliable across vitest versions

@@ -229,7 +229,7 @@ describe("licenseVerify — non-https URL guard", () => {
   });
 });
 
-// 10th-wave Fix G (codex r3265260657, P1): when the catalog declares
+// When the catalog declares
 // `sourceHosts`, the URL host must match the per-source allowlist.
 // QFAI:SPEC-0012:TC-0012-0411
 describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
@@ -295,7 +295,7 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
     expect(licenseVerify(sources, hostBoundCatalog)).toEqual({ ok: true });
   });
 
-  // 11th-wave Fix (codex r3265474144, P2): the catalog side is also
+  // The catalog side is also
   // compared case-insensitively so a user catalog with a capitalized
   // host (e.g. `"Images.Unsplash.com"`) does not false-positive reject
   // a valid URL. RFC 3986 §3.2.2: host is case-insensitive.
@@ -320,7 +320,7 @@ describe("licenseVerify — per-source URL host binding (TC-0012-0411)", () => {
   });
 });
 
-// 10th-wave Fix G backward-compat: catalogs that pre-date the
+// Backward-compat: catalogs that pre-date the
 // `sourceHosts` field continue to work — the host check is skipped.
 // QFAI:SPEC-0012:TC-0012-0412
 describe("licenseVerify — backward compat: catalog without sourceHosts (TC-0012-0412)", () => {
@@ -340,7 +340,7 @@ describe("licenseVerify — backward compat: catalog without sourceHosts (TC-001
   });
 });
 
-// 11th-wave Fix (codex r3265482144, P2): attribution is required at the
+// Attribution is required at the
 // runtime license gate. Undefined and empty-string both surface as the
 // new `license-missing-attribution` error → exit 66 per the CLI
 // contract's exit-code class table.
@@ -394,10 +394,10 @@ describe("licenseVerify — attribution is required (TC-0012-0414)", () => {
     ]);
   });
 
-  // 14th-wave Fix (codex r3269193005, MINOR): whitespace-only attribution
+  // Whitespace-only attribution
   // (spaces / tabs / newlines / ideographic-space) is semantically the
-  // same class as "missing"; pre-fix the gate only rejected `undefined`
-  // / empty-string and let `"   "` slip through.
+  // same class as "missing"; rejecting only `undefined`
+  // / empty-string would let `"   "` slip through.
   it.each([
     ["spaces", "   "],
     ["tab + newline", "\t\n"],

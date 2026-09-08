@@ -180,7 +180,7 @@ export function resolveWorkflowFileState(
  * Whether every directory between `rootDir` and the record is a real directory rather than a link.
  *
  * The leaf protections — `O_NOFOLLOW` on the read, write-then-`rename` on the write — are about the
- * FINAL component and say nothing about the path that reaches it. Review finding [09]/[31]: if the
+ * FINAL component and say nothing about the path that reaches it: if the
  * adopter's `.qfai` is itself a symlink to a writable directory outside the repository, `mkdir`,
  * the temp file and the `rename` all land over there. `qfai init` would create and replace an
  * `install-provenance.json` in a tree it was never pointed at, and the reader would take ownership
@@ -266,7 +266,7 @@ export async function writeInstallProvenance(
 
   const serialized = `${JSON.stringify(serializeRecord(record), null, 2)}\n`;
   // Checked BEFORE the rename, because the reader's ceiling is on the file and the writer's
-  // indentation is what can cross it. Review finding [13]: a valid record whose compact form is
+  // indentation is what can cross it: a valid record whose compact form is
   // well under the limit can pretty-print past it — an unknown namespace holding a large array is
   // enough — and the write then succeeds while the very next `readInstallProvenance` treats the
   // file as oversized and returns an EMPTY record. Every ownership and declined marker would be
@@ -285,7 +285,7 @@ export async function writeInstallProvenance(
   const tempPath = path.join(recordDir, `.install-provenance.${randomUUID()}.tmp`);
   // The directory's IDENTITY, pinned across the write.
   //
-  // Review finding [73]: `ancestorsAreRealDirectories` runs before the `mkdir` and again
+  // `ancestorsAreRealDirectories` runs before the `mkdir` and again
   // after it, and then this writes — three pathname operations with the same gap between
   // them the reviewer-artifact writers already close. A concurrent process that moves
   // `.qfai` aside and leaves a link in its place has the staging file created on the far
@@ -441,7 +441,7 @@ const LOCK_CONFIRM_MS = 5_000;
  * before writing, and the second write is built on the first's stale copy: entries the first run
  * recorded vanish. The file they describe stays on disk with no entry, which the next run reads
  * as `adopter-owned`, so nothing ever records it again and doctor's drift check is lost for that
- * name permanently. Review finding [03].
+ * name permanently.
  *
  * Two mechanisms, because neither alone is enough:
  *
@@ -479,7 +479,7 @@ export async function updateInstallProvenance(
   // THEIR content and written again. That converges whatever the lock does: each pass re-applies
   // onto the newest content, so the writer that finishes last leaves a record holding every
   // writer's entries, and every earlier writer notices its own pass was overtaken and repeats.
-  // Review finding [03] asked for the lost update to stop; this is the part that does not depend
+  // This is what stops the lost update directly; it is the part that does not depend
   // on the lock being perfect.
   for (let attempt = 1; attempt <= UPDATE_ATTEMPTS; attempt += 1) {
     const release = await acquireRecordLock(recordDir);
@@ -535,18 +535,17 @@ const LOCK_DIR_NAME = ".install-provenance.lock.d";
  * Takes the lock, waiting for a live holder and reclaiming an abandoned one.
  *
  * The whole difficulty is removing a lock whose owner is gone without removing one that is
- * alive, and every earlier attempt failed the same way: it identified the lock by its PATH.
+ * alive. Identifying the lock by its PATH does not work, in any of these forms:
  *
- * - Review finding [23]: reclaiming by `unlink` let two writers that observed the same stale
- *   lock both remove it — the second removing the first's FRESH lock.
- * - Then a second `wx` lock guarding the reclaim, which had the same defect one level down.
- * - Then a two-`stat` identity check on the lock file, which narrowed the window to one syscall
- *   and said so in a paragraph headed "what remains".
- * - Review finding [39] pointed at the RELEASE, which still had the original shape: read the
- *   token, then `unlink` the path. A holder stalled past the staleness ceiling reads its own
- *   token, another writer reclaims and publishes a fresh lock at the same name, and the stalled
- *   holder's `unlink` deletes THAT — putting two writers in the section at once, which is the
- *   lost update this primitive exists to prevent.
+ * - Reclaiming by `unlink` alone: two writers that observe the same stale
+ *   lock could both remove it — the second removing the first's FRESH lock.
+ * - A second `wx` lock guarding the reclaim: the same defect recurs one level down.
+ * - A two-`stat` identity check on the lock file: narrows the window to one syscall,
+ *   but does not close it.
+ * - Reading the token, then `unlink`ing the path, at RELEASE: a holder stalled past the
+ *   staleness ceiling reads its own token, another writer reclaims and publishes a fresh
+ *   lock at the same name, and the stalled holder's `unlink` deletes THAT — putting two
+ *   writers in the section at once, which is the lost update this primitive exists to prevent.
  *
  * So the lock stops being a path whose contents identify its holder, and becomes a DIRECTORY
  * whose ENTRY NAMES do. Every removal here then names one specific holder, or refuses:
@@ -579,9 +578,9 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
 
   // The marker's mtime is the holder's sign of life, and something has to keep moving it.
   //
-  // Review finding [46]: it was stamped once, at acquisition, and a writer whose
-  // read-modify-write ran longer than `LOCK_STALE_MS` — a slow disk, a suspended process, a
-  // loaded machine — was then reclaimed while it was still inside the section. Two writers in
+  // Stamping it once, at acquisition, is not enough: a writer whose
+  // read-modify-write runs longer than `LOCK_STALE_MS` — a slow disk, a suspended process, a
+  // loaded machine — would then be reclaimed while it is still inside the section. Two writers in
   // there at once is the lost update this primitive exists to prevent, and it is not
   // self-healing: the file stays on disk with no entry, reads as `adopter-owned`, and is never
   // recorded again.
@@ -600,8 +599,8 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
   /**
    * Give the lock up, removing an object this holder can still identify as its own.
    *
-   * Review finding [122]: this was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
-   * resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
+   * `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
+   * resolved through the lock NAME at the moment of the call, is not enough: anything that can write `.qfai/`
    * can move the acquired directory aside and leave a symlink to somewhere else in its place —
    * and the marker's name is readable out of the acquired directory, so an external file can be
    * waiting under exactly that name. The unlink then followed the link and deleted it.
@@ -621,13 +620,13 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
     clearInterval(heartbeat);
     if (held === undefined) return; // never published, so nothing under that name is ours
 
-    // The canonical name is never MOVED, and that is review finding [137].
+    // The canonical name is never MOVED.
     //
-    // The previous version checked the identity and then renamed the lock aside. Those are two
+    // Checking the identity and then renaming the lock aside would be two
     // syscalls: a holder that verified its own lock, stalled, was reclaimed as stale and
     // replaced, and then resumed would move its SUCCESSOR's directory — and if a third writer
-    // took the freed name, the restore declined and two writers were inside the section at
-    // once. Narrowing the window does not close it, because the operation itself acted on a
+    // took the freed name, the restore would decline and two writers would be inside the section at
+    // once. Narrowing the window would not close that, because the operation would still act on a
     // NAME rather than on this holder's object.
     //
     // So it acts on the object. `rmdir` removes a directory only when it is empty, and the
@@ -639,7 +638,7 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
     if (standing.isSymbolicLink() || !standing.isDirectory()) {
       // Swapped for something that is not a lock. Not followed and not removed: taking away a
       // link somebody else put there is the act this whole primitive refuses, and the next run
-      // stops on it with the path named. Review finding [122].
+      // stops on it with the path named.
       return;
     }
     if (standing.dev !== held.dev || standing.ino !== held.ino) {
@@ -658,7 +657,7 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
 
   // The lock path itself, before anything is created or removed under it.
   //
-  // Review finding [47]: `ancestorsAreRealDirectories` checks the components ABOVE the record,
+  // `ancestorsAreRealDirectories` checks the components ABOVE the record,
   // and this is a leaf beside it. An adopter — or anything that can write `.qfai/` — could
   // leave `.install-provenance.lock.d` as a symlink to a directory outside the tree, and the
   // reclaim below would then enumerate THAT directory and unlink every entry in it older than
@@ -670,7 +669,7 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
 
   await mkdir(staging, { recursive: true });
   // Read here, under a name nothing else knows, so it is the identity of an object this
-  // process made rather than of whatever a path resolves to later. Review finding [134].
+  // process made rather than of whatever a path resolves to later.
   const staged = await lstat(staging).catch(() => undefined);
 
   // Every failure below leaves the heartbeat renewing a marker this process does not hold, and
@@ -789,13 +788,12 @@ async function publishLock(staging: string, lockDir: string): Promise<boolean> {
  *
  * ## The identity
  *
- * Compared against the STAGING directory's identity, read before the rename rather than from the
- * lock name after it. Review finding [128] introduced this identity: release used to free the
- * canonical NAME before it could tell whose lock was under it, so a stalled holder that resumed
- * after being reclaimed moved its successor's lock aside. Review finding [134] then found the
- * identity itself taken the wrong way — `lstat(lockDir)` after the rename asks what is at that
- * name NOW, which is not necessarily what was just put there. A `rename` is atomic, so the
- * object that arrived is the object that was staged, and `staged` was read under a private name
+ * Compared against the STAGING directory's identity, read before the rename, rather than from the
+ * lock name after it. Freeing the canonical NAME before telling whose lock is under it would let a
+ * stalled holder that resumes after being reclaimed move its successor's lock aside. Reading the
+ * identity via `lstat(lockDir)` after the rename would not fix that either — it asks what is at
+ * that name NOW, which is not necessarily what was just put there. A `rename` is atomic, so the
+ * object that arrives is the object that was staged, and `staged` is read under a private name
  * nothing else could reach.
  *
  * ## Why it is read more than once
@@ -848,11 +846,11 @@ async function confirmPublishedLock(
  *
  * Everything destructive here acts on an object this call MOVED, never through the lock's name.
  *
- * Review finding [62] is the fourth on this function and the first that could not be answered by
- * checking harder: `lstat` the directory, compare its `dev`/`ino`, `lstat` each marker — and the
- * `unlink` still resolved `lockDir/<marker>` through a parent component a concurrent process could
- * replace one syscall earlier, at which point the removal lands on an external file of the same
- * name. Every version of that repair was an identity check followed by a pathname operation.
+ * Checking harder is not enough: `lstat` the directory, compare its `dev`/`ino`, `lstat` each
+ * marker — and the `unlink` would still resolve `lockDir/<marker>` through a parent component a
+ * concurrent process could replace one syscall earlier, at which point the removal would land on
+ * an external file of the same name. An identity check followed by a pathname operation cannot
+ * close that gap, however carefully the identity is checked.
  *
  * So the lock is RENAMED to a name nothing else holds, and then examined. `rename` does not follow
  * the final component, so a lock name that has become a symlink arrives as the link itself: it is
@@ -949,10 +947,10 @@ async function markerAges(dir: string): Promise<number[] | undefined> {
     if (observed === undefined || !observed.isFile()) {
       return undefined;
     }
-    // A NEGATIVE age is a marker dated in the future, and it was read as the freshest
-    // possible holder. Review finding [67]: a clock rolled back, restored filesystem
+    // A NEGATIVE age is a marker dated in the future, and it must not be read as the freshest
+    // possible holder: a clock rolled back, restored filesystem
     // metadata, or a hostile tree makes `age <= LOCK_STALE_MS` true until the wall clock
-    // catches up — so a lock with no process behind it is never reclaimed, and every
+    // catches up — so a lock with no process behind it would never be reclaimed, and every
     // `qfai init` waits out its whole patience and fails with `another process is writing`.
     //
     // A small tolerance, because a marker written moments ago on a filesystem whose clock is
@@ -1048,7 +1046,7 @@ function extractWorkflows(parsed: unknown): Record<string, WorkflowProvenanceEnt
   }
   // A NULL-prototype map, filled with `defineProperty` — the same shape
   // `extractOtherNamespaces` below already uses, and for the same reason one step further
-  // in. Review finding [66]: `workflows["__proto__"] = entry` creates no own property. It
+  // in. `workflows["__proto__"] = entry` creates no own property. It
   // REPLACES the prototype of the map, so a record carrying a `__proto__` object with a
   // valid digest, version and timestamp plus a key of its own makes
   // `record.workflows["qfai-tests.yml"]` answer an INHERITED entry — and a first `init` with
@@ -1077,7 +1075,7 @@ function extractOtherNamespaces(parsed: unknown): Record<string, unknown> | unde
   if (!isRecordObject(parsed)) {
     return undefined;
   }
-  // A NULL-prototype map, and `defineProperty` rather than assignment. Review finding [09]:
+  // A NULL-prototype map, and `defineProperty` rather than assignment:
   // a newer package version that adds a `__proto__` namespace to the record would, on an older
   // version, reach `other[key] = value` — which calls the prototype setter and creates no own
   // property at all. `seen` still went true, so the namespace vanished from the spread and from
@@ -1121,7 +1119,7 @@ function toWorkflowEntry(value: unknown): WorkflowProvenanceEntry | undefined {
   // from ever writing the workflow again. A corrupt entry must be DROPPED so
   // the name falls back to `absent`, the state that installs.
   //
-  // TRIMMED, not raw. Review finding [31]: `length === 0` is a check about a string, and
+  // TRIMMED, not raw: `length === 0` is a check about a string, and
   // the question here is whether the entry names a version. `"   "` answers no and passed,
   // so a record carrying it was kept, and a name whose file is absent then reads as
   // `declined` — the one state `qfai init` never repairs. Whitespace is not a version.
@@ -1143,8 +1141,8 @@ function isIsoTimestamp(value: string): boolean {
   if (Number.isNaN(parsed)) {
     return false;
   }
-  // `Date.parse` NORMALIZES rather than rejecting: review finding [16] measured
-  // `Date.parse("2020-02-31T00:00:00Z")` on Node 24 returning March 2 instead of NaN, so a date
+  // `Date.parse` NORMALIZES rather than rejecting:
+  // `Date.parse("2020-02-31T00:00:00Z")` on Node 24 returns March 2 instead of NaN, so a date
   // that does not exist on the calendar passed as a valid timestamp. An entry carrying one keeps
   // its name in the record, and `resolveWorkflowCopySet` then reads that name as `declined` — a
   // workflow the adopter never removed is never created, permanently.
@@ -1152,11 +1150,11 @@ function isIsoTimestamp(value: string): boolean {
   // Round-tripping is what separates a parsed date from an accepted one: the calendar fields are
   // read back out of the resulting instant and compared with the ones written down.
   //
-  // In the offset the timestamp DECLARES, though, not in UTC. Review finding [28]: the pattern
+  // In the offset the timestamp DECLARES, though, not in UTC: the pattern
   // above admits `+05:00`, and `2020-01-01T00:00:00+05:00` is 2019-12-31 once converted — so a
-  // UTC comparison rejected a perfectly ordinary ISO 8601 instant, dropped its entry, and left the
-  // workflow it named reading as `adopter-owned`, which is the same permanent loss of drift
-  // detection the [16] repair existed to prevent. Shifting the instant by the stated offset puts
+  // UTC comparison would reject a perfectly ordinary ISO 8601 instant, drop its entry, and leave the
+  // workflow it named reading as `adopter-owned`, the same permanent loss of drift
+  // detection normalization above exists to prevent. Shifting the instant by the stated offset puts
   // the fields back in the frame they were written in; a date that is not on the calendar is still
   // normalized away by `Date.parse` and still caught.
   const fields = /^(\d{4})-(\d{2})-(\d{2})T[\d:.]+(Z|[+-]\d{2}:\d{2})$/.exec(value);
