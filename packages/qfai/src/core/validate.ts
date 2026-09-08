@@ -356,6 +356,7 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
     case "sdd":
     case "atdd":
     case "tdd":
+    case "drift":
       return false;
   }
 }
@@ -580,6 +581,8 @@ async function runProfileValidators(
         return runFullValidators(root, config, timings, platformOption, specScope);
       case "saas-package":
         return runSaasPackage(root, config, timings, platformOption);
+      case "drift":
+        return validateUpstreamSsotGuard(root, config);
     }
   }
 }
