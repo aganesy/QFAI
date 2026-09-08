@@ -263,7 +263,7 @@ describe("the skills spell the carve-out the same way the protocol does", () => 
     // four as the unconditional set, which is what the conditional pair is
     // being distinguished *from*.
     expect(completion).toContain(
-      "`Status`, `DR-ID` and `Evidence` after each phase, and `Blocked-By` at the `todo -> blocked` transition that fills it. Those are the four cells the Drift Protocol carve-out covers unconditionally",
+      "`Status`, `DR-ID` and `Evidence` after each phase, and `Blocked-By` at the `active status -> blocked` transition that fills it. Those are the four cells the Drift Protocol carve-out covers unconditionally",
     );
     expect(completion).toContain(
       "`Test file` and `Selector` are covered too, but only while their stated condition still holds",
