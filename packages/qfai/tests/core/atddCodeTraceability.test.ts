@@ -208,11 +208,11 @@ describe("a TC that exists only in a fenced sample is not declared", () => {
 });
 
 describe("an id a file holds as DATA is not a reference", () => {
-  // #1123 stopped a TRUNCATED id being matched out of a regex literal. It left
-  // the scanner's stated structural problem — "a string in a regex, a string
-  // literal, a comment, and a real annotation are the same text" — so a
-  // COMPLETE id still fired from any of them. `maskJsNonCode` knows where those
-  // spans are and is now asked to blank all of them EXCEPT comments (#1141).
+  // A TRUNCATED id must not be matched out of a regex literal. The scanner's
+  // stated structural problem — "a string in a regex, a string
+  // literal, a comment, and a real annotation are the same text" — means a
+  // COMPLETE id would still fire from any of them, unless `maskJsNonCode`
+  // blanks all of those spans EXCEPT comments.
   //
   // The prefix is built from a placeholder for the same reason as the suite
   // above: a fixture for the scanner must not be visible to the scanner.
@@ -317,12 +317,12 @@ describe("an id truncated out of a regex literal is not a reference", () => {
   // prefix of itself: the optional half cannot consume `-\d`, the short form
   // succeeds, and `\b` holds because `-` is not a word character. The scanner
   // reported a TC id four digits short — unregistered by construction, because
-  // the truncation invented it (#1123).
+  // the truncation invented it.
   //
   // The fixtures build the prefix from a placeholder so this test file does not
-  // carry a contiguous annotation of its own. That is the workaround the issue
-  // calls unexplained cleverness; it is right here and nowhere else, because a
-  // fixture for the scanner must not be visible to the scanner.
+  // carry a contiguous annotation of its own. This is deliberately placed here
+  // and nowhere else, because a fixture for the scanner must not be visible to
+  // the scanner.
   const tc = (spec: string): string => `QFAI:SPEC-${spec}:${"TC"}-`;
   const us = (spec: string): string => `QFAI:SPEC-${spec}:${"US"}-`;
 

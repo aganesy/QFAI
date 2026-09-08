@@ -569,7 +569,7 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
    * citation is absolute because the author wrote it that way, which is
    * ordinary — and on Windows it is what `path.join` hands them, since
    * `os.tmpdir()` is the 8.3 short form whenever the profile name exceeds eight
-   * characters (#1211).
+   * characters.
    *
    * The `~` is written into the directory this creates, so a Linux-only matrix
    * runs it too.

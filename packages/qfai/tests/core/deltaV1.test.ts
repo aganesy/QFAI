@@ -103,8 +103,8 @@ describe("deltaV1 parser", () => {
 
   it("recognises the numbered delta heading the templates ship", () => {
     // Every spec-pack file is titled `NN Title`, so the shipped delta files are
-    // `# 09 Delta` / `# 18 Delta`. Requiring a bare `# Delta` made the parser
-    // disagree with the convention its own templates teach (#545).
+    // `# 09 Delta` / `# 18 Delta`. Requiring a bare `# Delta` would make the parser
+    // disagree with the convention its own templates teach.
     for (const title of ["# 09 Delta", "# 18 Delta", "# Delta", "# 09 Delta (Migration Record)"]) {
       expect(parseDeltaV1(`${title}\n`).hasDeltaHeading, title).toBe(true);
     }

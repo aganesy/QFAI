@@ -206,8 +206,8 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     const result = parseDesignMd(
       // The BOM is the SUBJECT here, so it is written as an escape rather
       // than typed: a literal one is invisible in a diff, and the guard that
-      // now scans the whole tree for exactly this character would report the
-      // fixture as a finding (#1202).
+      // scans the whole tree for exactly this character would report the
+      // fixture as a finding.
       "\uFEFF" + VALID_SAMPLE,
     );
     expect("error" in result).toBe(false);

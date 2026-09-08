@@ -85,7 +85,7 @@ describe("US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on regress
     );
     // Canonical prototyping state path (.qfai/evidence/prototyping/
     // prototyping.json). The legacy `phase` field is no longer emitted
-    // by iterate — the wave-18 active-loop signal is
+    // by iterate — the active-loop signal is
     // `stopReason === null` AND `acceptedIterationIndex === null`.
     await writeFileEnsure(
       path.join(root, ".qfai/evidence/prototyping/prototyping.json"),

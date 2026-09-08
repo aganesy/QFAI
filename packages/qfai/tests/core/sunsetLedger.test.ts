@@ -208,7 +208,7 @@ const ISSUE_ARG_RE = new RegExp(
  *
  * Nothing is currently hidden by it, and that is luck rather than design: both
  * codes are baseline, and both also appear as literal first arguments
- * elsewhere in the same file. #1062's point is the structure — a NEW hard
+ * elsewhere in the same file. The point is the structure — a NEW hard
  * error emitted through a ternary would be registered nowhere and owned by
  * nothing, having followed the house style.
  *
@@ -349,9 +349,9 @@ function topLevelArgs(body: string, open: number): string[] {
  * Whether an `issue(...)` first argument names `code` — directly, through a
  * file-local alias, or through either branch of a conditional.
  *
- * The conditional case is #1062: the severity of a code emitted as
- * `cond ? "A" : "B"` was never located, so the P7 ratchet could not tell
- * whether that emission went through `newRuleSeverity` or hard-coded
+ * The conditional case matters: the severity of a code emitted as
+ * `cond ? "A" : "B"` must be located, or the P7 ratchet cannot tell
+ * whether that emission goes through `newRuleSeverity` or hard-coded
  * `"error"`. The branches are split on the top-level `?` and `:` only, so a
  * nested conditional or a `:` inside a string does not confuse it — anything
  * this cannot split falls through and the call site stays unattributed, which
@@ -389,11 +389,11 @@ function severityExpressionsFor(body: string, code: string): string[] {
   }
 
   // The literal AND every module-level alias of it. `aliases` is already
-  // computed above for the `issue(...)` half; this half read only the literal,
-  // so a finding written as `{ code: SOME_CODE, severity: "error" }` — which is
-  // how `cli/lib/warnings.ts` builds both scan findings — reported no severity
-  // at all, and a code exempted on the strength of its severity could not be
-  // checked (#1110, #1111).
+  // computed above for the `issue(...)` half; reading only the literal here
+  // would report no severity at all for a finding written as
+  // `{ code: SOME_CODE, severity: "error" }` — which is
+  // how `cli/lib/warnings.ts` builds both scan findings — and a code exempted
+  // on the strength of its severity could not be checked.
   for (const escaped of [code, ...aliases].map(escapeForRegExp)) {
     for (const re of [
       new RegExp(`\\bcode:\\s*(?:"${escaped}"|${escaped})\\s*,\\s*severity:\\s*([^,\\n]+)`, "g"),
@@ -453,9 +453,9 @@ const GA_SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
  *
  * Findings written as object literals join the set too ({@link OBJECT_CODE_RE}),
  * through a quoted code OR a module-level constant. `cli/lib/warnings.ts` writes
- * `code: TRUNCATED_SCAN_CODE`, and requiring the literal meant a post-P7 code
- * declared that way was never asked for an answer — the same resolution the
- * `issue(...)` half already does through `resolveArg` (#1110):
+ * `code: TRUNCATED_SCAN_CODE`, and requiring the literal would mean a code
+ * declared that way is never asked for an answer — the same resolution the
+ * `issue(...)` half already does through `resolveArg`:
  * `issue(...)` is a convenience, not the only door out, and the door it is not
  * covering is the one three shipped files already use.
  */
@@ -887,7 +887,7 @@ describe("sunset ledger", () => {
     ).toEqual([]);
   });
 
-  // #1062. Both assertions run over a SYNTHETIC body rather than over `src/`,
+  // Both assertions run over a SYNTHETIC body rather than over `src/`,
   // because the real tree hides the hole twice by luck: the only two
   // conditional emissions (`validators/reviewArtifacts.ts`) name codes that
   // are baseline, and that also appear as literal first arguments elsewhere in

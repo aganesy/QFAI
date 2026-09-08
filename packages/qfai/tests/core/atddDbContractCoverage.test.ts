@@ -113,7 +113,7 @@ describe("QFAI-ATDD-115 — CON-DB coverage from integration tests", () => {
         expect(issues.map((i) => i.code)).not.toContain("QFAI-ATDD-115");
         const deferred = issues.find((i) => i.code === "QFAI-ATDD-116");
         // Reported, not silent: a deferral that shrinks the gate invisibly is
-        // the failure mode #274 describes for the API side.
+        // the same failure mode on the DB side as on the API side.
         expect(deferred?.severity).toBe("info");
         expect(deferred?.refs).toEqual(["CON-DB-0001"]);
       },

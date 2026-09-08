@@ -1,5 +1,5 @@
 /**
- * The declared seam column (#391).
+ * The declared seam column.
  *
  * `delivery-planner` is the sole authority for parallel dispatch and its allow
  * conditions are facts about production modules — "no shared source files under

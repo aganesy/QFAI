@@ -395,7 +395,7 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
  * described with — it does not claim the tree is wrong, and it is not a gate
  * waiting to close. Promoting it needs the project's own dependency
  * declaration to tell an intended resolution from an ambient one, which is
- * more than a path comparison, and what that would take is recorded in #1108.
+ * more than a path comparison.
  */
 async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
   const located = await locateToolAgainstProject(root);

@@ -104,7 +104,7 @@ export const RULE_PROMOTIONS = {
   /**
    * `QFAI-PROT-011` — `frozenSurfaceUnion` names a spec that no longer resolves
    * as UI-bearing. The window is doing real work: the in-loop way out does not
-   * exist yet (a `rescope` operation is proposed in #1099), so until it does,
+   * exist yet — a `rescope` operation would be the fix — so until it does,
    * the only remedy is the cycle-0 reset this finding exists to warn about in
    * advance. Failing a gate for a condition whose remedy discards the review
    * already paid for would make the warning worse than the silence it replaces.
@@ -389,7 +389,7 @@ export const RULE_PROMOTIONS = {
    *
    * `evidence-revision.md#what-makes-evidence-stale` has always defined
    * staleness mechanically, and nothing computed it: the field was written by
-   * hand, required in three places, and compared against nothing (#1146). So
+   * hand, required in three places, and compared against nothing. So
    * every project carries whatever stale revisions it has accumulated, by
    * construction — an immediate `error` would fail gates over a backlog nobody
    * has been told about, which is exactly what this window is for.
