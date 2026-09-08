@@ -21,6 +21,9 @@ import { issue } from "./utils.js";
 /** The window `QFAI-ATDD-127` ships behind; see `sunset.ts` for why. */
 const TC_STATUS_PROMOTION = RULE_PROMOTIONS.tcExternalWithoutVerifier.promoteAt;
 
+/** The window `QFAI-ATDD-128` ships behind; see `sunset.ts` for why. */
+const TC_LEVEL_MISFILED_PROMOTION = RULE_PROMOTIONS.atddTcLevelMisfiled.promoteAt;
+
 /** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
 // The optional `QFAI:` prefix is not cosmetic: `missing.*` and `forbidden.ids`
 // carry `SPEC-0001:TC-0001`, while an unknown-reference token is the annotation
@@ -138,6 +141,12 @@ function narrowToScope(
     // the finding is filed at a spec directory, which survives the scope
     // filter, so the scoped evidence artifact named another spec's ids.
     unitComponentTcIds: result.unitComponentTcIds.filter(inScope),
+    // And again for the misfiled rows. `QFAI-ATDD-128` names them by id and is
+    // filed at a spec directory, so an unnarrowed list puts a sibling spec's
+    // rows in this run's message, refs and annotations — with the requested
+    // spec among the related files, the finding survives the later filter and
+    // carries the other spec's ids with it.
+    misfiledLevelTcIds: result.misfiledLevelTcIds.filter(inScope),
     // Same terms again: `QFAI-ATDD-118` names the deferred stories by id and is
     // filed at a spec directory, so an unnarrowed list would put a sibling
     // spec's deferrals in this run's evidence artifact.
@@ -617,6 +626,39 @@ export async function validateAtddCodeTraceability(
         refs,
         "change",
         `Add \`- ${TC_VERIFIED_BY_KEY}: <what checks it>\` to the test case's own block — a scheduled probe, a platform setting, a monitor — or drop the status and cover the test case here. The pointer is what makes this an exit rather than a silencer: without it the spec records that nothing in the repository verifies the obligation and nothing else is named either.`,
+        { relatedFiles: home.relatedFiles },
+      ),
+    );
+  }
+
+  // A `TC-*` row declaring L4 or L5. `catalog/test-layers.md` states that a
+  // test case's `Level` stays within L1-L3 — L4's goal is a `CON-API-*` and
+  // L5's is a `US-*` — so such a row is an obligation filed under the wrong ID
+  // type. The routing table routes it to that layer rather than rejecting it so
+  // the row is reported once, by the rule that names the real cause, instead of
+  // twice as uncovered in one directory and forbidden in another. This is that
+  // rule.
+  if (result.misfiledLevelTcIds.length > 0) {
+    const refs = result.misfiledLevelTcIds;
+    const home = specAttribution(refs, result.specsRoot, result.declaredSpecDirs);
+    const severity = newRuleSeverity(await resolveToolVersion(), TC_LEVEL_MISFILED_PROMOTION);
+    // The window says so in the finding itself, which is what the promotion
+    // policy asks of a rule inside one: an operator reading `--fail-on error`
+    // output can see the release the warning becomes a failure at.
+    const windowNote =
+      severity === "warning"
+        ? ` Reported as a warning until the ${TC_LEVEL_MISFILED_PROMOTION} release, and as an error from then on.`
+        : "";
+    issues.push(
+      issue(
+        "QFAI-ATDD-128",
+        `${String(refs.length)} test case(s) declare a Level of L4/API or L5/E2E, which files a service-boundary contract or a journey as a test case: ${refs.join(", ")}.${windowNote}`,
+        severity,
+        home.file,
+        "atddCodeTraceability.coverage.tcLevelMisfiled",
+        refs,
+        "change",
+        "Re-file the obligation under the ID type its level names: `CON-API-*` for a service-boundary contract, `US-*` for a full-system journey. Re-filing is an upstream change, never a bare row deletion — the row goes together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX concretizes, or the parent is left with no `EX-Ref`. Where the level cell is simply wrong, correct it to the layer the oracle really needs.",
         { relatedFiles: home.relatedFiles },
       ),
     );

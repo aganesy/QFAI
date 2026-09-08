@@ -32,7 +32,9 @@ import {
 } from "../../src/core/atddTraceability.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import { classifyCoverageLevel, UNIT_COMPONENT_LAYERS } from "../../src/core/tddHelpers.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
@@ -1870,5 +1872,95 @@ describe("a test case that says where it is verified", () => {
         expect(codes(issues)).not.toContain("QFAI-ATDD-126");
       },
     );
+  });
+});
+
+/**
+ * The boundary at the other end: a `TC-*` row declaring L4 or L5.
+ *
+ * `catalog/test-layers.md` states that a test case's `Level` stays within
+ * L1-L3 — L4's goal is a `CON-API-*` and L5's is a `US-*` — so such a row is an
+ * obligation filed under the wrong ID type. The routing table already promised
+ * "the rule that names the real cause"; before it existed the constraint was
+ * checked by nothing, and the row surfaced only as a fix instruction naming a
+ * directory the same document tells a reader not to use.
+ */
+describe("a TC row's Level stays within L1-L3", () => {
+  const found = (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>) =>
+    issues.find((entry) => entry.code === "QFAI-ATDD-128");
+
+  it.each(["L4", "api", "L5", "e2e"])("reports a row declaring %s", async (level) => {
+    await withProject([{ id: "TC-0001", level }], {}, async (root) => {
+      const entry = found(await validateAtddCodeTraceability(root, defaultConfig));
+
+      expect(entry?.refs).toEqual(["SPEC-0001:TC-0001"]);
+      expect(entry?.rule).toBe("atddCodeTraceability.coverage.tcLevelMisfiled");
+      // The remedy is the ID type, not the directory. Naming a directory is
+      // what the routing legend already does, and it is what sent a reader
+      // into a placement this document tells them not to make.
+      expect(entry?.suggested_action).toContain("CON-API-*");
+      expect(entry?.suggested_action).toContain("US-*");
+      // Re-filing is an upstream change. A bare row deletion leaves the parent
+      // EX with no reference, which is the cascade this issue's own downstream
+      // cost describes.
+      expect(entry?.suggested_action).toContain("never a bare row deletion");
+    });
+  });
+
+  it.each(["L1", "L2", "L3", "integration", ""])(
+    "says nothing about a row declaring %s",
+    async (level) => {
+      await withProject([{ id: "TC-0001", level }], {}, async (root) => {
+        expect(found(await validateAtddCodeTraceability(root, defaultConfig))).toBeUndefined();
+      });
+    },
+  );
+
+  it("reads the row's own Level, not where its annotation ended up", async () => {
+    // Covering the test case does not make the row less misfiled. An L5 row
+    // annotated in `tests/e2e/**` is a legal placement — the rejection rules
+    // are Level-relative — and the row is still an obligation filed as a test
+    // case.
+    await withProject(
+      [{ id: "TC-0001", level: "L5" }],
+      { "tests/e2e/a.test.ts": "// QFAI:SPEC-0001:TC-0001\nit('x', () => {});\n" },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+
+        expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+        expect(codes(issues)).not.toContain("QFAI-ATDD-122");
+        expect(found(issues)?.refs).toEqual(["SPEC-0001:TC-0001"]);
+      },
+    );
+  });
+
+  it("names every misfiled row in one finding", async () => {
+    await withProject(
+      [
+        { id: "TC-0001", level: "L4" },
+        { id: "TC-0002", level: "L3" },
+        { id: "TC-0003", level: "L5" },
+      ],
+      {},
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+
+        expect(issues.filter((entry) => entry.code === "QFAI-ATDD-128")).toHaveLength(1);
+        expect(found(issues)?.refs).toEqual(["SPEC-0001:TC-0001", "SPEC-0001:TC-0003"]);
+      },
+    );
+  });
+
+  it("takes its severity from the promotion pin", async () => {
+    // Not a literal: re-filing takes the EX and the BR/AC with it, so the
+    // window is what keeps an upgrade from failing a gate over a change that
+    // has to be planned.
+    await withProject([{ id: "TC-0001", level: "L4" }], {}, async (root) => {
+      const entry = found(await validateAtddCodeTraceability(root, defaultConfig));
+
+      expect(entry?.severity).toBe(
+        newRuleSeverity(await resolveToolVersion(), RULE_PROMOTIONS.atddTcLevelMisfiled.promoteAt),
+      );
+    });
   });
 });

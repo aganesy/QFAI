@@ -70,6 +70,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`validate` reports a test case row filed at L4 or L5** (#1260).
+  `catalog/test-layers.md` has always said a `TC-*` row's `Level` stays within
+  L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so a row at either
+  level is an obligation filed under the wrong ID type rather than a test case
+  that happens to be high-layer.
+
+  The routing table already promised that such a row would be "reported once, by
+  the rule that names the real cause". No rule did. The row surfaced only through
+  the routing legend in `QFAI-ATDD-112`'s fix text, which named a directory the
+  same document tells a reader not to use — and a reader who followed it filed
+  the obligation deeper rather than re-filing it.
+
+  `QFAI-ATDD-128` reads the row's own `Level`, not where its annotation ended up:
+  covering the test case does not make the row less misfiled. It names the ID
+  type to re-file under, and says that re-filing is an upstream change — the row
+  goes together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX
+  concretizes, or the parent is left with no reference.
+
+  Ships at `warning` and becomes an `error` at 1.13.0. The window is doing real
+  work here: the remedy is not a cell edit, so a repository that has been writing
+  such rows needs time to plan the re-filing.
+
 - **`validate` reports a skills or agents tree behind the installed release**
   (#1381). `.qfai/assistant/skills/**` and `agents/**` are copied into a project
   once and refreshed only by an explicit `qfai init --force`, so a project that

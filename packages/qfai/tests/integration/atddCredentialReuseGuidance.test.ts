@@ -208,6 +208,12 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // set is enumerated, so the prose deliverable growing a code of its own
     // reddens it. Their promotion windows are held in `sunsetLedger.test.ts`.
     //
+    // `QFAI-ATDD-128` is present on the same terms: `catalog/test-layers.md`
+    // has always said a `TC-*` row's `Level` stays within L1-L3, and the
+    // routing table already named "the rule that names the real cause" for a
+    // row that does not. That rule is a validator now, so its code is a
+    // declaration the tree holds.
+    //
     // A re-pin script per pinned guard would need to ship with the workflow-hygiene
     // lane. This row gets the re-derivation COMMAND instead, and deliberately not
     // an auto-writer:
@@ -255,6 +261,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       // `external` while naming no verifier.
       "QFAI-ATDD-126",
       "QFAI-ATDD-127",
+      "QFAI-ATDD-128",
       "QFAI-ATDD-131",
       "QFAI-ATDD-132",
       "QFAI-ATDD-133",
