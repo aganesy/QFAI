@@ -38,6 +38,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it should not fail for it — so the check appears on no pull request and
   branch protection needs no new context.
 
+- **The lint lane rejects a merge-conflict marker in a tracked file** (#1349).
+  Nothing asked that question, and an evidence document reached the default
+  branch carrying a `=======` separator, a superseded line and a `>>>>>>>`
+  marker with every lane green.
+
+  Each lane passed for its own reason, and none of them is wrong: Markdown lint
+  reads `=======` as a heading underline and `>>>>>>> ref` as a paragraph,
+  prettier reformats the block rather than rejecting it, and the guard that
+  reads the figure in that paragraph takes the first matching line and stops.
+
+  `scripts/check-conflict-markers.mjs` scans every tracked text file for a line
+  starting with seven `<`, `=`, `>` or `|` followed by a space or the end of the
+  line. The boundary is what keeps a rule of equals signs and `>>>>>>>>` in
+  ASCII art from being findings. Fenced blocks in Markdown are skipped, so a
+  document explaining conflict resolution can show one.
+
 - **A retired spec pack has a template and a schema of its own** (#1324). A spec
   that was deleted or superseded is kept as the record of why it went away. That
   record cannot carry a consumer view or an applicable NFR for something that no
@@ -126,6 +142,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **The governed-path report case of `assistantAssetProvenance.test.ts` no
+  longer depends on the platform's path separator** (#1315). `init` names a
+  written path with `/` on every platform and a skipped one in a `NOTE:` line
+  carrying the absolute destination with the platform's own separator. The case
+  built one needle for both surfaces with `path.join`, so on Windows the
+  written-path needle carried a backslash, matched nothing, and the case failed
+  on a tree nobody had changed. Both sides are now read with one separator.
 
 - **An imported spec can state its surface, so a CLI-only project is no longer
   read as visual** (#1295). A discussion pack states the classification in its
