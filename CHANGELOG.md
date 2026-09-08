@@ -57,6 +57,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`QFAI-CONTRACT-037` reports a UI contract marker nothing on the screen
+  carries** (#1263). The traceability between a UI contract and the code ran one
+  way: a test could only name a `data-qfai` marker the contract declares. That
+  catches a typo in a test and cannot catch a missing element, because an
+  element nobody built is also an element no test names. A contract could
+  declare an element, mark it `required: true`, and have it rendered by nothing,
+  with every profile green.
+
+  The rule reads the markers a UI contract writes literally and looks for each
+  one under the configured source directory. A contract that names no marker is
+  asked for nothing, so projects that never adopted the convention see no
+  change.
+
+  A marker counts as rendered when its text appears anywhere in the source, not
+  only where the attribute is written out. A framework that renders it through a
+  variable still writes the marker somewhere, and requiring the literal
+  attribute would report every marker in such a project at once.
+
+  It is a warning until 1.13.0, then an error.
+
 - **Every test suite is now accounted for as type-checked or knowingly not**
   (#1288). `tsconfig.tests.json#include` is an enumeration rather than a
   whole-tree glob, and a suite left off it is typed by nothing: it can carry a
