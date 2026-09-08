@@ -1984,7 +1984,7 @@ describe("the real workflow trees", () => {
         // TWICE, and the duplicate is the point rather than an accident of the format: the `test`
         // job builds for its `e2e` / `integration` slices, and `node-floor` builds for the same
         // reason — it runs the whole suite on the engines floor, and `dist/` is not committed.
-        // Review finding [13]: without it that lane is structurally always red, and an always-red
+        // without it that lane is structurally always red, and an always-red
         // required lane carries no differential Node-20 signal. The entry is per OCCURRENCE, so
         // deleting either lane's build step fails this row.
         "build::ci.yml::pnpm -C packages/qfai build",
@@ -1994,7 +1994,7 @@ describe("the real workflow trees", () => {
         "build::ci.yml::pnpm check-types",
         // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the whole
         // package suite on the floor `packages/qfai/package.json#engines.node` promises, and
-        // `dist/` is not committed. Review finding [56] added that lane — a tag re-published
+        // `dist/` is not committed. A tag re-published
         // through `workflow_dispatch` may predate `node-floor` entirely, so the floor is exercised
         // on the tagged tree at release time rather than assumed from its ancestry.
         "build::release.yml::pnpm -C packages/qfai build",

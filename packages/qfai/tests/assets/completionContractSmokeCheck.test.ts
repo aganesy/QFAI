@@ -1,5 +1,5 @@
 /**
- * The Completion Contract's only executable step keeps its teeth (#576).
+ * The Completion Contract's only executable step keeps its teeth.
  *
  * Three of the four completion bullets are self-inspection — they are satisfied
  * by rereading what the agent just wrote, so an agent that hallucinated an

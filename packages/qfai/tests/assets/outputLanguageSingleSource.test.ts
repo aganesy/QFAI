@@ -1,5 +1,5 @@
 /**
- * Output language has exactly one normative source (#683, #772).
+ * Output language has exactly one normative source.
  *
  * `constitution/constitution.md` declares an Absolute Rule — output in the
  * user's working language — and says it "overrides all other stylistic

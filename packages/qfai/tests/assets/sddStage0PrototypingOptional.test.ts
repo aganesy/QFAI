@@ -1,5 +1,5 @@
 /**
- * Stage 0 must not stop on a `prototyping.yaml` `/qfai-discussion` may legally omit (#599).
+ * Stage 0 must not stop on a `prototyping.yaml` `/qfai-discussion` may legally omit.
  *
  * The producer emits the file only when the pack is UI-bearing *and* an explicit
  * prototyping recommendation is useful, and the UI-bearing completion matrix does
