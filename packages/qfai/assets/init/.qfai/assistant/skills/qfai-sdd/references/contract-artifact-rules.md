@@ -216,6 +216,19 @@ satisfied by a file that cannot run.
   contract in the set creates is left alone, and a table two contracts both
   create is not attributed to either.
 
+- **Compare the contracts with the migrations.** `npx qfai db-drift` applies
+  both to separate in-process databases and reports the columns they disagree
+  about: present on one side only, or declared with a different type,
+  nullability or default. Set `paths.migrationsDir` to the project's migration
+  directory; a project with no value there is out of scope and the command says
+  so.
+
+  This is the one question the rules above cannot answer. Contracts are frozen
+  early and implementation moves, so the two schemas drift by default, and a
+  suite that passes against the migration schema proves nothing about the
+  contracts. It is a separate command because it needs a database, and
+  `npx qfai validate` starts no processes.
+
 The cost of skipping this is not paid in Phase 0. It is paid inside a TDD
 micro-cycle, by an implementer who is forbidden from fixing the contract and has
 to stop the batch.
