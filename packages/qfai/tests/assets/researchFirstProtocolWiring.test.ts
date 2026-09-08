@@ -492,6 +492,35 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(broken?.message).toContain("discussion-20250101000000000");
   });
 
+  it("reports an unreadable state file instead of falling back to the latest pack", async () => {
+    // `.qfai/state.json` is present but not parsable, so the pointer's value is
+    // UNKNOWN — not absent. Treating the two alike sent the gate to the latest
+    // pack, which is a pack nobody selected: a project whose state file pins an
+    // older, incomplete pack would have been told its research was in order.
+    //
+    // The pack is seeded with the template UNFILLED, which is what makes the
+    // second half of this row mean something: a fallback would read it and
+    // report its placeholders, so "no finding but -020" is evidence that no
+    // pack was read at all. Seeded filled, the fallback produces nothing
+    // either way and the assertion passes on a validator that still falls
+    // back — measured: the lossy read reports eight findings here
+    // (`-004`, `-005`, `-006`, `-010`, `-018` x2, `-019`, `-021`) and no `-020`.
+    const root = await seedPack(await readShippedTemplate(), "discussion-20260202000000000");
+    await writeFile(path.join(root, ".qfai", "state.json"), "{ not json", "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const codes = issues.map((item) => item.code);
+    const broken = issues.find((item) => item.code === "QFAI-RESEARCH-020");
+
+    expect(broken, "an unreadable state file must be reported, not papered over").toBeDefined();
+    expect(broken?.message).toContain("state.json");
+    // Nothing but the broken pointer: every other code here would have to come
+    // from a pack this run was not entitled to read.
+    expect(codes, "the fallback read a pack the corrupt pointer did not select").toEqual([
+      "QFAI-RESEARCH-020",
+    ]);
+  });
+
   it("validates only 04_Sources.md inside a pack", async () => {
     // The Storage contract names one file. A sibling pack file that merely
     // mentions the heading must not be held to the whole Output Schema.
@@ -664,6 +693,97 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       ...defaultConfig,
       paths: { ...defaultConfig.paths, discussionDir: "docs/discussion" },
     });
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("does not read a non-YAML fenced block as summary data", async () => {
+    // A pack may keep a diagram or a paste of the blank template beside its
+    // summary. Collecting every fence made that prose part of the payload, so
+    // placeholders the real run had already replaced were reported again.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const note = [
+      "```markdown",
+      "sources:",
+      "  - id: SRC-0404",
+      "    title: [Reference title]",
+      "    url: [https://example.com/reference]",
+      "```",
+      "",
+      "```yaml",
+      "research_summary:",
+    ].join("\n");
+    const withNote = filled.replace("```yaml\nresearch_summary:", note);
+    expect(withNote, "fixture did not attach the note block").not.toBe(filled);
+
+    const issues = await validateResearchSummary(await seedPack(withNote), defaultConfig);
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("treats an unclosed empty YAML fence as an empty payload, not as no fence", async () => {
+    // A fence that opens at the end of the section and carries nothing is a
+    // payload saying "no data". Gating the tail push on a non-empty body left
+    // `blocks` empty, which is indistinguishable from a section with no YAML
+    // fence at all — so the whole section went to the YAML reader, fence line
+    // and prose included.
+    //
+    // The section carries a draft above the fence, which is what makes the two
+    // readings distinguishable: the empty payload has no sources at all
+    // (`-001`), while a fallback to the whole section finds the draft's
+    // `sources:` and reports its placeholder (`-021`) instead.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const truncated = filled.replace(
+      filled.slice(filled.indexOf("```yaml")),
+      [
+        "An earlier draft, left above the fence:",
+        "",
+        "sources:",
+        "  - id: SRC-0404",
+        "    title: [Stale draft title]",
+        "",
+        "```yaml",
+        "",
+      ].join("\n"),
+    );
+    expect(truncated, "fixture still carries the filled payload").not.toContain(
+      "research_summary:",
+    );
+    expect(truncated, "fixture lost its fence").toContain("```yaml");
+
+    const issues = await validateResearchSummary(await seedPack(truncated), defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes, "an empty payload has no sources, and that is what to report").toContain(
+      "QFAI-RESEARCH-001",
+    );
+    expect(codes, "the fallback read the draft above the empty fence").not.toContain(
+      "QFAI-RESEARCH-021",
+    );
+  });
+
+  it("reads the payload out of a tilde fence rather than the whole section", async () => {
+    // The section is where the mask says it is, so an earlier draft left above
+    // the fence is inside it. Only the fence separates that draft from the
+    // data, and a payload rule that knew backticks alone could not draw the
+    // line: the stale entry became the summary and its placeholder reported.
+    const filled = fillEveryPlaceholder(await readShippedTemplate());
+    const draft = [
+      "An earlier draft, kept for reference:",
+      "",
+      "sources:",
+      "  - id: SRC-0404",
+      "    title: [Stale draft title]",
+      "",
+      "~~~yaml",
+      "research_summary:",
+    ].join("\n");
+    const tildeFenced = filled
+      .replace("```yaml\nresearch_summary:", draft)
+      .replace("\n```\n", "\n~~~\n");
+    expect(tildeFenced, "fixture still carries a backtick fence").not.toContain("```");
+
+    const issues = await validateResearchSummary(await seedPack(tildeFenced), defaultConfig);
 
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });
