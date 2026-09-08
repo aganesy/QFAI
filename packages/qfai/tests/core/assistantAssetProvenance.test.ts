@@ -449,7 +449,6 @@ describe("assistant asset provenance", () => {
       expect(await readAssistantAssetsLock(assistantDir)).toBeNull();
       expect(Array.isArray(await validateAssistantAssets(root, defaultConfig))).toBe(true);
     },
-    15000,
   );
 
   it("retires a governed file the installed release no longer ships", async () => {
@@ -496,7 +495,6 @@ describe("assistant asset provenance", () => {
         "QFAI-ASSETS-007",
       );
     },
-    15000,
   );
 
   it.skipIf(process.platform === "win32")(
@@ -641,7 +639,7 @@ describe("assistant asset provenance", () => {
     const lonePath = path.join(root, "lone.md");
     await writeFile(lonePath, lone, "utf-8");
     expect(await hashAssistantAssetFile(lonePath)).toBe(hashAssistantAssetText(lone));
-  }, 30000);
+  });
 
   it("never writes or retires through a governed layer that leaves the project", async () => {
     const root = await makeProject();

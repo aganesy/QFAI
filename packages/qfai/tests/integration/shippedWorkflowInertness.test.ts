@@ -180,273 +180,262 @@ async function initScriptlessTree(): Promise<{ dir: string; doc: unknown }> {
   return { dir, doc };
 }
 
-describe(
-  "TC-0003-0036 (TDD-0036): no declared layer script means zero executing test lanes",
-  { timeout: 60000 },
-  () => {
-    // One it() per TC-0003-0036 verify bullet. Scope notes, disclosed:
-    // - The evaluator above honestly interprets a literal `false` conjunct
-    //   as skipped, so a hard-disabled lane also evaluates to zero
-    //   executing lanes. The zero-executing bullet (it2) therefore earns
-    //   its RED from the TC's Action — the script-presence probe must be
-    //   EXECUTED against the fixture package.json, and a probe-less
-    //   orchestrator fails that extraction — while the "keys on script
-    //   presence, not a hard false and not a credential attribute" bullet
-    //   is it3's own surface.
-    // - it2 stubs the detection lane-set at the FULL superset: inertness
-    //   must hold even when change detection selects every lane.
+describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing test lanes", () => {
+  // One it() per TC-0003-0036 verify bullet. Scope notes, disclosed:
+  // - The evaluator above honestly interprets a literal `false` conjunct
+  //   as skipped, so a hard-disabled lane also evaluates to zero
+  //   executing lanes. The zero-executing bullet (it2) therefore earns
+  //   its RED from the TC's Action — the script-presence probe must be
+  //   EXECUTED against the fixture package.json, and a probe-less
+  //   orchestrator fails that extraction — while the "keys on script
+  //   presence, not a hard false and not a credential attribute" bullet
+  //   is it3's own surface.
+  // - it2 stubs the detection lane-set at the FULL superset: inertness
+  //   must hold even when change detection selects every lane.
 
-    it("every test lane stays declared with its check name in the init-written orchestrator", async () => {
-      const { doc } = await initScriptlessTree();
-      const violations: string[] = [];
-      for (const layer of LANE_LAYERS) {
-        const job = findWorkflowJob(doc, layer);
-        if (job === undefined) {
-          violations.push(`lane job "${layer}" is not declared`);
-          continue;
-        }
-        const name = job["name"];
-        if (typeof name !== "string" || name.length === 0) {
-          violations.push(`lane job "${layer}" carries no check name`);
-        }
+  it("every test lane stays declared with its check name in the init-written orchestrator", async () => {
+    const { doc } = await initScriptlessTree();
+    const violations: string[] = [];
+    for (const layer of LANE_LAYERS) {
+      const job = findWorkflowJob(doc, layer);
+      if (job === undefined) {
+        violations.push(`lane job "${layer}" is not declared`);
+        continue;
       }
-      expect(violations).toEqual([]);
-    });
-
-    it("the probe finds no layer script in the fixture and every lane condition evaluates to skipped", async () => {
-      const { dir, doc } = await initScriptlessTree();
-      const probe = scriptsProbeBody(doc);
-      expect(
-        probe,
-        "the init-written orchestrator declares no script-presence probe (detection step id: scripts)",
-      ).toBeTypeOf("string");
-      if (typeof probe !== "string") {
-        throw new Error("unreachable: asserted above");
+      const name = job["name"];
+      if (typeof name !== "string" || name.length === 0) {
+        violations.push(`lane job "${layer}" carries no check name`);
       }
+    }
+    expect(violations).toEqual([]);
+  });
 
-      const fixtureRun = await runShell(probe, dir);
-      expect(fixtureRun.status).toBe(0);
-      expect(JSON.parse(fixtureRun.outputs["scripts"] ?? "null")).toEqual([]);
-
-      const outputs = { scripts: fixtureRun.outputs["scripts"] ?? "", lanes: FULL_LANES_JSON };
-      const executing = LANE_LAYERS.filter((layer) => {
-        const job = findWorkflowJob(doc, layer);
-        return job === undefined ? true : laneExecutes(job["if"], outputs);
-      });
-      expect(executing, "no test lane may execute without its opt-in script").toEqual([]);
-
-      // Discriminating control of the same predicate: ONE declared layer
-      // script must flip exactly that lane to executing, proving the zero
-      // above is earned by the fixture rather than hardwired.
-      const controlDir = await newTempDir();
-      await writeFile(path.join(controlDir, "package.json"), ONE_LAYER_SCRIPT_MANIFEST, "utf-8");
-      const controlRun = await runShell(probe, controlDir);
-      expect(controlRun.status).toBe(0);
-      expect(JSON.parse(controlRun.outputs["scripts"] ?? "null")).toEqual(["unit"]);
-      const controlOutputs = {
-        scripts: controlRun.outputs["scripts"] ?? "",
-        lanes: FULL_LANES_JSON,
-      };
-      const controlExecuting = LANE_LAYERS.filter((layer) => {
-        const job = findWorkflowJob(doc, layer);
-        return job === undefined ? true : laneExecutes(job["if"], controlOutputs);
-      });
-      expect(controlExecuting).toEqual(["unit"]);
-
-      // Second control, for the OTHER conjunct. Both cases above hold `lanes` at
-      // the full set, so nothing here had yet shown the lane set suppressing
-      // anything: replacing a condition's `contains(...lanes...)` with
-      // `(contains(...lanes...) || true)` leaves the scriptless fixture skipped
-      // and this control executing, and every assertion above still passes —
-      // while a documentation-only change, which is exactly when `lanes` is
-      // empty, would run the lane. Same script presence, empty lane set, zero
-      // executing lanes.
-      const unselectedOutputs = { scripts: controlRun.outputs["scripts"] ?? "", lanes: "[]" };
-      const unselectedExecuting = LANE_LAYERS.filter((layer) => {
-        const job = findWorkflowJob(doc, layer);
-        return job === undefined ? true : laneExecutes(job["if"], unselectedOutputs);
-      });
-      expect(
-        unselectedExecuting,
-        "a declared layer script must not execute a lane the detection step did not select",
-      ).toEqual([]);
-    });
-
-    it("each lane condition references layer-script presence and the detection lane set, never a credential attribute", async () => {
-      const { doc } = await initScriptlessTree();
-      const violations: string[] = [];
-      for (const layer of LANE_LAYERS) {
-        const job = findWorkflowJob(doc, layer);
-        if (job === undefined) {
-          violations.push(`lane job "${layer}" is not declared`);
-          continue;
-        }
-        const condition = job["if"];
-        if (typeof condition !== "string") {
-          violations.push(`lane "${layer}" declares no if: condition`);
-          continue;
-        }
-        if (!condition.includes(`contains(needs.detection.outputs.scripts, '${layer}')`)) {
-          violations.push(
-            `lane "${layer}" condition does not key on its own layer-script presence`,
-          );
-        }
-        if (!condition.includes(`contains(needs.detection.outputs.lanes, '${layer}')`)) {
-          violations.push(`lane "${layer}" condition does not key on the detection lane set`);
-        }
-        if (/secret|credential|token|password/i.test(condition)) {
-          violations.push(`lane "${layer}" condition references a credential attribute`);
-        }
-      }
-      expect(violations).toEqual([]);
-    });
-  },
-);
-
-describe(
-  "TC-0003-0037 (TDD-0037): exactly one installing job and zero secret references",
-  { timeout: 60000 },
-  () => {
-    // Setup is TC-0003-0036's init output tree (the scriptless adopter);
-    // every count below is taken over EVERY workflow file init wrote.
-    // Scope notes, disclosed:
-    // - The five test lanes ship install-less by the skeleton's staging
-    //   design (their bodies land with later revisions of the file), so
-    //   the installing-job count is exactly 1 — the validate lane —
-    //   today. The oracle counts install-bearing jobs, so it names any
-    //   job the moment one gains an install step; whether an enabled
-    //   lane's future body may install is that revision's scoping call,
-    //   judged then against this AC's count.
-    // - Born-green disclosure: all three its pass first-run — the set
-    //   never carried a secret, and detection/verdict shipped with
-    //   timeouts and without installs. The falsifiability path is taken
-    //   in-cycle via real-asset mutations, applied and reverted
-    //   byte-identically (recorded in the row's evidence block).
-
-    /** A run body that invokes a package-manager dependency install. */
-    const INSTALL_RUN_RE = /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/;
-
-    /** Every workflow file the init run wrote, as `[name, body]` sorted. */
-    async function initWorkflowSet(): Promise<Array<[string, string]>> {
-      const dir = await newTempDir();
-      await writeFile(path.join(dir, "package.json"), NO_LAYER_SCRIPTS_MANIFEST, "utf-8");
-      await runInitQuiet(dir);
-      const workflowsDir = path.join(dir, ".github", "workflows");
-      const names = (await readdir(workflowsDir)).sort();
-      const files: Array<[string, string]> = [];
-      for (const name of names) {
-        files.push([name, await readFile(path.join(workflowsDir, name), "utf-8")]);
-      }
-      return files;
+  it("the probe finds no layer script in the fixture and every lane condition evaluates to skipped", async () => {
+    const { dir, doc } = await initScriptlessTree();
+    const probe = scriptsProbeBody(doc);
+    expect(
+      probe,
+      "the init-written orchestrator declares no script-presence probe (detection step id: scripts)",
+    ).toBeTypeOf("string");
+    if (typeof probe !== "string") {
+      throw new Error("unreachable: asserted above");
     }
 
-    /** Occurrences of a mapping key anywhere in a parsed YAML tree. */
-    function countKeyOccurrences(node: unknown, key: string): number {
-      if (Array.isArray(node)) {
-        return node.reduce((count: number, member) => count + countKeyOccurrences(member, key), 0);
+    const fixtureRun = await runShell(probe, dir);
+    expect(fixtureRun.status).toBe(0);
+    expect(JSON.parse(fixtureRun.outputs["scripts"] ?? "null")).toEqual([]);
+
+    const outputs = { scripts: fixtureRun.outputs["scripts"] ?? "", lanes: FULL_LANES_JSON };
+    const executing = LANE_LAYERS.filter((layer) => {
+      const job = findWorkflowJob(doc, layer);
+      return job === undefined ? true : laneExecutes(job["if"], outputs);
+    });
+    expect(executing, "no test lane may execute without its opt-in script").toEqual([]);
+
+    // Discriminating control of the same predicate: ONE declared layer
+    // script must flip exactly that lane to executing, proving the zero
+    // above is earned by the fixture rather than hardwired.
+    const controlDir = await newTempDir();
+    await writeFile(path.join(controlDir, "package.json"), ONE_LAYER_SCRIPT_MANIFEST, "utf-8");
+    const controlRun = await runShell(probe, controlDir);
+    expect(controlRun.status).toBe(0);
+    expect(JSON.parse(controlRun.outputs["scripts"] ?? "null")).toEqual(["unit"]);
+    const controlOutputs = {
+      scripts: controlRun.outputs["scripts"] ?? "",
+      lanes: FULL_LANES_JSON,
+    };
+    const controlExecuting = LANE_LAYERS.filter((layer) => {
+      const job = findWorkflowJob(doc, layer);
+      return job === undefined ? true : laneExecutes(job["if"], controlOutputs);
+    });
+    expect(controlExecuting).toEqual(["unit"]);
+
+    // Second control, for the OTHER conjunct. Both cases above hold `lanes` at
+    // the full set, so nothing here had yet shown the lane set suppressing
+    // anything: replacing a condition's `contains(...lanes...)` with
+    // `(contains(...lanes...) || true)` leaves the scriptless fixture skipped
+    // and this control executing, and every assertion above still passes —
+    // while a documentation-only change, which is exactly when `lanes` is
+    // empty, would run the lane. Same script presence, empty lane set, zero
+    // executing lanes.
+    const unselectedOutputs = { scripts: controlRun.outputs["scripts"] ?? "", lanes: "[]" };
+    const unselectedExecuting = LANE_LAYERS.filter((layer) => {
+      const job = findWorkflowJob(doc, layer);
+      return job === undefined ? true : laneExecutes(job["if"], unselectedOutputs);
+    });
+    expect(
+      unselectedExecuting,
+      "a declared layer script must not execute a lane the detection step did not select",
+    ).toEqual([]);
+  });
+
+  it("each lane condition references layer-script presence and the detection lane set, never a credential attribute", async () => {
+    const { doc } = await initScriptlessTree();
+    const violations: string[] = [];
+    for (const layer of LANE_LAYERS) {
+      const job = findWorkflowJob(doc, layer);
+      if (job === undefined) {
+        violations.push(`lane job "${layer}" is not declared`);
+        continue;
       }
-      if (!isRecord(node)) {
-        return 0;
+      const condition = job["if"];
+      if (typeof condition !== "string") {
+        violations.push(`lane "${layer}" declares no if: condition`);
+        continue;
       }
-      let count = 0;
-      for (const [candidate, value] of Object.entries(node)) {
-        if (candidate === key) {
-          count += 1;
-        }
-        count += countKeyOccurrences(value, key);
+      if (!condition.includes(`contains(needs.detection.outputs.scripts, '${layer}')`)) {
+        violations.push(`lane "${layer}" condition does not key on its own layer-script presence`);
       }
-      return count;
+      if (!condition.includes(`contains(needs.detection.outputs.lanes, '${layer}')`)) {
+        violations.push(`lane "${layer}" condition does not key on the detection lane set`);
+      }
+      if (/secret|credential|token|password/i.test(condition)) {
+        violations.push(`lane "${layer}" condition references a credential attribute`);
+      }
     }
+    expect(violations).toEqual([]);
+  });
+});
 
-    it("the init-written jobs that install dependencies are exactly the validate and docs lanes", async () => {
-      const files = await initWorkflowSet();
-      // Non-vacuity: the whole multi-file set is what is being counted.
-      expect(
-        files.length,
-        "the init-written set must have two or more files",
-      ).toBeGreaterThanOrEqual(2);
-      const installing: Array<{ file: string; jobId: string }> = [];
-      for (const [name, body] of files) {
-        for (const { jobId, job } of collectWorkflowJobs(parse(body))) {
-          const installs = collectJobSteps(job).some((step) => {
-            const run = step["run"];
-            return typeof run === "string" && INSTALL_RUN_RE.test(run);
-          });
-          if (installs) {
-            installing.push({ file: name, jobId });
-          }
-        }
+describe("TC-0003-0037 (TDD-0037): exactly one installing job and zero secret references", () => {
+  // Setup is TC-0003-0036's init output tree (the scriptless adopter);
+  // every count below is taken over EVERY workflow file init wrote.
+  // Scope notes, disclosed:
+  // - The five test lanes ship install-less by the skeleton's staging
+  //   design (their bodies land with later revisions of the file), so
+  //   the installing-job count is exactly 1 — the validate lane —
+  //   today. The oracle counts install-bearing jobs, so it names any
+  //   job the moment one gains an install step; whether an enabled
+  //   lane's future body may install is that revision's scoping call,
+  //   judged then against this AC's count.
+  // - Born-green disclosure: all three its pass first-run — the set
+  //   never carried a secret, and detection/verdict shipped with
+  //   timeouts and without installs. The falsifiability path is taken
+  //   in-cycle via real-asset mutations, applied and reverted
+  //   byte-identically (recorded in the row's evidence block).
+
+  /** A run body that invokes a package-manager dependency install. */
+  const INSTALL_RUN_RE = /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/;
+
+  /** Every workflow file the init run wrote, as `[name, body]` sorted. */
+  async function initWorkflowSet(): Promise<Array<[string, string]>> {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "package.json"), NO_LAYER_SCRIPTS_MANIFEST, "utf-8");
+    await runInitQuiet(dir);
+    const workflowsDir = path.join(dir, ".github", "workflows");
+    const names = (await readdir(workflowsDir)).sort();
+    const files: Array<[string, string]> = [];
+    for (const name of names) {
+      files.push([name, await readFile(path.join(workflowsDir, name), "utf-8")]);
+    }
+    return files;
+  }
+
+  /** Occurrences of a mapping key anywhere in a parsed YAML tree. */
+  function countKeyOccurrences(node: unknown, key: string): number {
+    if (Array.isArray(node)) {
+      return node.reduce((count: number, member) => count + countKeyOccurrences(member, key), 0);
+    }
+    if (!isRecord(node)) {
+      return 0;
+    }
+    let count = 0;
+    for (const [candidate, value] of Object.entries(node)) {
+      if (candidate === key) {
+        count += 1;
       }
-      // An ALLOW-LIST of installing jobs rather than a count, and the
-      // distinction is the point: a count of one was the whole assertion when
-      // one lane installed, and it would have been satisfied by the wrong lane
-      // installing while the right one stopped. Naming them says which.
-      //
-      // The docs lane installs for the same reason the validate lane does: it
-      // runs a program out of the adopter's `node_modules`, and the package has
-      // to be there first. The test lanes still install nothing — they are
-      // placeholders, and a placeholder that installed would be paying for a
-      // toolchain it never uses.
-      expect(installing).toEqual([
-        { file: "qfai-docs.yml", jobId: "docs" },
-        { file: "qfai-validate.yml", jobId: "validate" },
-      ]);
-    });
+      count += countKeyOccurrences(value, key);
+    }
+    return count;
+  }
 
-    it("zero secret declarations, secret-context references and secrets: inherit across the set", async () => {
-      const files = await initWorkflowSet();
-      const violations: string[] = [];
-      for (const [name, body] of files) {
-        // Raw-text half: ANY mention of the secrets context, and any `secrets:`
-        // mapping line (a workflow_call declaration, a job-level passing
-        // block, or `secrets: inherit`), named per line.
-        //
-        // Not the dotted form alone — review finding [11]. `${{ toJSON(secrets) }}`
-        // names no property, hands the adopter's whole secret set to a step, and
-        // left this row green while the shape dimension beside it and the hygiene
-        // lane both looked elsewhere.
-        body.split(/\r?\n/).forEach((line, index) => {
-          if (/\bsecrets\b/.test(line) && !/\bsecrets\s*:/.test(line)) {
-            violations.push(`${name}:${index + 1}: secret context reference`);
-          }
-          if (/\bsecrets\s*:/.test(line)) {
-            violations.push(`${name}:${index + 1}: secrets declaration or inheritance`);
-          }
-        });
-        // Parsed-tree half: no `secrets` mapping key anywhere, so a form
-        // the line regexes cannot see (flow style, odd spacing) is still
-        // caught.
-        const keyCount = countKeyOccurrences(parse(body), "secrets");
-        if (keyCount !== 0) {
-          violations.push(`${name}: ${keyCount} secrets mapping key(s) in the parsed tree`);
-        }
-      }
-      expect(violations).toEqual([]);
-    });
-
-    it("detection and verdict install nothing and each carries timeout-minutes", async () => {
-      const files = await initWorkflowSet();
-      const orchestrator = files.find(([name]) => name === ORCHESTRATOR);
-      expect(orchestrator, "the init-written set carries no orchestrator").toBeDefined();
-      const doc: unknown = parse(orchestrator?.[1] ?? "");
-      const violations: string[] = [];
-      for (const jobId of ["detection", "verdict"]) {
-        const job = findWorkflowJob(doc, jobId);
-        if (job === undefined) {
-          violations.push(`orchestrator declares no ${jobId} job`);
-          continue;
-        }
-        if (typeof job["timeout-minutes"] !== "number") {
-          violations.push(`${jobId} job declares no timeout-minutes`);
-        }
-        for (const step of collectJobSteps(job)) {
+  it("the init-written jobs that install dependencies are exactly the validate and docs lanes", async () => {
+    const files = await initWorkflowSet();
+    // Non-vacuity: the whole multi-file set is what is being counted.
+    expect(files.length, "the init-written set must have two or more files").toBeGreaterThanOrEqual(
+      2,
+    );
+    const installing: Array<{ file: string; jobId: string }> = [];
+    for (const [name, body] of files) {
+      for (const { jobId, job } of collectWorkflowJobs(parse(body))) {
+        const installs = collectJobSteps(job).some((step) => {
           const run = step["run"];
-          if (typeof run === "string" && INSTALL_RUN_RE.test(run)) {
-            violations.push(`${jobId} job installs dependencies`);
-          }
+          return typeof run === "string" && INSTALL_RUN_RE.test(run);
+        });
+        if (installs) {
+          installing.push({ file: name, jobId });
         }
       }
-      expect(violations).toEqual([]);
-    });
-  },
-);
+    }
+    // An ALLOW-LIST of installing jobs rather than a count, and the
+    // distinction is the point: a count of one was the whole assertion when
+    // one lane installed, and it would have been satisfied by the wrong lane
+    // installing while the right one stopped. Naming them says which.
+    //
+    // The docs lane installs for the same reason the validate lane does: it
+    // runs a program out of the adopter's `node_modules`, and the package has
+    // to be there first. The test lanes still install nothing — they are
+    // placeholders, and a placeholder that installed would be paying for a
+    // toolchain it never uses.
+    expect(installing).toEqual([
+      { file: "qfai-docs.yml", jobId: "docs" },
+      { file: "qfai-validate.yml", jobId: "validate" },
+    ]);
+  });
+
+  it("zero secret declarations, secret-context references and secrets: inherit across the set", async () => {
+    const files = await initWorkflowSet();
+    const violations: string[] = [];
+    for (const [name, body] of files) {
+      // Raw-text half: ANY mention of the secrets context, and any `secrets:`
+      // mapping line (a workflow_call declaration, a job-level passing
+      // block, or `secrets: inherit`), named per line.
+      //
+      // Not the dotted form alone. `${{ toJSON(secrets) }}`
+      // names no property, hands the adopter's whole secret set to a step, and
+      // left this row green while the shape dimension beside it and the hygiene
+      // lane both looked elsewhere.
+      body.split(/\r?\n/).forEach((line, index) => {
+        if (/\bsecrets\b/.test(line) && !/\bsecrets\s*:/.test(line)) {
+          violations.push(`${name}:${index + 1}: secret context reference`);
+        }
+        if (/\bsecrets\s*:/.test(line)) {
+          violations.push(`${name}:${index + 1}: secrets declaration or inheritance`);
+        }
+      });
+      // Parsed-tree half: no `secrets` mapping key anywhere, so a form
+      // the line regexes cannot see (flow style, odd spacing) is still
+      // caught.
+      const keyCount = countKeyOccurrences(parse(body), "secrets");
+      if (keyCount !== 0) {
+        violations.push(`${name}: ${keyCount} secrets mapping key(s) in the parsed tree`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("detection and verdict install nothing and each carries timeout-minutes", async () => {
+    const files = await initWorkflowSet();
+    const orchestrator = files.find(([name]) => name === ORCHESTRATOR);
+    expect(orchestrator, "the init-written set carries no orchestrator").toBeDefined();
+    const doc: unknown = parse(orchestrator?.[1] ?? "");
+    const violations: string[] = [];
+    for (const jobId of ["detection", "verdict"]) {
+      const job = findWorkflowJob(doc, jobId);
+      if (job === undefined) {
+        violations.push(`orchestrator declares no ${jobId} job`);
+        continue;
+      }
+      if (typeof job["timeout-minutes"] !== "number") {
+        violations.push(`${jobId} job declares no timeout-minutes`);
+      }
+      for (const step of collectJobSteps(job)) {
+        const run = step["run"];
+        if (typeof run === "string" && INSTALL_RUN_RE.test(run)) {
+          violations.push(`${jobId} job installs dependencies`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

@@ -64,6 +64,6 @@ describe("GenericCommandProvider", () => {
 
       expect(result.failOpen).toBe(true);
       expect(result.reason).toBe("provider_unavailable");
-    }, 10_000);
+    });
   });
 });

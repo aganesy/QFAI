@@ -575,6 +575,16 @@ async function loadWaivers(
           "WAIVER-002",
           [id, ruleId],
           "change",
+          // The refusal said what is forbidden and not what to do instead, which
+          // left the reader to discover the alternatives by trying each one.
+          // They are declarations in the artifact the obligation lives in, not
+          // waivers, and each is narrower than a waiver on purpose.
+          "A waiver cannot clear an error, so the exit is a declaration in the artifact that owes it. " +
+            "A story outside the current slice takes `- x-qfai-status: planned` in its own block. A " +
+            "test case does too, and takes `- x-qfai-status: external` with `- x-qfai-verified-by: " +
+            "<what checks it>` when the obligation is met outside this repository. A contract takes " +
+            "the same `planned` marker at its document root. If none of those fits, the finding is " +
+            "reporting something real and the fix is the thing it names.",
         ),
       );
     }

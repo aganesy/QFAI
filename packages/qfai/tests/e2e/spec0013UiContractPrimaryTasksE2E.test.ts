@@ -106,50 +106,46 @@ function populatedPrimaryTasksContract(): string {
   ].join("\n");
 }
 
-describe(
-  "US-0013-0011: UI contract primary_tasks slot + QFAI-AUD-001 aligned validate lane",
-  { timeout: 60000 },
-  () => {
-    it("shipped ui-contract.sample.yaml carries primary_tasks slot on every screen", async () => {
-      const raw = await readFile(TEMPLATE_PATH, "utf-8");
-      const parsed = parseYaml(raw) as { screens?: Array<Record<string, unknown>> };
-      expect(Array.isArray(parsed.screens)).toBe(true);
-      expect((parsed.screens ?? []).length).toBeGreaterThan(0);
-      for (const screen of parsed.screens ?? []) {
-        expect(Object.hasOwn(screen, "primary_tasks")).toBe(true);
-        expect(Array.isArray(screen.primary_tasks)).toBe(true);
-      }
+describe("US-0013-0011: UI contract primary_tasks slot + QFAI-AUD-001 aligned validate lane", () => {
+  it("shipped ui-contract.sample.yaml carries primary_tasks slot on every screen", async () => {
+    const raw = await readFile(TEMPLATE_PATH, "utf-8");
+    const parsed = parseYaml(raw) as { screens?: Array<Record<string, unknown>> };
+    expect(Array.isArray(parsed.screens)).toBe(true);
+    expect((parsed.screens ?? []).length).toBeGreaterThan(0);
+    for (const screen of parsed.screens ?? []) {
+      expect(Object.hasOwn(screen, "primary_tasks")).toBe(true);
+      expect(Array.isArray(screen.primary_tasks)).toBe(true);
+    }
+  });
+
+  it("validate lane blocks preflight (exit != 0 + QFAI-AUD-001) when primary_tasks is empty", async () => {
+    const root = await newTempDir();
+    await seedWorkspace(root, emptyPrimaryTasksContract());
+
+    let exitCode = 0;
+    const stdout = await captureStdout(async () => {
+      exitCode = await runValidate({ root, strict: false, failOn: "error" });
     });
 
-    it("validate lane blocks preflight (exit != 0 + QFAI-AUD-001) when primary_tasks is empty", async () => {
-      const root = await newTempDir();
-      await seedWorkspace(root, emptyPrimaryTasksContract());
+    expect(exitCode, `expected non-zero exit, got ${exitCode}`).not.toBe(0);
+    expect(stdout).toMatch(/QFAI-AUD-001/);
+    expect(stdout).toMatch(/order_create/);
+  });
 
-      let exitCode = 0;
-      const stdout = await captureStdout(async () => {
-        exitCode = await runValidate({ root, strict: false, failOn: "error" });
-      });
+  it("validate lane reports zero QFAI-AUD-001 errors when primary_tasks is populated", async () => {
+    const root = await newTempDir();
+    await seedWorkspace(root, populatedPrimaryTasksContract());
 
-      expect(exitCode, `expected non-zero exit, got ${exitCode}`).not.toBe(0);
-      expect(stdout).toMatch(/QFAI-AUD-001/);
-      expect(stdout).toMatch(/order_create/);
+    const stdout = await captureStdout(async () => {
+      await runValidate({ root, strict: false, failOn: "error" });
     });
 
-    it("validate lane reports zero QFAI-AUD-001 errors when primary_tasks is populated", async () => {
-      const root = await newTempDir();
-      await seedWorkspace(root, populatedPrimaryTasksContract());
-
-      const stdout = await captureStdout(async () => {
-        await runValidate({ root, strict: false, failOn: "error" });
-      });
-
-      // Filter stdout for QFAI-AUD-001 error-severity lines. Other validators
-      // (e.g. traceability) may still warn/error in the tmp workspace, but
-      // the QFAI-AUD-001 aligned lane must be silent at error severity.
-      const audit001ErrorLines = stdout
-        .split("\n")
-        .filter((line) => line.includes("QFAI-AUD-001") && line.startsWith("[error]"));
-      expect(audit001ErrorLines).toEqual([]);
-    });
-  },
-);
+    // Filter stdout for QFAI-AUD-001 error-severity lines. Other validators
+    // (e.g. traceability) may still warn/error in the tmp workspace, but
+    // the QFAI-AUD-001 aligned lane must be silent at error severity.
+    const audit001ErrorLines = stdout
+      .split("\n")
+      .filter((line) => line.includes("QFAI-AUD-001") && line.startsWith("[error]"));
+    expect(audit001ErrorLines).toEqual([]);
+  });
+});

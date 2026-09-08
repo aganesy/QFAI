@@ -110,7 +110,7 @@ function reachableFrom(tree: Map<string, string>): Set<string> {
   return reached;
 }
 
-describe("shipped skill reference reachability", { timeout: 15000 }, () => {
+describe("shipped skill reference reachability", () => {
   const assistantRoot = path.resolve(process.cwd(), "..", "..", ...ASSISTANT_ROOT);
 
   it("every shipped `references/*.md` is reachable from some SKILL.md", async () => {

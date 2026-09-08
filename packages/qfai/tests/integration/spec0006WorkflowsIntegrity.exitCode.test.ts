@@ -93,108 +93,104 @@ const pool = useAdopterTreePool();
  */
 const STALE_NAME = "qfai-tests.yml";
 
-describe(
-  "TC-0006-0029 (TDD-0031): the drift advisory is severity info and leaves --fail-on error at exit 0",
-  { timeout: 60000 },
-  () => {
-    it("emits the drift finding at severity info and returns exit 0 under --fail-on error", async () => {
-      const dir = await pool.seedAdopterTree();
-      await editShippedWorkflow(dir, STALE_NAME);
+describe("TC-0006-0029 (TDD-0031): the drift advisory is severity info and leaves --fail-on error at exit 0", () => {
+  it("emits the drift finding at severity info and returns exit 0 under --fail-on error", async () => {
+    const dir = await pool.seedAdopterTree();
+    await editShippedWorkflow(dir, STALE_NAME);
 
-      // GUARDS #1-#4 are PRECONDITIONS on the fixture and stay hard: on a tree that
-      // is not in this state nothing below measures anything. The two claims after
-      // them are soft, for the reason the header gives.
+    // GUARDS #1-#4 are PRECONDITIONS on the fixture and stay hard: on a tree that
+    // is not in this state nothing below measures anything. The two claims after
+    // them are soft, for the reason the header gives.
 
-      // Guard #1 — the tree really does drift. One `toContain` closing three vacuity
-      // modes, as the sibling suites' first guard does: the packaged copy resolved
-      // and was readable, the provenance record is non-empty (the reader only visits
-      // recorded names, so a non-empty `modified` is impossible from an empty
-      // record), and the hand edit landed.
-      const diff = await diffInstalledShippedWorkflows(dir);
-      expect(
-        diff.modified,
-        "drift must be observable in this tree, or an exit code of 0 says nothing about an advisory that was never emitted",
-      ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
+    // Guard #1 — the tree really does drift. One `toContain` closing three vacuity
+    // modes, as the sibling suites' first guard does: the packaged copy resolved
+    // and was readable, the provenance record is non-empty (the reader only visits
+    // recorded names, so a non-empty `modified` is impossible from an empty
+    // record), and the hand edit landed.
+    const diff = await diffInstalledShippedWorkflows(dir);
+    expect(
+      diff.modified,
+      "drift must be observable in this tree, or an exit code of 0 says nothing about an advisory that was never emitted",
+    ).toContain(`${ADOPTER_WORKFLOWS_DIR}/${STALE_NAME}`);
 
-      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
-      const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
-      const check = findings[0];
+    const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+    const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
+    const check = findings[0];
 
-      // Guard #2 — registered exactly once. The finding SET rather than the first
-      // match, because `addCheck` is a bare push with no dedup: a `find` would hand
-      // back one registration while a second carried a different severity, and the
-      // severity claim below would read the first and pass.
-      expect(
-        findings,
-        "workflows.integrity must be registered exactly once per doctor run",
-      ).toHaveLength(1);
+    // Guard #2 — registered exactly once. The finding SET rather than the first
+    // match, because `addCheck` is a bare push with no dedup: a `find` would hand
+    // back one registration while a second carried a different severity, and the
+    // severity claim below would read the first and pass.
+    expect(
+      findings,
+      "workflows.integrity must be registered exactly once per doctor run",
+    ).toHaveLength(1);
 
-      // Guard #3 — nothing OTHER than the finding under test is severity `error`.
-      // That is what makes the exit-code claim attributable in both directions:
-      // under `--fail-on error` an unrelated error would drive the exit to 1 and the
-      // claim would redden for a fixture reason, while a green claim would otherwise
-      // only mean "this tree happened to carry no errors at all".
-      //
-      // Scoped to OTHER ids, and the scope is load-bearing rather than tidy. The
-      // whole-summary form (`data.summary.error` is 0) is also true here, but it
-      // reddens under this row's own oracle mutation (`severity: "info"` →
-      // `"error"`), and a hard guard that reddens aborts the `it` before either claim
-      // executes — leaving the oracle unmeasurable. This form is invariant under that
-      // mutation, so both claims are observed reddening.
-      //
-      // The baseline it expects is already measured by a shipped test —
-      // `tests/cli/doctor.test.ts`, "ignores warnings with --fail-on error" asserts
-      // exit 0 from a fresh `runInit` tree under `failOn: "error"`.
-      expect(
-        data.checks
-          .filter((entry) => entry.id !== "workflows.integrity" && entry.severity === "error")
-          .map((entry) => entry.id),
-        "no finding other than workflows.integrity may be severity `error`, or the exit code under `--fail-on error` is not attributable to this advisory",
-      ).toEqual([]);
+    // Guard #3 — nothing OTHER than the finding under test is severity `error`.
+    // That is what makes the exit-code claim attributable in both directions:
+    // under `--fail-on error` an unrelated error would drive the exit to 1 and the
+    // claim would redden for a fixture reason, while a green claim would otherwise
+    // only mean "this tree happened to carry no errors at all".
+    //
+    // Scoped to OTHER ids, and the scope is load-bearing rather than tidy. The
+    // whole-summary form (`data.summary.error` is 0) is also true here, but it
+    // reddens under this row's own oracle mutation (`severity: "info"` →
+    // `"error"`), and a hard guard that reddens aborts the `it` before either claim
+    // executes — leaving the oracle unmeasurable. This form is invariant under that
+    // mutation, so both claims are observed reddening.
+    //
+    // The baseline it expects is already measured by a shipped test —
+    // `tests/cli/doctor.test.ts`, "ignores warnings with --fail-on error" asserts
+    // exit 0 from a fresh `runInit` tree under `failOn: "error"`.
+    expect(
+      data.checks
+        .filter((entry) => entry.id !== "workflows.integrity" && entry.severity === "error")
+        .map((entry) => entry.id),
+      "no finding other than workflows.integrity may be severity `error`, or the exit code under `--fail-on error` is not attributable to this advisory",
+    ).toEqual([]);
 
-      const run = await runDoctorText(dir, "error");
+    const run = await runDoctorText(dir, "error");
 
-      // Guard #4 — the invocation that produced the exit code is the run that
-      // registered the finding. Two things at once, both needed:
-      //
-      // (a) the exit code is `shouldFailDoctor`'s verdict and not `runDoctor`'s
-      //     `--autoremediate` CI-off early return, which yields a literal 0 without
-      //     consulting it. That path never reaches `createDoctorData` and renders no
-      //     check line, so a check id in the rendered text rules it out.
-      //     (`runDoctorText` passes no `autoremediate`; this guard survives an edit
-      //     to the helper that does.)
-      // (b) severity is read from a FIRST invocation and the exit code from a SECOND.
-      //     `qfai doctor` is read-only so the tree cannot move between them, but
-      //     "cannot" is an argument and this is a measurement.
-      //
-      // The BARE ID only — no `[info]` tag, no group header, both TDD-0040's surface
-      // — and the id is fixed by the doctor contract, not by the renderer.
-      expect(
-        run.stdout,
-        "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
-      ).toContain("workflows.integrity");
+    // Guard #4 — the invocation that produced the exit code is the run that
+    // registered the finding. Two things at once, both needed:
+    //
+    // (a) the exit code is `shouldFailDoctor`'s verdict and not `runDoctor`'s
+    //     `--autoremediate` CI-off early return, which yields a literal 0 without
+    //     consulting it. That path never reaches `createDoctorData` and renders no
+    //     check line, so a check id in the rendered text rules it out.
+    //     (`runDoctorText` passes no `autoremediate`; this guard survives an edit
+    //     to the helper that does.)
+    // (b) severity is read from a FIRST invocation and the exit code from a SECOND.
+    //     `qfai doctor` is read-only so the tree cannot move between them, but
+    //     "cannot" is an argument and this is a measurement.
+    //
+    // The BARE ID only — no `[info]` tag, no group header, both TDD-0040's surface
+    // — and the id is fixed by the doctor contract, not by the renderer.
+    expect(
+      run.stdout,
+      "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
+    ).toContain("workflows.integrity");
 
-      // CLAIM, Verify bullet 1 — 「finding が `severity: 'info'` で含まれる」.
-      // Observed at the registration site rather than in the rendered text, matching
-      // every other suite in this family: severity is decided at `addCheck`, so a finding the
-      // reader reports but nobody registers must fail here instead of passing on the
-      // reader. (A count stood where "every other suite" now does; it went stale as the
-      // family grew, which is why the property is named instead.)
-      expect
-        .soft(check?.severity, "an installed shipped-workflow drift finding is an info advisory")
-        .toBe("info");
+    // CLAIM, Verify bullet 1 — 「finding が `severity: 'info'` で含まれる」.
+    // Observed at the registration site rather than in the rendered text, matching
+    // every other suite in this family: severity is decided at `addCheck`, so a finding the
+    // reader reports but nobody registers must fail here instead of passing on the
+    // reader. (A count stood where "every other suite" now does; it went stale as the
+    // family grew, which is why the property is named instead.)
+    expect
+      .soft(check?.severity, "an installed shipped-workflow drift finding is an info advisory")
+      .toBe("info");
 
-      // CLAIM, Verify bullet 2 — 「`shouldFailDoctor` が false を返す (exit 0 —
-      // advisory は exit code を変えない)」. What this line cannot see is in the
-      // header: it is invariant under `info` → `warning`, so it discriminates the
-      // `error` severity alone and the `--fail-on warning` leg (TDD-0034 /
-      // TDD-0035) owns the rest.
-      expect
-        .soft(
-          run.exitCode,
-          "the drift advisory must not change the exit code — `--fail-on error` counts errors, and an advisory is not one",
-        )
-        .toBe(0);
-    });
-  },
-);
+    // CLAIM, Verify bullet 2 — 「`shouldFailDoctor` が false を返す (exit 0 —
+    // advisory は exit code を変えない)」. What this line cannot see is in the
+    // header: it is invariant under `info` → `warning`, so it discriminates the
+    // `error` severity alone and the `--fail-on warning` leg (TDD-0034 /
+    // TDD-0035) owns the rest.
+    expect
+      .soft(
+        run.exitCode,
+        "the drift advisory must not change the exit code — `--fail-on error` counts errors, and an advisory is not one",
+      )
+      .toBe(0);
+  });
+});

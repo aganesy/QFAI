@@ -518,7 +518,6 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
       expect((await lstat(destAbs)).isFIFO()).toBe(true);
       expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
     },
-    10000,
   );
 
   // A run that dies between the exclusive `link` and its cleanup leaves
