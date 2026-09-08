@@ -6,6 +6,76 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The lint lane rejects a merge-conflict marker in a tracked file** (#1349).
+  Nothing asked that question, and an evidence document reached the default
+  branch carrying a `=======` separator, a superseded line and a `>>>>>>>`
+  marker with every lane green.
+
+  Each lane passed for its own reason, and none of them is wrong: Markdown lint
+  reads `=======` as a heading underline and `>>>>>>> ref` as a paragraph,
+  prettier reformats the block rather than rejecting it, and the guard that
+  reads the figure in that paragraph takes the first matching line and stops.
+
+  `scripts/check-conflict-markers.mjs` scans every tracked text file for a line
+  starting with seven `<`, `=`, `>` or `|` followed by a space or the end of the
+  line. The boundary is what keeps a rule of equals signs and `>>>>>>>>` in
+  ASCII art from being findings. Fenced blocks in Markdown are skipped, so a
+  document explaining conflict resolution can show one.
+
+- **A retired spec pack has a template and a schema of its own** (#1324). A spec
+  that was deleted or superseded is kept as the record of why it went away. That
+  record cannot carry a consumer view or an applicable NFR for something that no
+  longer exists, so it had no schema and was tolerated rather than checked —
+  including the `Superseded-by` bullet a reader following a stale reference
+  depends on.
+
+  Three pieces, in the order each needs the one before it.
+  1. `templates/specs/spec/01_Spec-retired.md` seeds the record: the status
+     bullets, and a `## Retirement` section saying why the spec stopped applying
+     and where its obligations went.
+  2. `spec/01_Spec-retired.mdschema.yml` states that contract, and is registered
+     in the manifest.
+  3. A manifest entry may carry `when:`, a regular expression read against the
+     document's own text. It is what lets one path carry two document shapes.
+
+  A `01_Spec.md` whose front matter declares `superseded`, `deprecated` or
+  `removed` is checked against the retired schema and dropped from the live one,
+  so the two partition the documents rather than running one document against
+  two contracts. A pack that is still live is unaffected.
+
+  Two invariants replace the old "every pattern is unique" rule, which was a
+  proxy for them: at most one entry per pattern may omit `when:`, and a
+  predicated entry shares its pattern with another entry — a `when:` on a pattern
+  nothing else claims is a filter, and the documents it misses would then be
+  checked by nothing.
+
+- **`qfai db-drift` compares the DB contracts with the migrations as schemas**
+  (#1332). `.qfai/contracts/db/**` is the schema a project declares; its
+  migrations are what actually builds the database. Nothing compared the two, so
+  they drift and every signal stays green — one measured tree differed by 58
+  columns the migrations had, 6 the contracts had, and 28 declared differently,
+  with a passing suite that proved things about the migration schema and nothing
+  about the contracts.
+
+  The command applies each side to its own in-process Postgres and reports the
+  columns they disagree about: present on one side only, or declared with a
+  different type, nullability or default.
+
+  | Exit code | Meaning                                            |
+  | --------- | -------------------------------------------------- |
+  | 0         | the two agree, or the project is out of scope      |
+  | 1         | they differ                                        |
+  | 2         | a file would not apply, or the engine is not there |
+
+  `--format json`, `--out <path>` and `--fail-on never` are accepted.
+
+  Set `paths.migrationsDir` to the project's migration directory. A project
+  without one is out of scope, not in violation: the command says so and exits 0.
+
+  It is a command rather than a `validate` rule because it needs a database, and
+  `qfai validate` starts no processes. The engine is loaded only when the
+  command runs, so a project that never runs it never pays for it.
+
 - **A `drift` validation profile, and the CI workflow `qfai init` writes now
   runs it** (#1262). The generated workflow ran `--profile full --fail-on error`
   and nothing else. `full` evaluates every gate group except drift, so the one
@@ -40,6 +110,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nobody reviews.
 
 ### Fixed
+
+- **The governed-path report case of `assistantAssetProvenance.test.ts` no
+  longer depends on the platform's path separator** (#1315). `init` names a
+  written path with `/` on every platform and a skipped one in a `NOTE:` line
+  carrying the absolute destination with the platform's own separator. The case
+  built one needle for both surfaces with `path.join`, so on Windows the
+  written-path needle carried a backslash, matched nothing, and the case failed
+  on a tree nobody had changed. Both sides are now read with one separator.
 
 - **An imported spec can state its surface, so a CLI-only project is no longer
   read as visual** (#1295). A discussion pack states the classification in its

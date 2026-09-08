@@ -79,6 +79,8 @@ interface ManifestEntry {
   id: string;
   schema: string;
   pattern: string;
+  /** The content predicate that routes one path to two schemas, if any. */
+  when?: string;
 }
 
 function readManifest(): ManifestEntry[] {
@@ -86,7 +88,12 @@ function readManifest(): ManifestEntry[] {
   let current: Partial<ManifestEntry> = {};
   const flush = (): void => {
     if (current.id !== undefined && current.schema !== undefined && current.pattern !== undefined) {
-      entries.push({ id: current.id, schema: current.schema, pattern: current.pattern });
+      entries.push({
+        id: current.id,
+        schema: current.schema,
+        pattern: current.pattern,
+        ...(current.when !== undefined ? { when: current.when } : {}),
+      });
     }
     current = {};
   };
@@ -102,11 +109,13 @@ function readManifest(): ManifestEntry[] {
       current = { id };
       continue;
     }
-    const field = /^\s+(schema|pattern):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
+    const field = /^\s+(schema|pattern|when):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
     const value = field?.[2];
     if (value !== undefined && current.id !== undefined) {
       if (field?.[1] === "schema") {
         current.schema = value;
+      } else if (field?.[1] === "when") {
+        current.when = value;
       } else {
         current.pattern = value;
       }
@@ -174,14 +183,54 @@ describe("shipped Markdown schemas", () => {
     expect(orphans).toEqual([]);
   });
 
-  it("gives every manifest entry a unique id and a unique pattern", () => {
-    // Two entries on one pattern run the same documents against two contracts,
-    // and the losing one is invisible in the summary.
+  it("gives every manifest entry a unique id", () => {
     const ids = manifest.map((entry) => entry.id);
-    const patterns = manifest.map((entry) => entry.pattern);
 
     expect(new Set(ids).size).toBe(ids.length);
-    expect(new Set(patterns).size).toBe(patterns.length);
+  });
+
+  it("leaves at most one entry per pattern without a `when` predicate", () => {
+    // The invariant is that no document is run against two contracts, with the
+    // loser invisible in the summary. Two entries on one pattern are how a path
+    // that carries two document shapes is expressed, and the predicate is what
+    // partitions them — so a second UNPREDICATED entry is the state that
+    // breaks it, not a repeated pattern.
+    const byPattern = new Map<string, string[]>();
+    for (const entry of manifest.filter((e) => e.when === undefined)) {
+      byPattern.set(entry.pattern, [...(byPattern.get(entry.pattern) ?? []), entry.id]);
+    }
+    const contested = [...byPattern].filter(([, ids]) => ids.length > 1);
+
+    expect(contested.map(([pattern, ids]) => `${pattern}: ${ids.join(", ")}`)).toEqual([]);
+  });
+
+  it("gives every predicated entry a pattern some other entry also carries", () => {
+    // A `when:` on a pattern nothing else claims is a filter, not a route: the
+    // documents it does not match are then checked by nothing at all, and the
+    // gap reads in the summary exactly like a pack nobody has written yet.
+    const patterns = manifest.map((entry) => entry.pattern);
+    const stranded = manifest.filter(
+      (entry) =>
+        entry.when !== undefined &&
+        patterns.filter((pattern) => pattern === entry.pattern).length < 2,
+    );
+
+    expect(stranded.map((entry) => `${entry.id}: ${entry.pattern}`)).toEqual([]);
+  });
+
+  it("gives every `when` predicate a valid regular expression", () => {
+    const broken = manifest
+      .filter((entry) => entry.when !== undefined)
+      .filter((entry) => {
+        try {
+          new RegExp(entry.when ?? "", "mu");
+          return false;
+        } catch {
+          return true;
+        }
+      });
+
+    expect(broken.map((entry) => `${entry.id}: ${entry.when ?? ""}`)).toEqual([]);
   });
 
   it("roots every pattern at the configured specs directory", () => {

@@ -306,7 +306,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 14 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 15 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -370,7 +370,7 @@ pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiS
       while the classifier corpus lived here, before round 4 moved it to
       tests/unit/buildCommand.test.ts where it belongs)
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 14 passed (14), exit 0
+  -> Tests 15 passed (15), exit 0
      (the 11th is the sweep's corpus: one assertion over every mechanism it
       confirmed executing, added with the repairs that close them. The 12th is
       the digest collision found by attacking the new gate rather than by a
@@ -2260,7 +2260,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 1897 (packages/qfai/tests/assets 1727, packages/qfai/tests/e2e 170)
+e2e callsites at this tree: 1910 (packages/qfai/tests/assets 1740, packages/qfai/tests/e2e 170)
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
 the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
