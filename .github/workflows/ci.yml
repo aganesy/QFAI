@@ -365,7 +365,7 @@ jobs:
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           sha256sum -c --quiet <<'PINNED_INPUTS'
           a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777  scripts/check-toolchain-action.sh
-          767a07c6a02aacfa8dde4e72085daa7fd53288cbc443b231d549e99eb5dbaf60  .github/pinned-bytes.txt
+          942a88c200bdedf9be592957d5f192a84d76eb6ae2f602fa7cd2c533e2eed8ab  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -456,6 +456,10 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          # Same reason as the `test` job's: this lane runs the whole package
+          # suite, `stageEvidenceCounts` included, and that test needs the base
+          # tip's objects to tell an inherited count from this branch's own.
+          fetch-depth: 2
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
       # `.github/actions/setup/action.yml`. It stood inline here six times.
@@ -517,6 +521,14 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          # The merge commit and its parents. `stageEvidenceCounts` tells a
+          # count this branch moved from one the base moved, and on a pull
+          # request the base tip is the first parent of the tree being tested.
+          # At the default depth its SHA is readable and its objects are not, so
+          # the question cannot be asked and every open pull request goes red
+          # whenever another one merges. Two commits, not full history: nothing
+          # here reads further back.
+          fetch-depth: 2
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
       # `.github/actions/setup/action.yml`. It stood inline here six times.

@@ -205,7 +205,7 @@
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
         "scripts/check-workflow-hygiene.mjs": "e1ce83c5068118002ad93f19cce8da6347fbc1bf53b328e741e421eefabc965d",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
-        "scripts/derive-e2e-callsites.mjs": "cf2f9fd4c961cf3ffc87c3702f0f0ec0ae84ae9d0e110b8866b31048c0b6622f",
+        "scripts/derive-e2e-callsites.mjs": "e768d8cd24e0a5082e1191e24f341b34e7ded5889ee530b512ca334f291f97a2",
         "scripts/fresh-init-findings.json": "28bf7de140686f8df16666c3d2a9e5a8dd7deaa30d5bbbfcb8eda39494b9ecfe",
         "scripts/fresh-init-findings.mjs": "65221f0f17246de0f092c767138604e49ff671e1ec55a5477f07339fb8ba62f6",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
@@ -367,7 +367,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "4f137ac700ddc112",
+        "Verify the toolchain action before running it": "09b024bb502703c1",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9909088db9df9e88",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "abe312b8d2c8fc6f",

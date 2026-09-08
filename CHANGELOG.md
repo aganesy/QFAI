@@ -181,6 +181,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The recorded e2e callsite count no longer fails a branch for the base's
+  changes** (#1357). A pull request is tested on the merge of the branch with
+  its base, so the count a branch pins stops being true the moment the base
+  gains a callsite — whoever merged, and whatever the branch touched. With
+  several pull requests open, every merge turned the rest red, each needing a
+  re-merge and a re-pin that the next merge undid.
+
+  `stageEvidenceCounts.test.ts` now measures the base's own count and compares.
+  A branch that changed a callsite under the `e2e` project still fails and still
+  owes `node scripts/pin-stage-evidence-counts.mjs` in the same commit. Drift
+  the branch did not cause is reported and passes. Where git cannot answer, it
+  fails as before.
+
+  The `test` and `node-floor` jobs check out two commits rather than one. At the
+  default depth the merge commit is grafted to no parents at all, so the base is
+  unreachable and the question cannot be asked.
+
 - **A failing clean leg of the workflow-hygiene fixtures now names the rule and
   the paths** (#1314). Both legs asserted the lane's exit code before its
   findings, so a failure read `expected 1 to be 0` and the lane's own output —
