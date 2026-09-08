@@ -148,3 +148,17 @@ Pack: `.qfai/discussion/discussion-20260804173914356/` (CHG-007). Cascade only �
 - Open questions: OQ-0015-0001 opened (registration timing + the full SSOT set that must move together). No prior open question resolved here.
 - Round-2 review corrections folded in: the acceptance criterion was first appended as a duplicate of the CHG-006 `AC-0015-0016` and is renumbered to `AC-0015-0022` (the CHG-006 chain at `AC-0015-0016` is untouched); the two ledger rows were first appended to the file's second Markdown table, which `parseFirstMarkdownTable` never reads, and are moved into the first table.
 - Approved By: user@2026-08-05 (CHG-007 pack approval)
+
+## 2026-08-22 — `companyName` removed from the hard-required autopilot bucket
+
+Upstream: `_policies/10_delta.md` § 2026-08-22 (policy-only UPDATE:MODIFY — the DR-0269 statement and `06_Glossary.md`). This spec is the cascade target for the same enumeration.
+
+| Operation     | Sub-op | Target                                                                             | Source (REQ) | Rationale                                                                             | DR-Ref  | Status |
+| ------------- | ------ | ---------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------- | ------- | ------ |
+| UPDATE:MODIFY | MODIFY | AC-0015-0015 / BR-0015-0010 / 01_Spec.md (Cross-skill governance behavior CHG-006) | REQ-0160     | Drop the consumerless `companyName` from hard-required and follow the DR-0269 wording | DR-0269 | PASS   |
+
+- Change: the hard-required enumeration narrows from `companyName` / brand intent / `primarySpecId` to brand intent / `primarySpecId`. What triggers `R-AUTOPILOT-POLICY-MISSING` — an absent section, or a partly absent bucket — is unchanged.
+- Rationale: nothing in the distributed tree reads `companyName`, so the bucket paid the "ask before starting" cost of a hard-required input and read nothing back. Narrowing the bucket is allowed, because there is no reason to ask for an input nobody reads; widening it is not. So one consumerless entry was removed, and the bucket did not become a closed set. A hard-required input a single skill reads stays allowed once that skill declares it by name.
+- Regression: `packages/qfai/tests/assets/assets.test.ts` checks that each shipped `SKILL.md` hard-required bucket stays within the two common entries plus whatever that skill declares, and carries no withdrawn entry. It does not check the count, because narrowing is allowed.
+- ID stability: no US / AC / BR / EX / TC is renumbered, and nothing is appended.
+- Approved By: yusuke_senaga

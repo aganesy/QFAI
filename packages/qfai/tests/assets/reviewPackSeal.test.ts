@@ -191,12 +191,17 @@ describe("the ATDD stage seal has a reference of its own", () => {
       expect(bullets.length).toBeGreaterThan(9);
       // No bullet may be a paragraph again. The seal bullet was 2,024
       // characters — larger than the other nine put together. The cap sits
-      // above the longest bullet this section already carries (1,047
-      // characters, wrapped over ten lines), so it fails on a paragraph moving
-      // back in — wrapped or not — and not on ordinary prose.
+      // above the longest bullet this section carries (669 characters, the
+      // `CON-API` ownership bullet), so it fails on a paragraph moving back in
+      // — wrapped or not — and not on ordinary prose.
+      //
+      // The margin is the point, not the number. A bullet that outgrows this
+      // cap belongs in `references/` under its own headings, with a bullet
+      // here naming the obligation and citing the anchor; raising the cap to
+      // fit it leaves the section unskimmable, which is what the cap is for.
       for (const bullet of bullets) {
         expect(bullet.length, `DoD bullet is a paragraph: ${bullet.slice(0, 80)}…`).toBeLessThan(
-          1200,
+          700,
         );
       }
 
