@@ -25,9 +25,9 @@ import { readDiscussionCurrentIdState } from "./state.js";
  * `discussion.ts#resolveDiscussionRoot`, and the public
  * `core/config.ts#resolvePath(root, config, "discussionDir")` are
  * three copies of the same single-line resolution rule. Folding all
- * three into one shared exported helper is a follow-up — for now the
- * three callsites have been verified to use identical semantics so a
- * change to ONE without the other two will introduce drift.
+ * three into one shared exported helper is a follow-up. The three
+ * callsites use identical semantics, so a change to ONE without the
+ * other two introduces drift.
  */
 async function resolveDiscussionRootFromConfig(root: string): Promise<string> {
   const { config } = await loadConfig(root);
@@ -485,7 +485,7 @@ function extractDeferredWithoutDetails(oqRegisterText: string, deferredText: str
   if (deferredIds.length === 0) return [];
 
   // 13_Deferred.md may use table format (OQ-ID column without Disposition)
-  // or heading format (### OQ-XXXX: ...).  Extract all OQ-ID references
+  // or heading format (### OQ-XXXX:...).  Extract all OQ-ID references
   // regardless of structure so both formats are supported.
   const deferredDetailSet = extractAllOqIds(deferredText);
 

@@ -51,9 +51,9 @@ const INDENTED_ITEM_RE = /^\s+-\s+/;
  * One path segment: anything but a separator, whitespace, a backtick or a
  * control character.
  *
- * The charset used to be `[A-Za-z0-9_@.-]`, which is not what filesystems
- * accept and not what real projects write: `src/app/(admin)/[id]/page.tsx` — an
- * ordinary Next.js route — was not recognised, and an entry the matcher does
+ * The charset is wider than `[A-Za-z0-9_@.-]`, which is not what filesystems
+ * accept or what real projects write: `src/app/(admin)/[id]/page.tsx` — an
+ * ordinary Next.js route — must be recognised, and an entry the matcher does
  * not recognise is an entry no gate ever sees. Whitespace stays excluded
  * because it is what separates a path from the prose around it, and it is what
  * keeps `MAX_ITERATIONS = 10` out.

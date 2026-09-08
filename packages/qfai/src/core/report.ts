@@ -1698,9 +1698,9 @@ export function formatReportMarkdown(
       const integrationTcsWithoutRow = spec.integrationTcsWithoutRow ?? [];
       // `?? 0` on both counts, not only on the gate: the second arm prints the
       // line for a spec that OWES rows and has none, which is exactly the
-      // shape where a producer that never ran leaves both fields unset. The
-      // line then read `Integration rows (ATDD-owned): undefined (unfinished:
-      // undefined)` in the report this PR adds it to.
+      // shape where a producer that never ran leaves both fields unset. Without
+      // the fallback, the line would read `Integration rows (ATDD-owned):
+      // undefined (unfinished: undefined)`.
       const integrationRowTotal = spec.integrationRowTotal ?? 0;
       const integrationRowOpenCount = spec.integrationRowOpenCount ?? 0;
       if (integrationRowTotal > 0 || integrationTcsWithoutRow.length > 0) {
@@ -2251,7 +2251,7 @@ function partitionDeltaEntries(entries: readonly DeltaDecisionEntry[]): DeltaEnt
  *
  * A file with no recognisable entry at all is a gap too: `countedEntries: 0`
  * with an empty `uncountedEntries` is "nothing here parsed", which is the shape
- * the old shipped template produced (#545).
+ * the old shipped template produced.
  */
 function toDeltaScanGap(file: string, partition: DeltaEntryPartition): ReportDeltaScanGap | null {
   const countedEntries = partition.counted.length;
@@ -2839,7 +2839,7 @@ async function collectTestStrategy(
   // layered layout — the normal shape for a project whose E2E lives in code
   // rather than in Gherkin — both knobs were compared against zero and could
   // not fire however many E2E rows the ledger held. A project could set them,
-  // read them in `qfai.config.yaml`, and be told nothing (#1197).
+  // read them in `qfai.config.yaml`, and be told nothing.
   //
   // A ledger row is a TC obligation rather than a parsed scenario, which is why
   // `layerSource` says which one produced these numbers. It is the same axis:
