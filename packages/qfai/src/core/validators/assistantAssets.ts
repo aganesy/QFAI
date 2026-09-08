@@ -6,13 +6,16 @@ import path from "node:path";
 import {
   ASSISTANT_ASSETS_LOCK_BASENAME,
   GOVERNED_ASSISTANT_LAYERS,
+  REGENERATED_ASSISTANT_LAYERS,
   buildShippedAssistantHashes,
   classifyAssistantAsset,
   collectGovernedAssistantFiles,
+  collectRegeneratedAssistantFiles,
   hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLockStatus,
 } from "../assistantAssetProvenance.js";
+import type { RegeneratedAssistantLayer } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
@@ -247,6 +250,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   }
 
   issues.push(...(await validateAssistantAssetProvenance(root, assistantDir)));
+  issues.push(...(await collectRegeneratedLayerIssues(root, assistantDir)));
   issues.push(...(await collectSteeringPlaceholderIssues(root, assistantDir)));
 
   // Every skill-tree document is read once, here, and both the per-`SKILL.md`
@@ -518,6 +522,163 @@ async function validateAssistantAssetProvenance(
 }
 
 /**
+ * How many differing paths a finding names before it stops listing them.
+ *
+ * Exported so the guard over this rule reads the cap rather than restating it.
+ * A literal on each side is two answers to one question, and the pair goes
+ * quiet the moment they disagree.
+ */
+export const NAMED_STALE_FILES = 3;
+
+/**
+ * `QFAI-ASSETS-009` — a regenerated layer behind the installed release.
+ *
+ * `skills/**` and `agents/**` are copied into the project once and refreshed
+ * only by an explicit `qfai init --force`, so an upgraded project keeps running
+ * the skill bodies and agent definitions it initialised with. A `SKILL.md`
+ * several releases behind describes a workflow the installed validators no
+ * longer implement, and it reads as authoritative because it is checked in.
+ *
+ * **One finding per layer, not one per file.** A project one release behind
+ * differs in many files at once — the trees hold well over a hundred between
+ * them — and a finding per file would bury every other result in the run.
+ *
+ * The comparison is against the shipped bytes alone. The governed layers need a
+ * record of what qfai wrote so `--force` can tell a stale copy from a fork and
+ * refresh only the first; here `--force` overwrites either way, so there is no
+ * merge decision for a record to protect and nothing a record would add.
+ *
+ * That is also why the hint says the local edit is lost. `QFAI-ASSETS-004` can
+ * offer `--force` as a plain refresh because a diverged file is left alone;
+ * this layer has no such exemption, and a fix hint that quietly destroys work
+ * is worse than the staleness it clears.
+ *
+ * Only what the release ships is compared. A file the project holds that the
+ * release does not is left alone: `--force` copies, it does not prune, so
+ * reporting one would name something the remedy cannot fix.
+ */
+async function collectRegeneratedLayerIssues(root: string, assistantDir: string): Promise<Issue[]> {
+  const promoteAt = RULE_PROMOTIONS.assistantRegeneratedLayerStale.promoteAt;
+  const severity = newRuleSeverity(await resolveToolVersion(), promoteAt);
+  const windowNote =
+    severity === "warning"
+      ? ` Reported as a warning until the ${promoteAt} release, and as an error from then on.`
+      : "";
+  const shippedRoot = path.join(getInitAssetsDir(), ...ASSISTANT_DIR.split("/"));
+
+  // The same parent-path guard the governed comparison applies, for the same
+  // reason: a `.qfai` — or a `.qfai/assistant` — that links out of the
+  // repository would have this walk hashing an external tree and passing
+  // whenever it happened to match. The layer roots' own `lstat` check does not
+  // cover it, because the link is above them.
+  //
+  // Abstains rather than reporting. The condition is about the path to the
+  // assistant tree, not about one layer, and the governed comparison ahead of
+  // this one raises `QFAI-ASSETS-008` for it in the same run — so reporting it
+  // again would be one fault printed twice, differing only in which layers each
+  // copy names.
+  if (!(await hasRealGovernedAssistantParents(root, `${ASSISTANT_DIR}/probe`))) {
+    return [];
+  }
+
+  const issues: Issue[] = [];
+  for (const layer of REGENERATED_ASSISTANT_LAYERS) {
+    // A project that never ran `init` here, or one still on the pre-recut
+    // layout, has no such layer — it is not behind, it has nothing. Reporting
+    // every shipped file at it would be noise rather than governance.
+    if (!(await isDirectory(path.join(assistantDir, layer)))) {
+      continue;
+    }
+    const finding = await regeneratedLayerIssue(
+      assistantDir,
+      shippedRoot,
+      layer,
+      severity,
+      windowNote,
+    );
+    if (finding !== null) {
+      issues.push(finding);
+    }
+  }
+  return issues;
+}
+
+/** The finding for one regenerated layer, or `null` when it matches the release. */
+async function regeneratedLayerIssue(
+  assistantDir: string,
+  shippedRoot: string,
+  layer: RegeneratedAssistantLayer,
+  severity: ProvenanceSeverity,
+  windowNote: string,
+): Promise<Issue | null> {
+  let shippedFiles: string[];
+  try {
+    shippedFiles = await collectRegeneratedAssistantFiles(shippedRoot, layer);
+  } catch (error: unknown) {
+    return unverifiableProvenanceIssue(assistantDir, "shipped", error, severity, windowNote, [
+      layer,
+    ]);
+  }
+  if (shippedFiles.length === 0) {
+    // Not "nothing to compare against, so nothing is wrong". The release ships
+    // these layers, so an empty one is an install that lost them, and passing
+    // here would report a tree as current on the strength of having no
+    // yardstick.
+    return unverifiableProvenanceIssue(
+      assistantDir,
+      "shipped",
+      new Error(`the installed release ships no files under ${layer}/`),
+      severity,
+      windowNote,
+      [layer],
+    );
+  }
+
+  const behind: string[] = [];
+  for (const relative of shippedFiles) {
+    const segments = relative.split("/");
+    const shippedHash = await hashAssistantAssetFile(path.join(shippedRoot, ...segments), {
+      // Whatever the package manager materialised. A store that links a shipped
+      // file into place is not a fault of the project's.
+      allowSymlink: true,
+    });
+    if (shippedHash === null) {
+      // One unreadable shipped file is not evidence about the project's copy,
+      // and calling it a difference would report staleness the remedy cannot
+      // clear. The install is the problem, and it is the governed comparison's
+      // to report.
+      continue;
+    }
+    const projectHash = await hashAssistantAssetFile(path.join(assistantDir, ...segments));
+    if (projectHash !== shippedHash) {
+      behind.push(relative);
+    }
+  }
+  if (behind.length === 0) {
+    return null;
+  }
+
+  const named = behind.slice(0, NAMED_STALE_FILES).join(", ");
+  const rest = behind.length - NAMED_STALE_FILES;
+  const examples = rest > 0 ? `${named} and ${String(rest)} more` : named;
+  return issue(
+    "QFAI-ASSETS-009",
+    `${ASSISTANT_DIR}/${layer}/ differs from the installed release in ${String(behind.length)} of ` +
+      `the ${String(shippedFiles.length)} files it ships (${examples}). ` +
+      "`qfai init` copies this layer once and only `--force` refreshes it, so the project is " +
+      `running the ${layer} it initialised with.${windowNote}`,
+    severity,
+    path.join(assistantDir, layer),
+    "assistantAssets.staleRegeneratedLayer",
+    undefined,
+    "canonical",
+    `Run \`qfai init --force\` to regenerate ${ASSISTANT_DIR}/${layer}/ from the installed release. ` +
+      "It overwrites every file in that layer, local edits included, so save any you mean to keep " +
+      "before running it.",
+  );
+}
+
+/**
  * `QFAI-ASSETS-003` — Stage 0 steering files still holding shipped placeholders.
  *
  * Emits one finding per file, naming every `## ` section that still contains
@@ -654,6 +815,11 @@ function unverifiableProvenanceIssue(
   error: unknown,
   assetProvenanceSeverity: ProvenanceSeverity,
   windowNote: string,
+  // Which layers went unverified. Defaulted to the governed ones so the
+  // provenance callers read as they did; the regenerated layers pass their own,
+  // because a message naming `constitution/ / catalog/` for a `skills/` failure
+  // sends the reader to the wrong directory.
+  layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS,
 ): Issue {
   const detail = error instanceof Error ? error.message : String(error);
   const subject =
@@ -664,9 +830,9 @@ function unverifiableProvenanceIssue(
         : `the project's governed layers under ${ASSISTANT_DIR}/`;
   return issue(
     "QFAI-ASSETS-008",
-    `${subject} could not be read, so the provenance of ${GOVERNED_ASSISTANT_LAYERS.map(
-      (layer) => `${layer}/`,
-    ).join(" / ")} was not verified (${detail}).${windowNote}`,
+    `${subject} could not be read, so the provenance of ${layers
+      .map((layer) => `${layer}/`)
+      .join(" / ")} was not verified (${detail}).${windowNote}`,
     assetProvenanceSeverity,
     assistantDir,
     "assistantAssets.unverifiableProvenance",

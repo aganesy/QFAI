@@ -132,10 +132,7 @@ export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/skills/qfai-discussion/templates/01_Context.md", 412],
   ["assistant/skills/qfai-implement/SKILL.md", 9104],
   ["assistant/skills/qfai-implement/references/cross-spec-ownership.md", 616],
-  // The rows below this file's cycle table are separated from its delimiter
-  // by a blank line, which ends the table — so they render as a paragraph
-  // and are measured as one.
-  ["assistant/skills/qfai-prototyping/SKILL.md", 899],
+  ["assistant/skills/qfai-prototyping/SKILL.md", 541],
   ["assistant/skills/qfai-sdd/SKILL.md", 2460],
   ["assistant/skills/qfai-sdd/references/sdd-phase-checklists.md", 3763],
   ["assistant/skills/qfai-sdd/references/spec-traceability-rules.md", 790],
