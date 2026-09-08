@@ -163,9 +163,11 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "report":
       {
         const resolvedRoot = await resolveRoot(options);
-        await runReport({
+        process.exitCode = await runReport({
           root: resolvedRoot,
           format: options.reportFormat,
+          strict: options.strict,
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.reportOut !== undefined ? { outPath: options.reportOut } : {}),
           ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
@@ -464,10 +466,10 @@ Options:
   --reason <delta-id>          prototyping rescope: the delta / decision id that retired it (required)
   --format <text|json>         doctor / prototyping preflight / discussion list: output format
   --active                     discussion list: show the active session pointer instead of listing packs
-  --strict                     validate: exit 1 on warning or worse
+  --strict                     validate/report: exit 1 on warning or worse
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: select the validation profile
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
-  --fail-on <error|warning|never>  validate: failure threshold (takes precedence over --strict)
+  --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
   --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)
   --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
