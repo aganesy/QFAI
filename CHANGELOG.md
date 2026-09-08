@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A document can opt out of its schema** with `<!-- mdschema:ignore -->` in
+  its leading comment block. A pack outlives what it specifies: a spec that was
+  deleted or superseded is kept as the record of why it went away, and that
+  record cannot carry a consumer view or an applicable NFR for something that
+  no longer exists.
+
+  The two alternatives were worse. Making the record conform means writing
+  fiction; admitting it into the schema weakens the contract for every live
+  pack.
+
+  The marker is per document, has to precede the content, and every ignored
+  file is counted in the run's own output — an exclusion nobody sees is one
+  nobody reviews.
+
 ### Fixed
 
 - **An imported spec can state its surface, so a CLI-only project is no longer
@@ -22,6 +38,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Neither skill guesses when nothing states a surface: both stop and ask.
   Assuming visual leaves a CLI project unable to proceed, and assuming `cli`
   strips a visual one of its review.
+
+- **The Drift Protocol no longer justifies its parking rule with a claim the
+  ledger contradicts** (#1312). Two shipped documents said only a `todo` row can
+  be parked, and cited the transition table — which admits
+  `any active status -> blocked` and defines `Blocked-By` to record the status
+  the row is leaving. A reader following the citation found a rule whose stated
+  reason was not in the file it pointed at, and could not tell whether the
+  transition was unavailable or the rule had another reason.
+
+  The rule is unchanged. Both documents now say the restriction is the
+  protocol's own: for a row past `todo` the transition adds nothing the change
+  request already records, and costs a trip out of the phase the row is in and
+  back into it.
 
 - **`TDDLIST_MISSING` is `info` for a spec that owes no ledger rows** (#1327).
   The rule already wrote two messages: one naming the coverage-target TC the
@@ -175,6 +204,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   provenance / init-path 各列挙に登録済み。
 
 ### Changed
+
+- **`QFAI-CFG-001` is an error from this release.** Three
+  `validation.traceability` keys were declared, defaulted and parsed while no
+  validator read them: `brMustHaveSc`, `scNoTestSeverity` and
+  `orphanContractsPolicy`. The 1.10.1 line began reporting them at `warning`,
+  and the window closes here.
+
+  A project whose `qfai.config.yaml` still carries any of the three moves from
+  a passing `validate --fail-on error` to a failing one on upgrade, with
+  nothing else changed. The keys were already inert, so the finding is about
+  the file's shape rather than its behaviour, and deleting the key clears it.
 
 - **Reworded the shipped `.agents/rules/*.md` templates for clarity.** Shortened
   sentences, and corrected `temporary-files.md`'s claim that `qfai init` does not
