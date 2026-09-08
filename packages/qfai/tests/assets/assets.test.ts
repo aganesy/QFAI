@@ -25,7 +25,15 @@ import {
   HARD_REQUIRED_COMMON_ENTRIES,
   RETIRED_HARD_REQUIRED_ENTRIES,
 } from "../../src/core/validators/autopilotPolicy.js";
-import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+import {
+  ASSISTANT_ASSET_MAX_LINE_CHARS,
+  countLines,
+  LINE_BUDGET_EXEMPT,
+  SKILL_MD_MAX_LINES,
+  WIDTH_BACKLOG_PATHS,
+  WIDTH_BUDGET_BACKLOG,
+  widestMeasurableLine,
+} from "../helpers/skillBudget.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -2401,6 +2409,95 @@ describe("assets guardrails", () => {
     );
   });
 
+  it("keeps every shipped assistant asset inside the width ceiling it is held to", async () => {
+    // The line ceiling above bounds reading cost only while a line is a roughly
+    // constant unit of reading, and packing broke that: one line in the tree
+    // runs 9,104 characters and costs the count one unit. This is the other
+    // half, and the two are read together — width alone permits a thin file of
+    // a thousand short lines, the count alone permits a packed one.
+    // Case-insensitive, because the runtime scan lowercases the extension
+    // before testing it. A `.MD` asset is measured by `qfai doctor` and would
+    // not have been matched here, so a wide line in one could reach the package
+    // and then warn on a tree its author never edited.
+    const assetFiles = await fg(["assistant/**/*.{md,yml,yaml}"], {
+      cwd: templateQfaiDir,
+      absolute: false,
+      caseSensitiveMatch: false,
+    });
+    expect(assetFiles.length, "no shipped assets matched — the glob is wrong").toBeGreaterThan(50);
+
+    const tooWide: string[] = [];
+    for (const relativePath of assetFiles.sort()) {
+      // No exemption skip here, unlike the line ceiling above. `LINE_BUDGET_EXEMPT`
+      // excuses a roster from having its LENGTH counted; nothing in that reason
+      // is about how wide one line may be, and skipping it here would leave the
+      // one shipped file this rule cannot reach.
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      const widest = widestMeasurableLine(content);
+      const allowed = WIDTH_BUDGET_BACKLOG.get(relativePath) ?? ASSISTANT_ASSET_MAX_LINE_CHARS;
+      if (widest > allowed) {
+        tooWide.push(`${relativePath} (${widest} > ${allowed})`);
+      }
+    }
+
+    expect(
+      tooWide,
+      `a line is wider than the ceiling that applies to it. A file in WIDTH_BUDGET_BACKLOG is ` +
+        `held at its recorded width and may not grow past it; every other file is held at ` +
+        `${ASSISTANT_ASSET_MAX_LINE_CHARS}. Wrap the prose — a table row and a fenced block are ` +
+        `not measured, because neither can be wrapped.`,
+    ).toEqual([]);
+  });
+
+  it("pins every width backlog entry to the file's real width", async () => {
+    // A recorded backlog is only a ratchet while its numbers track the files.
+    // An entry merely ABOVE the real width is a licence: reflow a file from 900
+    // to 500, leave the 900, and it may grow back to 900 with nothing to say so.
+    // So each entry must equal what the file measures — narrowing one is an edit
+    // that lowers its number in the same change.
+    // The paths and not their count: narrowing one file while widening another
+    // leaves the total unmoved, so a count lets a newly wide file take the
+    // vacated slot with nothing in the diff naming it.
+    expect(
+      [...WIDTH_BUDGET_BACKLOG.keys()].sort(),
+      "the width backlog may only shrink — remove the path you fixed, and never add one to " +
+        "admit a newly widened file",
+    ).toEqual([...WIDTH_BACKLOG_PATHS].sort());
+
+    const stale: string[] = [];
+    const loose: string[] = [];
+    const drifted: string[] = [];
+    for (const [relativePath, allowed] of WIDTH_BUDGET_BACKLOG) {
+      const absolute = path.join(templateQfaiDir, relativePath);
+      if (!existsSync(absolute)) {
+        stale.push(relativePath);
+        continue;
+      }
+      // An entry at or below the floor is not a backlog entry at all: the file
+      // would pass on the real ceiling, so the line only weakens it.
+      if (allowed <= ASSISTANT_ASSET_MAX_LINE_CHARS) {
+        loose.push(`${relativePath} (${allowed})`);
+        continue;
+      }
+      const widest = widestMeasurableLine(await readFile(absolute, "utf-8"));
+      if (widest !== allowed) {
+        drifted.push(`${relativePath} (recorded ${allowed}, measures ${widest})`);
+      }
+    }
+
+    expect(stale, "width backlog names a file that is not shipped").toEqual([]);
+    expect(
+      loose,
+      `at or under ${ASSISTANT_ASSET_MAX_LINE_CHARS} the entry grants nothing — remove it`,
+    ).toEqual([]);
+    expect(
+      drifted,
+      "a backlog entry must be the file's measured width. Lower it to what the file now " +
+        "measures (and delete the entry once that is at or under the ceiling); a number left " +
+        "above the real width is room to grow back into.",
+    ).toEqual([]);
+  });
+
   it("states the same ceiling in the shipped baseline authors read", async () => {
     // The number is owned by `src/core/doctor/assetLineBudget.ts` and quoted in
     // prose that ships to a `qfai init` project. Nothing tied the two together,
@@ -2412,6 +2509,12 @@ describe("assets guardrails", () => {
       "utf-8",
     );
     expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
+    // The width ceiling ships the same way and for the same reason: for a
+    // project that has only the published package, this prose is the only copy
+    // of the rule it can read.
+    expect(baseline).toContain(
+      `**A width ceiling makes the count honest: ${ASSISTANT_ASSET_MAX_LINE_CHARS} characters per line.**`,
+    );
   });
 
   it("justifies every line-budget exemption and keeps it live", () => {

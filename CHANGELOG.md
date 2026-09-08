@@ -48,6 +48,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A width ceiling beside the line ceiling for shipped assistant assets**
+  (#1181). A count of lines bounds reading cost only while a line is a roughly
+  constant unit of reading, and that stopped being true: the widest line in the
+  tree ran 9,104 characters against a median of 118, and cost the 800-line
+  budget one unit. A body at the ceiling stops shedding topics and starts
+  packing them, which the count cannot see.
+
+  Every `.qfai/assistant/**` asset is now held to **400 characters per line** as
+  well. The number is read off the tree — the 90th percentile is 413, so nine
+  files in ten already comply — and the two ceilings are read together, because
+  each permits what the other refuses.
+
+  Two shapes are not measured, both because the author cannot make them
+  narrower: a table row, which markdown gives no continuation, and a fenced
+  block, whose content is verbatim. Both are read with the container they sit
+  in, so a fence ends with the blockquote or list item that opened it, and three
+  list items that look alike once their markers are stripped stay three items
+  rather than becoming one table.
+
+  Twenty files predate the ceiling and carry a recorded width of their own,
+  which may only shrink: such a file may be edited freely below the width it
+  already had, and never past it. Nothing can join that list quietly — the paths
+  on it are pinned, so narrowing one file while widening another is a change a
+  reader sees rather than a swap that keeps a total unmoved.
+
+  `qfai doctor` reports both ceilings under `assets.lineBudget`, naming the
+  width each file was held to.
+
 - **A test case can say where it is verified** (#1252). Some acceptance criteria
   are true of the deployment rather than of the code — a TLS floor, a redirect
   the platform terminates — and no layer the annotation gate routes to can
