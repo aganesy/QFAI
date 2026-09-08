@@ -1450,12 +1450,17 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
  * `.github/required-status-contexts.json` still declares exactly one required context. Nothing in
  * branch protection has to be configured for it, which is the surface `AC-0017-0018` is about.
  *
+ * `release-notes-drift.yml` is outside it, and its case is the simplest of the four: `schedule`
+ * and `workflow_dispatch` only. Its check appears on the scheduled runs and nowhere else, so no
+ * pull request gains a context and branch protection has nothing to configure.
+ *
  * The list stays a literal for the reason it always was: a creation, removal or rename should be
  * a failing test naming which file, not a diff somebody has to interpret. It named each of these.
  */
 const OWN_WORKFLOW_FILES = [
   "ci.yml",
   "prepare-release.yml",
+  "release-notes-drift.yml",
   "release.yml",
   "renovate.yml",
   "tag-release.yml",

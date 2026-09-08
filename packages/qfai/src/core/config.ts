@@ -41,6 +41,16 @@ export type QfaiPaths = {
   promptsDir: string;
   srcDir: string;
   testsDir: string;
+  /**
+   * Where the project's migrations live, if it has any.
+   *
+   * Optional and unset by default, because qfai cannot guess it and a project
+   * without migrations is not in violation of anything. `qfai db-drift` is the
+   * only reader: with no value it says the project is out of scope and stops,
+   * rather than comparing the contracts against an empty directory and calling
+   * every column a difference.
+   */
+  migrationsDir?: string;
 };
 
 export type QfaiValidationConfig = {
@@ -230,7 +240,18 @@ export type QfaiConfig = {
  */
 const DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT = false;
 
-export type ConfigPathKey = keyof QfaiPaths;
+/**
+ * The path keys `resolvePath` can resolve: the ones every config has.
+ *
+ * An optional key is excluded by its type rather than by a list, so a path
+ * added later joins or stays out on its own. `resolvePath` returns a string,
+ * and there is no directory to return for a key the project did not set — its
+ * reader has to decide what absence means, which is not something a resolver
+ * can do for it.
+ */
+export type ConfigPathKey = {
+  [K in keyof QfaiPaths]-?: undefined extends QfaiPaths[K] ? never : K;
+}[keyof QfaiPaths];
 
 export type ConfigLoadResult = {
   config: QfaiConfig;
@@ -418,7 +439,15 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
   );
   const usePromptsDirForSkills = raw.skillsDir === undefined && isNonEmptyString(raw.promptsDir);
 
+  const migrationsDir = readOptionalString(
+    raw.migrationsDir,
+    "paths.migrationsDir",
+    configPath,
+    issues,
+  );
+
   return {
+    ...(migrationsDir !== undefined ? { migrationsDir } : {}),
     contractsDir: readString(
       raw.contractsDir,
       base.contractsDir,

@@ -84,10 +84,11 @@ async function stageWorkflowTrees(): Promise<string> {
 }
 
 /** Every finding the committed lane reported over a staged root, parsed from its own output. */
-function runLane(dir: string): { exitCode: number; findings: LaneFinding[] } {
+function runLane(dir: string): { exitCode: number; findings: LaneFinding[]; output: string } {
   const child = spawnSync(process.execPath, [LANE, "--root", dir], { encoding: "utf-8" });
+  const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
   const findings: LaneFinding[] = [];
-  for (const line of `${child.stdout ?? ""}${child.stderr ?? ""}`.split(/\r?\n/)) {
+  for (const line of output.split(/\r?\n/)) {
     const match = LANE_LINE.exec(line.trim());
     if (match === null) continue;
     findings.push({
@@ -100,7 +101,11 @@ function runLane(dir: string): { exitCode: number; findings: LaneFinding[] } {
   }
   // `?? -1` and not `?? 1`: a lane that could not be spawned must not read as one that reported a
   // violation, or a broken harness would satisfy every assertion below.
-  return { exitCode: child.status ?? -1, findings };
+  //
+  // The raw output travels with the parsed findings because a run can fail while producing none of
+  // them — a crash, or a message in a shape this parser does not read — and an exit code alone
+  // names neither the rule nor the path.
+  return { exitCode: child.status ?? -1, findings, output };
 }
 
 async function writeReviewerReport(findings: readonly unknown[]): Promise<void> {
@@ -189,8 +194,12 @@ describe(
       // The control for the row above: it plants, runs and asserts a chain of three components, and
       // every link of it would also be satisfied by a gate that emitted its advisory unconditionally.
       const lane = runLane(await stageWorkflowTrees());
-      expect(lane.exitCode, "the untouched trees do not pass the lane").toBe(0);
+      // The findings first, and the whole output beside the exit code. This leg fails whenever the
+      // staged tree is incomplete as well as when the workflow trees are, and an exit code alone
+      // cannot tell those apart — it sends a reader looking for a broken workflow when what broke
+      // is the fixture, or the reverse.
       expect(lane.findings, "the untouched trees produced a finding").toEqual([]);
+      expect(lane.exitCode, `the untouched trees do not pass the lane:\n${lane.output}`).toBe(0);
 
       await writeReviewerReport([]);
       expect(await gateIssues()).toEqual([]);
