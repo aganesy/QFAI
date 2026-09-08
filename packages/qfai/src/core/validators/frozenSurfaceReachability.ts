@@ -1,5 +1,5 @@
 /**
- * Whether the cycle-0 frozen scope still exists (#1099).
+ * Whether the cycle-0 frozen scope still exists.
  *
  * Cycle 0 records the screen set in `prototyping.json#frozenSurfaceUnion`, and
  * every later edit to it is lock drift — `qfai-prototyping/SKILL.md:120-123`
@@ -20,7 +20,7 @@
  * fine, so the precheck's "zero UI-bearing specs resolved" condition is false.
  *
  * A `warning` behind a promotion window. The route out is
- * `prototyping rescope --remove <id> --reason <delta-id>` (#1099), which is
+ * `prototyping rescope --remove <id> --reason <delta-id>`, which is
  * non-destructive and leaves the loop at its cycle — so unlike the first
  * revision of this finding, the window is justified on its own terms rather
  * than as an apology for having no remedy to offer. What it needs the window

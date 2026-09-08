@@ -140,7 +140,7 @@ export type ValidationResult = {
    * It exists so a consumer can relate the result to the tree it describes.
    * `qfai prototyping certify` seals evidence on the strength of a STORED
    * `validate.json`, and with no timestamp on it a success from before the
-   * evidence changed was indistinguishable from one after (#1107).
+   * evidence changed was indistinguishable from one after.
    */
   generatedAt?: string;
   profile?: ValidationProfile;

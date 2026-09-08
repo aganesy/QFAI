@@ -390,10 +390,10 @@ async function hasMatchingUiContract(contractsRoot: string, specId: string): Pro
  * short-circuit is skipped so the legacy `resolvePrimaryPrototypingSpec`
  * path can drive the loop.
  *
- * codex review r3264508578: bare `catch {}` previously swallowed
- * EACCES / EIO / ENOTDIR alike as "doesn't exist", letting a
- * permission-denied spec dir silently no-op the run. The discriminated
- * ENOENT branch preserves the genuine-absence semantic and propagates
+ * A bare `catch {}` would swallow EACCES / EIO / ENOTDIR alike as
+ * "doesn't exist", letting a permission-denied spec dir silently no-op
+ * the run. The discriminated ENOENT branch preserves the genuine-absence
+ * semantic instead, and propagates
  * every other errno.
  *
  * 19th-wave Fix (codex r3270055214, MAJOR — architecture-reviewer):

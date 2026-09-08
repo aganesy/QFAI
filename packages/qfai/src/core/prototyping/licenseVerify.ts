@@ -21,13 +21,12 @@
  * license, attribution}` — so the runtime gate refuses any entry the
  * handoff stage would also reject.
  *
- * 12th-wave Fix (codex r3265482144, P2): `attribution` was previously
- * deferred to the handoff stage with an inline comment ("recorded
- * separately at certify"), which let unattributed stock photos pass
- * the cycle ≥ 1 license-verify gate even though the contract's exit-66
- * class explicitly includes "missing attribution". The field is now
- * carried on the runtime type (optional at the type level so older
- * fixtures still compile) and the gate emits
+ * Deferring `attribution` to the handoff stage, with only a comment noting
+ * it is "recorded separately at certify", would let unattributed stock
+ * photos pass the cycle ≥ 1 license-verify gate even though the contract's
+ * exit-66 class explicitly includes "missing attribution". The field is
+ * carried on the runtime type instead (optional at the type level so older
+ * fixtures still compile), and the gate emits
  * `license-missing-attribution` whenever the value is undefined or an
  * empty string.
  */
