@@ -6,6 +6,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A wrong root heading is one mdschema violation, not one per section**
+  (#1388). Sections are graded against the heading above them, so a document
+  whose H1 the schema does not accept had every section beneath it reported as
+  `Unexpected section`. One wrong line became one violation per heading in the
+  outline — 55 lines for four root causes in the run that was measured — and
+  none of the extra lines was true. Those sections are where they belong, under
+  a heading that is spelled wrong.
+
+  The lane now takes that one verdict from the schema's own declaration, before
+  running `mdschema`, and does not run it over a document that fails it. The
+  cascade is never produced rather than filtered afterwards.
+
+  The output says the document is not checked further until the heading matches,
+  because a reader who is not told that reads the absence of other lines as the
+  rest of the document being sound. The cost is a second pass once the heading is
+  fixed, against a first pass whose real content was buried.
+
+  Reading the schema rather than `mdschema`'s output is what keeps this sound.
+  The schemas are this repository's, pinned by its own tests; the tool's message
+  text is not a contract, since every `--format` renders the same prose. A
+  parser for it would change what the lane reports whenever an upstream release
+  reflowed a sentence.
+
+  The ratchet is unchanged: a root heading already wrong at the merge base stays
+  the migration's backlog, and one this branch breaks is this branch's.
+
 - **A test's git sandbox no longer races git's own background maintenance**
   (#1394). `git commit` starts `git maintenance run --auto`, and `gc.autoDetach`
   defaults to true, so that process is detached and outlives the commit the test
